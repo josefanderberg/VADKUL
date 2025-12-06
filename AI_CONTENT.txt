@@ -1,0 +1,73 @@
+PROJECT CONTEXT: VADKUL
+
+Description: VADKUL is a spontaneous social event application built with modern web technologies. Users can create, view, and join events on a map or list. Features include real-time updates via Firebase, dark mode, geolocation, and categorized event filtering.
+
+Tech Stack:
+
+Framework: React + TypeScript (Vite).
+
+Styling: Tailwind CSS (Dark mode via 'class' strategy).
+
+Backend/DB: Firebase (Auth, Firestore).
+
+Maps: Leaflet & React-Leaflet.
+
+Icons: Lucide-React.
+
+Utils: Date-fns, CLSX, Tailwind-merge.
+
+Architecture & Patterns:
+
+Services (src/services): Handles all Firebase logic (get/set data). Returns typed Promises. No UI logic here.
+
+Context (src/context): Global state management (AuthContext for user, ThemeContext for dark mode).
+
+Layouts: Layout.tsx wraps pages with Navbar and Toast containers.
+
+Types: Strict TypeScript interfaces in src/types/index.ts.
+
+Current Directory Structure:
+
+Plaintext
+
+vadkul-client/
+├── public/                  # Static assets (markers, favicon)
+├── src/
+│   ├── components/
+│   │   ├── layout/          # Layout.tsx, Navbar.tsx
+│   │   └── ui/              # EventCard.tsx (reusable UI)
+│   ├── context/             # AuthContext.tsx, ThemeContext.tsx
+│   ├── lib/                 # firebase.ts (Config & Init)
+│   ├── pages/               # Routing Views
+│   │   ├── Home.tsx         # Main Map/List view
+│   │   ├── EventDetails.tsx # Single event view with Join/Leave logic
+│   │   ├── CreateEvent.tsx  # Multi-step wizard for creating events
+│   │   ├── Chat.tsx         # (Planned)
+│   │   └── Profile.tsx      # (Planned)
+│   ├── services/            # Business Logic
+│   │   └── eventService.ts  # Firestore CRUD operations
+│   ├── types/               # TypeScript Interfaces (AppEvent, User, etc.)
+│   │   └── index.ts
+│   ├── utils/               # Pure functions
+│   │   ├── dateUtils.ts     # Time formatting
+│   │   └── mapUtils.ts      # Distance calc, Icon logic
+│   ├── App.tsx              # Main Routing (react-router-dom)
+│   ├── main.tsx             # Entry point & Providers
+│   └── index.css            # Tailwind directives & Leaflet overrides
+├── tailwind.config.js       # Content paths & Dark mode config
+└── tsconfig.json            # TypeScript configuration
+Key Data Models (Interfaces):
+
+AppEvent: Contains id, host (User), location (lat/lng), attendees (string[] of emails), time (Date), etc.
+
+User: Firebase Auth User object.
+
+Coding Rules for AI:
+
+Strict Types: Always use import type { ... } for interfaces. Avoid any.
+
+Tailwind: Use utility classes for styling. No vanilla CSS files except index.css.
+
+Leaflet: Use react-leaflet components. Remember the Vite icon fix in Home.tsx.
+
+Separation: Do not write Firestore queries inside Components. Use/Create a Service function.
