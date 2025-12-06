@@ -32,20 +32,31 @@ export default function Chat() {
     return () => unsub();
   }, [user]);
 
-  // 2. Om vi kom från en profil, skapa/öppna den chatten direkt
+
+  
   useEffect(() => {
     if (initialTarget && user && !activeChatId) {
       const initChat = async () => {
+        // Vi måste matcha UserProfile-typen bättre här
         const myProfile = {
             uid: user.uid,
             displayName: user.displayName || 'Jag',
             email: user.email || '',
-            age: 0, isVerified: false, createdAt: new Date()
-        };
-        
-        const chatId = await chatService.createOrGetChat(myProfile, initialTarget);
-        setActiveChatId(chatId);
-        window.history.replaceState({}, document.title);
+            // LÄGG TILL DETTA: Använd photoURL från auth eller null
+            verificationImage: user.photoURL || null, 
+            age: 0, 
+            isVerified: false, 
+            createdAt: new Date()
+        } as any; // Tvinga typen om det behövs för att matcha UserProfile
+
+        try {
+            const chatId = await chatService.createOrGetChat(myProfile, initialTarget);
+            setActiveChatId(chatId);
+            // Rensa state så vi inte loopar om sidan laddas om
+            window.history.replaceState({}, document.title);
+        } catch (error) {
+            console.error("Kunde inte starta chatt:", error);
+        }
       };
       initChat();
     }

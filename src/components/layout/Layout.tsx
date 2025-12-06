@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'; // ÄNDRAT: lade till "type"
-import Navbar from '../ui/Navbar';
+import type { ReactNode } from 'react';
+import Navbar from '../ui/Navbar'; // Kontrollera att sökvägen stämmer
 
 interface LayoutProps {
   children: ReactNode;
@@ -7,9 +7,12 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200 font-sans">
+    // h-screen + overflow-hidden låser yttre ramen
+    <div className="h-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900 transition-colors">
+      
       <Navbar />
-      <main className="pt-16 min-h-screen">
+
+      <main className="flex-1 overflow-y-auto pt-16">
         {children}
       </main>
       <div id="toast-container" className="fixed top-4 left-1/2 -translate-x-1/2 z-[100]"></div>

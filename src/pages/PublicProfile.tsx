@@ -20,12 +20,28 @@ export default function PublicProfile() {
   useEffect(() => {
     async function load() {
       if (!uid) return;
+
+      // --- FIX: Hantera gamla legacy-användare manuellt ---
+      if (uid === 'legacy_user') {
+        setProfile({
+            uid: 'legacy_user',
+            displayName: 'Tidigare Användare',
+            email: '',
+            isVerified: false,
+            age: 0,
+            verificationImage: undefined, // Ingen bild
+            createdAt: new Date() // Sätt dagens datum eller null
+        } as UserProfile);
+        setLoading(false);
+        return;
+      }
+      // ----------------------------------------------------
+
       try {
         const data = await userService.getUserProfile(uid);
         if (data) {
           setProfile(data);
         } else {
-          // Om ingen profil hittas (kanske gammalt event utan UID)
           console.error("Ingen profil hittades för ID:", uid);
         }
       } catch (error) {
@@ -44,7 +60,6 @@ export default function PublicProfile() {
     }
     if (!profile) return;
     
-    // Skicka med vem vi vill prata med till Chat-sidan
     navigate('/chat', { 
         state: { 
             targetUser: {
@@ -70,6 +85,9 @@ export default function PublicProfile() {
   );
 
   const isMe = currentUser?.uid === profile.uid;
+  
+  // --- FIX: Inaktivera chat om det är en legacy_user ---
+  const isLegacy = profile.uid === 'legacy_user';
 
   return (
     <Layout>
@@ -81,8 +99,8 @@ export default function PublicProfile() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
             
-            {/* Omslagsbild (Dekorativ gradient) */}
-            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+            {/* Omslagsbild */}
+            <div className={`h-32 bg-gradient-to-r ${isLegacy ? 'from-slate-400 to-slate-500' : 'from-indigo-500 to-purple-600'}`}></div>
 
             <div className="px-6 pb-8">
                 {/* Avatar */}
@@ -112,12 +130,12 @@ export default function PublicProfile() {
                             {profile.displayName}
                         </h1>
                         <p className="text-slate-500 font-medium flex items-center gap-2">
-                            {profile.age > 0 ? `${profile.age} år gammal` : 'Ålder ej angiven'}
+                            {profile.age > 0 ? `${profile.age} år gammal` : ' '}
                         </p>
                     </div>
 
-                    {/* CHATTA KNAPP - Visas bara om det INTE är jag */}
-                    {!isMe && (
+                    {/* CHATTA KNAPP - Visas bara om det INTE är jag OCH inte legacy */}
+                    {!isMe && !isLegacy && (
                         <button 
                             onClick={startChat}
                             className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-transform active:scale-95"
@@ -143,7 +161,8 @@ export default function PublicProfile() {
                             <span className="text-xs font-bold uppercase">Medlem sedan</span>
                         </div>
                         <p className="font-semibold text-slate-800 dark:text-slate-200">
-                            {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Nyligen'}
+                            {/* Om legacy, skriv inget datum eller skriv "Tidigare" */}
+                            {isLegacy ? '-' : (profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Nyligen')}
                         </p>
                     </div>
                 </div>

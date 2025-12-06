@@ -6,36 +6,33 @@ import {
   import { db } from '../lib/firebase';
   import type { ChatMessage, ChatRoom, UserProfile } from '../types';
   
-  export const chatService = {
-    // Starta en ny chatt eller hämta befintlig
-    async createOrGetChat(currentUser: UserProfile, targetUser: { uid: string, name: string, image?: string }) {
-      // 1. Kolla om chatten redan finns
-      // (Enklast i NoSQL är att ha ett ID som är kombinationen av båda UIDs, sorterat)
-      const sortedIds = [currentUser.uid, targetUser.uid].sort();
-      const chatId = sortedIds.join('_');
-      
-      const chatRef = doc(db, 'chats', chatId);
-      
-      // Vi använder setDoc med { merge: true } så vi inte skriver över om den finns
-      await setDoc(chatRef, {
-        id: chatId,
-        participants: [currentUser.uid, targetUser.uid],
-        participantDetails: {
-          [currentUser.uid]: {
-            displayName: currentUser.displayName,
-            photoURL: currentUser.verificationImage
+
+    export const chatService = {
+      async createOrGetChat(currentUser: UserProfile, targetUser: { uid: string, name: string, image?: string }) {
+        const sortedIds = [currentUser.uid, targetUser.uid].sort();
+        const chatId = sortedIds.join('_');
+        
+        const chatRef = doc(db, 'chats', chatId);
+        
+        // VIKTIGT: Använd || null för bilder. Firestore kraschar av 'undefined'.
+        await setDoc(chatRef, {
+          id: chatId,
+          participants: [currentUser.uid, targetUser.uid],
+          participantDetails: {
+            [currentUser.uid]: {
+              displayName: currentUser.displayName,
+              photoURL: currentUser.verificationImage || null // <-- FIXAD
+            },
+            [targetUser.uid]: {
+              displayName: targetUser.name,
+              photoURL: targetUser.image || null // <-- FIXAD
+            }
           },
-          [targetUser.uid]: {
-            displayName: targetUser.name,
-            photoURL: targetUser.image
-          }
-        },
-        lastUpdated: Timestamp.now(),
-        // Sätt inte lastMessage om den redan finns, då skrivs den över
-      }, { merge: true });
-  
-      return chatId;
-    },
+          lastUpdated: Timestamp.now(),
+        }, { merge: true });
+    
+        return chatId;
+      },
   
     // Skicka meddelande
     async sendMessage(chatId: string, senderId: string, text: string) {

@@ -8,7 +8,7 @@ import EventCard from '../components/ui/EventCard';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, getEventEmoji } from '../utils/mapUtils';
-import { X, Map as MapIcon, List, Filter, Calendar, DollarSign, RefreshCw } from 'lucide-react';
+import { X, Map as MapIcon, List, Filter, Calendar, DollarSign, RefreshCw, ArrowUpDown } from 'lucide-react';
 
 // --- LEAFLET FIX ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -43,6 +43,7 @@ export default function Home() {
   const [filterDistance, setFilterDistance] = useState('10'); // km
   const [filterFree, setFilterFree] = useState(false);
   const [filterToday, setFilterToday] = useState(false);
+  const [sortBy, setSortBy] = useState('closest'); // NYTT: State för sortering
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
   useEffect(() => {
@@ -61,66 +62,65 @@ export default function Home() {
     setLoading(false);
   }
 
-  // --- FILTRERINGSLOGIK ---
+  // --- FILTRERING OCH SORTERINGSLOGIK ---
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
-        // 1. Beräkna avstånd (görs "on the fly" här)
+        // 1. Beräkna avstånd
         const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
-        
-        // Spara distans på objektet (muterar inte originalet i state, men används för sortering/filtrering)
         event.location.distance = dist; 
 
-        // 2. Kategori
+        // 2. Filter-checkar
         if (filterType !== 'all' && event.type !== filterType) return false;
-
-        // 3. Ålder
         if (filterAge === 'family' && event.minAge >= 12) return false;
         if (filterAge === '18+' && event.minAge < 18) return false;
         if (filterAge === 'seniors' && event.minAge < 65) return false;
-
-        // 4. Avstånd
         if (filterDistance !== 'all' && dist > parseInt(filterDistance)) return false;
-
-        // 5. Gratis
         if (filterFree && event.price > 0) return false;
-
-        // 6. Idag
         if (filterToday) {
             const today = new Date().toDateString();
-            if (event.time.toDateString() !== today) return false;
+            if (new Date(event.time).toDateString() !== today) return false;
         }
 
         return true;
-    }).sort((a, b) => (a.location.distance || 0) - (b.location.distance || 0)); // Sortera på avstånd
-  }, [events, userLocation, filterType, filterAge, filterDistance, filterFree, filterToday]);
+    }).sort((a, b) => {
+        // NYTT: Sorteringsswitch
+        switch (sortBy) {
+            case 'closest':
+                return (a.location.distance || 0) - (b.location.distance || 0);
+            case 'soonest': // Tid kvar (Datum stigande)
+                return new Date(a.time).getTime() - new Date(b.time).getTime();
+            case 'latest': // Senast (Datum fallande)
+                return new Date(b.time).getTime() - new Date(a.time).getTime();
+            case 'popular': // Flest anmälda (Högst siffra först)
+                // OBS: Antar att 'attendees' är en siffra. Om det är en array, använd .length
+                return ((b as any).attendees || 0) - ((a as any).attendees || 0);
+            default:
+                return 0;
+        }
+    });
+  }, [events, userLocation, filterType, filterAge, filterDistance, filterFree, filterToday, sortBy]);
 
 
-// Uppdaterad funktion för att skapa en "Nål/Pin"-design
-const createCustomIcon = (type: string, isSelected: boolean) => {
+  const createCustomIcon = (type: string, isSelected: boolean) => {
     const emoji = getEventEmoji(type);
-    
-    // Om vald: lila kant, annars vit kant.
     const borderColor = isSelected ? 'border-indigo-600' : 'border-white';
-    
-    // Animationer och z-index
     const containerClasses = isSelected 
       ? 'animate-bounce scale-110 z-50' 
-      : 'hover:scale-105 z-10'; // Lade till liten hover-effekt också
+      : 'hover:scale-105 z-10'; 
 
     return L.divIcon({
       className: 'custom-marker',
       html: `
         <div class="relative flex flex-col items-center ${containerClasses} transition-transform duration-300 filter drop-shadow-md">
-            <div class="relative z-20 w-7 h-10 rounded-full bg-white ${borderColor} flex items-center justify-center text-xl">
+            <div class="relative z-20 w-8 h-8 rounded-full bg-white border-2 ${borderColor} flex items-center justify-center text-lg">
                 ${emoji}
             </div>
-            
-            <div class="w-3 h-3 bg-white  ${borderColor} transform rotate-45 -mt-2 z-10"></div>
+            <div class="w-3 h-3 bg-white border-r-2 border-b-2 ${borderColor} transform rotate-45 -mt-2 z-10"></div>
         </div>
       `,
-      iconSize: [40, 50],   // Justerad storlek (lite högre pga spetsen)
-      iconAnchor: [20, 48], // X=Mitten(20), Y=Längst ner på spetsen(48)
-      popupAnchor: [0, -50] // Om du lägger till popups hamnar de ovanför nålen
+      iconSize: [32, 42],
+      iconAnchor: [16, 40],
+      popupAnchor: [0, -45]
     });
 };
 
@@ -130,18 +130,18 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
       setFilterDistance('10');
       setFilterFree(false);
       setFilterToday(false);
+      setSortBy('closest');
   };
 
   return (
     <Layout>
       {/* FILTER BAR */}
-      <div className="sticky top-16 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
+      <div className="sticky z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
             
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
                     
-                    {/* FILTER BUTTONS (Mobile & Desktop) */}
                     <select 
                         value={filterType} 
                         onChange={(e) => setFilterType(e.target.value)}
@@ -158,7 +158,7 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
 
                     <button 
                         onClick={() => setFilterToday(!filterToday)}
-                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2
+                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
                             ${filterToday 
                                 ? 'bg-indigo-600 text-white border-indigo-600' 
                                 : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
@@ -169,7 +169,7 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
 
                     <button 
                         onClick={() => setFilterFree(!filterFree)}
-                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2
+                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
                             ${filterFree 
                                 ? 'bg-indigo-600 text-white border-indigo-600' 
                                 : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
@@ -186,26 +186,36 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
                     </button>
                 </div>
 
-                {/* VIEW TOGGLE */}
                 <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0 ml-2">
-                    <button 
-                        onClick={() => setView('list')}
-                        className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
-                    >
+                    <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
                         <List size={20} />
                     </button>
-                    <button 
-                        onClick={() => setView('map')}
-                        className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
-                    >
+                    <button onClick={() => setView('map')} className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
                         <MapIcon size={20} />
                     </button>
                 </div>
             </div>
 
-            {/* EXPANDED FILTERS (Mobile & Desktop) */}
+            {/* EXPANDED FILTERS & SORT */}
             <div className={`flex flex-wrap gap-3 items-center text-sm ${showFiltersMobile ? 'block' : 'hidden md:flex'}`}>
                 
+                {/* NYTT: Sorteringsdropdown */}
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
+                    <span className="text-xs font-bold text-slate-400 uppercase px-2 flex items-center gap-1">
+                         <ArrowUpDown size={12} /> Sortera
+                    </span>
+                    <select 
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-transparent font-bold text-slate-700 dark:text-white outline-none pr-2 cursor-pointer"
+                    >
+                        <option value="closest">Närmast</option>
+                        <option value="soonest">Tid kvar</option>
+                        <option value="latest">Senast</option>
+                        <option value="popular">Anmälda</option>
+                    </select>
+                </div>
+
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg">
                     <span className="text-xs font-bold text-slate-400 uppercase px-2">Avstånd</span>
                     <select 
@@ -235,7 +245,7 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
                     </select>
                 </div>
                 
-                {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '10') && (
+                {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '10' || sortBy !== 'closest') && (
                     <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 ml-auto">
                         <RefreshCw size={12} /> Rensa
                     </button>
@@ -245,9 +255,7 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="max-w-6xl mx-auto p-4 h-[calc(100vh-140px)]">
-        
         {loading ? (
             <div className="text-center py-20 text-slate-500">Laddar events...</div>
         ) : filteredEvents.length === 0 ? (
@@ -269,14 +277,11 @@ const createCustomIcon = (type: string, isSelected: boolean) => {
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapReCenter center={userLocation} />
                     {filteredEvents.map(evt => {
-                        // Kolla om detta event är det som är valt just nu
                         const isSelected = selectedEvent?.id === evt.id;
-
                         return (
                             <Marker 
                                 key={evt.id} 
                                 position={[evt.lat, evt.lng]}
-                                // Skicka med true/false till funktionen
                                 icon={createCustomIcon(evt.type, isSelected)}
                                 eventHandlers={{ 
                                     click: () => setSelectedEvent(evt) 

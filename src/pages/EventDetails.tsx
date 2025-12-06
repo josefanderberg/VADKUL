@@ -137,7 +137,7 @@ if (isJoined) {
       <div className="max-w-3xl mx-auto pb-24">
         
         {/* TOP NAV */}
-        <div className="p-4 flex items-center justify-between sticky top-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur z-20">
+        <div className="p-4 flex items-center justify-between sticky bg-white/90 dark:bg-slate-900/90 backdrop-blur z-20">
              <button onClick={() => navigate(-1)} className="flex items-center text-slate-500 hover:text-indigo-600 transition-colors">
                 <ChevronLeft size={20} />
                 <span className="font-bold text-sm ml-1">Tillbaka</span>
