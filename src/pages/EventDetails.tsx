@@ -18,6 +18,7 @@ import type { AppEvent } from '../types';
 import { formatTime } from '../utils/dateUtils';
 import { getEventEmoji, getEventColor } from '../utils/mapUtils';
 import { notificationService } from '../services/notificationService';
+import { userService } from '../services/userService';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -72,10 +73,17 @@ export default function EventDetails() {
                 setJoining(false);
                 return;
             }
+            
+            // 1. Hämta användarens profil för att få tag på bilden (verificationImage)
+            const userProfile = await userService.getUserProfile(user.uid);
+            const correctPhotoURL = userProfile?.verificationImage || user.photoURL || null;
+
+            // 2. Spara med rätt bild
             newAttendees.push({
                 uid: user.uid,
                 email: user.email || '',
-                displayName: user.displayName || 'Deltagare'
+                displayName: user.displayName || 'Deltagare',
+                photoURL: correctPhotoURL // <--- Nu används bilden från databasen
             });
             
             toast.success("Hurra! Du är anmäld! 🚀");
@@ -105,7 +113,6 @@ export default function EventDetails() {
     }
   };
 
-  // Funktion för att sparka ut en deltagare
   const handleKickAttendee = async (attendeeUid: string, attendeeName: string) => {
     if (!event) return;
     
@@ -114,11 +121,7 @@ export default function EventDetails() {
     }
 
     try {
-        const newAttendees = event.attendees.filter(a => {
-            const uid = (typeof a === 'object' && a !== null) ? a.uid : null;
-            return uid !== attendeeUid;
-        });
-
+        const newAttendees = event.attendees.filter(a => a.uid !== attendeeUid);
         const updatedEvent = { ...event, attendees: newAttendees };
         
         setEvent(updatedEvent);
@@ -181,9 +184,13 @@ export default function EventDetails() {
                         }}
                         className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 -ml-2 rounded-lg transition-colors group text-left"
                     >
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                            {event.host.initials}
-                        </div>
+                        {event.host.photoURL ? (
+                             <img src={event.host.photoURL} className="w-6 h-6 rounded-full object-cover" alt={event.host.name} />
+                        ) : (
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                                {event.host.initials}
+                            </div>
+                        )}
                         <span className="font-semibold group-hover:text-indigo-600 group-hover:underline decoration-indigo-600 underline-offset-2">
                             {event.host.name}
                         </span>
@@ -246,7 +253,7 @@ export default function EventDetails() {
                         </p>
                     </div>
 
-                    {/* ATTENDEES LISTA - Uppdaterad logik för Host/Visitor */}
+                    {/* ATTENDEES LISTA - Uppdaterad för Avatarer */}
                     <div className="mb-8 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                         <div className="flex justify-between items-end mb-2">
                             <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
@@ -266,34 +273,44 @@ export default function EventDetails() {
                             <span className="text-sm text-slate-400 italic">Inga anmälda ännu.</span>
                         ) : (
                             <div className={isHost ? "flex flex-col gap-2" : "flex flex-wrap gap-2"}>
-                                {event.attendees.map((attendee: any, i) => {
+                                {event.attendees.map((attendee, i) => {
+                                    // Säkra upp objektet
                                     const isObject = typeof attendee === 'object' && attendee !== null;
-                                    const displayStr = isObject ? (attendee.displayName || attendee.email || 'Anonym') : attendee;
+                                    const displayStr = isObject ? (attendee.displayName || attendee.email || 'Anonym') : 'Okänd';
                                     const uid = isObject ? attendee.uid : null;
-                                    
+                                    const photo = isObject ? attendee.photoURL : null;
                                     const isMe = uid === user?.uid;
 
+                                    // Gemensam Avatar-komponent
+                                    const Avatar = photo ? (
+                                        <img 
+                                            src={photo} 
+                                            alt={displayStr} 
+                                            className={isHost ? "w-8 h-8 rounded-full object-cover" : "w-6 h-6 rounded-full object-cover"}
+                                        />
+                                    ) : (
+                                        <div className={`${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}>
+                                            {displayStr.charAt(0).toUpperCase()}
+                                        </div>
+                                    );
+
                                     if (isHost) {
-                                        // HOST VIEW
+                                        // HOST VIEW: Lista med Kick-knapp
                                         return (
                                             <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
                                                 <div 
                                                     className="flex items-center gap-3 cursor-pointer"
-                                                    onClick={() => {
-                                                        if (uid) navigate(`/profile/${uid}`);
-                                                    }}
+                                                    onClick={() => uid && navigate(`/profile/${uid}`)}
                                                 >
-                                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold">
-                                                        {displayStr.charAt(0).toUpperCase()}
-                                                    </div>
+                                                    {Avatar}
                                                     <span className="font-medium text-slate-900 dark:text-slate-100">
                                                         {displayStr} {isMe && "(Du)"}
                                                     </span>
                                                 </div>
 
-                                                {!isMe && (
+                                                {!isMe && uid && (
                                                     <button 
-                                                        onClick={() => uid && handleKickAttendee(uid, displayStr)}
+                                                        onClick={() => handleKickAttendee(uid, displayStr)}
                                                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                                         title="Ta bort från eventet"
                                                     >
@@ -303,22 +320,18 @@ export default function EventDetails() {
                                             </div>
                                         );
                                     } else {
-                                        // VISITOR VIEW
+                                        // VISITOR VIEW: Chips/Badges
                                         return (
                                             <button 
                                                 key={i} 
-                                                onClick={() => {
-                                                    if (uid) navigate(`/profile/${uid}`);
-                                                }}
+                                                onClick={() => uid && navigate(`/profile/${uid}`)}
                                                 className={`flex items-center gap-2 bg-white dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
                                                     ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
                                                 `}
                                             >
-                                                <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
-                                                    {displayStr && displayStr.length > 0 ? displayStr.charAt(0).toUpperCase() : '?'}
-                                                </div>
+                                                {Avatar}
                                                 <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                                                    {displayStr.includes('@') ? displayStr.split('@')[0] : displayStr}
+                                                    {displayStr.split(' ')[0]}
                                                 </span>
                                             </button>
                                         );

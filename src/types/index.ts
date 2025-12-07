@@ -53,6 +53,7 @@ export interface EventAttendee {
   uid: string;
   email: string;
   displayName: string;
+  photoURL?: string | null;
 }
 
 export interface AppEvent {
@@ -71,7 +72,7 @@ export interface AppEvent {
   maxAge: number;
   ageCategory: string;
   host: EventHost;
-  attendees: EventAttendee[]; // <--- ÄNDRAT FRÅN string[] TILL EventAttendee[]
+  attendees: EventAttendee[]; 
 }
 
 export interface AppNotification {

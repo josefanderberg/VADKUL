@@ -185,8 +185,10 @@ export default function CreateEvent() {
               attendees: [{
                 uid: user.uid,
                 email: user.email || '',
-                displayName: user.displayName || 'Värd'
-            }]
+                displayName: user.displayName || 'Värd',
+                // ÄNDRING: Nu kollar vi userProfile också
+                photoURL: userProfile.verificationImage || user.photoURL || null 
+              }]
         };
 
           await eventService.create(newEvent);

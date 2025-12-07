@@ -1,17 +1,17 @@
 // src/components/layout/Navbar.tsx
-import { useState, useEffect } from 'react'; // <--- NYTT: Importera useState/useEffect
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { userService } from '../../services/userService'; // <--- NYTT: För att hämta bild
-import NotificationsMenu from '../ui/NotificationsMenu'; // <--- NYTT: Importera menyn
+import { userService } from '../../services/userService';
+import NotificationsMenu from '../ui/NotificationsMenu';
 import {
-  Sun, Moon, LogOut,
+  Sun, Moon,
   Plus, MessageSquare
-} from 'lucide-react';
+} from 'lucide-react'; // Tog bort LogOut från importen
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth(); // Tog bort logout härifrån då den inte används
   const { theme, toggleTheme } = useTheme();
   
   // State för bilden i navbaren
@@ -50,7 +50,14 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
 
-          {/* THEME TOGGLE */}
+          {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
+          {user && (
+            <Link to="/create" className="p-2 text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Skapa Event">
+                <Plus size={24} strokeWidth={2.5} />
+            </Link>
+          )}
+
+          {/* 2. THEME TOGGLE */}
           <button
             onClick={toggleTheme}
             className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
@@ -59,14 +66,10 @@ export default function Navbar() {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
+          {/* 3. RESTERANDE MENY (Notiser, Chatt, Profil eller Login) */}
           {user ? (
             <>
-              {/* SKAPA EVENT */}
-              <Link to="/create" className="p-2 text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Skapa Event">
-                <Plus size={24} strokeWidth={2.5} />
-              </Link>
-
-              {/* NOTISER (Nu med riktig komponent) */}
+              {/* NOTISER */}
               <NotificationsMenu /> 
 
               {/* CHATT */}
@@ -77,7 +80,7 @@ export default function Navbar() {
               {/* PROFILBILD */}
               <Link to="/profile" className="block ml-1">
                 {navImage ? (
-                  // OM BILD FINNS (Hämtad från Firestore eller Auth)
+                  // OM BILD FINNS
                   <img
                     src={navImage}
                     alt="Profil"
@@ -90,11 +93,6 @@ export default function Navbar() {
                   </div>
                 )}
               </Link>
-
-              {/* LOGGA UT */}
-              <button onClick={() => logout()} className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Logga ut">
-                <LogOut size={20} />
-              </button>
             </>
           ) : (
             /* LOGGA IN KNAPP */
