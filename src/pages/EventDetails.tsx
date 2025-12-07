@@ -5,11 +5,13 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   Clock, MapPin, ChevronLeft, 
-  CheckCircle2, Share2, AlertCircle 
+  CheckCircle2, Share2, AlertCircle,
+  MessageCircle, Info // Importerade ikoner för flikar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import Layout from '../components/layout/Layout';
+import EventChat from '../components/events/EventChat'; // Din nya komponent
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types'; 
@@ -26,6 +28,9 @@ export default function EventDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [joining, setJoining] = useState(false);
+  
+  // State för aktiv flik ('info' eller 'chat')
+  const [activeTab, setActiveTab] = useState<'info' | 'chat'>('info');
 
   // Ladda eventet
   useEffect(() => {
@@ -42,8 +47,13 @@ export default function EventDetails() {
     load();
   }, [id]);
 
-  // Hantera Anmälan/Avanmälan (UPPDATERAD FÖR OBJEKT)
-  const handleJoinToggle = async () => {
+  // Beräknade värden (Flyttade upp för att kunna användas i handleJoinToggle och render)
+  const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
+  const isFull = event ? event.attendees.length >= event.maxParticipants : false;
+  const percentFull = event ? Math.min(100, (event.attendees.length / event.maxParticipants) * 100) : 0;
+
+// Hantera Anmälan/Avanmälan
+const handleJoinToggle = async () => {
     if (!user) {
         toast.error("Du måste logga in för att anmäla dig!");
         return;
@@ -52,15 +62,14 @@ export default function EventDetails() {
 
     setJoining(true);
     try {
-        // KOLLA OM JAG ÄR MED (Jämför email eller UID)
-        const isJoined = event.attendees.some(a => a.email === user.email);
         let newAttendees = [...event.attendees];
 
         if (isJoined) {
             // AVANMÄL: Ta bort mig från listan
             newAttendees = newAttendees.filter(a => a.email !== user.email);
+            toast.success("Du har avbokat din plats.");
         } else {
-            // ANMÄL: Lägg till mig som OBJEKT
+            // ANMÄL: Lägg till mig
             if (newAttendees.length >= event.maxParticipants) {
                 toast.error("Tyvärr, eventet är fullbokat.");
                 setJoining(false);
@@ -71,6 +80,22 @@ export default function EventDetails() {
                 email: user.email || '',
                 displayName: user.displayName || 'Deltagare'
             });
+            
+            toast.success("Hurra! Du är anmäld! 🚀");
+
+            // --- SKICKA NOTIS TILL VÄRDEN ---
+            if (event.host.uid && event.host.uid !== user.uid) {
+                await notificationService.send({
+                    recipientId: event.host.uid,
+                    senderId: user.uid,
+                    senderName: user.displayName || user.email || 'Någon',
+                    // ÄNDRING HÄR: Byt "|| undefined" mot "|| null"
+                    senderImage: user.photoURL || null, 
+                    type: 'join',
+                    message: `har anmält sig till "${event.title}"!`,
+                    link: `/event/${event.id}`
+                });
+            }
         }
 
         // Uppdatera lokalt state
@@ -79,43 +104,18 @@ export default function EventDetails() {
 
         // Spara till Firebase
         await eventService.update(updatedEvent);
-
-// ... inuti handleJoinToggle, i else-blocket (när man går med) ...
-
-if (isJoined) {
-    toast.success("Du har avbokat din plats.");
-} else {
-    toast.success("Hurra! Du är anmäld! 🚀");
-
-    // --- SKICKA NOTIS TILL VÄRDEN ---
-    if (event.host.uid && event.host.uid !== user.uid) {
-        await notificationService.send({
-            recipientId: event.host.uid,
-            senderId: user.uid,
-            senderName: user.displayName || user.email || 'Någon',
-            senderImage: user.photoURL || undefined, // Om du har detta i Auth-objektet
-            type: 'join',
-            message: `har anmält sig till "${event.title}"!`,
-            link: `/event/${event.id}`
-        });
-    }
-}
         
     } catch (err) {
         console.error("Kunde inte uppdatera anmälan:", err);
+        // Visa det faktiska felet i konsolen för enklare debugging
+        toast.error("Något gick fel vid sparandet.");
     } finally {
         setJoining(false);
     }
   };
-
+  
   if (loading) return <Layout><div className="p-10 text-center">Laddar...</div></Layout>;
   if (error || !event) return <Layout><div className="p-10 text-center text-red-500">{error}</div></Layout>;
-
-  // Beräknade värden (UPPDATERAD LOGIK)
-  const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
-  
-  const isFull = event.attendees.length >= event.maxParticipants;
-  const percentFull = Math.min(100, (event.attendees.length / event.maxParticipants) * 100);
   
   // Styling
   const emoji = getEventEmoji(event.type);
@@ -149,7 +149,7 @@ if (isJoined) {
 
         <div className="px-4 md:px-8">
             
-            {/* TITEL & HOST */}
+            {/* TITEL & HOST (Gemensamt för båda flikarna) */}
             <div className="flex gap-4 items-start mb-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-sm border border-slate-100 dark:border-slate-700 shrink-0 ${bgClass} ${textClass}`}>
                     {emoji}
@@ -175,112 +175,159 @@ if (isJoined) {
                         </span>
                         {event.host.verified && <CheckCircle2 size={14} className="text-blue-500" />}
                     </button>
-                    {/* --------------------- */}
-
                 </div>
             </div>
 
-            {/* INFO GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
-                        <Clock size={20} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">Tid</p>
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">{formatTime(event.time)}</p>
-                    </div>
-                </div>
-                
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
-                        <MapPin size={20} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">Plats</p>
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">{event.location.name}</p>
-                    </div>
-                </div>
+            {/* --- FLIKAR (NAVIGATION) --- */}
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+                <button
+                onClick={() => setActiveTab('info')}
+                className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 
+                    ${activeTab === 'info' 
+                    ? 'border-indigo-600 text-indigo-600' 
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+                >
+                <Info size={18} /> Info
+                </button>
+                <button
+                onClick={() => setActiveTab('chat')}
+                className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 
+                    ${activeTab === 'chat' 
+                    ? 'border-indigo-600 text-indigo-600' 
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+                >
+                <MessageCircle size={18} /> Gruppchatt
+                </button>
             </div>
 
-            {/* BESKRIVNING */}
-            <div className="mb-8">
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Om eventet</h3>
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {event.description || "Ingen beskrivning angiven."}
-                </p>
-            </div>
 
-            {/* ATTENDEES (KLICKBARA) */}
-            <div className="mb-8 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
-                <div className="flex justify-between items-end mb-2">
-                    <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
-                    <span className="text-sm font-bold text-slate-500">
-                        {event.attendees.length} / {event.maxParticipants}
-                    </span>
-                </div>
-                
-                <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-4">
-                    <div 
-                        className={`h-full ${isFull ? 'bg-rose-500' : 'bg-emerald-500'} transition-all duration-500`} 
-                        style={{ width: `${percentFull}%` }} 
-                    />
-                </div>
+            {/* --- FLIKINNEHÅLL --- */}
+            
+            {activeTab === 'info' ? (
+                // === INFO FLIKEN ===
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {/* INFO GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
+                            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                                <Clock size={20} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Tid</p>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200">{formatTime(event.time)}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
+                            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                                <MapPin size={20} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Plats</p>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200">{event.location.name}</p>
+                            </div>
+                        </div>
+                    </div>
 
-                <div className="flex flex-wrap gap-2">
-                    {event.attendees.length === 0 ? (
-                        <span className="text-sm text-slate-400 italic">Inga anmälda ännu. Bli den första!</span>
+                    {/* BESKRIVNING */}
+                    <div className="mb-8">
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Om eventet</h3>
+                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {event.description || "Ingen beskrivning angiven."}
+                        </p>
+                    </div>
+
+                    {/* ATTENDEES (KLICKBARA) */}
+                    <div className="mb-8 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <div className="flex justify-between items-end mb-2">
+                            <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
+                            <span className="text-sm font-bold text-slate-500">
+                                {event.attendees.length} / {event.maxParticipants}
+                            </span>
+                        </div>
+                        
+                        <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-4">
+                            <div 
+                                className={`h-full ${isFull ? 'bg-rose-500' : 'bg-emerald-500'} transition-all duration-500`} 
+                                style={{ width: `${percentFull}%` }} 
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {event.attendees.length === 0 ? (
+                                <span className="text-sm text-slate-400 italic">Inga anmälda ännu. Bli den första!</span>
+                            ) : (
+                                event.attendees.map((attendee: any, i) => {
+                                    // SÄKERHETSKOLL: Hantera både gamla (string) och nya (object) dataformat
+                                    const isObject = typeof attendee === 'object' && attendee !== null;
+                                    const displayStr = isObject ? (attendee.displayName || attendee.email || 'Anonym') : attendee;
+                                    const uid = isObject ? attendee.uid : null;
+
+                                    return (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => {
+                                                if (uid) navigate(`/profile/${uid}`);
+                                                else toast.error("Kan inte visa profil (gammalt dataformat)");
+                                            }}
+                                            className={`flex items-center gap-2 bg-white dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
+                                                ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
+                                            `}
+                                        >
+                                            <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
+                                                {displayStr && displayStr.length > 0 ? displayStr.charAt(0).toUpperCase() : '?'}
+                                            </div>
+                                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                {displayStr.includes('@') ? displayStr.split('@')[0] : displayStr}
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* KARTA */}
+                    <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
+                        <MapContainer 
+                            center={[event.lat, event.lng]} 
+                            zoom={14} 
+                            scrollWheelZoom={false}
+                            dragging={false}
+                            style={{ height: '100%', width: '100%' }}
+                        >
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <Marker position={[event.lat, event.lng]} icon={markerIcon} />
+                        </MapContainer>
+                    </div>
+                </div>
+            ) : (
+                // === CHATT FLIKEN ===
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {!isJoined ? (
+                        <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                            <div className="w-16 h-16 bg-indigo-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-500">
+                                <MessageCircle size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                                Chatten är låst
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mb-6">
+                                Du måste anmäla dig till eventet för att kunna läsa och skriva i gruppchatten.
+                            </p>
+                            <button 
+                                onClick={handleJoinToggle}
+                                disabled={joining || isFull}
+                                className="bg-indigo-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                            >
+                                {isFull ? 'Eventet är fullt' : 'Anmäl mig nu'}
+                            </button>
+                        </div>
                     ) : (
-                        event.attendees.map((attendee: any, i) => {
-                            // SÄKERHETSKOLL: Hantera både gamla (string) och nya (object) dataformat
-                            const isObject = typeof attendee === 'object' && attendee !== null;
-                            
-                            // Hämta namn/email säkert
-                            const displayStr = isObject 
-                                ? (attendee.displayName || attendee.email || 'Anonym') 
-                                : attendee; // Om det är en sträng (gammal data)
-                            
-                            // Hämta UID säkert
-                            const uid = isObject ? attendee.uid : null;
-
-                            return (
-                                <button 
-                                    key={i} 
-                                    onClick={() => {
-                                        if (uid) navigate(`/profile/${uid}`);
-                                        else toast.error("Kan inte visa profil (gammalt dataformat)");
-                                    }}
-                                    className={`flex items-center gap-2 bg-white dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
-                                        ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
-                                    `}
-                                >
-                                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
-                                        {/* Nu kraschar inte charAt eftersom displayStr alltid är en sträng */}
-                                        {displayStr && displayStr.length > 0 ? displayStr.charAt(0).toUpperCase() : '?'}
-                                    </div>
-                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                                        {displayStr.includes('@') ? displayStr.split('@')[0] : displayStr}
-                                    </span>
-                                </button>
-                            );
-                        })
+                        <EventChat eventId={event.id} />
                     )}
                 </div>
-            </div>
-
-            {/* KARTA */}
-            <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
-                 <MapContainer 
-                    center={[event.lat, event.lng]} 
-                    zoom={14} 
-                    scrollWheelZoom={false}
-                    dragging={false}
-                    style={{ height: '100%', width: '100%' }}
-                 >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker position={[event.lat, event.lng]} icon={markerIcon} />
-                 </MapContainer>
-            </div>
+            )}
 
         </div>
 

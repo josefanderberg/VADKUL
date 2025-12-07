@@ -11,23 +11,9 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
-import { getEventColor } from '../utils/mapUtils';
-import type { AppEvent } from '../types'; 
+import type { AppEvent } from '../types';
+import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 
-const EVENT_TYPES = [
-  { id: 'party', label: 'Fest & Förfest', emoji: '🍻' },
-  { id: 'social', label: 'Häng & Socialt', emoji: '☕' },
-  { id: 'game', label: 'Spel & Gaming', emoji: '🎮' },
-  { id: 'study', label: 'Pluggstuga', emoji: '📚' },
-  { id: 'campus', label: 'Kåren & Nation', emoji: '🎓' },
-  { id: 'help_move', label: 'Flytt & Bärhjälp', emoji: '📦' },
-  { id: 'help_borrow', label: 'Låna/Hyra', emoji: '🔧' },
-  { id: 'transport', label: 'Samåkning', emoji: '🚗' },
-  { id: 'food', label: 'Mat & Bak', emoji: '🍕' },
-  { id: 'sport', label: 'Sport & Träning', emoji: '⚽' },
-  { id: 'market', label: 'Köp & Sälj', emoji: '💸' },
-  { id: 'other', label: 'Övrigt', emoji: '✨' },
-];
 
 const AGE_CATEGORIES = [
   { id: 'family', label: 'Familj', min: 0, max: 99 },
@@ -172,7 +158,7 @@ export default function CreateEvent() {
               lat: formData.lat,
               lng: formData.lng,
               time: finalDate,
-              type: formData.type,
+              type: formData.type as EventCategoryType,
               price: Number(formData.price),
               minParticipants: Number(formData.minParticipants),
               maxParticipants: Number(formData.maxParticipants),
@@ -253,23 +239,24 @@ export default function CreateEvent() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                 <h3 className="text-lg font-bold mb-4 dark:text-white">Vad vill du hitta på?</h3>
                 <div className="flex flex-wrap gap-3 justify-center">
-                    {EVENT_TYPES.map(t => {
-                        const isSelected = formData.type === t.id;
-                        // Hämta färg från util, men vi gör en "ring" effekt vid vald
-                        const colorClass = getEventColor(t.id); // ex "bg-green-100 text-green-600"
-                        const bg = isSelected ? 'bg-indigo-600 text-white shadow-lg scale-105' : colorClass;
-                        
-                        return (
-                            <button
-                                key={t.id}
-                                onClick={() => setFormData({ ...formData, type: t.id })}
-                                className={`px-4 py-3 rounded-full font-bold transition-all flex items-center gap-2 border-2 ${isSelected ? 'border-indigo-600' : 'border-transparent'} ${bg}`}
-                            >
-                                <span>{t.emoji}</span>
-                                <span>{t.label}</span>
-                            </button>
-                        );
-                    })}
+                {CATEGORY_LIST.map(cat => {
+                const isSelected = formData.type === cat.id;
+                // Använd färgen från objektet
+                const bg = isSelected 
+                    ? 'bg-indigo-600 text-white shadow-lg scale-105' 
+                    : `${cat.color} border-transparent`; // Använd cat.color här
+                
+                return (
+                    <button
+                        key={cat.id}
+                        onClick={() => setFormData({ ...formData, type: cat.id })}
+                        className={`px-4 py-3 rounded-full font-bold transition-all flex items-center gap-2 border-2 ${isSelected ? 'border-indigo-600' : ''} ${bg}`}
+                    >
+                        <span>{cat.emoji}</span>
+                        <span>{cat.label}</span>
+                    </button>
+                );
+            })}
                 </div>
             </div>
         )}

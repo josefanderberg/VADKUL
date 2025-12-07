@@ -1,4 +1,6 @@
 // src/utils/mapUtils.ts
+import { EVENT_CATEGORIES } from './categories';
+import type { EventCategoryType } from './categories';
 
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371; // Jordens radie i km
@@ -11,28 +13,17 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 }
 
 export const getEventEmoji = (type: string): string => {
-    switch (type) {
-        case 'party': return '🍻';
-        case 'social': return '☕';
-        case 'game': return '🎮';
-        case 'sport': return '⚽';
-        case 'study': return '📚';
-        case 'food': return '🍕';
-        case 'help_move': return '📦';
-        case 'transport': return '🚗';
-        default: return '🌟';
-    }
+    // Vi castar type till vår key, och faller tillbaka på 'other' om den inte finns
+    const category = EVENT_CATEGORIES[type as EventCategoryType];
+    return category ? category.emoji : '🌟';
 };
 
 export const getEventColor = (type: string): string => {
-    // Returnerar Tailwind-klasser för bakgrund/text
-    switch (type) {
-        case 'party': return 'bg-indigo-100 text-indigo-600';
-        case 'social': return 'bg-emerald-100 text-emerald-600';
-        case 'sport': return 'bg-green-100 text-green-600';
-        case 'game': return 'bg-purple-100 text-purple-600';
-        case 'food': return 'bg-pink-100 text-pink-600';
-        case 'help_move': return 'bg-red-100 text-red-600';
-        default: return 'bg-slate-100 text-slate-600';
-    }
+    const category = EVENT_CATEGORIES[type as EventCategoryType];
+    return category ? category.color : 'bg-slate-100 text-slate-600';
+};
+
+export const getEventLabel = (type: string): string => {
+    const category = EVENT_CATEGORIES[type as EventCategoryType];
+    return category ? category.label : 'Event';
 };

@@ -1,5 +1,6 @@
 // src/types/index.ts
 import { Timestamp } from 'firebase/firestore';
+import type { EventCategoryType } from '../utils/categories';
 
 export interface UserProfile {
   uid: string; // Koppling till Auth
@@ -60,7 +61,7 @@ export interface AppEvent {
   lat: number;
   lng: number;
   time: Date;
-  type: string;
+  type: EventCategoryType; 
   price: number;
   minParticipants: number;
   maxParticipants: number;
@@ -76,7 +77,7 @@ export interface AppNotification {
   recipientId: string; // Vem ska ha notisen?
   senderId?: string;   // Vem skickade den? (valfritt)
   senderName?: string; // Namn för visning
-  senderImage?: string;// Bild för visning
+  senderImage?: string | null;
   type: 'join' | 'leave' | 'chat' | 'system';
   message: string;
   link?: string;       // Vart ska man hamna om man klickar?

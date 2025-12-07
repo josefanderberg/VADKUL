@@ -8,6 +8,7 @@ import EventCard from '../components/ui/EventCard';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, getEventEmoji } from '../utils/mapUtils';
+import { EVENT_CATEGORIES, CATEGORY_LIST } from '../utils/categories';
 import { X, Map as MapIcon, List, Filter, Calendar, DollarSign, RefreshCw, ArrowUpDown } from 'lucide-react';
 
 // --- LEAFLET FIX ---
@@ -45,6 +46,18 @@ export default function Home() {
   const [filterToday, setFilterToday] = useState(false);
   const [sortBy, setSortBy] = useState('closest'); // NYTT: State för sortering
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
+
+  const markerColors: Record<string, string> = {
+    party: 'bg-indigo-500',  // Fest
+    study: 'bg-blue-500',    // Plugg
+    campus: 'bg-red-500',    // Nation/Kår
+    social: 'bg-amber-500',  // Socialt
+    game:   'bg-purple-500', // Spel
+    sport:  'bg-emerald-500',// Sport
+    food:   'bg-pink-500',   // Mat
+    market: 'bg-lime-600',   // Köp/Sälj
+    other:  'bg-slate-500',  // Övrigt
+  };
 
   useEffect(() => {
     loadData();
@@ -102,24 +115,30 @@ export default function Home() {
 
 
   const createCustomIcon = (type: string, isSelected: boolean) => {
-    const emoji = getEventEmoji(type);
-    const borderColor = isSelected ? 'border-indigo-600' : 'border-white';
+    // Hämta kategori-objektet säkert
+    const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
+    
+    // Hämta data direkt från källan
+    const emoji = category.emoji;
+    const bgClass = category.markerColor; // Nu finns denna property!
+
     const containerClasses = isSelected 
-      ? 'animate-bounce scale-110 z-50' 
-      : 'hover:scale-105 z-10'; 
+      ? 'scale-125 z-50 drop-shadow-xl -translate-y-2' 
+      : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1';
 
     return L.divIcon({
-      className: 'custom-marker',
+      className: 'custom-marker-simple',
       html: `
-        <div class="relative flex flex-col items-center ${containerClasses} transition-transform duration-300 filter drop-shadow-md">
-            <div class="relative z-20 w-8 h-8 rounded-full bg-white border-2 ${borderColor} flex items-center justify-center text-lg">
+        <div class="relative flex flex-col items-center transition-all duration-300 ${containerClasses}">
+            <div class="w-10 h-10 rounded-full ${bgClass} border-[3px] border-white shadow-md flex items-center justify-center text-xl text-white">
                 ${emoji}
             </div>
-            <div class="w-3 h-3 bg-white border-r-2 border-b-2 ${borderColor} transform rotate-45 -mt-2 z-10"></div>
+            <div class="w-3 h-3 ${bgClass} border-r-[3px] border-b-[3px] border-white transform rotate-45 -mt-1.5 z-0"></div>
+            <div class="absolute -bottom-2 w-6 h-1 bg-black/20 blur-[2px] rounded-full"></div>
         </div>
       `,
-      iconSize: [32, 42],
-      iconAnchor: [16, 40],
+      iconSize: [40, 50],
+      iconAnchor: [20, 45],
       popupAnchor: [0, -45]
     });
 };
@@ -142,19 +161,20 @@ export default function Home() {
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
                     
-                    <select 
-                        value={filterType} 
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="bg-slate-100 dark:bg-slate-700 border-transparent rounded-xl text-sm p-2 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                        <option value="all">Alla kategorier</option>
-                        <option value="party">Fest 🍻</option>
-                        <option value="social">Socialt ☕</option>
-                        <option value="sport">Sport ⚽</option>
-                        <option value="game">Spel 🎮</option>
-                        <option value="food">Mat 🍕</option>
-                        <option value="other">Övrigt ✨</option>
-                    </select>
+                <select 
+                    value={filterType} 
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="bg-slate-100 dark:bg-slate-700 border-transparent rounded-xl text-sm p-2 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                    <option value="all">Alla kategorier</option>
+                    
+                    {/* Vi loopar igenom din centrala lista så alla nya kategorier syns här automatiskt */}
+                    {CATEGORY_LIST.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                            {cat.label} {cat.emoji}
+                        </option>
+                    ))}
+                </select>
 
                     <button 
                         onClick={() => setFilterToday(!filterToday)}
