@@ -16,9 +16,7 @@ import { eventService } from '../services/eventService';
 import { userService } from '../services/userService'; 
 import type { AppEvent, UserProfile } from '../types'; 
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
-// --- NY IMPORT: Lägg till loadLocationFromLocalStorage
 import { loadLocationFromLocalStorage } from '../utils/mapUtils';
-
 
 const AGE_CATEGORIES = [
   { id: 'family', label: 'Familj', min: 0, max: 99 },
@@ -61,9 +59,7 @@ export default function CreateEvent() {
   
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  // --- NY LOGIK: Hämta sparad plats vid start ---
-  // Vi läser från localStorage direkt här.
-  // Om det finns en sparad plats från Home, använd den som default.
+  // Hämta sparad plats vid start
   const savedLocation = useMemo(() => loadLocationFromLocalStorage(), []);
 
   const [step, setStep] = useState(1);
@@ -75,7 +71,6 @@ export default function CreateEvent() {
     type: '',
     title: '',
     description: '',
-    // Använd sparad lat/lng om finns, annars default
     lat: savedLocation ? savedLocation.lat : 56.8790, 
     lng: savedLocation ? savedLocation.lng : 14.8059,
     locationName: '',
@@ -91,9 +86,7 @@ export default function CreateEvent() {
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Hämta position vid start ENDAST om vi inte har en sparad plats
   useEffect(() => {
-    // Om vi inte har någon sparad plats, försök ta GPS
     if (!savedLocation && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
@@ -129,8 +122,8 @@ export default function CreateEvent() {
   const validateStep = (currentStep: number) => {
       switch(currentStep) {
           case 1: 
-          if (!formData.type) { toast.error("Välj en kategori först!"); return false; 
-          }   return true;
+            if (!formData.type) { toast.error("Välj en kategori först!"); return false; }   
+            return true;
           case 2:
               if (!formData.title) { toast.success("Ange en titel!"); return false; }
               return true;
@@ -250,22 +243,57 @@ export default function CreateEvent() {
                 <h3 className="text-lg font-bold mb-4 dark:text-white">Vad vill du hitta på?</h3>
                 <div className="flex flex-wrap gap-3 justify-center">
                 {CATEGORY_LIST.map(cat => {
-                const isSelected = formData.type === cat.id;
-                const bg = isSelected 
-                    ? 'bg-indigo-600 text-white shadow-lg scale-105' 
-                    : `${cat.color} border-transparent`; 
-                
-                return (
-                    <button
-                        key={cat.id}
-                        onClick={() => setFormData({ ...formData, type: cat.id })}
-                        className={`px-4 py-3 rounded-full font-bold transition-all flex items-center gap-2 border-2 ${isSelected ? 'border-indigo-600' : ''} ${bg}`}
-                    >
-                        <span>{cat.emoji}</span>
-                        <span>{cat.label}</span>
-                    </button>
-                );
-            })}
+                    const isSelected = formData.type === cat.id;
+                    
+                    // Definiera de "starka" färgerna för aktivt läge här
+                    const getActiveColor = (id: string) => {
+                        switch(id) {
+                            // Social & Mingel
+                            case 'social': return 'bg-amber-600 border-amber-600';
+                            case 'party': return 'bg-indigo-600 border-indigo-600';
+                            case 'mingle': return 'bg-teal-600 border-teal-600';
+                            case 'movie': return 'bg-cyan-600 border-cyan-600';
+                            
+                            // Aktiviteter
+                            case 'game': return 'bg-purple-600 border-purple-600';
+                            case 'sport': return 'bg-emerald-600 border-emerald-600';
+                            case 'food': return 'bg-pink-600 border-pink-600';
+                            case 'outdoor': return 'bg-green-600 border-green-600';
+                            case 'creative': return 'bg-orange-600 border-orange-600';
+                            case 'culture': return 'bg-fuchsia-600 border-fuchsia-600';
+                            
+                            // Akademiskt
+                            case 'study': return 'bg-blue-600 border-blue-600';
+                            case 'campus': return 'bg-red-600 border-red-600';
+                            case 'workshop': return 'bg-sky-600 border-sky-600';
+                            
+                            // Övrigt
+                            case 'market': return 'bg-lime-600 border-lime-600';
+                            case 'other': return 'bg-slate-600 border-slate-600';
+                            
+                            default: return 'bg-indigo-600 border-indigo-600'; 
+                        }
+                    };
+
+                    const activeClass = getActiveColor(cat.id);
+
+                    // Om vald: Använd den starka färgen + vit text.
+                    // Om ej vald: Använd cat.color (pastell) + transparent border.
+                    const bg = isSelected 
+                        ? `${activeClass} text-white shadow-lg scale-105` 
+                        : `${cat.color} border-transparent hover:scale-105`; 
+                    
+                    return (
+                        <button
+                            key={cat.id}
+                            onClick={() => setFormData({ ...formData, type: cat.id })}
+                            className={`px-4 py-3 rounded-full font-bold transition-all duration-200 flex items-center gap-2 border-2 ${bg}`}
+                        >
+                            <span>{cat.emoji}</span>
+                            <span>{cat.label}</span>
+                        </button>
+                    );
+                })}
                 </div>
             </div>
         )}

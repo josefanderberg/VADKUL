@@ -11,7 +11,8 @@ import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils'; 
 import { EVENT_CATEGORIES, CATEGORY_LIST, type EventCategoryType } from '../utils/categories'; 
-import { X, Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown } from 'lucide-react';
+// Bytte ut X mot ArrowRight i importen
+import { Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown, ArrowRight } from 'lucide-react';
 
 // --- LEAFLET FIX ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -32,16 +33,15 @@ function MapReCenter({ center }: { center: [number, number] }) {
   return null;
 }
 
-// Lyssna på klick på kartan
-function MapClickListener({ onLocationSet }: { onLocationSet: (lat: number, lng: number) => void }) {
+// Uppdaterad MapClickListener som skickar vidare klicket till Home-komponenten
+function MapClickListener({ onClick }: { onClick: (lat: number, lng: number) => void }) {
     useMapEvents({
         click(e) {
-            onLocationSet(e.latlng.lat, e.latlng.lng);
+            onClick(e.latlng.lat, e.latlng.lng);
         },
     });
     return null;
 }
-
 
 export default function Home() {
   const [events, setEvents] = useState<AppEvent[]>([]);
@@ -111,6 +111,29 @@ export default function Home() {
     });
   }, [events, userLocation, filterType, filterAge, filterDistance, filterFree, filterToday, sortBy]);
 
+  // --- Hantera klick på kartan ---
+  // Om ett event är öppet -> stäng det.
+  // Annars -> flytta användarens position.
+  const handleMapClick = (lat: number, lng: number) => {
+      if (selectedEvent) {
+          setSelectedEvent(null);
+      } else {
+          setUserLocation([lat, lng]);
+          saveLocationToLocalStorage(lat, lng);
+      }
+  };
+
+  // --- Byta till nästa event ---
+  const cycleNextEvent = (e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Förhindra att kartan klickas
+    if (!selectedEvent || filteredEvents.length === 0) return;
+    
+    const currentIndex = filteredEvents.findIndex(evt => evt.id === selectedEvent.id);
+    // Hitta nästa index (loopa runt om vi är på sista)
+    const nextIndex = (currentIndex + 1) % filteredEvents.length;
+    
+    setSelectedEvent(filteredEvents[nextIndex]);
+  };
 
   // --- SKAPA IKONER FÖR KARTAN ---
   const createCustomIcon = (type: string, isSelected: boolean) => {
@@ -164,7 +187,6 @@ export default function Home() {
                 
                 {/* RAD 1: Kategori + List/Map Toggle */}
                 <div className="flex justify-between items-center w-full">
-                    {/* KATEGORI SELECT (Full bredd på mobil för tydlighet, eller flex-grow) */}
                     <select 
                         value={filterType} 
                         onChange={(e) => setFilterType(e.target.value)}
@@ -178,7 +200,6 @@ export default function Home() {
                         ))}
                     </select>
 
-                    {/* LIST / MAP TOGGLE */}
                     <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0">
                         <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
                             <List size={20} />
@@ -214,7 +235,6 @@ export default function Home() {
                             Gratis
                         </button>
 
-                        {/* Knapp för att visa fler filter (Avstånd, Ålder) */}
                         <button 
                             onClick={() => setShowExtraFilters(!showExtraFilters)}
                             className={`px-3 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
@@ -234,11 +254,10 @@ export default function Home() {
                     )}
                 </div>
     
-                {/* EXTRA FILTER (Avstånd & Ålder) - Visas bara om man klickar på "Fler filter" */}
+                {/* EXTRA FILTER */}
                 {showExtraFilters && (
                     <div className="flex gap-3 items-center text-sm flex-wrap animate-in fade-in slide-in-from-top-2 pt-1 border-t border-slate-100 dark:border-slate-700 mt-1">
                         
-                        {/* AVSTÅND SELECT */}
                         <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
                             <span className="text-xs font-bold text-slate-400 uppercase px-1">Avstånd</span>
                             <select 
@@ -254,7 +273,6 @@ export default function Home() {
                             </select>
                         </div>
         
-                        {/* ÅLDER SELECT */}
                         <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
                             <span className="text-xs font-bold text-slate-400 uppercase px-1">Ålder</span>
                             <select 
@@ -274,7 +292,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* --- SORTERING (Utanför menyn) --- */}
           <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
              <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                 <ArrowUpDown size={14} />
@@ -318,11 +335,8 @@ export default function Home() {
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapReCenter center={userLocation} />
                     
-                    {/* --- Klicka för att spara plats --- */}
-                    <MapClickListener onLocationSet={(lat, lng) => {
-                        setUserLocation([lat, lng]);
-                        saveLocationToLocalStorage(lat, lng); 
-                    }} />                    
+                    {/* Hantera klick på kartan via vår nya logik */}
+                    <MapClickListener onClick={handleMapClick} />                    
                     
                     {/* Event Markers */}
                     {filteredEvents.map(evt => {
@@ -342,7 +356,6 @@ export default function Home() {
                         );
                     })}
 
-                    {/* ANVÄNDARPOSITION */}
                     <Marker 
                         position={userLocation} 
                         icon={L.divIcon({
@@ -357,15 +370,16 @@ export default function Home() {
                 {selectedEvent && (
                     <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
                         <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-md mx-auto">
+                            
+                            {/* --- NÄSTA EVENT KNAPP (Ersätter krysset) --- */}
                             <button 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    setSelectedEvent(null); 
-                                }}
-                                className="absolute -top-3 -right-3 bg-slate-800 text-white p-1.5 rounded-full shadow-md hover:bg-slate-700 transition-colors z-50"
+                                onClick={cycleNextEvent}
+                                className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center"
+                                title="Nästa event"
                             >
-                                <X size={16} />
+                                <ArrowRight size={18} />
                             </button>
+
                             <div className="max-h-[300px] overflow-y-auto">
                                 <EventCard event={selectedEvent} />
                             </div>

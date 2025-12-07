@@ -13,7 +13,7 @@ export const EVENT_CATEGORIES = {
   },
     party: {
     id: 'party',
-    label: 'Fest & Krök',
+    label: 'Förfest & Fest',
     emoji: '🍻',
     color: 'bg-indigo-100 text-indigo-600',
     markerColor: 'bg-indigo-500', 

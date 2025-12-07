@@ -6,12 +6,12 @@ import L from 'leaflet';
 import { 
   Clock, MapPin, ChevronLeft, 
   CheckCircle2, Share2, AlertCircle,
-  MessageCircle, Info // Importerade ikoner för flikar
+  MessageCircle, Info, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import Layout from '../components/layout/Layout';
-import EventChat from '../components/events/EventChat'; // Din nya komponent
+import EventChat from '../components/events/EventChat';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types'; 
@@ -29,10 +29,8 @@ export default function EventDetails() {
   const [error, setError] = useState('');
   const [joining, setJoining] = useState(false);
   
-  // State för aktiv flik ('info' eller 'chat')
   const [activeTab, setActiveTab] = useState<'info' | 'chat'>('info');
 
-  // Ladda eventet
   useEffect(() => {
     async function load() {
       if (!id) return;
@@ -47,13 +45,14 @@ export default function EventDetails() {
     load();
   }, [id]);
 
-  // Beräknade värden (Flyttade upp för att kunna användas i handleJoinToggle och render)
   const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
   const isFull = event ? event.attendees.length >= event.maxParticipants : false;
   const percentFull = event ? Math.min(100, (event.attendees.length / event.maxParticipants) * 100) : 0;
+  
+  // Kolla om inloggad användare är skaparen av eventet
+  const isHost = user?.uid === event?.host.uid;
 
-// Hantera Anmälan/Avanmälan
-const handleJoinToggle = async () => {
+  const handleJoinToggle = async () => {
     if (!user) {
         toast.error("Du måste logga in för att anmäla dig!");
         return;
@@ -65,11 +64,9 @@ const handleJoinToggle = async () => {
         let newAttendees = [...event.attendees];
 
         if (isJoined) {
-            // AVANMÄL: Ta bort mig från listan
             newAttendees = newAttendees.filter(a => a.email !== user.email);
             toast.success("Du har avbokat din plats.");
         } else {
-            // ANMÄL: Lägg till mig
             if (newAttendees.length >= event.maxParticipants) {
                 toast.error("Tyvärr, eventet är fullbokat.");
                 setJoining(false);
@@ -83,13 +80,11 @@ const handleJoinToggle = async () => {
             
             toast.success("Hurra! Du är anmäld! 🚀");
 
-            // --- SKICKA NOTIS TILL VÄRDEN ---
             if (event.host.uid && event.host.uid !== user.uid) {
                 await notificationService.send({
                     recipientId: event.host.uid,
                     senderId: user.uid,
                     senderName: user.displayName || user.email || 'Någon',
-                    // ÄNDRING HÄR: Byt "|| undefined" mot "|| null"
                     senderImage: user.photoURL || null, 
                     type: 'join',
                     message: `har anmält sig till "${event.title}"!`,
@@ -98,26 +93,46 @@ const handleJoinToggle = async () => {
             }
         }
 
-        // Uppdatera lokalt state
         const updatedEvent = { ...event, attendees: newAttendees };
         setEvent(updatedEvent);
-
-        // Spara till Firebase
         await eventService.update(updatedEvent);
         
     } catch (err) {
         console.error("Kunde inte uppdatera anmälan:", err);
-        // Visa det faktiska felet i konsolen för enklare debugging
         toast.error("Något gick fel vid sparandet.");
     } finally {
         setJoining(false);
+    }
+  };
+
+  // Funktion för att sparka ut en deltagare
+  const handleKickAttendee = async (attendeeUid: string, attendeeName: string) => {
+    if (!event) return;
+    
+    if (!window.confirm(`Vill du ta bort ${attendeeName} från eventet?`)) {
+        return;
+    }
+
+    try {
+        const newAttendees = event.attendees.filter(a => {
+            const uid = (typeof a === 'object' && a !== null) ? a.uid : null;
+            return uid !== attendeeUid;
+        });
+
+        const updatedEvent = { ...event, attendees: newAttendees };
+        
+        setEvent(updatedEvent);
+        await eventService.update(updatedEvent);
+        toast.success(`${attendeeName} har tagits bort.`);
+    } catch (error) {
+        console.error("Kunde inte ta bort deltagare:", error);
+        toast.error("Något gick fel.");
     }
   };
   
   if (loading) return <Layout><div className="p-10 text-center">Laddar...</div></Layout>;
   if (error || !event) return <Layout><div className="p-10 text-center text-red-500">{error}</div></Layout>;
   
-  // Styling
   const emoji = getEventEmoji(event.type);
   const colorClasses = getEventColor(event.type);
   const bgClass = colorClasses.split(' ')[0];
@@ -149,7 +164,7 @@ const handleJoinToggle = async () => {
 
         <div className="px-4 md:px-8">
             
-            {/* TITEL & HOST (Gemensamt för båda flikarna) */}
+            {/* TITEL & HOST */}
             <div className="flex gap-4 items-start mb-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-sm border border-slate-100 dark:border-slate-700 shrink-0 ${bgClass} ${textClass}`}>
                     {emoji}
@@ -159,7 +174,6 @@ const handleJoinToggle = async () => {
                         {event.title}
                     </h1>
                     
-                    {/* --- KLICKBAR VÄRD --- */}
                     <button 
                         onClick={() => {
                             if (event.host.uid) navigate(`/profile/${event.host.uid}`);
@@ -178,7 +192,7 @@ const handleJoinToggle = async () => {
                 </div>
             </div>
 
-            {/* --- FLIKAR (NAVIGATION) --- */}
+            {/* --- FLIKAR --- */}
             <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
                 <button
                 onClick={() => setActiveTab('info')}
@@ -200,13 +214,9 @@ const handleJoinToggle = async () => {
                 </button>
             </div>
 
-
             {/* --- FLIKINNEHÅLL --- */}
-            
             {activeTab === 'info' ? (
-                // === INFO FLIKEN ===
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {/* INFO GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
                             <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
@@ -229,7 +239,6 @@ const handleJoinToggle = async () => {
                         </div>
                     </div>
 
-                    {/* BESKRIVNING */}
                     <div className="mb-8">
                         <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Om eventet</h3>
                         <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -237,7 +246,7 @@ const handleJoinToggle = async () => {
                         </p>
                     </div>
 
-                    {/* ATTENDEES (KLICKBARA) */}
+                    {/* ATTENDEES LISTA - Uppdaterad logik för Host/Visitor */}
                     <div className="mb-8 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                         <div className="flex justify-between items-end mb-2">
                             <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
@@ -253,41 +262,72 @@ const handleJoinToggle = async () => {
                             />
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {event.attendees.length === 0 ? (
-                                <span className="text-sm text-slate-400 italic">Inga anmälda ännu. Bli den första!</span>
-                            ) : (
-                                event.attendees.map((attendee: any, i) => {
-                                    // SÄKERHETSKOLL: Hantera både gamla (string) och nya (object) dataformat
+                        {event.attendees.length === 0 ? (
+                            <span className="text-sm text-slate-400 italic">Inga anmälda ännu.</span>
+                        ) : (
+                            <div className={isHost ? "flex flex-col gap-2" : "flex flex-wrap gap-2"}>
+                                {event.attendees.map((attendee: any, i) => {
                                     const isObject = typeof attendee === 'object' && attendee !== null;
                                     const displayStr = isObject ? (attendee.displayName || attendee.email || 'Anonym') : attendee;
                                     const uid = isObject ? attendee.uid : null;
+                                    
+                                    const isMe = uid === user?.uid;
 
-                                    return (
-                                        <button 
-                                            key={i} 
-                                            onClick={() => {
-                                                if (uid) navigate(`/profile/${uid}`);
-                                                else toast.error("Kan inte visa profil (gammalt dataformat)");
-                                            }}
-                                            className={`flex items-center gap-2 bg-white dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
-                                                ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
-                                            `}
-                                        >
-                                            <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
-                                                {displayStr && displayStr.length > 0 ? displayStr.charAt(0).toUpperCase() : '?'}
+                                    if (isHost) {
+                                        // HOST VIEW
+                                        return (
+                                            <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                                                <div 
+                                                    className="flex items-center gap-3 cursor-pointer"
+                                                    onClick={() => {
+                                                        if (uid) navigate(`/profile/${uid}`);
+                                                    }}
+                                                >
+                                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold">
+                                                        {displayStr.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                                                        {displayStr} {isMe && "(Du)"}
+                                                    </span>
+                                                </div>
+
+                                                {!isMe && (
+                                                    <button 
+                                                        onClick={() => uid && handleKickAttendee(uid, displayStr)}
+                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                                        title="Ta bort från eventet"
+                                                    >
+                                                        <X size={20} />
+                                                    </button>
+                                                )}
                                             </div>
-                                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                                                {displayStr.includes('@') ? displayStr.split('@')[0] : displayStr}
-                                            </span>
-                                        </button>
-                                    );
-                                })
-                            )}
-                        </div>
+                                        );
+                                    } else {
+                                        // VISITOR VIEW
+                                        return (
+                                            <button 
+                                                key={i} 
+                                                onClick={() => {
+                                                    if (uid) navigate(`/profile/${uid}`);
+                                                }}
+                                                className={`flex items-center gap-2 bg-white dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
+                                                    ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
+                                                `}
+                                            >
+                                                <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
+                                                    {displayStr && displayStr.length > 0 ? displayStr.charAt(0).toUpperCase() : '?'}
+                                                </div>
+                                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                    {displayStr.includes('@') ? displayStr.split('@')[0] : displayStr}
+                                                </span>
+                                            </button>
+                                        );
+                                    }
+                                })}
+                            </div>
+                        )}
                     </div>
 
-                    {/* KARTA */}
                     <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
                         <MapContainer 
                             center={[event.lat, event.lng]} 
@@ -302,7 +342,6 @@ const handleJoinToggle = async () => {
                     </div>
                 </div>
             ) : (
-                // === CHATT FLIKEN ===
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {!isJoined ? (
                         <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
@@ -344,10 +383,10 @@ const handleJoinToggle = async () => {
                     disabled={joining || (isFull && !isJoined)}
                     className={`flex-grow py-3.5 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2
                         ${isJoined 
-                            ? 'bg-slate-400 hover:bg-slate-500' // Avanmäl färg
+                            ? 'bg-slate-400 hover:bg-slate-500' 
                             : isFull 
-                                ? 'bg-rose-400 cursor-not-allowed' // Fullbokat färg
-                                : 'bg-emerald-600 hover:bg-emerald-700' // Anmäl färg
+                                ? 'bg-rose-400 cursor-not-allowed' 
+                                : 'bg-emerald-600 hover:bg-emerald-700' 
                         }
                     `}
                 >
