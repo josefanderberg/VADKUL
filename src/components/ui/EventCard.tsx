@@ -1,8 +1,9 @@
 // src/components/ui/EventCard.tsx
+
 import { Link, useNavigate } from 'react-router-dom';
 import type { AppEvent } from '../../types';
 import { formatTime } from '../../utils/dateUtils';
-import { getEventEmoji, getEventColor } from '../../utils/mapUtils';
+import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 import { MapPin, CheckCircle2, Star, Clock, Users, ArrowRight } from 'lucide-react';
 
 interface EventCardProps {
@@ -12,34 +13,27 @@ interface EventCardProps {
 export default function EventCard({ event }: EventCardProps) {
   const navigate = useNavigate();
 
-  // Beräkna status
+  // 1. Hämta kategori-data från vår centrala fil
+  const category = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
+  const emoji = category.emoji;
+  const categoryLabel = category.label;
+
+  // 2. Hämta färger från kategorin
+  // Vi extraherar basfärgen (t.ex. "indigo") från kategorins färgklass för att styla texten
+  // category.color ser ut typ "bg-indigo-100 text-indigo-600"
+  const colorBase = category.color.split(' ')[0].split('-')[1]; // "indigo"
+  const iconColorClass = `text-${colorBase}-600 dark:text-${colorBase}-400`;
+  
+  // Fallback-färg för avatar (om bild saknas) - vi tar den starka markör-färgen
+  const avatarFallbackBg = category.markerColor; // t.ex. "bg-indigo-500"
+
+  // 3. Status-logik
   const currentCount = event.attendees.length;
   const isFull = currentCount >= event.maxParticipants;
   const isGuaranteed = currentCount >= event.minParticipants;
   const percentFull = Math.min(100, (currentCount / event.maxParticipants) * 100);
-  
-  // Hämta styling
-  const emoji = getEventEmoji(event.type);
-  // Vi hämtar färgen men gör den lite subtilare för text
-  const colorClasses = getEventColor(event.type); 
-  const colorBase = colorClasses.split(' ')[0].split('-')[1]; // t.ex. "green"
-  const avatarBgClass = `bg-${colorBase}-500`;
-  const iconColorClass = `text-${colorBase}-600 dark:text-${colorBase}-400`;
 
-  // Enkel mappning för kategorinamn på svenska (om du inte har en utility för detta)
-  const categoryNames: Record<string, string> = {
-    sports: 'Sport',
-    food: 'Mat & Dryck',
-    culture: 'Kultur',
-    outdoor: 'Utomhus',
-    social: 'Socialt',
-    gaming: 'Spel',
-    other: 'Övrigt'
-    // Lägg till fler vid behov
-  };
-  const categoryName = categoryNames[event.type] || event.type.charAt(0).toUpperCase() + event.type.slice(1);
-
-  // Ålderslogik
+  // 4. Ålderslogik
   let ageText = "Alla åldrar";
   if (event.minAge > 0) {
       if (event.maxAge < 99) ageText = `${event.minAge}–${event.maxAge} år`;
@@ -50,7 +44,7 @@ export default function EventCard({ event }: EventCardProps) {
     <Link to={`/event/${event.id}`} className="block h-full group">
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 relative flex flex-col h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-slate-200 dark:hover:border-slate-600">
         
-        {/* --- HEADER: Host & Status (Oförändrad layout-mässigt men polerad) --- */}
+        {/* --- HEADER: Host & Status --- */}
         <div className="flex justify-between items-start mb-4">
           {/* Värd */}
           <div 
@@ -61,13 +55,23 @@ export default function EventCard({ event }: EventCardProps) {
             }}
             className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <div className={`w-9 h-9 rounded-full ${avatarBgClass} flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-800`}>
-              {event.host.initials}
-            </div>
+            {/* --- HÄR ÄR ÄNDRINGEN FÖR BILDEN --- */}
+            {event.host.photoURL ? (
+                <img 
+                    src={event.host.photoURL} 
+                    alt={event.host.name}
+                    className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-800 border border-slate-100 dark:border-slate-700"
+                />
+            ) : (
+                <div className={`w-9 h-9 rounded-full ${avatarFallbackBg} flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-800`}>
+                  {event.host.initials}
+                </div>
+            )}
+            
             <div>
               <span className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-none block">
-                {event.host.name.split(' ')[0]}
-              </span>
+              {(event.host.name || event.host.displayName || 'Anonym').split(' ')[0]}
+                            </span>
               <div className="flex items-center text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                 <span className="text-amber-500 flex items-center gap-0.5 mr-1.5">
                   {event.host.rating.toFixed(1)} <Star size={8} fill="currentColor" />
@@ -96,7 +100,7 @@ export default function EventCard({ event }: EventCardProps) {
         </div>
 
         {/* --- TITEL --- */}
-        <h3 className="font-bold text-slate-900 dark:text-white text-lg leading-snug mb-3 pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+        <h3 className="font-bold text-slate-900 dark:text-white text-lg leading-snug mb-3 pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
             {event.title}
         </h3>
 
@@ -108,7 +112,7 @@ export default function EventCard({ event }: EventCardProps) {
                 {/* Kategori */}
                 <div className={`flex items-center gap-2 text-xs font-semibold ${iconColorClass}`}>
                     <span className="text-sm filter drop-shadow-sm">{emoji}</span>
-                    <span>{categoryName}</span>
+                    <span>{categoryLabel}</span>
                 </div>
 
                 {/* Tid */}
@@ -151,13 +155,11 @@ export default function EventCard({ event }: EventCardProps) {
                     </span>
                 </div>
                 
-                {/* "Läs mer" indikator (Visas vid hover) */}
                 <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
                     Gå till event <ArrowRight size={12} />
                 </div>
             </div>
 
-            {/* Slimmad Progress Bar */}
             <div className="h-1 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div 
                     className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-rose-500' : 'bg-emerald-500'}`} 

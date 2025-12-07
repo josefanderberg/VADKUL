@@ -1,5 +1,8 @@
+// src/pages/Home.tsx
+
 import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+// Lade till Popup
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet'; 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -7,15 +10,15 @@ import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
-import { calculateDistance, getEventEmoji } from '../utils/mapUtils';
-import { EVENT_CATEGORIES, CATEGORY_LIST } from '../utils/categories';
-import { X, Map as MapIcon, List, Filter, Calendar, DollarSign, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { calculateDistance } from '../utils/mapUtils';
+import { EVENT_CATEGORIES, CATEGORY_LIST, type EventCategoryType } from '../utils/categories'; 
+import { X, Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown } from 'lucide-react';
 
 // --- LEAFLET FIX ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
+// FIXA DENNA RADEN (byt 'shadows' mot 'shadow')
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
@@ -31,33 +34,32 @@ function MapReCenter({ center }: { center: [number, number] }) {
   return null;
 }
 
+// NY KOMPONENT: Lyssna på klick på kartan
+function MapClickListener({ onLocationSet }: { onLocationSet: (lat: number, lng: number) => void }) {
+    useMapEvents({
+        click(e) {
+            onLocationSet(e.latlng.lat, e.latlng.lng);
+        },
+    });
+    return null;
+}
+
+
 export default function Home() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'map'>('list');
-  const [userLocation, setUserLocation] = useState<[number, number]>([56.8790, 14.8059]); // Växjö
+  const [userLocation, setUserLocation] = useState<[number, number]>([56.8556, 14.8250]);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
   // FILTER STATES
   const [filterType, setFilterType] = useState('all');
   const [filterAge, setFilterAge] = useState('all');
-  const [filterDistance, setFilterDistance] = useState('10'); // km
+  const [filterDistance, setFilterDistance] = useState('1');
   const [filterFree, setFilterFree] = useState(false);
   const [filterToday, setFilterToday] = useState(false);
-  const [sortBy, setSortBy] = useState('closest'); // NYTT: State för sortering
+  const [sortBy, setSortBy] = useState('closest');
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-
-  const markerColors: Record<string, string> = {
-    party: 'bg-indigo-500',  // Fest
-    study: 'bg-blue-500',    // Plugg
-    campus: 'bg-red-500',    // Nation/Kår
-    social: 'bg-amber-500',  // Socialt
-    game:   'bg-purple-500', // Spel
-    sport:  'bg-emerald-500',// Sport
-    food:   'bg-pink-500',   // Mat
-    market: 'bg-lime-600',   // Köp/Sälj
-    other:  'bg-slate-500',  // Övrigt
-  };
 
   useEffect(() => {
     loadData();
@@ -75,14 +77,12 @@ export default function Home() {
     setLoading(false);
   }
 
-  // --- FILTRERING OCH SORTERINGSLOGIK ---
+  // --- FILTRERING OCH SORTERING ---
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
-        // 1. Beräkna avstånd
         const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
         event.location.distance = dist; 
 
-        // 2. Filter-checkar
         if (filterType !== 'all' && event.type !== filterType) return false;
         if (filterAge === 'family' && event.minAge >= 12) return false;
         if (filterAge === '18+' && event.minAge < 18) return false;
@@ -96,17 +96,15 @@ export default function Home() {
 
         return true;
     }).sort((a, b) => {
-        // NYTT: Sorteringsswitch
         switch (sortBy) {
             case 'closest':
                 return (a.location.distance || 0) - (b.location.distance || 0);
-            case 'soonest': // Tid kvar (Datum stigande)
+            case 'soonest':
                 return new Date(a.time).getTime() - new Date(b.time).getTime();
-            case 'latest': // Senast (Datum fallande)
+            case 'latest':
                 return new Date(b.time).getTime() - new Date(a.time).getTime();
-            case 'popular': // Flest anmälda (Högst siffra först)
-                // OBS: Antar att 'attendees' är en siffra. Om det är en array, använd .length
-                return ((b as any).attendees || 0) - ((a as any).attendees || 0);
+            case 'popular':
+                return (b.attendees?.length || 0) - (a.attendees?.length || 0);
             default:
                 return 0;
         }
@@ -114,170 +112,189 @@ export default function Home() {
   }, [events, userLocation, filterType, filterAge, filterDistance, filterFree, filterToday, sortBy]);
 
 
+  // --- SKAPA IKONER FÖR KARTAN ---
   const createCustomIcon = (type: string, isSelected: boolean) => {
-    // Hämta kategori-objektet säkert
     const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
-    
-    // Hämta data direkt från källan
     const emoji = category.emoji;
-    const bgClass = category.markerColor; // Nu finns denna property!
+    const bgClass = category.markerColor;
 
+    // Vi gör den lite större (scale-125) när den är vald
     const containerClasses = isSelected 
-      ? 'scale-125 z-50 drop-shadow-xl -translate-y-2' 
+      ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' 
       : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1';
 
     return L.divIcon({
-      className: 'custom-marker-simple',
+      className: 'custom-marker-teardrop', 
       html: `
-        <div class="relative flex flex-col items-center transition-all duration-300 ${containerClasses}">
-            <div class="w-10 h-10 rounded-full ${bgClass} border-[3px] border-white shadow-md flex items-center justify-center text-xl text-white">
-                ${emoji}
+        <div class="relative group transition-all duration-300 ${containerClasses}">
+            
+            <div class="w-12 h-12 ${bgClass} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
+                
+                <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
+
+                <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">
+                    ${emoji}
+                </div>
             </div>
-            <div class="w-3 h-3 ${bgClass} border-r-[3px] border-b-[3px] border-white transform rotate-45 -mt-1.5 z-0"></div>
-            <div class="absolute -bottom-2 w-6 h-1 bg-black/20 blur-[2px] rounded-full"></div>
+
+            <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-[3px] rounded-full transition-all duration-300 group-hover:w-6 group-hover:opacity-50"></div>
         </div>
       `,
-      iconSize: [40, 50],
-      iconAnchor: [20, 45],
-      popupAnchor: [0, -45]
+      // Justera storleken så Leaflet vet var spetsen är
+      iconSize: [48, 65], 
+      iconAnchor: [24, 58], 
+      popupAnchor: [0, -50]
     });
-};
+  };
 
   const resetFilters = () => {
       setFilterType('all');
       setFilterAge('all');
-      setFilterDistance('10');
+      setFilterDistance('1');
       setFilterFree(false);
       setFilterToday(false);
       setSortBy('closest');
   };
 
-  return (
-    <Layout>
-      {/* FILTER BAR */}
-      <div className="sticky z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
-        <div className="max-w-6xl mx-auto flex flex-col gap-3">
-            
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
-                    
-                <select 
-                    value={filterType} 
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="bg-slate-100 dark:bg-slate-700 border-transparent rounded-xl text-sm p-2 font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                    <option value="all">Alla kategorier</option>
-                    
-                    {/* Vi loopar igenom din centrala lista så alla nya kategorier syns här automatiskt */}
-                    {CATEGORY_LIST.map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                            {cat.label} {cat.emoji}
-                        </option>
-                    ))}
-                </select>
+  // Hämta färgen för den valda kategorin, eller en standardfärg
+  const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
+  const categoryColorClass = selectedCategory 
+    ? selectedCategory.color 
+    : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white';
 
-                    <button 
-                        onClick={() => setFilterToday(!filterToday)}
-                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                            ${filterToday 
-                                ? 'bg-indigo-600 text-white border-indigo-600' 
-                                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                            }`}
-                    >
-                        <Calendar size={14} /> Idag
-                    </button>
 
-                    <button 
-                        onClick={() => setFilterFree(!filterFree)}
-                        className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                            ${filterFree 
-                                ? 'bg-indigo-600 text-white border-indigo-600' 
-                                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                            }`}
-                    >
-                        <DollarSign size={14} /> Gratis
-                    </button>
-
-                    <button 
-                        onClick={() => setShowFiltersMobile(!showFiltersMobile)}
-                        className="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 md:hidden"
-                    >
-                        <Filter size={20} />
-                    </button>
-                </div>
-
-                <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0 ml-2">
-                    <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
-                        <List size={20} />
-                    </button>
-                    <button onClick={() => setView('map')} className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}>
-                        <MapIcon size={20} />
-                    </button>
-                </div>
-            </div>
-
-            {/* EXPANDED FILTERS & SORT */}
-            <div className={`flex flex-wrap gap-3 items-center text-sm ${showFiltersMobile ? 'block' : 'hidden md:flex'}`}>
+    return (
+        <Layout>
+          <div className="sticky z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
+            <div className="max-w-6xl mx-auto flex flex-col gap-3">
                 
-                {/* NYTT: Sorteringsdropdown */}
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
-                    <span className="text-xs font-bold text-slate-400 uppercase px-2 flex items-center gap-1">
-                         <ArrowUpDown size={12} /> Sortera
-                    </span>
-                    <select 
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="bg-transparent font-bold text-slate-700 dark:text-white outline-none pr-2 cursor-pointer"
-                    >
-                        <option value="closest">Närmast</option>
-                        <option value="soonest">Tid kvar</option>
-                        <option value="latest">Senast</option>
-                        <option value="popular">Anmälda</option>
-                    </select>
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
+                        
+                        {/* KATEGORI SELECT (UPPDATERAD med dynamisk färg och höjd) */}
+                        <select 
+                            value={filterType} 
+                            onChange={(e) => setFilterType(e.target.value)}
+                            // Ändrade p-2 till p-2.5 för att matcha höjden på knapparna
+                            className={`font-bold rounded-xl text-sm p-2.5 outline-none cursor-pointer border-2 border-transparent transition-colors ${categoryColorClass}`}
+                        >
+                            <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alla kategorier</option>
+                            {CATEGORY_LIST.map(cat => (
+                                // Sätter en standardfärg på alternativen för läsbarhet
+                                <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                                    {cat.label} {cat.emoji}
+                                </option>
+                            ))}
+                        </select>
+    
+                        <button 
+                            onClick={() => setFilterToday(!filterToday)}
+                            className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
+                                ${filterToday 
+                                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
+                                }`}
+                        >
+                            <Calendar size={14} /> Idag
+                        </button>
+    
+                        <button 
+                            onClick={() => setFilterFree(!filterFree)}
+                            className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
+                                ${filterFree 
+                                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
+                                }`}
+                        >
+                            Gratis
+                        </button>
+    
+                        <button 
+                            onClick={() => setShowFiltersMobile(!showFiltersMobile)}
+                            className="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 md:hidden hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            <Filter size={20} />
+                        </button>
+                    </div>
+    
+                    <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0 ml-2">
+                        <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
+                            <List size={20} />
+                        </button>
+                        <button onClick={() => setView('map')} className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
+                            <MapIcon size={20} />
+                        </button>
+                    </div>
                 </div>
+    
+                {/* EXPANDED FILTERS (NY: la till flex-nowrap och overflow-x-auto) */}
+                <div className={`flex gap-3 items-center text-sm flex-nowrap overflow-x-auto pb-1 no-scrollbar ${showFiltersMobile ? 'block animate-in fade-in slide-in-from-top-2' : 'hidden md:flex'}`}>
+                    
+                    {/* SORTERING SELECT */}
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
+                        <span className="text-xs font-bold text-slate-400 uppercase px-1 flex items-center">
+                             <ArrowUpDown size={16} /> 
+                        </span>
+                        <select 
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none pr-2 cursor-pointer"
+                        >
+                            <option value="closest">Närmast</option>
+                            <option value="soonest">Tid kvar</option>
+                            <option value="latest">Senast</option>
+                            <option value="popular">Anmälda</option>
+                        </select>
+                    </div>
+    
+                    {/* AVSTÅND SELECT */}
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
+                        <span className="text-xs font-bold text-slate-400 uppercase px-1">Avstånd</span>
+                        <select 
+                            value={filterDistance}
+                            onChange={(e) => setFilterDistance(e.target.value)}
+                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer"
+                        >
+                            <option value="1">1 km</option>
+                            <option value="5">5 km</option>
+                            <option value="10">10 km</option>
+                            <option value="25">25 km</option>
+                            <option value="all">Alla</option>
+                        </select>
+                    </div>
+    
+                    {/* ÅLDER SELECT */}
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
+                        <span className="text-xs font-bold text-slate-400 uppercase px-1">Ålder</span>
+                        <select 
+                            value={filterAge}
+                            onChange={(e) => setFilterAge(e.target.value)}
+                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer"
+                        >
+                            <option value="all">Alla</option>
+                            <option value="family">Familj</option>
+                            <option value="13+">Ungdomar</option>
 
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg">
-                    <span className="text-xs font-bold text-slate-400 uppercase px-2">Avstånd</span>
-                    <select 
-                        value={filterDistance}
-                        onChange={(e) => setFilterDistance(e.target.value)}
-                        className="bg-transparent font-bold text-slate-700 dark:text-white outline-none"
-                    >
-                        <option value="1">1 km</option>
-                        <option value="5">5 km</option>
-                        <option value="10">10 km</option>
-                        <option value="25">25 km</option>
-                        <option value="all">Alla</option>
-                    </select>
+                            <option value="18+">Vuxna</option>
+                            <option value="seniors">Seniorer</option>
+                        </select>
+                    </div>
+                    
+                    {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '1' || sortBy !== 'closest') && (
+                        <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 ml-auto shrink-0">
+                            <RefreshCw size={12} /> Rensa
+                        </button>
+                    )}
                 </div>
-
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg">
-                    <span className="text-xs font-bold text-slate-400 uppercase px-2">Ålder</span>
-                    <select 
-                        value={filterAge}
-                        onChange={(e) => setFilterAge(e.target.value)}
-                        className="bg-transparent font-bold text-slate-700 dark:text-white outline-none"
-                    >
-                        <option value="all">Alla</option>
-                        <option value="family">Familj (0-12)</option>
-                        <option value="18+">Vuxna (18+)</option>
-                        <option value="seniors">Seniorer (65+)</option>
-                    </select>
-                </div>
-                
-                {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '10' || sortBy !== 'closest') && (
-                    <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 ml-auto">
-                        <RefreshCw size={12} /> Rensa
-                    </button>
-                )}
-            </div>
-
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-4 h-[calc(100vh-140px)]">
         {loading ? (
-            <div className="text-center py-20 text-slate-500">Laddar events...</div>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p>Laddar events...</p>
+            </div>
         ) : filteredEvents.length === 0 ? (
             <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                 <p className="text-slate-500 font-medium mb-2">Inga events matchar dina filter.</p>
@@ -296,7 +313,12 @@ export default function Home() {
                 <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapReCenter center={userLocation} />
+                    
+                    {/* NYTT: Lyssna på klick för att flytta userLocation */}
+                    <MapClickListener onLocationSet={(lat, lng) => setUserLocation([lat, lng])} />                    
+                    {/* Event Markers (Teardrops) */}
                     {filteredEvents.map(evt => {
+                        
                         const isSelected = selectedEvent?.id === evt.id;
                         return (
                             <Marker 
@@ -304,21 +326,35 @@ export default function Home() {
                                 position={[evt.lat, evt.lng]}
                                 icon={createCustomIcon(evt.type, isSelected)}
                                 eventHandlers={{ 
-                                    click: () => setSelectedEvent(evt) 
+                                    click: (e) => {
+                                        L.DomEvent.stopPropagation(e as any);
+                                        setSelectedEvent(evt); 
+                                    }
                                 }}
                             />
                         );
                     })}
-                    <Marker position={userLocation} icon={L.divIcon({
-                        className: 'user-pos',
-                        html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow pulse-ring"></div>'
-                    })} />
+
+                    {/* ANVÄNDARPOSITION (Statisk, flyttas via klick) */}
+                    <Marker 
+                        position={userLocation} 
+                        icon={L.divIcon({
+                            className: 'user-pos',
+                            html: '<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-xl pulse-ring cursor-pointer"></div>' 
+                        })} 
+                    >
+                         <Popup>Din plats (Klicka på kartan för att flytta)</Popup>
+                    </Marker>
                 </MapContainer>
+
                 {selectedEvent && (
                     <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
                         <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-md mx-auto">
                             <button 
-                                onClick={(e) => { e.stopPropagation(); setSelectedEvent(null); }}
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setSelectedEvent(null); 
+                                }}
                                 className="absolute -top-3 -right-3 bg-slate-800 text-white p-1.5 rounded-full shadow-md hover:bg-slate-700 transition-colors z-50"
                             >
                                 <X size={16} />

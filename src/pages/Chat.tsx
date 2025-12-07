@@ -1,21 +1,23 @@
 // src/pages/Chat.tsx
 import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, User as UserIcon } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
-import { notificationService } from '../services/notificationService'; // <--- NY IMPORT
+import { notificationService } from '../services/notificationService'; 
 import type { ChatRoom, ChatMessage } from '../types';
 
 export default function Chat() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Data från navigation (när man klickade "Chatta" på profilen)
-  const initialTarget = location.state?.targetUser; 
-
+  // VIKTIGT: Spara initialTarget i ett state för att hantera rensning av URL-state.
+  const [initialChatTarget, setInitialChatTarget] = useState(location.state?.targetUser); // <-- ÄNDRING 1
+  
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -32,35 +34,41 @@ export default function Chat() {
     return () => unsub();
   }, [user]);
 
-
-  
+  // 2. Initiera chatt från profilsidan om det behövs
   useEffect(() => {
-    if (initialTarget && user && !activeChatId) {
+    // Använd det lokala state-värdet
+    if (initialChatTarget && user && !activeChatId) { // <-- ÄNDRING 2: Använder initialChatTarget
       const initChat = async () => {
         // Vi måste matcha UserProfile-typen bättre här
         const myProfile = {
             uid: user.uid,
             displayName: user.displayName || 'Jag',
             email: user.email || '',
-            // LÄGG TILL DETTA: Använd photoURL från auth eller null
             verificationImage: user.photoURL || null, 
             age: 0, 
             isVerified: false, 
             createdAt: new Date()
-        } as any; // Tvinga typen om det behövs för att matcha UserProfile
+        } as any; 
 
         try {
-            const chatId = await chatService.createOrGetChat(myProfile, initialTarget);
+            const chatId = await chatService.createOrGetChat(myProfile, initialChatTarget); // <-- ÄNDRING 3: Använder initialChatTarget
             setActiveChatId(chatId);
-            // Rensa state så vi inte loopar om sidan laddas om
-            window.history.replaceState({}, document.title);
+            
+            // NY LOGIK: Rensa location.state HELT efter att chatten är skapad.
+            // Detta förhindrar att komponenten försöker initiera chatten igen efter att du backat.
+            if (location.state?.targetUser) {
+                navigate(location.pathname, { replace: true });
+            }
+            // Rensa det lokala state-värdet också
+            setInitialChatTarget(undefined); // <-- NY RAD
+            
         } catch (error) {
             console.error("Kunde inte starta chatt:", error);
         }
       };
       initChat();
     }
-  }, [initialTarget, user, activeChatId]);
+  }, [initialChatTarget, user, activeChatId, location.pathname, location.state, navigate]); // <-- ÄNDRING 4: Lade till beroenden för att fixa linting och nya navigate-anropet
 
   // 3. Lyssna på meddelanden i vald chatt
   useEffect(() => {
@@ -76,11 +84,16 @@ export default function Chat() {
     e.preventDefault();
     if (!newMessage.trim() || !activeChatId || !user) return;
     
+    // Spara meddelandet temporärt och rensa input direkt för bättre känsla
+    const msgToSend = newMessage;
+    setNewMessage('');
+
     try {
-        await chatService.sendMessage(activeChatId, user.uid, newMessage);
+        await chatService.sendMessage(activeChatId, user.uid, msgToSend);
         
         // --- SKICKA NOTIS TILL MOTTAGAREN ---
         const currentChat = chats.find(c => c.id === activeChatId);
+        
         // Hitta ID på den som INTE är jag
         const otherId = currentChat?.participants.find(p => p !== user.uid);
 
@@ -89,7 +102,10 @@ export default function Chat() {
                 recipientId: otherId,
                 senderId: user.uid,
                 senderName: user.displayName || 'Någon',
-                senderImage: user.photoURL || undefined,
+                
+                // HÄR VAR FELET: Firebase gillar inte undefined. Använd null istället.
+                senderImage: user.photoURL || null, 
+                
                 type: 'chat',
                 message: `skickade ett meddelande.`,
                 link: '/chat' // Länka till chatten
@@ -97,11 +113,22 @@ export default function Chat() {
         }
         // ------------------------------------
 
-        setNewMessage('');
     } catch (err) {
         console.error("Fel vid sändning:", err);
+        // Återställ meddelandet om det blev fel (valfritt)
+        // setNewMessage(msgToSend); 
     }
   };
+
+  const handleBack = () => {
+    // Om vi inte har några chattar, och vi VET att vi kom från en profil (initialChatTarget var satt), 
+    // går vi tillbaka. Annars visar vi bara chattlistan.
+    if (chats.length === 0 && initialChatTarget) { // <-- ÄNDRING 5: Använder initialChatTarget
+        navigate(-1);
+    } else {
+        setActiveChatId(null);
+    }
+  }
 
   const getOtherParticipant = (chat: ChatRoom) => {
     if (!user) return null;
@@ -119,7 +146,7 @@ export default function Chat() {
     <Layout>
       <div className="max-w-5xl mx-auto h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] flex bg-white dark:bg-slate-800 md:rounded-2xl md:shadow-xl md:border md:border-slate-200 dark:md:border-slate-700 overflow-hidden">
         
-        {/* --- VÄNSTERSPALT --- */}
+        {/* --- VÄNSTERSPALT (Chattlista) --- */}
         <div className={`w-full md:w-80 border-r border-slate-100 dark:border-slate-700 flex flex-col ${showList ? 'block' : 'hidden md:flex'}`}>
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
                 <h2 className="font-extrabold text-xl dark:text-white">Meddelanden</h2>
@@ -159,22 +186,27 @@ export default function Chat() {
             </div>
         </div>
 
-        {/* --- HÖGERSPALT --- */}
+        {/* --- HÖGERSPALT (Aktiv chatt) --- */}
         <div className={`flex-1 flex flex-col bg-slate-50 dark:bg-slate-900/50 ${showChat ? 'block' : 'hidden md:flex'}`}>
             
             {activeChatId ? (
                 <>
                     {/* Header */}
                     <div className="p-4 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3 shadow-sm z-10">
-                        <button onClick={() => setActiveChatId(null)} className="md:hidden p-2 -ml-2 text-slate-500">
+                        <button onClick={handleBack} className="md:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full">
                             <ArrowLeft size={20} />
                         </button>
                         {(() => {
                              const chat = chats.find(c => c.id === activeChatId);
                              const other = chat ? getOtherParticipant(chat) : null;
                              return (
-                                <div className="font-bold text-slate-900 dark:text-white">
-                                    {other ? other.displayName : 'Chatt'}
+                                <div className="flex items-center gap-3">
+                                    {other?.photoURL && (
+                                        <img src={other.photoURL} className="w-8 h-8 rounded-full object-cover md:hidden" alt="" />
+                                    )}
+                                    <div className="font-bold text-slate-900 dark:text-white">
+                                        {other ? other.displayName : 'Chatt'}
+                                    </div>
                                 </div>
                              );
                         })()}

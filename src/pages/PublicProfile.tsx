@@ -1,7 +1,8 @@
 // src/pages/PublicProfile.tsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageCircle, MapPin, Calendar, CheckCircle2, User as UserIcon, ArrowLeft } from 'lucide-react';
+// Importera nya ikoner: UserPlus för vän, Flag för rapport
+import { MessageCircle, MapPin, Calendar, CheckCircle2, User as UserIcon, ArrowLeft, UserPlus, Flag } from 'lucide-react'; 
 import toast from 'react-hot-toast';
 
 import Layout from '../components/layout/Layout';
@@ -16,6 +17,11 @@ export default function PublicProfile() {
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // --- NYTT STATE FÖR VÄNNER OCH RAPPORT ---
+  const [isFriend, setIsFriend] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
+  // ------------------------------------------
 
   useEffect(() => {
     async function load() {
@@ -41,6 +47,9 @@ export default function PublicProfile() {
         const data = await userService.getUserProfile(uid);
         if (data) {
           setProfile(data);
+          // HÄR SKA LOGIK FÖR ATT KONTROLLERA VÄNSTATUS LIGGA
+          // Exempel: const isFr = await friendService.checkStatus(currentUser.uid, uid);
+          // setIsFriend(isFr);
         } else {
           console.error("Ingen profil hittades för ID:", uid);
         }
@@ -70,6 +79,48 @@ export default function PublicProfile() {
         } 
     });
   };
+  
+  // --- MOCKAD LOGIK FÖR VÄN-FUNKTION ---
+  const handleFriendRequest = () => {
+    if (!currentUser) {
+        toast.error("Du måste logga in för att skicka en vänförfrågan.");
+        return;
+    }
+    if (!profile) return;
+    
+    if (isFriend) {
+        // Logik för att ta bort vän
+        toast.success(`Tog bort ${profile.displayName} som vän.`);
+        setIsFriend(false);
+    } else if (friendRequestSent) {
+        // Logik för att avbryta förfrågan
+        toast('Vänförfrågan avbruten.', { icon: '✋' });
+        setFriendRequestSent(false);
+    } else {
+        // Logik för att skicka förfrågan
+        toast.success(`Vänförfrågan skickad till ${profile.displayName}!`);
+        setFriendRequestSent(true);
+        // await friendService.sendRequest(currentUser.uid, profile.uid);
+    }
+  };
+
+  // --- MOCKAD LOGIK FÖR RAPPORT-FUNKTION ---
+  const handleReport = () => {
+    if (!currentUser) {
+        toast.error("Du måste logga in för att rapportera.");
+        return;
+    }
+    if (!profile) return;
+
+    // Här kan man öppna en modal eller navigera till en rapportsida
+    // För detta exempel använder vi en toast.
+    toast.error(`Rapportfunktion för ${profile.displayName} triggad.`, { 
+        duration: 3000, 
+        icon: '⚠️' 
+    });
+    // navigate('/report-user', { state: { userId: profile.uid }});
+  }
+  // ------------------------------------------
 
   if (loading) return <Layout><div className="p-10 text-center">Laddar profil...</div></Layout>;
   
@@ -88,6 +139,15 @@ export default function PublicProfile() {
   
   // --- FIX: Inaktivera chat om det är en legacy_user ---
   const isLegacy = profile.uid === 'legacy_user';
+  
+  // Vänknappens text
+  const friendButtonText = isFriend ? 'Vänner' : (friendRequestSent ? 'Väntar...' : 'Lägg till som vän');
+  // Vänknappens stil
+  const friendButtonClass = isFriend 
+    ? 'bg-green-500 hover:bg-green-600'
+    : (friendRequestSent
+        ? 'bg-slate-500 hover:bg-slate-600'
+        : 'bg-indigo-500 hover:bg-indigo-600');
 
   return (
     <Layout>
@@ -123,7 +183,7 @@ export default function PublicProfile() {
                     )}
                 </div>
 
-                {/* Header Info & Knapp */}
+                {/* Header Info & Knappar */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-1">
@@ -134,15 +194,38 @@ export default function PublicProfile() {
                         </p>
                     </div>
 
-                    {/* CHATTA KNAPP - Visas bara om det INTE är jag OCH inte legacy */}
+                    {/* ACTIONS - Visas bara om det INTE är jag OCH inte legacy */}
                     {!isMe && !isLegacy && (
-                        <button 
-                            onClick={startChat}
-                            className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-transform active:scale-95"
-                        >
-                            <MessageCircle size={20} />
-                            Chatta nu
-                        </button>
+                        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            
+                            {/* VÄN-KNAPP */}
+                            <button 
+                                onClick={handleFriendRequest}
+                                className={`w-full md:w-auto text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-transform active:scale-95 ${friendButtonClass}`}
+                                disabled={friendRequestSent && !isFriend}
+                            >
+                                <UserPlus size={20} />
+                                {friendButtonText}
+                            </button>
+                            
+                            {/* CHATTA KNAPP */}
+                            <button 
+                                onClick={startChat}
+                                className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-transform active:scale-95"
+                            >
+                                <MessageCircle size={20} />
+                                Chatta nu
+                            </button>
+
+                            {/* RAPPORTERA KNAPP (Diskret Utropstecken/Flagga) */}
+                            <button
+                                onClick={handleReport}
+                                title="Rapportera användare"
+                                className="md:w-auto p-3 flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                <Flag size={20} className="text-red-400/80" /> 
+                            </button>
+                        </div>
                     )}
                 </div>
 

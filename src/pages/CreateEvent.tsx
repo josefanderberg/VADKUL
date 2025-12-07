@@ -1,3 +1,5 @@
+// src/pages/CreateEvent.tsx
+
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -11,11 +13,14 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
-import type { AppEvent } from '../types';
+// NY IMPORT: Hämta UserProfile och userService
+import { userService } from '../services/userService'; 
+import type { AppEvent, UserProfile } from '../types'; 
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 
 
 const AGE_CATEGORIES = [
+// ... (AGE_CATEGORIES är oförändrad)
   { id: 'family', label: 'Familj', min: 0, max: 99 },
   { id: 'kids', label: 'Barn', min: 3, max: 12 },
   { id: 'youth', label: 'Ungdom', min: 13, max: 17 },
@@ -25,6 +30,7 @@ const AGE_CATEGORIES = [
 
 // --- SUB-KOMPONENT: KARTVÄLJARE ---
 function LocationPicker({ position, onLocationSelect }: { position: [number, number], onLocationSelect: (lat: number, lng: number) => void }) {
+// ... (LocationPicker är oförändrad)
     const map = useMapEvents({
         click(e) {
             onLocationSelect(e.latlng.lat, e.latlng.lng);
@@ -55,6 +61,9 @@ export default function CreateEvent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // NYTT STATE: För att lagra den utökade profilen från Firestore
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
   // State för Wizard
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -62,6 +71,7 @@ export default function CreateEvent() {
 
   // Form Data State
   const [formData, setFormData] = useState({
+// ... (formData är oförändrad)
     type: '',
     title: '',
     description: '',
@@ -89,6 +99,21 @@ export default function CreateEvent() {
         });
     }
   }, []);
+  
+  // NYTT useEffect: Hämta UserProfile när användaren loggat in
+  useEffect(() => {
+    if (user) {
+      userService.getUserProfile(user.uid)
+        .then(profile => {
+          if (profile) {
+            setUserProfile(profile);
+          }
+        })
+        .catch(error => {
+          console.error("Kunde inte hämta UserProfile:", error);
+        });
+    }
+  }, [user]);
 
   // Skydda sidan (Redirect om ej inloggad)
   useEffect(() => {
@@ -100,15 +125,18 @@ export default function CreateEvent() {
   // --- LOGIK ---
 
   const handleNext = () => {
+// ... (handleNext är oförändrad)
       if (!validateStep(step)) return;
       setStep(prev => Math.min(prev + 1, totalSteps));
   };
 
   const handleBack = () => {
+// ... (handleBack är oförändrad)
       setStep(prev => Math.max(prev - 1, 1));
   };
 
   const validateStep = (currentStep: number) => {
+// ... (validateStep är oförändrad)
       switch(currentStep) {
           case 1: 
           if (!formData.type) { toast.error("Välj en kategori först!"); return false; 
@@ -138,7 +166,8 @@ export default function CreateEvent() {
   };
 
   const handleSubmit = async () => {
-      if (!user || !user.email) return;
+      // LAGT TILL KONTROLL PÅ userProfile
+      if (!user || !user.email || !userProfile) return;
       setLoading(true);
 
       // Bygg ihop det slutgiltiga datumet
@@ -166,12 +195,15 @@ export default function CreateEvent() {
               maxAge: Number(formData.maxAge),
               ageCategory: formData.ageCategory,
               host: {
-                  uid: user.uid, // <--- LÄGG TILL DENNA RAD HÄR!
+                  uid: user.uid,
                   name: user.displayName || user.email,
                   initials: (user.displayName || user.email).substring(0, 2).toUpperCase(),
                   email: user.email,
-                  verified: true,
-                  rating: 5.0
+                  // ANVÄND userProfile.isVerified
+                  verified: userProfile.isVerified, 
+                  rating: 5.0,
+                  // FIXEN: Använd userProfile.verificationImage (Base64-sträng)
+                  photoURL: userProfile.verificationImage || user.photoURL || null 
               },
               attendees: [{
                 uid: user.uid,
@@ -192,6 +224,7 @@ export default function CreateEvent() {
   };
 
   // --- KALENDER-HJÄLPARE ---
+// ... (calendarDays useMemo är oförändrad)
   const calendarDays = useMemo(() => {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
@@ -507,7 +540,7 @@ export default function CreateEvent() {
                 ) : (
                     <button 
                         onClick={handleSubmit}
-                        disabled={loading}
+                        disabled={loading || !userProfile} // Inaktivera om profilen inte laddats
                         className="flex-grow py-3 rounded-xl font-bold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                     >
                         {loading ? 'Publicerar...' : 'Publicera Event'} <Check size={20} />
@@ -515,7 +548,6 @@ export default function CreateEvent() {
                 )}
             </div>
         </div>
-
       </div>
     </Layout>
   );

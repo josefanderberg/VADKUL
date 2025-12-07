@@ -35,10 +35,12 @@ export interface ChatRoom {
 export interface EventHost {
   uid: string; 
   name: string;
+  displayName?: string; // <--- LÄGG TILL DENNA RAD
   initials: string;
   verified: boolean;
   rating: number;
   email: string;
+  photoURL?: string | null;
 }
 
 export interface EventLocation {
