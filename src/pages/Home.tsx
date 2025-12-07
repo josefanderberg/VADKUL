@@ -9,7 +9,7 @@ import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
-import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils'; // Se till att saveLocationToLocalStorage är med
+import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils'; 
 import { EVENT_CATEGORIES, CATEGORY_LIST, type EventCategoryType } from '../utils/categories'; 
 import { X, Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown } from 'lucide-react';
 
@@ -32,7 +32,7 @@ function MapReCenter({ center }: { center: [number, number] }) {
   return null;
 }
 
-// NY KOMPONENT: Lyssna på klick på kartan
+// Lyssna på klick på kartan
 function MapClickListener({ onLocationSet }: { onLocationSet: (lat: number, lng: number) => void }) {
     useMapEvents({
         click(e) {
@@ -57,7 +57,9 @@ export default function Home() {
   const [filterFree, setFilterFree] = useState(false);
   const [filterToday, setFilterToday] = useState(false);
   const [sortBy, setSortBy] = useState('closest');
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
+  
+  // State för att visa de "extra" filtren (Ålder/Avstånd)
+  const [showExtraFilters, setShowExtraFilters] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -156,57 +158,28 @@ export default function Home() {
 
     return (
         <Layout>
-          <div className="sticky z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
+          {/* --- TOP STICKY MENU --- */}
+          <div className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
             <div className="max-w-6xl mx-auto flex flex-col gap-3">
                 
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
-                        
-                        {/* KATEGORI SELECT */}
-                        <select 
-                            value={filterType} 
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className={`font-bold rounded-xl text-sm p-2.5 outline-none cursor-pointer border-2 border-transparent transition-colors ${categoryColorClass}`}
-                        >
-                            <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alla kategorier</option>
-                            {CATEGORY_LIST.map(cat => (
-                                <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                                    {cat.label} {cat.emoji}
-                                </option>
-                            ))}
-                        </select>
-    
-                        <button 
-                            onClick={() => setFilterToday(!filterToday)}
-                            className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                                ${filterToday 
-                                    ? 'bg-indigo-600 text-white border-indigo-600' 
-                                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                                }`}
-                        >
-                            <Calendar size={14} /> Idag
-                        </button>
-    
-                        <button 
-                            onClick={() => setFilterFree(!filterFree)}
-                            className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                                ${filterFree 
-                                    ? 'bg-indigo-600 text-white border-indigo-600' 
-                                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                                }`}
-                        >
-                            Gratis
-                        </button>
-    
-                        <button 
-                            onClick={() => setShowFiltersMobile(!showFiltersMobile)}
-                            className="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 md:hidden hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        >
-                            <Filter size={20} />
-                        </button>
-                    </div>
-    
-                    <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0 ml-2">
+                {/* RAD 1: Kategori + List/Map Toggle */}
+                <div className="flex justify-between items-center w-full">
+                    {/* KATEGORI SELECT (Full bredd på mobil för tydlighet, eller flex-grow) */}
+                    <select 
+                        value={filterType} 
+                        onChange={(e) => setFilterType(e.target.value)}
+                        className={`flex-grow md:flex-grow-0 md:w-64 font-bold rounded-xl text-sm p-3 outline-none cursor-pointer border-2 border-transparent transition-colors mr-3 ${categoryColorClass}`}
+                    >
+                        <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alla kategorier</option>
+                        {CATEGORY_LIST.map(cat => (
+                            <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                                {cat.label} {cat.emoji}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* LIST / MAP TOGGLE */}
+                    <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0">
                         <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
                             <List size={20} />
                         </button>
@@ -215,69 +188,112 @@ export default function Home() {
                         </button>
                     </div>
                 </div>
-    
-                {/* EXPANDED FILTERS */}
-                <div className={`flex gap-3 items-center text-sm flex-nowrap overflow-x-auto pb-1 no-scrollbar ${showFiltersMobile ? 'block animate-in fade-in slide-in-from-top-2' : 'hidden md:flex'}`}>
-                    
-                    {/* SORTERING SELECT */}
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
-                        <span className="text-xs font-bold text-slate-400 uppercase px-1 flex items-center">
-                             <ArrowUpDown size={16} /> 
-                        </span>
-                        <select 
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none pr-2 cursor-pointer"
+
+                {/* RAD 2: Snabbval + Filterknapp */}
+                <div className="flex items-center justify-between">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                        <button 
+                            onClick={() => setFilterToday(!filterToday)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
+                                ${filterToday 
+                                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-200'
+                                }`}
                         >
-                            <option value="closest">Närmast</option>
-                            <option value="soonest">Tid kvar</option>
-                            <option value="latest">Senast</option>
-                            <option value="popular">Anmälda</option>
-                        </select>
-                    </div>
-    
-                    {/* AVSTÅND SELECT */}
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
-                        <span className="text-xs font-bold text-slate-400 uppercase px-1">Avstånd</span>
-                        <select 
-                            value={filterDistance}
-                            onChange={(e) => setFilterDistance(e.target.value)}
-                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer"
+                            <Calendar size={14} /> Idag
+                        </button>
+
+                        <button 
+                            onClick={() => setFilterFree(!filterFree)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
+                                ${filterFree 
+                                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-200'
+                                }`}
                         >
-                            <option value="1">1 km</option>
-                            <option value="5">5 km</option>
-                            <option value="10">10 km</option>
-                            <option value="25">25 km</option>
-                            <option value="all">Alla</option>
-                        </select>
-                    </div>
-    
-                    {/* ÅLDER SELECT */}
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600 shrink-0">
-                        <span className="text-xs font-bold text-slate-400 uppercase px-1">Ålder</span>
-                        <select 
-                            value={filterAge}
-                            onChange={(e) => setFilterAge(e.target.value)}
-                            className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer"
+                            Gratis
+                        </button>
+
+                        {/* Knapp för att visa fler filter (Avstånd, Ålder) */}
+                        <button 
+                            onClick={() => setShowExtraFilters(!showExtraFilters)}
+                            className={`px-3 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
+                                ${showExtraFilters
+                                    ? 'bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white border-slate-200'
+                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-100'
+                                }`}
                         >
-                            <option value="all">Alla</option>
-                            <option value="family">Familj</option>
-                            <option value="13+">Ungdomar</option>
-                            <option value="18+">Vuxna</option>
-                            <option value="seniors">Seniorer</option>
-                        </select>
+                            <Filter size={16} /> Fler filter
+                        </button>
                     </div>
-                    
-                    {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '1' || sortBy !== 'closest') && (
-                        <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 ml-auto shrink-0">
-                            <RefreshCw size={12} /> Rensa
+
+                    {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '1' || filterAge !== 'all') && (
+                        <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 shrink-0 ml-2">
+                            <RefreshCw size={12} />
                         </button>
                     )}
                 </div>
-        </div>
-      </div>
+    
+                {/* EXTRA FILTER (Avstånd & Ålder) - Visas bara om man klickar på "Fler filter" */}
+                {showExtraFilters && (
+                    <div className="flex gap-3 items-center text-sm flex-wrap animate-in fade-in slide-in-from-top-2 pt-1 border-t border-slate-100 dark:border-slate-700 mt-1">
+                        
+                        {/* AVSTÅND SELECT */}
+                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
+                            <span className="text-xs font-bold text-slate-400 uppercase px-1">Avstånd</span>
+                            <select 
+                                value={filterDistance}
+                                onChange={(e) => setFilterDistance(e.target.value)}
+                                className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm"
+                            >
+                                <option value="1">1 km</option>
+                                <option value="5">5 km</option>
+                                <option value="10">10 km</option>
+                                <option value="25">25 km</option>
+                                <option value="all">Alla</option>
+                            </select>
+                        </div>
+        
+                        {/* ÅLDER SELECT */}
+                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
+                            <span className="text-xs font-bold text-slate-400 uppercase px-1">Ålder</span>
+                            <select 
+                                value={filterAge}
+                                onChange={(e) => setFilterAge(e.target.value)}
+                                className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm"
+                            >
+                                <option value="all">Alla</option>
+                                <option value="family">Familj</option>
+                                <option value="13+">Ungdomar</option>
+                                <option value="18+">Vuxna</option>
+                                <option value="seniors">Seniorer</option>
+                            </select>
+                        </div>
+                    </div>
+                )}
+            </div>
+          </div>
 
-      <div className="max-w-6xl mx-auto p-4 h-[calc(100vh-140px)]">
+          {/* --- SORTERING (Utanför menyn) --- */}
+          <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
+             <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                <ArrowUpDown size={14} />
+                <span className="text-xs font-bold uppercase mr-1">Sortera:</span>
+                <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm hover:text-indigo-600 transition-colors"
+                >
+                    <option value="closest">Närmast</option>
+                    <option value="soonest">Tid kvar</option>
+                    <option value="latest">Senast tillagd</option>
+                    <option value="popular">Populärast</option>
+                </select>
+             </div>
+          </div>
+
+      {/* --- CONTENT --- */}
+      <div className="max-w-6xl mx-auto p-4 h-[calc(100vh-180px)]">
         {loading ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -302,10 +318,10 @@ export default function Home() {
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapReCenter center={userLocation} />
                     
-                    {/* --- FIX: Spara location vid klick --- */}
+                    {/* --- Klicka för att spara plats --- */}
                     <MapClickListener onLocationSet={(lat, lng) => {
                         setUserLocation([lat, lng]);
-                        saveLocationToLocalStorage(lat, lng); // <-- Spara positionen
+                        saveLocationToLocalStorage(lat, lng); 
                     }} />                    
                     
                     {/* Event Markers */}
