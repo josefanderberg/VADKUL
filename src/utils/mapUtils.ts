@@ -2,6 +2,39 @@
 import { EVENT_CATEGORIES } from './categories';
 import type { EventCategoryType } from './categories';
 
+// --- NYA FUNKTIONER FÖR LOCAL STORAGE ---
+export function saveLocationToLocalStorage(lat: number, lng: number) {
+    localStorage.setItem('user_lat', lat.toString());
+    localStorage.setItem('user_lng', lng.toString());
+}
+
+export function loadLocationFromLocalStorage(): { lat: number, lng: number } | null {
+    const latStr = localStorage.getItem('user_lat');
+    const lngStr = localStorage.getItem('user_lng');
+    
+    if (latStr && lngStr) {
+        return {
+            lat: parseFloat(latStr),
+            lng: parseFloat(lngStr)
+        };
+    }
+    return null;
+}
+
+export function getCurrentBrowserLocation(): Promise<{lat: number, lng: number}> {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("Geolocation not supported"));
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => reject(err)
+        );
+    });
+}
+// ----------------------------------------
+
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371; // Jordens radie i km
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -13,7 +46,6 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 }
 
 export const getEventEmoji = (type: string): string => {
-    // Vi castar type till vår key, och faller tillbaka på 'other' om den inte finns
     const category = EVENT_CATEGORIES[type as EventCategoryType];
     return category ? category.emoji : '🌟';
 };

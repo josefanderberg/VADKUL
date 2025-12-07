@@ -13,14 +13,14 @@ import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
-// NY IMPORT: Hämta UserProfile och userService
 import { userService } from '../services/userService'; 
 import type { AppEvent, UserProfile } from '../types'; 
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
+// --- NY IMPORT: Lägg till loadLocationFromLocalStorage
+import { loadLocationFromLocalStorage } from '../utils/mapUtils';
 
 
 const AGE_CATEGORIES = [
-// ... (AGE_CATEGORIES är oförändrad)
   { id: 'family', label: 'Familj', min: 0, max: 99 },
   { id: 'kids', label: 'Barn', min: 3, max: 12 },
   { id: 'youth', label: 'Ungdom', min: 13, max: 17 },
@@ -30,7 +30,6 @@ const AGE_CATEGORIES = [
 
 // --- SUB-KOMPONENT: KARTVÄLJARE ---
 function LocationPicker({ position, onLocationSelect }: { position: [number, number], onLocationSelect: (lat: number, lng: number) => void }) {
-// ... (LocationPicker är oförändrad)
     const map = useMapEvents({
         click(e) {
             onLocationSelect(e.latlng.lat, e.latlng.lng);
@@ -38,7 +37,6 @@ function LocationPicker({ position, onLocationSelect }: { position: [number, num
         },
     });
 
-    // Uppdatera kartvyn om positionen ändras utifrån (t.ex. geolocation vid start)
     useEffect(() => {
         map.setView(position);
     }, [position, map]);
@@ -61,25 +59,28 @@ export default function CreateEvent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // NYTT STATE: För att lagra den utökade profilen från Firestore
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  // State för Wizard
+  // --- NY LOGIK: Hämta sparad plats vid start ---
+  // Vi läser från localStorage direkt här.
+  // Om det finns en sparad plats från Home, använd den som default.
+  const savedLocation = useMemo(() => loadLocationFromLocalStorage(), []);
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const totalSteps = 6;
 
   // Form Data State
   const [formData, setFormData] = useState({
-// ... (formData är oförändrad)
     type: '',
     title: '',
     description: '',
-    lat: 56.8790, // Default Växjö
-    lng: 14.8059,
+    // Använd sparad lat/lng om finns, annars default
+    lat: savedLocation ? savedLocation.lat : 56.8790, 
+    lng: savedLocation ? savedLocation.lng : 14.8059,
     locationName: '',
     date: new Date(),
-    timeStr: '18:00', // Sträng för input type="time"
+    timeStr: '18:00', 
     ageCategory: 'adults',
     minAge: 18,
     maxAge: 99,
@@ -88,19 +89,18 @@ export default function CreateEvent() {
     price: 0
   });
 
-  // Kalender State
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Hämta användarens position vid start
+  // Hämta position vid start ENDAST om vi inte har en sparad plats
   useEffect(() => {
-    if (navigator.geolocation) {
+    // Om vi inte har någon sparad plats, försök ta GPS
+    if (!savedLocation && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
         });
     }
-  }, []);
+  }, [savedLocation]);
   
-  // NYTT useEffect: Hämta UserProfile när användaren loggat in
   useEffect(() => {
     if (user) {
       userService.getUserProfile(user.uid)
@@ -115,28 +115,18 @@ export default function CreateEvent() {
     }
   }, [user]);
 
-  // Skydda sidan (Redirect om ej inloggad)
-  useEffect(() => {
-      // Vi hanterar detta i AuthContext egentligen, men en extra koll skadar inte
-      // Om user är null och loading är false -> redirect. 
-      // (Lämnar detta åt AuthGuard-logik i App.tsx helst, men här för säkerhets skull)
-  }, [user]);
-
   // --- LOGIK ---
 
   const handleNext = () => {
-// ... (handleNext är oförändrad)
       if (!validateStep(step)) return;
       setStep(prev => Math.min(prev + 1, totalSteps));
   };
 
   const handleBack = () => {
-// ... (handleBack är oförändrad)
       setStep(prev => Math.max(prev - 1, 1));
   };
 
   const validateStep = (currentStep: number) => {
-// ... (validateStep är oförändrad)
       switch(currentStep) {
           case 1: 
           if (!formData.type) { toast.error("Välj en kategori först!"); return false; 
@@ -145,7 +135,6 @@ export default function CreateEvent() {
               if (!formData.title) { toast.success("Ange en titel!"); return false; }
               return true;
           case 4:
-              // Datumvalidering
               const combinedDate = new Date(formData.date);
               const [hours, minutes] = formData.timeStr.split(':').map(Number);
               combinedDate.setHours(hours, minutes);
@@ -166,23 +155,20 @@ export default function CreateEvent() {
   };
 
   const handleSubmit = async () => {
-      // LAGT TILL KONTROLL PÅ userProfile
       if (!user || !user.email || !userProfile) return;
       setLoading(true);
 
-      // Bygg ihop det slutgiltiga datumet
       const finalDate = new Date(formData.date);
       const [h, m] = formData.timeStr.split(':').map(Number);
       finalDate.setHours(h, m);
 
       try {
-          // Förbered objektet
           const newEvent: Omit<AppEvent, 'id'> = {
               title: formData.title,
               description: formData.description,
               location: { 
                   name: formData.locationName || "Vald plats", 
-                  distance: 0 // Räknas ut vid visning
+                  distance: 0 
               },
               lat: formData.lat,
               lng: formData.lng,
@@ -199,10 +185,8 @@ export default function CreateEvent() {
                   name: user.displayName || user.email,
                   initials: (user.displayName || user.email).substring(0, 2).toUpperCase(),
                   email: user.email,
-                  // ANVÄND userProfile.isVerified
                   verified: userProfile.isVerified, 
                   rating: 5.0,
-                  // FIXEN: Använd userProfile.verificationImage (Base64-sträng)
                   photoURL: userProfile.verificationImage || user.photoURL || null 
               },
               attendees: [{
@@ -214,7 +198,7 @@ export default function CreateEvent() {
 
           await eventService.create(newEvent);
           toast.success('Eventet är publicerat! 🎉'); 
-          navigate('/'); // Skicka tillbaka till startsidan
+          navigate('/'); 
       } catch (error) {
           console.error("Fel vid skapande:", error);
           toast.error("Kunde inte skapa eventet. Försök igen.");
@@ -223,29 +207,22 @@ export default function CreateEvent() {
       }
   };
 
-  // --- KALENDER-HJÄLPARE ---
-// ... (calendarDays useMemo är oförändrad)
   const calendarDays = useMemo(() => {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
       const firstDayOfMonth = new Date(year, month, 1);
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       
-      // Justera så måndag = 0, söndag = 6 för rendering (eller måndag=1...)
-      // JS getDay(): Söndag=0, Måndag=1. Vi vill ha Måndag först.
       let startDay = firstDayOfMonth.getDay(); 
-      startDay = (startDay + 6) % 7; // Nu är Måndag=0, Söndag=6
+      startDay = (startDay + 6) % 7; 
 
       const days = [];
-      // Tomma dagar i början
       for (let i = 0; i < startDay; i++) days.push(null);
-      // Dagar
       for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
       
       return days;
   }, [currentMonth]);
 
-  // --- RENDER STEPS ---
 
   return (
     <Layout>
@@ -274,10 +251,9 @@ export default function CreateEvent() {
                 <div className="flex flex-wrap gap-3 justify-center">
                 {CATEGORY_LIST.map(cat => {
                 const isSelected = formData.type === cat.id;
-                // Använd färgen från objektet
                 const bg = isSelected 
                     ? 'bg-indigo-600 text-white shadow-lg scale-105' 
-                    : `${cat.color} border-transparent`; // Använd cat.color här
+                    : `${cat.color} border-transparent`; 
                 
                 return (
                     <button
@@ -540,7 +516,7 @@ export default function CreateEvent() {
                 ) : (
                     <button 
                         onClick={handleSubmit}
-                        disabled={loading || !userProfile} // Inaktivera om profilen inte laddats
+                        disabled={loading || !userProfile}
                         className="flex-grow py-3 rounded-xl font-bold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                     >
                         {loading ? 'Publicerar...' : 'Publicera Event'} <Check size={20} />

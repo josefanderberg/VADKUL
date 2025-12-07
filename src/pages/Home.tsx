@@ -1,7 +1,6 @@
 // src/pages/Home.tsx
 
 import { useEffect, useState, useMemo } from 'react';
-// Lade till Popup
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet'; 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -10,14 +9,13 @@ import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
-import { calculateDistance } from '../utils/mapUtils';
+import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils'; // Se till att saveLocationToLocalStorage är med
 import { EVENT_CATEGORIES, CATEGORY_LIST, type EventCategoryType } from '../utils/categories'; 
 import { X, Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown } from 'lucide-react';
 
 // --- LEAFLET FIX ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
-// FIXA DENNA RADEN (byt 'shadows' mot 'shadow')
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -118,7 +116,6 @@ export default function Home() {
     const emoji = category.emoji;
     const bgClass = category.markerColor;
 
-    // Vi gör den lite större (scale-125) när den är vald
     const containerClasses = isSelected 
       ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' 
       : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1';
@@ -127,20 +124,15 @@ export default function Home() {
       className: 'custom-marker-teardrop', 
       html: `
         <div class="relative group transition-all duration-300 ${containerClasses}">
-            
             <div class="w-12 h-12 ${bgClass} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
-                
                 <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
-
                 <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">
                     ${emoji}
                 </div>
             </div>
-
             <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-[3px] rounded-full transition-all duration-300 group-hover:w-6 group-hover:opacity-50"></div>
         </div>
       `,
-      // Justera storleken så Leaflet vet var spetsen är
       iconSize: [48, 65], 
       iconAnchor: [24, 58], 
       popupAnchor: [0, -50]
@@ -156,7 +148,6 @@ export default function Home() {
       setSortBy('closest');
   };
 
-  // Hämta färgen för den valda kategorin, eller en standardfärg
   const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
   const categoryColorClass = selectedCategory 
     ? selectedCategory.color 
@@ -171,16 +162,14 @@ export default function Home() {
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar md:pb-0">
                         
-                        {/* KATEGORI SELECT (UPPDATERAD med dynamisk färg och höjd) */}
+                        {/* KATEGORI SELECT */}
                         <select 
                             value={filterType} 
                             onChange={(e) => setFilterType(e.target.value)}
-                            // Ändrade p-2 till p-2.5 för att matcha höjden på knapparna
                             className={`font-bold rounded-xl text-sm p-2.5 outline-none cursor-pointer border-2 border-transparent transition-colors ${categoryColorClass}`}
                         >
                             <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alla kategorier</option>
                             {CATEGORY_LIST.map(cat => (
-                                // Sätter en standardfärg på alternativen för läsbarhet
                                 <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                                     {cat.label} {cat.emoji}
                                 </option>
@@ -227,7 +216,7 @@ export default function Home() {
                     </div>
                 </div>
     
-                {/* EXPANDED FILTERS (NY: la till flex-nowrap och overflow-x-auto) */}
+                {/* EXPANDED FILTERS */}
                 <div className={`flex gap-3 items-center text-sm flex-nowrap overflow-x-auto pb-1 no-scrollbar ${showFiltersMobile ? 'block animate-in fade-in slide-in-from-top-2' : 'hidden md:flex'}`}>
                     
                     {/* SORTERING SELECT */}
@@ -274,7 +263,6 @@ export default function Home() {
                             <option value="all">Alla</option>
                             <option value="family">Familj</option>
                             <option value="13+">Ungdomar</option>
-
                             <option value="18+">Vuxna</option>
                             <option value="seniors">Seniorer</option>
                         </select>
@@ -314,11 +302,14 @@ export default function Home() {
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapReCenter center={userLocation} />
                     
-                    {/* NYTT: Lyssna på klick för att flytta userLocation */}
-                    <MapClickListener onLocationSet={(lat, lng) => setUserLocation([lat, lng])} />                    
-                    {/* Event Markers (Teardrops) */}
+                    {/* --- FIX: Spara location vid klick --- */}
+                    <MapClickListener onLocationSet={(lat, lng) => {
+                        setUserLocation([lat, lng]);
+                        saveLocationToLocalStorage(lat, lng); // <-- Spara positionen
+                    }} />                    
+                    
+                    {/* Event Markers */}
                     {filteredEvents.map(evt => {
-                        
                         const isSelected = selectedEvent?.id === evt.id;
                         return (
                             <Marker 
@@ -335,7 +326,7 @@ export default function Home() {
                         );
                     })}
 
-                    {/* ANVÄNDARPOSITION (Statisk, flyttas via klick) */}
+                    {/* ANVÄNDARPOSITION */}
                     <Marker 
                         position={userLocation} 
                         icon={L.divIcon({
