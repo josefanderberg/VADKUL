@@ -123,8 +123,8 @@ export const EVENT_CATEGORIES = {
     id: 'market',
     label: 'Köp & Sälj',
     emoji: '💸',
-    color: 'bg-lime-100 text-lime-700',
-    markerColor: 'bg-lime-600', 
+    color: 'bg-emerald-100 text-emerald-700',
+    markerColor: 'bg-emerald-600', 
     description: 'Kurslitteratur, möbler eller annat som byter ägare'
   },
   other: {

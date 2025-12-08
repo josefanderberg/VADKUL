@@ -1,20 +1,21 @@
 // src/pages/Home.tsx
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet'; 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
+import EventFilters from '../components/home/EventFilters'; 
+
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils'; 
-import { EVENT_CATEGORIES, CATEGORY_LIST, type EventCategoryType } from '../utils/categories'; 
-// Bytte ut X mot ArrowRight i importen
-import { Map as MapIcon, List, Filter, Calendar, RefreshCw, ArrowUpDown, ArrowRight } from 'lucide-react';
+import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories'; 
+import { ArrowUpDown, ArrowRight, Search } from 'lucide-react';
 
-// --- LEAFLET FIX ---
+// ... (Behåll Leaflet icon fixar) ...
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -25,22 +26,26 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-function MapReCenter({ center }: { center: [number, number] }) {
+function MapController({ center, onMove, onClick }: { center: [number, number], onMove: (newCenter: L.LatLng) => void, onClick: (lat: number, lng: number) => void }) {
   const map = useMap();
-  useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
-  return null;
-}
+  const isFirstLoad = useRef(true);
 
-// Uppdaterad MapClickListener som skickar vidare klicket till Home-komponenten
-function MapClickListener({ onClick }: { onClick: (lat: number, lng: number) => void }) {
-    useMapEvents({
-        click(e) {
-            onClick(e.latlng.lat, e.latlng.lng);
-        },
-    });
-    return null;
+  useEffect(() => {
+    if (center) {
+        if (isFirstLoad.current) {
+            map.setView(center, map.getZoom());
+            isFirstLoad.current = false;
+        } else {
+            map.flyTo(center, map.getZoom(), { duration: 1.5 });
+        }
+    }
+  }, [center, map]);
+
+  useMapEvents({
+    moveend: () => onMove(map.getCenter()),
+    click: (e) => onClick(e.latlng.lat, e.latlng.lng)
+  });
+  return null;
 }
 
 export default function Home() {
@@ -50,16 +55,41 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<[number, number]>([56.8556, 14.8250]);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
-  // FILTER STATES
+  // Filter states
   const [filterType, setFilterType] = useState('all');
   const [filterAge, setFilterAge] = useState('all');
-  const [filterDistance, setFilterDistance] = useState('1');
   const [filterFree, setFilterFree] = useState(false);
   const [filterToday, setFilterToday] = useState(false);
   const [sortBy, setSortBy] = useState('closest');
   
-  // State för att visa de "extra" filtren (Ålder/Avstånd)
-  const [showExtraFilters, setShowExtraFilters] = useState(false);
+  const [showSearchHereBtn, setShowSearchHereBtn] = useState(false);
+  const [mapCenter, setMapCenter] = useState<L.LatLng | null>(null);
+
+  // --- NY STATE FÖR SCROLL ---
+  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+  const lastScrollTop = useRef(0);
+
+  // --- NY FUNKTION: Hantera scroll inuti containern ---
+  const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const currentScrollTop = e.currentTarget.scrollTop;
+    
+    // Om vi är i toppen eller nära, visa alltid
+    if (currentScrollTop < 10) {
+        setIsFiltersVisible(true);
+        lastScrollTop.current = currentScrollTop;
+        return;
+    }
+
+    // Scrollar vi NER (mer än sist) -> Göm
+    // Scrollar vi UPP (mindre än sist) -> Visa
+    if (currentScrollTop > lastScrollTop.current) {
+        setIsFiltersVisible(false);
+    } else {
+        setIsFiltersVisible(true);
+    }
+    
+    lastScrollTop.current = currentScrollTop;
+  };
 
   useEffect(() => {
     loadData();
@@ -77,9 +107,8 @@ export default function Home() {
     setLoading(false);
   }
 
-  // --- FILTRERING OCH SORTERING ---
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+    let candidates = events.filter(event => {
         const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
         event.location.distance = dist; 
 
@@ -87,75 +116,70 @@ export default function Home() {
         if (filterAge === 'family' && event.minAge >= 12) return false;
         if (filterAge === '18+' && event.minAge < 18) return false;
         if (filterAge === 'seniors' && event.minAge < 65) return false;
-        if (filterDistance !== 'all' && dist > parseInt(filterDistance)) return false;
         if (filterFree && event.price > 0) return false;
         if (filterToday) {
             const today = new Date().toDateString();
             if (new Date(event.time).toDateString() !== today) return false;
         }
-
         return true;
-    }).sort((a, b) => {
-        switch (sortBy) {
-            case 'closest':
-                return (a.location.distance || 0) - (b.location.distance || 0);
-            case 'soonest':
-                return new Date(a.time).getTime() - new Date(b.time).getTime();
-            case 'latest':
-                return new Date(b.time).getTime() - new Date(a.time).getTime();
-            case 'popular':
-                return (b.attendees?.length || 0) - (a.attendees?.length || 0);
-            default:
-                return 0;
+    });
+
+    candidates.sort((a, b) => (a.location.distance || 0) - (b.location.distance || 0));
+    const top30Closest = candidates.slice(0, 30);
+
+    return top30Closest.sort((a, b) => {
+       switch (sortBy) {
+            case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
+            case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
+            case 'latest': return new Date(b.time).getTime() - new Date(a.time).getTime();
+            case 'popular': return (b.attendees?.length || 0) - (a.attendees?.length || 0);
+            default: return 0;
         }
     });
-  }, [events, userLocation, filterType, filterAge, filterDistance, filterFree, filterToday, sortBy]);
+  }, [events, userLocation, filterType, filterAge, filterFree, filterToday, sortBy]);
 
-  // --- Hantera klick på kartan ---
-  // Om ett event är öppet -> stäng det.
-  // Annars -> flytta användarens position.
+  const handleMapMove = (newCenter: L.LatLng) => {
+    setMapCenter(newCenter);
+    const dist = calculateDistance(userLocation[0], userLocation[1], newCenter.lat, newCenter.lng);
+    if (dist > 1) setShowSearchHereBtn(true);
+    else setShowSearchHereBtn(false);
+  };
+
+  const handleSearchHere = () => {
+    if (mapCenter) {
+        setUserLocation([mapCenter.lat, mapCenter.lng]);
+        saveLocationToLocalStorage(mapCenter.lat, mapCenter.lng);
+        setShowSearchHereBtn(false);
+    }
+  };
+
   const handleMapClick = (lat: number, lng: number) => {
-      if (selectedEvent) {
-          setSelectedEvent(null);
-      } else {
+      if (selectedEvent) setSelectedEvent(null);
+      else {
           setUserLocation([lat, lng]);
           saveLocationToLocalStorage(lat, lng);
+          setShowSearchHereBtn(false);
       }
   };
 
-  // --- Byta till nästa event ---
   const cycleNextEvent = (e?: React.MouseEvent) => {
-    e?.stopPropagation(); // Förhindra att kartan klickas
+    e?.stopPropagation();
     if (!selectedEvent || filteredEvents.length === 0) return;
-    
     const currentIndex = filteredEvents.findIndex(evt => evt.id === selectedEvent.id);
-    // Hitta nästa index (loopa runt om vi är på sista)
     const nextIndex = (currentIndex + 1) % filteredEvents.length;
-    
     setSelectedEvent(filteredEvents[nextIndex]);
   };
 
-  // --- SKAPA IKONER FÖR KARTAN ---
   const createCustomIcon = (type: string, isSelected: boolean) => {
     const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
-    const emoji = category.emoji;
-    const bgClass = category.markerColor;
-
-    const containerClasses = isSelected 
-      ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' 
-      : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1';
-
     return L.divIcon({
       className: 'custom-marker-teardrop', 
       html: `
-        <div class="relative group transition-all duration-300 ${containerClasses}">
-            <div class="w-12 h-12 ${bgClass} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
+        <div class="relative group transition-all duration-300 ${isSelected ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1'}">
+            <div class="w-12 h-12 ${category.markerColor} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
-                <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">
-                    ${emoji}
-                </div>
+                <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">${category.emoji}</div>
             </div>
-            <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-[3px] rounded-full transition-all duration-300 group-hover:w-6 group-hover:opacity-50"></div>
         </div>
       `,
       iconSize: [48, 65], 
@@ -167,227 +191,118 @@ export default function Home() {
   const resetFilters = () => {
       setFilterType('all');
       setFilterAge('all');
-      setFilterDistance('1');
       setFilterFree(false);
       setFilterToday(false);
       setSortBy('closest');
+      setShowSearchHereBtn(false);
   };
-
-  const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
-  const categoryColorClass = selectedCategory 
-    ? selectedCategory.color 
-    : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white';
-
-
-    return (
-        <Layout>
-          {/* --- TOP STICKY MENU --- */}
-          <div className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm transition-all">
-            <div className="max-w-6xl mx-auto flex flex-col gap-3">
-                
-                {/* RAD 1: Kategori + List/Map Toggle */}
-                <div className="flex justify-between items-center w-full">
-                    <select 
-                        value={filterType} 
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className={`flex-grow md:flex-grow-0 md:w-64 font-bold rounded-xl text-sm p-3 outline-none cursor-pointer border-2 border-transparent transition-colors mr-3 ${categoryColorClass}`}
-                    >
-                        <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Alla kategorier</option>
-                        {CATEGORY_LIST.map(cat => (
-                            <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                                {cat.label} {cat.emoji}
-                            </option>
-                        ))}
-                    </select>
-
-                    <div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex shrink-0">
-                        <button onClick={() => setView('list')} className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
-                            <List size={20} />
-                        </button>
-                        <button onClick={() => setView('map')} className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-indigo-500'}`}>
-                            <MapIcon size={20} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* RAD 2: Snabbval + Filterknapp */}
-                <div className="flex items-center justify-between">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button 
-                            onClick={() => setFilterToday(!filterToday)}
-                            className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                                ${filterToday 
-                                    ? 'bg-indigo-600 text-white border-indigo-600' 
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-200'
-                                }`}
-                        >
-                            <Calendar size={14} /> Idag
-                        </button>
-
-                        <button 
-                            onClick={() => setFilterFree(!filterFree)}
-                            className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                                ${filterFree 
-                                    ? 'bg-indigo-600 text-white border-indigo-600' 
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-200'
-                                }`}
-                        >
-                            Gratis
-                        </button>
-
-                        <button 
-                            onClick={() => setShowExtraFilters(!showExtraFilters)}
-                            className={`px-3 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border-2 shrink-0
-                                ${showExtraFilters
-                                    ? 'bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white border-slate-200'
-                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-100'
-                                }`}
-                        >
-                            <Filter size={16} /> Fler filter
-                        </button>
-                    </div>
-
-                    {(filterType !== 'all' || filterFree || filterToday || filterDistance !== '1' || filterAge !== 'all') && (
-                        <button onClick={resetFilters} className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1 shrink-0 ml-2">
-                            <RefreshCw size={12} />
-                        </button>
-                    )}
-                </div>
-    
-                {/* EXTRA FILTER */}
-                {showExtraFilters && (
-                    <div className="flex gap-3 items-center text-sm flex-wrap animate-in fade-in slide-in-from-top-2 pt-1 border-t border-slate-100 dark:border-slate-700 mt-1">
-                        
-                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
-                            <span className="text-xs font-bold text-slate-400 uppercase px-1">Avstånd</span>
-                            <select 
-                                value={filterDistance}
-                                onChange={(e) => setFilterDistance(e.target.value)}
-                                className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm"
-                            >
-                                <option value="1">1 km</option>
-                                <option value="5">5 km</option>
-                                <option value="10">10 km</option>
-                                <option value="25">25 km</option>
-                                <option value="all">Alla</option>
-                            </select>
-                        </div>
+  
+  return (
+    <Layout>
+      {/* Här är nyckeln! Vi skapar en container som är lika hög som skärmen (minus ev. header)
+         och sätter overflow-y-auto på DENNA. Då fångar onScroll händelsen korrekt.
+         Du kan behöva justera 'h-[calc(100vh-64px)]' beroende på hur hög din Navbar i Layout är.
+      */}
+      <div 
+        className="h-[calc(100vh-64px)] overflow-y-auto relative w-full"
+        onScroll={handleContainerScroll}
+      >
+        <EventFilters 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            view={view}
+            setView={setView}
+            filterToday={filterToday}
+            setFilterToday={setFilterToday}
+            filterFree={filterFree}
+            setFilterFree={setFilterFree}
+            filterAge={filterAge}
+            setFilterAge={setFilterAge}
+            resetFilters={resetFilters}
+            visible={isFiltersVisible}
+        />
         
-                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-100 dark:border-slate-600">
-                            <span className="text-xs font-bold text-slate-400 uppercase px-1">Ålder</span>
-                            <select 
-                                value={filterAge}
-                                onChange={(e) => setFilterAge(e.target.value)}
-                                className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm"
-                            >
-                                <option value="all">Alla</option>
-                                <option value="family">Familj</option>
-                                <option value="13+">Ungdomar</option>
-                                <option value="18+">Vuxna</option>
-                                <option value="seniors">Seniorer</option>
-                            </select>
-                        </div>
-                    </div>
-                )}
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
-             <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+        <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
+            <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                 <ArrowUpDown size={14} />
-                <span className="text-xs font-bold uppercase mr-1">Sortera:</span>
-                <select 
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm hover:text-indigo-600 transition-colors"
-                >
+                <span className="text-xs font-bold uppercase mr-1">Sortera (topp 30):</span>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm hover:text-indigo-600 transition-colors">
                     <option value="closest">Närmast</option>
                     <option value="soonest">Tid kvar</option>
                     <option value="latest">Senast tillagd</option>
                     <option value="popular">Populärast</option>
                 </select>
-             </div>
-          </div>
-
-      {/* --- CONTENT --- */}
-      <div className="max-w-6xl mx-auto p-4 h-[calc(100vh-180px)]">
-        {loading ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <p>Laddar events...</p>
             </div>
-        ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                <p className="text-slate-500 font-medium mb-2">Inga events matchar dina filter.</p>
-                <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
-            </div>
-        ) : view === 'list' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20 animate-in fade-in duration-500">
-                {filteredEvents.map(evt => (
-                    <div key={evt.id} className="h-full">
-                        <EventCard event={evt} />
-                    </div>
-                ))}
-            </div>
-        ) : (
-            <div className="relative h-full w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-inner">
-                <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <MapReCenter center={userLocation} />
-                    
-                    {/* Hantera klick på kartan via vår nya logik */}
-                    <MapClickListener onClick={handleMapClick} />                    
-                    
-                    {/* Event Markers */}
-                    {filteredEvents.map(evt => {
-                        const isSelected = selectedEvent?.id === evt.id;
-                        return (
-                            <Marker 
-                                key={evt.id} 
-                                position={[evt.lat, evt.lng]}
-                                icon={createCustomIcon(evt.type, isSelected)}
-                                eventHandlers={{ 
-                                    click: (e) => {
-                                        L.DomEvent.stopPropagation(e as any);
-                                        setSelectedEvent(evt); 
-                                    }
-                                }}
-                            />
-                        );
-                    })}
+        </div>
 
-                    <Marker 
-                        position={userLocation} 
-                        icon={L.divIcon({
-                            className: 'user-pos',
-                            html: '<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-xl pulse-ring cursor-pointer"></div>' 
-                        })} 
-                    >
-                         <Popup>Din plats (Klicka på kartan för att flytta)</Popup>
-                    </Marker>
-                </MapContainer>
-
-                {selectedEvent && (
-                    <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
-                        <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-md mx-auto">
-                            
-                            {/* --- NÄSTA EVENT KNAPP (Ersätter krysset) --- */}
+        <div className={`max-w-6xl mx-auto p-4 ${view === 'map' ? 'h-[calc(100vh-180px)]' : 'min-h-[500px]'}`}>
+            {loading ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 pt-20">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <p>Laddar events...</p>
+                </div>
+            ) : filteredEvents.length === 0 && view === 'list' ? (
+                <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                    <p className="text-slate-500 font-medium mb-2">Inga events hittades.</p>
+                    <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
+                </div>
+            ) : view === 'list' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20 animate-in fade-in duration-500">
+                    {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
+                </div>
+            ) : (
+                <div className="relative h-full w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-inner">
+                    {showSearchHereBtn && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] animate-in slide-in-from-top-4 fade-in duration-300">
                             <button 
-                                onClick={cycleNextEvent}
-                                className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center"
-                                title="Nästa event"
+                                onClick={handleSearchHere}
+                                className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-slate-600 hover:scale-105 transition-transform"
                             >
-                                <ArrowRight size={18} />
+                                <Search size={16} />
+                                Sök i detta område
                             </button>
+                        </div>
+                    )}
 
-                            <div className="max-h-[300px] overflow-y-auto">
-                                <EventCard event={selectedEvent} />
+                    <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <MapController center={userLocation} onMove={handleMapMove} onClick={handleMapClick} />
+                        {filteredEvents.map(evt => {
+                            const isSelected = selectedEvent?.id === evt.id;
+                            return (
+                                <Marker 
+                                    key={evt.id} 
+                                    position={[evt.lat, evt.lng]}
+                                    icon={createCustomIcon(evt.type, isSelected)}
+                                    eventHandlers={{ 
+                                        click: (e) => {
+                                            L.DomEvent.stopPropagation(e as any);
+                                            setSelectedEvent(evt); 
+                                        }
+                                    }}
+                                />
+                            );
+                        })}
+                        <Marker position={userLocation} icon={L.divIcon({ className: 'user-pos', html: '<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-xl pulse-ring cursor-pointer"></div>' })} >
+                            <Popup>Din sökposition</Popup>
+                        </Marker>
+                    </MapContainer>
+
+                    {selectedEvent && (
+                        <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
+                            <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-md mx-auto">
+                                <button onClick={cycleNextEvent} className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center">
+                                    <ArrowRight size={18} />
+                                </button>
+                                <div className="max-h-[300px] overflow-y-auto">
+                                    <EventCard event={selectedEvent} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        )}
+                    )}
+                </div>
+            )}
+        </div>
       </div>
     </Layout>
   );

@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalIcon, 
-  MapPin, Check, Info 
+  MapPin, Check,Users, Info 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -15,19 +15,27 @@ import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import { userService } from '../services/userService'; 
 import type { AppEvent, UserProfile } from '../types'; 
-import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
+// OBS: Vi importerar nu även EVENT_CATEGORIES för att få färgerna till markören
+import { CATEGORY_LIST, EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
 import { loadLocationFromLocalStorage } from '../utils/mapUtils';
 
 const AGE_CATEGORIES = [
   { id: 'family', label: 'Familj', min: 0, max: 99 },
-  { id: 'kids', label: 'Barn', min: 3, max: 12 },
   { id: 'youth', label: 'Ungdom', min: 13, max: 17 },
   { id: 'adults', label: 'Vuxna', min: 18, max: 99 },
   { id: 'seniors', label: 'Seniorer', min: 65, max: 99 },
 ];
 
-// --- SUB-KOMPONENT: KARTVÄLJARE ---
-function LocationPicker({ position, onLocationSelect }: { position: [number, number], onLocationSelect: (lat: number, lng: number) => void }) {
+// --- SUB-KOMPONENT: KARTVÄLJARE MED ANPASSAD MARKÖR ---
+function LocationPicker({ 
+    position, 
+    onLocationSelect,
+    selectedType 
+}: { 
+    position: [number, number], 
+    onLocationSelect: (lat: number, lng: number) => void,
+    selectedType: string
+}) {
     const map = useMapEvents({
         click(e) {
             onLocationSelect(e.latlng.lat, e.latlng.lng);
@@ -39,13 +47,27 @@ function LocationPicker({ position, onLocationSelect }: { position: [number, num
         map.setView(position);
     }, [position, map]);
 
+    // Hämta stil och emoji baserat på vald kategori (samma logik som Home.tsx)
+    const category = EVENT_CATEGORIES[selectedType as EventCategoryType] || EVENT_CATEGORIES.other;
+    const emoji = category.emoji;
+    const bgClass = category.markerColor; // T.ex. 'bg-amber-500'
+
     const markerIcon = L.divIcon({
-        className: 'custom-picker-marker',
-        html: `<div class="w-8 h-8 bg-indigo-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center animate-bounce">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-               </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+        className: 'custom-marker-teardrop ', 
+        html: `
+          <div class="relative group rotate-45">
+              <div class="w-12 h-12 ${bgClass} border-[3px] border-white shadow-md rounded-full rounded-br-none transform  flex items-center justify-center overflow-hidden">
+                  
+                  <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
+                  
+                  <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">
+                      ${emoji}
+                  </div>
+              </div>
+          </div>
+        `,
+        iconSize: [48, 65],
+        iconAnchor: [24, 58]
     });
 
     return position ? <Marker position={position} icon={markerIcon} /> : null;
@@ -124,7 +146,11 @@ export default function CreateEvent() {
           case 1: 
             if (!formData.type) { toast.error("Välj en kategori först!"); return false; }   
             return true;
+          // ÄNDRAT: Steg 2 är nu kartan (behöver oftast ingen validering då default finns)
           case 2:
+              return true; 
+          // ÄNDRAT: Steg 3 är nu Titel & Info
+          case 3:
               if (!formData.title) { toast.success("Ange en titel!"); return false; }
               return true;
           case 4:
@@ -186,7 +212,6 @@ export default function CreateEvent() {
                 uid: user.uid,
                 email: user.email || '',
                 displayName: user.displayName || 'Värd',
-                // ÄNDRING: Nu kollar vi userProfile också
                 photoURL: userProfile.verificationImage || user.photoURL || null 
               }]
         };
@@ -247,40 +272,28 @@ export default function CreateEvent() {
                 {CATEGORY_LIST.map(cat => {
                     const isSelected = formData.type === cat.id;
                     
-                    // Definiera de "starka" färgerna för aktivt läge här
                     const getActiveColor = (id: string) => {
                         switch(id) {
-                            // Social & Mingel
                             case 'social': return 'bg-amber-600 border-amber-600';
                             case 'party': return 'bg-indigo-600 border-indigo-600';
                             case 'mingle': return 'bg-teal-600 border-teal-600';
                             case 'movie': return 'bg-cyan-600 border-cyan-600';
-                            
-                            // Aktiviteter
                             case 'game': return 'bg-purple-600 border-purple-600';
                             case 'sport': return 'bg-emerald-600 border-emerald-600';
                             case 'food': return 'bg-pink-600 border-pink-600';
                             case 'outdoor': return 'bg-green-600 border-green-600';
                             case 'creative': return 'bg-orange-600 border-orange-600';
                             case 'culture': return 'bg-fuchsia-600 border-fuchsia-600';
-                            
-                            // Akademiskt
                             case 'study': return 'bg-blue-600 border-blue-600';
                             case 'campus': return 'bg-red-600 border-red-600';
                             case 'workshop': return 'bg-sky-600 border-sky-600';
-                            
-                            // Övrigt
-                            case 'market': return 'bg-lime-600 border-lime-600';
+                            case 'market': return 'bg-emerald-600 border-emerald-600';
                             case 'other': return 'bg-slate-600 border-slate-600';
-                            
                             default: return 'bg-indigo-600 border-indigo-600'; 
                         }
                     };
 
                     const activeClass = getActiveColor(cat.id);
-
-                    // Om vald: Använd den starka färgen + vit text.
-                    // Om ej vald: Använd cat.color (pastell) + transparent border.
                     const bg = isSelected 
                         ? `${activeClass} text-white shadow-lg scale-105` 
                         : `${cat.color} border-transparent hover:scale-105`; 
@@ -300,8 +313,41 @@ export default function CreateEvent() {
             </div>
         )}
 
-        {/* --- STEP 2: INFO --- */}
+        {/* --- STEP 2: LOCATION (Här var tidigare Info) --- */}
         {step === 2 && (
+             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                <h3 className="text-lg font-bold dark:text-white">Var ska ni ses?</h3>
+                <p className="text-sm text-slate-500">Klicka på kartan för att flytta markören.</p>
+                
+                <div className="h-72 w-full rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner relative z-0">
+                    <MapContainer center={[formData.lat, formData.lng]} zoom={14} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <LocationPicker 
+                            position={[formData.lat, formData.lng]} 
+                            onLocationSelect={(lat, lng) => setFormData({...formData, lat, lng})} 
+                            selectedType={formData.type} 
+                        />
+                    </MapContainer>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Platsnamn (Valfritt)</label>
+                    <div className="relative">
+                        <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                        <input 
+                            type="text" 
+                            value={formData.locationName}
+                            onChange={e => setFormData({...formData, locationName: e.target.value})}
+                            className="w-full pl-10 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                            placeholder="T.ex. Vid fontänen"
+                        />
+                    </div>
+                </div>
+             </div>
+        )}
+
+        {/* --- STEP 3: INFO (Här var tidigare Location) --- */}
+        {step === 3 && (
              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
                 <h3 className="text-lg font-bold dark:text-white">Beskriv ditt event</h3>
                 
@@ -325,38 +371,6 @@ export default function CreateEvent() {
                         className="w-full p-3 h-32 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                         placeholder="Berätta lite mer..."
                     />
-                </div>
-             </div>
-        )}
-
-        {/* --- STEP 3: LOCATION --- */}
-        {step === 3 && (
-             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                <h3 className="text-lg font-bold dark:text-white">Var ska ni ses?</h3>
-                <p className="text-sm text-slate-500">Klicka på kartan för att flytta markören.</p>
-                
-                <div className="h-72 w-full rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner relative z-0">
-                    <MapContainer center={[formData.lat, formData.lng]} zoom={14} style={{ height: '100%', width: '100%' }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <LocationPicker 
-                            position={[formData.lat, formData.lng]} 
-                            onLocationSelect={(lat, lng) => setFormData({...formData, lat, lng})} 
-                        />
-                    </MapContainer>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Platsnamn (Valfritt)</label>
-                    <div className="relative">
-                        <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
-                        <input 
-                            type="text" 
-                            value={formData.locationName}
-                            onChange={e => setFormData({...formData, locationName: e.target.value})}
-                            className="w-full pl-10 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder="T.ex. Vid fontänen"
-                        />
-                    </div>
                 </div>
              </div>
         )}
@@ -475,45 +489,69 @@ export default function CreateEvent() {
              </div>
         )}
 
-        {/* --- STEP 6: PRICE & PARTICIPANTS --- */}
-        {step === 6 && (
+       {/* --- STEP 6: PRICE & PARTICIPANTS --- */}
+       {step === 6 && (
              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
                 <h3 className="text-lg font-bold dark:text-white">Sista detaljerna</h3>
                 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                    
+                    {/* PRIS SEKTION */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pris (kr)</label>
-                        <input 
-                            type="number" 
-                            value={formData.price}
-                            onChange={e => setFormData({...formData, price: parseInt(e.target.value)})}
-                            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white"
-                        />
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pris</label>
+                        <div className="relative">
+                            <input 
+                                type="number" 
+                                value={formData.price}
+                                onChange={e => setFormData({...formData, price: parseInt(e.target.value)})}
+                                className="w-full p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            {/* Texten "kr" som ligger inuti rutan */}
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">kr</span>
+                        </div>
                         <p className="text-xs text-slate-400 mt-1">Sätt 0 för gratis.</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Min antal</label>
-                            <input 
-                                type="number" 
-                                min="2"
-                                value={formData.minParticipants}
-                                onChange={e => setFormData({...formData, minParticipants: parseInt(e.target.value)})}
-                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center"
-                            />
+                    {/* DELTAGARE SEKTION */}
+                    <div>
+                        {/* Rubrik med ikon för att tydliggöra att det handlar om personer */}
+                        <div className="flex items-center gap-2 mb-3 border-t border-slate-100 dark:border-slate-700 pt-4">
+                             <Users size={18} className="text-indigo-500" />
+                             <label className="block text-xs font-bold text-slate-500 uppercase mt-0.5">Antal Deltagare</label>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Max antal</label>
-                            <input 
-                                type="number" 
-                                min="2"
-                                value={formData.maxParticipants}
-                                onChange={e => setFormData({...formData, maxParticipants: parseInt(e.target.value)})}
-                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center"
-                            />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Minst antal</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        min="2"
+                                        value={formData.minParticipants}
+                                        onChange={e => setFormData({...formData, minParticipants: parseInt(e.target.value)})}
+                                        className="w-full p-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    {/* Texten "pers" inuti rutan */}
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">pers</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Max antal</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        min="2"
+                                        value={formData.maxParticipants}
+                                        onChange={e => setFormData({...formData, maxParticipants: parseInt(e.target.value)})}
+                                        className="w-full p-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    {/* Texten "pers" inuti rutan */}
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">pers</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
                 </div>
 
                 {formData.price === 0 && (

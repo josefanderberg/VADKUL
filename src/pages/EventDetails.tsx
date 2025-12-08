@@ -16,9 +16,12 @@ import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types'; 
 import { formatTime } from '../utils/dateUtils';
-import { getEventEmoji, getEventColor } from '../utils/mapUtils';
+import { getEventColor } from '../utils/mapUtils';
 import { notificationService } from '../services/notificationService';
 import { userService } from '../services/userService';
+
+// VIKTIGT: Importera kategorier för att få rätt markör-färg
+import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -50,7 +53,6 @@ export default function EventDetails() {
   const isFull = event ? event.attendees.length >= event.maxParticipants : false;
   const percentFull = event ? Math.min(100, (event.attendees.length / event.maxParticipants) * 100) : 0;
   
-  // Kolla om inloggad användare är skaparen av eventet
   const isHost = user?.uid === event?.host.uid;
 
   const handleJoinToggle = async () => {
@@ -74,16 +76,14 @@ export default function EventDetails() {
                 return;
             }
             
-            // 1. Hämta användarens profil för att få tag på bilden (verificationImage)
             const userProfile = await userService.getUserProfile(user.uid);
             const correctPhotoURL = userProfile?.verificationImage || user.photoURL || null;
 
-            // 2. Spara med rätt bild
             newAttendees.push({
                 uid: user.uid,
                 email: user.email || '',
                 displayName: user.displayName || 'Deltagare',
-                photoURL: correctPhotoURL // <--- Nu används bilden från databasen
+                photoURL: correctPhotoURL 
             });
             
             toast.success("Hurra! Du är anmäld! 🚀");
@@ -136,18 +136,32 @@ export default function EventDetails() {
   if (loading) return <Layout><div className="p-10 text-center">Laddar...</div></Layout>;
   if (error || !event) return <Layout><div className="p-10 text-center text-red-500">{error}</div></Layout>;
   
-  const emoji = getEventEmoji(event.type);
+  // Hämta färger för Header-ikonen
   const colorClasses = getEventColor(event.type);
-  const bgClass = colorClasses.split(' ')[0];
-  const textClass = colorClasses.split(' ')[1];
+  const bgClassHeader = colorClasses.split(' ')[0];
+  const textClassHeader = colorClasses.split(' ')[1];
+
+  // --- NY LOGIK FÖR MARKÖREN (Samma som Home.tsx) ---
+  const categoryData = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
+  const markerEmoji = categoryData.emoji;
+  const markerBgClass = categoryData.markerColor; // T.ex "bg-emerald-500"
 
   const markerIcon = L.divIcon({
     className: 'custom-detail-marker',
-    html: `<div class="w-12 h-12 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-2xl ${bgClass}" style="background-color: white;">
-             <span class="transform -translate-y-0.5">${emoji}</span>
-           </div>`,
-    iconSize: [48, 48],
-    iconAnchor: [24, 24]
+    html: `
+      <div class="relative group">
+          <div class="w-12 h-12 ${markerBgClass} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
+              <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">
+                  ${markerEmoji}
+              </div>
+          </div>
+          <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-[3px] rounded-full"></div>
+      </div>
+    `,
+    iconSize: [48, 65],
+    iconAnchor: [24, 58], // Justerat ankare för teardrop-formen
+    popupAnchor: [0, -50]
   });
 
   return (
@@ -169,8 +183,8 @@ export default function EventDetails() {
             
             {/* TITEL & HOST */}
             <div className="flex gap-4 items-start mb-6">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-sm border border-slate-100 dark:border-slate-700 shrink-0 ${bgClass} ${textClass}`}>
-                    {emoji}
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-sm border border-slate-100 dark:border-slate-700 shrink-0 ${bgClassHeader} ${textClassHeader}`}>
+                    {markerEmoji}
                 </div>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight mb-2">
@@ -224,6 +238,8 @@ export default function EventDetails() {
             {/* --- FLIKINNEHÅLL --- */}
             {activeTab === 'info' ? (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    
+                    {/* 1. TID OCH PLATS GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
                             <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
@@ -246,6 +262,21 @@ export default function EventDetails() {
                         </div>
                     </div>
 
+                    {/* 2. KARTA (Flyttad hit) */}
+                    <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
+                        <MapContainer 
+                            center={[event.lat, event.lng]} 
+                            zoom={14} 
+                            scrollWheelZoom={false}
+                            dragging={false}
+                            style={{ height: '100%', width: '100%' }}
+                        >
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <Marker position={[event.lat, event.lng]} icon={markerIcon} />
+                        </MapContainer>
+                    </div>
+
+                    {/* 3. BESKRIVNING (Flyttad hit) */}
                     <div className="mb-8">
                         <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Om eventet</h3>
                         <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -253,7 +284,7 @@ export default function EventDetails() {
                         </p>
                     </div>
 
-                    {/* ATTENDEES LISTA - Uppdaterad för Avatarer */}
+                    {/* 4. DELTAGARE (Flyttad hit) */}
                     <div className="mb-8 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                         <div className="flex justify-between items-end mb-2">
                             <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
@@ -274,14 +305,12 @@ export default function EventDetails() {
                         ) : (
                             <div className={isHost ? "flex flex-col gap-2" : "flex flex-wrap gap-2"}>
                                 {event.attendees.map((attendee, i) => {
-                                    // Säkra upp objektet
                                     const isObject = typeof attendee === 'object' && attendee !== null;
                                     const displayStr = isObject ? (attendee.displayName || attendee.email || 'Anonym') : 'Okänd';
                                     const uid = isObject ? attendee.uid : null;
                                     const photo = isObject ? attendee.photoURL : null;
                                     const isMe = uid === user?.uid;
 
-                                    // Gemensam Avatar-komponent
                                     const Avatar = photo ? (
                                         <img 
                                             src={photo} 
@@ -295,7 +324,6 @@ export default function EventDetails() {
                                     );
 
                                     if (isHost) {
-                                        // HOST VIEW: Lista med Kick-knapp
                                         return (
                                             <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
                                                 <div 
@@ -320,7 +348,6 @@ export default function EventDetails() {
                                             </div>
                                         );
                                     } else {
-                                        // VISITOR VIEW: Chips/Badges
                                         return (
                                             <button 
                                                 key={i} 
@@ -340,21 +367,9 @@ export default function EventDetails() {
                             </div>
                         )}
                     </div>
-
-                    <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
-                        <MapContainer 
-                            center={[event.lat, event.lng]} 
-                            zoom={14} 
-                            scrollWheelZoom={false}
-                            dragging={false}
-                            style={{ height: '100%', width: '100%' }}
-                        >
-                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                            <Marker position={[event.lat, event.lng]} icon={markerIcon} />
-                        </MapContainer>
-                    </div>
                 </div>
             ) : (
+                // --- CHATT FLIK (Oförändrad layout) ---
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {!isJoined ? (
                         <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
