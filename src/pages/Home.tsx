@@ -108,10 +108,15 @@ export default function Home() {
 
     // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
     const filteredEvents = useMemo(() => {
+        const now = new Date(); // Skapa datumet en gång innan loopen
+
         // 1. Grundläggande filtrering
         let candidates = events.filter(event => {
             const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
             event.location.distance = dist; // Spara avståndet på objektet
+
+            // Filtrera bort gamla events (starttid har passerat)
+            if (new Date(event.time) < now) return false;
 
             if (filterType !== 'all' && event.type !== filterType) return false;
             if (filterAge === 'family' && event.minAge >= 12) return false;

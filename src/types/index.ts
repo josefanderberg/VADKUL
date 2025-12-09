@@ -7,6 +7,8 @@ export interface UserProfile {
   email: string;
   displayName: string;
   age: number;
+  bio?: string; // <--- NY: Biografi
+  photoURL?: string; // <--- NY: Profilbild (separat från verifiering)
   isVerified: boolean;
   verificationImage?: string; // Base64 sträng av bilden
   createdAt: Date;
@@ -33,7 +35,7 @@ export interface ChatRoom {
 }
 
 export interface EventHost {
-  uid: string; 
+  uid: string;
   name: string;
   displayName?: string; // <--- LÄGG TILL DENNA RAD
   initials: string;
@@ -64,7 +66,7 @@ export interface AppEvent {
   lat: number;
   lng: number;
   time: Date;
-  type: EventCategoryType; 
+  type: EventCategoryType;
   price: number;
   minParticipants: number;
   maxParticipants: number;
@@ -72,7 +74,7 @@ export interface AppEvent {
   maxAge: number;
   ageCategory: string;
   host: EventHost;
-  attendees: EventAttendee[]; 
+  attendees: EventAttendee[];
 }
 
 export interface AppNotification {

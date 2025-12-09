@@ -95,7 +95,8 @@ export default function Profile() {
     if (!user) return null;
 
     const displayName = profile?.displayName || user.displayName || user.email;
-    const image = profile?.verificationImage;
+    // Använd photoURL (profilbild) om det finns, annars verificationImage, annars fallback
+    const image = profile?.photoURL || profile?.verificationImage;
     const initials = (displayName || 'ME').substring(0, 2).toUpperCase();
     const currentList = activeTab === 'hosted' ? hostedEvents : joinedEvents;
 
@@ -131,9 +132,16 @@ export default function Profile() {
                             {profileLoading ? (
                                 <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-2"></div>
                             ) : (
-                                <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
-                                    {displayName}
-                                </h1>
+                                <div>
+                                    <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
+                                        {displayName}
+                                    </h1>
+                                    {profile?.bio && (
+                                        <p className="text-slate-600 dark:text-slate-300 text-sm mb-3 max-w-md mx-auto md:mx-0">
+                                            {profile.bio}
+                                        </p>
+                                    )}
+                                </div>
                             )}
                             <div className="flex items-center justify-center md:justify-start gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4">
                                 {profileLoading ? (
@@ -151,7 +159,7 @@ export default function Profile() {
 
                         {/* Actions */}
                         <div className="flex gap-2 absolute top-4 right-4 md:static">
-                            <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                            <button onClick={() => navigate('/settings')} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
                                 <Settings size={20} />
                             </button>
                             <button onClick={() => logout()} className="p-2 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
