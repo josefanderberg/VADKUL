@@ -272,32 +272,10 @@ export default function CreateEvent() {
                 {CATEGORY_LIST.map(cat => {
                     const isSelected = formData.type === cat.id;
                     
-                    const getActiveColor = (id: string) => {
-                        switch(id) {
-                            case 'social': return 'bg-amber-600 border-amber-600';
-                            case 'party': return 'bg-indigo-600 border-indigo-600';
-                            case 'mingle': return 'bg-teal-600 border-teal-600';
-                            case 'movie': return 'bg-cyan-600 border-cyan-600';
-                            case 'game': return 'bg-purple-600 border-purple-600';
-                            case 'sport': return 'bg-emerald-600 border-emerald-600';
-                            case 'food': return 'bg-pink-600 border-pink-600';
-                            case 'outdoor': return 'bg-green-600 border-green-600';
-                            case 'creative': return 'bg-orange-600 border-orange-600';
-                            case 'culture': return 'bg-fuchsia-600 border-fuchsia-600';
-                            case 'study': return 'bg-blue-600 border-blue-600';
-                            case 'campus': return 'bg-red-600 border-red-600';
-                            case 'workshop': return 'bg-sky-600 border-sky-600';
-                            case 'market': return 'bg-emerald-600 border-emerald-600';
-                            case 'other': return 'bg-slate-600 border-slate-600';
-                            default: return 'bg-indigo-600 border-indigo-600'; 
-                        }
-                    };
-
-                    const activeClass = getActiveColor(cat.id);
                     const bg = isSelected 
-                        ? `${activeClass} text-white shadow-lg scale-105` 
-                        : `${cat.color} border-transparent hover:scale-105`; 
-                    
+                    ? `${cat.activeColor} text-white shadow-lg scale-105` 
+                    : `${cat.color} border-transparent hover:scale-105`;
+
                     return (
                         <button
                             key={cat.id}

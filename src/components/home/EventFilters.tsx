@@ -15,7 +15,7 @@ interface EventFiltersProps {
   filterAge: string;
   setFilterAge: (val: string) => void;
   resetFilters: () => void;
-  visible: boolean; // NY PROP
+  visible: boolean; // För scroll-effekten
 }
 
 export default function EventFilters({
@@ -30,7 +30,7 @@ export default function EventFilters({
   filterAge,
   setFilterAge,
   resetFilters,
-  visible // Ta emot den här
+  visible
 }: EventFiltersProps) {
 
   const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
@@ -95,8 +95,10 @@ export default function EventFilters({
               Gratis
             </button>
 
+            {/* Avgränsare */}
             <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
+            {/* Ålder - Nu direkt synlig */}
             <div className="flex items-center bg-slate-50 dark:bg-slate-700/50 rounded-full border border-slate-200 dark:border-slate-600 px-3 py-1 shrink-0">
               <span className="text-[10px] font-bold text-slate-400 uppercase mr-2">Ålder</span>
               <select 

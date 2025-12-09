@@ -34,37 +34,6 @@ export default function EventCard({ event }: EventCardProps) {
   };
   
   // --- FÄRGER ---
-  const getCategoryStyles = (id: string) => {
-      switch(id) {
-          // Social & Mingel
-          case 'social': return { badge: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30', icon: 'text-amber-500' };
-          case 'party': return { badge: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30', icon: 'text-indigo-500' };
-          case 'mingle': return { badge: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-500/20 dark:text-teal-300 dark:border-teal-500/30', icon: 'text-teal-500' };
-          case 'movie': return { badge: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/30', icon: 'text-cyan-500' };
-
-          // Aktiviteter
-          case 'game': return { badge: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30', icon: 'text-purple-500' };
-          case 'sport': return { badge: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30', icon: 'text-emerald-500' };
-          case 'food': return { badge: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-300 dark:border-pink-500/30', icon: 'text-pink-500' };
-          case 'outdoor': return { badge: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30', icon: 'text-green-500' };
-          case 'creative': return { badge: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30', icon: 'text-orange-500' };
-          case 'culture': return { badge: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 dark:border-fuchsia-500/30', icon: 'text-fuchsia-500' };
-
-          // Akademiskt
-          case 'study': return { badge: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30', icon: 'text-blue-500' };
-          case 'campus': return { badge: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30', icon: 'text-red-500' };
-          case 'workshop': return { badge: 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30', icon: 'text-sky-500' };
-
-          // Övrigt
-          case 'market': return { badge: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-500/20 dark:text-lime-300 dark:border-lime-500/30', icon: 'text-lime-600' };
-          case 'other': 
-          default:
-            return { badge: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/20 dark:text-slate-300 dark:border-slate-500/30', icon: 'text-slate-500' };
-      }
-  };
-
-  const styles = getCategoryStyles(category.id);
-
   // --- STATUS LOGIK ---
   const currentCount = event.attendees.length;
   const spotsLeft = event.maxParticipants - currentCount;
@@ -81,7 +50,7 @@ export default function EventCard({ event }: EventCardProps) {
         
         {/* --- TOP: Kategori & Status --- */}
         <div className="flex justify-between items-start mb-3">
-            <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide flex items-center gap-1.5 border ${styles.badge}`}>
+        <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide flex items-center gap-1.5 border ${category.badgeStyle}`}>
                 <span className="text-sm">{emoji}</span>
                 {category.label}
             </div>
@@ -106,15 +75,15 @@ export default function EventCard({ event }: EventCardProps) {
         {/* --- INFO --- */}
         <div className="space-y-2 mb-5">
             <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${styles.icon}`}>
-                    <Clock size={14} strokeWidth={2.5} />
+            <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
+                <Clock size={14} strokeWidth={2.5} />
                 </div>
                 <span>{formatTime(event.time)}</span>
             </div>
             
             <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${styles.icon}`}>
-                    <MapPin size={14} strokeWidth={2.5} />
+            <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
+                <MapPin size={14} strokeWidth={2.5} />
                 </div>
                 {/* UPPDATERAD PLATSVISNING MED DISTANS */}
                 <div className="flex items-center gap-1 overflow-hidden">

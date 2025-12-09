@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 
 import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
-import EventFilters from '../components/home/EventFilters'; 
+import EventFilters from '../components/home/EventFilters'; // Se till att sökvägen stämmer
 
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
@@ -15,7 +15,7 @@ import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils
 import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories'; 
 import { ArrowUpDown, ArrowRight, Search } from 'lucide-react';
 
-// ... (Behåll Leaflet icon fixar) ...
+// Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -55,33 +55,32 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<[number, number]>([56.8556, 14.8250]);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
-  // Filter states
+  // Filter states (Avstånd borttaget)
   const [filterType, setFilterType] = useState('all');
   const [filterAge, setFilterAge] = useState('all');
   const [filterFree, setFilterFree] = useState(false);
   const [filterToday, setFilterToday] = useState(false);
-  const [sortBy, setSortBy] = useState('closest');
+  const [sortBy, setSortBy] = useState('closest'); // Default: närmast
   
   const [showSearchHereBtn, setShowSearchHereBtn] = useState(false);
   const [mapCenter, setMapCenter] = useState<L.LatLng | null>(null);
 
-  // --- NY STATE FÖR SCROLL ---
+  // Scroll states
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const lastScrollTop = useRef(0);
 
-  // --- NY FUNKTION: Hantera scroll inuti containern ---
+  // --- Hantera scroll på containern för att gömma/visa menyn ---
   const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const currentScrollTop = e.currentTarget.scrollTop;
     
-    // Om vi är i toppen eller nära, visa alltid
+    // Om vi är i toppen (eller nära), visa alltid
     if (currentScrollTop < 10) {
         setIsFiltersVisible(true);
         lastScrollTop.current = currentScrollTop;
         return;
     }
 
-    // Scrollar vi NER (mer än sist) -> Göm
-    // Scrollar vi UPP (mindre än sist) -> Visa
+    // Scrollar vi NER -> Göm. Scrollar vi UPP -> Visa.
     if (currentScrollTop > lastScrollTop.current) {
         setIsFiltersVisible(false);
     } else {
@@ -107,10 +106,12 @@ export default function Home() {
     setLoading(false);
   }
 
+  // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
   const filteredEvents = useMemo(() => {
+    // 1. Grundläggande filtrering
     let candidates = events.filter(event => {
         const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
-        event.location.distance = dist; 
+        event.location.distance = dist; // Spara avståndet på objektet
 
         if (filterType !== 'all' && event.type !== filterType) return false;
         if (filterAge === 'family' && event.minAge >= 12) return false;
@@ -124,9 +125,13 @@ export default function Home() {
         return true;
     });
 
+    // 2. Sortera ALLA kandidater på avstånd (närmast först)
     candidates.sort((a, b) => (a.location.distance || 0) - (b.location.distance || 0));
+
+    // 3. Ta bara de 30 närmaste
     const top30Closest = candidates.slice(0, 30);
 
+    // 4. Sortera dessa 30 baserat på vad användaren valt i dropdownen
     return top30Closest.sort((a, b) => {
        switch (sortBy) {
             case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
@@ -199,9 +204,9 @@ export default function Home() {
   
   return (
     <Layout>
-      {/* Här är nyckeln! Vi skapar en container som är lika hög som skärmen (minus ev. header)
-         och sätter overflow-y-auto på DENNA. Då fångar onScroll händelsen korrekt.
-         Du kan behöva justera 'h-[calc(100vh-64px)]' beroende på hur hög din Navbar i Layout är.
+      {/* SCROLL FIXEN:
+          Vi sätter en fast höjd på hela sid-containern (calc(100vh - 64px)) och låter den ha overflow-y-auto.
+          Detta gör att onScroll fungerar korrekt.
       */}
       <div 
         className="h-[calc(100vh-64px)] overflow-y-auto relative w-full"
@@ -235,6 +240,10 @@ export default function Home() {
             </div>
         </div>
 
+        {/* Container för innehåll. 
+            Om lista: Min-height för att tillåta scroll.
+            Om karta: Fast höjd för att kartan ska fylla utrymmet.
+        */}
         <div className={`max-w-6xl mx-auto p-4 ${view === 'map' ? 'h-[calc(100vh-180px)]' : 'min-h-[500px]'}`}>
             {loading ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 pt-20">

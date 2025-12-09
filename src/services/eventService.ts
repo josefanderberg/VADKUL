@@ -1,5 +1,6 @@
-import { 
-  collection, getDocs, addDoc, doc, updateDoc, getDoc, Timestamp 
+import {
+  collection, getDocs, addDoc, doc, updateDoc, getDoc, Timestamp,
+  query, where
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AppEvent, FirestoreEventData } from '../types'; // OBS: "import type"
@@ -21,6 +22,29 @@ export const eventService = {
       });
     } catch (error) {
       console.error("Error fetching events:", error);
+      return [];
+    }
+  },
+
+  // Hämta events där jag är värd (Optimerad)
+  async getHostedEvents(uid: string): Promise<AppEvent[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTION),
+        where("host.uid", "==", uid)
+        // orderBy("time", "desc") // Kräver index om host.uid blandas med timesortering, avvaktar
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(doc => {
+        const data = doc.data() as FirestoreEventData;
+        return {
+          ...data,
+          id: doc.id,
+          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time)
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching hosted events:", error);
       return [];
     }
   },
@@ -54,13 +78,13 @@ export const eventService = {
     return await addDoc(collection(db, COLLECTION), payload);
   },
 
-  // Uppdatera (DENNA SAKNADES)
+  // Uppdatera
   async update(event: AppEvent) {
     const ref = doc(db, COLLECTION, event.id);
     // Vi plockar bort id innan vi sparar till Firestore
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...data } = event; 
-    
+    const { id, ...data } = event;
+
     await updateDoc(ref, {
       ...data,
       time: Timestamp.fromDate(event.time)
