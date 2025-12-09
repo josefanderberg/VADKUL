@@ -6,22 +6,35 @@ import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 
 // --- KONFIGURATION & KONSTANTER ---
 
-const VAXJO_CENTER = { lat: 56.87767, lng: 14.80906 };
+const SWEDISH_CITIES = [
+  { name: 'Växjö', lat: 56.87767, lng: 14.80906 },
+  { name: 'Stockholm', lat: 59.3293, lng: 18.0686 },
+  { name: 'Göteborg', lat: 57.7089, lng: 11.9746 },
+  { name: 'Malmö', lat: 55.6050, lng: 13.0038 },
+  { name: 'Uppsala', lat: 59.8586, lng: 17.6389 },
+  { name: 'Lund', lat: 55.7047, lng: 13.1910 },
+  { name: 'Umeå', lat: 63.8258, lng: 20.2630 },
+  { name: 'Linköping', lat: 58.4109, lng: 15.6214 },
+  { name: 'Örebro', lat: 59.2753, lng: 15.2134 },
+  { name: 'Helsingborg', lat: 56.0465, lng: 12.6945 }
+];
 
 const RANDOM_TITLES = [
-  "Morgonlöpning runt sjön", "Fika på stan", "Padel-match", 
-  "Programmerings-hackathon", "Kvällspromenad", "Utomhusbio", 
+  "Morgonlöpning runt sjön", "Fika på stan", "Padel-match",
+  "Programmerings-hackathon", "Kvällspromenad", "Utomhusbio",
   "Grillkväll", "Fotboll i parken", "Yoga i solen", "Lunchträff",
   "Stand-up kväll", "Loppis-runda", "Brädspelskväll", "Kajakpaddling"
 ];
 
-// Hjälpfunktion för slumpad position
-const getRandomLocationInVaxjo = () => {
-  const latOffset = (Math.random() - 0.5) * 0.06; 
-  const lngOffset = (Math.random() - 0.5) * 0.06;
+// Hjälpfunktion för slumpad position i Sverige
+const getRandomLocationInSweden = () => {
+  const city = SWEDISH_CITIES[Math.floor(Math.random() * SWEDISH_CITIES.length)];
+  const latOffset = (Math.random() - 0.5) * 0.15;
+  const lngOffset = (Math.random() - 0.5) * 0.15;
   return {
-    lat: VAXJO_CENTER.lat + latOffset,
-    lng: VAXJO_CENTER.lng + lngOffset
+    lat: city.lat + latOffset,
+    lng: city.lng + lngOffset,
+    cityName: city.name
   };
 };
 
@@ -37,7 +50,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  
+
   // State för varningsmeddelande
   const [selectedUserId, setSelectedUserId] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
@@ -49,7 +62,7 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, 'users'));
         const userList = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
         setUsers(userList);
-        if(userList.length > 0) setSelectedUserId(userList[0].uid);
+        if (userList.length > 0) setSelectedUserId(userList[0].uid);
       } catch (e) {
         addLog("Kunde inte hämta användarlistan.");
       }
@@ -63,85 +76,85 @@ export default function AdminDashboard() {
   // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
   // ---------------------------------------------------------
 
-    // ---------------------------------------------------------
-    // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
-    // ---------------------------------------------------------
-    const handleSeedEvents = async (count: number) => {
-      if (!confirm(`Är du säker på att du vill skapa ${count} nya events?`)) return;
-  
-      setLoading(true);
-      setLog([]); // Rensa logg
-      addLog(`🚀 Startar generering av ${count} events...`);
-  
-      try {
-        if (users.length === 0) throw new Error("Inga användare hittades att använda som hosts.");
-  
-        // Vi använder en batch om det är färre än 500, annars loop (Firestore limit)
-        // För enkelhetens skull loopar vi här för att kunna logga framsteg
-        let successCount = 0;
-  
-        for (let i = 0; i < count; i++) {
-          const randomUser = users[Math.floor(Math.random() * users.length)];
-          const randomTitle = RANDOM_TITLES[Math.floor(Math.random() * RANDOM_TITLES.length)];
-          const location = getRandomLocationInVaxjo();
-          const category = getRandomCategory(); // Hämta slumpmässig kategori
-  
-          const now = new Date();
-          const futureDate = new Date();
-          futureDate.setDate(now.getDate() + Math.floor(Math.random() * 60)); // 0-60 dagar framåt
-          futureDate.setHours(10 + Math.floor(Math.random() * 12), 0, 0);
-  
-          const minPart = 2; // Minst 2 deltagare
-          const maxPart = 5 + Math.floor(Math.random() * 20); // Som tidigare
-  
-          const eventData = {
-            title: `${randomTitle}`,
-            description: `Detta är event #${i + 1} skapat av admin-verktyget.`,
-            time: Timestamp.fromDate(futureDate), 
-            
-            lat: location.lat, 
-            lng: location.lng, 
-  
-            location: {
-              name: "Genererad plats, Växjö", 
-              distance: Math.floor(Math.random() * 5), 
-            },
-            
-            // Använd den slumpmässiga kategorin
-            type: category, // 🔥 ÄNDRAD HÄR!
-            price: Math.floor(Math.random() * 10) === 0 ? 0 : 50 + Math.floor(Math.random() * 150), 
-            minParticipants: minPart, 
-            maxParticipants: maxPart, 
-            minAge: 18, 
-            maxAge: 99, 
-            ageCategory: '18+', 
-  
-            host: {
-              uid: randomUser.uid,
-              email: randomUser.email || 'unknown@test.com',
-              displayName: randomUser.displayName || 'Anonym',
-              name: randomUser.displayName || 'Anonym Testare', 
-              initials: randomUser.displayName ? randomUser.displayName.charAt(0).toUpperCase() : 'A', 
-              verified: Math.random() > 0.8, 
-              rating: 3 + Math.random() * 2, 
-              photoURL: null, 
-            },
-            attendees: [],
-            createdAt: Timestamp.now()
-          };
-  
-          await addDoc(collection(db, 'events'), eventData);
-          successCount++;
-          if (successCount % 10 === 0) addLog(`...skapat ${successCount} av ${count}`);
-        }
-  
-        addLog(`✅ Klart! ${successCount} events skapades.`);
-      } catch (error: any) {
-        addLog(`❌ Fel: ${error.message}`);
-      } finally {
-        setLoading(false);
+  // ---------------------------------------------------------
+  // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
+  // ---------------------------------------------------------
+  const handleSeedEvents = async (count: number) => {
+    if (!confirm(`Är du säker på att du vill skapa ${count} nya events?`)) return;
+
+    setLoading(true);
+    setLog([]); // Rensa logg
+    addLog(`🚀 Startar generering av ${count} events...`);
+
+    try {
+      if (users.length === 0) throw new Error("Inga användare hittades att använda som hosts.");
+
+      // Vi använder en batch om det är färre än 500, annars loop (Firestore limit)
+      // För enkelhetens skull loopar vi här för att kunna logga framsteg
+      let successCount = 0;
+
+      for (let i = 0; i < count; i++) {
+        const randomUser = users[Math.floor(Math.random() * users.length)];
+        const randomTitle = RANDOM_TITLES[Math.floor(Math.random() * RANDOM_TITLES.length)];
+        const location = getRandomLocationInSweden();
+        const category = getRandomCategory(); // Hämta slumpmässig kategori
+
+        const now = new Date();
+        const futureDate = new Date();
+        futureDate.setDate(now.getDate() + Math.floor(Math.random() * 60)); // 0-60 dagar framåt
+        futureDate.setHours(10 + Math.floor(Math.random() * 12), 0, 0);
+
+        const minPart = 2; // Minst 2 deltagare
+        const maxPart = 5 + Math.floor(Math.random() * 20); // Som tidigare
+
+        const eventData = {
+          title: `${randomTitle}`,
+          description: `Detta är event #${i + 1} skapat av admin-verktyget.`,
+          time: Timestamp.fromDate(futureDate),
+
+          lat: location.lat,
+          lng: location.lng,
+
+          location: {
+            name: `Genererad plats, ${location.cityName}`,
+            distance: Math.floor(Math.random() * 5),
+          },
+
+          // Använd den slumpmässiga kategorin
+          type: category, // 🔥 ÄNDRAD HÄR!
+          price: Math.floor(Math.random() * 10) === 0 ? 0 : 50 + Math.floor(Math.random() * 150),
+          minParticipants: minPart,
+          maxParticipants: maxPart,
+          minAge: 18,
+          maxAge: 99,
+          ageCategory: '18+',
+
+          host: {
+            uid: randomUser.uid,
+            email: randomUser.email || 'unknown@test.com',
+            displayName: randomUser.displayName || 'Anonym',
+            name: randomUser.displayName || 'Anonym Testare',
+            initials: randomUser.displayName ? randomUser.displayName.charAt(0).toUpperCase() : 'A',
+            verified: Math.random() > 0.8,
+            rating: 3 + Math.random() * 2,
+            photoURL: null,
+          },
+          attendees: [],
+          createdAt: Timestamp.now()
+        };
+
+        await addDoc(collection(db, 'events'), eventData);
+        successCount++;
+        if (successCount % 10 === 0) addLog(`...skapat ${successCount} av ${count}`);
       }
-    };
+
+      addLog(`✅ Klart! ${successCount} events skapades.`);
+    } catch (error: any) {
+      addLog(`❌ Fel: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ---------------------------------------------------------
   // FUNKTION 2: RENSA ALLA EVENTS
@@ -155,7 +168,7 @@ export default function AdminDashboard() {
     try {
       const snap = await getDocs(collection(db, 'events'));
       const total = snap.size;
-      
+
       if (total === 0) {
         addLog("Databasen är redan tom.");
         setLoading(false);
@@ -219,33 +232,33 @@ export default function AdminDashboard() {
     <Layout>
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-6xl mx-auto">
-          
+
           <header className="mb-8">
             <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
             <p className="text-slate-500">Hantera testdata och användare</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
+
             {/* VÄNSTER KOLUMN: ACTIONS */}
             <div className="space-y-6">
-              
+
               {/* KORT 1: Generera Data */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-xl font-semibold mb-4 text-green-700">🌱 Generera Testdata</h2>
                 <div className="space-y-3">
                   <p className="text-sm text-slate-600 mb-4">
-                    Skapa slumpmässiga events utspridda i Växjö. Använder befintliga användare som hosts.
+                    Skapa slumpmässiga events utspridda i hela Sverige (Stockholm, Gbg, Malmö, Växjö m.fl).
                   </p>
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={() => handleSeedEvents(40)}
                       disabled={loading}
                       className="flex-1 bg-green-100 text-green-800 py-2 px-4 rounded-lg font-medium hover:bg-green-200 transition disabled:opacity-50"
                     >
                       +40 Events
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleSeedEvents(100)}
                       disabled={loading}
                       className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
@@ -262,7 +275,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-slate-600 mb-4">
                   Ta bort all data i `events`-samlingen. Går ej att ångra.
                 </p>
-                <button 
+                <button
                   onClick={handleClearEvents}
                   disabled={loading}
                   className="w-full bg-red-50 text-red-600 border border-red-200 py-3 px-4 rounded-lg font-bold hover:bg-red-100 transition disabled:opacity-50"
@@ -277,22 +290,22 @@ export default function AdminDashboard() {
                 <form onSubmit={handleSendWarning} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Välj användare</label>
-                    <select 
+                    <select
                       className="w-full p-2 border border-slate-300 rounded-lg text-sm"
                       value={selectedUserId}
                       onChange={(e) => setSelectedUserId(e.target.value)}
                     >
                       {users.map(u => (
                         <option key={u.uid} value={u.uid}>
-                          {u.displayName || u.email} ({u.uid.substring(0,5)}...)
+                          {u.displayName || u.email} ({u.uid.substring(0, 5)}...)
                         </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Meddelande</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full p-2 border border-slate-300 rounded-lg"
                       placeholder="T.ex. Vänligen följ våra regler..."
@@ -301,7 +314,7 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  <button 
+                  <button
                     type="submit"
                     disabled={loading || !warningMessage}
                     className="w-full bg-slate-800 text-white py-2 rounded-lg hover:bg-slate-900 disabled:opacity-50"

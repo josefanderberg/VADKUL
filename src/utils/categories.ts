@@ -4,23 +4,18 @@ export const EVENT_CATEGORIES = {
   // --- SOCIAL & MINGEL ---
   social: {
     id: 'social',
-    label: 'Häng & Fika',
+    label: 'Fika',
     emoji: '☕',
-    // Används för kart-markören
     markerColor: 'bg-amber-500',
-    // Används för omarkerade knappar (CreateEvent)
     color: 'bg-amber-100 text-amber-600',
-    // NY: Används för märket i EventCard (inkl dark mode)
     badgeStyle: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30',
-    // NY: Ikonfärg i EventCard
     iconColor: 'text-amber-500',
-    // NY: Vald status i CreateEvent
     activeColor: 'bg-amber-600 border-amber-600',
     description: 'Avslappnat häng, kaffe, lunch eller en pratstund'
   },
   party: {
     id: 'party',
-    label: 'Förfest & Fest',
+    label: 'Fest',
     emoji: '🍻',
     markerColor: 'bg-indigo-500',
     color: 'bg-indigo-100 text-indigo-600',
@@ -31,7 +26,7 @@ export const EVENT_CATEGORIES = {
   },
   mingle: {
     id: 'mingle',
-    label: 'Nätverka & Mingel',
+    label: 'Mingel',
     emoji: '🤝',
     markerColor: 'bg-teal-500',
     color: 'bg-teal-100 text-teal-600',
@@ -42,7 +37,7 @@ export const EVENT_CATEGORIES = {
   },
   movie: {
     id: 'movie',
-    label: 'Film & Serier',
+    label: 'Film',
     emoji: '🎬',
     markerColor: 'bg-cyan-500',
     color: 'bg-cyan-100 text-cyan-600',
@@ -55,7 +50,7 @@ export const EVENT_CATEGORIES = {
   // --- AKTIVITETER & INTRESSEN ---
   game: {
     id: 'game',
-    label: 'Spel & Gaming',
+    label: 'Gaming',
     emoji: '🎮',
     markerColor: 'bg-purple-500',
     color: 'bg-purple-100 text-purple-600',
@@ -64,9 +59,21 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-purple-600 border-purple-600',
     description: 'Brädspel, LAN, konsol-gaming, quiz eller kortspel'
   },
+
+  boardgame: {
+    id: 'boardgame',
+    label: 'Sällskapsspel', // Täcker in kubb, brädspel, kortspel
+    emoji: '🎲',
+    markerColor: 'bg-stone-500',
+    color: 'bg-stone-100 text-stone-600',
+    badgeStyle: 'bg-stone-100 text-stone-800 border-stone-200 dark:bg-stone-500/20 dark:text-stone-300 dark:border-stone-500/30',
+    iconColor: 'text-stone-500',
+    activeColor: 'bg-stone-600 border-stone-600',
+    description: 'Bokcirkel, poesikväll, bibblan-häng eller skrivarstuga'
+  },
   sport: {
     id: 'sport',
-    label: 'Sport & Träning',
+    label: 'Träning',
     emoji: '⚽',
     markerColor: 'bg-emerald-500',
     color: 'bg-emerald-100 text-emerald-600',
@@ -77,18 +84,19 @@ export const EVENT_CATEGORIES = {
   },
   food: {
     id: 'food',
-    label: 'Matlag & Bak',
+    label: 'Mat',
     emoji: '🍕',
-    markerColor: 'bg-pink-500',
-    color: 'bg-pink-100 text-pink-600',
-    badgeStyle: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-300 dark:border-pink-500/30',
-    iconColor: 'text-pink-500',
-    activeColor: 'bg-pink-600 border-pink-600',
+    // Ändrat till ROSE för att skilja från övriga och ge en varmare "mat-känsla" än pink
+    markerColor: 'bg-rose-500',
+    color: 'bg-rose-100 text-rose-600',
+    badgeStyle: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30',
+    iconColor: 'text-rose-500',
+    activeColor: 'bg-rose-600 border-rose-600',
     description: 'Laga mat ihop, baka, korridorsmiddag eller restaurangbesök'
   },
   outdoor: {
     id: 'outdoor',
-    label: 'Utomhus & Äventyr',
+    label: 'Natur',
     emoji: '🌳',
     markerColor: 'bg-green-500',
     color: 'bg-green-100 text-green-600',
@@ -99,7 +107,7 @@ export const EVENT_CATEGORIES = {
   },
   creative: {
     id: 'creative',
-    label: 'Kreativt & Pyssel',
+    label: 'Kreativt',
     emoji: '🎨',
     markerColor: 'bg-orange-500',
     color: 'bg-orange-100 text-orange-600',
@@ -110,7 +118,7 @@ export const EVENT_CATEGORIES = {
   },
   culture: {
     id: 'culture',
-    label: 'Kultur & Musik',
+    label: 'Kultur',
     emoji: '🎻',
     markerColor: 'bg-fuchsia-500',
     color: 'bg-fuchsia-100 text-fuchsia-600',
@@ -123,7 +131,7 @@ export const EVENT_CATEGORIES = {
   // --- AKADEMISKT & CAMPUSRELATERAT ---
   study: {
     id: 'study',
-    label: 'Plugg & Tenta',
+    label: 'Plugg',
     emoji: '📚',
     markerColor: 'bg-blue-500',
     color: 'bg-blue-100 text-blue-600',
@@ -134,7 +142,7 @@ export const EVENT_CATEGORIES = {
   },
   campus: {
     id: 'campus',
-    label: 'Nation & Kår',
+    label: 'Studentliv',
     emoji: '🎓',
     markerColor: 'bg-red-500',
     color: 'bg-red-100 text-red-600',
@@ -145,7 +153,7 @@ export const EVENT_CATEGORIES = {
   },
   workshop: {
     id: 'workshop',
-    label: 'Workshop & Lärande',
+    label: 'Kunskap',
     emoji: '🧠',
     markerColor: 'bg-sky-500',
     color: 'bg-sky-100 text-sky-600',
@@ -158,18 +166,19 @@ export const EVENT_CATEGORIES = {
   // --- ÖVRIGT ---
   market: {
     id: 'market',
-    label: 'Köp & Sälj',
+    label: 'Marknad',
     emoji: '💸',
-    markerColor: 'bg-emerald-600',
-    color: 'bg-emerald-100 text-emerald-700',
-    badgeStyle: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
-    iconColor: 'text-emerald-600',
-    activeColor: 'bg-emerald-600 border-emerald-600',
+    // Ändrat till LIME för att inte krocka med Sport/Outdoor (som är Emerald/Green)
+    markerColor: 'bg-lime-500',
+    color: 'bg-lime-100 text-lime-700',
+    badgeStyle: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-500/20 dark:text-lime-300 dark:border-lime-500/30',
+    iconColor: 'text-lime-600',
+    activeColor: 'bg-lime-600 border-lime-600',
     description: 'Kurslitteratur, möbler eller annat som byter ägare'
   },
   other: {
     id: 'other',
-    label: 'Övrigt',
+    label: 'Annat',
     emoji: '✨',
     markerColor: 'bg-slate-500',
     color: 'bg-slate-100 text-slate-600',
