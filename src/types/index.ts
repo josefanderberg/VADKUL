@@ -56,6 +56,7 @@ export interface EventAttendee {
   email: string;
   displayName: string;
   photoURL?: string | null;
+  status: 'confirmed' | 'pending'; // <--- NY: Status
 }
 
 export interface AppEvent {
@@ -75,6 +76,8 @@ export interface AppEvent {
   ageCategory: string;
   host: EventHost;
   attendees: EventAttendee[];
+  coverImage?: string;
+  requiresApproval: boolean; // <--- NY: Kräv godkännande
 }
 
 export interface AppNotification {
