@@ -12,6 +12,19 @@ export interface UserProfile {
   isVerified: boolean;
   verificationImage?: string; // Base64 sträng av bilden
   createdAt: Date;
+  rating?: number;       // Medelbetyg (0-5)
+  ratingCount?: number;  // Antal omdömen
+}
+
+export interface UserReview {
+  id: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerImage?: string;
+  rating: number; // 1-5
+  comment: string;
+  createdAt: Timestamp;
+  eventId?: string; // Koppla till event om möjligt
 }
 
 export interface ChatMessage {

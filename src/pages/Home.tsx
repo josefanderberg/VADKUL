@@ -61,6 +61,7 @@ export default function Home() {
     const [filterFree, setFilterFree] = useState(false);
     const [filterToday, setFilterToday] = useState(false);
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
+    const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
 
     const [showSearchHereBtn, setShowSearchHereBtn] = useState(false);
     const [mapCenter, setMapCenter] = useState<L.LatLng | null>(null);
@@ -109,6 +110,7 @@ export default function Home() {
     // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
     const filteredEvents = useMemo(() => {
         const now = new Date(); // Skapa datumet en gång innan loopen
+        const query = searchQuery.toLowerCase().trim();
 
         // 1. Grundläggande filtrering
         let candidates = events.filter(event => {
@@ -117,6 +119,14 @@ export default function Home() {
 
             // Filtrera bort gamla events (starttid har passerat)
             if (new Date(event.time) < now) return false;
+
+            // Sök-filtrering (Titel, Beskrivning eller Plats)
+            if (query) {
+                const matchTitle = event.title.toLowerCase().includes(query);
+                const matchDesc = event.description.toLowerCase().includes(query);
+                const matchLoc = event.location.name.toLowerCase().includes(query);
+                if (!matchTitle && !matchDesc && !matchLoc) return false;
+            }
 
             if (filterType !== 'all' && event.type !== filterType) return false;
 
@@ -162,7 +172,7 @@ export default function Home() {
                 default: return 0;
             }
         });
-    }, [events, userLocation, filterType, filterAge, filterFree, filterToday, sortBy]);
+    }, [events, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery]); // <-- Lade till searchQuery
 
     const handleMapMove = (newCenter: L.LatLng) => {
         setMapCenter(newCenter);
@@ -220,6 +230,7 @@ export default function Home() {
         setFilterFree(false);
         setFilterToday(false);
         setSortBy('closest');
+        setSearchQuery(''); // <-- Nollställ sök
         setShowSearchHereBtn(false);
     };
 
@@ -233,23 +244,23 @@ export default function Home() {
                 className={`h-[calc(100vh-64px)] relative w-full ${view === 'map' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
                 onScroll={view === 'list' ? handleContainerScroll : undefined}
             >
-                {/* Filters tar sin plats, men döljs automatiskt i map-vy via effekt */}
-                <div className="flex-shrink-0 z-30 sticky top-0">
-                    <EventFilters
-                        filterType={filterType}
-                        setFilterType={setFilterType}
-                        view={view}
-                        setView={setView}
-                        filterToday={filterToday}
-                        setFilterToday={setFilterToday}
-                        filterFree={filterFree}
-                        setFilterFree={setFilterFree}
-                        filterAge={filterAge}
-                        setFilterAge={setFilterAge}
-                        resetFilters={resetFilters}
-                        visible={isFiltersVisible}
-                    />
-                </div>
+                {/* Filters är numera sticky internt, så ingen wrapper behövs */}
+                <EventFilters
+                    filterType={filterType}
+                    setFilterType={setFilterType}
+                    view={view}
+                    setView={setView}
+                    filterToday={filterToday}
+                    setFilterToday={setFilterToday}
+                    filterFree={filterFree}
+                    setFilterFree={setFilterFree}
+                    filterAge={filterAge}
+                    setFilterAge={setFilterAge}
+                    resetFilters={resetFilters}
+                    visible={isFiltersVisible}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                />
 
                 {/* Sortering - Också flex-shrink-0 för att inte tryckas ihop */}
                 <div className="max-w-6xl mx-auto px-4 pt-4 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">

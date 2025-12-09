@@ -1,5 +1,5 @@
 // src/services/userService.ts
-import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp, runTransaction, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { UserProfile } from '../types';
 
@@ -7,12 +7,12 @@ export const userService = {
   // Skapa eller uppdatera användarprofil i databasen
   async createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'>) {
     const userRef = doc(db, 'users', uid);
-    
+
     await setDoc(userRef, {
       ...data,
       uid,
       createdAt: Timestamp.now(),
-      isVerified: true 
+      isVerified: true
     }, { merge: true });
   },
 
@@ -20,7 +20,7 @@ export const userService = {
   async getUserProfile(uid: string): Promise<UserProfile | null> {
     const docRef = doc(db, 'users', uid);
     const snap = await getDoc(docRef);
-    
+
     if (snap.exists()) {
       const data = snap.data();
       return {
@@ -30,5 +30,48 @@ export const userService = {
       } as UserProfile;
     }
     return null;
+    return null;
+  },
+
+  // Lägg till omdöme
+  async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
+    const userRef = doc(db, 'users', targetUid);
+    const reviewRef = doc(collection(db, 'users', targetUid, 'reviews')); // Nytt dokument i subcollection
+
+    await runTransaction(db, async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists()) throw new Error("Användaren finns inte");
+
+      const userData = userDoc.data() as UserProfile;
+      const currentRating = userData.rating || 0;
+      const currentCount = userData.ratingCount || 0;
+
+      // Beräkna nytt snitt
+      const newCount = currentCount + 1;
+      const newRating = ((currentRating * currentCount) + review.rating) / newCount;
+
+      // 1. Skapa review
+      transaction.set(reviewRef, {
+        reviewerId: review.reviewer.uid,
+        reviewerName: review.reviewer.displayName,
+        reviewerImage: review.reviewer.photoURL || null,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: Timestamp.now()
+      });
+
+      // 2. Uppdatera användaren
+      transaction.update(userRef, {
+        rating: newRating,
+        ratingCount: newCount
+      });
+    });
+  },
+
+  // Hämta omdömen (valfritt, men bra för listan)
+  async getReviews(targetUid: string) {
+    const q = query(collection(db, 'users', targetUid, 'reviews'), orderBy('createdAt', 'desc'), limit(10));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 };

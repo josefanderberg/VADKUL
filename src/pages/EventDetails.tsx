@@ -170,8 +170,7 @@ export default function EventDetails() {
                 senderId: user?.uid, // Värden
                 type: 'system',
                 message: `Du har blivit godkänd att delta på "${event.title}"!`,
-                link: `/event/${event.id}`,
-                createdAt: new Date()
+                link: `/event/${event.id}`
             });
 
         } catch (error) {

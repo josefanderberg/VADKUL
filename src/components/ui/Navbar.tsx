@@ -13,24 +13,26 @@ import {
 export default function Navbar() {
   const { user } = useAuth(); // Tog bort logout härifrån då den inte används
   const { theme, toggleTheme } = useTheme();
-  
+
   // State för bilden i navbaren
   const [navImage, setNavImage] = useState<string | null>(null);
 
   // Hämta bilden från databasen när användaren ändras
   useEffect(() => {
     if (user?.uid) {
-        // 1. Sätt först Auth-bilden om den finns (snabbast)
-        if (user.photoURL) setNavImage(user.photoURL);
+      // 1. Sätt först Auth-bilden om den finns (snabbast)
+      if (user.photoURL) setNavImage(user.photoURL);
 
-        // 2. Hämta den "riktiga" bilden från Firestore för att vara säker
-        userService.getUserProfile(user.uid).then(profile => {
-            if (profile?.verificationImage) {
-                setNavImage(profile.verificationImage);
-            }
-        });
+      // 2. Hämta den "riktiga" bilden från Firestore för att vara säker
+      userService.getUserProfile(user.uid).then(profile => {
+        if (profile?.photoURL) {
+          setNavImage(profile.photoURL);
+        } else if (profile?.verificationImage) {
+          setNavImage(profile.verificationImage);
+        }
+      });
     } else {
-        setNavImage(null);
+      setNavImage(null);
     }
   }, [user]);
 
@@ -53,7 +55,7 @@ export default function Navbar() {
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
           {user && (
             <Link to="/create" className="p-2 text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Skapa Event">
-                <Plus size={24} strokeWidth={2.5} />
+              <Plus size={24} strokeWidth={2.5} />
             </Link>
           )}
 
@@ -70,7 +72,7 @@ export default function Navbar() {
           {user ? (
             <>
               {/* NOTISER */}
-              <NotificationsMenu /> 
+              <NotificationsMenu />
 
               {/* CHATT */}
               <Link to="/chat" className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">

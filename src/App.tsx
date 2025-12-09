@@ -18,7 +18,7 @@ function App() {
       <Route path="/login" element={<Login />} />
 
       {/* Mina sidor (Privat) */}
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/:uid?" element={<Profile />} />
 
       {/* Annan användare (Publik) - T.ex. /profile/ABC-123 */}
       <Route path="/profile/:uid" element={<PublicProfile />} />
