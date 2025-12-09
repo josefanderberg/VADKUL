@@ -119,9 +119,25 @@ export default function Home() {
             if (new Date(event.time) < now) return false;
 
             if (filterType !== 'all' && event.type !== filterType) return false;
-            if (filterAge === 'family' && event.minAge >= 12) return false;
-            if (filterAge === '18+' && event.minAge < 18) return false;
-            if (filterAge === 'seniors' && event.minAge < 65) return false;
+
+            // Åldersfilter
+            if (filterAge === 'family') {
+                // Familj: Max 12 år (eller ingen åldersgräns alls)
+                if (event.minAge >= 13) return false;
+            }
+            if (filterAge === '13+') {
+                // Ungdom: 13-17 år.
+                // Exkludera barn-events (maxAge < 13) och vuxen-events (minAge >= 18)
+                if (event.minAge >= 18) return false; // För gamla
+                if (event.maxAge && event.maxAge < 13) return false; // För unga
+            }
+            if (filterAge === '18+') {
+                // Vuxen: Strikt 18+
+                if (event.minAge < 18) return false;
+            }
+            if (filterAge === 'seniors') {
+                if (event.minAge < 65) return false;
+            }
             if (filterFree && event.price > 0) return false;
             if (filterToday) {
                 const today = new Date().toDateString();
@@ -218,7 +234,7 @@ export default function Home() {
                 onScroll={view === 'list' ? handleContainerScroll : undefined}
             >
                 {/* Filters tar sin plats, men döljs automatiskt i map-vy via effekt */}
-                <div className="flex-shrink-0 z-20 relative">
+                <div className="flex-shrink-0 z-30 sticky top-0">
                     <EventFilters
                         filterType={filterType}
                         setFilterType={setFilterType}
