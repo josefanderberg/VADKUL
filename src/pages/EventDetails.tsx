@@ -77,7 +77,7 @@ export default function EventDetails() {
                 }
 
                 const userProfile = await userService.getUserProfile(user.uid);
-                const correctPhotoURL = userProfile?.verificationImage || user.photoURL || null;
+                const correctPhotoURL = userProfile?.photoURL || user.photoURL || userProfile?.verificationImage || null;
 
                 // NY LOGIK: Koll om godkännande krävs
                 const initialStatus = event.requiresApproval ? 'pending' : 'confirmed';

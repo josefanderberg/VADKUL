@@ -68,27 +68,33 @@ export default function Home() {
 
     // Scroll states
     const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+    // Scroll toggling logic
     const lastScrollTop = useRef(0);
 
     // --- Hantera scroll på containern för att gömma/visa menyn ---
     const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const currentScrollTop = e.currentTarget.scrollTop;
+        const currentScroll = e.currentTarget.scrollTop;
+        const delta = currentScroll - lastScrollTop.current;
 
         // Om vi är i toppen (eller nära), visa alltid
-        if (currentScrollTop < 10) {
+        if (currentScroll < 50) {
             setIsFiltersVisible(true);
-            lastScrollTop.current = currentScrollTop;
+            lastScrollTop.current = currentScroll;
             return;
         }
 
-        // Scrollar vi NER -> Göm. Scrollar vi UPP -> Visa.
-        if (currentScrollTop > lastScrollTop.current) {
+        // Ignorera små rörelser (jitter)
+        if (Math.abs(delta) < 10) return;
+
+        // Scrollar vi NER -> Göm
+        if (delta > 0) {
             setIsFiltersVisible(false);
         } else {
+            // Scrollar vi UPP -> Visa
             setIsFiltersVisible(true);
         }
 
-        lastScrollTop.current = currentScrollTop;
+        lastScrollTop.current = currentScroll;
     };
 
     useEffect(() => {
