@@ -19,12 +19,103 @@ const SWEDISH_CITIES = [
   { name: 'Helsingborg', lat: 56.0465, lng: 12.6945 }
 ];
 
-const RANDOM_TITLES = [
-  "Morgonlöpning runt sjön", "Fika på stan", "Padel-match",
-  "Programmerings-hackathon", "Kvällspromenad", "Utomhusbio",
-  "Grillkväll", "Fotboll i parken", "Yoga i solen", "Lunchträff",
-  "Stand-up kväll", "Loppis-runda", "Brädspelskväll", "Kajakpaddling"
-];
+const CATEGORY_EXAMPLES: Record<string, { title: string, desc: string }[]> = {
+  play: [
+    { title: "Kubb i parken", desc: "Kom och spela kubb! Alla är välkomna, vi kör så länge vi orkar." },
+    { title: "Vattenkrig - Alla mot alla", desc: "Ta med vattenpistol så kör vi! Samling vid fontänen." },
+    { title: "Kurragömma Extreme", desc: "Kurragömma över hela campusområdet. Kom i oömma kläder." }
+  ],
+  sport: [
+    { title: "Fotbollsmatch 5-mot-5", desc: "Vi behöver folk till en vänskapsmatch. Vi delar upp lagen på plats." },
+    { title: "Volleyboll på stranden", desc: "Spontan volleyboll i solen. Vi har boll och nät." },
+    { title: "Padel-turnering (Amerikano)", desc: "Vi kör en spontan Americano. Alla nivåer välkomna!" }
+  ],
+  training: [
+    { title: "Morgonjogg 5km", desc: "Lugnt tempo, vi håller ihop gruppen. Startar vid utegymmet." },
+    { title: "Yoga i solnedgången", desc: "Ta med egen matta. Vi kör ett pass för alla nivåer." },
+    { title: "Utomhusträning stationer", desc: "Jag tar med redskap, vi kör cirkelträning i parken." }
+  ],
+  party: [
+    { title: "Förfest innan kåren", desc: "Vi ses och värmer upp inför kvällens släpp. Ta med egen dryck." },
+    { title: "Spontan hemmafest", desc: "Öppet hus! Kom och häng, lyssna på musik och träffa folk." },
+    { title: "Utgång ikväll?", desc: "Någon som är taggad på dansgolvet? Vi möts upp på torget." }
+  ],
+  social: [
+    { title: "Söndagsfika", desc: "Kaffe och bulle på stans mysigaste café. Kom och snacka skit." },
+    { title: "Lunch på stan", desc: "Vi testar det nya stället på hörnet. De har bra vegatariskt!" },
+    { title: "Afternoon Tea", desc: "Lite lyxigare fika. Vi har bokat bord för 6 pers." }
+  ],
+  campus: [
+    { title: "Pubkväll på nationen", desc: "Billig öl och hamburgare. Kom och häng med oss!" },
+    { title: "Sittning: Tema 80-tal", desc: "Vi har några biljetter över till sittningen. Först till kvarn!" },
+    { title: "Kårfrukost", desc: "Gratis frukost för medlemmar. Vi ses i kårhuset." }
+  ],
+  community: [
+    { title: "Städdag i parken", desc: "Vi hjälps åt att snygga till i parken. Fika bjuds det på!" },
+    { title: "Diskussionskväll: Klimat", desc: "Hur kan vi leva mer hållbart? Öppen diskussion." },
+    { title: "Volontärmöte", desc: "Vill du engagera dig? Kom och lyssna på vad vi gör." }
+  ],
+  culture: [
+    { title: "Livejazz på puben", desc: "Lokalt band spelar ikväll. Skön stämning utlovas." },
+    { title: "Konstutställning vernissage", desc: "Vi går och kollar in den nya utställningen tillsammans." },
+    { title: "Impro-teater workshop", desc: "Prova på teater! Inga förkunskaper krävs, bara glatt humör." }
+  ],
+  study: [
+    { title: "Tenta-P i biblioteket", desc: "Vi sitter hela dagen. Kom och plugga med oss för motivation." },
+    { title: "Språkcafé: Engelska", desc: "Öva din engelska över en kopp kaffe. Alla nivåer välkomna." },
+    { title: "Grupparbete & Pizza", desc: "Vi pluggar effektivt i 2 timmar, sen beställer vi pizza." }
+  ],
+  workshop: [
+    { title: "Lär dig koda React", desc: "Enkel intro för nybörjare. Ta med laptop!" },
+    { title: "Fotokurs: Grunderna", desc: "Lär dig din systemkamera. Vi går igenom ISO och slutartid." },
+    { title: "Danskurs: Salsa", desc: "Prova på grundstegen i salsa. Partner behövs ej." }
+  ],
+  creative: [
+    { title: "Måla och skåla", desc: "Vi målar akvarell och dricker lite bubbel. Material finns." },
+    { title: "Stickjunta", desc: "Ta med din stickning/virkning. Vi fikar och handarbetar ihop." },
+    { title: "Kreativt skrivande", desc: "Vi gör skrivövningar tillsammans. Penna och papper räcker." }
+  ],
+  food: [
+    { title: "Hemlagad Pizza-kväll", desc: "Jag gör degen, ni tar med topping. Blir sjukt gott!" },
+    { title: "Knytkalas i parken", desc: "Alla tar med sig en rätt var att bjuda på." },
+    { title: "Sushi-workshop", desc: "Vi lär oss rulla sushi. Ingredienser köps in gemensamt." }
+  ],
+  game: [
+    { title: "LAN-party hela helgen", desc: "Ta med burken och skärm. Vi har plats och nätverk." },
+    { title: "Mario Kart-turnering", desc: "Vem är bäst på Rainbow Road? Pris till vinnaren!" },
+    { title: "CS:GO Matchkväll", desc: "Vi behöver en femte spelare till vårt lag. Rank spelar ingen roll." }
+  ],
+  boardgame: [
+    { title: "Spelkväll: Catan & Ticket to Ride", desc: "Klassiska brädspel. Vi förklarar reglerna." },
+    { title: "Dungeons & Dragons One-shot", desc: "Ett äventyr på en kväll. Karaktärer finns färdiga." },
+    { title: "Schack-turnering", desc: "Snabbschack 10 minuter. Alla möter alla." }
+  ],
+  market: [
+    { title: "Klädbytardag", desc: "Ta med plagg du inte använder, byt till dig nya favoriter." },
+    { title: "Bakluckeloppis", desc: "Vi delar på en plats. Samling 09:00." },
+    { title: "Säljer kurslitteratur", desc: "Möts upp för att köpa/sälja gamla böcker." }
+  ],
+  outdoor: [
+    { title: "Vandring i naturreservatet", desc: "Ca 1 mil i lugnt tempo. Ta med matsäck." },
+    { title: "Korvgrillning vid sjön", desc: "Vi tänder grillen kl 18. Ta med det du vill grilla." },
+    { title: "Fiske-tur", desc: "Vi drar ut med båt och kastar lite. Flytvästar finns." }
+  ],
+  movie: [
+    { title: "Bio: Nya Marvel-filmen", desc: "Vi har bokat mittenplatserna. Häng med!" },
+    { title: "Filmkväll: Sagan om Ringen", desc: "Maraton (Extended edition) hemma hos mig. Popcorn ingår." },
+    { title: "Utomhusbio i parken", desc: "Ta med filt och stol. Filmen startar vid mörkrets inbrott." }
+  ],
+  mingle: [
+    { title: "After Work med branschen", desc: "Mingel för oss som jobbar inom IT/Tech." },
+    { title: "Entreprenörsfrukost", desc: "Nätverka med andra som driver eget. God frukost!" },
+    { title: "Mingelkväll för nyinflyttade", desc: "Ny i stan? Kom och lär känna folk!" }
+  ],
+  other: [
+    { title: "Hjälp med flytt?", desc: "Bjuder på pizza och öl till den som kan bära lite lådor." },
+    { title: "Kattvakts-träff", desc: "Vi som gillar katter ses och pratar." },
+    { title: "Överrasknings-event", desc: "Hemlig aktivitet! Samling vid statyn." }
+  ]
+};
 
 // Hjälpfunktion för slumpad position i Sverige
 const getRandomLocationInSweden = () => {
@@ -95,9 +186,13 @@ export default function AdminDashboard() {
 
       for (let i = 0; i < count; i++) {
         const randomUser = users[Math.floor(Math.random() * users.length)];
-        const randomTitle = RANDOM_TITLES[Math.floor(Math.random() * RANDOM_TITLES.length)];
+        // const randomTitle = RANDOM_TITLES[Math.floor(Math.random() * RANDOM_TITLES.length)]; // REMOVED
         const location = getRandomLocationInSweden();
         const category = getRandomCategory(); // Hämta slumpmässig kategori
+
+        // Hämta exempel för kategorin
+        const templates = CATEGORY_EXAMPLES[category] || CATEGORY_EXAMPLES.other;
+        const template = templates[Math.floor(Math.random() * templates.length)];
 
         const now = new Date();
         const futureDate = new Date();
@@ -108,8 +203,8 @@ export default function AdminDashboard() {
         const maxPart = 5 + Math.floor(Math.random() * 20); // Som tidigare
 
         const eventData = {
-          title: `${randomTitle}`,
-          description: `Detta är event #${i + 1} skapat av admin-verktyget.`,
+          title: template.title,
+          description: template.desc,
           time: Timestamp.fromDate(futureDate),
 
           lat: location.lat,

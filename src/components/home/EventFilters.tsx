@@ -15,7 +15,6 @@ interface EventFiltersProps {
   filterAge: string;
   setFilterAge: (val: string) => void;
   resetFilters: () => void;
-  visible: boolean; // För scroll-effekten
   searchQuery: string;
   setSearchQuery: (val: string) => void;
 }
@@ -45,7 +44,7 @@ export default function EventFilters({
 
   // 0 = Basic (Idag + Gratis), 1 = Age (Ålder)
   const [filterMode] = useState<0 | 1>(0);
-  const [showFilters, setShowFilters] = useState(false); // Default hidden or visible? User asked for button to show it. Let's default to false or true? Usually hidden if "toggle" is needed, but maybe true is better UX. Let's go with false as it sounds like an expansion. Re-reading: "göra så att raden under visas". Implies it might be hidden initially, or just togglable. Let's default to true so they see options, but can hide. Or false to clean up? Let's check existing behavior. Existing was auto-hide on scroll.
+  const [showFilters, setShowFilters] = useState(true);
   // Actually, user said "Kan du göra så att vi har en filter ikon... det ska göra så att raden under visas".
   // Let's default to TRUE because filters are important.
 
@@ -82,12 +81,23 @@ export default function EventFilters({
           </div>
 
           {/* Filter Toggle Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 ${showFilters ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-          >
-            <SlidersHorizontal size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {!showFilters && hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="p-2 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 animate-in fade-in zoom-in duration-200"
+                title="Rensa filter"
+              >
+                <X size={20} />
+              </button>
+            )}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 ${showFilters ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            >
+              <SlidersHorizontal size={20} />
+            </button>
+          </div>
 
           {/* View Toggle */}
           <div className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex shrink-0 border border-slate-200 dark:border-slate-700">

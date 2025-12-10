@@ -1,5 +1,6 @@
 // src/pages/Home.tsx
 
+
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -7,7 +8,8 @@ import 'leaflet/dist/leaflet.css';
 
 import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
-import EventFilters from '../components/home/EventFilters'; // Se till att sökvägen stämmer
+import EventFilters from '../components/home/EventFilters';
+import WelcomeModal from '../components/ui/WelcomeModal';
 
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
@@ -64,36 +66,12 @@ export default function Home() {
 
 
 
-    // Scroll states
-    const [isFiltersVisible, setIsFiltersVisible] = useState(true);
-    // Scroll toggling logic
-    const lastScrollTop = useRef(0);
 
-    // --- Hantera scroll på containern för att gömma/visa menyn ---
-    const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const currentScroll = e.currentTarget.scrollTop;
-        const delta = currentScroll - lastScrollTop.current;
+    // --- Hantera scroll på containern för att gömma/visa menyn (REMOVED LOGIC) ---
+    // User wants manual control, so we keep this empty or remove if fully unused.
+    // Keeping handleContainerScroll as empty to avoid extensive rewrite if container uses it,
+    // but better to remove usages.
 
-        // Om vi är i toppen (eller nära), visa alltid
-        if (currentScroll < 50) {
-            setIsFiltersVisible(true);
-            lastScrollTop.current = currentScroll;
-            return;
-        }
-
-        // Ignorera små rörelser (jitter)
-        if (Math.abs(delta) < 10) return;
-
-        // Scrollar vi NER -> Göm
-        if (delta > 0) {
-            setIsFiltersVisible(false);
-        } else {
-            // Scrollar vi UPP -> Visa
-            setIsFiltersVisible(true);
-        }
-
-        lastScrollTop.current = currentScroll;
-    };
 
     useEffect(() => {
         loadData();
@@ -228,13 +206,13 @@ export default function Home() {
 
     return (
         <Layout>
+            <WelcomeModal />
             {/* SCROLL FIXEN:
           List-vy: Overflow-y-auto på container.
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.
       */}
             <div
                 className={`h-[calc(100vh-64px)] relative w-full ${view === 'map' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
-                onScroll={view === 'list' ? handleContainerScroll : undefined}
             >
                 {/* Filters är numera sticky internt, så ingen wrapper behövs */}
                 <EventFilters
@@ -249,7 +227,6 @@ export default function Home() {
                     filterAge={filterAge}
                     setFilterAge={setFilterAge}
                     resetFilters={resetFilters}
-                    visible={isFiltersVisible}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                 />

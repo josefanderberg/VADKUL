@@ -1,4 +1,6 @@
 // src/utils/categories.ts
+import mingleImage from '../assets/categories/mingle.png';
+import cultureImage from '../assets/categories/culture.png';
 
 export const EVENT_CATEGORIES = {
   // --- AKTIVITET & HÄLSA ---
@@ -100,7 +102,7 @@ export const EVENT_CATEGORIES = {
     iconColor: 'text-pink-500',
     activeColor: 'bg-pink-600 border-pink-600',
     description: 'Livemusik, teater, utställningar och jam sessions',
-    defaultImage: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80' // Ny bild: Konsert/Kultur (bättre länk)
+    defaultImage: cultureImage // Updated
   },
 
   // --- KUNSKAP & INTRESSE ---
@@ -146,11 +148,11 @@ export const EVENT_CATEGORIES = {
     id: 'food',
     label: 'Mat & Dryck',
     emoji: '🍕',
-    markerColor: 'bg-lime-500',
-    color: 'bg-lime-100 text-lime-700',
-    badgeStyle: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-500/20 dark:text-lime-300 dark:border-lime-500/30',
-    iconColor: 'text-lime-600',
-    activeColor: 'bg-lime-600 border-lime-600',
+    markerColor: 'bg-amber-900', // Mörkbrun (Trä)
+    color: 'bg-amber-100 text-amber-900',
+    badgeStyle: 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/40 dark:text-amber-100 dark:border-amber-700',
+    iconColor: 'text-amber-900',
+    activeColor: 'bg-amber-950 border-amber-950',
     description: 'Middag, bakning, grillning eller matlag',
     defaultImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
   },
@@ -224,7 +226,7 @@ export const EVENT_CATEGORIES = {
     iconColor: 'text-teal-500',
     activeColor: 'bg-teal-600 border-teal-600',
     description: 'Professionellt nätverkande, lokala samarbeten och after work',
-    defaultImage: 'https://images.unsplash.com/photo-1515168816969-c953feeb5023?auto=format&fit=crop&w=800&q=80' // Ny bild: Mingel
+    defaultImage: mingleImage // Updated
   },
   other: {
     id: 'other',
