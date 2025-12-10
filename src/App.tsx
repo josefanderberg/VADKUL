@@ -8,6 +8,7 @@ import PublicProfile from './pages/PublicProfile'; // <--- NY: Importera den pub
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import AdminDashboard from './pages/AdminDashboard';
+import About from './pages/About'; // NY SIDA
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
       <Route path="/profile/:uid" element={<PublicProfile />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/about" element={<About />} />
       <Route path="/chat" element={<Chat />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -7,7 +7,7 @@ import { userService } from '../../services/userService';
 import NotificationsMenu from '../ui/NotificationsMenu';
 import {
   Sun, Moon,
-  Plus, MessageSquare
+  Plus, MessageSquare, Info
 } from 'lucide-react'; // Tog bort LogOut från importen
 
 export default function Navbar() {
@@ -58,6 +58,11 @@ export default function Navbar() {
               <Plus size={24} strokeWidth={2.5} />
             </Link>
           )}
+
+          {/* 1.5 INFO (Ny) */}
+          <Link to="/about" className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Om VADKUL">
+            <Info size={22} />
+          </Link>
 
           {/* 2. THEME TOGGLE */}
           <button
