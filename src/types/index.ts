@@ -91,6 +91,7 @@ export interface AppEvent {
   attendees: EventAttendee[];
   coverImage?: string;
   requiresApproval: boolean; // <--- NY: Kräv godkännande
+  createdAt?: Date; // <--- NY: Skapad datum
 }
 
 export interface AppNotification {
@@ -106,6 +107,7 @@ export interface AppNotification {
   createdAt: any;      // Timestamp
 }
 
-export interface FirestoreEventData extends Omit<AppEvent, 'id' | 'time'> {
+export interface FirestoreEventData extends Omit<AppEvent, 'id' | 'time' | 'createdAt'> {
   time: Timestamp;
+  createdAt?: Timestamp;
 }

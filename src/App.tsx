@@ -15,6 +15,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/event/:id" element={<EventDetails />} />
       <Route path="/create" element={<CreateEvent />} />
+      <Route path="/edit-event/:id" element={<CreateEvent />} />
       <Route path="/login" element={<Login />} />
 
       {/* Mina sidor (Privat) */}

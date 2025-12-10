@@ -1,6 +1,6 @@
 // src/components/home/EventFilters.tsx
-import { useState, useEffect, useRef } from 'react';
-import { List, Map as MapIcon, Calendar, RefreshCw, Search, X, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { SlidersHorizontal, List, Map as MapIcon, Search, X, ChevronDown } from 'lucide-react';
 import { CATEGORY_LIST, EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 
 interface EventFiltersProps {
@@ -32,7 +32,6 @@ export default function EventFilters({
   filterAge,
   setFilterAge,
   resetFilters,
-  visible,
   searchQuery,
   setSearchQuery
 }: EventFiltersProps) {
@@ -45,17 +44,14 @@ export default function EventFilters({
   const hasActiveFilters = filterType !== 'all' || filterFree || filterToday || filterAge !== 'all' || searchQuery.length > 0;
 
   // 0 = Basic (Idag + Gratis), 1 = Age (Ålder)
-  const [filterMode, setFilterMode] = useState<0 | 1>(0);
-  const prevVisible = useRef(visible);
+  const [filterMode] = useState<0 | 1>(0);
+  const [showFilters, setShowFilters] = useState(false); // Default hidden or visible? User asked for button to show it. Let's default to false or true? Usually hidden if "toggle" is needed, but maybe true is better UX. Let's go with false as it sounds like an expansion. Re-reading: "göra så att raden under visas". Implies it might be hidden initially, or just togglable. Let's default to true so they see options, but can hide. Or false to clean up? Let's check existing behavior. Existing was auto-hide on scroll.
+  // Actually, user said "Kan du göra så att vi har en filter ikon... det ska göra så att raden under visas".
+  // Let's default to TRUE because filters are important.
 
-  useEffect(() => {
-    // Om vi precis blev synliga (scrollade upp), byt läge!
-    // Men bara om vi faktiskt var osynliga innan.
-    if (visible && !prevVisible.current) {
-      setFilterMode(prev => (prev === 0 ? 1 : 0));
-    }
-    prevVisible.current = visible;
-  }, [visible]);
+  // Remove prevVisible logic or adapt it? User wants manual control. I will remove the scroll effect affecting visibility of the row if the user wants purely manual.
+  // "Stabilize the filter bar by removing its scroll-based hiding/showing animation" was a previous goal.
+  // Actually, I'll remove the `visible` prop dependency for the row visibility and use `showFilters` instead.
 
   return (
     <div className="sticky top-0 z-40 transition-all duration-300">
@@ -63,7 +59,7 @@ export default function EventFilters({
       {/* --- CONTAINER: Bakgrund & Blur (Håller båda raderna) --- */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm transition-all duration-300">
 
-        {/* RAD 1: SÖK + VIEW (Alltid synlig) */}
+        {/* RAD 1: SÖK + FILTER BUTTON + VIEW (Alltid synlig) */}
         <div className="max-w-6xl mx-auto px-4 py-3 pb-2 flex gap-3 items-center">
           {/* Sökfält */}
           <div className="flex-grow relative">
@@ -73,7 +69,7 @@ export default function EventFilters({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Sök på event..."
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all dark:text-white"
             />
             {searchQuery && (
               <button
@@ -84,6 +80,14 @@ export default function EventFilters({
               </button>
             )}
           </div>
+
+          {/* Filter Toggle Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 ${showFilters ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+          >
+            <SlidersHorizontal size={20} />
+          </button>
 
           {/* View Toggle */}
           <div className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex shrink-0 border border-slate-200 dark:border-slate-700">
@@ -104,7 +108,7 @@ export default function EventFilters({
 
         {/* RAD 2: FILTER (Kollapsar) */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${visible ? 'max-h-[60px] opacity-100' : 'max-h-0 opacity-0'}`}
+          className={`overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${showFilters ? 'max-h-[60px] opacity-100' : 'max-h-0 opacity-0'}`}
         >
           <div className="max-w-6xl mx-auto px-4 pb-3 pt-0 flex items-center justify-between gap-2">
 

@@ -10,12 +10,12 @@ import { useMemo } from 'react'; // <--- NYTT (valfritt, för prestanda)
 
 interface EventCardProps {
     event: AppEvent;
+    compact?: boolean;
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, compact = false }: EventCardProps) {
     const navigate = useNavigate();
 
-    // --- DATA ---
     // --- DATA ---
     const category = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
     const emoji = category.emoji;
@@ -37,7 +37,6 @@ export default function EventCard({ event }: EventCardProps) {
         return `${d.toFixed(1)} km`;
     };
 
-    // --- FÄRGER ---
     // --- STATUS LOGIK ---
     const currentCount = event.attendees.length;
     const spotsLeft = event.maxParticipants - currentCount;
@@ -53,7 +52,7 @@ export default function EventCard({ event }: EventCardProps) {
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-slate-700 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-slate-200 dark:hover:border-slate-600 overflow-hidden">
 
                 {/* --- NYTT: OMSLAGSBILD --- */}
-                <div className="relative h-40 w-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                <div className={`relative w-full bg-slate-100 dark:bg-slate-700 overflow-hidden transition-all ${compact ? 'h-24' : 'h-40'}`}>
                     {/* Bilden */}
                     <img
                         src={coverImage}
@@ -69,12 +68,32 @@ export default function EventCard({ event }: EventCardProps) {
                         {category.label}
                     </div>
 
-                    {/* Garanterad Status Badge Top Right */}
-                    {isGuaranteed && (
+                    {/* Status Badge Top Right */}
+                    {isGuaranteed ? (
                         <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
                             <CheckCircle2 size={10} strokeWidth={3} />
                             <span>Blir av!</span>
                         </div>
+                    ) : (
+                        spotsLeft > 0 && (
+                            (event.minParticipants - currentCount) <= 0 ? (
+                                // Borde vara garanterad, men för säkerhets skull
+                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
+                                    <CheckCircle2 size={10} strokeWidth={3} />
+                                    <span>Blir av!</span>
+                                </div>
+                            ) : (event.minParticipants - currentCount) === 1 ? (
+                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-amber-400/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
+                                    <Clock size={10} strokeWidth={3} />
+                                    <span>Söker 1 till!</span>
+                                </div>
+                            ) : (
+                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-orange-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
+                                    <Clock size={10} strokeWidth={3} />
+                                    <span>Söker {event.minParticipants - currentCount} till</span>
+                                </div>
+                            )
+                        )
                     )}
 
                     {/* Datum Badge Bottom Right */}
@@ -85,10 +104,10 @@ export default function EventCard({ event }: EventCardProps) {
                 </div>
 
                 {/* --- CONTENT START --- */}
-                <div className="p-5 flex flex-col flex-1">
+                <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-5'}`}>
 
                     {/* --- TITEL --- */}
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                    <h3 className={`font-bold text-slate-900 dark:text-white leading-tight mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 ${compact ? 'text-base' : 'text-lg'}`}>
                         {event.title}
                     </h3>
 

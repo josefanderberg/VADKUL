@@ -217,9 +217,20 @@ export default function EventDetails() {
                         <ChevronLeft size={20} />
                         <span className="font-bold text-sm ml-1 hidden md:inline">Tillbaka</span>
                     </button>
-                    <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
-                        <Share2 size={20} />
-                    </button>
+                    <div className="flex gap-2">
+                        {isHost && (
+                            <button
+                                onClick={() => navigate(`/edit-event/${event.id}`)}
+                                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-indigo-600 transition-colors"
+                                title="Redigera event"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </button>
+                        )}
+                        <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
+                            <Share2 size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* --- HERO IMAGE --- */}

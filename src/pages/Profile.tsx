@@ -49,7 +49,7 @@ export default function Profile() {
         async function loadProfile() {
             setProfileLoading(true); // Reset loading vid byte av ID
             try {
-                const data = await userService.getUserProfile(targetUid);
+                const data = await userService.getUserProfile(targetUid!);
                 setProfile(data);
                 // Reset events vid byte av profil
                 setHostedEvents([]);
@@ -73,7 +73,7 @@ export default function Profile() {
             if (activeTab === 'hosted' && !hasLoadedHosted && user) {
                 setEventsLoading(true);
                 try {
-                    const hosted = await eventService.getHostedEvents(targetUid);
+                    const hosted = await eventService.getHostedEvents(targetUid!);
                     setHostedEvents(hosted);
                     setHasLoadedHosted(true);
                 } catch (err) {
@@ -122,7 +122,8 @@ export default function Profile() {
                 displayName: user.displayName || 'Anonym',
                 age: 0,
                 isVerified: false,
-                createdAt: new Date()
+                createdAt: new Date(),
+                photoURL: user.photoURL || undefined
             } // Mockar ihop en userprofile av auth-objektet ifall den saknas
         });
 

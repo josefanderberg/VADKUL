@@ -1,7 +1,7 @@
 // src/pages/CreateEvent.tsx
 
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -76,12 +76,15 @@ function LocationPicker({
 // --- HUVUDKOMPONENT ---
 
 export default function CreateEvent() {
+    const { id } = useParams<{ id?: string }>(); // Hämta ID om vi redigerar
+    const isEditMode = !!id;
+
     const navigate = useNavigate();
     const { user } = useAuth();
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-    // Hämta sparad plats vid start
+    // Hämta sparad plats vid start (Endast om vi INTE redigerar)
     const savedLocation = useMemo(() => loadLocationFromLocalStorage(), []);
 
     const [step, setStep] = useState(1);
@@ -93,8 +96,8 @@ export default function CreateEvent() {
         type: '',
         title: '',
         description: '',
-        lat: savedLocation ? savedLocation.lat : 56.8790,
-        lng: savedLocation ? savedLocation.lng : 14.8059,
+        lat: 56.8790, // Default till Växjö
+        lng: 14.8059,
         locationName: '',
         date: new Date(),
         timeStr: '18:00',
@@ -104,18 +107,66 @@ export default function CreateEvent() {
         minParticipants: 2,
         maxParticipants: 10,
         price: 0,
-        requiresApproval: false // <--- NY: Default false
+        requiresApproval: false
     });
 
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
+    // --- LADDA EVENT OM REDIGERING ---
     useEffect(() => {
-        if (!savedLocation && navigator.geolocation) {
+        if (isEditMode && id) {
+            setLoading(true);
+            eventService.getById(id).then(event => {
+                if (event) {
+                    // Kontrollera att det är rätt ägare
+                    if (user && event.host.uid !== user.uid) {
+                        toast.error("Du får inte redigera detta event!");
+                        navigate('/');
+                        return;
+                    }
+
+                    // Fyll i formuläret
+                    // Hantera om time är en Timestamp (från Firebase SDK direkt) eller Date (från vår Service)
+                    // @ts-ignore - Ibland kommer det som timestamp trots typningen
+                    const eventDate = event.time.seconds ? new Date(event.time.seconds * 1000) : new Date(event.time);
+
+                    setFormData({
+                        type: event.type,
+                        title: event.title,
+                        description: event.description || '',
+                        lat: event.lat,
+                        lng: event.lng,
+                        locationName: event.location.name,
+                        date: eventDate,
+                        timeStr: eventDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+                        ageCategory: event.ageCategory,
+                        minAge: event.minAge,
+                        maxAge: event.maxAge,
+                        minParticipants: event.minParticipants,
+                        maxParticipants: event.maxParticipants,
+                        price: event.price,
+                        requiresApproval: event.requiresApproval || false
+                    });
+
+                    // Sätt kalendern till rätt månad
+                    setCurrentMonth(new Date(eventDate));
+                }
+                setLoading(false);
+            });
+        }
+    }, [id, isEditMode, user]);
+
+
+    useEffect(() => {
+        // Endast sätt position från saved/GPS om vi INTE redigerar och inte har laddat data än
+        if (!isEditMode && !formData.type && savedLocation) {
+            setFormData(prev => ({ ...prev, lat: savedLocation.lat, lng: savedLocation.lng }));
+        } else if (!isEditMode && !formData.type && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
             });
         }
-    }, [savedLocation]);
+    }, [savedLocation, isEditMode]);
 
     useEffect(() => {
         if (user) {
@@ -147,10 +198,8 @@ export default function CreateEvent() {
             case 1:
                 if (!formData.type) { toast.error("Välj en kategori först!"); return false; }
                 return true;
-            // ÄNDRAT: Steg 2 är nu kartan (behöver oftast ingen validering då default finns)
             case 2:
                 return true;
-            // ÄNDRAT: Steg 3 är nu Titel & Info
             case 3:
                 if (!formData.title) { toast.success("Ange en titel!"); return false; }
                 return true;
@@ -183,7 +232,8 @@ export default function CreateEvent() {
         finalDate.setHours(h, m);
 
         try {
-            const newEvent: Omit<AppEvent, 'id'> = {
+            // Gemensam data
+            const commonData = {
                 title: formData.title,
                 description: formData.description,
                 location: {
@@ -200,31 +250,54 @@ export default function CreateEvent() {
                 minAge: Number(formData.minAge),
                 maxAge: Number(formData.maxAge),
                 ageCategory: formData.ageCategory,
-                requiresApproval: formData.requiresApproval, // <--- NY
-                host: {
-                    uid: user.uid,
-                    name: user.displayName || user.email,
-                    initials: (user.displayName || user.email).substring(0, 2).toUpperCase(),
-                    email: user.email,
-                    verified: userProfile.isVerified,
-                    rating: 5.0,
-                    photoURL: userProfile.verificationImage || user.photoURL || null
-                },
-                attendees: [{
-                    uid: user.uid,
-                    email: user.email || '',
-                    displayName: user.displayName || 'Värd',
-                    photoURL: userProfile.verificationImage || user.photoURL || null,
-                    status: 'confirmed' // <--- Värden är alltid godkänd
-                }]
+                requiresApproval: formData.requiresApproval,
             };
 
-            await eventService.create(newEvent);
-            toast.success('Eventet är publicerat! 🎉');
-            navigate('/');
+            if (isEditMode && id) {
+                // --- UPPDATERA BEFINTLIGT EVENT ---
+                // Vi behöver hämta hela eventet först för att inte tappa bort deltagare/host
+                const existingEvent = await eventService.getById(id);
+                if (!existingEvent) throw new Error("Event not found");
+
+                const updatedEvent: AppEvent = {
+                    ...existingEvent,
+                    ...commonData
+                };
+
+                await eventService.update(updatedEvent);
+                toast.success('Eventet är uppdaterat! 🎉');
+                navigate(`/event/${id}`);
+
+            } else {
+                // --- SKAPA NYTT EVENT ---
+                const newEvent: Omit<AppEvent, 'id'> = {
+                    ...commonData,
+                    host: {
+                        uid: user.uid,
+                        name: user.displayName || user.email,
+                        initials: (user.displayName || user.email).substring(0, 2).toUpperCase(),
+                        email: user.email,
+                        verified: userProfile.isVerified,
+                        rating: 5.0,
+                        photoURL: userProfile.photoURL || user.photoURL || userProfile.verificationImage || null
+                    },
+                    attendees: [{
+                        uid: user.uid,
+                        email: user.email || '',
+                        displayName: user.displayName || 'Värd',
+                        photoURL: userProfile.photoURL || user.photoURL || userProfile.verificationImage || null,
+                        status: 'confirmed'
+                    }]
+                };
+
+                await eventService.create(newEvent);
+                toast.success('Eventet är publicerat! 🎉');
+                navigate('/');
+            }
+
         } catch (error) {
-            console.error("Fel vid skapande:", error);
-            toast.error("Kunde inte skapa eventet. Försök igen.");
+            console.error("Fel vid sparande:", error);
+            toast.error("Kunde inte spara eventet. Försök igen.");
         } finally {
             setLoading(false);
         }
@@ -254,7 +327,7 @@ export default function CreateEvent() {
                 {/* HEADER */}
                 <div className="flex items-center justify-between py-6">
                     <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                        Skapa Event
+                        {isEditMode ? 'Redigera Event' : 'Skapa Event'}
                         <span className="text-base text-indigo-500 ml-2">Steg {step}/{totalSteps}</span>
                     </h1>
                     <button onClick={() => navigate('/')} className="text-sm font-semibold text-slate-500 hover:text-red-500">
@@ -588,7 +661,7 @@ export default function CreateEvent() {
                                 disabled={loading || !userProfile}
                                 className="flex-grow py-3 rounded-xl font-bold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                             >
-                                {loading ? 'Publicerar...' : 'Publicera Event'} <Check size={20} />
+                                {loading ? (isEditMode ? 'Sparar...' : 'Publicerar...') : (isEditMode ? 'Spara ändringar' : 'Publicera Event')} <Check size={20} />
                             </button>
                         )}
                     </div>

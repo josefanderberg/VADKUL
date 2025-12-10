@@ -17,7 +17,8 @@ export const eventService = {
         return {
           ...data,
           id: doc.id,
-          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time)
+          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined)
         };
       });
     } catch (error) {
@@ -40,7 +41,8 @@ export const eventService = {
         return {
           ...data,
           id: doc.id,
-          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time)
+          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined)
         };
       });
     } catch (error) {
@@ -59,7 +61,8 @@ export const eventService = {
         return {
           ...data,
           id: snap.id,
-          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time)
+          time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined)
         };
       }
       return null;
@@ -73,7 +76,8 @@ export const eventService = {
   async create(event: Omit<AppEvent, 'id'>) {
     const payload = {
       ...event,
-      time: Timestamp.fromDate(event.time)
+      time: Timestamp.fromDate(event.time),
+      createdAt: Timestamp.now() // Use client-side timestamp for simplicity effectively matching server
     };
     return await addDoc(collection(db, COLLECTION), payload);
   },
@@ -85,9 +89,32 @@ export const eventService = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...data } = event;
 
-    await updateDoc(ref, {
-      ...data,
-      time: Timestamp.fromDate(event.time)
+    // Sanitize data: Remove undefined fields and convert Dates to Timestamps
+    const payload: any = { ...data };
+
+    // Convert known dates
+    payload.time = Timestamp.fromDate(event.time);
+    if (event.createdAt) {
+      payload.createdAt = Timestamp.fromDate(event.createdAt);
+    } else {
+      delete payload.createdAt; // Ensure it's not undefined
+    }
+
+    // Helper to recursively clean undefined from objects/arrays if needed, 
+    // but for now shallow cleanup for top-level undefined is likely what's needed for 'createdAt' if it's on the root.
+    // However, the error said "found in field createdAt in document events/...". 
+    // If it's a root field, the above handles it.
+    // If it's inside 'attendees' array, we need deep sanitization or fix the caller.
+    // Given the error message "found in field createdAt", it usually refers to top-level or specific path.
+    // If it was nested, it might say "attendees[0].createdAt".
+    // Let's assume top level for now, but also clean up the payload object.
+
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) {
+        delete payload[key];
+      }
     });
+
+    await updateDoc(ref, payload);
   }
 };

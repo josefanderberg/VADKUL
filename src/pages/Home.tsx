@@ -13,7 +13,7 @@ import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
-import { ArrowUpDown, ArrowRight, Search } from 'lucide-react';
+import { ArrowUpDown, ArrowRight } from 'lucide-react';
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -26,7 +26,7 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
-function MapController({ center, onMove, onClick }: { center: [number, number], onMove: (newCenter: L.LatLng) => void, onClick: (lat: number, lng: number) => void }) {
+function MapController({ center, onClick }: { center: [number, number], onClick: (lat: number, lng: number) => void }) {
     const map = useMap();
     const isFirstLoad = useRef(true);
 
@@ -42,7 +42,6 @@ function MapController({ center, onMove, onClick }: { center: [number, number], 
     }, [center, map]);
 
     useMapEvents({
-        moveend: () => onMove(map.getCenter()),
         click: (e) => onClick(e.latlng.lat, e.latlng.lng)
     });
     return null;
@@ -63,8 +62,7 @@ export default function Home() {
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
 
-    const [showSearchHereBtn, setShowSearchHereBtn] = useState(false);
-    const [mapCenter, setMapCenter] = useState<L.LatLng | null>(null);
+
 
     // Scroll states
     const [isFiltersVisible, setIsFiltersVisible] = useState(true);
@@ -173,34 +171,22 @@ export default function Home() {
             switch (sortBy) {
                 case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
                 case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
-                case 'latest': return new Date(b.time).getTime() - new Date(a.time).getTime();
+                case 'latest':
+                    // Sortera på createdAt om det finns, annars fallback till time (skapad nyligen = oftast långt fram i tiden?)
+                    // Nej, fallback bör nog vara 0 eller något.
+                    if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    return 0;
                 case 'popular': return (b.attendees?.length || 0) - (a.attendees?.length || 0);
                 default: return 0;
             }
         });
     }, [events, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery]); // <-- Lade till searchQuery
 
-    const handleMapMove = (newCenter: L.LatLng) => {
-        setMapCenter(newCenter);
-        const dist = calculateDistance(userLocation[0], userLocation[1], newCenter.lat, newCenter.lng);
-        if (dist > 1) setShowSearchHereBtn(true);
-        else setShowSearchHereBtn(false);
-    };
-
-    const handleSearchHere = () => {
-        if (mapCenter) {
-            setUserLocation([mapCenter.lat, mapCenter.lng]);
-            saveLocationToLocalStorage(mapCenter.lat, mapCenter.lng);
-            setShowSearchHereBtn(false);
-        }
-    };
-
     const handleMapClick = (lat: number, lng: number) => {
         if (selectedEvent) setSelectedEvent(null);
         else {
             setUserLocation([lat, lng]);
             saveLocationToLocalStorage(lat, lng);
-            setShowSearchHereBtn(false);
         }
     };
 
@@ -237,7 +223,7 @@ export default function Home() {
         setFilterToday(false);
         setSortBy('closest');
         setSearchQuery(''); // <-- Nollställ sök
-        setShowSearchHereBtn(false);
+
     };
 
     return (
@@ -304,21 +290,11 @@ export default function Home() {
                         </div>
                     ) : (
                         <div className="relative h-full w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-inner">
-                            {showSearchHereBtn && (
-                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] animate-in slide-in-from-top-4 fade-in duration-300">
-                                    <button
-                                        onClick={handleSearchHere}
-                                        className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2 border border-slate-200 dark:border-slate-600 hover:scale-105 transition-transform"
-                                    >
-                                        <Search size={16} />
-                                        Sök i detta område
-                                    </button>
-                                </div>
-                            )}
+
 
                             <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <MapController center={userLocation} onMove={handleMapMove} onClick={handleMapClick} />
+                                <MapController center={userLocation} onClick={handleMapClick} />
                                 {filteredEvents.map(evt => {
                                     const isSelected = selectedEvent?.id === evt.id;
                                     return (
@@ -342,12 +318,12 @@ export default function Home() {
 
                             {selectedEvent && (
                                 <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
-                                    <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-md mx-auto">
+                                    <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-sm mx-auto">
                                         <button onClick={cycleNextEvent} className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center">
                                             <ArrowRight size={18} />
                                         </button>
-                                        <div className="max-h-[300px] overflow-y-auto">
-                                            <EventCard event={selectedEvent} />
+                                        <div className="">
+                                            <EventCard event={selectedEvent} compact={true} />
                                         </div>
                                     </div>
                                 </div>
