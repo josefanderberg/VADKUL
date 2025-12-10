@@ -8,7 +8,7 @@ export default function About() {
             <div className="min-h-screen bg-white dark:bg-slate-900">
 
                 {/* HERO SECTION */}
-                <section className="relative py-20 px-6 overflow-hidden">
+                <section className="relative py-40 px-6 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 -z-10" />
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">
@@ -47,7 +47,7 @@ export default function About() {
                             </div>
                             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Träffa Folk</h3>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                Vidga din mxcirkel. VADKUL handlar om att föra samman människor genom gemensamma intressen, från spela brädspel till att löpträna.
+                                Vidga din maxcirkel. VADKUL handlar om att föra samman människor genom gemensamma intressen, från spela brädspel till att löpträna.
                             </p>
                         </div>
 

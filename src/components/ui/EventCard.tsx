@@ -52,7 +52,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-slate-700 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-slate-200 dark:hover:border-slate-600 overflow-hidden">
 
                 {/* --- NYTT: OMSLAGSBILD --- */}
-                <div className={`relative w-full bg-slate-100 dark:bg-slate-700 overflow-hidden transition-all ${compact ? 'h-24' : 'h-40'}`}>
+                <div className={`relative w-full bg-slate-100 dark:bg-slate-700 overflow-hidden transition-all ${compact ? 'h-20' : 'h-24'}`}>
                     {/* Bilden */}
                     <img
                         src={coverImage}
@@ -68,33 +68,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         {category.label}
                     </div>
 
-                    {/* Status Badge Top Right */}
-                    {isGuaranteed ? (
-                        <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-                            <CheckCircle2 size={10} strokeWidth={3} />
-                            <span>Blir av!</span>
-                        </div>
-                    ) : (
-                        spotsLeft > 0 && (
-                            (event.minParticipants - currentCount) <= 0 ? (
-                                // Borde vara garanterad, men för säkerhets skull
-                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-                                    <CheckCircle2 size={10} strokeWidth={3} />
-                                    <span>Blir av!</span>
-                                </div>
-                            ) : (event.minParticipants - currentCount) === 1 ? (
-                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-amber-400/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-                                    <Clock size={10} strokeWidth={3} />
-                                    <span>Söker 1 till!</span>
-                                </div>
-                            ) : (
-                                <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-white bg-orange-500/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-                                    <Clock size={10} strokeWidth={3} />
-                                    <span>Söker {event.minParticipants - currentCount} till</span>
-                                </div>
-                            )
-                        )
-                    )}
+
 
                     {/* Datum Badge Bottom Right */}
                     <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 font-bold px-2 py-1 rounded-lg text-xs shadow-sm flex flex-col items-center leading-tight">
@@ -124,17 +98,48 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                             <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
                                 <MapPin size={14} strokeWidth={2.5} />
                             </div>
-                            {/* UPPDATERAD PLATSVISNING MED DISTANS */}
-                            <div className="flex items-center gap-1 overflow-hidden">
-                                <span className="truncate">{event.location.name}</span>
-                                {distance !== null && (
-                                    <span className="shrink-0 text-[10px] text-slate-400 font-normal">
-                                        • {formatDistance(distance)} bort
-                                    </span>
+                            {/* UPPDATERAD PLATSVISNING MED DISTANS OCH BADGE */}
+                            <div className="flex items-center justify-between flex-1 min-w-0">
+                                <div className="flex items-center gap-1 overflow-hidden">
+                                    <span className="truncate">{event.location.name}</span>
+                                    {distance !== null && (
+                                        <span className="shrink-0 text-[10px] text-slate-400 font-normal">
+                                            • {formatDistance(distance)} bort
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* STATUS BADGE (Nu flyttad hit, högerställd) */}
+                                {isGuaranteed ? (
+                                    <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md ml-2">
+                                        <CheckCircle2 size={10} strokeWidth={3} />
+                                        <span>Blir av!</span>
+                                    </div>
+                                ) : (
+                                    spotsLeft > 0 && (
+                                        (event.minParticipants - currentCount) <= 0 ? (
+                                            <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md ml-2">
+                                                <CheckCircle2 size={10} strokeWidth={3} />
+                                                <span>Blir av!</span>
+                                            </div>
+                                        ) : (event.minParticipants - currentCount) === 1 ? (
+                                            <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-md ml-2">
+                                                <Clock size={10} strokeWidth={3} />
+                                                <span>Söker 1 till!</span>
+                                            </div>
+                                        ) : (
+                                            <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-500/20 dark:text-orange-300 px-2 py-0.5 rounded-md ml-2">
+                                                <Clock size={10} strokeWidth={3} />
+                                                <span>Söker {event.minParticipants - currentCount} till</span>
+                                            </div>
+                                        )
+                                    )
                                 )}
                             </div>
                         </div>
                     </div>
+
+
 
                     {/* --- BOTTOM SECTION --- */}
                     <div className="mt-auto border-t border-slate-100 dark:border-slate-700 pt-4 flex items-end justify-between">
