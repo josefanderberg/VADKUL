@@ -42,11 +42,11 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-800 shadow-lg z-50 border-b border-slate-200 dark:border-slate-700 h-16 transition-colors duration-200">
+    <nav className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md shadow-sm z-50 border-b border-border h-16 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 md:px-8 h-full flex justify-between items-center">
 
         {/* LOGO */}
-        <Link to="/" className="text-3xl font-extrabold italic text-green-700 dark:text-green-500 tracking-tight hover:text-green-800 dark:hover:text-green-400 transition-colors">
+        <Link to="/" className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors">
           VADKUL
         </Link>
 
@@ -54,20 +54,20 @@ export default function Navbar() {
 
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
           {user && (
-            <Link to="/create" className="p-2 text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Skapa Event">
+            <Link to="/create" className="p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
               <Plus size={24} strokeWidth={2.5} />
             </Link>
           )}
 
           {/* 1.5 INFO (Ny) */}
-          <Link to="/about" className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Om VADKUL">
+          <Link to="/about" className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
             <Info size={22} />
           </Link>
 
           {/* 2. THEME TOGGLE */}
           <button
             onClick={toggleTheme}
-            className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+            className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors"
             title="Växla tema"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -80,7 +80,7 @@ export default function Navbar() {
               <NotificationsMenu />
 
               {/* CHATT */}
-              <Link to="/chat" className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+              <Link to="/chat" className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors">
                 <MessageSquare size={20} />
               </Link>
 
@@ -91,11 +91,11 @@ export default function Navbar() {
                   <img
                     src={navImage}
                     alt="Profil"
-                    className="w-9 h-9 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-700 shadow-sm hover:border-indigo-400 transition-colors"
+                    className="w-9 h-9 rounded-full object-cover border-2 border-border shadow-sm hover:border-ring transition-colors"
                   />
                 ) : (
                   // FALLBACK: Initialer
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-extrabold text-xs border-2 border-indigo-200 dark:border-indigo-700 shadow-sm hover:border-indigo-400 transition-colors">
+                  <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-extrabold text-xs border-2 border-border shadow-sm hover:border-ring transition-colors">
                     {getInitials()}
                   </div>
                 )}

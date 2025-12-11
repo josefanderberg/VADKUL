@@ -175,15 +175,15 @@ export default function Login() {
         <Layout>
             <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-8">
 
-                <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
+                <div className="w-full max-w-md bg-card rounded-2xl shadow-xl overflow-hidden border border-border">
 
                     {/* Header */}
-                    <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                        <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                    <div className="p-6 border-b border-border flex items-center justify-between">
+                        <h2 className="text-xl font-extrabold text-foreground">
                             {isLoginMode ? 'Välkommen tillbaka' : (regStep === 1 ? 'Skapa konto' : 'Slutför profil')}
                         </h2>
                         {regStep === 2 && (
-                            <button onClick={() => setRegStep(1)} className="text-slate-400 hover:text-indigo-600">
+                            <button onClick={() => setRegStep(1)} className="text-muted-foreground hover:text-primary">
                                 <ChevronLeft size={24} />
                             </button>
                         )}
@@ -200,20 +200,20 @@ export default function Login() {
                         {isLoginMode && (
                             <form onSubmit={handleLogin} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">E-post</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">E-post</label>
                                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="namn@exempel.se" />
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="namn@exempel.se" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lösenord</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Lösenord</label>
                                     <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••" />
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="••••••" />
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md disabled:opacity-70">
+                                <button type="submit" disabled={loading} className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md disabled:opacity-70">
                                     {loading ? 'Loggar in...' : 'Logga In'}
                                 </button>
-                                <p className="text-center text-sm text-slate-500 mt-4">
-                                    Inget konto? <button type="button" onClick={() => setIsLoginMode(false)} className="text-indigo-600 font-bold hover:underline">Registrera dig</button>
+                                <p className="text-center text-sm text-muted-foreground mt-4">
+                                    Inget konto? <button type="button" onClick={() => setIsLoginMode(false)} className="text-primary font-bold hover:underline">Registrera dig</button>
                                 </p>
                             </form>
                         )}
@@ -222,20 +222,20 @@ export default function Login() {
                         {!isLoginMode && regStep === 1 && (
                             <form onSubmit={handleNextStep} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">E-post</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">E-post</label>
                                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="namn@exempel.se" />
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="namn@exempel.se" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lösenord</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Lösenord</label>
                                     <input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Minst 6 tecken" />
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Minst 6 tecken" />
                                 </div>
-                                <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">
+                                <button type="submit" className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md">
                                     Nästa
                                 </button>
-                                <p className="text-center text-sm text-slate-500 mt-4">
-                                    Redan konto? <button type="button" onClick={() => setIsLoginMode(true)} className="text-indigo-600 font-bold hover:underline">Logga in</button>
+                                <p className="text-center text-sm text-muted-foreground mt-4">
+                                    Redan konto? <button type="button" onClick={() => setIsLoginMode(true)} className="text-primary font-bold hover:underline">Logga in</button>
                                 </p>
                             </form>
                         )}
@@ -245,26 +245,26 @@ export default function Login() {
                             <div className="space-y-5">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Namn</label>
+                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
                                         <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                                            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ditt namn" />
+                                            className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ålder</label>
+                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Ålder</label>
                                         <input type="number" required value={age} onChange={e => setAge(e.target.value)}
-                                            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="År" />
+                                            className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="År" />
                                     </div>
                                 </div>
 
                                 {/* KAMERA SEKTION */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Verifiera dig (Ta en selfie)</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Verifiera dig (Ta en selfie)</label>
 
-                                    <div className="relative w-full bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700">
+                                    <div className="relative w-full bg-muted rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-border">
 
                                         {/* 1. Ingen bild tagen än */}
                                         {!cameraActive && !capturedImage && (
-                                            <button onClick={startCamera} className="flex flex-col items-center text-slate-400 hover:text-indigo-600 transition-colors">
+                                            <button onClick={startCamera} className="flex flex-col items-center text-muted-foreground hover:text-primary transition-colors">
                                                 <Camera size={48} className="mb-2" />
                                                 <span className="text-sm font-bold">Öppna kameran</span>
                                             </button>
@@ -287,16 +287,16 @@ export default function Login() {
                                     {/* Kamera Kontroller */}
                                     <div className="mt-3 flex justify-center">
                                         {cameraActive && (
-                                            <button onClick={takePhoto} className="px-6 py-2 bg-indigo-600 text-white rounded-full font-bold shadow-lg hover:bg-indigo-700">
+                                            <button onClick={takePhoto} className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold shadow-lg hover:bg-primary/90">
                                                 Ta Bild
                                             </button>
                                         )}
                                         {capturedImage && (
                                             <div className="flex gap-3">
-                                                <button onClick={retakePhoto} className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-bold hover:bg-slate-300">
+                                                <button onClick={retakePhoto} className="flex items-center gap-2 px-4 py-2 bg-muted text-foreground rounded-lg font-bold hover:bg-muted/80">
                                                     <RefreshCw size={16} /> Ta om
                                                 </button>
-                                                <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-bold border border-green-200">
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold border border-emerald-500/20">
                                                     <Check size={16} /> Redo
                                                 </div>
                                             </div>

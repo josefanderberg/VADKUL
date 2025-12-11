@@ -38,7 +38,7 @@ export default function EventFilters({
   const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
   const categoryColorClass = selectedCategory
     ? selectedCategory.color
-    : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white';
+    : 'bg-muted text-foreground';
 
   const hasActiveFilters = filterType !== 'all' || filterFree || filterToday || filterAge !== 'all' || searchQuery.length > 0;
 
@@ -56,24 +56,24 @@ export default function EventFilters({
     <div className="sticky top-0 z-40 transition-all duration-300">
 
       {/* --- CONTAINER: Bakgrund & Blur (Håller båda raderna) --- */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm transition-all duration-300">
+      <div className="bg-background/80 backdrop-blur-md border-b border-border shadow-sm transition-all duration-300">
 
         {/* RAD 1: SÖK + FILTER BUTTON + VIEW (Alltid synlig) */}
         <div className="max-w-6xl mx-auto px-4 py-3 pb-2 flex gap-3 items-center">
           {/* Sökfält */}
           <div className="flex-grow relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Sök på event..."
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all dark:text-white"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-muted/50 border border-border focus:bg-background focus:ring-2 focus:ring-ring outline-none text-sm transition-all text-foreground"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
               >
                 <X size={14} />
               </button>
@@ -85,7 +85,7 @@ export default function EventFilters({
             {!showFilters && hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="p-2 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 animate-in fade-in zoom-in duration-200"
+                className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 animate-in fade-in zoom-in duration-200"
                 title="Rensa filter"
               >
                 <X size={20} />
@@ -93,23 +93,23 @@ export default function EventFilters({
             )}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 ${showFilters ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`p-2 rounded-xl transition-all border border-border ${showFilters ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
             >
               <SlidersHorizontal size={20} />
             </button>
           </div>
 
           {/* View Toggle */}
-          <div className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex shrink-0 border border-slate-200 dark:border-slate-700">
+          <div className="bg-muted/50 p-1 rounded-xl flex shrink-0 border border-border">
             <button
               onClick={() => setView('list')}
-              className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <List size={20} />
             </button>
             <button
               onClick={() => setView('map')}
-              className={`p-2 rounded-lg transition-all ${view === 'map' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`p-2 rounded-lg transition-all ${view === 'map' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <MapIcon size={20} />
             </button>
@@ -130,11 +130,11 @@ export default function EventFilters({
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className={`appearance-none font-bold rounded-full text-xs py-2 pl-3 pr-8 outline-none cursor-pointer border hover:border-slate-300 dark:hover:border-slate-500 transition-colors ${categoryColorClass}`}
+                  className={`appearance-none font-bold rounded-full text-xs py-2 pl-3 pr-8 outline-none cursor-pointer border hover:border-input transition-colors ${categoryColorClass}`}
                 >
-                  <option value="all" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Kategorier</option>
+                  <option value="all" className="bg-background text-foreground">Kategorier</option>
                   {CATEGORY_LIST.map(cat => (
-                    <option key={cat.id} value={cat.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                    <option key={cat.id} value={cat.id} className="bg-background text-foreground">
                       {cat.label} {cat.emoji}
                     </option>
                   ))}
@@ -142,7 +142,7 @@ export default function EventFilters({
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" size={14} />
               </div>
 
-              <div className="w-[1px] h-5 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+              <div className="w-[1px] h-5 bg-border mx-1"></div>
 
               {/* VÄXLANDE INNEHÅLL */}
               {filterMode === 0 ? (
@@ -150,13 +150,13 @@ export default function EventFilters({
                   {/* MODE 0: TID & PRIS */}
                   <button
                     onClick={() => setFilterToday(!filterToday)}
-                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterToday ? 'bg-indigo-600 text-white border-indigo-600 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-300'}`}
+                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterToday ? 'bg-primary text-primary-foreground border-primary scale-105' : 'bg-background text-muted-foreground border-border hover:border-primary/50'}`}
                   >
                     Idag
                   </button>
                   <button
                     onClick={() => setFilterFree(!filterFree)}
-                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterFree ? 'bg-indigo-600 text-white border-indigo-600 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-300'}`}
+                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterFree ? 'bg-primary text-primary-foreground border-primary scale-105' : 'bg-background text-muted-foreground border-border hover:border-primary/50'}`}
                   >
                     Gratis
                   </button>
@@ -164,12 +164,12 @@ export default function EventFilters({
               ) : (
                 <>
                   {/* MODE 1: ÅLDER */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Ålder:</span>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-full border border-border animate-in fade-in slide-in-from-right-4 duration-300">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Ålder:</span>
                     <select
                       value={filterAge}
                       onChange={(e) => setFilterAge(e.target.value)}
-                      className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-xs"
+                      className="bg-transparent font-bold text-foreground outline-none cursor-pointer text-xs"
                     >
                       <option value="all">Alla</option>
                       <option value="family">Familj</option>
@@ -187,7 +187,7 @@ export default function EventFilters({
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 px-2 py-1 rounded-md transition-colors"
+                className="text-xs font-bold text-destructive hover:bg-destructive/10 px-2 py-1 rounded-md transition-colors"
               >
                 Rensa
               </button>

@@ -68,11 +68,11 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             >
                 {/* The Ticket Itself (Masked) */}
                 <div
-                    className="flex flex-col h-full bg-white dark:bg-slate-800 overflow-hidden"
+                    className="flex flex-col h-full bg-card overflow-hidden"
                     style={ticketStyle}
                 >
                     {/* --- OMSLAGSBILD --- */}
-                    <div className={`relative w-full bg-slate-100 dark:bg-slate-700 overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
+                    <div className={`relative w-full bg-muted overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
                         {/* Bilden */}
                         <img
                             src={coverImage}
@@ -83,7 +83,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
 
                         {/* Kategori Badge */}
-                        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-md backdrop-blur-md bg-white/90 text-slate-800`}>
+                        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-md backdrop-blur-md bg-white/90 text-slate-900`}>
                             <span className="text-sm">{emoji}</span>
                             {category.label}
                         </div>
@@ -97,12 +97,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
                     {/* --- PERFORATION LINE --- */}
                     <div className="relative w-full px-2" style={{ marginTop: -1 }}>
-                        <div className="w-full border-t-2 border-dashed border-slate-200 dark:border-slate-700/60"></div>
+                        <div className="w-full border-t-2 border-dashed border-border opacity-50"></div>
                     </div>
 
                     {/* --- CONTENT --- */}
                     <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-5'} pt-4`}>
-                        <h3 className={`font-bold text-slate-900 dark:text-white leading-tight mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 ${compact ? 'text-base' : 'text-lg'}`}>
+                        <h3 className={`font-bold text-card-foreground leading-tight mb-3 group-hover:text-primary transition-colors line-clamp-2 ${compact ? 'text-base' : 'text-lg'}`}>
                             {event.title}
                         </h3>
 
@@ -123,7 +123,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     <div className="flex items-center gap-1 overflow-hidden">
                                         <span className="truncate">{event.location.name}</span>
                                         {distance !== null && (
-                                            <span className="shrink-0 text-[10px] text-slate-400 font-normal">
+                                            <span className="shrink-0 text-[10px] text-muted-foreground/80 font-normal">
                                                 • {formatDistance(distance)} bort
                                             </span>
                                         )}
@@ -158,11 +158,11 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         </div>
 
                         {/* --- BOTTOM SECTION --- */}
-                        <div className="mt-auto border-t border-slate-100 dark:border-slate-700 pt-4 flex items-end justify-between">
+                        <div className="mt-auto border-t border-border pt-4 flex items-end justify-between">
 
                             {/* VÄNSTER: Värd Info */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Värd</span>
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Värd</span>
                                 <div
                                     onClick={(e) => {
                                         e.preventDefault();
@@ -172,13 +172,13 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     className="flex items-center gap-2 cursor-pointer group/host"
                                 >
                                     {event.host.photoURL ? (
-                                        <img src={event.host.photoURL} alt={event.host.name} className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-100 dark:ring-slate-600" />
+                                        <img src={event.host.photoURL} alt={event.host.name} className="w-6 h-6 rounded-full object-cover ring-1 ring-border" />
                                     ) : (
-                                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500">
+                                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
                                             {event.host.initials}
                                         </div>
                                     )}
-                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover/host:text-indigo-600 transition-colors">
+                                    <span className="text-xs font-semibold text-foreground group-hover/host:text-primary transition-colors">
                                         {event.host.name.split(' ')[0]}
                                     </span>
                                     <div className="flex items-center text-[10px] text-amber-500 bg-amber-500/15 dark:bg-amber-500/20 px-1 rounded">
@@ -190,7 +190,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
                             {/* HÖGER: Deltagare */}
                             <div className="flex flex-col items-end gap-1">
-                                <span className="text-[10px] font-bold text-slate-400">
+                                <span className="text-[10px] font-bold text-muted-foreground/70">
                                     {isFull ? 'Fullbokat' : `${spotsLeft} platser kvar`}
                                 </span>
 
@@ -202,12 +202,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                                     <img
                                                         src={attendee.photoURL}
                                                         alt={attendee.displayName}
-                                                        className="w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-slate-800 bg-slate-100"
+                                                        className="w-7 h-7 rounded-full object-cover ring-2 ring-card bg-muted"
                                                         title={attendee.displayName}
                                                     />
                                                 ) : (
                                                     <div
-                                                        className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-600 ring-2 ring-white dark:ring-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-500 cursor-default"
+                                                        className="w-7 h-7 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
                                                         title={attendee.displayName}
                                                     >
                                                         {attendee.displayName?.charAt(0).toUpperCase() || '?'}
@@ -217,13 +217,13 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         ))}
 
                                         {hiddenCount > 0 && (
-                                            <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 ring-2 ring-white dark:ring-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-500 z-0">
+                                            <div className="w-7 h-7 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0">
                                                 +{hiddenCount}
                                             </div>
                                         )}
 
                                         {event.attendees.length === 0 && (
-                                            <span className="text-xs text-slate-400 italic pr-1">Bli först!</span>
+                                            <span className="text-xs text-muted-foreground/60 italic pr-1">Bli först!</span>
                                         )}
                                     </div>
                                 </div>
@@ -232,7 +232,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
                         {/* Hover Arrow */}
                         <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300">
-                            <ArrowRight size={20} className="text-indigo-600 dark:text-white" />
+                            <ArrowRight size={20} className="text-primary" />
                         </div>
 
                     </div>

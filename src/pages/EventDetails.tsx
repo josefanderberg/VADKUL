@@ -209,8 +209,8 @@ export default function EventDetails() {
         }
     };
 
-    if (loading) return <Layout><div className="p-10 text-center">Laddar...</div></Layout>;
-    if (error || !event) return <Layout><div className="p-10 text-center text-red-500">{error}</div></Layout>;
+    if (loading) return <Layout><div className="p-10 text-center text-muted-foreground">Laddar...</div></Layout>;
+    if (error || !event) return <Layout><div className="p-10 text-center text-destructive">{error}</div></Layout>;
 
     // --- NY LOGIK FÖR MARKÖREN (Samma som Home.tsx) ---
     const categoryData = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
@@ -242,8 +242,8 @@ export default function EventDetails() {
             <div className="max-w-3xl mx-auto pb-24">
 
                 {/* TOP NAV */}
-                <div className="p-4 flex items-center justify-between sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur z-50 shadow-sm md:shadow-none">
-                    <button onClick={() => navigate(-1)} className="flex items-center text-slate-500 hover:text-indigo-600 transition-colors bg-white/50 dark:bg-black/20 p-2 rounded-full md:bg-transparent md:p-0">
+                <div className="p-4 flex items-center justify-between sticky top-0 bg-background/90 backdrop-blur z-50 shadow-sm md:shadow-none">
+                    <button onClick={() => navigate(-1)} className="flex items-center text-muted-foreground hover:text-primary transition-colors bg-background/50 p-2 rounded-full md:bg-transparent md:p-0">
                         <ChevronLeft size={20} />
                         <span className="font-bold text-sm ml-1 hidden md:inline">Tillbaka</span>
                     </button>
@@ -251,13 +251,13 @@ export default function EventDetails() {
                         {isHost && (
                             <button
                                 onClick={() => navigate(`/edit-event/${event.id}`)}
-                                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-indigo-600 transition-colors"
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
                                 title="Redigera event"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                             </button>
                         )}
-                        <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
+                        <button className="p-2 rounded-full hover:bg-muted text-muted-foreground">
                             <Share2 size={20} />
                         </button>
                     </div>
@@ -270,11 +270,11 @@ export default function EventDetails() {
                         alt={event.title}
                         className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-slate-900/30"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30"></div>
 
                     {/* Kategori Badge på bilden */}
                     <div className="absolute bottom-4 left-4 md:left-8">
-                        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wide flex items-center gap-2 shadow-lg backdrop-blur-md bg-white/95 text-slate-900`}>
+                        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wide flex items-center gap-2 shadow-lg backdrop-blur-md bg-white/95 text-black`}>
                             <span className="text-lg">{markerEmoji}</span>
                             {categoryData.label}
                         </div>
@@ -293,7 +293,7 @@ export default function EventDetails() {
 
                     {/* TITEL & HOST */}
                     <div className="flex flex-col gap-2 mb-8">
-                        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight">
+                        <h1 className="text-3xl md:text-4xl font-black text-foreground leading-tight">
                             {event.title}
                         </h1>
 
@@ -304,18 +304,18 @@ export default function EventDetails() {
                                     if (event.host.uid) navigate(`/profile/${event.host.uid}`);
                                     else toast.error("Kan inte visa profil (gammalt event)");
                                 }}
-                                className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 -ml-2 rounded-lg transition-colors group text-left"
+                                className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted p-2 -ml-2 rounded-lg transition-colors group text-left"
                             >
                                 {event.host.photoURL ? (
-                                    <img src={event.host.photoURL} className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-sm" alt={event.host.name} />
+                                    <img src={event.host.photoURL} className="w-8 h-8 rounded-full object-cover ring-2 ring-background shadow-sm" alt={event.host.name} />
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform ring-2 ring-white dark:ring-slate-700 shadow-sm">
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform ring-2 ring-background shadow-sm">
                                         {event.host.initials}
                                     </div>
                                 )}
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Arrangeras av</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600">
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Arrangeras av</span>
+                                    <span className="font-bold text-foreground group-hover:text-primary">
                                         {event.host.name}
                                         {event.host.verified && <CheckCircle2 size={12} className="inline ml-1 text-blue-500" />}
                                     </span>
@@ -324,8 +324,8 @@ export default function EventDetails() {
 
                             {/* PRIS (Flyttad hit för bättre balans) */}
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Pris</span>
-                                <span className="font-bold text-xl text-slate-900 dark:text-white">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Pris</span>
+                                <span className="font-bold text-xl text-foreground">
                                     {event.price > 0 ? `${event.price} kr` : 'Gratis'}
                                 </span>
                             </div>
@@ -333,13 +333,13 @@ export default function EventDetails() {
                     </div>
 
                     {/* --- FLIKAR --- */}
-                    <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+                    <div className="flex border-b border-border mb-6">
                         <button
                             onClick={() => setActiveTab('info')}
                             className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 
                     ${activeTab === 'info'
-                                    ? 'border-indigo-600 text-indigo-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                         >
                             <Info size={18} /> Info
                         </button>
@@ -347,8 +347,8 @@ export default function EventDetails() {
                             onClick={() => setActiveTab('chat')}
                             className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 
                     ${activeTab === 'chat'
-                                    ? 'border-indigo-600 text-indigo-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                         >
                             <MessageCircle size={18} /> Gruppchatt
                         </button>
@@ -360,29 +360,29 @@ export default function EventDetails() {
 
                             {/* 1. TID OCH PLATS GRID */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                                    <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase">Tid</p>
-                                        <p className="font-semibold text-slate-800 dark:text-slate-200">{formatTime(event.time)}</p>
+                                        <p className="text-xs font-bold text-muted-foreground/70 uppercase">Tid</p>
+                                        <p className="font-semibold text-foreground">{formatTime(event.time)}</p>
                                     </div>
                                 </div>
 
-                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                                    <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                                         <MapPin size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase">Plats</p>
-                                        <p className="font-semibold text-slate-800 dark:text-slate-200">{event.location.name}</p>
+                                        <p className="text-xs font-bold text-muted-foreground/70 uppercase">Plats</p>
+                                        <p className="font-semibold text-foreground">{event.location.name}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* 2. KARTA (Flyttad hit) */}
-                            <div className="h-64 rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 relative z-0 mb-8">
+                            <div className="h-64 rounded-xl overflow-hidden shadow-md border border-border relative z-0 mb-8">
                                 <MapContainer
                                     center={[event.lat, event.lng]}
                                     zoom={14}
@@ -397,14 +397,14 @@ export default function EventDetails() {
 
                             {/* 3. BESKRIVNING (Flyttad hit) */}
                             <div className="mb-8">
-                                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Om eventet</h3>
-                                <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                <h3 className="font-bold text-lg text-foreground mb-2">Om eventet</h3>
+                                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
                                     {event.description || "Ingen beskrivning angiven."}
                                 </p>
                             </div>
 
                             {/* 4. DELTAGARE (Uppdaterad med Väntande Lista) */}
-                            <div className="mb-8 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <div className="mb-8 p-5 bg-card rounded-2xl border border-border shadow-sm">
 
                                 {/* HOST: VÄNTANDE FÖRFRÅGNINGAR */}
                                 {isHost && event.attendees.some(a => a.status === 'pending') && (
@@ -414,20 +414,20 @@ export default function EventDetails() {
                                         </h4>
                                         <div className="space-y-3">
                                             {event.attendees.filter(a => a.status === 'pending').map(request => (
-                                                <div key={request.uid} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-lg border border-amber-200 dark:border-none shadow-sm">
+                                                <div key={request.uid} className="flex items-center justify-between bg-card p-3 rounded-lg border border-amber-200 dark:border-transparent shadow-sm">
                                                     <div className="flex items-center gap-3">
                                                         {request.photoURL ? (
                                                             <img src={request.photoURL} className="w-10 h-10 rounded-full object-cover" />
                                                         ) : (
-                                                            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">
+                                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
                                                                 {request.displayName.charAt(0)}
                                                             </div>
                                                         )}
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold text-slate-900 dark:text-white">{request.displayName}</span>
+                                                            <span className="font-bold text-foreground">{request.displayName}</span>
                                                             <button
                                                                 onClick={() => navigate(`/profile/${request.uid}`)}
-                                                                className="text-xs text-indigo-600 hover:underline text-left"
+                                                                className="text-xs text-primary hover:underline text-left"
                                                             >
                                                                 Visa profil
                                                             </button>
@@ -454,13 +454,13 @@ export default function EventDetails() {
                                 )}
 
                                 <div className="flex justify-between items-end mb-2">
-                                    <h3 className="font-bold text-slate-900 dark:text-white">Vilka kommer?</h3>
-                                    <span className="text-sm font-bold text-slate-500">
+                                    <h3 className="font-bold text-foreground">Vilka kommer?</h3>
+                                    <span className="text-sm font-bold text-muted-foreground">
                                         {event.attendees.filter(a => a.status !== 'pending').length} / {event.maxParticipants}
                                     </span>
                                 </div>
 
-                                <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-4">
+                                <div className="h-2 w-full bg-muted rounded-full overflow-hidden mb-4">
                                     <div
                                         className={`h-full ${isFull ? 'bg-rose-500' : 'bg-emerald-500'} transition-all duration-500`}
                                         style={{ width: `${percentFull}%` }}
@@ -468,7 +468,7 @@ export default function EventDetails() {
                                 </div>
 
                                 {event.attendees.filter(a => a.status !== 'pending').length === 0 ? (
-                                    <span className="text-sm text-slate-400 italic">Inga bekräftade deltagare ännu.</span>
+                                    <span className="text-sm text-muted-foreground/80 italic">Inga bekräftade deltagare ännu.</span>
                                 ) : (
                                     <div className={isHost ? "flex flex-col gap-2" : "flex flex-wrap gap-2"}>
                                         {event.attendees
@@ -488,20 +488,20 @@ export default function EventDetails() {
                                                         className={isHost ? "w-8 h-8 rounded-full object-cover" : "w-6 h-6 rounded-full object-cover"}
                                                     />
                                                 ) : (
-                                                    <div className={`${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}>
+                                                    <div className={`${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}>
                                                         {displayStr.charAt(0).toUpperCase()}
                                                     </div>
                                                 );
 
                                                 if (isHost) {
                                                     return (
-                                                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                                                        <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border border-border shadow-sm">
                                                             <div
                                                                 className="flex items-center gap-3 cursor-pointer"
                                                                 onClick={() => uid && navigate(`/profile/${uid}`)}
                                                             >
                                                                 {Avatar}
-                                                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                                                <span className="font-medium text-foreground">
                                                                     {displayStr} {isMe && "(Du)"}
                                                                 </span>
                                                             </div>
@@ -509,7 +509,7 @@ export default function EventDetails() {
                                                             {!isMe && uid && (
                                                                 <button
                                                                     onClick={() => handleKickAttendee(uid, displayStr)}
-                                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                                                                     title="Ta bort från eventet"
                                                                 >
                                                                     <X size={20} />
@@ -522,12 +522,12 @@ export default function EventDetails() {
                                                         <button
                                                             key={i}
                                                             onClick={() => uid && navigate(`/profile/${uid}`)}
-                                                            className={`flex items-center gap-2 bg-slate-50 dark:bg-slate-700 pl-1 pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm transition-all
-                                                    ${uid ? 'hover:ring-2 hover:ring-indigo-500 cursor-pointer' : 'cursor-default opacity-80'}
+                                                            className={`flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border/50 shadow-sm transition-all
+                                                    ${uid ? 'hover:ring-2 hover:ring-primary cursor-pointer' : 'cursor-default opacity-80'}
                                                 `}
                                                         >
                                                             {Avatar}
-                                                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                            <span className="text-xs font-medium text-muted-foreground">
                                                                 {displayStr.split(' ')[0]}
                                                             </span>
                                                         </button>
@@ -542,20 +542,20 @@ export default function EventDetails() {
                         // --- CHATT FLIK (Oförändrad layout) ---
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             {(!isJoined || event.attendees.find(a => a.email === user?.email)?.status === 'pending') ? (
-                                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div className="w-16 h-16 bg-indigo-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-500">
+                                <div className="text-center py-12 bg-card rounded-xl border border-border">
+                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 text-muted-foreground">
                                         <MessageCircle size={32} />
                                     </div>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                                    <h3 className="text-lg font-bold text-foreground mb-2">
                                         Chatten är låst
                                     </h3>
-                                    <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mb-6">
+                                    <p className="text-muted-foreground max-w-xs mx-auto mb-6">
                                         Du måste anmäla dig till eventet för att kunna läsa och skriva i gruppchatten.
                                     </p>
                                     <button
                                         onClick={handleJoinToggle}
                                         disabled={joining || isFull}
-                                        className="bg-indigo-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                                        className="bg-primary text-primary-foreground px-6 py-2 rounded-full font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
                                     >
                                         {isFull ? 'Eventet är fullt' : 'Anmäl mig nu'}
                                     </button>
@@ -569,19 +569,14 @@ export default function EventDetails() {
                 </div>
 
                 {/* BOTTOM ACTION BAR */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40">
                     <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
                         <button
                             onClick={handleJoinToggle}
                             disabled={joining || (isFull && !isJoined)}
                             className={`flex-grow py-3.5 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2
-                        ${isJoined
-                                    ? 'bg-slate-400 hover:bg-slate-500'
-                                    : isFull
-                                        ? 'bg-rose-400 cursor-not-allowed'
-                                        : 'bg-emerald-600 hover:bg-emerald-700'
-                                }
-                    `}
+          ${isJoined ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : isFull ? 'bg-destructive/50 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}
+        `}
                         >
                             {joining ? (
                                 <span>Sparar...</span>

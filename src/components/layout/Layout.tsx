@@ -10,7 +10,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     // h-screen + overflow-hidden låser yttre ramen
-    <div className="h-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900 transition-colors">
+    <div className="h-screen overflow-hidden flex flex-col bg-background transition-colors">
 
       <Navbar />
 

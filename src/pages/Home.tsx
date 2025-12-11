@@ -233,10 +233,10 @@ export default function Home() {
 
                 {/* Sortering - Också flex-shrink-0 för att inte tryckas ihop */}
                 <div className="max-w-6xl mx-auto px-4 pt-4 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-1 text-muted-foreground pointer-events-auto bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-border">
                         <ArrowUpDown size={14} />
                         <span className="text-xs font-bold uppercase mr-1">Sortera (topp 30):</span>
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-transparent font-bold text-slate-700 dark:text-white outline-none cursor-pointer text-sm hover:text-indigo-600 transition-colors">
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-transparent font-bold text-foreground outline-none cursor-pointer text-sm hover:text-primary transition-colors">
                             <option value="closest">Närmast</option>
                             <option value="soonest">Tid kvar</option>
                             <option value="latest">Senast tillagd</option>
@@ -257,7 +257,7 @@ export default function Home() {
                             <p>Laddar events...</p>
                         </div>
                     ) : filteredEvents.length === 0 && view === 'list' ? (
-                        <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
                             <p className="text-slate-500 font-medium mb-2">Inga events hittades.</p>
                             <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
                         </div>
@@ -266,7 +266,7 @@ export default function Home() {
                             {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
                         </div>
                     ) : (
-                        <div className="relative h-full w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-inner">
+                        <div className="relative h-full w-full rounded-2xl overflow-hidden border border-border shadow-inner">
 
 
                             <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
