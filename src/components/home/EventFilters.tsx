@@ -44,7 +44,7 @@ export default function EventFilters({
 
   // 0 = Basic (Idag + Gratis), 1 = Age (Ålder)
   const [filterMode] = useState<0 | 1>(0);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   // Actually, user said "Kan du göra så att vi har en filter ikon... det ska göra så att raden under visas".
   // Let's default to TRUE because filters are important.
 

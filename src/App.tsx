@@ -20,10 +20,10 @@ function App() {
       <Route path="/login" element={<Login />} />
 
       {/* Mina sidor (Privat) */}
-      <Route path="/profile/:uid?" element={<Profile />} />
+      <Route path="/profile" element={<Profile />} />
 
-      {/* Annan användare (Publik) - T.ex. /profile/ABC-123 */}
-      <Route path="/profile/:uid" element={<PublicProfile />} />
+      {/* Annan användare (Publik) - T.ex. /public-profile/ABC-123 */}
+      <Route path="/public-profile/:uid" element={<PublicProfile />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/about" element={<About />} />

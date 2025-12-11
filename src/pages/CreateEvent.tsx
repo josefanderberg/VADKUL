@@ -326,31 +326,31 @@ export default function CreateEvent() {
 
                 {/* HEADER */}
                 <div className="flex items-center justify-between py-6">
-                    <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                    <h1 className="text-2xl font-extrabold text-foreground">
                         {isEditMode ? 'Redigera Event' : 'Skapa Event'}
-                        <span className="text-base text-indigo-500 ml-2">Steg {step}/{totalSteps}</span>
+                        <span className="text-base text-primary ml-2">Steg {step}/{totalSteps}</span>
                     </h1>
-                    <button onClick={() => navigate('/')} className="text-sm font-semibold text-slate-500 hover:text-red-500">
+                    <button onClick={() => navigate('/')} className="text-sm font-semibold text-muted-foreground hover:text-destructive">
                         Avbryt
                     </button>
                 </div>
 
                 {/* PROGRESS BAR */}
-                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full mb-8 overflow-hidden">
-                    <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%` }} />
+                <div className="h-1.5 w-full bg-muted rounded-full mb-8 overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%` }} />
                 </div>
 
                 {/* --- STEP 1: TYPE --- */}
                 {step === 1 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                        <h3 className="text-lg font-bold mb-4 dark:text-white">Vad vill du hitta på?</h3>
+                        <h3 className="text-lg font-bold mb-4 text-foreground">Vad vill du hitta på?</h3>
                         <div className="flex flex-wrap gap-3 justify-center">
                             {CATEGORY_LIST.map(cat => {
                                 const isSelected = formData.type === cat.id;
 
                                 const bg = isSelected
                                     ? `${cat.activeColor} text-white shadow-lg scale-105`
-                                    : `${cat.color} border-transparent hover:scale-105`;
+                                    : `bg-card text-foreground border-border hover:border-primary hover:scale-105`;
 
                                 return (
                                     <button
@@ -370,10 +370,10 @@ export default function CreateEvent() {
                 {/* --- STEP 2: LOCATION (Här var tidigare Info) --- */}
                 {step === 2 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                        <h3 className="text-lg font-bold dark:text-white">Var ska ni ses?</h3>
-                        <p className="text-sm text-slate-500">Klicka på kartan för att flytta markören.</p>
+                        <h3 className="text-lg font-bold text-foreground">Var ska ni ses?</h3>
+                        <p className="text-sm text-muted-foreground">Klicka på kartan för att flytta markören.</p>
 
-                        <div className="h-72 w-full rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner relative z-0">
+                        <div className="h-72 w-full rounded-xl overflow-hidden border border-border shadow-inner relative z-0">
                             <MapContainer center={[formData.lat, formData.lng]} zoom={14} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <LocationPicker
@@ -385,14 +385,14 @@ export default function CreateEvent() {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Platsnamn (Valfritt)</label>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Platsnamn (Valfritt)</label>
                             <div className="relative">
-                                <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                                <MapPin className="absolute left-3 top-3 text-muted-foreground" size={18} />
                                 <input
                                     type="text"
                                     value={formData.locationName}
                                     onChange={e => setFormData({ ...formData, locationName: e.target.value })}
-                                    className="w-full pl-10 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full pl-10 p-3 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary outline-none"
                                     placeholder="T.ex. Vid fontänen"
                                 />
                             </div>
@@ -403,26 +403,26 @@ export default function CreateEvent() {
                 {/* --- STEP 3: INFO (Här var tidigare Location) --- */}
                 {step === 3 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                        <h3 className="text-lg font-bold dark:text-white">Beskriv ditt event</h3>
+                        <h3 className="text-lg font-bold text-foreground">Beskriv ditt event</h3>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Titel</label>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Titel</label>
                             <input
                                 type="text"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full p-3 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary outline-none"
                                 placeholder="T.ex. Fotboll i parken"
                                 autoFocus
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Beskrivning (Valfritt)</label>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Beskrivning (Valfritt)</label>
                             <textarea
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full p-3 h-32 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                className="w-full p-3 h-32 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary outline-none resize-none"
                                 placeholder="Berätta lite mer..."
                             />
                         </div>
@@ -432,22 +432,22 @@ export default function CreateEvent() {
                 {/* --- STEP 4: DATE & TIME --- */}
                 {step === 4 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                        <h3 className="text-lg font-bold dark:text-white">När händer det?</h3>
+                        <h3 className="text-lg font-bold text-foreground">När händer det?</h3>
 
                         {/* KALENDER */}
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="font-bold capitalize text-slate-700 dark:text-slate-200">
+                                <span className="font-bold capitalize text-foreground">
                                     {currentMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}
                                 </span>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><ChevronLeft size={20} /></button>
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><ChevronRight size={20} /></button>
+                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-muted rounded text-foreground"><ChevronLeft size={20} /></button>
+                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-muted rounded text-foreground"><ChevronRight size={20} /></button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                                {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d, i) => <span key={i} className="text-xs font-bold text-slate-400">{d}</span>)}
+                                {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d, i) => <span key={i} className="text-xs font-bold text-muted-foreground">{d}</span>)}
                             </div>
 
                             <div className="grid grid-cols-7 gap-1">
@@ -464,7 +464,7 @@ export default function CreateEvent() {
                                             onClick={() => setFormData({ ...formData, date: date })}
                                             className={`
                                         aspect-square rounded-full text-sm flex items-center justify-center transition-colors
-                                        ${isSelected ? 'bg-indigo-600 text-white font-bold' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300'}
+                                        ${isSelected ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-primary/10 text-foreground'}
                                         ${isPast ? 'opacity-30 cursor-not-allowed' : ''}
                                     `}
                                         >
@@ -477,14 +477,14 @@ export default function CreateEvent() {
 
                         {/* TID */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Klockslag</label>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Klockslag</label>
                             <div className="relative">
-                                <CalIcon className="absolute left-3 top-3 text-slate-400" size={18} />
+                                <CalIcon className="absolute left-3 top-3 text-muted-foreground" size={18} />
                                 <input
                                     type="time"
                                     value={formData.timeStr}
                                     onChange={e => setFormData({ ...formData, timeStr: e.target.value })}
-                                    className="w-full pl-10 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full pl-10 p-3 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary outline-none"
                                 />
                             </div>
                         </div>
@@ -494,10 +494,10 @@ export default function CreateEvent() {
                 {/* --- STEP 5: AGE & CATEGORY --- */}
                 {step === 5 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                        <h3 className="text-lg font-bold dark:text-white">Vem passar det för?</h3>
+                        <h3 className="text-lg font-bold text-foreground">Vem passar det för?</h3>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori</label>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Kategori</label>
                             <select
                                 value={formData.ageCategory}
                                 onChange={e => {
@@ -509,7 +509,7 @@ export default function CreateEvent() {
                                         maxAge: cat ? cat.max : 99
                                     });
                                 }}
-                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full p-3 rounded-xl border border-border bg-card text-foreground focus:ring-2 focus:ring-primary outline-none"
                             >
                                 {AGE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                             </select>
@@ -517,26 +517,26 @@ export default function CreateEvent() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Min Ålder</label>
+                                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Min Ålder</label>
                                 <input
                                     type="number"
                                     value={formData.minAge}
                                     onChange={e => setFormData({ ...formData, minAge: parseInt(e.target.value) })}
-                                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-center"
+                                    className="w-full p-3 rounded-xl border border-border bg-card text-foreground text-center"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Max Ålder</label>
+                                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Max Ålder</label>
                                 <input
                                     type="number"
                                     value={formData.maxAge}
                                     onChange={e => setFormData({ ...formData, maxAge: parseInt(e.target.value) })}
-                                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-center"
+                                    className="w-full p-3 rounded-xl border border-border bg-card text-foreground text-center"
                                 />
                             </div>
                         </div>
 
-                        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-200 text-sm">
+                        <div className="bg-primary/10 p-4 rounded-xl flex gap-3 text-primary text-sm">
                             <Info className="shrink-0" size={20} />
                             <p>Detta är bara rekommendationer så att rätt personer hittar ditt event.</p>
                         </div>
@@ -546,25 +546,25 @@ export default function CreateEvent() {
                 {/* --- STEP 6: PRICE & PARTICIPANTS --- */}
                 {step === 6 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                        <h3 className="text-lg font-bold dark:text-white">Sista detaljerna</h3>
+                        <h3 className="text-lg font-bold text-foreground">Sista detaljerna</h3>
 
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                        <div className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-6">
 
                             {/* GODKÄNNANDE */}
-                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
+                            <div className="flex items-center justify-between border-b border-border pb-4">
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-slate-800 dark:text-white">Kräv godkännande</span>
-                                    <span className="text-xs text-slate-500">Du måste godkänna deltagare manuellt</span>
+                                    <span className="font-bold text-foreground">Kräv godkännande</span>
+                                    <span className="text-xs text-muted-foreground">Du måste godkänna deltagare manuellt</span>
                                 </div>
                                 <button
                                     onClick={() => setFormData({ ...formData, requiresApproval: !formData.requiresApproval })}
                                     className={`
                                 w-12 h-6 rounded-full transition-colors relative
-                                ${formData.requiresApproval ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}
+                                ${formData.requiresApproval ? 'bg-primary' : 'bg-muted'}
                             `}
                                 >
                                     <div className={`
-                                w-4 h-4 rounded-full bg-white shadow-sm absolute top-1 transition-transform
+                                w-4 h-4 rounded-full bg-background shadow-sm absolute top-1 transition-transform
                                 ${formData.requiresApproval ? 'left-7' : 'left-1'}
                             `} />
                                 </button>
@@ -572,55 +572,55 @@ export default function CreateEvent() {
 
                             {/* PRIS SEKTION */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pris</label>
+                                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Pris</label>
                                 <div className="relative">
                                     <input
                                         type="number"
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: parseInt(e.target.value) })}
-                                        className="w-full p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full p-3 pr-10 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     {/* Texten "kr" som ligger inuti rutan */}
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">kr</span>
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">kr</span>
                                 </div>
-                                <p className="text-xs text-slate-400 mt-1">Sätt 0 för gratis.</p>
+                                <p className="text-xs text-muted-foreground mt-1">Sätt 0 för gratis.</p>
                             </div>
 
                             {/* DELTAGARE SEKTION */}
                             <div>
                                 {/* Rubrik med ikon för att tydliggöra att det handlar om personer */}
-                                <div className="flex items-center gap-2 mb-3 border-t border-slate-100 dark:border-slate-700 pt-4">
-                                    <Users size={18} className="text-indigo-500" />
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-0.5">Antal Deltagare</label>
+                                <div className="flex items-center gap-2 mb-3 border-t border-border pt-4">
+                                    <Users size={18} className="text-primary" />
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mt-0.5">Antal Deltagare</label>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Minst antal</label>
+                                        <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1">Minst antal</label>
                                         <div className="relative">
                                             <input
                                                 type="number"
                                                 min="2"
                                                 value={formData.minParticipants}
                                                 onChange={e => setFormData({ ...formData, minParticipants: parseInt(e.target.value) })}
-                                                className="w-full p-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center outline-none focus:ring-2 focus:ring-indigo-500"
+                                                className="w-full p-3 pr-12 rounded-xl border border-border bg-muted/50 text-foreground text-center outline-none focus:ring-2 focus:ring-primary"
                                             />
                                             {/* Texten "pers" inuti rutan */}
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">pers</span>
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs pointer-events-none">pers</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Max antal</label>
+                                        <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1">Max antal</label>
                                         <div className="relative">
                                             <input
                                                 type="number"
                                                 min="2"
                                                 value={formData.maxParticipants}
                                                 onChange={e => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })}
-                                                className="w-full p-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white text-center outline-none focus:ring-2 focus:ring-indigo-500"
+                                                className="w-full p-3 pr-12 rounded-xl border border-border bg-muted/50 text-foreground text-center outline-none focus:ring-2 focus:ring-primary"
                                             />
                                             {/* Texten "pers" inuti rutan */}
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">pers</span>
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs pointer-events-none">pers</span>
                                         </div>
                                     </div>
                                 </div>
@@ -629,7 +629,7 @@ export default function CreateEvent() {
                         </div>
 
                         {formData.price === 0 && (
-                            <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg font-bold text-sm justify-center">
+                            <div className="flex items-center gap-2 text-green-600 bg-green-500/20 p-3 rounded-lg font-bold text-sm justify-center">
                                 <Check size={18} />
                                 Detta event blir gratis!
                             </div>
@@ -638,12 +638,12 @@ export default function CreateEvent() {
                 )}
 
                 {/* --- NAVIGATION BUTTONS --- */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 z-50">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-50">
                     <div className="max-w-lg mx-auto flex gap-3">
                         <button
                             onClick={handleBack}
                             disabled={step === 1}
-                            className="px-6 py-3 rounded-xl font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-50 transition-colors"
+                            className="px-6 py-3 rounded-xl font-bold bg-muted text-muted-foreground disabled:opacity-50 transition-colors"
                         >
                             <ChevronLeft size={24} />
                         </button>
@@ -651,7 +651,7 @@ export default function CreateEvent() {
                         {step < totalSteps ? (
                             <button
                                 onClick={handleNext}
-                                className="flex-grow py-3 rounded-xl font-bold bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+                                className="flex-grow py-3 rounded-xl font-bold bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
                             >
                                 Nästa <ChevronRight size={20} />
                             </button>
@@ -659,7 +659,7 @@ export default function CreateEvent() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={loading || !userProfile}
-                                className="flex-grow py-3 rounded-xl font-bold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                                className="flex-grow py-3 rounded-xl font-bold bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                             >
                                 {loading ? (isEditMode ? 'Sparar...' : 'Publicerar...') : (isEditMode ? 'Spara ändringar' : 'Publicera Event')} <Check size={20} />
                             </button>

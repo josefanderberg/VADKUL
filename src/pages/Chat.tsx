@@ -199,8 +199,14 @@ export default function Chat() {
                                 {(() => {
                                     const chat = chats.find(c => c.id === activeChatId);
                                     const other = chat ? getOtherParticipant(chat) : null;
+                                    const otherId = chat?.participants.find(p => p !== user?.uid);
+
                                     return (
-                                        <div className="flex items-center gap-3">
+                                        <div
+                                            onClick={() => otherId && navigate(`/public-profile/${otherId}`)}
+                                            className="flex items-center gap-3 cursor-pointer hover:opacity-70 transition-opacity"
+                                            title="Gå till profil"
+                                        >
                                             {other?.photoURL && (
                                                 <img src={other.photoURL} className="w-8 h-8 rounded-full object-cover md:hidden" alt="" />
                                             )}
@@ -219,8 +225,8 @@ export default function Chat() {
                                     return (
                                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${isMe
-                                                    ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                                    : 'bg-card text-foreground shadow-sm border border-border rounded-tl-none'
+                                                ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                                : 'bg-card text-foreground shadow-sm border border-border rounded-tl-none'
                                                 }`}>
                                                 {msg.text}
                                             </div>

@@ -9,12 +9,12 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    // h-screen + overflow-hidden låser yttre ramen
-    <div className="h-screen overflow-hidden flex flex-col bg-background transition-colors">
+    // min-h-screen ser till att bakgrunden täcker hela sidan, men låter body scrolla
+    <div className="min-h-screen flex flex-col bg-background transition-colors">
 
       <Navbar />
 
-      <main className="flex-1 overflow-y-auto pt-16">
+      <main className="flex-1 pt-16">
         {children}
       </main>
 
