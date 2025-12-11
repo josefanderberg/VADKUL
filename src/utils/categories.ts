@@ -6,7 +6,7 @@ export const EVENT_CATEGORIES = {
   // --- AKTIVITET & HÄLSA ---
   play: {
     id: 'play',
-    label: 'Lek & Skoj',
+    label: 'Spel & Lek',
     emoji: '🤹',
     markerColor: 'bg-orange-500',
     color: 'bg-orange-100 text-orange-600',

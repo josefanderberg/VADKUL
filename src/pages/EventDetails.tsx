@@ -40,6 +40,36 @@ export default function EventDetails() {
             const data = await eventService.getById(id);
             if (data) {
                 setEvent(data);
+
+                // Self-healing: Check if host data is up to date
+                if (data.host?.uid) {
+                    try {
+                        const hostProfile = await userService.getUserProfile(data.host.uid);
+                        if (hostProfile) {
+                            const correctPhoto = hostProfile.photoURL || hostProfile.verificationImage || null;
+                            const currentPhoto = data.host.photoURL || null;
+
+                            // If photo changed/missing, update the event
+                            if (correctPhoto !== currentPhoto) {
+                                console.log("Updating stale host data...");
+                                const updatedEvent = {
+                                    ...data,
+                                    host: {
+                                        ...data.host,
+                                        photoURL: correctPhoto,
+                                        // Update other fields if needed, e.g. name if changed
+                                        name: hostProfile.displayName || data.host.name,
+                                        verified: hostProfile.isVerified
+                                    }
+                                };
+                                setEvent(updatedEvent);
+                                await eventService.update(updatedEvent);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to refresh host data", e);
+                    }
+                }
             } else {
                 setError('Eventet kunde inte hittas.');
             }

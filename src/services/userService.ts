@@ -33,24 +33,41 @@ export const userService = {
     return null;
   },
 
-  // Lägg till omdöme
+  // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
     const userRef = doc(db, 'users', targetUid);
-    const reviewRef = doc(collection(db, 'users', targetUid, 'reviews')); // Nytt dokument i subcollection
+    const reviewRef = doc(db, 'users', targetUid, 'reviews', review.reviewer.uid); // Använd ID för att garantera ett omdöme per pers
 
     await runTransaction(db, async (transaction) => {
       const userDoc = await transaction.get(userRef);
+      const reviewDoc = await transaction.get(reviewRef);
+
       if (!userDoc.exists()) throw new Error("Användaren finns inte");
 
       const userData = userDoc.data() as UserProfile;
-      const currentRating = userData.rating || 0;
-      const currentCount = userData.ratingCount || 0;
+      let currentRating = userData.rating || 0;
+      let currentCount = userData.ratingCount || 0;
 
-      // Beräkna nytt snitt
-      const newCount = currentCount + 1;
-      const newRating = ((currentRating * currentCount) + review.rating) / newCount;
+      // Om omdöme redan finns, dra bort gamla värdet först
+      if (reviewDoc.exists()) {
+        const oldData = reviewDoc.data();
+        const oldRating = oldData.rating || 0;
 
-      // 1. Skapa review
+        // Backa ut gamla betyget
+        // (Snitt * antal) - gammalt = Total
+        const totalScore = (currentRating * currentCount) - oldRating;
+
+        // Uppdatera snitt (antalet är samma)
+        // (Total + nytt) / antal
+        currentRating = (totalScore + review.rating) / currentCount;
+      } else {
+        // Nytt omdöme
+        const totalScore = currentRating * currentCount;
+        currentCount += 1;
+        currentRating = (totalScore + review.rating) / currentCount;
+      }
+
+      // 1. Skapa/Uppdatera review
       transaction.set(reviewRef, {
         reviewerId: review.reviewer.uid,
         reviewerName: review.reviewer.displayName,
@@ -62,10 +79,17 @@ export const userService = {
 
       // 2. Uppdatera användaren
       transaction.update(userRef, {
-        rating: newRating,
-        ratingCount: newCount
+        rating: currentRating,
+        ratingCount: currentCount
       });
     });
+  },
+
+  // Kolla om användaren redan har recenserat
+  async hasUserReviewed(targetUid: string, reviewerUid: string): Promise<boolean> {
+    const docRef = doc(db, 'users', targetUid, 'reviews', reviewerUid);
+    const snap = await getDoc(docRef);
+    return snap.exists();
   },
 
   // Hämta omdömen (valfritt, men bra för listan)

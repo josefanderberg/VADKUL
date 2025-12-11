@@ -1,93 +1,82 @@
-// src/services/friendService.ts
-import { doc, updateDoc } from 'firebase/firestore'; // <-- ÄNDRING: Tog bort onödig 'getDoc' och 'setDoc'
 import { db } from '../lib/firebase';
-// Importera typer vid behov
-// import { UserProfile } from '../types'; 
-// OBS: Vi antar att 'db' är importerat från '../lib/firebase'
+import { doc, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
+
+export type FriendStatus = 'pending' | 'accepted' | 'incoming' | 'none';
 
 export const friendService = {
-  
-  /**
-   * Skickar en vänförfrågan från senderId till recipientId.
-   * Lägger till pending request i mottagarens dokument.
-   */
-  async sendRequest(senderId: string, recipientId: string, senderName: string) {
-    // 1. Markera förfrågan som skickad hos mottagaren (Recipient)
-    const recipientRef = doc(db, 'users', recipientId);
-    await updateDoc(recipientRef, {
-      // Lägg till senderId i en lista över väntande förfrågningar
-      incomingFriendRequests: {
-        [senderId]: {
-            name: senderName,
-            sentAt: new Date().toISOString()
-        }
-      }
-    });
+  // Check status between current user and target user
+  async checkFriendStatus(currentUid: string, targetUid: string): Promise<FriendStatus> {
+    if (!currentUid || !targetUid) return 'none';
 
-    // 2. Markera förfrågan som väntande hos avsändaren (Sender) (Valfritt, men bra för UI)
-    const senderRef = doc(db, 'users', senderId);
-    await updateDoc(senderRef, {
-        outgoingFriendRequests: {
-            [recipientId]: true // Markera att förfrågan har skickats
-        }
-    });
+    // Check friend document in current user's subcollection
+    const docRef = doc(db, 'users', currentUid, 'friends', targetUid);
+    const snap = await getDoc(docRef);
 
-    return true;
+    if (snap.exists()) {
+      return snap.data().status as FriendStatus;
+    }
+    return 'none';
   },
 
-  /**
-   * Accepterar en vänförfrågan och skapar en ömsesidig vänrelation.
-   */
-  async acceptRequest(userId: string, requesterId: string) {
-    const userRef = doc(db, 'users', userId);
-    const requesterRef = doc(db, 'users', requesterId);
-
-    // 1. Lägg till varandra i vänlistorna (Anta att vi använder arrayUnion i verkligheten)
-    await updateDoc(userRef, {
-        friends: { [requesterId]: true },
-        // Ta bort förfrågan från inkommande lista
-        incomingFriendRequests: { [requesterId]: false } // Mockad borttagning
-    });
-    
-    await updateDoc(requesterRef, {
-        friends: { [userId]: true },
-        // Ta bort förfrågan från utgående lista
-        outgoingFriendRequests: { [userId]: false } // Mockad borttagning
-    });
-
-    return true;
+  // Check if users are friends (helper for booleans)
+  async isFriend(currentUid: string, targetUid: string): Promise<boolean> {
+    const status = await this.checkFriendStatus(currentUid, targetUid);
+    return status === 'accepted';
   },
 
-  /**
-   * Tar bort en vän.
-   */
-  async removeFriend(userId: string, friendId: string) {
-    const userRef = doc(db, 'users', userId);
-    const friendRef = doc(db, 'users', friendId);
+  // Send friend request
+  async sendFriendRequest(currentUid: string, targetUid: string) {
+    const batch = writeBatch(db);
 
-    // 1. Ta bort från bådas vänlistor
-    await updateDoc(userRef, {
-        friends: { [friendId]: false } // Mockad borttagning
-    });
-    
-    await updateDoc(friendRef, {
-        friends: { [userId]: false } // Mockad borttagning
+    // 1. My side: 'pending' (I am waiting for answer)
+    const myRef = doc(db, 'users', currentUid, 'friends', targetUid);
+    batch.set(myRef, {
+      uid: targetUid,
+      status: 'pending',
+      createdAt: Timestamp.now()
     });
 
-    return true;
+    // 2. Their side: 'incoming' (They have a request)
+    const theirRef = doc(db, 'users', targetUid, 'friends', currentUid);
+    batch.set(theirRef, {
+      uid: currentUid,
+      status: 'incoming',
+      createdAt: Timestamp.now()
+    });
+
+    await batch.commit();
   },
-  
-  /**
-   * Kontrollerar vänstatus mellan två användare.
-   * Returnerar: 'friend', 'pending' (request skickad av A), 'received' (request skickad av B), eller 'none'
-   */
-  // <-- ÄNDRING: Tog bort oanvända parametrar för att undvika TS-varningar i mock-tjänsten.
-  // Funktionen är mockad och behöver inte parametrarna just nu.
-  async getFriendshipStatus(): Promise<'friend' | 'pending' | 'received' | 'none'> { 
-    // I en riktig app skulle detta slå mot Firestore/Backend för att kolla 3 saker.
-    
-    // Vi returnerar 'none' i denna mock-tjänst tills logiken i PublicProfile.tsx 
-    // faktiskt sätter isFriend/friendRequestSent till true via handlarna.
-    return 'none'; 
+
+  // Accept friend request
+  async acceptFriendRequest(currentUid: string, targetUid: string) {
+    const batch = writeBatch(db);
+
+    // Both become 'accepted'
+    const myRef = doc(db, 'users', currentUid, 'friends', targetUid);
+    batch.update(myRef, {
+      status: 'accepted',
+      updatedAt: Timestamp.now()
+    });
+
+    const theirRef = doc(db, 'users', targetUid, 'friends', currentUid);
+    batch.update(theirRef, {
+      status: 'accepted',
+      updatedAt: Timestamp.now()
+    });
+
+    await batch.commit();
   },
+
+  // Remove friend or cancel request
+  async removeFriend(currentUid: string, targetUid: string) {
+    const batch = writeBatch(db);
+
+    const myRef = doc(db, 'users', currentUid, 'friends', targetUid);
+    batch.delete(myRef);
+
+    const theirRef = doc(db, 'users', targetUid, 'friends', currentUid);
+    batch.delete(theirRef);
+
+    await batch.commit();
+  }
 };

@@ -295,7 +295,7 @@ export default function Home() {
 
                             {selectedEvent && (
                                 <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
-                                    <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 max-w-sm mx-auto">
+                                    <div className="relative max-w-sm mx-auto">
                                         <button onClick={cycleNextEvent} className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center">
                                             <ArrowRight size={18} />
                                         </button>
