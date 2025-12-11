@@ -301,7 +301,7 @@ export default function EventDetails() {
                             {/* VÄRD */}
                             <button
                                 onClick={() => {
-                                    if (event.host.uid) navigate(`/profile/${event.host.uid}`);
+                                    if (event.host.uid) navigate(`/public-profile/${event.host.uid}`);
                                     else toast.error("Kan inte visa profil (gammalt event)");
                                 }}
                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted p-2 -ml-2 rounded-lg transition-colors group text-left"
@@ -426,7 +426,7 @@ export default function EventDetails() {
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-foreground">{request.displayName}</span>
                                                             <button
-                                                                onClick={() => navigate(`/profile/${request.uid}`)}
+                                                                onClick={() => navigate(`/public-profile/${request.uid}`)}
                                                                 className="text-xs text-primary hover:underline text-left"
                                                             >
                                                                 Visa profil
@@ -498,7 +498,7 @@ export default function EventDetails() {
                                                         <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border border-border shadow-sm">
                                                             <div
                                                                 className="flex items-center gap-3 cursor-pointer"
-                                                                onClick={() => uid && navigate(`/profile/${uid}`)}
+                                                                onClick={() => uid && navigate(`/public-profile/${uid}`)}
                                                             >
                                                                 {Avatar}
                                                                 <span className="font-medium text-foreground">
@@ -521,7 +521,7 @@ export default function EventDetails() {
                                                     return (
                                                         <button
                                                             key={i}
-                                                            onClick={() => uid && navigate(`/profile/${uid}`)}
+                                                            onClick={() => uid && navigate(`/public-profile/${uid}`)}
                                                             className={`flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border/50 shadow-sm transition-all
                                                     ${uid ? 'hover:ring-2 hover:ring-primary cursor-pointer' : 'cursor-default opacity-80'}
                                                 `}

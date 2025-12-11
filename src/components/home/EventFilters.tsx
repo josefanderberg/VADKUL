@@ -1,5 +1,5 @@
 // src/components/home/EventFilters.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SlidersHorizontal, List, Map as MapIcon, Search, X, ChevronDown } from 'lucide-react';
 import { CATEGORY_LIST, EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 
@@ -45,20 +45,45 @@ export default function EventFilters({
   // 0 = Basic (Idag + Gratis), 1 = Age (Ålder)
   const [filterMode] = useState<0 | 1>(0);
   const [showFilters, setShowFilters] = useState(false);
-  // Actually, user said "Kan du göra så att vi har en filter ikon... det ska göra så att raden under visas".
-  // Let's default to TRUE because filters are important.
 
-  // Remove prevVisible logic or adapt it? User wants manual control. I will remove the scroll effect affecting visibility of the row if the user wants purely manual.
-  // "Stabilize the filter bar by removing its scroll-based hiding/showing animation" was a previous goal.
-  // Actually, I'll remove the `visible` prop dependency for the row visibility and use `showFilters` instead.
+  // --- SCROLL LOGIC ---
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Show immediately if scrolling UP or at the very top
+      if (currentScrollY < lastScrollY || currentScrollY < 50) {
+        setIsVisible(true);
+      }
+      // Hide if scrolling DOWN and not at the top
+      else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsVisible(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+
+  // Navbar är normalt 64px (h-16). Vi sätter top-16 för att hamna precis under den.
+  // Transform används för att skjuta upp den under navbaren.
+  const visibilityClass = isVisible
+    ? 'translate-y-0 opacity-100'
+    : '-translate-y-full opacity-0 pointer-events-none';
 
   return (
-    <div className="sticky top-0 z-40 transition-all duration-300">
+    <div className={`fixed top-16 left-0 right-0 z-30 transition-all duration-300 ease-in-out transform ${visibilityClass}`}>
 
-      {/* --- CONTAINER: Bakgrund & Blur (Håller båda raderna) --- */}
-      <div className="bg-background/80 backdrop-blur-md border-b border-border shadow-sm transition-all duration-300">
+      {/* --- CONTAINER: Bakgrund & Blur --- */}
+      <div className="bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
 
-        {/* RAD 1: SÖK + FILTER BUTTON + VIEW (Alltid synlig) */}
+        {/* RAD 1: SÖK + FILTER BUTTON + VIEW */}
         <div className="max-w-6xl mx-auto px-4 py-3 pb-2 flex gap-3 items-center">
           {/* Sökfält */}
           <div className="flex-grow relative">
@@ -125,7 +150,7 @@ export default function EventFilters({
             {/* VÄNSTER SIDA: Filterval */}
             <div className="flex items-center gap-2 flex-grow">
 
-              {/* Alltid synlig: KATEGORIER */}
+              {/* KATEGORIER */}
               <div className="relative shrink-0">
                 <select
                   value={filterType}

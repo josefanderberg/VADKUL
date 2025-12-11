@@ -15,7 +15,7 @@ import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
-import { ArrowUpDown, ArrowRight } from 'lucide-react';
+import { ArrowUpDown, ArrowRight, ArrowLeft } from 'lucide-react';
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -176,6 +176,15 @@ export default function Home() {
         setSelectedEvent(filteredEvents[nextIndex]);
     };
 
+    const cyclePrevEvent = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!selectedEvent || filteredEvents.length === 0) return;
+        const currentIndex = filteredEvents.findIndex(evt => evt.id === selectedEvent.id);
+        // Lägg till length innan modulo för att hantera negativa tal korrekt
+        const prevIndex = (currentIndex - 1 + filteredEvents.length) % filteredEvents.length;
+        setSelectedEvent(filteredEvents[prevIndex]);
+    };
+
     const createCustomIcon = (type: string, isSelected: boolean) => {
         const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
         return L.divIcon({
@@ -212,9 +221,9 @@ export default function Home() {
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.
       */}
             <div
-                className={`h-[calc(100vh-64px)] relative w-full ${view === 'map' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
+                className={`relative w-full ${view === 'map' ? 'h-[calc(100vh-64px)] flex flex-col overflow-hidden' : 'min-h-[calc(100vh-64px)]'}`}
             >
-                {/* Filters är numera sticky internt, så ingen wrapper behövs */}
+                {/* Filters är numera fixed (internt), så vi behöver en spacer för att inte dölja innehåll */}
                 <EventFilters
                     filterType={filterType}
                     setFilterType={setFilterType}
@@ -230,6 +239,10 @@ export default function Home() {
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                 />
+
+                {/* Spacer för att kompensera för fixed filter-bar (ca 70px) */}
+                <div className="h-[72px] w-full" />
+
 
                 {/* Sortering - Också flex-shrink-0 för att inte tryckas ihop */}
                 <div className="max-w-6xl mx-auto px-4 pt-4 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">
@@ -294,11 +307,25 @@ export default function Home() {
                             </MapContainer>
 
                             {selectedEvent && (
-                                <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300">
-                                    <div className="relative max-w-sm mx-auto">
-                                        <button onClick={cycleNextEvent} className="absolute -top-3 -left-3 bg-indigo-600 text-white p-2 rounded-full shadow-md hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center">
+                                <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-none">
+                                    <div className="relative max-w-sm mx-auto pointer-events-auto">
+
+                                        {/* PREV BUTTON - Aligned with notch (top-20 = 80px) */}
+                                        <button
+                                            onClick={cyclePrevEvent}
+                                            className="absolute top-20 -left-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
+                                        >
+                                            <ArrowLeft size={18} />
+                                        </button>
+
+                                        {/* NEXT BUTTON - Aligned with notch (top-20 = 80px) */}
+                                        <button
+                                            onClick={cycleNextEvent}
+                                            className="absolute top-20 -right-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
+                                        >
                                             <ArrowRight size={18} />
                                         </button>
+
                                         <div className="">
                                             <EventCard event={selectedEvent} compact={true} />
                                         </div>

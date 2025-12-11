@@ -167,7 +167,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        if (event.host.uid) navigate(`/profile/${event.host.uid}`);
+                                        if (event.host.uid) navigate(`/public-profile/${event.host.uid}`);
                                     }}
                                     className="flex items-center gap-2 cursor-pointer group/host"
                                 >
