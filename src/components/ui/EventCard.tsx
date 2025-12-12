@@ -45,20 +45,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     const visibleAttendees = event.attendees.slice(0, 3);
     const hiddenCount = event.attendees.length - visibleAttendees.length;
 
-    // --- TICKET STYLING VARIABLES ---
-    const notchSize = 12; // px
-    const imageHeight = compact ? 80 : 96; // h-20 (80px) vs h-24 (96px)
 
-    const ticketStyle: React.CSSProperties = {
-        maskImage: `radial-gradient(circle ${notchSize}px at 0 ${imageHeight}px, transparent ${notchSize - 1}px, black ${notchSize}px), radial-gradient(circle ${notchSize}px at 100% ${imageHeight}px, transparent ${notchSize - 1}px, black ${notchSize}px)`,
-        maskPosition: '0 0, 100% 0',
-        maskSize: '51% 100%',
-        maskRepeat: 'no-repeat',
-        WebkitMaskImage: `radial-gradient(circle ${notchSize}px at 0 ${imageHeight}px, transparent ${notchSize - 1}px, black ${notchSize}px), radial-gradient(circle ${notchSize}px at 100% ${imageHeight}px, transparent ${notchSize - 1}px, black ${notchSize}px)`,
-        WebkitMaskPosition: '0 0, 100% 0',
-        WebkitMaskSize: '51% 100%',
-        WebkitMaskRepeat: 'no-repeat',
-    };
 
     return (
         <Link to={`/event/${event.id}`} className="block h-full group relative">
@@ -69,7 +56,6 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                 {/* The Ticket Itself (Masked) */}
                 <div
                     className="flex flex-col h-full bg-card overflow-hidden"
-                    style={ticketStyle}
                 >
                     {/* --- OMSLAGSBILD --- */}
                     <div className={`relative w-full bg-muted overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
@@ -95,10 +81,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         </div>
                     </div>
 
-                    {/* --- PERFORATION LINE --- */}
-                    <div className="relative w-full px-2" style={{ marginTop: -1 }}>
-                        <div className="w-full border-t-2 border-dashed border-border opacity-50"></div>
-                    </div>
+
 
                     {/* --- CONTENT --- */}
                     <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-5'} pt-4`}>
