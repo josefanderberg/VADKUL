@@ -1,143 +1,113 @@
 import Layout from '../components/layout/Layout';
-import { Sparkles, Map, Users, Heart, ArrowRight } from 'lucide-react';
+import { Briefcase, TrendingUp, ShieldCheck, Globe, ArrowRight, Lightbulb } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function About() {
     return (
         <Layout>
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background text-foreground">
 
-                {/* HERO SECTION */}
-                <section className="relative py-40 px-6 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-background dark:to-background -z-10" />
-                    <div className="max-w-4xl mx-auto text-center">
-                        <h1 className="text-4xl md:text-6xl font-extrabold text-foreground tracking-tight mb-6">
-                            Hitta på något <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">kul!</span>
+                {/* HERO SECTION - "THE PITCH" */}
+                <section className="relative py-32 px-6 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/80 to-background dark:from-indigo-950/20 dark:to-background -z-10" />
+                    <div className="max-w-4xl mx-auto text-center space-y-8">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs font-bold uppercase tracking-wider mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <Lightbulb size={14} />
+                            Vision 2030
+                        </div>
+                        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+                            Det här är <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-amber-500 animate-gradient-x">
+                                Årets Affärsidé
+                            </span>
                         </h1>
-                        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-                            VADKUL är plattformen för dig som vill vara spontan. Hitta aktiviteter nära dig, träffa nya människor och skapa minnen – precis när det passar dig.
+                        <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light">
+                            Vi bygger inte bara en app för att hitta vänner. <br className="hidden md:block" />
+                            Vi bygger <strong className="text-foreground font-semibold">infrastrukturen</strong> för mänsklig utveckling och ett rikare samhälle.
                         </p>
-                        <div className="flex justify-center gap-4">
-                            <Link to="/" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-full font-bold text-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25 hover:-translate-y-1">
-                                Kolla Karta <Map size={20} />
+                    </div>
+                </section>
+
+                {/* THE PILLARS */}
+                <section className="py-20 px-6">
+                    <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 lg:gap-20">
+
+                        {/* PILLAR 1: SAMHÄLLSMOTORN */}
+                        <div className="group space-y-6">
+                            <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                                <Globe size={32} strokeWidth={1.5} />
+                            </div>
+                            <h2 className="text-3xl font-bold tracking-tight">Samhällsmotorn</h2>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Vi flyttar fokus från ensamhet till <strong>samhällsnytta</strong>. Genom att effektivisera möten mellan människor skapar vi ett dynamiskt flöde av idéer, kultur och gemenskap.
+                            </p>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Ett samhälle där människor möts är ett tryggt, robust och innovativt samhälle. VADKUL är oljan i maskineriet som får staden att leva.
+                            </p>
+                        </div>
+
+                        {/* PILLAR 2: PERSONLIG UTVECKLING */}
+                        <div className="group space-y-6">
+                            <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                                <TrendingUp size={32} strokeWidth={1.5} />
+                            </div>
+                            <h2 className="text-3xl font-bold tracking-tight">Utvecklas som Människa</h2>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Komfortzonen är en vacker plats, men där växer ingenting. Vår plattform uppmanar dig att ta steget ut.
+                            </p>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Varje nytt möte är en lektion. Varje event är en chans att vässa din sociala kompetens, lära dig något nytt och växa som individ. Livet är det ultimata utbildningsprogrammet.
+                            </p>
+                        </div>
+
+                        {/* PILLAR 3: FRAMTIDENS JOBB */}
+                        <div className="group space-y-6">
+                            <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                                <Briefcase size={32} strokeWidth={1.5} />
+                            </div>
+                            <h2 className="text-3xl font-bold tracking-tight">The Gig Economy of Fun</h2>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Vi ser en framtid där "värdskap" är ett yrke. Varför ska du inte kunna ta betalt för att dela med dig av din passion?
+                            </p>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                I framtiden kommer VADKUL möjliggöra för kreatörer, guider och entusiaster att skapa mikro-jobb. Håll i en workshop, en guidad tur eller en matlagningskurs. Vi skapar jobb där de inte fanns tidigare.
+                            </p>
+                        </div>
+
+                        {/* PILLAR 4: SUNT FÖRNUFT */}
+                        <div className="group space-y-6">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                                <ShieldCheck size={32} strokeWidth={1.5} />
+                            </div>
+                            <h2 className="text-3xl font-bold tracking-tight">Trygghet & Sunt Förnuft</h2>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Vi bygger på tillit, men vi är inte naiva. Vår filosofi är enkel: <strong>Frihet under ansvar.</strong>
+                            </p>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                Vi tror på människors förmåga att använda sunt förnuft. Vi tillhandahåller verktygen för verifiering och säkerhet, men i grunden bygger vi en community av vuxna människor som behandlar varandra med respekt.
+                            </p>
+                        </div>
+
+                    </div>
+                </section>
+
+                {/* CALL TO ACTION */}
+                <section className="py-24 px-6 text-center">
+                    <div className="max-w-3xl mx-auto bg-card border border-border p-12 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+
+                        <h2 className="text-3xl md:text-4xl font-bold mb-6 relative z-10">Bli en del av rörelsen</h2>
+                        <p className="text-xl text-muted-foreground mb-10 leading-relaxed relative z-10">
+                            Det här är bara början. Var med och forma framtidens sociala landskap.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
+                            <Link to="/" className="inline-flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 rounded-full font-bold text-lg hover:bg-foreground/90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                                Utforska Platformen
                             </Link>
-                        </div>
-                    </div>
-                </section>
-
-                {/* FEATURES GRID */}
-                <section className="py-20 px-6 max-w-6xl mx-auto">
-                    <div className="grid md:grid-cols-3 gap-10">
-
-                        {/* SPONTANT */}
-                        <div className="bg-card p-8 rounded-2xl border border-border hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                            <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/20 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
-                                <Sparkles size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-foreground mb-3">Var Spontan</h3>
-                            <p className="text-muted-foreground leading-relaxed">
-                                Inga långa planeringshorisonter. Se vad som händer just nu eller ikväll. Livet är det som händer när du vågar säga "ja".
-                            </p>
-                        </div>
-
-                        {/* GEMENSKAP */}
-                        <div className="bg-card p-8 rounded-2xl border border-border hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
-                            <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-6 group-hover:scale-110 transition-transform">
-                                <Users size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-foreground mb-3">Träffaa Folk</h3>
-                            <p className="text-muted-foreground leading-relaxed">
-                                Vidga din mxcirkel. VADKUL handlar om att föra samman människor genom gemensamma intressen, från spela brädspel till att löpträna.
-                            </p>
-                        </div>
-
-                        {/* ENKELT */}
-                        <div className="bg-card p-8 rounded-2xl border border-border hover:shadow-xl transition-all duration-300 group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
-                            <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
-                                <Heart size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-foreground mb-3">Inkluderande</h3>
-                            <p className="text-muted-foreground leading-relaxed">
-                                Alla är välkomna. Vår community bygger på respekt och glädje. Skapa öppna events där vem som helst kan känna sig inbjuden.
-                            </p>
-                        </div>
-
-                    </div>
-                </section>
-
-                {/* MISSION STATEMENT */}
-                <section className="bg-card text-card-foreground py-24 px-6 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-
-                    <div className="max-w-4xl mx-auto text-center relative z-10 space-y-16">
-
-                        {/* VARFÖR FINNS VI? */}
-                        <div>
-                            <h2 className="text-3xl md:text-4xl font-bold mb-6">Varför finns VADKUL?</h2>
-                            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                                Vi lever i en värld där vi är mer digitalt uppkopplade än någonsin, men där den fysiska ensamheten ökar. Vi tröttnade på att scrolla genom perfekta liv på sociala medier och sitta hemma och undra "vad händer ikväll?".
-                            </p>
-                            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto mt-4">
-                                VADKUL föddes ur en enkel idé: Tänk om det fanns ett sätt att se <i>allt</i> kul som händer runtomkring dig just nu? Ett verktyg som sänker tröskeln för att gå ut, som gör det lika naturligt att bjuda in till en spontan brädspelskväll som det är att "lajka" en bild.
-                            </p>
-                        </div>
-
-                        {/* VÅR VISION */}
-                        <div className="bg-background/50 p-8 rounded-3xl border border-border backdrop-blur-sm">
-                            <h3 className="text-2xl font-bold text-primary mb-4">Vår Vision</h3>
-                            <p className="text-muted-foreground leading-relaxed italic">
-                                "Att skapa ett varmare samhälle där främlingar blir grannar, och grannar blir vänner. Ett samhälle där ingen behöver känna sig ensam, och där staden vi bor i känns som vårt gemensamma vardagsrum."
-                            </p>
-                        </div>
-
-                        {/* POTENTIALEN */}
-                        <div className="grid md:grid-cols-2 gap-8 text-left">
-                            <div className="space-y-4">
-                                <h4 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                    <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-bold">1</span>
-                                    Bryta isolering
-                                </h4>
-                                <p className="text-muted-foreground">
-                                    Genom att göra det enkelt att hitta och skapa små, lokala events kan vi motverka ofrivillig ensamhet. En promenad, en fika eller en fotbollsmatch kan vara starten på en livslång vänskap.
-                                </p>
-                            </div>
-                            <div className="space-y-4">
-                                <h4 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                    <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold">2</span>
-                                    Levande städer
-                                </h4>
-                                <p className="text-muted-foreground">
-                                    Vi vill att torg, parker och gemensamma utrymmen ska fyllas av liv. VADKUL hjälper till att aktivera lokalsamhället och gör staden tryggare och roligare att leva i.
-                                </p>
-                            </div>
-                            <div className="space-y-4">
-                                <h4 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                    <span className="w-8 h-8 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-sm font-bold">3</span>
-                                    Demokratisera nöje
-                                </h4>
-                                <p className="text-muted-foreground">
-                                    Det ska inte krävas dyra biljetter eller exklusiva klubbar för att ha kul. De bästa minnena skapas ofta gratis, i gräset med en engångsgrill och ett gäng glada människor.
-                                </p>
-                            </div>
-                            <div className="space-y-4">
-                                <h4 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                    <span className="w-8 h-8 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-sm font-bold">4</span>
-                                    Trygg gemenskap
-                                </h4>
-                                <p className="text-muted-foreground">
-                                    Genom verifierade profiler och ett gemensamt ansvar bygger vi en trygg plattform där alla vågar delta. Vi tror på människors godhet och vilja att mötas.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="pt-8">
-                            <div className="inline-block p-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition-transform duration-300">
-                                <Link to="/create" className="flex items-center gap-2 bg-background px-8 py-3 rounded-full font-bold hover:bg-muted transition-colors text-foreground">
-                                    Var med och bidra – Skapa event <ArrowRight size={18} />
-                                </Link>
-                            </div>
-                            <p className="text-muted-foreground text-sm mt-4">Det är helt gratis att använda.</p>
+                            <Link to="/create" className="inline-flex items-center justify-center gap-2 bg-primary/10 text-primary px-8 py-4 rounded-full font-bold text-lg hover:bg-primary/20 transition-all">
+                                Skapa ett Event <ArrowRight size={20} />
+                            </Link>
                         </div>
                     </div>
                 </section>
