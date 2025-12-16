@@ -47,7 +47,7 @@ export default function EventDetails() {
                     try {
                         const hostProfile = await userService.getUserProfile(data.host.uid);
                         if (hostProfile) {
-                            const correctPhoto = hostProfile.photoURL || hostProfile.verificationImage || null;
+                            const correctPhoto = hostProfile.photoURL || null;
                             const currentPhoto = data.host.photoURL || null;
 
                             // If photo changed/missing, update the event
@@ -109,7 +109,7 @@ export default function EventDetails() {
                 }
 
                 const userProfile = await userService.getUserProfile(user.uid);
-                const correctPhotoURL = userProfile?.photoURL || user.photoURL || userProfile?.verificationImage || null;
+                const correctPhotoURL = userProfile?.photoURL || user.photoURL || null;
 
                 // NY LOGIK: Koll om godkännande krävs
                 const initialStatus = event.requiresApproval ? 'pending' : 'confirmed';

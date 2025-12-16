@@ -272,13 +272,13 @@ export default function CreateEvent() {
                         email: user.email,
                         verified: userProfile.isVerified,
                         rating: 5.0,
-                        photoURL: userProfile.photoURL || user.photoURL || userProfile.verificationImage || null
+                        photoURL: userProfile.photoURL || user.photoURL || null
                     },
                     attendees: [{
                         uid: user.uid,
                         email: user.email || '',
                         displayName: user.displayName || 'Värd',
-                        photoURL: userProfile.photoURL || user.photoURL || userProfile.verificationImage || null,
+                        photoURL: userProfile.photoURL || user.photoURL || null,
                         status: 'confirmed'
                     }]
                 };

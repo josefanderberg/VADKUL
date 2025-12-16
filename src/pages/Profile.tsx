@@ -211,7 +211,7 @@ export default function Profile() {
                 targetUser: {
                     uid: profile.uid,
                     name: profile.displayName,
-                    image: profile.photoURL || profile.verificationImage
+                    image: profile.photoURL || null
                 }
             }
         });
