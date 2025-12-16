@@ -28,6 +28,9 @@ export default function PublicProfile() {
     const [activeTab, setActiveTab] = useState<'hosted' | 'joined'>('hosted');
     const [eventsLoading, setEventsLoading] = useState(false);
 
+    // Sortering
+    const [sortOption, setSortOption] = useState<'created' | 'time'>('created');
+
     // Friend / Rating State
     const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'incoming' | 'accepted'>('none');
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
@@ -209,6 +212,18 @@ export default function PublicProfile() {
     // Rating Display
     const ratingValue = profile.rating ? profile.rating.toFixed(1) : 'Ny';
 
+    // Sort Logic
+    const rawList = activeTab === 'hosted' ? hostedEvents : joinedEvents;
+    const currentList = [...rawList].sort((a, b) => {
+        if (sortOption === 'created') {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA; // Nyast först
+        } else {
+            return new Date(a.time).getTime() - new Date(b.time).getTime(); // Snarast först
+        }
+    });
+
     return (
         <Layout>
             <div className="max-w-4xl mx-auto p-4 md:p-8 pb-24">
@@ -353,38 +368,65 @@ export default function PublicProfile() {
                 </div>
 
                 {/* --- TABS --- */}
-                <div className="mb-6 flex border-b border-border">
-                    <button
-                        onClick={() => setActiveTab('hosted')}
-                        className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
-                            ${activeTab === 'hosted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
-                        `}
-                    >
-                        Arrangerar
-                        <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{hostedEvents.length}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('joined')}
-                        className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
-                            ${activeTab === 'joined' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
-                        `}
-                    >
-                        Ska gå på
-                        {friendStatus === 'accepted' && joinedEvents.length > 0 && (
-                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{joinedEvents.length}</span>
-                        )}
-                    </button>
+                <div className="border-b border-border">
+                    <div className="flex mb-1">
+                        <button
+                            onClick={() => setActiveTab('hosted')}
+                            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
+                                ${activeTab === 'hosted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
+                            `}
+                        >
+                            Arrangerar
+                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{hostedEvents.length}</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('joined')}
+                            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
+                                ${activeTab === 'joined' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
+                            `}
+                        >
+                            Ska gå på
+                            {friendStatus === 'accepted' && joinedEvents.length > 0 && (
+                                <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{joinedEvents.length}</span>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* SORT CONTROLS - Visas bara om det finns events */}
+                    {currentList.length > 0 && (activeTab === 'hosted' || friendStatus === 'accepted') && (
+                        <div className="p-2 flex justify-end gap-2">
+                            <label className="text-xs font-semibold text-muted-foreground self-center mr-1">Sortera:</label>
+                            <div className="flex bg-card rounded-lg p-1 border border-border shadow-sm">
+                                <button
+                                    onClick={() => setSortOption('created')}
+                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                            ${sortOption === 'created' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                        `}
+                                >
+                                    Senast tillagd
+                                </button>
+                                <button
+                                    onClick={() => setSortOption('time')}
+                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                            ${sortOption === 'time' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                        `}
+                                >
+                                    Tid kvar
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
 
                 {/* --- CONTENT AREA --- */}
-                <div className="min-h-[200px]">
+                <div className="min-h-[200px] mt-6">
 
                     {/* CASE HOSTED EVENTS */}
                     {activeTab === 'hosted' && (
-                        hostedEvents.length > 0 ? (
+                        currentList.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                                {hostedEvents.map(evt => (
+                                {currentList.map(evt => (
                                     <div key={evt.id} className="h-full">
                                         <EventCard event={evt} compact={false} />
                                     </div>
@@ -403,9 +445,9 @@ export default function PublicProfile() {
                             eventsLoading ? (
                                 <Loading text="Hämtar..." />
                             ) : (
-                                joinedEvents.length > 0 ? (
+                                currentList.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                                        {joinedEvents.map(evt => (
+                                        {currentList.map(evt => (
                                             <div key={evt.id} className="h-full">
                                                 <EventCard event={evt} compact={false} />
                                             </div>

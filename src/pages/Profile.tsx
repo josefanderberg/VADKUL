@@ -41,6 +41,9 @@ export default function Profile() {
 
     const [activeTab, setActiveTab] = useState<'hosted' | 'joined'>('hosted');
 
+    // Sort logic
+    const [sortOption, setSortOption] = useState<'created' | 'time'>('created');
+
     // Friend State
     const [friendStatus, setFriendStatus] = useState<FriendStatus>('none');
 
@@ -219,7 +222,20 @@ export default function Profile() {
     const displayName = profile?.displayName || (isMyProfile ? user?.displayName : 'Användare');
     const image = profile?.photoURL || profile?.verificationImage || undefined;
     const initials = (displayName || '??').substring(0, 2).toUpperCase();
-    const currentList = activeTab === 'hosted' ? hostedEvents : joinedEvents;
+
+    // Sort Logic
+    // 1. Created (Desc) - Senast tillagd först
+    // 2. Time (Asc) - Snarast först (Tid kvar)
+    const rawList = activeTab === 'hosted' ? hostedEvents : joinedEvents;
+    const currentList = [...rawList].sort((a, b) => {
+        if (sortOption === 'created') {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA; // Nyast först
+        } else {
+            return new Date(a.time).getTime() - new Date(b.time).getTime(); // Snarast först
+        }
+    });
 
     const ratingValue = profile?.rating ? profile.rating.toFixed(1) : 'Ny';
     const ratingCount = profile?.ratingCount || 0;
@@ -347,12 +363,6 @@ export default function Profile() {
                                     </button>
                                 </>
                             ) : (
-                                // Chat button remains here (or can be moved next to Add Friend too? User said Add Friend next to Rate)
-                                // Let's keep Chat button here as a standard "action" or move it? 
-                                // User request: "du kan göra så att lägg till vän är jämte betygsätt"
-                                // It usually makes sense to group checking msg icon with others.
-                                // I will keep it here for now as a secondary action, or maybe move it to the group?
-                                // Let's keep it here to avoid overcrowding the main area if not requested.
                                 <button onClick={startChat} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors" title="Skicka meddelande">
                                     <MessageSquare size={20} />
                                 </button>
@@ -360,37 +370,66 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    <div className="flex border-t border-border">
-                        <button
-                            onClick={() => setActiveTab('hosted')}
-                            className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2
+                    {/* TABS & SORT HEADER */}
+                    <div className="border-t border-border">
+                        {/* TAB BAR */}
+                        <div className="flex">
+                            <button
+                                onClick={() => setActiveTab('hosted')}
+                                className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2
                         ${activeTab === 'hosted'
-                                    ? 'border-primary text-primary bg-primary/5'
-                                    : 'border-transparent text-muted-foreground hover:bg-muted/50'
-                                }`}
-                        >
-                            {isMyProfile ? 'Mina Event' : 'Arrangerar'}
-                            {hasLoadedHosted && (
-                                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs animate-in fade-in">
-                                    {hostedEvents.length}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('joined')}
-                            className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2
+                                        ? 'border-primary text-primary bg-primary/5'
+                                        : 'border-transparent text-muted-foreground hover:bg-muted/50'
+                                    }`}
+                            >
+                                {isMyProfile ? 'Mina Event' : 'Arrangerar'}
+                                {hasLoadedHosted && (
+                                    <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs animate-in fade-in">
+                                        {hostedEvents.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('joined')}
+                                className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2
                         ${activeTab === 'joined'
-                                    ? 'border-primary text-primary bg-primary/5'
-                                    : 'border-transparent text-muted-foreground hover:bg-muted/50'
-                                }`}
-                        >
-                            {isMyProfile ? 'Anmäld' : 'Deltar på'}
-                            {hasLoadedJoined && (
-                                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs animate-in fade-in">
-                                    {joinedEvents.length}
-                                </span>
-                            )}
-                        </button>
+                                        ? 'border-primary text-primary bg-primary/5'
+                                        : 'border-transparent text-muted-foreground hover:bg-muted/50'
+                                    }`}
+                            >
+                                {isMyProfile ? 'Anmäld' : 'Deltar på'}
+                                {hasLoadedJoined && (
+                                    <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs animate-in fade-in">
+                                        {joinedEvents.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* SORT CONTROLS - Visas bara om det finns events */}
+                        {currentList.length > 0 && (activeTab === 'hosted' || friendStatus === 'accepted' || isMyProfile) && (
+                            <div className="p-2 bg-muted/20 flex justify-end gap-2 px-4 border-b border-border/50">
+                                <label className="text-xs font-semibold text-muted-foreground self-center mr-1">Sortera:</label>
+                                <div className="flex bg-background rounded-lg p-1 border border-border shadow-sm">
+                                    <button
+                                        onClick={() => setSortOption('created')}
+                                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                            ${sortOption === 'created' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                        `}
+                                    >
+                                        Senast tillagd
+                                    </button>
+                                    <button
+                                        onClick={() => setSortOption('time')}
+                                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                            ${sortOption === 'time' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                        `}
+                                    >
+                                        Tid kvar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
