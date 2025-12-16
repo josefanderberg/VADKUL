@@ -6,21 +6,15 @@ import { useAuth } from '../../context/AuthContext';
 import { notificationService } from '../../services/notificationService';
 import type { AppNotification } from '../../types';
 
-export default function NotificationsMenu() {
+interface NotificationsMenuProps {
+  notifications: AppNotification[];
+}
+
+export default function NotificationsMenu({ notifications }: NotificationsMenuProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Lyssna på notiser
-  useEffect(() => {
-    if (!user) return;
-    const unsub = notificationService.subscribe(user.uid, (data) => {
-      setNotifications(data);
-    });
-    return () => unsub();
-  }, [user]);
 
   // Stäng om man klickar utanför
   useEffect(() => {

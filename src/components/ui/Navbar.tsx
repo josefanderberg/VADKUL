@@ -4,18 +4,23 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { userService } from '../../services/userService';
+import { notificationService } from '../../services/notificationService';
 import NotificationsMenu from '../ui/NotificationsMenu';
 import {
   Sun, Moon,
   Plus, MessageSquare, Info
-} from 'lucide-react'; // Tog bort LogOut från importen
+} from 'lucide-react';
+import type { AppNotification } from '../../types';
 
 export default function Navbar() {
-  const { user } = useAuth(); // Tog bort logout härifrån då den inte används
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // State för bilden i navbaren
   const [navImage, setNavImage] = useState<string | null>(null);
+
+  // State för notiser (Flyttad från NotificationsMenu)
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Hämta bilden från databasen när användaren ändras
   useEffect(() => {
@@ -36,10 +41,27 @@ export default function Navbar() {
     }
   }, [user]);
 
+  // Hämta notiser
+  useEffect(() => {
+    if (!user) return;
+    const unsub = notificationService.subscribe(user.uid, (data) => {
+      setNotifications(data);
+    });
+    return () => unsub();
+  }, [user]);
+
   const getInitials = () => {
     if (!user?.email) return '??';
     return (user.displayName || user.email).substring(0, 2).toUpperCase();
   };
+
+  // Filtrera notiser
+  // 'chat' går till chatt-ikonen
+  // Allt annat går till klockan
+  const chatNotifications = notifications.filter(n => n.type === 'chat');
+  const generalNotifications = notifications.filter(n => n.type !== 'chat');
+
+  const unreadChatCount = chatNotifications.filter(n => !n.read).length;
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md shadow-sm z-50 border-b border-border h-16 transition-colors duration-200">
@@ -76,12 +98,17 @@ export default function Navbar() {
           {/* 3. RESTERANDE MENY (Notiser, Chatt, Profil eller Login) */}
           {user ? (
             <>
-              {/* NOTISER */}
-              <NotificationsMenu />
+              {/* NOTISER (Endast generella) */}
+              <NotificationsMenu notifications={generalNotifications} />
 
               {/* CHATT */}
-              <Link to="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors">
+              <Link to="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors relative">
                 <MessageSquare size={20} />
+                {unreadChatCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background animate-in zoom-in">
+                    {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                  </span>
+                )}
               </Link>
 
               {/* PROFILBILD */}

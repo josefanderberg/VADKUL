@@ -1,7 +1,7 @@
 // src/services/notificationService.ts
-import { 
-    collection, addDoc, query, where, orderBy, 
-    onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs 
+import {
+  collection, addDoc, query, where, orderBy,
+  onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AppNotification } from '../types';
@@ -48,17 +48,38 @@ export const notificationService = {
   // Markera ALLA som lästa (knapp i menyn)
   async markAllAsRead(userId: string) {
     const q = query(
-        collection(db, COLLECTION), 
-        where('recipientId', '==', userId),
-        where('read', '==', false)
+      collection(db, COLLECTION),
+      where('recipientId', '==', userId),
+      where('read', '==', false)
     );
     const snapshot = await getDocs(q);
     const batch = writeBatch(db);
-    
+
     snapshot.docs.forEach(doc => {
-        batch.update(doc.ref, { read: true });
+      batch.update(doc.ref, { read: true });
     });
-    
+
+    await batch.commit();
+  },
+
+  // Markera specifikt chatt-notiser som lästa från en viss avsändare
+  async markChatNotificationsAsRead(recipientId: string, senderId: string) {
+    const q = query(
+      collection(db, COLLECTION),
+      where('recipientId', '==', recipientId),
+      where('senderId', '==', senderId),
+      where('type', '==', 'chat'),
+      where('read', '==', false)
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return;
+
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, { read: true });
+    });
+
     await batch.commit();
   }
 };

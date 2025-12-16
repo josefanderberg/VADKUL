@@ -272,7 +272,7 @@ export default function EventDetails() {
             <div className="max-w-3xl mx-auto pb-24">
 
                 {/* TOP NAV */}
-                <div className="p-4 flex items-center justify-between sticky top-0 bg-background/90 backdrop-blur z-50 shadow-sm md:shadow-none">
+                <div className="p-4 flex items-center justify-between sticky top-16 bg-background/90 backdrop-blur z-40 shadow-sm md:shadow-none">
                     <button onClick={() => navigate(-1)} className="flex items-center text-muted-foreground hover:text-primary transition-colors bg-background/50 p-2 rounded-full md:bg-transparent md:p-0">
                         <ChevronLeft size={20} />
                         <span className="font-bold text-sm ml-1 hidden md:inline">Tillbaka</span>
