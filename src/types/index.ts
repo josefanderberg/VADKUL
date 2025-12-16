@@ -8,9 +8,11 @@ export interface UserProfile {
   displayName: string;
   age: number;
   bio?: string; // <--- NY: Biografi
-  photoURL?: string; // <--- NY: Profilbild (separat från verifiering)
+  photoURL?: string | null; // <--- NY: Profilbild (separat från verifiering)
   isVerified: boolean;
-  verificationImage?: string; // Base64 sträng av bilden
+  verificationImage?: string | null; // Base64 sträng av bilden
+  verificationStatus?: 'none' | 'pending' | 'verified' | 'rejected'; // <--- NY: Status för verifiering
+  rejectionReason?: string | null; // <--- NY: Anledning till nekad verifiering
   createdAt: Date;
   rating?: number;       // Medelbetyg (0-5)
   ratingCount?: number;  // Antal omdömen

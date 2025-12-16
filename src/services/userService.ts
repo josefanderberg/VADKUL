@@ -8,11 +8,19 @@ export const userService = {
   async createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'>) {
     const userRef = doc(db, 'users', uid);
 
+    // Sanitize data: Remove undefined values which Firestore doesn't support
+    // (We allow null for explicit clearing if supported by types, but remove undefined)
+    const sanitizedData = Object.entries(data).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+
     await setDoc(userRef, {
-      ...data,
+      ...sanitizedData,
       uid,
       createdAt: Timestamp.now(),
-      isVerified: true
     }, { merge: true });
   },
 

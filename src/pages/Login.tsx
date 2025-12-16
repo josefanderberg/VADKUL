@@ -141,7 +141,7 @@ export default function Login() {
             // 3. Uppdatera Auth-profilen (Display Name)
             await updateProfile(user, {
                 displayName: fullName,
-                photoURL: verificationUrl || undefined // Sätt auth profilbild till verifieringsbilden initialt?
+                photoURL: null // Vi sätter INTE verifieringsbilden som profilbild, null för att nollställa
             });
 
             // 4. Spara utökad profil i Firestore
@@ -149,9 +149,11 @@ export default function Login() {
                 email: user.email || '',
                 displayName: fullName,
                 age: parseInt(age),
-                isVerified: true,
-                verificationImage: verificationUrl || capturedImage, // Fallback till base64 om upload failade (inte optimalt men säkert)
-                photoURL: verificationUrl || undefined
+                // Fix: Sätt till false/pending vid registrering
+                isVerified: false,
+                verificationStatus: 'pending',
+                verificationImage: verificationUrl || capturedImage || undefined, // undefined will be filtered out by userService
+                photoURL: null // Null is valid in Firestore to signify "no value" if we want that
             });
 
             navigate('/');

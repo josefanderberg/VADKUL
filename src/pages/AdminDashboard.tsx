@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import Layout from '../components/layout/Layout';
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
+import { notificationService } from '../services/notificationService';
+import { CheckCircle2, XCircle, ShieldAlert, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // --- KONFIGURATION & KONSTANTER ---
 
@@ -142,6 +145,14 @@ export default function AdminDashboard() {
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
 
+  // Verification State
+  const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+  // Pagination for user list
+  const [visibleCount, setVisibleCount] = useState(5);
+
   // State för varningsmeddelande
   const [selectedUserId, setSelectedUserId] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
@@ -153,13 +164,18 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, 'users'));
         const userList = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
         setUsers(userList);
+
+        // Filter pending verifications
+        const pending = userList.filter((u: any) => u.verificationStatus === 'pending');
+        setPendingVerifications(pending);
+
         if (userList.length > 0) setSelectedUserId(userList[0].uid);
       } catch (e) {
         addLog("Kunde inte hämta användarlistan.");
       }
     };
     fetchUsers();
-  }, []);
+  }, [loading]); // Reload when loading finishes (e.g. after action)
 
   const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
 
@@ -323,6 +339,86 @@ export default function AdminDashboard() {
     }
   };
 
+  // ---------------------------------------------------------
+  // FUNKTION 4: HANTERA VERIFIERINGAR
+  // ---------------------------------------------------------
+  const handleAcceptVerification = async (user: any) => {
+    if (!confirm(`Godkänn verifiering för ${user.displayName}?`)) return;
+    setLoading(true);
+    addLog(`🔍 Godkänner verifiering för ${user.displayName}...`);
+
+    try {
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', user.uid);
+
+      // 1. Update User
+      batch.update(userRef, {
+        isVerified: true,
+        verificationStatus: 'verified',
+        // Note: verificationImage remains in DB for record, but is private
+      });
+
+      // 2. Send Notification
+      await notificationService.send({
+        recipientId: user.uid,
+        type: 'system',
+        message: 'Din identitet har verifierats! Du har nu en verifierad profil.',
+        read: false,
+        createdAt: Timestamp.now() // Will be addressed by service logic but added here for clarity if needed
+      } as any);
+
+      await batch.commit();
+      addLog(`✅ ${user.displayName} är nu verifierad!`);
+      toast.success(`${user.displayName} verifierad!`);
+
+    } catch (error: any) {
+      addLog(`❌ Fel vid godkännande: ${error.message}`);
+      toast.error("Något gick fel");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDenyVerification = async (userId: string) => {
+    if (!rejectReason) {
+      toast.error("Ange en anledning!");
+      return;
+    }
+    setLoading(true);
+    addLog(`🚫 Nekar verifiering för ID: ${userId}...`);
+
+    try {
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', userId);
+
+      batch.update(userRef, {
+        isVerified: false,
+        verificationStatus: 'rejected',
+        rejectionReason: rejectReason
+      });
+
+      // Send Notification
+      await notificationService.send({
+        recipientId: userId,
+        type: 'system',
+        message: `Din verifiering nekades. Anledning: ${rejectReason}`,
+        read: false,
+        createdAt: Timestamp.now()
+      } as any);
+
+      await batch.commit();
+      addLog(`✅ Verifiering nekad.`);
+      toast.success("Verifiering nekad.");
+      setRejectingId(null);
+      setRejectReason('');
+
+    } catch (error: any) {
+      addLog(`❌ Fel vid nekande: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-slate-50 p-6">
@@ -337,6 +433,71 @@ export default function AdminDashboard() {
 
             {/* VÄNSTER KOLUMN: ACTIONS */}
             <div className="space-y-6">
+
+              {/* KORT 0: Verifieringsförfrågningar */}
+              {pendingVerifications.length > 0 && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 ring-4 ring-indigo-50">
+                  <h2 className="text-xl font-bold mb-4 text-indigo-900 flex items-center gap-2">
+                    <ShieldAlert className="text-indigo-600" />
+                    Verifieringsförfrågningar ({pendingVerifications.length})
+                  </h2>
+                  <div className="space-y-4">
+                    {pendingVerifications.map((u: any) => (
+                      <div key={u.uid} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <div className="flex items-start gap-4 mb-3">
+                          <div className="w-16 h-16 bg-slate-200 rounded-lg overflow-hidden flex-shrink-0 border border-slate-300">
+                            {u.verificationImage ? (
+                              <a href={u.verificationImage} target="_blank" rel="noreferrer">
+                                <img src={u.verificationImage} alt="Verif" className="w-full h-full object-cover" />
+                              </a>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                <User size={24} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900 truncate">{u.displayName || 'Utan namn'}</p>
+                            <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                            <p className="text-xs text-slate-500 mt-1">Ålder: {u.age || '?'}</p>
+                          </div>
+                        </div>
+
+                        {rejectingId === u.uid ? (
+                          <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                            <label className="text-xs font-bold text-red-700 block mb-1">Anledning till nekande:</label>
+                            <textarea
+                              value={rejectReason}
+                              onChange={e => setRejectReason(e.target.value)}
+                              className="w-full p-2 text-sm border border-red-200 rounded mb-2"
+                              placeholder="T.ex. Bilden är för mörk..."
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => handleDenyVerification(u.uid)} className="px-3 py-1 bg-red-600 text-white text-sm font-bold rounded hover:bg-red-700">Neka</button>
+                              <button onClick={() => setRejectingId(null)} className="px-3 py-1 bg-slate-200 text-slate-700 text-sm font-bold rounded hover:bg-slate-300">Avbryt</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAcceptVerification(u)}
+                              className="flex-1 py-2 bg-emerald-600 text-white font-bold rounded-lg text-sm hover:bg-emerald-700 flex items-center justify-center gap-1"
+                            >
+                              <CheckCircle2 size={16} /> Godkänn
+                            </button>
+                            <button
+                              onClick={() => { setRejectingId(u.uid); setRejectReason(''); }}
+                              className="flex-1 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg text-sm hover:bg-red-50 flex items-center justify-center gap-1"
+                            >
+                              <XCircle size={16} /> Neka
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* KORT 1: Generera Data */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -379,7 +540,6 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* KORT 3: Varna Användare */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-xl font-semibold mb-4 text-slate-800">📢 Skicka Varning</h2>
                 <form onSubmit={handleSendWarning} className="space-y-4">
@@ -421,22 +581,125 @@ export default function AdminDashboard() {
 
             </div>
 
-            {/* HÖGER KOLUMN: LOGG */}
-            <div className="h-full min-h-[500px]">
-              <div className="bg-slate-900 rounded-xl p-4 h-full flex flex-col shadow-lg">
-                <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
-                  <span className="text-green-400 font-mono font-bold">System Terminal</span>
-                  <span className="text-slate-500 text-xs">{loading ? 'ARBETAR...' : 'VÄNTAR'}</span>
+            {/* HÖGER KOLUMN: LOGG & ANVÄNDARLISTA */}
+            <div className="space-y-6">
+
+              {/* 1. Terminal */}
+              <div className="h-[300px]">
+                <div className="bg-slate-900 rounded-xl p-4 h-full flex flex-col shadow-lg">
+                  <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
+                    <span className="text-green-400 font-mono font-bold">System Terminal</span>
+                    <span className="text-slate-500 text-xs">{loading ? 'ARBETAR...' : 'VÄNTAR'}</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto font-mono text-xs md:text-sm space-y-1 pr-2">
+                    {log.length === 0 && <span className="text-slate-600 italic">Ingen aktivitet än...</span>}
+                    {log.map((entry, i) => (
+                      <div key={i} className="text-green-300 border-l-2 border-slate-700 pl-2">
+                        {entry}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex-1 overflow-y-auto font-mono text-xs md:text-sm space-y-1 pr-2">
-                  {log.length === 0 && <span className="text-slate-600 italic">Ingen aktivitet än...</span>}
-                  {log.map((entry, i) => (
-                    <div key={i} className="text-green-300 border-l-2 border-slate-700 pl-2">
-                      {entry}
+              </div>
+
+              {/* 2. Användarlista (ADMIN POWER) */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+                  <User className="text-slate-600" />
+                  Alla Användare ({users.length})
+                </h2>
+                <div className="space-y-3">
+                  {users.slice(0, visibleCount).map(u => (
+                    <div key={u.uid} className="flex flex-col md:flex-row items-center gap-4 p-4 border border-slate-100 rounded-xl bg-slate-50 transition-colors hover:bg-slate-100">
+
+                      {/* Verification Image Thumbnail */}
+                      <div className="w-16 h-16 bg-slate-200 rounded-lg overflow-hidden flex-shrink-0 border border-slate-300 shadow-sm relative group">
+                        {u.verificationImage ? (
+                          <a href={u.verificationImage} target="_blank" rel="noreferrer" className="block w-full h-full">
+                            <img src={u.verificationImage} alt="Verif" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                          </a>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <User size={24} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 text-center md:text-left">
+                        <div className="font-bold text-slate-900 truncate">{u.displayName || 'John Doe'}</div>
+                        <div className="text-xs text-slate-500 truncate">{u.email}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {u.uid.substring(0, 6)}...</div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className={`text-xs font-bold px-3 py-1 rounded-full ${u.isVerified
+                          ? 'bg-green-100 text-green-700 border border-green-200'
+                          : (u.verificationStatus === 'pending' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-200 text-slate-500')
+                          }`}>
+                          {u.isVerified ? 'Verifierad' : (u.verificationStatus === 'pending' ? 'Väntar' : 'Ej verifierad')}
+                        </div>
+                        {u.isVerified ? (
+                          <button
+                            onClick={async () => {
+                              const reason = prompt(`Vill du återkalla verifieringen för ${u.displayName}? Ange anledning:`, "Verifiering återkallad av admin.");
+                              if (!reason) return; // Cancelled
+
+                              setLoading(true);
+                              try {
+                                const batch = writeBatch(db);
+
+                                // 1. Update User to Rejected (so they can upload new)
+                                const userRef = doc(db, 'users', u.uid);
+                                batch.update(userRef, {
+                                  isVerified: false,
+                                  verificationStatus: 'rejected',
+                                  rejectionReason: reason
+                                });
+
+                                // 2. Send Notification
+                                await notificationService.send({
+                                  recipientId: u.uid,
+                                  type: 'system',
+                                  message: `Din verifiering har återkallats. Anledning: ${reason}. Du kan ladda upp en ny bild under Inställningar.`,
+                                  read: false,
+                                  createdAt: Timestamp.now()
+                                } as any);
+
+                                await batch.commit();
+
+                                toast.success("Verifiering återkallad.");
+                                addLog(`Revoked verification for ${u.displayName}`);
+
+                                // Trigger fetch to update list & UI
+                                const snap = await getDocs(collection(db, 'users'));
+                                setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+                              } catch (e) {
+                                console.error(e);
+                                toast.error("Kunde inte återkalla.");
+                              }
+                              setLoading(false);
+                            }}
+                            className="text-xs bg-white border border-red-200 text-red-600 px-3 py-1 rounded-lg font-bold hover:bg-red-50 transition-colors"
+                          >
+                            Återkalla
+                          </button>
+                        ) : (<span className="w-20"></span> // Spacer for alignment
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {visibleCount < users.length && (
+                  <button
+                    onClick={() => setVisibleCount(prev => prev + 5)}
+                    className="w-full mt-4 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    Visa fler ({users.length - visibleCount} kvar)
+                  </button>
+                )}
               </div>
+
             </div>
 
           </div>

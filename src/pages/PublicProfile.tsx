@@ -135,7 +135,7 @@ export default function PublicProfile() {
                 targetUser: {
                     uid: profile.uid,
                     name: profile.displayName,
-                    image: profile.verificationImage || profile.photoURL
+                    image: profile.photoURL
                 }
             }
         });
@@ -235,13 +235,13 @@ export default function PublicProfile() {
                 {/* --- PROFIL HEADER (Liknande Profile.tsx) --- */}
                 <div className="bg-card rounded-2xl shadow-xl overflow-hidden border border-border mb-8">
 
-                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 relative">
+                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
 
                         {/* Avatar */}
-                        <div className="relative">
-                            {profile.verificationImage || profile.photoURL ? (
+                        <div className="relative flex-shrink-0">
+                            {profile.photoURL ? (
                                 <img
-                                    src={profile.verificationImage || profile.photoURL}
+                                    src={profile.photoURL}
                                     alt={profile.displayName}
                                     className="w-32 h-32 rounded-full border-4 border-background object-cover shadow-lg"
                                 />
@@ -258,8 +258,8 @@ export default function PublicProfile() {
                         </div>
 
                         {/* Namn & Info */}
-                        <div className="flex-1 text-center md:text-left w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
+                        <div className="flex-1 w-full">
+                            <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-4 mb-4">
                                 <div>
                                     <h1 className="text-3xl font-black text-foreground mb-1">
                                         {profile.displayName}

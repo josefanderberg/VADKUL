@@ -32,8 +32,6 @@ export default function Navbar() {
       userService.getUserProfile(user.uid).then(profile => {
         if (profile?.photoURL) {
           setNavImage(profile.photoURL);
-        } else if (profile?.verificationImage) {
-          setNavImage(profile.verificationImage);
         }
       });
     } else {

@@ -56,7 +56,7 @@ export default function Chat() {
                     uid: user.uid,
                     displayName: user.displayName || 'Jag',
                     email: user.email || '',
-                    verificationImage: user.photoURL || null,
+                    image: user.photoURL,
                     age: 0,
                     isVerified: false,
                     createdAt: new Date()

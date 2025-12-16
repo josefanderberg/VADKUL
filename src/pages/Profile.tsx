@@ -220,7 +220,7 @@ export default function Profile() {
     if (!user && !targetUid) return null;
 
     const displayName = profile?.displayName || (isMyProfile ? user?.displayName : 'Användare');
-    const image = profile?.photoURL || profile?.verificationImage || undefined;
+    const image = profile?.photoURL || undefined;
     const initials = (displayName || '??').substring(0, 2).toUpperCase();
 
     // Sort Logic
@@ -249,7 +249,7 @@ export default function Profile() {
                     <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
 
                         {/* Avatar */}
-                        <div className="relative">
+                        <div className="relative flex-shrink-0">
                             {image ? (
                                 <img
                                     src={image}

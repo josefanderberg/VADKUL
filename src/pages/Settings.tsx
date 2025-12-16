@@ -31,6 +31,8 @@ export default function Settings() {
 
     // Verification State
     const [isVerified, setIsVerified] = useState(false);
+    const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'verified' | 'rejected'>('none');
+    const [rejectionReason, setRejectionReason] = useState<string | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cameraActive, setCameraActive] = useState(false);
@@ -53,6 +55,8 @@ export default function Settings() {
                     setBio(profile.bio || '');
                     setProfileImage(profile.photoURL || null);
                     setIsVerified(profile.isVerified);
+                    setVerificationStatus(profile.verificationStatus || (profile.isVerified ? 'verified' : 'none'));
+                    setRejectionReason(profile.rejectionReason || null);
                 } else {
                     setDisplayName(user!.displayName || '');
                 }
@@ -156,19 +160,21 @@ export default function Settings() {
         try {
             const ageNum = parseInt(age) || 0;
 
+            // Om vi har laddat upp en ny bild, sätt status till pending och isVerified till false
+            // Om vi redan är verifierade och inte ändrat bild, behåll status
+            const newStatus = verificationImage ? 'pending' : (activeProfile?.verificationStatus || 'none');
+            const newIsVerified = verificationImage ? false : (activeProfile?.isVerified || false);
+
             await userService.createUserProfile(user.uid, {
                 displayName,
                 age: ageNum,
                 email: user.email || '',
                 bio,
-                photoURL: profileImage || undefined,
-                // Om vi har tagit en ny verifieringsbild -> Sätt isVerified=false tills admin godkänt? 
-                // Eller true om vi bara uppdaterar den? 
-                // Logiken var: "Om man redan är verifierad, ska man inte kunna ladda upp".
-                // Så om vi är här har vi laddat upp en ny -> Antagligen Pending eller True. 
-                // Vi sätter den till true (verifierad via kamera) för enkelhetens skull i MVP.
-                isVerified: isVerified || !!verificationImage,
-                verificationImage: verificationImage || activeProfile?.verificationImage || undefined
+                photoURL: profileImage || null, // Use null for Firestore
+
+                isVerified: newIsVerified,
+                verificationStatus: newStatus,
+                verificationImage: verificationImage || activeProfile?.verificationImage || null // Use null
             });
 
             // Om lösenord fyllts i
@@ -298,6 +304,7 @@ export default function Settings() {
                                 <CheckCircle2 size={14} /> Verifiering
                             </h2>
 
+                            {/* VISA STATUS */}
                             {isVerified ? (
                                 <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl flex items-center gap-3 border border-emerald-100 dark:border-emerald-900/50">
                                     <CheckCircle2 size={24} className="flex-shrink-0" />
@@ -306,12 +313,35 @@ export default function Settings() {
                                         <p className="text-xs opacity-80">Din identitet har bekräftats. Du kan inte ändra din verifieringsbild.</p>
                                     </div>
                                 </div>
+                            ) : verificationStatus === 'pending' ? (
+                                <div className="space-y-4">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 p-4 rounded-xl flex items-center gap-3 border border-blue-100 dark:border-blue-900/50">
+                                        <RefreshCw size={24} className="flex-shrink-0 animate-spin-slow" />
+                                        <div>
+                                            <p className="font-bold">Granskning pågår</p>
+                                            <p className="text-xs opacity-80">Din verifieringsbild granskas av en administratör. Detta tar vanligtvis 24 timmar.</p>
+                                        </div>
+                                    </div>
+                                    {/* Visa bilden vi väntar på om den finns i state (nyuppladdad) eller om vi vill visa den gamla "pending" bilden? 
+                                        För nu visar vi bara info texten. 
+                                    */}
+                                </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50">
-                                        <p className="font-bold text-sm mb-1">Du är inte verifierad</p>
-                                        <p className="text-xs">För att öka tilliten i communityt behöver du verifiera din profil med en bild.</p>
-                                    </div>
+                                    {verificationStatus === 'rejected' && (
+                                        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-xl border border-red-100 dark:border-red-900/50">
+                                            <p className="font-bold text-sm mb-1">Verifiering nekad</p>
+                                            <p className="text-xs">Anledning: {rejectionReason || "Bilden godkändes inte."}</p>
+                                            <p className="text-xs mt-1 font-bold">Vänligen ta en ny bild.</p>
+                                        </div>
+                                    )}
+
+                                    {!verificationStatus || verificationStatus === 'none' || verificationStatus === 'rejected' ? (
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50">
+                                            <p className="font-bold text-sm mb-1">Du är inte verifierad</p>
+                                            <p className="text-xs">För att öka tilliten i communityt behöver du verifiera din profil med en bild.</p>
+                                        </div>
+                                    ) : null}
 
                                     {/* KAMERA LOGIK */}
                                     <div className="relative w-full max-w-sm mx-auto bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700">
