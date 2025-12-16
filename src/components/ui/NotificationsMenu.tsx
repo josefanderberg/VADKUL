@@ -52,7 +52,7 @@ export default function NotificationsMenu() {
       {/* BELL BUTTON */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors relative"
+        className="p-1.5 md:p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors relative"
       >
         <Bell size={24} />
         {unreadCount > 0 && (

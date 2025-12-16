@@ -50,24 +50,24 @@ export default function Navbar() {
           VADKUL
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-0.5 md:gap-2">
 
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
           {user && (
-            <Link to="/create" className="p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
+            <Link to="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
               <Plus size={24} strokeWidth={2.5} />
             </Link>
           )}
 
           {/* 1.5 INFO (Ny) */}
-          <Link to="/about" className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
+          <Link to="/about" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
             <Info size={22} />
           </Link>
 
           {/* 2. THEME TOGGLE */}
           <button
             onClick={toggleTheme}
-            className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors"
+            className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors"
             title="Växla tema"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -80,22 +80,22 @@ export default function Navbar() {
               <NotificationsMenu />
 
               {/* CHATT */}
-              <Link to="/chat" className="p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors">
+              <Link to="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors">
                 <MessageSquare size={20} />
               </Link>
 
               {/* PROFILBILD */}
-              <Link to="/profile" className="block ml-1">
+              <Link to="/profile" className="block ml-1 shrink-0">
                 {navImage ? (
                   // OM BILD FINNS
                   <img
                     src={navImage}
                     alt="Profil"
-                    className="w-9 h-9 rounded-full object-cover border-2 border-border shadow-sm hover:border-ring transition-colors"
+                    className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-border shadow-sm hover:border-ring transition-colors"
                   />
                 ) : (
                   // FALLBACK: Initialer
-                  <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-extrabold text-xs border-2 border-border shadow-sm hover:border-ring transition-colors">
+                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-extrabold text-xs border-2 border-border shadow-sm hover:border-ring transition-colors">
                     {getInitials()}
                   </div>
                 )}

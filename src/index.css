@@ -7,8 +7,8 @@
 @layer base {
   :root {
     /* Base HSL values */
-    --background: 0 0% 100%;
-    /* white */
+    --background: 240 5% 96%;
+    /* slightly off-white for contrast */
     --foreground: 222.2 84% 4.9%;
     /* slate-950 approx */
 
@@ -49,8 +49,8 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    /* Modern Zinc Dark (almost black) */
+    --background: 240 10% 2%;
+    /* Even darker (almost black) for better contrast */
     --foreground: 0 0% 98%;
 
     --card: 240 5.9% 10%;

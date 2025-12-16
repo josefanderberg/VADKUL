@@ -16,15 +16,8 @@ import { eventService } from '../services/eventService';
 import { userService } from '../services/userService';
 import type { AppEvent, UserProfile } from '../types';
 // OBS: Vi importerar nu även EVENT_CATEGORIES för att få färgerna till markören
-import { CATEGORY_LIST, EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
+import { CATEGORY_LIST, EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../utils/categories';
 import { loadLocationFromLocalStorage } from '../utils/mapUtils';
-
-const AGE_CATEGORIES = [
-    { id: 'family', label: 'Familj', min: 0, max: 99 },
-    { id: 'youth', label: 'Ungdom', min: 13, max: 17 },
-    { id: 'adults', label: 'Vuxna', min: 18, max: 99 },
-    { id: 'seniors', label: 'Seniorer', min: 65, max: 99 },
-];
 
 // --- SUB-KOMPONENT: KARTVÄLJARE MED ANPASSAD MARKÖR ---
 function LocationPicker({

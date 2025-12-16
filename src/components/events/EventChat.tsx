@@ -35,9 +35,9 @@ export default function EventChat({ eventId }: Props) {
     try {
       await eventChatService.sendMessage(eventId, {
         senderId: user.uid,
+        senderName: user.displayName || user.email || 'Anonym',
+        senderImage: user.photoURL || null,
         text: newMessage.trim(),
-        // Vi kan spara displayNamn här också om vi vill slippa slå upp det
-        // men för enkelhetens skull använder vi senderId
       });
       setNewMessage('');
     } catch (error) {
@@ -61,16 +61,48 @@ export default function EventChat({ eventId }: Props) {
         {messages.map((msg) => {
           const isMe = msg.senderId === user?.uid;
 
+          // Säkerställ att vi kan hantera både Firestore Timestamp och vanliga Date-objekt (om det skulle behövas)
+          // msg.createdAt är typad som Timestamp i interfacet
+          let timeString = '';
+          if (msg.createdAt && typeof msg.createdAt.toDate === 'function') {
+            timeString = msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm text-sm 
-                ${isMe
-                  ? 'bg-primary text-primary-foreground rounded-br-none'
-                  : 'bg-muted/80 text-foreground border border-border rounded-bl-none'
-                }`}
-              >
-                {!isMe && <p className="text-[10px] text-muted-foreground/80 font-bold mb-1">Deltagare</p>}
-                <p>{msg.text}</p>
+            <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+              <div className={`flex items-end gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+
+                {/* Avatar (om inte jag) */}
+                {!isMe && (
+                  <div className="shrink-0">
+                    {msg.senderImage ? (
+                      <img src={msg.senderImage} alt={msg.senderName} className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                        {(msg.senderName || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div
+                  className={`rounded-2xl px-4 py-2 shadow-sm text-sm relative group
+                  ${isMe
+                      ? 'bg-primary text-primary-foreground rounded-br-none'
+                      : 'bg-muted/80 text-foreground border border-border rounded-bl-none'
+                    }`}
+                >
+                  {!isMe && (
+                    <p className="text-[10px] text-muted-foreground/80 font-bold mb-0.5">
+                      {msg.senderName || 'Deltagare'}
+                    </p>
+                  )}
+                  <p className="breaking-words">{msg.text}</p>
+                  {/* Timestamp inside or outside? Lets put it tiny inside at bottom right or outside. Inside is cleaner but takes space. */}
+                  <span className={`text-[9px] opacity-70 block text-right mt-1 ${isMe ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                    {timeString}
+                  </span>
+                </div>
               </div>
             </div>
           );

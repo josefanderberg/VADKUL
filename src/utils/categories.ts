@@ -243,4 +243,12 @@ export const EVENT_CATEGORIES = {
 } as const;
 
 export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
+// Ålderskategorier för events
+export const AGE_CATEGORIES = [
+  { id: 'family', label: 'Familj', min: 0, max: 99 },
+  { id: 'youth', label: 'Ungdom', min: 13, max: 17 },
+  { id: 'adults', label: 'Vuxna', min: 18, max: 99 },
+  { id: 'seniors', label: 'Seniorer', min: 65, max: 99 },
+];
+
 export const CATEGORY_LIST = Object.values(EVENT_CATEGORIES);

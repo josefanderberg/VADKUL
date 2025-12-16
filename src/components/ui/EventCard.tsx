@@ -6,6 +6,8 @@ import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories
 import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { useAuth } from '../../context/AuthContext';
+
 interface EventCardProps {
     event: AppEvent;
     compact?: boolean;
@@ -13,6 +15,7 @@ interface EventCardProps {
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     // --- DATA ---
     const category = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
@@ -150,7 +153,14 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        if (event.host.uid) navigate(`/public-profile/${event.host.uid}`);
+                                        if (event.host.uid) {
+                                            // Om det är jag själv som är värd, gå till min profil
+                                            if (user && user.uid === event.host.uid) {
+                                                navigate('/profile');
+                                            } else {
+                                                navigate(`/public-profile/${event.host.uid}`);
+                                            }
+                                        }
                                     }}
                                     className="flex items-center gap-2 cursor-pointer group/host"
                                 >

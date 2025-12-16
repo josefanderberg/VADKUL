@@ -230,7 +230,7 @@ export default function Profile() {
 
                 {/* HEADER */}
                 <div className="bg-card rounded-2xl shadow-xl overflow-hidden mb-8 border border-border">
-                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 relative">
+                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
 
                         {/* Avatar */}
                         <div className="relative">
@@ -252,7 +252,7 @@ export default function Profile() {
                             )}
                         </div>
 
-                        <div className="text-center md:text-left flex-grow">
+                        <div className="flex-grow">
                             {profileLoading ? (
                                 <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2"></div>
                             ) : (

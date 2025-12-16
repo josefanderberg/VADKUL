@@ -30,6 +30,8 @@ export interface UserReview {
 export interface ChatMessage {
   id?: string;
   senderId: string;     // Vem skickade?
+  senderName?: string;  // Visningsnamn
+  senderImage?: string | null;
   text: string;
   createdAt: Timestamp; // Firestore timestamp
 }

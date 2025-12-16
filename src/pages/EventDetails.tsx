@@ -6,7 +6,7 @@ import L from 'leaflet';
 import {
     Clock, MapPin, ChevronLeft,
     CheckCircle2, Share2, AlertCircle,
-    MessageCircle, Info, X
+    MessageCircle, Info, X, Users, MoreVertical, Flag
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -20,7 +20,7 @@ import { notificationService } from '../services/notificationService';
 import { userService } from '../services/userService';
 
 // VIKTIGT: Importera kategorier för att få rätt markör-färg
-import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
+import { EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../utils/categories';
 
 export default function EventDetails() {
     const { id } = useParams<{ id: string }>();
@@ -33,6 +33,7 @@ export default function EventDetails() {
     const [joining, setJoining] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'info' | 'chat'>('info');
+    const [showMenu, setShowMenu] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -82,6 +83,7 @@ export default function EventDetails() {
     const confirmedCount = event ? event.attendees.filter(a => a.status !== 'pending').length : 0;
     const isFull = event ? confirmedCount >= event.maxParticipants : false;
     const percentFull = event ? Math.min(100, (confirmedCount / event.maxParticipants) * 100) : 0;
+    const spotsLeft = event ? Math.max(0, event.minParticipants - confirmedCount) : 0;
 
     const isHost = user?.uid === event?.host.uid;
 
@@ -209,6 +211,34 @@ export default function EventDetails() {
         }
     };
 
+    const handleShare = async () => {
+        if (!event) return;
+        const shareData = {
+            title: `VADKUL: ${event.title}`,
+            text: `Häng med på ${event.title}!`,
+            url: window.location.href
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log('Error sharing:', err);
+            }
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("Länk kopierad till urklipp!");
+        }
+    };
+
+    const handleReport = () => {
+        setShowMenu(false);
+        if (window.confirm("Vill du rapportera detta event som olämpligt?")) {
+            // Här skulle vi anropa backend för att flagga eventet
+            toast.success("Tack! Vi har mottagit din anmälan och kommer granska eventet.");
+        }
+    };
+
     if (loading) return <Layout><div className="p-10 text-center text-muted-foreground">Laddar...</div></Layout>;
     if (error || !event) return <Layout><div className="p-10 text-center text-destructive">{error}</div></Layout>;
 
@@ -247,7 +277,7 @@ export default function EventDetails() {
                         <ChevronLeft size={20} />
                         <span className="font-bold text-sm ml-1 hidden md:inline">Tillbaka</span>
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 relative">
                         {isHost && (
                             <button
                                 onClick={() => navigate(`/edit-event/${event.id}`)}
@@ -257,14 +287,42 @@ export default function EventDetails() {
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                             </button>
                         )}
-                        <button className="p-2 rounded-full hover:bg-muted text-muted-foreground">
+                        <button
+                            onClick={handleShare}
+                            className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            title="Dela event"
+                        >
                             <Share2 size={20} />
                         </button>
+
+                        {/* MORE MENU */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            >
+                                <MoreVertical size={20} />
+                            </button>
+
+                            {showMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden">
+                                        <button
+                                            onClick={handleReport}
+                                            className="w-full text-left px-4 py-3 text-sm font-medium text-destructive hover:bg-muted flex items-center gap-2"
+                                        >
+                                            <Flag size={16} /> Rapportera event
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {/* --- HERO IMAGE --- */}
-                <div className="relative h-64 md:h-80 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6">
+                <div className="relative h-56 md:h-72 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6">
                     <img
                         src={coverImage}
                         alt={event.title}
@@ -280,13 +338,26 @@ export default function EventDetails() {
                         </div>
                     </div>
 
-                    {/* Garanterad Badge */}
-                    {event.attendees.length >= event.minParticipants && (
-                        <div className="absolute top-20 right-4 md:right-8 flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-500/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/20">
-                            <CheckCircle2 size={12} strokeWidth={3} />
-                            <span>Garanterat event!</span>
-                        </div>
-                    )}
+                    {/* TOP RIGHT BADGES */}
+                    <div className="absolute top-20 md:top-6 right-4 md:right-8 flex flex-col items-end gap-2">
+                        {/* Söker deltagare Badge */}
+                        {!isFull && spotsLeft > 0 && (
+                            <div className={`flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-full shadow-lg border border-white/20 backdrop-blur-md
+                                ${spotsLeft === 1 ? 'bg-amber-500/90' : 'bg-orange-500/90'}
+                            `}>
+                                <Users size={12} strokeWidth={3} />
+                                <span>Söker {spotsLeft} deltagare till</span>
+                            </div>
+                        )}
+
+                        {/* Garanterat Badge */}
+                        {confirmedCount >= event.minParticipants && (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-500/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/20">
+                                <CheckCircle2 size={12} strokeWidth={3} />
+                                <span>Garanterat event!</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="px-4 md:px-8">
@@ -379,8 +450,26 @@ export default function EventDetails() {
                                         <p className="font-semibold text-foreground">{event.location.name}</p>
                                     </div>
                                 </div>
-                            </div>
 
+                                <div className="col-span-1 md:col-span-2 bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-muted rounded-lg text-muted-foreground">
+                                        <Users size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-muted-foreground/70 uppercase">Ålder</p>
+                                        <p className="font-semibold text-foreground">
+                                            {(() => {
+                                                const cat = AGE_CATEGORIES.find(c => c.id === event.ageCategory);
+                                                if (!cat) return 'Alla åldrar';
+                                                if (event.minAge !== cat.min || event.maxAge !== cat.max) {
+                                                    return `${cat.label} (${event.minAge}-${event.maxAge} år)`;
+                                                }
+                                                return cat.label;
+                                            })()}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                             {/* 2. KARTA (Flyttad hit) */}
                             <div className="h-64 rounded-xl overflow-hidden shadow-md border border-border relative z-0 mb-8">
                                 <MapContainer
