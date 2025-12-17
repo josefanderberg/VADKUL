@@ -2,11 +2,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { auth } from '../lib/firebase';
 import { userService } from '../services/userService';
 import { storageService } from '../services/storageService';
 import { updatePassword } from 'firebase/auth';
 import Layout from '../components/layout/Layout';
 import { ArrowLeft, Save, LogOut, Camera, Lock, RefreshCw, CheckCircle2, User, FileText } from 'lucide-react';
+import { calculateAge } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 import type { UserProfile } from '../types';
 
@@ -21,7 +23,8 @@ export default function Settings() {
     // Form states
     const [displayName, setDisplayName] = useState('');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [age, setAge] = useState<string>('');
+    const [birthDate, setBirthDate] = useState('');
+    const [currentAge, setCurrentAge] = useState(0); // For display
     const [bio, setBio] = useState('');
     const [profileImage, setProfileImage] = useState<string | null>(null);
 
@@ -50,8 +53,9 @@ export default function Settings() {
                 setActiveProfile(profile);
 
                 if (profile) {
-                    setDisplayName(profile.displayName || '');
-                    setAge(profile.age ? profile.age.toString() : '');
+                    setDisplayName(profile.displayName || auth.currentUser?.displayName || '');
+                    setBirthDate(profile.birthDate || '');
+                    setCurrentAge(profile.age || 0);
                     setBio(profile.bio || '');
                     setProfileImage(profile.photoURL || null);
                     setIsVerified(profile.isVerified);
@@ -158,16 +162,18 @@ export default function Settings() {
 
         setSaving(true);
         try {
-            const ageNum = parseInt(age) || 0;
-
             // Om vi har laddat upp en ny bild, sätt status till pending och isVerified till false
             // Om vi redan är verifierade och inte ändrat bild, behåll status
             const newStatus = verificationImage ? 'pending' : (activeProfile?.verificationStatus || 'none');
             const newIsVerified = verificationImage ? false : (activeProfile?.isVerified || false);
 
+            // Prepare Age
+            const ageNum = calculateAge(birthDate);
+
             await userService.createUserProfile(user.uid, {
                 displayName,
                 age: ageNum,
+                birthDate,
                 email: user.email || '',
                 bio,
                 photoURL: profileImage || null, // Use null for Firestore
@@ -264,19 +270,26 @@ export default function Settings() {
                                             type="text"
                                             value={displayName}
                                             onChange={e => handleInputChange(setDisplayName, e.target.value)}
-                                            className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
+                                            className="w-full p-2.5 rounded-lg border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary placeholder-muted-foreground"
                                             placeholder="Ditt namn"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Ålder</label>
-                                        <input
-                                            type="number"
-                                            value={age}
-                                            onChange={e => handleInputChange(setAge, e.target.value)}
-                                            className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
-                                            placeholder="Din ålder"
-                                        />
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Födelsedatum</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="date"
+                                                value={birthDate}
+                                                onChange={e => {
+                                                    handleInputChange(setBirthDate, e.target.value);
+                                                    setCurrentAge(calculateAge(e.target.value));
+                                                }}
+                                                className="w-full p-2.5 rounded-lg border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary appearance-none"
+                                            />
+                                            <div className="bg-muted px-3 py-2 rounded-lg flex items-center justify-center font-bold text-muted-foreground w-20 shrink-0">
+                                                {currentAge} år
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

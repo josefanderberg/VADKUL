@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { AppEvent } from '../../types';
-import { formatTime } from '../../utils/dateUtils';
+import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
@@ -26,12 +26,18 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
     // --- DISTANS BERÄKNING (NYTT) ---
     const distance = useMemo(() => {
+        // Prioritera redan uträknat avstånd (från Home.tsx)
+        if (typeof event.location.distance === 'number') {
+            return event.location.distance;
+        }
+
+        // Fallback: Räkna ut från localStorage
         const userLoc = loadLocationFromLocalStorage();
         if (userLoc && event.lat && event.lng) {
             return calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng);
         }
         return null;
-    }, [event.lat, event.lng]);
+    }, [event.lat, event.lng, event.location.distance]);
 
     const formatDistance = (d: number) => {
         if (d < 1) return `${Math.round(d * 1000)} m`;
@@ -98,7 +104,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                 <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
                                     <Clock size={14} strokeWidth={2.5} />
                                 </div>
-                                <span>{formatTime(event.time)}</span>
+                                <span>{formatEventDate(event.time)}</span>
                             </div>
 
                             <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">

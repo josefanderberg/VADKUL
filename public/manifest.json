@@ -1,0 +1,16 @@
+{
+    "name": "Vad Kul",
+    "short_name": "Vad Kul",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "description": "Hitta roliga event på campus!",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

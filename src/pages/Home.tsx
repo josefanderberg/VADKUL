@@ -78,6 +78,7 @@ export default function Home() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+                saveLocationToLocalStorage(pos.coords.latitude, pos.coords.longitude);
             });
         }
     }, []);

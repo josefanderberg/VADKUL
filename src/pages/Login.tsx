@@ -5,7 +5,8 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfi
 import { auth } from '../lib/firebase';
 import { userService } from '../services/userService';
 import { storageService } from '../services/storageService';
-import { ChevronLeft, Camera, RefreshCw, Check } from 'lucide-react';
+import { calculateAge } from '../utils/dateUtils';
+import { Camera, RefreshCw, Check, ChevronLeft } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 
 export default function Login() {
@@ -19,7 +20,7 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [age, setAge] = useState('');
+    const [birthDate, setBirthDate] = useState('');
 
     // UI State
     const [error, setError] = useState('');
@@ -109,8 +110,8 @@ export default function Login() {
     };
 
     const handleRegister = async () => {
-        if (!fullName || !age) {
-            setError("Fyll i namn och ålder.");
+        if (!fullName || !birthDate) {
+            setError("Fyll i namn och födelsedatum.");
             return;
         }
         if (!capturedImage) {
@@ -148,7 +149,8 @@ export default function Login() {
             await userService.createUserProfile(user.uid, {
                 email: user.email || '',
                 displayName: fullName,
-                age: parseInt(age),
+                age: calculateAge(birthDate),
+                birthDate: birthDate,
                 // Fix: Sätt till false/pending vid registrering
                 isVerified: false,
                 verificationStatus: 'pending',
@@ -244,17 +246,26 @@ export default function Login() {
 
                         {/* --- REGISTRERING STEG 2 (Profil & Kamera) --- */}
                         {!isLoginMode && regStep === 2 && (
-                            <div className="space-y-5">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
-                                        <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                                            className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Ålder</label>
-                                        <input type="number" required value={age} onChange={e => setAge(e.target.value)}
-                                            className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="År" />
+                            <>
+                                <div className="space-y-5">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
+                                            <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                                                className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Födelsedatum</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    value={birthDate}
+                                                    onChange={(e) => setBirthDate(e.target.value)}
+                                                    className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary appearance-none placeholder-muted-foreground"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -308,17 +319,17 @@ export default function Login() {
 
                                 <button
                                     onClick={handleRegister}
-                                    disabled={loading || !capturedImage || !fullName || !age}
+                                    disabled={loading || !capturedImage || !fullName || !birthDate}
                                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                                 >
                                     {loading ? 'Skapar konto...' : 'Slutför Registrering'}
                                 </button>
-                            </div>
+                            </>
                         )}
 
                     </div>
                 </div>
             </div>
-        </Layout>
+        </Layout >
     );
 }

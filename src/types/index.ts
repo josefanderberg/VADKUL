@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   age: number;
+  birthDate?: string; // <--- NY: Födelsedatum (YYYY-MM-DD)
   bio?: string; // <--- NY: Biografi
   photoURL?: string | null; // <--- NY: Profilbild (separat från verifiering)
   isVerified: boolean;

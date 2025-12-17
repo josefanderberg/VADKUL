@@ -15,7 +15,7 @@ import EventChat from '../components/events/EventChat';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import type { AppEvent } from '../types';
-import { formatTime } from '../utils/dateUtils';
+import { formatEventDate } from '../utils/dateUtils';
 import { notificationService } from '../services/notificationService';
 import { userService } from '../services/userService';
 
@@ -437,7 +437,7 @@ export default function EventDetails() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-bold text-muted-foreground/70 uppercase">Tid</p>
-                                        <p className="font-semibold text-foreground">{formatTime(event.time)}</p>
+                                        <p className="font-semibold text-foreground">{formatEventDate(event.time)}</p>
                                     </div>
                                 </div>
 
