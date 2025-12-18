@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# VADKUL
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+VADKUL is a spontaneous social event application built with modern web technologies. It allows users to create, view, and join events on a map or list, fostering real-time social interactions.
 
-Currently, two official plugins are available:
+🌐 **Live Demo:** [vadkul.se](https://vadkul.se)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## React Compiler
+- **Interactive Map & List Views**: Browse events geographically or in a list format.
+- **Real-time Updates**: Functionality powered by Firebase for instant data synchronization.
+- **Event Management**: Create, join, and manage social events easily.
+- **Categorized Filtering**: Filter events by category to find what interests you.
+- **Geolocation Support**: Find valid events near you.
+- **Dark Mode**: Built-in dark mode support using Tailwind CSS.
+- **Responsive Design**: optimized for both desktop and mobile use.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Tech Stack
 
-## Expanding the ESLint configuration
+- **Framework**: [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) (via [Vite](https://vitejs.dev/))
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Backend & Database**: [Firebase](https://firebase.google.com/) (Auth, Firestore)
+- **Maps**: [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Utilities**: `date-fns`, `clsx`, `tailwind-merge`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📦 Installation & Setup
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/josefanderberg/vadkul.git
+    cd vadkul
+    ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+3.  **Environment Configuration**
+    Create a `.env` file in the root directory (based on `.env.example` if available) and add your Firebase configuration keys:
+    ```env
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your_project_id
+    VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+    VITE_FIREBASE_APP_ID=your_app_id
+    ```
+
+4.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+
+## 📜 Scripts
+
+- `npm run dev`: Starts the development server.
+- `npm run build`: Builds the application for production.
+- `npm run lint`: Runs ESLint to check for code quality issues.
+- `npm run preview`: Previews the production build locally.
+
+## 📂 Project Structure
+
+```plaintext
+src/
+├── components/      # Reusable UI components
+│   ├── layout/      # Layout components (Navbar, etc.)
+│   └── ui/          # Generic UI elements (EventCard, Buttons)
+├── context/         # React Context (Auth, Theme)
+├── lib/             # Third-party library configs (Firebase)
+├── pages/           # Application views/routes
+├── services/        # API and business logic handling
+├── types/           # TypeScript interface definitions
+└── utils/           # Helper functions
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🤝 Contributing
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1.  Fork the project
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
