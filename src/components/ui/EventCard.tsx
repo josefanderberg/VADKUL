@@ -64,7 +64,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             >
                 {/* The Ticket Itself (Masked) */}
                 <div
-                    className="flex flex-col h-full bg-card overflow-hidden"
+                    className="flex flex-col h-full bg-card overflow-hidden rounded-xl"
                 >
                     {/* --- OMSLAGSBILD --- */}
                     <div className={`relative w-full bg-muted overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
