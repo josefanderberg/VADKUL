@@ -87,7 +87,7 @@ export default function Navbar() {
           {/* 2. THEME TOGGLE */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors"
+            className={`p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors ${!user ? 'mr-3' : ''}`}
             title="Växla tema"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}

@@ -13,6 +13,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30',
     iconColor: 'text-orange-500',
     activeColor: 'bg-orange-600 border-orange-600',
+    hoverBorder: 'hover:border-orange-500',
     description: 'Kubb, brännboll, kurragömma eller vattenkrig',
     defaultImage: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=800&q=80'
   },
@@ -25,6 +26,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30',
     iconColor: 'text-red-500',
     activeColor: 'bg-red-600 border-red-600',
+    hoverBorder: 'hover:border-red-500',
     description: 'Fotbollsmatcher, turneringar och lagidrott',
     defaultImage: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80'
   },
@@ -37,6 +39,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
     iconColor: 'text-emerald-500',
     activeColor: 'bg-emerald-600 border-emerald-600',
+    hoverBorder: 'hover:border-emerald-500',
     description: 'Gymmet, löprundan, yoga eller powerwalk',
     defaultImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80'
   },
@@ -51,6 +54,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30',
     iconColor: 'text-purple-500',
     activeColor: 'bg-purple-600 border-purple-600',
+    hoverBorder: 'hover:border-purple-600',
     description: 'Sittningar, mellanfest, utgång eller korridorsfest',
     defaultImage: 'https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=800&q=80'
   },
@@ -63,6 +67,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30',
     iconColor: 'text-amber-500',
     activeColor: 'bg-amber-600 border-amber-600',
+    hoverBorder: 'hover:border-amber-500',
     description: 'Avslappnat häng, kaffe, lunch eller en pratstund',
     defaultImage: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80'
   },
@@ -75,6 +80,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30',
     iconColor: 'text-indigo-500',
     activeColor: 'bg-indigo-600 border-indigo-600',
+    hoverBorder: 'hover:border-indigo-500',
     description: 'Evenemang arrangerade av nationer eller kåren',
     defaultImage: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80'
   },
@@ -89,6 +95,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/30',
     iconColor: 'text-cyan-600',
     activeColor: 'bg-cyan-600 border-cyan-600',
+    hoverBorder: 'hover:border-cyan-600',
     description: 'Diskussioner, välgörenhet, samarbeten och framtidsfrågor',
     defaultImage: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=800&q=80' // Ny bild: Volontärer/Händer
   },
@@ -101,6 +108,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-300 dark:border-pink-500/30',
     iconColor: 'text-pink-500',
     activeColor: 'bg-pink-600 border-pink-600',
+    hoverBorder: 'hover:border-pink-500',
     description: 'Livemusik, teater, utställningar och jam sessions',
     defaultImage: cultureImage // Updated
   },
@@ -115,9 +123,11 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30',
     iconColor: 'text-blue-500',
     activeColor: 'bg-blue-600 border-blue-600',
+    hoverBorder: 'hover:border-blue-500',
     description: 'Tenta-P, grupparbeten eller tyst läsning',
     defaultImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80'
   },
+
   workshop: {
     id: 'workshop',
     label: 'Kunskap & Lärande',
@@ -127,32 +137,23 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30',
     iconColor: 'text-sky-500',
     activeColor: 'bg-sky-600 border-sky-600',
+    hoverBorder: 'hover:border-sky-500',
     description: 'Föreläsningar, workshops, språkcafé och nya färdigheter',
     defaultImage: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80' // Ny bild: Föreläsningssal/Workshop
   },
-  creative: {
-    id: 'creative',
-    label: 'Skapande & DIY',
-    emoji: '🎨',
-    markerColor: 'bg-orange-500',
-    color: 'bg-orange-100 text-orange-600',
-    badgeStyle: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30',
-    iconColor: 'text-orange-500',
-    activeColor: 'bg-orange-600 border-orange-600',
-    description: 'Måla, rita, handarbete, skriva eller byggprojekt',
-    defaultImage: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=800&q=80' // Ny bild: Målarfärger/Penslar
-  },
+
 
   // --- MAT & ÖVRIGT ---
   food: {
     id: 'food',
     label: 'Mat & Dryck',
     emoji: '🍕',
-    markerColor: 'bg-amber-900', // Mörkbrun (Trä)
-    color: 'bg-amber-100 text-amber-900',
-    badgeStyle: 'bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/40 dark:text-amber-100 dark:border-amber-700',
-    iconColor: 'text-amber-900',
-    activeColor: 'bg-amber-950 border-amber-950',
+    markerColor: 'bg-red-700',
+    color: 'bg-red-100 text-red-700',
+    badgeStyle: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-700/40 dark:text-red-100 dark:border-red-700/30',
+    iconColor: 'text-red-700',
+    activeColor: 'bg-red-700 border-red-700',
+    hoverBorder: 'hover:border-red-700',
     description: 'Middag, bakning, grillning eller matlag',
     defaultImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
   },
@@ -160,11 +161,12 @@ export const EVENT_CATEGORIES = {
     id: 'game',
     label: 'Data & Gaming',
     emoji: '🎮',
-    markerColor: 'bg-purple-500',
-    color: 'bg-purple-100 text-purple-600',
-    badgeStyle: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30',
-    iconColor: 'text-purple-500',
-    activeColor: 'bg-purple-600 border-purple-600',
+    markerColor: 'bg-slate-500',
+    color: 'bg-slate-100 text-slate-700',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/20 dark:text-slate-300 dark:border-slate-500/30',
+    iconColor: 'text-slate-500',
+    activeColor: 'bg-slate-600 border-slate-600',
+    hoverBorder: 'hover:border-slate-500',
     description: 'LAN, konsol-gaming, e-sport eller arkad',
     defaultImage: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'
   },
@@ -177,6 +179,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-stone-100 text-stone-800 border-stone-200 dark:bg-stone-500/20 dark:text-stone-300 dark:border-stone-500/30',
     iconColor: 'text-stone-500',
     activeColor: 'bg-stone-600 border-stone-600',
+    hoverBorder: 'hover:border-stone-500',
     description: 'Brädspel, kortspel, rollspel eller schack',
     defaultImage: 'https://images.unsplash.com/photo-1611195974226-a6a9be9dd763?auto=format&fit=crop&w=800&q=80' // Ny bild: Tärningar/Brädspel
   },
@@ -189,6 +192,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
     iconColor: 'text-emerald-600',
     activeColor: 'bg-emerald-600 border-emerald-600',
+    hoverBorder: 'hover:border-emerald-600',
     description: 'Loppis, kurslitteratur eller klädbytardag',
     defaultImage: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&w=800&q=80' // Ny bild: Loppis/Shopping
   },
@@ -201,6 +205,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30',
     iconColor: 'text-green-500',
     activeColor: 'bg-green-600 border-green-600',
+    hoverBorder: 'hover:border-green-500',
     description: 'Vandring, picknick, cykling, fiske och friluftsliv',
     defaultImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80'
   },
@@ -213,6 +218,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/30',
     iconColor: 'text-cyan-500',
     activeColor: 'bg-cyan-600 border-cyan-600',
+    hoverBorder: 'hover:border-cyan-500',
     description: 'Biobesök, filmkvällar eller maraton av en TV-serie',
     defaultImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'
   },
@@ -225,6 +231,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-500/20 dark:text-teal-300 dark:border-teal-500/30',
     iconColor: 'text-teal-500',
     activeColor: 'bg-teal-600 border-teal-600',
+    hoverBorder: 'hover:border-teal-500',
     description: 'Professionellt nätverkande, lokala samarbeten och after work',
     defaultImage: mingleImage // Updated
   },
@@ -237,6 +244,7 @@ export const EVENT_CATEGORIES = {
     badgeStyle: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-500/30',
     iconColor: 'text-gray-500',
     activeColor: 'bg-gray-500 border-gray-500',
+    hoverBorder: 'hover:border-gray-500',
     description: 'Allt som inte passar in ovan',
     defaultImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80' // Ny bild: Sparkler/Festligt/Partiklar
   }

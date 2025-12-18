@@ -245,7 +245,7 @@ export default function Profile() {
             <div className="max-w-4xl mx-auto p-4 md:p-8 pb-20">
 
                 {/* HEADER */}
-                <div className="bg-card rounded-2xl shadow-xl overflow-hidden mb-8 border border-border">
+                <div className="bg-card dark:bg-neutral-900 rounded-2xl shadow-xl overflow-hidden mb-8 border border-border">
                     <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
 
                         {/* Avatar */}

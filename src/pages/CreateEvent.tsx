@@ -343,7 +343,7 @@ export default function CreateEvent() {
 
                                 const bg = isSelected
                                     ? `${cat.activeColor} text-white shadow-lg scale-105`
-                                    : `bg-card text-foreground border-border hover:border-primary hover:scale-105`;
+                                    : `bg-card text-foreground border-border ${cat.hoverBorder} hover:scale-105`;
 
                                 return (
                                     <button
@@ -428,7 +428,7 @@ export default function CreateEvent() {
                         <h3 className="text-lg font-bold text-foreground">När händer det?</h3>
 
                         {/* KALENDER */}
-                        <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
+                        <div className="bg-card dark:bg-neutral-900 p-4 rounded-xl border border-border shadow-sm">
                             <div className="flex justify-between items-center mb-4">
                                 <span className="font-bold capitalize text-foreground">
                                     {currentMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}
@@ -541,7 +541,7 @@ export default function CreateEvent() {
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
                         <h3 className="text-lg font-bold text-foreground">Sista detaljerna</h3>
 
-                        <div className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-6">
+                        <div className="bg-card dark:bg-neutral-900 p-6 rounded-xl border border-border shadow-sm space-y-6">
 
                             {/* GODKÄNNANDE */}
                             <div className="flex items-center justify-between border-b border-border pb-4">
@@ -631,7 +631,7 @@ export default function CreateEvent() {
                 )}
 
                 {/* --- NAVIGATION BUTTONS --- */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-50">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-card dark:bg-neutral-900 border-t border-border z-50">
                     <div className="max-w-lg mx-auto flex gap-3">
                         <button
                             onClick={handleBack}
