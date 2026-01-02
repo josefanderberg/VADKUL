@@ -97,6 +97,8 @@ export interface AppEvent {
   coverImage?: string;
   requiresApproval: boolean; // <--- NY: Kräv godkännande
   createdAt?: Date; // <--- NY: Skapad datum
+  visibility?: 'public' | 'hidden'; // <--- NY: Synlighet
+  customCategory?: string; // <--- NY: Anpassad kategori (t.ex. "Kalmar Nation")
 }
 
 export interface AppNotification {

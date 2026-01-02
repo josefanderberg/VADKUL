@@ -103,7 +103,12 @@ export default function Profile() {
                 setEventsLoading(true);
                 try {
                     const hosted = await eventService.getHostedEvents(targetUid!);
-                    setHostedEvents(hosted);
+                    // Filtrera bort gömda events om det inte är min profil
+                    if (isMyProfile) {
+                        setHostedEvents(hosted);
+                    } else {
+                        setHostedEvents(hosted.filter(e => e.visibility !== 'hidden'));
+                    }
                     setHasLoadedHosted(true);
                 } catch (err) {
                     console.error("Error loading hosted events:", err);
@@ -122,10 +127,17 @@ export default function Profile() {
                         const pEmail = profile.email || '';
                         const pUid = profile.uid;
 
-                        const joined = all.filter(e =>
+                        let joined = all.filter(e =>
                             e.attendees.some(a => a.email === pEmail || a.uid === pUid) &&
                             e.host.uid !== pUid
                         );
+
+                        // Om det inte är min profil, visa inte gömda events (om jag inte också är bjuden? 
+                        // Men för enkelhetens skull, dölj dem om det inte är min profil för nu,
+                        // eller om vi vill vara strikta: visa bara om publikt)
+                        if (!isMyProfile) {
+                            joined = joined.filter(e => e.visibility !== 'hidden');
+                        }
 
                         setJoinedEvents(joined);
                         setHasLoadedJoined(true);

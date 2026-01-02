@@ -143,7 +143,7 @@ export default function EventFilters({
 
         {/* RAD 2: FILTER (Kollapsar) */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${showFilters ? 'max-h-[60px] opacity-100' : 'max-h-0 opacity-0'}`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-[60px] opacity-100' : 'max-h-0 opacity-0'}`}
         >
           <div className="max-w-6xl mx-auto px-4 pb-3 pt-0 flex items-center justify-between gap-2">
 

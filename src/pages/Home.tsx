@@ -103,6 +103,9 @@ export default function Home() {
             // Filtrera bort gamla events (starttid har passerat)
             if (new Date(event.time) < now) return false;
 
+            // Filtrera bort gömda events
+            if (event.visibility === 'hidden') return false;
+
             // Sök-filtrering (Titel, Beskrivning eller Plats)
             if (query) {
                 const matchTitle = event.title.toLowerCase().includes(query);

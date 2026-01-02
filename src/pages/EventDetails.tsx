@@ -6,7 +6,8 @@ import L from 'leaflet';
 import {
     Clock, MapPin, ChevronLeft,
     CheckCircle2, Share2, AlertCircle,
-    MessageCircle, Info, X, Users, MoreVertical, Flag
+    MessageCircle, Info, X, Users, MoreVertical, Flag,
+    Eye, EyeOff, Trash2 // <--- NYA IMPORTER
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -239,6 +240,37 @@ export default function EventDetails() {
         }
     };
 
+    // --- NY LOGIK: GÖM / VISA / TA BORT ---
+    const handleToggleVisibility = async () => {
+        if (!event) return;
+        const newVisibility = event.visibility === 'hidden' ? 'public' : 'hidden';
+        const updatedEvent: AppEvent = { ...event, visibility: newVisibility };
+
+        try {
+            await eventService.update(updatedEvent);
+            setEvent(updatedEvent);
+            toast.success(newVisibility === 'hidden' ? "Eventet är nu gömt." : "Eventet är nu publikt.");
+            setShowMenu(false);
+        } catch (e) {
+            toast.error("Kunde inte ändra synlighet.");
+        }
+    };
+
+    const handleDeleteEvent = async () => {
+        if (!event) return;
+        if (!window.confirm("Är du säker på att du vill ta bort detta event permanent? Detta går inte att ångra.")) {
+            return;
+        }
+
+        try {
+            await eventService.delete(event.id);
+            toast.success("Eventet har tagits bort.");
+            navigate('/'); // Skicka till startsidan
+        } catch (e) {
+            toast.error("Kunde inte ta bort eventet.");
+        }
+    };
+
     if (loading) return <Layout><div className="p-10 text-center text-muted-foreground">Laddar...</div></Layout>;
     if (error || !event) return <Layout><div className="p-10 text-center text-destructive">{error}</div></Layout>;
 
@@ -307,13 +339,31 @@ export default function EventDetails() {
                             {showMenu && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden">
-                                        <button
-                                            onClick={handleReport}
-                                            className="w-full text-left px-4 py-3 text-sm font-medium text-destructive hover:bg-muted flex items-center gap-2"
-                                        >
-                                            <Flag size={16} /> Rapportera event
-                                        </button>
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden py-1">
+                                        {isHost ? (
+                                            <>
+                                                <button
+                                                    onClick={handleToggleVisibility}
+                                                    className="w-full text-left px-4 py-3 text-sm font-medium text-foreground hover:bg-muted flex items-center gap-3 border-b border-border/50"
+                                                >
+                                                    {event.visibility === 'hidden' ? <Eye size={18} /> : <EyeOff size={18} />}
+                                                    {event.visibility === 'hidden' ? "Gör publikt" : "Göm event"}
+                                                </button>
+                                                <button
+                                                    onClick={handleDeleteEvent}
+                                                    className="w-full text-left px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 flex items-center gap-3"
+                                                >
+                                                    <Trash2 size={18} /> Ta bort event
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button
+                                                onClick={handleReport}
+                                                className="w-full text-left px-4 py-3 text-sm font-medium text-destructive hover:bg-muted flex items-center gap-3"
+                                            >
+                                                <Flag size={18} /> Rapportera event
+                                            </button>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -322,13 +372,24 @@ export default function EventDetails() {
                 </div>
 
                 {/* --- HERO IMAGE --- */}
-                <div className="relative h-56 md:h-72 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6">
+                <div className="relative h-56 md:h-72 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6 group">
                     <img
                         src={coverImage}
                         alt={event.title}
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30"></div>
+
+                    {/* HIDDEN OVERLAY BANNER */}
+                    {event.visibility === 'hidden' && (
+                        <div className="absolute inset-x-0 top-16 md:top-0 bg-black/60 backdrop-blur-sm p-4 flex flex-col items-center justify-center text-center z-20 border-b border-white/10 animate-in slide-in-from-top-4 duration-500">
+                            <div className="flex items-center gap-2 text-white font-bold mb-1">
+                                <EyeOff size={20} className="text-white" />
+                                <span>Eventet är gömt</span>
+                            </div>
+                            <p className="text-xs text-white/80 max-w-md">Endast du och anmälda deltagare kan se detta event.</p>
+                        </div>
+                    )}
 
                     {/* Kategori Badge på bilden */}
                     <div className="absolute bottom-4 left-4 md:left-8">

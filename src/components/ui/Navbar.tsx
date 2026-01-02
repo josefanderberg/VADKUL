@@ -129,7 +129,8 @@ export default function Navbar() {
           ) : (
             /* LOGGA IN KNAPP */
             <Link to="/login" className="px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors active:scale-95">
-              Logga In / Registrera
+              <span className="min-[394px]:hidden">Login</span>
+              <span className="hidden min-[394px]:inline">Logga In / Registrera</span>
             </Link>
           )}
         </div>

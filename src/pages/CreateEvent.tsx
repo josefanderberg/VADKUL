@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import {
     ChevronLeft, ChevronRight, Calendar as CalIcon,
-    MapPin, Check, Users, Info
+    MapPin, Check, Users, Info, Image as ImageIcon, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -14,6 +14,7 @@ import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import { userService } from '../services/userService';
+import { storageService } from '../services/storageService';
 import type { AppEvent, UserProfile } from '../types';
 // OBS: Vi importerar nu även EVENT_CATEGORIES för att få färgerna till markören
 import { CATEGORY_LIST, EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../utils/categories';
@@ -100,10 +101,34 @@ export default function CreateEvent() {
         minParticipants: 2,
         maxParticipants: 10,
         price: 0,
-        requiresApproval: false
+        requiresApproval: false,
+        coverImage: '', // URL till bilden
+        customCategory: '' // <--- NY: För exklusiva kategorier
     });
 
+    // NY: State för filuppladdning
+    const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
     const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    // NY: Kod för exklusiva kategorier
+    const [showCodeInput, setShowCodeInput] = useState(false);
+    const [accessCode, setAccessCode] = useState('');
+    const [codeUnlocked, setCodeUnlocked] = useState(false);
+    const [customCategoryName, setCustomCategoryName] = useState('');
+
+    const handleCodeSubmit = () => {
+        if (accessCode === 'N4TN') {
+            setCodeUnlocked(true);
+            toast.success("Kod godkänd! Ange namn på nation/kår.");
+            // Vi sätter typen direkt, men namnet kommer via inputen
+            setFormData(prev => ({ ...prev, type: 'campus' }));
+        } else {
+            toast.error("Felaktig kod. Försök igen.");
+            setAccessCode('');
+        }
+    };
 
     // --- LADDA EVENT OM REDIGERING ---
     useEffect(() => {
@@ -138,8 +163,14 @@ export default function CreateEvent() {
                         minParticipants: event.minParticipants,
                         maxParticipants: event.maxParticipants,
                         price: event.price,
-                        requiresApproval: event.requiresApproval || false
+                        requiresApproval: event.requiresApproval || false,
+                        coverImage: event.coverImage || '',
+                        customCategory: event.customCategory || '' // <--- NY: Ladda in anpassad kategori
                     });
+
+                    if (event.coverImage) {
+                        setPreviewUrl(event.coverImage);
+                    }
 
                     // Sätt kalendern till rätt månad
                     setCurrentMonth(new Date(eventDate));
@@ -174,6 +205,24 @@ export default function CreateEvent() {
                 });
         }
     }, [user]);
+
+
+
+    // --- BILD HANTERING ---
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setCoverImageFile(file);
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        }
+    };
+
+    const clearImage = () => {
+        setCoverImageFile(null);
+        setPreviewUrl(null);
+        setFormData({ ...formData, coverImage: '' });
+    };
 
     // --- LOGIK ---
 
@@ -243,8 +292,18 @@ export default function CreateEvent() {
                 minAge: Number(formData.minAge),
                 maxAge: Number(formData.maxAge),
                 ageCategory: formData.ageCategory,
+
                 requiresApproval: formData.requiresApproval,
+                coverImage: formData.coverImage, // Börja med befintlig URL (tom eller gammal)
+                customCategory: formData.customCategory // <--- NY: Spara anpassad kategori
             };
+
+            // Om vi har en ny fil, ladda upp den och uppdatera URL
+            if (coverImageFile) {
+                const path = `event-images/${user.uid}/${Date.now()}_${coverImageFile.name}`;
+                const url = await storageService.uploadFile(path, coverImageFile);
+                commonData.coverImage = url;
+            }
 
             if (isEditMode && id) {
                 // --- UPPDATERA BEFINTLIGT EVENT ---
@@ -338,24 +397,76 @@ export default function CreateEvent() {
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                         <h3 className="text-lg font-bold mb-4 text-foreground">Vad vill du hitta på?</h3>
                         <div className="flex flex-wrap gap-3 justify-center">
-                            {CATEGORY_LIST.map(cat => {
-                                const isSelected = formData.type === cat.id;
+                            {CATEGORY_LIST
+                                .filter(cat => cat.id !== 'campus') // Dölj "Nation & Kår" från listan
+                                .map(cat => {
+                                    const isSelected = formData.type === cat.id;
 
-                                const bg = isSelected
-                                    ? `${cat.activeColor} text-white shadow-lg scale-105`
-                                    : `bg-card text-foreground border-border ${cat.hoverBorder} hover:scale-105`;
+                                    const bg = isSelected
+                                        ? `${cat.activeColor} text-white shadow-lg scale-105`
+                                        : `bg-card text-foreground border-border ${cat.hoverBorder} hover:scale-105`;
 
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setFormData({ ...formData, type: cat.id })}
-                                        className={`px-4 py-3 rounded-full font-bold transition-all duration-200 flex items-center gap-2 border-2 ${bg}`}
-                                    >
-                                        <span>{cat.emoji}</span>
-                                        <span>{cat.label}</span>
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setFormData({ ...formData, type: cat.id, customCategory: '' })}
+                                            className={`px-4 py-3 rounded-full font-bold transition-all duration-200 flex items-center gap-2 border-2 ${bg}`}
+                                        >
+                                            <span>{cat.emoji}</span>
+                                            <span>{cat.label}</span>
+                                        </button>
+                                    );
+                                })}
+                        </div>
+
+                        {/* EXCLUSIVE CODE SECTION */}
+                        <div className="mt-8 flex flex-col items-center">
+                            <button
+                                onClick={() => setShowCodeInput(!showCodeInput)}
+                                className="text-sm font-semibold text-muted-foreground hover:text-primary underline mb-3"
+                            >
+                                Har du en kod?
+                            </button>
+
+                            {showCodeInput && (
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-300 w-full max-w-xs bg-muted/50 p-4 rounded-xl border border-border">
+                                    <div className="flex gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Ange kod..."
+                                            value={accessCode}
+                                            onChange={e => setAccessCode(e.target.value.toUpperCase())}
+                                            className="flex-grow p-2 rounded-lg border border-border bg-background text-foreground text-center font-mono uppercase tracking-widest placeholder:tracking-normal"
+                                        />
+                                        <button
+                                            onClick={handleCodeSubmit}
+                                            disabled={!accessCode || codeUnlocked}
+                                            className={`px-3 rounded-lg font-bold text-white transition-colors ${codeUnlocked ? 'bg-green-500' : 'bg-primary'}`}
+                                        >
+                                            {codeUnlocked ? <Check size={18} /> : 'OK'}
+                                        </button>
+                                    </div>
+
+                                    {codeUnlocked && (
+                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <p className="text-xs text-green-600 font-bold mb-2 flex items-center justify-center gap-1">
+                                                <Check size={12} /> Kod godkänd!
+                                            </p>
+                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Vilken nation/kår?</label>
+                                            <input
+                                                type="text"
+                                                placeholder="T.ex. Kalmar Nation"
+                                                value={customCategoryName}
+                                                onChange={e => {
+                                                    setCustomCategoryName(e.target.value);
+                                                    setFormData({ ...formData, type: 'campus', customCategory: e.target.value });
+                                                }}
+                                                className="w-full p-2 rounded-lg border border-border bg-background text-foreground"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -397,6 +508,49 @@ export default function CreateEvent() {
                 {step === 3 && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
                         <h3 className="text-lg font-bold text-foreground">Beskriv ditt event</h3>
+
+                        {/* BILD UPLOAD */}
+                        <div>
+                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Omslagsbild (Valfritt)</label>
+
+                            <div className="relative w-full h-40 bg-muted rounded-xl overflow-hidden border-2 border-dashed border-border group cursor-pointer hover:border-primary transition-colors">
+                                {previewUrl || (formData.type && EVENT_CATEGORIES[formData.type as EventCategoryType]?.defaultImage) ? (
+                                    <>
+                                        <img
+                                            src={previewUrl || EVENT_CATEGORIES[formData.type as EventCategoryType]?.defaultImage}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <div className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2">
+                                                <ImageIcon size={20} /> Byt bild
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+                                        <ImageIcon size={32} className="mb-2 opacity-50" />
+                                        <span className="text-sm font-medium">Klicka för att ladda upp</span>
+                                    </div>
+                                )}
+
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                            </div>
+
+                            {(previewUrl || formData.coverImage) && (
+                                <button
+                                    onClick={clearImage}
+                                    className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1"
+                                >
+                                    <X size={12} /> Återställ till standardbild
+                                </button>
+                            )}
+                        </div>
 
                         <div>
                             <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Titel</label>

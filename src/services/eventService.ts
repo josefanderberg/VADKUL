@@ -1,5 +1,5 @@
 import {
-  collection, getDocs, addDoc, doc, updateDoc, getDoc, Timestamp,
+  collection, getDocs, addDoc, doc, updateDoc, getDoc, deleteDoc, Timestamp,
   query, where
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -116,5 +116,11 @@ export const eventService = {
     });
 
     await updateDoc(ref, payload);
+  },
+
+  // Ta bort
+  async delete(id: string) {
+    const ref = doc(db, COLLECTION, id);
+    await deleteDoc(ref);
   }
 };
