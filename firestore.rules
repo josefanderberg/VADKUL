@@ -1,19 +1,85 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 1, 2);
+    // --- HJÄLPFUNKTIONER ---
+    
+    // Är man inloggad?
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Är man ägare till datat? (t.ex. sin egen profil)
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Är man Admin? (Kräver att du sätter fältet 'isAdmin: true' på din user i Firestore)
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Är man värd för eventet? (Fältet 'host.uid' måste matcha)
+    function isHost() {
+       return isAuthenticated() && resource.data.host.uid == request.auth.uid;
+    }
+
+    // --- REGLER PER KOLLEKTION ---
+
+    // 1. USERS
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Behövs för att se andras profiler/bilder
+      allow create: if isOwner(userId); // Man får skapa sin egen profil
+      
+      // Man får uppdatera sin egen profil, MEN...
+      // Man får INTE ge sig själv admin-rättigheter eller verifiera sig själv.
+      allow update: if isOwner(userId) 
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isVerified', 'verificationStatus']));
+        
+      // Admins får göra allt (t.ex. verifiera användare)
+      allow write: if isAdmin();
+    }
+
+    // 2. EVENTS
+    match /events/{eventId} {
+      allow read: if true; // Alla kan se events (eller ändra till isAuthenticated() om du vill ha det privat)
+      
+      allow create: if isAuthenticated(); // Bara inloggade får skapa
+      
+      allow delete: if isHost() || isAdmin(); // Bara värden eller admin får ta bort
+
+      allow update: if 
+        isAdmin() ||            // Admin får ändra allt
+        isHost() ||             // Värden får ändra allt
+        (isAuthenticated() &&   // Andra får BARA ändra 'attendees' (för att gå med/gå ur)
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']));
+    }
+    
+    // 3. CHATS (Privata meddelanden / Grupper)
+    match /chats/{chatId} {
+      // Man får läsa/skriva om man är med i listan 'participants'
+      allow read, write: if isAuthenticated() && (request.auth.uid in resource.data.participants);
+      
+      // Undersamling: Messages
+      match /messages/{messageId} {
+        // Man får läsa meddelanden om man får läsa chatten (parent)
+        allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+        // Man får skriva om man är deltagare
+        allow create: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+      }
+    }
+    
+    // 4. NOTIFICATIONS (Om du använder det)
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      allow create: if isAuthenticated(); // Tillåt användare att skicka notiser till varandra (t.ex. "join request")
+    }
+    
+    // 5. FEEDBACK (För din nya funktion)
+    match /feedback/{feedbackId} {
+        allow create: if true; // Eller isAuthenticated()
+        allow read: if isAdmin();
     }
   }
 }

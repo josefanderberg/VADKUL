@@ -122,5 +122,11 @@ export const eventService = {
   async delete(id: string) {
     const ref = doc(db, COLLECTION, id);
     await deleteDoc(ref);
+  },
+
+  // Uppdatera ENDAST deltagare (för att matcha säkerhetsregler)
+  async updateAttendees(eventId: string, attendees: any[]) {
+    const ref = doc(db, COLLECTION, eventId);
+    await updateDoc(ref, { attendees });
   }
 };

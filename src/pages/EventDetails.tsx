@@ -44,7 +44,8 @@ export default function EventDetails() {
                 setEvent(data);
 
                 // Self-healing: Check if host data is up to date
-                if (data.host?.uid) {
+                // ONLY RUN THIS IF I AM THE HOST (Security Rule Requirement)
+                if (user?.uid && data.host?.uid === user.uid) {
                     try {
                         const hostProfile = await userService.getUserProfile(data.host.uid);
                         if (hostProfile) {
@@ -78,7 +79,7 @@ export default function EventDetails() {
             setLoading(false);
         }
         load();
-    }, [id]);
+    }, [id, user?.uid]); // FIX: Bero på primitive string istället för objekt
 
     const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
     const confirmedCount = event ? event.attendees.filter(a => a.status !== 'pending').length : 0;
@@ -112,7 +113,6 @@ export default function EventDetails() {
                 const userProfile = await userService.getUserProfile(user.uid);
                 const correctPhotoURL = userProfile?.photoURL || user.photoURL || null;
 
-                // NY LOGIK: Koll om godkännande krävs
                 const initialStatus = event.requiresApproval ? 'pending' : 'confirmed';
 
                 newAttendees.push({
@@ -120,31 +120,32 @@ export default function EventDetails() {
                     email: user.email || '',
                     displayName: user.displayName || 'Deltagare',
                     photoURL: correctPhotoURL,
-                    status: initialStatus // <--- Fixar TS-felet och sätter rätt status
+                    status: initialStatus
                 });
 
                 if (initialStatus === 'pending') {
                     toast.success("Förfrågan skickad! Väntar på värdens godkännande.");
                 } else {
                     toast.success("Hurra! Du är anmäld! 🚀");
-                }
-
-                if (event.host.uid && event.host.uid !== user.uid) {
-                    await notificationService.send({
-                        recipientId: event.host.uid,
-                        senderId: user.uid,
-                        senderName: user.displayName || user.email || 'Någon',
-                        senderImage: user.photoURL || null,
-                        type: 'join',
-                        message: event.requiresApproval ? `vill gå med i "${event.title}" (Godkännande krävs)` : `har anmält sig till "${event.title}"!`,
-                        link: `/event/${event.id}`
-                    });
+                    // Skicka notis till värden
+                    if (event.host.uid && event.host.uid !== user.uid) {
+                        await notificationService.send({
+                            recipientId: event.host.uid,
+                            senderId: user.uid,
+                            senderName: user.displayName || user.email || 'Någon',
+                            senderImage: user.photoURL || null,
+                            type: 'join',
+                            message: event.requiresApproval ? `vill gå med i "${event.title}"` : `har anmält sig till "${event.title}"!`,
+                            link: `/event/${event.id}`
+                        });
+                    }
                 }
             }
 
             const updatedEvent = { ...event, attendees: newAttendees };
             setEvent(updatedEvent);
-            await eventService.update(updatedEvent);
+            // ANVÄND NYA METODEN: Skicka bara arrayen
+            await eventService.updateAttendees(event.id, newAttendees);
 
         } catch (err) {
             console.error("Kunde inte uppdatera anmälan:", err);
@@ -156,10 +157,7 @@ export default function EventDetails() {
 
     const handleKickAttendee = async (attendeeUid: string, attendeeName: string) => {
         if (!event) return;
-
-        if (!window.confirm(`Vill du ta bort ${attendeeName} från eventet?`)) {
-            return;
-        }
+        if (!window.confirm(`Vill du ta bort ${attendeeName} från eventet?`)) return;
         await removeAttendee(attendeeUid);
         toast.success(`${attendeeName} har tagits bort.`);
     };
@@ -167,7 +165,6 @@ export default function EventDetails() {
     const handleDenyRequest = async (attendeeUid: string) => {
         if (!event) return;
         if (!window.confirm(`Vill du neka denna förfrågan?`)) return;
-
         await removeAttendee(attendeeUid);
         toast.success("Förfrågan nekad.");
     };
@@ -178,10 +175,10 @@ export default function EventDetails() {
             const newAttendees = event.attendees.filter(a => a.uid !== uidToRemove);
             const updatedEvent = { ...event, attendees: newAttendees };
             setEvent(updatedEvent);
-            await eventService.update(updatedEvent);
+            await eventService.updateAttendees(event.id, newAttendees);
         } catch (error) {
-            console.error(error);
-            toast.error("Kunde inte uppdatera eventet.");
+            console.error("Kunde inte ta bort deltagare:", error);
+            toast.error("Misslyckades att ta bort deltagare.");
         }
     };
 
