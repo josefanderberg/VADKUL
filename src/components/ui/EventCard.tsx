@@ -3,7 +3,7 @@ import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
-import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
+import { MapPin, CheckCircle2, Star, Clock, ArrowRight, Eye } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -230,7 +230,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         </div>
 
                         {/* Hover Arrow */}
-                        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300">
+                        <div className="absolute bottom-4 right-4 z-50 opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300">
                             <ArrowRight size={20} className="text-primary" />
                         </div>
 
