@@ -99,6 +99,7 @@ export interface AppEvent {
   createdAt?: Date; // <--- NY: Skapad datum
   visibility?: 'public' | 'hidden'; // <--- NY: Synlighet
   customCategory?: string; // <--- NY: Anpassad kategori (t.ex. "Kalmar Nation")
+  views: number; // <--- NY: Antal visningar
 }
 
 export interface AppNotification {
@@ -117,4 +118,5 @@ export interface AppNotification {
 export interface FirestoreEventData extends Omit<AppEvent, 'id' | 'time' | 'createdAt'> {
   time: Timestamp;
   createdAt?: Timestamp;
+  views: number;
 }

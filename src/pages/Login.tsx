@@ -32,6 +32,50 @@ export default function Login() {
     const [cameraActive, setCameraActive] = useState(false);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
+    // Date Refs & State for optimized UX
+    const yearRef = useRef<HTMLInputElement>(null);
+    const monthRef = useRef<HTMLInputElement>(null);
+    const dayRef = useRef<HTMLInputElement>(null);
+
+    const [bYear, setBYear] = useState('');
+    const [bMonth, setBMonth] = useState('');
+    const [bDay, setBDay] = useState('');
+
+    const updateBirthDate = (y: string, m: string, d: string) => {
+        if (y.length === 4 && m.length > 0 && d.length > 0) {
+            // Pad month/day with 0 if needed
+            const padM = m.length === 1 ? `0${m}` : m;
+            const padD = d.length === 1 ? `0${d}` : d;
+            setBirthDate(`${y}-${padM}-${padD}`);
+        } else {
+            setBirthDate('');
+        }
+    };
+
+    const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        if (val.length <= 4) {
+            setBYear(val);
+            updateBirthDate(val, bMonth, bDay);
+            // Jump to Month if 4 digits
+            if (val.length === 4) {
+                monthRef.current?.focus();
+            }
+        }
+    };
+
+    const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        if (val.length <= 2) {
+            setBMonth(val);
+            updateBirthDate(bYear, val, bDay);
+            // Jump to Day if 2 digits
+            if (val.length === 2) {
+                dayRef.current?.focus();
+            }
+        }
+    };
+
     // --- LOGGA IN LOGIK ---
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,10 +158,7 @@ export default function Login() {
             setError("Fyll i namn och födelsedatum.");
             return;
         }
-        if (!capturedImage) {
-            setError("Du måste verifiera dig med en bild.");
-            return;
-        }
+
 
         setError('');
         setLoading(true);
@@ -129,14 +170,14 @@ export default function Login() {
 
             // 2. Ladda upp verifieringsbild (från Base64 -> Blob -> Storage)
             let verificationUrl = '';
-            try {
-                const res = await fetch(capturedImage);
-                const blob = await res.blob();
-                verificationUrl = await storageService.uploadFile(`users/${user.uid}/verification_image`, blob);
-            } catch (uploadError) {
-                console.error("Kunde inte ladda upp bild", uploadError);
-                // Fortsätt ändå? Eller faila? Vi fortsätter men kanske loggar.
-                // För MVP är det ok, men vi vill helst ha bilden.
+            if (capturedImage) {
+                try {
+                    const res = await fetch(capturedImage);
+                    const blob = await res.blob();
+                    verificationUrl = await storageService.uploadFile(`users/${user.uid}/verification_image`, blob);
+                } catch (uploadError) {
+                    console.error("Kunde inte ladda upp bild", uploadError);
+                }
             }
 
             // 3. Uppdatera Auth-profilen (Display Name)
@@ -248,22 +289,58 @@ export default function Login() {
                         {!isLoginMode && regStep === 2 && (
                             <>
                                 <div className="space-y-5">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
+                                    <div className="grid grid-cols-10 gap-3">
+                                        <div className="col-span-3">
                                             <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
                                             <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
                                                 className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
                                         </div>
-                                        <div>
+                                        <div className="col-span-7">
                                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Födelsedatum</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="date"
-                                                    value={birthDate}
-                                                    onChange={(e) => setBirthDate(e.target.value)}
-                                                    className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary appearance-none placeholder-muted-foreground"
-                                                    required
-                                                />
+                                            <div className="grid grid-cols-10 gap-2">
+                                                {/* ÅR */}
+                                                <div className="col-span-4">
+                                                    <input
+                                                        ref={yearRef}
+                                                        type="text"
+                                                        placeholder="ÅÅÅÅ"
+                                                        maxLength={4}
+                                                        value={bYear}
+                                                        onChange={handleYearChange}
+                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                        required
+                                                    />
+                                                </div>
+                                                {/* MÅNAD */}
+                                                <div className="col-span-3">
+                                                    <input
+                                                        ref={monthRef}
+                                                        type="text"
+                                                        placeholder="MM"
+                                                        maxLength={2}
+                                                        value={bMonth}
+                                                        onChange={handleMonthChange}
+                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                        required
+                                                    />
+                                                </div>
+                                                {/* DAG */}
+                                                <div className="col-span-3">
+                                                    <input
+                                                        ref={dayRef}
+                                                        type="text"
+                                                        placeholder="DD"
+                                                        maxLength={2}
+                                                        value={bDay}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/[^0-9]/g, '');
+                                                            setBDay(val);
+                                                            updateBirthDate(bYear, bMonth, val);
+                                                        }}
+                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                        required
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -271,7 +348,7 @@ export default function Login() {
 
                                 {/* KAMERA SEKTION */}
                                 <div>
-                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Verifiera dig (Ta en selfie)</label>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Verifiera dig (Valfritt)</label>
 
                                     <div className="relative w-full bg-muted rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-border">
 
@@ -319,7 +396,7 @@ export default function Login() {
 
                                 <button
                                     onClick={handleRegister}
-                                    disabled={loading || !capturedImage || !fullName || !birthDate}
+                                    disabled={loading || !fullName || !birthDate}
                                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                                 >
                                     {loading ? 'Skapar konto...' : 'Slutför Registrering'}

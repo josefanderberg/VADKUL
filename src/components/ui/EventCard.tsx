@@ -3,7 +3,7 @@ import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
-import { MapPin, CheckCircle2, Star, Clock, ArrowRight, Eye } from 'lucide-react';
+import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -111,7 +111,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                 <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
                                     <MapPin size={14} strokeWidth={2.5} />
                                 </div>
-                                <div className="flex items-center justify-between flex-1 min-w-0">
+                                <div className="flex items-center justify-between flex-1 min-w-0 gap-2">
                                     <div className="flex items-center gap-1 overflow-hidden">
                                         <span className="truncate">{event.location.name}</span>
                                         {distance !== null && (
@@ -120,33 +120,39 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                             </span>
                                         )}
                                     </div>
-                                    {isGuaranteed ? (
-                                        <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md ml-2">
-                                            <CheckCircle2 size={10} strokeWidth={3} />
-                                            <span>Blir av!</span>
-                                        </div>
-                                    ) : (
-                                        spotsLeft > 0 && (
-                                            (event.minParticipants - currentCount) <= 0 ? (
-                                                <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md ml-2">
-                                                    <CheckCircle2 size={10} strokeWidth={3} />
-                                                    <span>Blir av!</span>
-                                                </div>
-                                            ) : (event.minParticipants - currentCount) === 1 ? (
-                                                <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-md ml-2">
-                                                    <Clock size={10} strokeWidth={3} />
-                                                    <span>Söker 1 till!</span>
-                                                </div>
-                                            ) : (
-                                                <div className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-500/20 dark:text-orange-300 px-2 py-0.5 rounded-md ml-2">
-                                                    <Clock size={10} strokeWidth={3} />
-                                                    <span>Söker {event.minParticipants - currentCount} till</span>
-                                                </div>
+
+                                    {/* Status Badge moved here */}
+                                    <div className="shrink-0">
+                                        {isGuaranteed ? (
+                                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md">
+                                                <CheckCircle2 size={10} strokeWidth={3} />
+                                                <span>Blir av!</span>
+                                            </div>
+                                        ) : (
+                                            spotsLeft > 0 && (
+                                                (event.minParticipants - currentCount) <= 0 ? (
+                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md">
+                                                        <CheckCircle2 size={10} strokeWidth={3} />
+                                                        <span>Blir av!</span>
+                                                    </div>
+                                                ) : (event.minParticipants - currentCount) === 1 ? (
+                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-md">
+                                                        <Clock size={10} strokeWidth={3} />
+                                                        <span>Söker 1 till!</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-500/20 dark:text-orange-300 px-2 py-0.5 rounded-md">
+                                                        <Clock size={10} strokeWidth={3} />
+                                                        <span>Söker {event.minParticipants - currentCount} till</span>
+                                                    </div>
+                                                )
                                             )
-                                        )
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+
+
                         </div>
 
                         {/* --- BOTTOM SECTION --- */}

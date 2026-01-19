@@ -211,7 +211,7 @@ export default function About() {
                             <div className="max-w-3xl mx-auto relative">
                                 <h2 className="text-4xl md:text-5xl font-bold mb-8">Vågar du vara spontan?</h2>
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <Link to="/" className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25 hover:-translate-y-1">
+                                    <Link to="/events" className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25 hover:-translate-y-1">
                                         Hitta något nu
                                     </Link>
                                     <Link to="/create" className="inline-flex items-center justify-center gap-2 bg-background border-2 border-primary/20 text-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-muted transition-all">

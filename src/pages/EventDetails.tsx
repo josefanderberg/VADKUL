@@ -1,4 +1,3 @@
-// src/pages/EventDetails.tsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
@@ -7,7 +6,7 @@ import {
     Clock, MapPin, ChevronLeft,
     CheckCircle2, Share2, AlertCircle,
     MessageCircle, Info, X, Users, MoreVertical, Flag,
-    Eye, EyeOff, Trash2 // <--- NYA IMPORTER
+    Eye, EyeOff, Trash2 // Removed ArrowLeft
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,6 +38,17 @@ export default function EventDetails() {
     useEffect(() => {
         async function load() {
             if (!id) return;
+
+            // 1. Öka visningar och VÄNTA tills det är klart för att undvika race condition
+            try {
+                // Vi använder optimistic update lokalt för känslan, men vi vill också se rätt data.
+                // Vi väntar på Firestore.
+                await eventService.incrementViews(id);
+            } catch (err) {
+                console.error("Failed to increment views:", err);
+            }
+
+            // 2. Hämta data EFTER att vi ökat
             const data = await eventService.getById(id);
             if (data) {
                 setEvent(data);
@@ -79,7 +89,7 @@ export default function EventDetails() {
             setLoading(false);
         }
         load();
-    }, [id, user?.uid]); // FIX: Bero på primitive string istället för objekt
+    }, [id, user?.uid]);
 
     const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
     const confirmedCount = event ? event.attendees.filter(a => a.status !== 'pending').length : 0;
@@ -255,16 +265,14 @@ export default function EventDetails() {
 
     const handleDeleteEvent = async () => {
         if (!event) return;
-        if (!window.confirm("Är du säker på att du vill ta bort detta event permanent? Detta går inte att ångra.")) {
-            return;
-        }
-
-        try {
-            await eventService.delete(event.id);
-            toast.success("Eventet har tagits bort.");
-            navigate('/'); // Skicka till startsidan
-        } catch (e) {
-            toast.error("Kunde inte ta bort eventet.");
+        if (window.confirm("Är du säker på att du vill ta bort detta event permanent? Detta går inte att ångra.")) {
+            try {
+                await eventService.delete(event.id);
+                toast.success("Eventet har tagits bort.");
+                navigate('/'); // Skicka till startsidan
+            } catch (e) {
+                toast.error("Kunde inte ta bort eventet.");
+            }
         }
     };
 
@@ -487,9 +495,9 @@ export default function EventDetails() {
                     {activeTab === 'info' ? (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
 
-                            {/* 1. TID OCH PLATS GRID */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                            {/* 1. TID, PLATS, ÅLDER, VISNINGAR GRID */}
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                <div className="col-span-2 md:col-span-1 bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
                                     <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                                         <Clock size={20} />
                                     </div>
@@ -499,7 +507,7 @@ export default function EventDetails() {
                                     </div>
                                 </div>
 
-                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                <div className="col-span-2 md:col-span-1 bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
                                     <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                                         <MapPin size={20} />
                                     </div>
@@ -509,7 +517,7 @@ export default function EventDetails() {
                                     </div>
                                 </div>
 
-                                <div className="col-span-1 md:col-span-2 bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
                                     <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                                         <Users size={20} />
                                     </div>
@@ -527,8 +535,19 @@ export default function EventDetails() {
                                         </p>
                                     </div>
                                 </div>
+
+                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-muted rounded-lg text-muted-foreground">
+                                        <Eye size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-muted-foreground/70 uppercase">Visningar</p>
+                                        <p className="font-semibold text-foreground">{event.views || 0}</p>
+                                    </div>
+                                </div>
                             </div>
-                            {/* 2. KARTA (Flyttad hit) */}
+
+                            {/* 2. KARTA */}
                             <div className="h-64 rounded-xl overflow-hidden shadow-md border border-border relative z-0 mb-8">
                                 <MapContainer
                                     center={[event.lat, event.lng]}
@@ -542,7 +561,7 @@ export default function EventDetails() {
                                 </MapContainer>
                             </div>
 
-                            {/* 3. BESKRIVNING (Flyttad hit) */}
+                            {/* 3. BESKRIVNING */}
                             <div className="mb-8">
                                 <h3 className="font-bold text-lg text-foreground mb-2">Om eventet</h3>
                                 <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -550,7 +569,7 @@ export default function EventDetails() {
                                 </p>
                             </div>
 
-                            {/* 4. DELTAGARE (Uppdaterad med Väntande Lista) */}
+                            {/* 4. DELTAGARE */}
                             <div className="mb-8 p-5 bg-card rounded-2xl border border-border shadow-sm">
 
                                 {/* HOST: VÄNTANDE FÖRFRÅGNINGAR */}
@@ -670,8 +689,8 @@ export default function EventDetails() {
                                                             key={i}
                                                             onClick={() => uid && navigate(`/public-profile/${uid}`)}
                                                             className={`flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border/50 shadow-sm transition-all
-                                                    ${uid ? 'hover:ring-2 hover:ring-primary cursor-pointer' : 'cursor-default opacity-80'}
-                                                `}
+                                                                            ${uid ? 'hover:ring-2 hover:ring-primary cursor-pointer' : 'cursor-default opacity-80'}
+                                                                        `}
                                                         >
                                                             {Avatar}
                                                             <span className="text-xs font-medium text-muted-foreground">
@@ -686,7 +705,7 @@ export default function EventDetails() {
                             </div>
                         </div>
                     ) : (
-                        // --- CHATT FLIK (Oförändrad layout) ---
+                        // --- CHATT FLIK ---
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             {(!isJoined || event.attendees.find(a => a.email === user?.email)?.status === 'pending') ? (
                                 <div className="text-center py-12 bg-card rounded-xl border border-border">
@@ -712,7 +731,6 @@ export default function EventDetails() {
                             )}
                         </div>
                     )}
-
                 </div>
 
                 {/* BOTTOM ACTION BAR */}

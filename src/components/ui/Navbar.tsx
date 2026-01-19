@@ -16,8 +16,10 @@ export default function Navbar() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // State för bilden i navbaren
-  const [navImage, setNavImage] = useState<string | null>(null);
+  // State för bilden i navbaren - Initiera från cache för att undvika flicker
+  const [navImage, setNavImage] = useState<string | null>(() => {
+    return localStorage.getItem('cached_avatar_url');
+  });
 
   // State för notiser (Flyttad från NotificationsMenu)
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -25,17 +27,26 @@ export default function Navbar() {
   // Hämta bilden från databasen när användaren ändras
   useEffect(() => {
     if (user?.uid) {
-      // 1. Sätt först Auth-bilden om den finns (snabbast)
-      if (user.photoURL) setNavImage(user.photoURL);
+      // VIKTIGT: Vi använder INTE user.photoURL direkt längre, eftersom det kan vara verifikationsbilden.
+      // Däremot kan vi kolla om vi redan har en cachad bild.
 
-      // 2. Hämta den "riktiga" bilden från Firestore för att vara säker
       userService.getUserProfile(user.uid).then(profile => {
         if (profile?.photoURL) {
           setNavImage(profile.photoURL);
+          // Uppdatera cachen
+          localStorage.setItem('cached_avatar_url', profile.photoURL);
+        } else {
+          // Om ingen bild finns i profilen heller, rensa cachen om den fanns?
+          // Eller behåll "null" så initialerna visas.
+          // setNavImage(null); 
+          // Vi låter bli att rensa här för att inte flimra om fetch misslyckas tillfälligt,
+          // men om man vill vara strikt:
+          // localStorage.removeItem('cached_avatar_url');
         }
       });
     } else {
       setNavImage(null);
+      localStorage.removeItem('cached_avatar_url'); // Rensa vid utloggning
     }
   }, [user]);
 

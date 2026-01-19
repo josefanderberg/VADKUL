@@ -324,6 +324,7 @@ export default function CreateEvent() {
                 // --- SKAPA NYTT EVENT ---
                 const newEvent: Omit<AppEvent, 'id'> = {
                     ...commonData,
+                    views: 0,
                     host: {
                         uid: user.uid,
                         name: user.displayName || user.email,

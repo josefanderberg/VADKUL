@@ -32,13 +32,22 @@ service cloud.firestore {
       allow read: if isAuthenticated(); // Behövs för att se andras profiler/bilder
       allow create: if isOwner(userId); // Man får skapa sin egen profil
       
-      // Man får uppdatera sin egen profil, MEN...
-      // Man får INTE ge sig själv admin-rättigheter eller verifiera sig själv.
+      // Man får uppdatera sin egen profil...
+      // ELLER om man bara uppdaterar 'rating' och 'ratingCount' (för att ge omdöme)
       allow update: if isOwner(userId) 
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isVerified', 'verificationStatus']));
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified', 'verificationStatus']))
+        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         
       // Admins får göra allt (t.ex. verifiera användare)
       allow write: if isAdmin();
+      
+      // UNDERSAMLING: Reviews (Omdömen)
+      match /reviews/{reviewerId} {
+        // Man får läsa alla omdömen (eller begränsa om man vill)
+        allow read: if isAuthenticated();
+        // Man får skriva ETT omdöme om man är den personen (reviewerId måste matcha mitt UID)
+        allow write: if isAuthenticated() && request.auth.uid == reviewerId;
+      }
     }
 
     // 2. EVENTS
@@ -52,8 +61,15 @@ service cloud.firestore {
       allow update: if 
         isAdmin() ||            // Admin får ändra allt
         isHost() ||             // Värden får ändra allt
-        (isAuthenticated() &&   // Andra får BARA ändra 'attendees' (för att gå med/gå ur)
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']));
+         (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees'])) ||
+         // Tillåt alla (även oinloggade) att öka visningar
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']);
+
+      // UNDERSAMLING: Event Chat Messages
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+      }
     }
     
     // 3. CHATS (Privata meddelanden / Grupper)
@@ -73,7 +89,8 @@ service cloud.firestore {
     // 4. NOTIFICATIONS (Om du använder det)
     match /notifications/{notifId} {
       allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      allow create: if isAuthenticated(); // Tillåt användare att skicka notiser till varandra (t.ex. "join request")
+      allow create: if isAuthenticated(); // Tillåt användare att skicka notiser till varandra
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid; // TILLÅT uppdatering (markera som läst)
     }
     
     // 5. FEEDBACK (För din nya funktion)

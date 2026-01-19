@@ -1,6 +1,6 @@
 import {
   collection, getDocs, addDoc, doc, updateDoc, getDoc, deleteDoc, Timestamp,
-  query, where
+  query, where, increment
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AppEvent, FirestoreEventData } from '../types'; // OBS: "import type"
@@ -76,6 +76,7 @@ export const eventService = {
   async create(event: Omit<AppEvent, 'id'>) {
     const payload = {
       ...event,
+      views: 0,
       time: Timestamp.fromDate(event.time),
       createdAt: Timestamp.now() // Use client-side timestamp for simplicity effectively matching server
     };
@@ -128,5 +129,45 @@ export const eventService = {
   async updateAttendees(eventId: string, attendees: any[]) {
     const ref = doc(db, COLLECTION, eventId);
     await updateDoc(ref, { attendees });
+  },
+
+  async incrementViews(id: string) {
+    const ref = doc(db, COLLECTION, id);
+    await updateDoc(ref, {
+      views: increment(1)
+    });
+  },
+
+  // Uppdatera host-data på alla events när användaren byter profil
+  async updateEventsHostData(uid: string, hostData: { name: string; photoURL: string | null; verified: boolean }) {
+    try {
+      // 1. Hämta alla events där jag är värd
+      const q = query(collection(db, COLLECTION), where("host.uid", "==", uid));
+      const snap = await getDocs(q);
+
+      if (snap.empty) return;
+
+      // 2. Uppdatera alla (batch hade varit bättre men loop funkar för nu och är enklare med typerna)
+      const updates = snap.docs.map(docSnapshot => {
+        const eventData = docSnapshot.data() as FirestoreEventData;
+        const ref = doc(db, COLLECTION, docSnapshot.id);
+
+        return updateDoc(ref, {
+          host: {
+            ...eventData.host,
+            name: hostData.name,
+            photoURL: hostData.photoURL,
+            verified: hostData.verified
+          }
+        });
+      });
+
+      await Promise.all(updates);
+      console.log(`Updated host data for ${updates.length} events.`);
+
+    } catch (error) {
+      console.error("Failed to sync host data to events:", error);
+      throw error;
+    }
   }
 };

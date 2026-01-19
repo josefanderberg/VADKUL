@@ -1,7 +1,7 @@
 // src/pages/Home.tsx
 
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -48,12 +48,61 @@ function MapController({ center, onClick }: { center: [number, number], onClick:
     });
     return null;
 }
+// Helper to track map state
+function MapStateTracker() {
+    const map = useMapEvents({
+        moveend: () => {
+            const center = map.getCenter();
+            sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
+            sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
+        },
+        zoomend: () => {
+            const center = map.getCenter();
+            sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
+            sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
+        }
+    });
+    return null;
+}
 
 export default function Home() {
-    const [events, setEvents] = useState<AppEvent[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [view, setView] = useState<'list' | 'map'>('list');
-    const [userLocation, setUserLocation] = useState<[number, number]>([56.8556, 14.8250]);
+    // 1. Initiera events från cache för att slippa "blink"
+    const [events, setEvents] = useState<AppEvent[]>(() => {
+        try {
+            const cached = sessionStorage.getItem('vadkul_events_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Måste återställa Datum-objekt eftersom JSON gör dem till strängar
+                return parsed.map((evt: any) => ({
+                    ...evt,
+                    time: new Date(evt.time),
+                    createdAt: evt.createdAt ? new Date(evt.createdAt) : undefined
+                }));
+            }
+            return [];
+        } catch (e) {
+            return [];
+        }
+    });
+
+    // 2. Om vi har data, visa den DIREKT (loading=false)
+    const [loading, setLoading] = useState(() => {
+        return !sessionStorage.getItem('vadkul_events_cache');
+    });
+
+    // Initialize view from storage
+    const [view, setView] = useState<'list' | 'map'>(() => {
+        return (sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
+    });
+
+    // Initialize userLocation from storage if available (Visual center), else default
+    // We keep userLocation as the "Anchor" but initially set it to saved View center if exists,
+    // to prevent jumping. (Or strictly separate View vs UserPos, but this is simpler)
+    const [userLocation, setUserLocation] = useState<[number, number]>(() => {
+        const saved = sessionStorage.getItem('vadkul_map_center');
+        return saved ? JSON.parse(saved) : [56.8556, 14.8250];
+    });
+
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
     // Filter states (Avstånd borttaget)
@@ -64,30 +113,86 @@ export default function Home() {
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
 
+    // --- Persist View State ---
+    useEffect(() => {
+        sessionStorage.setItem('vadkul_home_view', view);
+    }, [view]);
+
+    // --- AGGRESSIVE SCROLL RESTORATION ---
+    // 1. Disable browser's auto restoration to avoid conflicts
+    useEffect(() => {
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+        return () => {
+            // Reset to auto when leaving Home (optional, but good practice if other pages rely on it)
+            // But since we want to control it, maybe keep it manual or let other pages set it.
+            // For now, let's leave it manual or reset it.
+            if ('scrollRestoration' in window.history) {
+                window.history.scrollRestoration = 'auto';
+            }
+        }
+    }, []);
+
+    // 2. Restore Scroll logic
+    useLayoutEffect(() => {
+        if (view === 'list' && !loading) {
+            const savedScroll = sessionStorage.getItem('vadkul_home_scroll');
+            if (savedScroll) {
+                const scrollPos = parseInt(savedScroll, 10);
+                if (scrollPos > 0) {
+                    // Restore immediately
+                    window.scrollTo(0, scrollPos);
+                }
+            }
+        }
+    }, [view, loading]); // Run whenever view or loading changes
+
+    // --- Save Scroll on Unmount/View Change/Scroll ---
+    useEffect(() => {
+        // Save scroll position periodically or on leave
+        const handleScroll = () => {
+            if (view === 'list') {
+                sessionStorage.setItem('vadkul_home_scroll', window.scrollY.toString());
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [view]);
 
 
-
-    // --- Hantera scroll på containern för att gömma/visa menyn (REMOVED LOGIC) ---
-    // User wants manual control, so we keep this empty or remove if fully unused.
-    // Keeping handleContainerScroll as empty to avoid extensive rewrite if container uses it,
-    // but better to remove usages.
-
-
+    // Ladda data varje gång komponenten mountas (vilket sker när man navigerar tillbaka från EventDetails)
     useEffect(() => {
         loadData();
-        if (navigator.geolocation) {
+
+        // Only fetch GPS if we DON'T have a saved state, OR just update silent?
+        // If we force update userLocation on mount, we lose the "saved view".
+        // Let's only do it if no saved center exists.
+        if (!sessionStorage.getItem('vadkul_map_center') && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 setUserLocation([pos.coords.latitude, pos.coords.longitude]);
                 saveLocationToLocalStorage(pos.coords.latitude, pos.coords.longitude);
             });
         }
-    }, []);
+    }, []); // Empty dependency array = run on mount
 
     async function loadData() {
-        setLoading(true);
-        const data = await eventService.getAll();
-        setEvents(data);
-        setLoading(false);
+        // Bara visa spinner om vi INTE har data. Har vi data kör vi "silent update" (stale-while-revalidate)
+        if (events.length === 0) {
+            setLoading(true);
+        }
+
+        try {
+            const data = await eventService.getAll();
+            setEvents(data);
+            // Spara till cache för nästa gång
+            sessionStorage.setItem('vadkul_events_cache', JSON.stringify(data));
+        } catch (error) {
+            console.error("Failed to load events", error);
+        } finally {
+            setLoading(false);
+        }
     }
 
     // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
@@ -285,9 +390,13 @@ export default function Home() {
                     ) : (
                         <div className="relative h-full w-full rounded-2xl overflow-hidden border border-border shadow-inner">
 
-
-                            <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
+                            <MapContainer center={userLocation} zoom={(() => {
+                                // Initialize zoom from storage (inline since we only need it once)
+                                const z = sessionStorage.getItem('vadkul_map_zoom');
+                                return z ? parseInt(z, 10) : 13;
+                            })()} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <MapStateTracker />
                                 <MapController center={userLocation} onClick={handleMapClick} />
                                 {filteredEvents.map(evt => {
                                     const isSelected = selectedEvent?.id === evt.id;

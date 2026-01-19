@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../lib/firebase';
 import { userService } from '../services/userService';
+import { eventService } from '../services/eventService';
 import { storageService } from '../services/storageService';
 import { updatePassword } from 'firebase/auth';
 import Layout from '../components/layout/Layout';
@@ -169,7 +170,6 @@ export default function Settings() {
 
             // Prepare Age
             const ageNum = calculateAge(birthDate);
-
             await userService.createUserProfile(user.uid, {
                 displayName,
                 age: ageNum,
@@ -182,6 +182,26 @@ export default function Settings() {
                 verificationStatus: newStatus,
                 verificationImage: verificationImage || activeProfile?.verificationImage || null // Use null
             });
+
+            // --- 3. SYNKRONISERA MED EVENTS ---
+            // Om namn, bild eller verifiering ändrats så måste vi uppdatera alla events
+            // där användaren är värd, annars visas gammal info.
+            try {
+                // Skapa hostData object som matchar det Event förväntar sig
+                const hostData = {
+                    name: displayName,
+                    photoURL: profileImage || null,
+                    verified: newIsVerified
+                };
+
+                // Kör async men vänta inte nödvändigtvis? Jo, vi vill nog vänta så det är klart.
+                console.log("Syncing host data to events...", hostData);
+                await eventService.updateEventsHostData(user.uid, hostData);
+                console.log("Sync complete.");
+            } catch (err) {
+                console.error("Failed to sync host data to events (non-critical):", err);
+                // Vi kastar inte error här för att inte förstöra hela spara-flödet
+            }
 
             // Om lösenord fyllts i
             if (newPassword) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, Timestamp, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 import { notificationService } from '../services/notificationService';
@@ -128,6 +129,7 @@ const getRandomCategory = (): EventCategoryType => {
 // --- HUVUDKOMPONENT ---
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -233,9 +235,9 @@ export default function AdminDashboard() {
             displayName: randomUser.displayName || 'Anonym',
             name: randomUser.displayName || 'Anonym Testare',
             initials: randomUser.displayName ? randomUser.displayName.charAt(0).toUpperCase() : 'A',
-            verified: Math.random() > 0.8,
-            rating: 3 + Math.random() * 2,
-            photoURL: null,
+            verified: randomUser.isVerified || false,
+            rating: randomUser.rating || (3 + Math.random() * 2),
+            photoURL: randomUser.photoURL || `https://i.pravatar.cc/150?u=${randomUser.uid}`,
           },
           attendees: [],
           createdAt: Timestamp.now()
@@ -255,38 +257,120 @@ export default function AdminDashboard() {
   };
 
   // ---------------------------------------------------------
-  // FUNKTION 2: RENSA ALLA EVENTS
+  // FUNKTION 2: SYNKA HOST BILDER
   // ---------------------------------------------------------
-  const handleClearEvents = async () => {
-    if (!confirm("⚠️ VARNING: Detta tar bort ALLA events i databasen permanent. Är du helt säker?")) return;
+  // ---------------------------------------------------------
+  // FUNKTION 2: SYNKA HOST BILDER
+  // ---------------------------------------------------------
+  const handleSyncHostImages = async () => {
+    if (!confirm("Vill du uppdatera alla events med värdens nuvarande profilbild? Detta kan ta en stund.")) return;
 
     setLoading(true);
-    addLog("🗑️ Börjar rensa databasen...");
+    addLog(`🔄 Startar synkronisering av profilbilder...`);
 
     try {
-      const snap = await getDocs(collection(db, 'events'));
-      const total = snap.size;
+      // 1. Hämta alla events
+      const eventsSnap = await getDocs(collection(db, 'events'));
+      const events = eventsSnap.docs;
+      addLog(`Hittade ${events.length} events.`);
 
-      if (total === 0) {
-        addLog("Databasen är redan tom.");
-        setLoading(false);
-        return;
+      let updateCount = 0;
+      let batchCount = 0;
+      let currentBatch = writeBatch(db);
+      let operationsInBatch = 0;
+      const MAX_BATCH_SIZE = 400; // Firestore limit is 500, keeping safety margin
+
+      // 2. Loopa och kolla mot users
+      for (const docSnap of events) {
+        const eventData = docSnap.data();
+        const hostUid = eventData.host?.uid;
+
+        if (hostUid) {
+          const hostUser = users.find(u => u.uid === hostUid);
+
+          if (hostUser) {
+            // Använd 'photoURL' från user, ELLER null om det saknas.
+            const correctPhoto = hostUser.photoURL || null;
+            const currentEventPhoto = eventData.host.photoURL || null;
+
+            if (correctPhoto !== currentEventPhoto) {
+              const eventRef = doc(db, 'events', docSnap.id);
+              currentBatch.update(eventRef, {
+                "host.photoURL": correctPhoto,
+                "host.name": hostUser.displayName || eventData.host.name, // Passa på att uppdatera namn också
+                "host.verified": hostUser.isVerified || false
+              });
+
+              updateCount++;
+              operationsInBatch++;
+
+              // Commit batch if full
+              if (operationsInBatch >= MAX_BATCH_SIZE) {
+                await currentBatch.commit();
+                batchCount++;
+                addLog(`💾 Sparade batch ${batchCount} (${operationsInBatch} ändringar)...`);
+                currentBatch = writeBatch(db); // Start new batch
+                operationsInBatch = 0;
+              }
+            }
+          }
+        }
       }
 
-      // Firestore batch delete
-      const batch = writeBatch(db);
-      snap.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
+      // Commit remaining operations
+      if (operationsInBatch > 0) {
+        await currentBatch.commit();
+        batchCount++;
+        addLog(`💾 Sparade sista batchen (${operationsInBatch} ändringar).`);
+      }
 
-      await batch.commit();
-      addLog(`✅ Raderade ${total} events.`);
+      if (updateCount > 0) {
+        addLog(`✅ KLART! Uppdaterade totalt ${updateCount} events.`);
+        toast.success(`Synkade ${updateCount} events!`);
+      } else {
+        addLog(`✅ Alla events är redan synkade.`);
+        toast.success("Allt är redan synkat!");
+      }
+
     } catch (error: any) {
-      addLog(`❌ Fel vid radering: ${error.message}`);
+      console.error("Sync Error:", error);
+      addLog(`❌ Svarar servern med fel? Kontrollera dina rättigheter.`);
+      addLog(`❌ Felmeddelande: ${error.message}`);
+      toast.error("Kunde inte synka. Se loggen för detaljer.");
     } finally {
       setLoading(false);
     }
   };
+
+  // ---------------------------------------------------------
+  // FUNKTION [NEW]: BLI ADMIN
+  // ---------------------------------------------------------
+  const handleBecomeAdmin = async () => {
+    if (!user) {
+      toast.error("Du måste vara inloggad först.");
+      return;
+    }
+    if (!confirm("Vill du ge dig själv admin-rättigheter?")) return;
+
+    setLoading(true);
+    addLog(`👑 Uppdaterar rättigheter för ${user.email}...`);
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        isAdmin: true
+      });
+      addLog(`✅ KLART! Du är nu admin.`);
+      toast.success("Du är nu admin! 👑");
+    } catch (error: any) {
+      addLog(`❌ Fel: ${error.message}`);
+      toast.error("Kunde inte uppdatera rättigheter.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   // ---------------------------------------------------------
   // FUNKTION 3: VARNA ANVÄNDARE
@@ -512,20 +596,32 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* KORT 2: Rensa Data */}
+              {/* KORT: UNDERHÅLL */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-red-600">⚠️ Farozon</h2>
-                <p className="text-sm text-slate-600 mb-4">
-                  Ta bort all data i `events`-samlingen. Går ej att ångra.
-                </p>
-                <button
-                  onClick={handleClearEvents}
-                  disabled={loading}
-                  className="w-full bg-red-50 text-red-600 border border-red-200 py-3 px-4 rounded-lg font-bold hover:bg-red-100 transition disabled:opacity-50"
-                >
-                  🗑️ RADERA ALLA EVENTS
-                </button>
+                <h2 className="text-xl font-semibold mb-4 text-blue-800">🛠️ Underhåll</h2>
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600 mb-4">
+                    Uppdatera alla events så att värdens bild matchar deras nuvarande profilbild (användbart om bilder ändrats eller saknas).
+                  </p>
+                  <button
+                    onClick={handleSyncHostImages}
+                    disabled={loading}
+                    className="w-full bg-blue-100 text-blue-800 py-2 px-4 rounded-lg font-medium hover:bg-blue-200 transition disabled:opacity-50 flex items-center justify-center gap-2 mb-2"
+                  >
+                    🔄 Synka Profilbilder
+                  </button>
+
+                  <button
+                    onClick={handleBecomeAdmin}
+                    disabled={loading}
+                    className="w-full bg-amber-100 text-amber-800 py-2 px-4 rounded-lg font-medium hover:bg-amber-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    👑 Bli Admin (Lös rättighetsproblem)
+                  </button>
+                </div>
               </div>
+
+
 
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-xl font-semibold mb-4 text-slate-800">📢 Skicka Varning</h2>

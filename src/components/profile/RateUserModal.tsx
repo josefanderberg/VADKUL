@@ -25,7 +25,7 @@ export default function RateUserModal({ isOpen, onClose, onSubmit, targetName }:
             await onSubmit(rating, comment);
             onClose();
             // Toast sköts troligen av föräldern eller här
-            toast.success("Tack för ditt omdöme! ⭐");
+            // Toast sköts av föräldern (PublicProfile)
         } catch (error) {
             toast.error("Något gick fel.");
             console.error(error);
@@ -65,8 +65,8 @@ export default function RateUserModal({ isOpen, onClose, onSubmit, targetName }:
                                 <Star
                                     size={36}
                                     className={`${(hoverRating || rating) >= star
-                                            ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm'
-                                            : 'text-slate-300 dark:text-slate-600'
+                                        ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm'
+                                        : 'text-slate-300 dark:text-slate-600'
                                         } transition-colors duration-200`}
                                 />
                             </button>
