@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 import { notificationService } from '../services/notificationService';
-import { CheckCircle2, XCircle, ShieldAlert, User } from 'lucide-react';
+import { CheckCircle2, XCircle, ShieldAlert, User, MessageSquare } from 'lucide-react';
+import { feedbackService } from '../services/feedbackService';
+import type { FeedbackItem } from '../types';
 import toast from 'react-hot-toast';
 
 // --- KONFIGURATION & KONSTANTER ---
@@ -139,6 +141,9 @@ export default function AdminDashboard() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
 
+  // Feedback State
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+
   // Pagination for user list
   const [visibleCount, setVisibleCount] = useState(5);
 
@@ -163,7 +168,15 @@ export default function AdminDashboard() {
         addLog("Kunde inte hämta användarlistan.");
       }
     };
+
+    const fetchFeedback = async () => {
+      const data = await feedbackService.getRecentFeedback(5);
+      setFeedback(data);
+    };
+
     fetchUsers();
+    fetchFeedback();
+
   }, [loading]); // Reload when loading finishes (e.g. after action)
 
   const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
@@ -504,6 +517,36 @@ export default function AdminDashboard() {
 
             {/* VÄNSTER KOLUMN: ACTIONS */}
             <div className="space-y-6">
+
+
+              {/* KORT: Senaste Feedback */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-purple-100 ring-4 ring-purple-50">
+                <h2 className="text-xl font-bold mb-4 text-purple-900 flex items-center gap-2">
+                  <MessageSquare className="text-purple-600" />
+                  Senaste Feedback
+                </h2>
+                <div className="space-y-4">
+                  {feedback.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Ingen feedback än.</p>
+                  ) : (
+                    feedback.map((item) => (
+                      <div key={item.id} className="border border-purple-100 rounded-lg p-4 bg-purple-50/50">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`text-sm ${i < item.rating ? 'text-yellow-400' : 'text-gray-300'}`}>★</span>
+                            ))}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {item.createdAt?.toDate().toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-800 italic">"{item.message}"</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
               {/* KORT 0: Verifieringsförfrågningar */}
               {pendingVerifications.length > 0 && (

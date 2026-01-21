@@ -165,7 +165,13 @@ export default function Settings() {
         try {
             // Om vi har laddat upp en ny bild, sätt status till pending och isVerified till false
             // Om vi redan är verifierade och inte ändrat bild, behåll status
-            const newStatus = verificationImage ? 'pending' : (activeProfile?.verificationStatus || 'none');
+            // Om vi INTE har en bild och INTE laddar upp en ny, se till att status INTE är pending
+            const newStatus = verificationImage
+                ? 'pending'
+                : (activeProfile?.verificationStatus === 'pending' && !activeProfile.verificationImage
+                    ? 'none'
+                    : (activeProfile?.verificationStatus || 'none'));
+
             const newIsVerified = verificationImage ? false : (activeProfile?.isVerified || false);
 
             // Prepare Age
@@ -259,7 +265,7 @@ export default function Settings() {
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inställningar</h1>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-slate-100 dark:border-neutral-800 overflow-hidden">
 
                     <form onSubmit={handleSave} className="p-6 space-y-8">
 
@@ -270,7 +276,7 @@ export default function Settings() {
                             </h2>
                             <div className="flex items-start gap-4 mb-4">
                                 <div className="relative group cursor-pointer">
-                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600">
+                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 dark:bg-neutral-800 border-2 border-slate-200 dark:border-neutral-700">
                                         {profileImage ? (
                                             <img src={profileImage} alt="Profil" className="w-full h-full object-cover" />
                                         ) : (
@@ -285,7 +291,7 @@ export default function Settings() {
                                 </div>
                                 <div className="flex-1 space-y-4">
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Visningsnamn</label>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-neutral-300 mb-1">Visningsnamn</label>
                                         <input
                                             type="text"
                                             value={displayName}
@@ -295,7 +301,7 @@ export default function Settings() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Födelsedatum</label>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-neutral-300 mb-1">Födelsedatum</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="date"
@@ -316,20 +322,20 @@ export default function Settings() {
 
                             {/* BIO */}
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                                <label className="block text-sm font-bold text-slate-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
                                     <FileText size={14} className="text-slate-400" /> Biografi
                                 </label>
                                 <textarea
                                     value={bio}
                                     onChange={e => handleInputChange(setBio, e.target.value)}
                                     rows={3}
-                                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white text-sm resize-none"
+                                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white text-sm resize-none"
                                     placeholder="Berätta kort om dig själv..."
                                 />
                             </div>
                         </section>
 
-                        <hr className="border-slate-100 dark:border-slate-700" />
+                        <hr className="border-slate-100 dark:border-neutral-800" />
 
                         {/* 2. VERIFIERING */}
                         <section>
@@ -346,7 +352,7 @@ export default function Settings() {
                                         <p className="text-xs opacity-80">Din identitet har bekräftats. Du kan inte ändra din verifieringsbild.</p>
                                     </div>
                                 </div>
-                            ) : verificationStatus === 'pending' ? (
+                            ) : verificationStatus === 'pending' && (verificationImage || activeProfile?.verificationImage) ? ( // VISA ENDAST pending OM bild finns!
                                 <div className="space-y-4">
                                     <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 p-4 rounded-xl flex items-center gap-3 border border-blue-100 dark:border-blue-900/50">
                                         <RefreshCw size={24} className="flex-shrink-0 animate-spin-slow" />
@@ -377,7 +383,7 @@ export default function Settings() {
                                     ) : null}
 
                                     {/* KAMERA LOGIK */}
-                                    <div className="relative w-full max-w-sm mx-auto bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700">
+                                    <div className="relative w-full max-w-sm mx-auto bg-slate-100 dark:bg-neutral-900 rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-neutral-700">
                                         {!cameraActive && !verificationImage && (
                                             <button type="button" onClick={startCamera} className="flex flex-col items-center text-slate-500 hover:text-indigo-600 transition-colors">
                                                 <Camera size={32} className="mb-2" />
@@ -401,7 +407,7 @@ export default function Settings() {
                                             <button type="button" onClick={stopCamera} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-full font-bold text-sm">Avbryt</button>
                                         )}
                                         {verificationImage && (
-                                            <button type="button" onClick={() => { setVerificationImage(null); startCamera(); setHasUnsavedChanges(true); }} className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-full font-bold text-sm hover:bg-slate-300">
+                                            <button type="button" onClick={() => { setVerificationImage(null); startCamera(); setHasUnsavedChanges(true); }} className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-neutral-700 text-slate-700 dark:text-slate-200 rounded-full font-bold text-sm hover:bg-slate-300">
                                                 <RefreshCw size={14} /> Ta om
                                             </button>
                                         )}
@@ -410,7 +416,7 @@ export default function Settings() {
                             )}
                         </section>
 
-                        <hr className="border-slate-100 dark:border-slate-700" />
+                        <hr className="border-slate-100 dark:border-neutral-800" />
 
                         {/* 3. SÄKERHET - LÖSENORD */}
                         <section>
@@ -422,20 +428,20 @@ export default function Settings() {
                                     type="password"
                                     value={newPassword}
                                     onChange={e => handleInputChange(setNewPassword, e.target.value)}
-                                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
+                                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
                                     placeholder="Nytt lösenord (minst 6 tecken)"
                                 />
                                 <input
                                     type="password"
                                     value={confirmPassword}
                                     onChange={e => setConfirmPassword(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
+                                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 focus:ring-2 focus:ring-indigo-500 outline-none  dark:text-white text-sm"
                                     placeholder="Bekräfta lösenord"
                                 />
                             </div>
                         </section>
 
-                        <div className="pt-4 flex items-center justify-end sticky bottom-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md py-4 border-t border-slate-100 dark:border-slate-700 -mx-6 px-6">
+                        <div className="pt-4 flex items-center justify-end sticky bottom-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md py-4 border-t border-slate-100 dark:border-neutral-800 -mx-6 px-6">
                             <button
                                 type="submit"
                                 disabled={saving}
@@ -452,7 +458,7 @@ export default function Settings() {
                     </form>
 
                     {/* Danger Zone */}
-                    <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
+                    <div className="p-6 bg-slate-50 dark:bg-neutral-900/50 border-t border-slate-100 dark:border-neutral-800">
                         <button
                             onClick={handleLogout}
                             className="text-red-600 font-bold text-sm flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors w-full justify-center"

@@ -120,3 +120,12 @@ export interface FirestoreEventData extends Omit<AppEvent, 'id' | 'time' | 'crea
   createdAt?: Timestamp;
   views: number;
 }
+
+export interface FeedbackItem {
+  id: string;
+  rating: number;
+  message: string;
+  createdAt: Timestamp;
+  userAgent?: string;
+  userId?: string;
+}

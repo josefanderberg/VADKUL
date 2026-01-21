@@ -192,9 +192,9 @@ export default function Login() {
                 displayName: fullName,
                 age: calculateAge(birthDate),
                 birthDate: birthDate,
-                // Fix: Sätt till false/pending vid registrering
+                // Fix: Sätt till 'pending' ENDAST om bild laddades upp
                 isVerified: false,
-                verificationStatus: 'pending',
+                verificationStatus: verificationUrl ? 'pending' : 'none',
                 verificationImage: verificationUrl || capturedImage || undefined, // undefined will be filtered out by userService
                 photoURL: null // Null is valid in Firestore to signify "no value" if we want that
             });
@@ -288,7 +288,7 @@ export default function Login() {
                         {/* --- REGISTRERING STEG 2 (Profil & Kamera) --- */}
                         {!isLoginMode && regStep === 2 && (
                             <>
-                                <div className="space-y-5">
+                                <div className="space-y-5 mb-8">
                                     <div className="grid grid-cols-10 gap-3">
                                         <div className="col-span-3">
                                             <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
@@ -296,7 +296,7 @@ export default function Login() {
                                                 className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
                                         </div>
                                         <div className="col-span-7">
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Födelsedatum</label>
+                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Födelsedatum</label>
                                             <div className="grid grid-cols-10 gap-2">
                                                 {/* ÅR */}
                                                 <div className="col-span-4">
