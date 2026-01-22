@@ -367,84 +367,92 @@ export default function PublicProfile() {
                     </div>
                 </div>
 
-                {/* --- TABS --- */}
-                <div className="border-b border-border">
-                    <div className="flex mb-1">
-                        <button
-                            onClick={() => setActiveTab('hosted')}
-                            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
-                                ${activeTab === 'hosted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
-                            `}
-                        >
-                            Arrangerar
-                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{hostedEvents.length}</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('joined')}
-                            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
-                                ${activeTab === 'joined' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
-                            `}
-                        >
-                            Ska gå på
-                            {friendStatus === 'accepted' && joinedEvents.length > 0 && (
-                                <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{joinedEvents.length}</span>
-                            )}
-                        </button>
-                    </div>
+                {/* --- BLURRED CONTENT WRAPPER FOR NON-AUTH USERS --- */}
+                <div className="relative">
 
-                    {/* SORT CONTROLS - Visas bara om det finns events */}
-                    {currentList.length > 0 && (activeTab === 'hosted' || friendStatus === 'accepted') && (
-                        <div className="p-2 flex justify-end gap-2">
-                            <label className="text-xs font-semibold text-muted-foreground self-center mr-1">Sortera:</label>
-                            <div className="flex bg-card rounded-lg p-1 border border-border shadow-sm">
-                                <button
-                                    onClick={() => setSortOption('created')}
-                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all
-                                            ${sortOption === 'created' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
-                                        `}
-                                >
-                                    Senast tillagd
-                                </button>
-                                <button
-                                    onClick={() => setSortOption('time')}
-                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all
-                                            ${sortOption === 'time' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
-                                        `}
-                                >
-                                    Tid kvar
-                                </button>
+                    {/* OVERLAY FOR NON-AUTH */}
+                    {!currentUser && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pt-20 bg-background/60 backdrop-blur-sm rounded-xl border border-white/20">
+                            <div className="bg-card p-8 rounded-2xl shadow-2xl border border-border max-w-md text-center transform hover:scale-105 transition-transform duration-300">
+                                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary animate-pulse">
+                                    <UserPlus size={32} />
+                                </div>
+                                <h2 className="text-2xl font-bold mb-2">Nyfiken på {profile.displayName}?</h2>
+                                <p className="text-muted-foreground mb-6">
+                                    Logga in för att se vilka events {profile.displayName} ska gå på, vilka vänner hen har och mycket mer!
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={() => navigate('/login')}
+                                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-colors"
+                                    >
+                                        Logga in / Skapa konto
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
-                </div>
 
+                    {/* ACTUAL CONTENT (Blurred if !currentUser) */}
+                    <div className={!currentUser ? 'filter blur-md pointer-events-none select-none opacity-50' : ''}>
 
-                {/* --- CONTENT AREA --- */}
-                <div className="min-h-[200px] mt-6">
+                        {/* --- TABS --- */}
+                        <div className="border-b border-border">
+                            <div className="flex mb-1">
+                                <button
+                                    onClick={() => setActiveTab('hosted')}
+                                    className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
+                                        ${activeTab === 'hosted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
+                                    `}
+                                >
+                                    Arrangerar
+                                    <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{hostedEvents.length}</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('joined')}
+                                    className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 flex items-center gap-2
+                                        ${activeTab === 'joined' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}
+                                    `}
+                                >
+                                    Ska gå på
+                                    {friendStatus === 'accepted' && joinedEvents.length > 0 && (
+                                        <span className="bg-muted px-2 py-0.5 rounded-full text-xs text-muted-foreground">{joinedEvents.length}</span>
+                                    )}
+                                </button>
+                            </div>
 
-                    {/* CASE HOSTED EVENTS */}
-                    {activeTab === 'hosted' && (
-                        currentList.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                                {currentList.map(evt => (
-                                    <div key={evt.id} className="h-full">
-                                        <EventCard event={evt} compact={false} />
+                            {/* SORT CONTROLS - Visas bara om det finns events */}
+                            {currentList.length > 0 && (activeTab === 'hosted' || friendStatus === 'accepted') && (
+                                <div className="p-2 flex justify-end gap-2">
+                                    <label className="text-xs font-semibold text-muted-foreground self-center mr-1">Sortera:</label>
+                                    <div className="flex bg-card rounded-lg p-1 border border-border shadow-sm">
+                                        <button
+                                            onClick={() => setSortOption('created')}
+                                            className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                                    ${sortOption === 'created' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                                `}
+                                        >
+                                            Senast tillagd
+                                        </button>
+                                        <button
+                                            onClick={() => setSortOption('time')}
+                                            className={`px-3 py-1 rounded-md text-xs font-medium transition-all
+                                                    ${sortOption === 'time' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}
+                                                `}
+                                        >
+                                            Tid kvar
+                                        </button>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl">
-                                Ingen events skapade just nu.
-                            </div>
-                        )
-                    )}
+                                </div>
+                            )}
+                        </div>
 
-                    {/* CASE JOINED EVENTS */}
-                    {activeTab === 'joined' && (
-                        friendStatus === 'accepted' ? (
-                            eventsLoading ? (
-                                <Loading text="Hämtar..." />
-                            ) : (
+
+                        {/* --- CONTENT AREA --- */}
+                        <div className="min-h-[200px] mt-6">
+
+                            {/* CASE HOSTED EVENTS */}
+                            {activeTab === 'hosted' && (
                                 currentList.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2">
                                         {currentList.map(evt => (
@@ -455,32 +463,55 @@ export default function PublicProfile() {
                                     </div>
                                 ) : (
                                     <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl">
-                                        {profile.displayName} ska inte gå på något just nu.
+                                        Ingen events skapade just nu.
                                     </div>
                                 )
-                            )
-                        ) : (
-                            // PRIVATE CONTENT
-                            <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border flex flex-col items-center">
-                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-                                    <LogOut size={24} />
-                                </div>
-                                <h3 className="text-lg font-bold mb-2">Detta är privat</h3>
-                                <p className="text-muted-foreground max-w-xs mx-auto mb-6">
-                                    Du måste vara vän med {profile.displayName} för att se vilka events de ska gå på.
-                                </p>
-                                {friendStatus === 'none' && (
-                                    <button
-                                        onClick={handleFriendRequest}
-                                        className="text-primary font-bold hover:underline"
-                                    >
-                                        Skicka vänförfrågan
-                                    </button>
-                                )}
-                            </div>
-                        )
-                    )}
+                            )}
 
+                            {/* CASE JOINED EVENTS */}
+                            {activeTab === 'joined' && (
+                                friendStatus === 'accepted' ? (
+                                    eventsLoading ? (
+                                        <Loading text="Hämtar..." />
+                                    ) : (
+                                        currentList.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2">
+                                                {currentList.map(evt => (
+                                                    <div key={evt.id} className="h-full">
+                                                        <EventCard event={evt} compact={false} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl">
+                                                {profile.displayName} ska inte gå på något just nu.
+                                            </div>
+                                        )
+                                    )
+                                ) : (
+                                    // PRIVATE CONTENT
+                                    <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border flex flex-col items-center">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                                            <LogOut size={24} />
+                                        </div>
+                                        <h3 className="text-lg font-bold mb-2">Detta är privat</h3>
+                                        <p className="text-muted-foreground max-w-xs mx-auto mb-6">
+                                            Du måste vara vän med {profile.displayName} för att se vilka events de ska gå på.
+                                        </p>
+                                        {friendStatus === 'none' && (
+                                            <button
+                                                onClick={handleFriendRequest}
+                                                className="text-primary font-bold hover:underline"
+                                            >
+                                                Skicka vänförfrågan
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            )}
+
+                        </div>
+                    </div>
                 </div>
 
             </div>

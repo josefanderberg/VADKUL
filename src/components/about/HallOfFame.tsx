@@ -1,5 +1,6 @@
 // src/components/about/HallOfFame.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trophy, Star, Flame, Calendar, Users } from 'lucide-react';
 import { eventService } from '../../services/eventService';
 
@@ -199,7 +200,14 @@ export default function HallOfFame() {
     );
 }
 
+// MoviNg `useNavigate` to the parent component isn't strictly necessary if PodiumCard is in the same file, 
+// but usually it's better to pass `onUserClick` prop if we want to keep it pure.
+// However, simplest here is to just use hook inside PodiumCard or pass navigator.
+// Since PodiumCard is a separate function component defined in the same file, it can use hooks.
+
 function PodiumCard({ user, place, type }: { user: LeaderboardUser, place: number, type: 'creator' | 'host' | 'inviter' }) {
+    const navigate = useNavigate(); // Hook must be used inside the component
+
     const isGold = place === 1;
     const isSilver = place === 2;
     const isBronze = place === 3;
@@ -232,7 +240,11 @@ function PodiumCard({ user, place, type }: { user: LeaderboardUser, place: numbe
     };
 
     return (
-        <div className={`relative w-full max-w-[140px] md:max-w-[160px] cursor-pointer group ${heightClass} flex flex-col items-center justify-end p-4 rounded-t-2xl border-x border-t ${borderClass} ${bgClass} ${shadowClass} transition-all duration-500 hover:scale-105`}>
+        <div
+            onClick={() => navigate(`/public-profile/${user.uid}`)}
+            className={`relative w-full max-w-[140px] md:max-w-[160px] cursor-pointer group ${heightClass} flex flex-col items-center justify-end p-4 rounded-t-2xl border-x border-t ${borderClass} ${bgClass} ${shadowClass} transition-all duration-500 hover:scale-105 hover:brightness-110`}
+            title={`Gå till ${user.name}s profil`}
+        >
 
             {/* RANK BADGE */}
             <div className={`absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-sm z-10 

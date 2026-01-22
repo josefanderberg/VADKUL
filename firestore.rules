@@ -29,7 +29,7 @@ service cloud.firestore {
 
     // 1. USERS
     match /users/{userId} {
-      allow read: if isAuthenticated(); // Behövs för att se andras profiler/bilder
+      allow read: if true; // Behövs för att se andras profiler/bilder (även om man inte är inloggad)
       allow create: if isOwner(userId); // Man får skapa sin egen profil
       
       // Man får uppdatera sin egen profil...
