@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Navbar from '../ui/Navbar';
+import InstallPrompt from '../ui/InstallPrompt';
 // NYTT: Importera Toaster
 import { Toaster } from 'react-hot-toast'; // Lägg till denna import
 
@@ -17,6 +18,8 @@ export default function Layout({ children }: LayoutProps) {
       <main className="flex-1 pt-16">
         {children}
       </main>
+
+      <InstallPrompt />
 
       {/* FIX: Byt ut den tomma div:en mot Toaster-komponenten */}
       <Toaster
