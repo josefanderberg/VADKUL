@@ -1,6 +1,6 @@
 {
-    "name": "Vad Kul",
-    "short_name": "Vad Kul",
+    "name": "VADKUL",
+    "short_name": "VADKUL",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
@@ -8,9 +8,14 @@
     "description": "Hitta roliga event på campus!",
     "icons": [
         {
-            "src": "/vite.svg",
-            "sizes": "any",
-            "type": "image/svg+xml"
+            "src": "/pwa-icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/pwa-icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
         }
     ]
 }

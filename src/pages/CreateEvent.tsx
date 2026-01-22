@@ -6,11 +6,12 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import {
     ChevronLeft, ChevronRight, Calendar as CalIcon,
-    MapPin, Check, Users, Info, Image as ImageIcon, X
+    MapPin, Check, Users, Info, Image as ImageIcon, X, KeyRound
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import Layout from '../components/layout/Layout';
+import PromoCodeModal from '../components/events/PromoCodeModal';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import { userService } from '../services/userService';
@@ -113,21 +114,11 @@ export default function CreateEvent() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
     // NY: Kod för exklusiva kategorier
-    const [showCodeInput, setShowCodeInput] = useState(false);
-    const [accessCode, setAccessCode] = useState('');
-    const [codeUnlocked, setCodeUnlocked] = useState(false);
-    const [customCategoryName, setCustomCategoryName] = useState('');
+    const [showPromoModal, setShowPromoModal] = useState(false);
 
-    const handleCodeSubmit = () => {
-        if (accessCode === 'N4TN') {
-            setCodeUnlocked(true);
-            toast.success("Kod godkänd! Ange namn på nation/kår.");
-            // Vi sätter typen direkt, men namnet kommer via inputen
-            setFormData(prev => ({ ...prev, type: 'campus' }));
-        } else {
-            toast.error("Felaktig kod. Försök igen.");
-            setAccessCode('');
-        }
+    const handlePromoSuccess = (_code: string, customName: string) => {
+        setFormData({ ...formData, type: 'campus', customCategory: customName });
+        toast.success(`Kategori inställd: ${customName}`);
     };
 
     // --- LADDA EVENT OM REDIGERING ---
@@ -423,51 +414,11 @@ export default function CreateEvent() {
                         {/* EXCLUSIVE CODE SECTION */}
                         <div className="mt-8 flex flex-col items-center">
                             <button
-                                onClick={() => setShowCodeInput(!showCodeInput)}
-                                className="text-sm font-semibold text-muted-foreground hover:text-primary underline mb-3"
+                                onClick={() => setShowPromoModal(true)}
+                                className="text-sm font-semibold text-muted-foreground hover:text-primary underline mb-3 flex items-center gap-2"
                             >
-                                Har du en kod?
+                                <KeyRound size={16} /> Har du en kod?
                             </button>
-
-                            {showCodeInput && (
-                                <div className="animate-in fade-in slide-in-from-top-2 duration-300 w-full max-w-xs bg-muted/50 p-4 rounded-xl border border-border">
-                                    <div className="flex gap-2 mb-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Ange kod..."
-                                            value={accessCode}
-                                            onChange={e => setAccessCode(e.target.value.toUpperCase())}
-                                            className="flex-grow p-2 rounded-lg border border-border bg-background text-foreground text-center font-mono uppercase tracking-widest placeholder:tracking-normal"
-                                        />
-                                        <button
-                                            onClick={handleCodeSubmit}
-                                            disabled={!accessCode || codeUnlocked}
-                                            className={`px-3 rounded-lg font-bold text-white transition-colors ${codeUnlocked ? 'bg-green-500' : 'bg-primary'}`}
-                                        >
-                                            {codeUnlocked ? <Check size={18} /> : 'OK'}
-                                        </button>
-                                    </div>
-
-                                    {codeUnlocked && (
-                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <p className="text-xs text-green-600 font-bold mb-2 flex items-center justify-center gap-1">
-                                                <Check size={12} /> Kod godkänd!
-                                            </p>
-                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Vilken nation/kår?</label>
-                                            <input
-                                                type="text"
-                                                placeholder="T.ex. Kalmar Nation"
-                                                value={customCategoryName}
-                                                onChange={e => {
-                                                    setCustomCategoryName(e.target.value);
-                                                    setFormData({ ...formData, type: 'campus', customCategory: e.target.value });
-                                                }}
-                                                className="w-full p-2 rounded-lg border border-border bg-background text-foreground"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
@@ -814,6 +765,11 @@ export default function CreateEvent() {
                         )}
                     </div>
                 </div>
+                <PromoCodeModal
+                    isOpen={showPromoModal}
+                    onClose={() => setShowPromoModal(false)}
+                    onSuccess={handlePromoSuccess}
+                />
             </div>
         </Layout>
     );
