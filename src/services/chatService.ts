@@ -1,7 +1,7 @@
 // src/services/chatService.ts
 import {
   collection, addDoc, query, where, orderBy,
-  onSnapshot, Timestamp, doc, setDoc, updateDoc
+  onSnapshot, Timestamp, doc, setDoc, updateDoc, limit
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { ChatMessage, ChatRoom, UserProfile } from '../types';
@@ -76,7 +76,8 @@ export const chatService = {
   subscribeToMessages(chatId: string, callback: (msgs: ChatMessage[]) => void) {
     const q = query(
       collection(db, 'chats', chatId, 'messages'),
-      orderBy('createdAt', 'asc')
+      orderBy('createdAt', 'asc'),
+      limit(20) // Begränsa antal meddelanden för att spara reads
     );
 
     return onSnapshot(q, (snapshot) => {

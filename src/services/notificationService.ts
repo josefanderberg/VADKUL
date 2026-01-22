@@ -1,7 +1,7 @@
 // src/services/notificationService.ts
 import {
   collection, addDoc, query, where, orderBy,
-  onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs
+  onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs, limit
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AppNotification } from '../types';
@@ -26,7 +26,8 @@ export const notificationService = {
     const q = query(
       collection(db, COLLECTION),
       where('recipientId', '==', userId),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(20) // Begränsa till 20 senaste notiserna
     );
 
     return onSnapshot(q, (snapshot) => {

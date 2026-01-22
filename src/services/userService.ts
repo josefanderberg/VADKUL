@@ -1,27 +1,52 @@
 // src/services/userService.ts
-import { doc, setDoc, getDoc, Timestamp, runTransaction, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp, runTransaction, collection, query, orderBy, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { UserProfile } from '../types';
 
 export const userService = {
   // Skapa eller uppdatera användarprofil i databasen
-  async createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'>) {
+  async createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'> & { referrerUid?: string }) {
     const userRef = doc(db, 'users', uid);
 
     // Sanitize data: Remove undefined values which Firestore doesn't support
     // (We allow null for explicit clearing if supported by types, but remove undefined)
     const sanitizedData = Object.entries(data).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
+      if (value !== undefined && key !== 'referrerUid') { // Exclude referrerUid from being saved directly
         acc[key] = value;
       }
       return acc;
     }, {} as any);
 
-    await setDoc(userRef, {
+    // Prepare payload
+    const payload = {
       ...sanitizedData,
       uid,
       createdAt: Timestamp.now(),
-    }, { merge: true });
+      inviteCount: 0 // Initiera räknare
+    };
+
+    // Om vi har en referrer, spara det
+    if (data.referrerUid) {
+      payload.invitedBy = data.referrerUid;
+    }
+
+    await setDoc(userRef, payload, { merge: true });
+
+    // Om referrer finns, öka deras räknare
+    if (data.referrerUid) {
+      const referrerRef = doc(db, 'users', data.referrerUid);
+      // Använd updateDoc för att inte skriva över hela dokumentet, och increment
+      // Vi bryr oss inte om att vänta på denna (fire and forget) eller så gör vi det?
+      // Bäst att vänta för att undvika race-conditions i tester, men för UI är det inte så noga.
+      // Sätt det i en try-catch så det inte stoppar registreringen om det failar.
+      try {
+        await updateDoc(referrerRef, {
+          inviteCount: increment(1)
+        });
+      } catch (e) {
+        console.error("Failed to increment referrer count", e);
+      }
+    }
   },
 
   // Hämta profil

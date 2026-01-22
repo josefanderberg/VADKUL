@@ -1,6 +1,6 @@
 // src/pages/Login.tsx
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { userService } from '../services/userService';
@@ -11,6 +11,19 @@ import Layout from '../components/layout/Layout';
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation(); // <--- Hämta location
+
+    // Fånga referral code vid mount
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const ref = params.get('ref');
+        if (ref) {
+            console.log("Referral detected:", ref);
+            sessionStorage.setItem('vadkul_ref_uid', ref);
+            // Vi byter automatiskt till registreringsläget om man kommer via länk
+            setIsLoginMode(false);
+        }
+    }, [location]);
 
     // State för läge (Logga in vs Registrera)
     const [isLoginMode, setIsLoginMode] = useState(true);
@@ -196,8 +209,12 @@ export default function Login() {
                 isVerified: false,
                 verificationStatus: verificationUrl ? 'pending' : 'none',
                 verificationImage: verificationUrl || capturedImage || undefined, // undefined will be filtered out by userService
-                photoURL: null // Null is valid in Firestore to signify "no value" if we want that
+                photoURL: null, // Null is valid in Firestore to signify "no value" if we want that
+                referrerUid: sessionStorage.getItem('vadkul_ref_uid') || undefined // <--- Skicka med referrerUid
             });
+
+            // Rensa ref efter användning
+            sessionStorage.removeItem('vadkul_ref_uid');
 
             navigate('/');
         } catch (err: any) {

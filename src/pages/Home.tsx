@@ -87,6 +87,7 @@ export default function Home() {
 
     // 2. Om vi har data, visa den DIREKT (loading=false)
     const [loading, setLoading] = useState(() => {
+        // Om vi har data i cache, visa den direkt (loading=false)
         return !sessionStorage.getItem('vadkul_events_cache');
     });
 
@@ -178,7 +179,27 @@ export default function Home() {
     }, []); // Empty dependency array = run on mount
 
     async function loadData() {
-        // Bara visa spinner om vi INTE har data. Har vi data kör vi "silent update" (stale-while-revalidate)
+        const CACHE_KEY = 'vadkul_events_cache';
+        const TIME_KEY = 'vadkul_events_cache_time';
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minuter
+
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cacheTime = sessionStorage.getItem(TIME_KEY);
+
+        const now = Date.now();
+        const isCacheValid = cached && cacheTime && (now - parseInt(cacheTime) < CACHE_DURATION);
+
+        // Om vi har giltig cache, gör INGET (vi har redan laddat från state initializern)
+        if (isCacheValid) {
+            console.log("Using cached events (valid for 5 mins)");
+            setLoading(false);
+            return;
+        }
+
+        console.log("Fetching fresh events...");
+
+        // Bara visa spinner om vi INTE har någon data alls
+        // Om vi har "gammal" data, visa den medan vi hämtar nytt (silent update)
         if (events.length === 0) {
             setLoading(true);
         }
@@ -187,7 +208,8 @@ export default function Home() {
             const data = await eventService.getAll();
             setEvents(data);
             // Spara till cache för nästa gång
-            sessionStorage.setItem('vadkul_events_cache', JSON.stringify(data));
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            sessionStorage.setItem(TIME_KEY, now.toString());
         } catch (error) {
             console.error("Failed to load events", error);
         } finally {

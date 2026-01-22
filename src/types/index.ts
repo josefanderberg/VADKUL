@@ -17,6 +17,8 @@ export interface UserProfile {
   createdAt: Date;
   rating?: number;       // Medelbetyg (0-5)
   ratingCount?: number;  // Antal omdömen
+  inviteCount?: number;  // <--- NY: Antal inbjudna
+  invitedBy?: string;    // <--- NY: Vem bjöd in mig?
 }
 
 export interface UserReview {

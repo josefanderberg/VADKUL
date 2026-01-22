@@ -9,7 +9,8 @@ import type { AppEvent, UserProfile } from '../types';
 import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import RateUserModal from '../components/profile/RateUserModal';
-import { Star, LogOut, Settings, CheckCircle2, MessageSquare } from 'lucide-react';
+import InviteModal from '../components/profile/InviteModal';
+import { Star, LogOut, Settings, CheckCircle2, MessageSquare, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loading from '../components/ui/Loading';
 
@@ -34,6 +35,7 @@ export default function Profile() {
 
     // Modal state
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
     // Cache flags
     const [hasLoadedHosted, setHasLoadedHosted] = useState(false);
@@ -310,6 +312,8 @@ export default function Profile() {
                                 )}
                             </div>
 
+                            {/* --- INVITE SECTION REMOVED --- */}
+
                             {!isMyProfile && !profileLoading && (
                                 <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
                                     {/* --- FRIEND ACTIONS (Flyttade hit) --- */}
@@ -346,6 +350,8 @@ export default function Profile() {
                                         </button>
                                     )}
 
+
+
                                     {/* --- RATE BUTTON --- */}
                                     {hasRated ? (
                                         <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-sm font-bold rounded-full border border-amber-200 dark:border-amber-700/50 flex items-center gap-2 cursor-pointer" title="Du har redan betygsatt">
@@ -363,10 +369,17 @@ export default function Profile() {
                             )}
                         </div>
 
-                        {/* Top Right Actions (Now only Settings/Logout/Chat) */}
+                        {/* Top Right Actions (Now only Settings/Logout/Chat/Invite) */}
                         <div className="flex gap-2 absolute top-4 right-4 md:static self-start">
                             {isMyProfile ? (
                                 <>
+                                    <button
+                                        onClick={() => setIsInviteModalOpen(true)}
+                                        className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+                                        title="Bjud in vänner"
+                                    >
+                                        <UserPlus size={20} />
+                                    </button>
                                     <button onClick={() => navigate('/settings')} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors">
                                         <Settings size={20} />
                                     </button>
@@ -490,7 +503,14 @@ export default function Profile() {
                     targetName={profile?.displayName || 'Användaren'}
                 />
 
+                <InviteModal
+                    isOpen={isInviteModalOpen}
+                    onClose={() => setIsInviteModalOpen(false)}
+                    inviteLink={`${window.location.origin}/login?ref=${user?.uid}`}
+                    inviteCount={profile?.inviteCount || 0}
+                />
+
             </div>
-        </Layout>
+        </Layout >
     );
 }
