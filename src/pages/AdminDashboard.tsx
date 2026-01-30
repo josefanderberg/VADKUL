@@ -25,90 +25,7 @@ const SWEDISH_CITIES = [
   { name: 'Helsingborg', lat: 56.0465, lng: 12.6945 }
 ];
 
-const CATEGORY_EXAMPLES: Record<string, { title: string, desc: string }[]> = {
-  study: [
-    { title: "Tenta-P i biblioteket", desc: "Vi sitter hela dagen. Kom och plugga med oss för motivation." },
-    { title: "Språkcafé: Engelska", desc: "Öva din engelska över en kopp kaffe. Alla nivåer välkomna." },
-    { title: "Grupparbete & Pizza", desc: "Vi pluggar effektivt i 2 timmar, sen beställer vi pizza." },
-    { title: "Lär dig koda React", desc: "Enkel intro för nybörjare. Ta med laptop!" }
-  ],
-  party: [
-    { title: "Förfest innan kåren", desc: "Vi ses och värmer upp inför kvällens släpp. Ta med egen dryck." },
-    { title: "Spontan hemmafest", desc: "Öppet hus! Kom och häng, lyssna på musik och träffa folk." },
-    { title: "Utgång ikväll?", desc: "Någon som är taggad på dansgolvet? Vi möts upp på torget." },
-    { title: "Pubkväll på nationen", desc: "Billig öl och hamburgare. Kom och häng med oss!" },
-    { title: "Sittning: Tema 80-tal", desc: "Vi har några biljetter över till sittningen. Först till kvarn!" }
-  ],
-  fika: [
-    { title: "Söndagsfika", desc: "Kaffe och bulle på stans mysigaste café. Kom och snacka skit." },
-    { title: "Lunch på stan", desc: "Vi testar det nya stället på hörnet. De har bra vegatariskt!" },
-    { title: "Afternoon Tea", desc: "Lite lyxigare fika. Vi har bokat bord för 6 pers." },
-    { title: "After Work med branschen", desc: "Mingel för oss som jobbar inom IT/Tech." },
-    { title: "Mingelkväll för nyinflyttade", desc: "Ny i stan? Kom och lär känna folk!" }
-  ],
-  food: [
-    { title: "Hemlagad Pizza-kväll", desc: "Jag gör degen, ni tar med topping. Blir sjukt gott!" },
-    { title: "Knytkalas i parken", desc: "Alla tar med sig en rätt var att bjuda på." },
-    { title: "Sushi-workshop", desc: "Vi lär oss rulla sushi. Ingredienser köps in gemensamt." },
-    { title: "Korvgrillning vid sjön", desc: "Vi tänder grillen kl 18. Ta med det du vill grilla." },
-    { title: "Kårfrukost", desc: "Gratis frukost för medlemmar. Vi ses i kårhuset." }
-  ],
-  borrow: [
-    { title: "Låna min slagborr?", desc: "Jag har en proffsmaskin som bara ligger. Låna gratis!" },
-    { title: "Har någon en släpvagn?", desc: "Behöver flytta en soffa på lördag. Betalar i kanelbullar." },
-    { title: "Extra stolar till festen", desc: "Jag har 10 klappstolar att låna ut över helgen." }
-  ],
-  market: [
-    { title: "Klädbytardag", desc: "Ta med plagg du inte använder, byt till dig nya favoriter." },
-    { title: "Bakluckeloppis", desc: "Vi delar på en plats. Samling 09:00." },
-    { title: "Säljer kurslitteratur", desc: "Möts upp för att köpa/sälja gamla böcker." }
-  ],
-  help: [
-    { title: "Hjälp med flytt?", desc: "Bjuder på pizza och öl till den som kan bära lite lådor." },
-    { title: "Städdag i parken", desc: "Vi hjälps åt att snygga till i parken. Fika bjuds det på!" },
-    { title: "Volontärmöte", desc: "Vill du engagera dig? Kom och lyssna på vad vi gör." },
-    { title: "Kattvakts-träff", desc: "Vi som gillar katter ses och pratar." }
-  ],
-  creative: [
-    { title: "Måla och skåla", desc: "Vi målar akvarell och dricker lite bubbel. Material finns." },
-    { title: "Stickjunta", desc: "Ta med din stickning/virkning. Vi fikar och handarbetar ihop." },
-    { title: "Kreativt skrivande", desc: "Vi gör skrivövningar tillsammans. Penna och papper räcker." },
-    { title: "Fotokurs: Grunderna", desc: "Lär dig din systemkamera. Vi går igenom ISO och slutartid." },
-    { title: "Impro-teater workshop", desc: "Prova på teater! Inga förkunskaper krävs, bara glatt humör." },
-    { title: "Konstutställning vernissage", desc: "Vi går och kollar in den nya utställningen tillsammans." }
-  ],
-  sport: [
-    { title: "Fotbollsmatch 5-mot-5", desc: "Vi behöver folk till en vänskapsmatch. Vi delar upp lagen på plats." },
-    { title: "Volleyboll på stranden", desc: "Spontan volleyboll i solen. Vi har boll och nät." },
-    { title: "Padel-turnering (Amerikano)", desc: "Vi kör en spontan Americano. Alla nivåer välkomna!" },
-    { title: "Morgonjogg 5km", desc: "Lugnt tempo, vi håller ihop gruppen. Startar vid utegymmet." },
-    { title: "Yoga i solnedgången", desc: "Ta med egen matta. Vi kör ett pass för alla nivåer." },
-    { title: "Utomhusträning stationer", desc: "Jag tar med redskap, vi kör cirkelträning i parken." },
-    { title: "Vandring i naturreservatet", desc: "Ca 1 mil i lugnt tempo. Ta med matsäck." }
-  ],
-  games: [
-    { title: "LAN-party hela helgen", desc: "Ta med burken och skärm. Vi har plats och nätverk." },
-    { title: "Mario Kart-turnering", desc: "Vem är bäst på Rainbow Road? Pris till vinnaren!" },
-    { title: "CS:GO Matchkväll", desc: "Vi behöver en femte spelare till vårt lag. Rank spelar ingen roll." },
-    { title: "Spelkväll: Catan & Ticket to Ride", desc: "Klassiska brädspel. Vi förklarar reglerna." },
-    { title: "Dungeons & Dragons One-shot", desc: "Ett äventyr på en kväll. Karaktärer finns färdiga." },
-    { title: "Schack-turnering", desc: "Snabbschack 10 minuter. Alla möter alla." }
-  ],
-  kids: [
-    { title: "Kubb i parken", desc: "Kom och spela kubb! Alla är välkomna, vi kör så länge vi orkar." },
-    { title: "Vattenkrig - Alla mot alla", desc: "Ta med vattenpistol så kör vi! Samling vid fontänen." },
-    { title: "Kurragömma Extreme", desc: "Kurragömma över hela campusområdet. Kom i oömma kläder." },
-    { title: "Fiske-tur", desc: "Vi drar ut med båt och kastar lite. Flytvästar finns." }
-  ],
-  other: [
-    { title: "Livejazz på puben", desc: "Lokalt band spelar ikväll. Skön stämning utlovas." },
-    { title: "Diskussionskväll: Klimat", desc: "Hur kan vi leva mer hållbart? Öppen diskussion." },
-    { title: "Bio: Nya Marvel-filmen", desc: "Vi har bokat mittenplatserna. Häng med!" },
-    { title: "Filmkväll: Sagan om Ringen", desc: "Maraton (Extended edition) hemma hos mig. Popcorn ingår." },
-    { title: "Utomhusbio i parken", desc: "Ta med filt och stol. Filmen startar vid mörkrets inbrott." },
-    { title: "Överrasknings-event", desc: "Hemlig aktivitet! Samling vid statyn." }
-  ]
-};
+
 
 // Hjälpfunktion för slumpad position i Sverige
 const getRandomLocationInSweden = () => {
@@ -186,6 +103,65 @@ export default function AdminDashboard() {
   // ---------------------------------------------------------
 
   // ---------------------------------------------------------
+  // FUNKTION: TA BORT ALLA EVENTS
+  // ---------------------------------------------------------
+  const handleDeleteAllEvents = async () => {
+    if (!confirm("VARNING: Detta tar bort ALLA events permanent. Vill du fortsätta?")) return;
+    if (!confirm("Är du verkligen helt säker? Det går inte att ångra.")) return;
+
+    setLoading(true);
+    setLog([]);
+    addLog("🗑️ Startar radering av alla events...");
+
+    try {
+      const snapshot = await getDocs(collection(db, 'events'));
+      const total = snapshot.size;
+
+      if (total === 0) {
+        addLog("✅ Inga events att ta bort.");
+        setLoading(false);
+        return;
+      }
+
+      addLog(`Hittade ${total} events. Raderar...`);
+
+      let count = 0;
+
+      // Firestore batch limit is 500
+      const docs = snapshot.docs;
+
+      // Vi måste köra flera batcher om det är > 500
+      // Här gör vi det enkelt och kör en-och-en via promise.all eller seriemässigt om det är säkrare, 
+      // men för prestanda är batch bäst. Låt oss köra uppdelade batcher.
+
+      for (let i = 0; i < docs.length; i += 400) {
+        const chunk = docs.slice(i, i + 400);
+        const currentBatch = writeBatch(db);
+        chunk.forEach(doc => {
+          currentBatch.delete(doc.ref);
+        });
+        await currentBatch.commit();
+        count += chunk.length;
+        addLog(`🗑️ Raderat batch ${Math.ceil(count / 400)} (${count} / ${total})...`);
+      }
+
+      addLog(`✅ Alla ${count} events har raderats.`);
+      toast.success("Alla events raderade.");
+
+      // Clear cache
+      sessionStorage.removeItem('vadkul_events_cache');
+      sessionStorage.removeItem('vadkul_events_cache_time');
+
+    } catch (error: any) {
+      addLog(`❌ Fel vid radering: ${error.message}`);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // ---------------------------------------------------------
   // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
   // ---------------------------------------------------------
   const handleSeedEvents = async (count: number) => {
@@ -198,18 +174,152 @@ export default function AdminDashboard() {
     try {
       if (users.length === 0) throw new Error("Inga användare hittades att använda som hosts.");
 
-      // Vi använder en batch om det är färre än 500, annars loop (Firestore limit)
-      // För enkelhetens skull loopar vi här för att kunna logga framsteg
+      // UPDATED CATEGORY EXAMPLES TO MATCH ids in categories.ts
+      const MOCKED_TEMPLATES: Record<string, { title: string, desc: string }[]> = {
+        study: [
+          { title: "Tenta-P i biblioteket", desc: "Vi sitter hela dagen. Kom och plugga med oss för motivation." },
+          { title: "Språkcafé: Engelska", desc: "Öva din engelska över en kopp kaffe. Alla nivåer välkomna." },
+          { title: "Grupparbete & Pizza", desc: "Vi pluggar effektivt i 2 timmar, sen beställer vi pizza." },
+          { title: "Lär dig koda React", desc: "Enkel intro för nybörjare. Ta med laptop!" },
+          { title: "Matte-stuga inför tentan", desc: "Vi hjälps åt att räkna gamla tentor. Kaffe ingår." },
+          { title: "Uppsats-skrivande (Shut up & Write)", desc: "45 min skrivande, 15 min paus. Upprepa." },
+          { title: "Bokcirkel: Kurslitteratur", desc: "Vi diskuterar veckans läsning så det fastnar bättre." }
+        ],
+        party: [
+          { title: "Förfest innan kåren", desc: "Vi ses och värmer upp inför kvällens släpp. Ta med egen dryck." },
+          { title: "Spontan hemmafest", desc: "Öppet hus! Kom och häng, lyssna på musik och träffa folk." },
+          { title: "Utgång ikväll?", desc: "Någon som är taggad på dansgolvet? Vi möts upp på torget." },
+          { title: "Pubkväll på nationen", desc: "Billig öl och hamburgare. Kom och häng med oss!" },
+          { title: "Sittning: Tema 80-tal", desc: "Vi har några biljetter över till sittningen. Först till kvarn!" },
+          { title: "Korridorsfest hos mig", desc: "Trångt, varmt och sjukt kul. Alla får plats!" },
+          { title: "Karaokekväll på puben", desc: "Vem vågar sjunga först? Vi bjuder på första rundan." },
+          { title: "Takfest (om vädret tillåter)", desc: "Fantastisk utsikt och gott sällskap. Ta med filt." }
+        ],
+        social: [ // Was 'fika'
+          { title: "Söndagsfika", desc: "Kaffe och bulle på stans mysigaste café. Kom och snacka skit." },
+          { title: "Lunch på stan", desc: "Vi testar det nya stället på hörnet. De har bra vegatariskt!" },
+          { title: "Afternoon Tea", desc: "Lite lyxigare fika. Vi har bokat bord för 6 pers." },
+          { title: "After Work med branschen", desc: "Mingel för oss som jobbar inom IT/Tech." },
+          { title: "Mingelkväll för nyinflyttade", desc: "Ny i stan? Kom och lär känna folk!" },
+          { title: "Hundpromenad & Kaffe", desc: "Ta med vovven (eller kom utan) så går vi en sväng." },
+          { title: "Glass i hamnen", desc: "Bästa glassbaren har öppnat för säsongen. Häng med!" }
+        ],
+        food: [
+          { title: "Hemlagad Pizza-kväll", desc: "Jag gör degen, ni tar med topping. Blir sjukt gott!" },
+          { title: "Knytkalas i parken", desc: "Alla tar med sig en rätt var att bjuda på." },
+          { title: "Sushi-workshop", desc: "Vi lär oss rulla sushi. Ingredienser köps in gemensamt." },
+          { title: "Korvgrillning vid sjön", desc: "Vi tänder grillen kl 18. Ta med det du vill grilla." },
+          { title: "Kårfrukost", desc: "Gratis frukost för medlemmar. Vi ses i kårhuset." },
+          { title: "Taco Tuesday", desc: "Klassisk tacokväll. Guacamolen är 'on me'." },
+          { title: "Pannkaksbrunch", desc: "Amerikanska pannkakor med lönnsirap och bär." }
+        ],
+        market: [
+          { title: "Klädbytardag", desc: "Ta med plagg du inte använder, byt till dig nya favoriter." },
+          { title: "Bakluckeloppis", desc: "Vi delar på en plats. Samling 09:00." },
+          { title: "Säljer kurslitteratur", desc: "Möts upp för att köpa/sälja gamla böcker." },
+          { title: "Växtstickling-byte", desc: "Har du för många Palettblad? Byt till dig en Monstera!" }
+        ],
+        community: [ // Was 'help'
+          { title: "Hjälp med flytt?", desc: "Bjuder på pizza och öl till den som kan bära lite lådor." },
+          { title: "Städdag i parken", desc: "Vi hjälps åt att snygga till i parken. Fika bjuds det på!" },
+          { title: "Volontärmöte", desc: "Vill du engagera dig? Kom och lyssna på vad vi gör." },
+          { title: "Kattvakts-träff", desc: "Vi som gillar katter ses och pratar." },
+          { title: "Fixar-kväll i cykelrummet", desc: "Lär dig laga punka och smörja kedjan." }
+        ],
+        creative: [
+          { title: "Måla och skåla", desc: "Vi målar akvarell och dricker lite bubbel. Material finns." },
+          { title: "Stickjunta", desc: "Ta med din stickning/virkning. Vi fikar och handarbetar ihop." },
+          { title: "Kreativt skrivande", desc: "Vi gör skrivövningar tillsammans. Penna och papper räcker." },
+          { title: "Fotokurs: Grunderna", desc: "Lär dig din systemkamera. Vi går igenom ISO och slutartid." },
+          { title: "Impro-teater workshop", desc: "Prova på teater! Inga förkunskaper krävs, bara glatt humör." },
+          { title: "Jam-session (Musik)", desc: "Ta med instrument. Vi kör lite covers och improviserar." }
+        ],
+        sport: [
+          { title: "Fotbollsmatch 5-mot-5", desc: "Vi behöver folk till en vänskapsmatch. Vi delar upp lagen på plats." },
+          { title: "Volleyboll på stranden", desc: "Spontan volleyboll i solen. Vi har boll och nät." },
+          { title: "Padel-turnering (Amerikano)", desc: "Vi kör en spontan Americano. Alla nivåer välkomna!" },
+          { title: "Brännboll med klassen", desc: "Klassisk brännboll i parken. Ta med dryck!" },
+          { title: "Basket skills & game", desc: "Vi tränar lite teknik och spelar match sen." },
+          { title: "Badminton i hallen", desc: "Vi har bokat två banor. Racket finns att hyra." }
+        ],
+        training: [ // NEW
+          { title: "Morgonjogg 5km", desc: "Lugnt tempo, vi håller ihop gruppen. Startar vid utegymmet." },
+          { title: "Yoga i solnedgången", desc: "Ta med egen matta. Vi kör ett pass för alla nivåer." },
+          { title: "Utomhusträning stationer", desc: "Jag tar med redskap, vi kör cirkelträning i parken." },
+          { title: "Intervaller i backen", desc: "Jobbigt men effektivt! Vi kör 10 vändor." },
+          { title: "Långpass Löpning (10km+)", desc: "För dig som vill springa lite längre i prattempo." }
+        ],
+        game: [ // Was 'games'
+          { title: "LAN-party hela helgen", desc: "Ta med burken och skärm. Vi har plats och nätverk." },
+          { title: "Mario Kart-turnering", desc: "Vem är bäst på Rainbow Road? Pris till vinnaren!" },
+          { title: "CS:GO Matchkväll", desc: "Vi behöver en femte spelare till vårt lag. Rank spelar ingen roll." },
+          { title: "Super Smash Bros Ultimate", desc: "Vi kör turnering på storbildsskärm. Kontroller finns." }
+        ],
+        boardgame: [ // NEW
+          { title: "Spelkväll: Catan & Ticket to Ride", desc: "Klassiska brädspel. Vi förklarar reglerna." },
+          { title: "Dungeons & Dragons One-shot", desc: "Ett äventyr på en kväll. Karaktärer finns färdiga." },
+          { title: "Schack-turnering", desc: "Snabbschack 10 minuter. Alla möter alla." },
+          { title: "Komplexa Brädspel (Twilight Imperium)", desc: "För dig som gillar tunga strategispel. Tar hela dagen!" },
+          { title: "Kortspel & Poker", desc: "Vi spelar Texas Hold'em (utan riktiga pengar såklart)." }
+        ],
+        play: [ // NEW
+          { title: "Kubb i parken", desc: "Kom och spela kubb! Alla är välkomna, vi kör så länge vi orkar." },
+          { title: "Vattenkrig - Alla mot alla", desc: "Ta med vattenpistol så kör vi! Samling vid fontänen." },
+          { title: "Kurragömma Extreme", desc: "Kurragömma över hela campusområdet. Kom i oömma kläder." },
+          { title: "Tipspromenad", desc: "Gå en runda och svara på kluriga frågor. Prisutdelning efteråt." }
+        ],
+        outdoor: [ // NEW
+          { title: "Vandring i naturreservatet", desc: "Ca 1 mil i lugnt tempo. Ta med matsäck." },
+          { title: "Fiske-tur", desc: "Vi drar ut med båt och kastar lite. Flytvästar finns." },
+          { title: "Upptäcktsfärd i skogen", desc: "Vi letar svamp och bara njuter av naturen." },
+          { title: "Grilla korv vid vindskyddet", desc: "Mysig kväll vid elden. Ta med varma kläder." },
+          { title: "Kajakpaddling", desc: "Vi hyr kajaker och paddlar en tur i ån." }
+        ],
+        movie: [ // NEW
+          { title: "Bio: Nya Marvel-filmen", desc: "Vi har bokat mittenplatserna. Häng med!" },
+          { title: "Filmkväll: Sagan om Ringen", desc: "Maraton (Extended edition) hemma hos mig. Popcorn ingår." },
+          { title: "Utomhusbio i parken", desc: "Ta med filt och stol. Filmen startar vid mörkrets inbrott." },
+          { title: "Skräckfilmskväll", desc: "Vågar du? Vi kollar på klassiker och äter snacks." }
+        ],
+        culture: [ // NEW
+          { title: "Konstutställning vernissage", desc: "Vi går och kollar in den nya utställningen tillsammans." },
+          { title: "Livejazz på puben", desc: "Lokalt band spelar ikväll. Skön stämning utlovas." },
+          { title: "Teaterbesök", desc: "Vi ser den nya uppsättningen på stadsteatern." },
+          { title: "Museum: Gratis inträde", desc: "Vi passar på när det är fri entré. Guidad tur kl 14." }
+        ],
+        workshop: [ // NEW
+          { title: "Keramik-kurs", desc: "Prova på att dreja! Lera ingår i priset." },
+          { title: "Lär dig dansa salsa", desc: "Nybörjarkurs. Ingen partner krävs." },
+          { title: "Kryddväxt-plantering", desc: "Plantera basilika och chili. Krukor och jord finns." }
+        ],
+        campus: [ // NEW
+          { title: "Pubkväll på nationen", desc: "Vi drar dit när de öppnar. Billig öl och gött häng." },
+          { title: "Kårtrappan-häng", desc: "Vi sitter i solen på trappan och dricker kaffe." },
+          { title: "Campus-orientering", desc: "Hitta rätt på campus. Bra för dig som är ny!" }
+        ],
+        mingle: [ // NEW
+          { title: "Nätverksfrukost", desc: "Träffa andra studenter och företagare. Frukost ingår." },
+          { title: "After School Mingle", desc: "Vi ses efter föreläsningen och snackar." },
+          { title: "Speed-friending", desc: "Lär känna 10 nya personer på en timme!" }
+        ],
+        other: [
+          { title: "Diskussionskväll: Klimat", desc: "Hur kan vi leva mer hållbart? Öppen diskussion." },
+          { title: "Överrasknings-event", desc: "Hemlig aktivitet! Samling vid statyn." },
+          { title: "Loppisrunda på stan", desc: "Vi går runt till alla second hand-butiker." }
+        ]
+      };
+
       let successCount = 0;
+      let lastEventData = null;
 
       for (let i = 0; i < count; i++) {
         const randomUser = users[Math.floor(Math.random() * users.length)];
-        // const randomTitle = RANDOM_TITLES[Math.floor(Math.random() * RANDOM_TITLES.length)]; // REMOVED
         const location = getRandomLocationInSweden();
-        const category = getRandomCategory(); // Hämta slumpmässig kategori
+        const category = getRandomCategory(); // Hämta slumpmässig kategori (e.g. 'sport', 'social')
 
-        // Hämta exempel för kategorin
-        const templates = CATEGORY_EXAMPLES[category] || CATEGORY_EXAMPLES.other;
+        // Look up templates properly
+        // If exact match exists, user it. Else use 'other'.
+        const templates = MOCKED_TEMPLATES[category] || MOCKED_TEMPLATES.other;
         const template = templates[Math.floor(Math.random() * templates.length)];
 
         const now = new Date();
@@ -234,7 +344,7 @@ export default function AdminDashboard() {
           },
 
           // Använd den slumpmässiga kategorin
-          type: category, // 🔥 ÄNDRAD HÄR!
+          type: category,
           price: Math.floor(Math.random() * 10) === 0 ? 0 : 50 + Math.floor(Math.random() * 150),
           minParticipants: minPart,
           maxParticipants: maxPart,
@@ -256,12 +366,24 @@ export default function AdminDashboard() {
           createdAt: Timestamp.now()
         };
 
+        lastEventData = eventData;
+
         await addDoc(collection(db, 'events'), eventData);
         successCount++;
         if (successCount % 10 === 0) addLog(`...skapat ${successCount} av ${count}`);
       }
 
       addLog(`✅ Klart! ${successCount} events skapades.`);
+
+      // LOGGA FEILDS FÖR EN EVENT
+      if (lastEventData) {
+        addLog("--------------- SAMPLE EVENT ---------------");
+        addLog(JSON.stringify(lastEventData, null, 2));
+        // Also log keys clearly
+        addLog("FIELDS: " + Object.keys(lastEventData).join(", "));
+        addLog("--------------------------------------------");
+      }
+
     } catch (error: any) {
       addLog(`❌ Fel: ${error.message}`);
     } finally {
@@ -615,10 +737,10 @@ export default function AdminDashboard() {
 
               {/* KORT 1: Generera Data */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-green-700">🌱 Generera Testdata</h2>
+                <h2 className="text-xl font-semibold mb-4 text-green-700">🌱 Datahantering</h2>
                 <div className="space-y-3">
                   <p className="text-sm text-slate-600 mb-4">
-                    Skapa slumpmässiga events utspridda i hela Sverige (Stockholm, Gbg, Malmö, Växjö m.fl).
+                    Hantera testdata och rensa databasen.
                   </p>
                   <div className="flex gap-3">
                     <button
@@ -636,6 +758,16 @@ export default function AdminDashboard() {
                       +100 Events
                     </button>
                   </div>
+
+                  <hr className="border-slate-100 my-2" />
+
+                  <button
+                    onClick={handleDeleteAllEvents}
+                    disabled={loading}
+                    className="w-full bg-red-50 text-red-600 border border-red-200 py-2 px-4 rounded-lg font-bold hover:bg-red-100 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    🗑️ Radera ALLA events
+                  </button>
                 </div>
               </div>
 

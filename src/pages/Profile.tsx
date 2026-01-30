@@ -10,9 +10,10 @@ import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import RateUserModal from '../components/profile/RateUserModal';
 import InviteModal from '../components/profile/InviteModal';
-import { Star, LogOut, Settings, CheckCircle2, MessageSquare, UserPlus } from 'lucide-react';
+import { Star, LogOut, Settings, CheckCircle2, MessageSquare, UserPlus, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loading from '../components/ui/Loading';
+import FriendsListModal from '../components/profile/FriendsListModal';
 
 export default function Profile() {
     const { user, logout } = useAuth();
@@ -28,6 +29,7 @@ export default function Profile() {
     // Data states
     const [hostedEvents, setHostedEvents] = useState<AppEvent[]>([]);
     const [joinedEvents, setJoinedEvents] = useState<AppEvent[]>([]);
+    const [friends, setFriends] = useState<UserProfile[]>([]);
 
     // Loading states
     const [profileLoading, setProfileLoading] = useState(true);
@@ -36,12 +38,15 @@ export default function Profile() {
     // Modal state
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false); // NY
 
     // Cache flags
     const [hasLoadedHosted, setHasLoadedHosted] = useState(false);
     const [hasLoadedJoined, setHasLoadedJoined] = useState(false);
+    const [hasLoadedFriends, setHasLoadedFriends] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'hosted' | 'joined'>('hosted');
+    const [friendIds, setFriendIds] = useState<string[]>([]); // För count
 
     // Sort logic
     const [sortOption, setSortOption] = useState<'created' | 'time'>('created');
@@ -66,9 +71,14 @@ export default function Profile() {
                 setProfile(data);
                 // Reset events on profile switch
                 setHostedEvents([]);
-                setJoinedEvents([]);
                 setHasLoadedHosted(false);
                 setHasLoadedJoined(false);
+                setHasLoadedFriends(false);
+                setFriends([]);
+                setFriendIds([]); // Reset IDs
+
+                // Fetch friend IDs immediately to show count
+                friendService.getFriends(targetUid!).then(ids => setFriendIds(ids)).catch(console.error);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -105,7 +115,6 @@ export default function Profile() {
                 setEventsLoading(true);
                 try {
                     const hosted = await eventService.getHostedEvents(targetUid!);
-                    // Filtrera bort gömda events om det inte är min profil
                     if (isMyProfile) {
                         setHostedEvents(hosted);
                     } else {
@@ -118,10 +127,7 @@ export default function Profile() {
                     setEventsLoading(false);
                 }
             } else if (activeTab === 'joined' && !hasLoadedJoined && profile) {
-                // Determine if we should load joined events
-                // Allowed if: It is my profile OR we are friends
                 const canView = isMyProfile || friendStatus === 'accepted';
-
                 if (canView) {
                     setEventsLoading(true);
                     try {
@@ -134,9 +140,6 @@ export default function Profile() {
                             e.host.uid !== pUid
                         );
 
-                        // Om det inte är min profil, visa inte gömda events (om jag inte också är bjuden? 
-                        // Men för enkelhetens skull, dölj dem om det inte är min profil för nu,
-                        // eller om vi vill vara strikta: visa bara om publikt)
                         if (!isMyProfile) {
                             joined = joined.filter(e => e.visibility !== 'hidden');
                         }
@@ -153,7 +156,28 @@ export default function Profile() {
         }
 
         loadEvents();
-    }, [targetUid, profile, activeTab, hasLoadedHosted, hasLoadedJoined, user, isMyProfile, friendStatus]);
+    }, [targetUid, profile, activeTab, hasLoadedHosted, hasLoadedJoined, hasLoadedFriends, user, isMyProfile, friendStatus]);
+
+    // Load full friend profiles when modal opens
+    useEffect(() => {
+        if (isFriendsModalOpen && !hasLoadedFriends && friendIds.length > 0) {
+            async function fetchFriends() {
+                setProfileLoading(true); // Reuse or make new loading state? Reuse is okay for modal content
+                try {
+                    const friendProfiles = await Promise.all(
+                        friendIds.map(fid => userService.getUserProfile(fid))
+                    );
+                    setFriends(friendProfiles.filter((f): f is UserProfile => f !== null));
+                    setHasLoadedFriends(true);
+                } catch (e) {
+                    console.error("Failed to load friend profiles", e);
+                } finally {
+                    setProfileLoading(false);
+                }
+            }
+            fetchFriends();
+        }
+    }, [isFriendsModalOpen, hasLoadedFriends, friendIds]);
 
     const handleRateUser = async (rating: number, comment: string) => {
         if (!user || !profile || !user.email) return;
@@ -240,6 +264,8 @@ export default function Profile() {
     // Sort Logic
     // 1. Created (Desc) - Senast tillagd först
     // 2. Time (Asc) - Snarast först (Tid kvar)
+    // 1. Created (Desc) - Senast tillagd först
+    // 2. Time (Asc) - Snarast först (Tid kvar)
     const rawList = activeTab === 'hosted' ? hostedEvents : joinedEvents;
     const currentList = [...rawList].sort((a, b) => {
         if (sortOption === 'created') {
@@ -303,11 +329,23 @@ export default function Profile() {
                                 ) : (
                                     <>
                                         {profile?.age && <span>{profile.age} år •</span>}
+
+                                        {/* RATING */}
                                         <div className="flex items-center gap-1 font-bold text-foreground bg-muted/50 px-2 py-1 rounded-lg">
                                             <Star size={14} className="text-amber-400 fill-amber-400" />
                                             <span>{ratingValue}</span>
                                             <span className="text-muted-foreground font-normal text-xs">({ratingCount})</span>
                                         </div>
+
+                                        {/* FRIENDS BUTTON */}
+                                        <button
+                                            onClick={() => setIsFriendsModalOpen(true)}
+                                            className="flex items-center gap-1 font-bold text-foreground bg-muted/50 px-2 py-1 rounded-lg hover:bg-muted transition-colors"
+                                        >
+                                            <Users size={14} className="text-blue-500" />
+                                            <span>{friendIds.length}</span>
+                                            <span className="text-muted-foreground font-normal text-xs">vänner</span>
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -463,6 +501,7 @@ export default function Profile() {
                 ) : (
                     <>
                         {/* CONDITIONAL CONTENT */}
+                        {/* CONDITIONAL CONTENT */}
                         {activeTab === 'joined' && !isMyProfile && friendStatus !== 'accepted' ? (
                             <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border animate-in fade-in zoom-in-95 duration-300">
                                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 text-muted-foreground">
@@ -508,6 +547,13 @@ export default function Profile() {
                     onClose={() => setIsInviteModalOpen(false)}
                     inviteLink={`${window.location.origin}/login?ref=${user?.uid}`}
                     inviteCount={profile?.inviteCount || 0}
+                />
+
+                <FriendsListModal
+                    isOpen={isFriendsModalOpen}
+                    onClose={() => setIsFriendsModalOpen(false)}
+                    friends={friends}
+                    loading={profileLoading && friends.length === 0}
                 />
 
             </div>

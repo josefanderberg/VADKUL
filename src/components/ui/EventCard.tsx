@@ -199,7 +199,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     {isFull ? 'Fullbokat' : `${spotsLeft} platser kvar`}
                                 </span>
 
-                                <div className="flex items-center pl-2">
+                                <div className="flex items-center pl-2 h-6">
                                     <div className="flex -space-x-2">
                                         {visibleAttendees.map((attendee, i) => (
                                             <div key={i} className="relative z-10 hover:z-20 transition-transform hover:scale-110">
@@ -207,12 +207,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                                     <img
                                                         src={attendee.photoURL}
                                                         alt={attendee.displayName}
-                                                        className="w-7 h-7 rounded-full object-cover ring-2 ring-card bg-muted"
+                                                        className="w-6 h-6 rounded-full object-cover ring-2 ring-card bg-muted"
                                                         title={attendee.displayName}
                                                     />
                                                 ) : (
                                                     <div
-                                                        className="w-7 h-7 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
+                                                        className="w-6 h-6 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
                                                         title={attendee.displayName}
                                                     >
                                                         {attendee.displayName?.charAt(0).toUpperCase() || '?'}
@@ -222,7 +222,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         ))}
 
                                         {hiddenCount > 0 && (
-                                            <div className="w-7 h-7 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0">
+                                            <div className="w-6 h-6 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0">
                                                 +{hiddenCount}
                                             </div>
                                         )}

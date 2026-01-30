@@ -97,7 +97,10 @@ export default function Login() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            navigate('/');
+            // Kolla om vi ska omdirigeras någonstans
+            const params = new URLSearchParams(location.search);
+            const redirect = params.get('redirect') || '/';
+            navigate(redirect);
         } catch (err: any) {
             handleAuthError(err);
         } finally {
@@ -172,6 +175,39 @@ export default function Login() {
             return;
         }
 
+        // Validera datum strikt
+        const [yStr, mStr, dStr] = birthDate.split('-');
+        const y = parseInt(yStr);
+        const m = parseInt(mStr);
+        const d = parseInt(dStr);
+        const now = new Date();
+        const currentYear = now.getFullYear();
+
+        // 1. Grundläggande gränser
+        if (m < 1 || m > 12) {
+            setError("Ogiltig månad.");
+            return;
+        }
+
+        if (y < 1900 || y > currentYear) {
+            setError("Ogiltigt årtal.");
+            return;
+        }
+
+        // 2. Dagar i månaden (hanterar skottår automatiskt via Date(y, m, 0).getDate())
+        const daysInMonth = new Date(y, m, 0).getDate();
+        if (d < 1 || d > daysInMonth) {
+            setError("Ogiltigt datum för vald månad.");
+            return;
+        }
+
+        // 3. Framtida datum (kontrollera fullständigt datum)
+        const dateObj = new Date(y, m - 1, d);
+        if (dateObj > now) {
+            setError("Födelsedatumet kan inte vara i framtiden.");
+            return;
+        }
+
 
         setError('');
         setLoading(true);
@@ -216,7 +252,10 @@ export default function Login() {
             // Rensa ref efter användning
             sessionStorage.removeItem('vadkul_ref_uid');
 
-            navigate('/');
+            // Kolla om vi ska omdirigeras någonstans
+            const params = new URLSearchParams(location.search);
+            const redirect = params.get('redirect') || '/';
+            navigate(redirect);
         } catch (err: any) {
             handleAuthError(err);
         } finally {

@@ -84,11 +84,10 @@ export default function Navbar() {
         <div className="flex items-center gap-0.5 md:gap-2">
 
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
-          {user && (
-            <Link to="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
-              <Plus size={24} strokeWidth={2.5} />
-            </Link>
-          )}
+          {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
+          <Link to="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
+            <Plus size={24} strokeWidth={2.5} />
+          </Link>
 
           {/* 1.5 INFO (Ny) */}
           <Link to="/about" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">

@@ -397,7 +397,7 @@ export default function Home() {
                 <div className={`max-w-6xl mx-auto px-4 pb-4 w-full ${view === 'map' ? 'flex-1 h-full min-h-0' : 'min-h-[500px]'}`}>
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 pt-20">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                             <p>Laddar events...</p>
                         </div>
                     ) : filteredEvents.length === 0 && view === 'list' ? (

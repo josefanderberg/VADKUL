@@ -268,6 +268,10 @@ export default function EventDetails() {
         if (window.confirm("Är du säker på att du vill ta bort detta event permanent? Detta går inte att ångra.")) {
             try {
                 await eventService.delete(event.id);
+                // Rensa hem-cachen så att eventet försvinner direkt
+                sessionStorage.removeItem('vadkul_events_cache');
+                sessionStorage.removeItem('vadkul_events_cache_time');
+
                 toast.success("Eventet har tagits bort.");
                 navigate('/'); // Skicka till startsidan
             } catch (e) {

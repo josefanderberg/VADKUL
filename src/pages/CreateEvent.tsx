@@ -68,6 +68,43 @@ function LocationPicker({
     return position ? <Marker position={position} icon={markerIcon} /> : null;
 }
 
+function LoginAlertModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const navigate = useNavigate();
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+                <button onClick={onClose} className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground">
+                    <X size={20} />
+                </button>
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                        <KeyRound size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold">Du behöver logga in</h3>
+                    <p className="text-muted-foreground">
+                        För att publicera ett event behöver du vara inloggad.
+                    </p>
+                    <button
+                        onClick={() => navigate('/login?redirect=/create')}
+                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-transform active:scale-95"
+                    >
+                        Logga in / Registrera
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                        Avbryt
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // --- HUVUDKOMPONENT ---
 
 export default function CreateEvent() {
@@ -86,35 +123,69 @@ export default function CreateEvent() {
     const [loading, setLoading] = useState(false);
     const totalSteps = 6;
 
-    // Form Data State
-    const [formData, setFormData] = useState({
-        type: '',
-        title: '',
-        description: '',
-        lat: 56.8790, // Default till Växjö
-        lng: 14.8059,
-        locationName: '',
-        date: new Date(),
-        timeStr: '18:00',
-        ageCategory: 'adults',
-        minAge: 18,
-        maxAge: 99,
-        minParticipants: 2,
-        maxParticipants: 10,
-        price: 0,
-        requiresApproval: false,
-        coverImage: '', // URL till bilden
-        customCategory: '' // <--- NY: För exklusiva kategorier
+    // Form Data State - INITIERA MED SPARAD DATA OM FINNS
+    const [formData, setFormData] = useState(() => {
+        // Försök hämta från sessionStorage först
+        if (!isEditMode) {
+            try {
+                const saved = sessionStorage.getItem('create_event_backup');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Återställ datumobjekt som blir strängar i JSON
+                    if (parsed.date) parsed.date = new Date(parsed.date);
+                    return parsed;
+                }
+            } catch (e) {
+                console.error("Kunde inte läsa sparad form data", e);
+            }
+        }
+
+        return {
+            type: '',
+            title: '',
+            description: '',
+            lat: 56.8790, // Default till Växjö
+            lng: 14.8059,
+            locationName: '',
+            date: new Date(),
+            timeStr: '18:00',
+            ageCategory: 'adults',
+            minAge: 18,
+            maxAge: 99,
+            minParticipants: 2,
+            maxParticipants: 10,
+            price: 0,
+            requiresApproval: false,
+            coverImage: '', // URL till bilden
+            customCategory: ''
+        };
     });
 
     // NY: State för filuppladdning
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(formData.coverImage || null);
 
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState(new Date(formData.date));
 
     // NY: Kod för exklusiva kategorier
     const [showPromoModal, setShowPromoModal] = useState(false);
+    const [showLoginAlert, setShowLoginAlert] = useState(false);
+
+    // --- CLEANUP & PERSISTENCE ---
+
+    // Spara till sessionStorage vid ändring (om ej edit mode)
+    useEffect(() => {
+        if (!isEditMode) {
+            const dataToSave = { ...formData };
+            // Vi kan inte spara File-objektet i session storage enkelt, men resten går bra.
+            // URL:er till bilder sparas ok om de är strängar.
+            sessionStorage.setItem('create_event_backup', JSON.stringify(dataToSave));
+        }
+    }, [formData, isEditMode]);
+
+    // Rensa vid unmount om man lämnar sidan helt (valfritt, men kanske bra om man avbryter)
+    // Dock: Om användaren går till Login vill vi ha kvar det. Så vi rensar INTE på unmount.
+    // Vi rensar BARA vid lyckad publicering.
 
     const handlePromoSuccess = (_code: string, customName: string) => {
         setFormData({ ...formData, type: 'campus', customCategory: customName });
@@ -175,10 +246,10 @@ export default function CreateEvent() {
     useEffect(() => {
         // Endast sätt position från saved/GPS om vi INTE redigerar och inte har laddat data än
         if (!isEditMode && !formData.type && savedLocation) {
-            setFormData(prev => ({ ...prev, lat: savedLocation.lat, lng: savedLocation.lng }));
+            setFormData((prev: any) => ({ ...prev, lat: savedLocation.lat, lng: savedLocation.lng }));
         } else if (!isEditMode && !formData.type && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
-                setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
+                setFormData((prev: any) => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
             });
         }
     }, [savedLocation, isEditMode]);
@@ -257,7 +328,15 @@ export default function CreateEvent() {
     };
 
     const handleSubmit = async () => {
-        if (!user || !user.email || !userProfile) return;
+        if (!user) {
+            setShowLoginAlert(true);
+            return;
+        }
+        if (!userProfile) {
+            toast.error("Vänta, laddar din profil...");
+            return;
+        }
+        if (!user.email) return;
         setLoading(true);
 
         const finalDate = new Date(formData.date);
@@ -308,6 +387,11 @@ export default function CreateEvent() {
                 };
 
                 await eventService.update(updatedEvent);
+
+                // Rensa hem-cachen så att ändringen syns
+                sessionStorage.removeItem('vadkul_events_cache');
+                sessionStorage.removeItem('vadkul_events_cache_time');
+
                 toast.success('Eventet är uppdaterat! 🎉');
                 navigate(`/event/${id}`);
 
@@ -335,6 +419,12 @@ export default function CreateEvent() {
                 };
 
                 await eventService.create(newEvent);
+                sessionStorage.removeItem('create_event_backup');
+
+                // Rensa hem-cachen så att det nya eventet syns
+                sessionStorage.removeItem('vadkul_events_cache');
+                sessionStorage.removeItem('vadkul_events_cache_time');
+
                 toast.success('Eventet är publicerat! 🎉');
                 navigate('/');
             }
@@ -757,7 +847,7 @@ export default function CreateEvent() {
                         ) : (
                             <button
                                 onClick={handleSubmit}
-                                disabled={loading || !userProfile}
+                                disabled={loading}
                                 className="flex-grow py-3 rounded-xl font-bold bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                             >
                                 {loading ? (isEditMode ? 'Sparar...' : 'Publicerar...') : (isEditMode ? 'Spara ändringar' : 'Publicera Event')} <Check size={20} />
@@ -769,6 +859,10 @@ export default function CreateEvent() {
                     isOpen={showPromoModal}
                     onClose={() => setShowPromoModal(false)}
                     onSuccess={handlePromoSuccess}
+                />
+                <LoginAlertModal
+                    isOpen={showLoginAlert}
+                    onClose={() => setShowLoginAlert(false)}
                 />
             </div>
         </Layout>

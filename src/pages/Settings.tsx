@@ -247,7 +247,7 @@ export default function Settings() {
         return (
             <Layout>
                 <div className="flex justify-center p-20 text-slate-400">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                 </div>
             </Layout>
         );

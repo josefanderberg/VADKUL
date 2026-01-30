@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { doc, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 
 export type FriendStatus = 'pending' | 'accepted' | 'incoming' | 'none';
 
@@ -78,5 +78,26 @@ export const friendService = {
     batch.delete(theirRef);
 
     await batch.commit();
+  },
+
+  // Get list of friends (accepts)
+  async getFriends(uid: string) {
+    const q = query(collection(db, 'users', uid, 'friends'), where('status', '==', 'accepted'));
+    const snap = await getDocs(q);
+    const friendIds = snap.docs.map(doc => doc.id);
+    return friendIds;
+  },
+
+  // Get incoming requests
+  async getFriendRequests(uid: string) {
+    const q = query(
+      collection(db, 'users', uid, 'friends'),
+      where('status', '==', 'incoming')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({
+      uid: doc.data().uid,
+      createdAt: doc.data().createdAt
+    }));
   }
 };
