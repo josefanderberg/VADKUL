@@ -1,7 +1,8 @@
 import {
   collection, getDocs, addDoc, doc, updateDoc, getDoc, deleteDoc, Timestamp,
-  query, where, increment
+  query, where, increment, orderBy, startAt, endAt
 } from 'firebase/firestore';
+import { geohashForLocation, geohashQueryBounds, distanceBetween } from 'geofire-common';
 import { db } from '../lib/firebase';
 import type { AppEvent, FirestoreEventData } from '../types'; // OBS: "import type"
 
@@ -35,6 +36,69 @@ export const eventService = {
       });
     } catch (error) {
       console.error("Error fetching events:", error);
+      return [];
+    }
+  },
+
+  // Hämta events inom en radie (Geo-querying)
+  async getEventsInBounds(center: [number, number], radiusInMeters: number): Promise<AppEvent[]> {
+    try {
+      const bounds = geohashQueryBounds(center, radiusInMeters);
+      const promises = [];
+      const now = new Date(); // Filter only future events
+
+      for (const b of bounds) {
+        const q = query(
+          collection(db, COLLECTION),
+          orderBy('geohash'),
+          startAt(b[0]),
+          endAt(b[1])
+          // Note: We can't composite query 'geohash' + 'time' easily without specific indexes for every combination.
+          // Instead, we fetch purely by geohash and filter time/distance in memory.
+        );
+        promises.push(getDocs(q));
+      }
+
+      const snapshots = await Promise.all(promises);
+      const matchingDocs: AppEvent[] = [];
+      const seenIds = new Set<string>();
+
+      for (const snap of snapshots) {
+        for (const doc of snap.docs) {
+          if (seenIds.has(doc.id)) continue;
+
+          const data = doc.data() as FirestoreEventData;
+
+          // 1. Client-side Time Filter (Future events only)
+          const eventTime = data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time);
+          if (eventTime < now) continue;
+
+          // 2. Client-side Distance Filter
+          // Lat/Lng are required for distance calc
+          const lat = data.lat;
+          const lng = data.lng;
+
+          if (!lat || !lng) continue;
+
+          const distanceInKm = distanceBetween([lat, lng], center);
+          const distanceInM = distanceInKm * 1000;
+
+          if (distanceInM <= radiusInMeters) {
+            seenIds.add(doc.id);
+            matchingDocs.push({
+              ...data,
+              id: doc.id,
+              time: eventTime,
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt || 0) : undefined)
+            });
+          }
+        }
+      }
+
+      return matchingDocs;
+
+    } catch (error) {
+      console.error("Error fetching events in bounds:", error);
       return [];
     }
   },
@@ -86,9 +150,11 @@ export const eventService = {
 
   // Skapa
   async create(event: Omit<AppEvent, 'id'>) {
+    const hash = geohashForLocation([event.lat, event.lng]);
     const payload = {
       ...event,
       views: 0,
+      geohash: hash,
       time: Timestamp.fromDate(event.time),
       createdAt: Timestamp.now() // Use client-side timestamp for simplicity effectively matching server
     };
@@ -102,8 +168,11 @@ export const eventService = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...data } = event;
 
+    // Recalculate geohash if lat/lng changed (always calculating to be safe)
+    const hash = geohashForLocation([event.lat, event.lng]);
+
     // Sanitize data: Remove undefined fields and convert Dates to Timestamps
-    const payload: any = { ...data };
+    const payload: any = { ...data, geohash: hash };
 
     // Convert known dates
     payload.time = Timestamp.fromDate(event.time);

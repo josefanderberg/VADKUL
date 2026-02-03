@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -48,18 +49,19 @@ function MapController({ center, onClick }: { center: [number, number], onClick:
     });
     return null;
 }
-// Helper to track map state
-function MapStateTracker() {
+// Helper to track map state and trigger fetch
+function MapStateTracker({ onMoveEnd }: { onMoveEnd: (center: L.LatLng, zoom: number) => void }) {
     const map = useMapEvents({
         moveend: () => {
             const center = map.getCenter();
+            onMoveEnd(center, map.getZoom());
             sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
             sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
         },
         zoomend: () => {
+            // zoomend also triggers moveend usually, but good to be safe if Logic changes
             const center = map.getCenter();
-            sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
-            sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
+            // onMoveEnd handled by moveend
         }
     });
     return null;
@@ -68,29 +70,42 @@ function MapStateTracker() {
 export default function HomeContent() {
     const router = useRouter();
 
-    // 1. Initiera events från cache för att slippa "blink"
-    const [events, setEvents] = useState<AppEvent[]>(() => {
-        try {
-            const cached = sessionStorage.getItem('vadkul_events_cache');
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                // Måste återställa Datum-objekt eftersom JSON gör dem till strängar
-                return parsed.map((evt: any) => ({
-                    ...evt,
-                    time: new Date(evt.time),
-                    createdAt: evt.createdAt ? new Date(evt.createdAt) : undefined
-                }));
-            }
-            return [];
-        } catch (e) {
-            return [];
+    // 1. Initialisera userLocation från storage eller default 
+    // Vi flyttar upp detta för att kunna använda i queryKey
+    const [userLocation, setUserLocation] = useState<[number, number]>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = sessionStorage.getItem('vadkul_map_center');
+            return saved ? JSON.parse(saved) : [56.8556, 14.8250];
         }
+        return [56.8556, 14.8250];
     });
 
-    // 2. Om vi har data, visa den DIREKT (loading=false)
-    const [loading, setLoading] = useState(() => {
-        // Om vi har data i cache, visa den direkt (loading=false)
-        return !sessionStorage.getItem('vadkul_events_cache');
+    // 2. State för "Sökfönster" för Query
+    const [fetchRadius, setFetchRadius] = useState(50000);
+    const [mapState, setMapState] = useState<{ center: [number, number], zoom: number } | null>(null);
+
+    // Initial Geolocation fetch (only on mount if no saved pos)
+    useEffect(() => {
+        if (!sessionStorage.getItem('vadkul_map_center') && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const newLoc: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+                setUserLocation(newLoc);
+                setMapState({ center: newLoc, zoom: 13 }); // Trigger update
+                saveLocationToLocalStorage(pos.coords.latitude, pos.coords.longitude);
+            });
+        }
+    }, []);
+
+    // 3. TanStack Query
+    const { data: events = [], isLoading: loading } = useQuery({
+        queryKey: ['events', 'geo', mapState ? mapState.center : userLocation, fetchRadius],
+        queryFn: async () => {
+            // Use mapState center if moved, else initial userLocation
+            const center = mapState ? mapState.center : userLocation;
+            return eventService.getEventsInBounds(center, fetchRadius);
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        placeholderData: (previousData) => previousData, // Keep data while fetching new
     });
 
     // Initialize view from storage
@@ -98,13 +113,7 @@ export default function HomeContent() {
         return (sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
     });
 
-    // Initialize userLocation from storage if available (Visual center), else default
-    // We keep userLocation as the "Anchor" but initially set it to saved View center if exists,
-    // to prevent jumping. (Or strictly separate View vs UserPos, but this is simpler)
-    const [userLocation, setUserLocation] = useState<[number, number]>(() => {
-        const saved = sessionStorage.getItem('vadkul_map_center');
-        return saved ? JSON.parse(saved) : [56.8556, 14.8250];
-    });
+
 
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
@@ -179,59 +188,25 @@ export default function HomeContent() {
     }, [view]);
 
 
-    // Ladda data varje gång komponenten mountas (vilket sker när man navigerar tillbaka från EventDetails)
+    // --- Ladda data baserat på position ---
+    // Effect to handle Debounced Map Moves (Update Query Params)
     useEffect(() => {
-        loadData();
+        if (!mapState) return;
 
-        // Only fetch GPS if we DON'T have a saved state, OR just update silent?
-        // If we force update userLocation on mount, we lose the "saved view".
-        // Let's only do it if no saved center exists.
-        if (!sessionStorage.getItem('vadkul_map_center') && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                setUserLocation([pos.coords.latitude, pos.coords.longitude]);
-                saveLocationToLocalStorage(pos.coords.latitude, pos.coords.longitude);
-            });
-        }
-    }, []); // Empty dependency array = run on mount
+        const timer = setTimeout(() => {
+            // Calculate appropriate radius based on zoom
+            const r = 40000000 / Math.pow(2, mapState.zoom);
+            const newRadius = Math.max(2000, Math.min(r, 500000));
+            setFetchRadius(newRadius);
+            // Updating mapState (handled by handleMapMove) implicitly updates the Query Key via render
+        }, 500); // 500ms debounce
 
-    async function loadData() {
-        const CACHE_KEY = 'vadkul_events_cache';
-        const TIME_KEY = 'vadkul_events_cache_time';
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minuter
+        return () => clearTimeout(timer);
+    }, [mapState]);
 
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        const cacheTime = sessionStorage.getItem(TIME_KEY);
-
-        const now = Date.now();
-        const isCacheValid = cached && cacheTime && (now - parseInt(cacheTime) < CACHE_DURATION);
-
-        // Om vi har giltig cache, gör INGET (vi har redan laddat från state initializern)
-        if (isCacheValid) {
-            console.log("Using cached events (valid for 5 mins)");
-            setLoading(false);
-            return;
-        }
-
-        console.log("Fetching fresh events...");
-
-        // Bara visa spinner om vi INTE har någon data alls
-        // Om vi har "gammal" data, visa den medan vi hämtar nytt (silent update)
-        if (events.length === 0) {
-            setLoading(true);
-        }
-
-        try {
-            const data = await eventService.getAll();
-            setEvents(data);
-            // Spara till cache för nästa gång
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-            sessionStorage.setItem(TIME_KEY, now.toString());
-        } catch (error) {
-            console.error("Failed to load events", error);
-        } finally {
-            setLoading(false);
-        }
-    }
+    const handleMapMove = (center: L.LatLng, zoom: number) => {
+        setMapState({ center: [center.lat, center.lng], zoom });
+    };
 
     // --- HALL OF FAME LOGIC ---
     const hallOfFameEvent = useMemo(() => {
@@ -490,7 +465,7 @@ export default function HomeContent() {
                                 return z ? parseInt(z, 10) : 13;
                             })()} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <MapStateTracker />
+                                <MapStateTracker onMoveEnd={handleMapMove} />
                                 <MapController center={userLocation} onClick={handleMapClick} />
                                 {filteredEvents.map(evt => {
                                     const isSelected = selectedEvent?.id === evt.id;

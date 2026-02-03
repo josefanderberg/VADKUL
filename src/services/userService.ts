@@ -132,45 +132,16 @@ export const userService = {
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   },
 
-  // Lös in kod
+  // Lös in kod (Via Cloud Function för säkerhet)
   async redeemCode(uid: string, code: string): Promise<{ success: boolean; message: string }> {
-    const VALID_CODES = ['H2K2']; // Hardcoded for now
-    const normalizedCode = code.toUpperCase().trim();
-
-    if (!VALID_CODES.includes(normalizedCode)) {
-      return { success: false, message: 'Ogiltig kod.' };
-    }
-
-    const userRef = doc(db, 'users', uid);
-
     try {
-      // Use a variable to capture the result message from within the transaction
-      let message = "";
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../lib/firebase');
 
-      await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) throw new Error("User does not exist");
+      const redeemFn = httpsCallable<{ code: string }, { success: boolean, message: string }>(functions, 'redeemCode');
+      const result = await redeemFn({ code });
 
-        const userData = userDoc.data() as UserProfile;
-        const redeemed = userData.redeemedCodes || [];
-
-        if (redeemed.includes(normalizedCode)) {
-          // TOGGLE OFF
-          const newRedeemed = redeemed.filter(c => c !== normalizedCode);
-          transaction.update(userRef, {
-            redeemedCodes: newRedeemed
-          });
-          message = 'Koden godkänd. Premium avaktiverat.';
-        } else {
-          // TOGGLE ON
-          transaction.update(userRef, {
-            redeemedCodes: [...redeemed, normalizedCode]
-          });
-          message = 'Koden godkänd. Premium aktiverat!';
-        }
-      });
-
-      return { success: true, message };
+      return result.data;
     } catch (e: any) {
       console.error("Redeem error:", e);
       return { success: false, message: e.message || 'Kunde inte lösa in koden.' };

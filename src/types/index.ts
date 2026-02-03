@@ -103,6 +103,7 @@ export interface AppEvent {
   visibility?: 'public' | 'hidden'; // <--- NY: Synlighet
   customCategory?: string; // <--- NY: Anpassad kategori (t.ex. "Kalmar Nation")
   views: number; // <--- NY: Antal visningar
+  geohash?: string; // <--- NY: Geofire hash
 }
 
 export interface AppNotification {
