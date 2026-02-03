@@ -1,6 +1,6 @@
 // src/components/layout/Navbar.tsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { userService } from '../../services/userService';
@@ -16,10 +16,13 @@ export default function Navbar() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // State för bilden i navbaren - Initiera från cache för att undvika flicker
-  const [navImage, setNavImage] = useState<string | null>(() => {
-    return localStorage.getItem('cached_avatar_url');
-  });
+  // State för bilden i navbaren - Initiera med null för SSR, hämta i useEffect
+  const [navImage, setNavImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cached = localStorage.getItem('cached_avatar_url');
+    if (cached) setNavImage(cached);
+  }, []);
 
   // State för notiser (Flyttad från NotificationsMenu)
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -77,7 +80,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 md:px-8 h-full flex justify-between items-center">
 
         {/* LOGO */}
-        <Link to="/" className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors">
+        <Link href="/" className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors">
           VADKUL
         </Link>
 
@@ -85,12 +88,12 @@ export default function Navbar() {
 
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
           {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
-          <Link to="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
+          <Link href="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
             <Plus size={24} strokeWidth={2.5} />
           </Link>
 
           {/* 1.5 INFO (Ny) */}
-          <Link to="/about" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
+          <Link href="/about" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
             <Info size={22} />
           </Link>
 
@@ -110,7 +113,7 @@ export default function Navbar() {
               <NotificationsMenu notifications={generalNotifications} />
 
               {/* CHATT */}
-              <Link to="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors relative">
+              <Link href="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors relative">
                 <MessageSquare size={20} />
                 {unreadChatCount > 0 && (
                   <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background animate-in zoom-in">
@@ -120,7 +123,7 @@ export default function Navbar() {
               </Link>
 
               {/* PROFILBILD */}
-              <Link to="/profile" className="block ml-1 shrink-0">
+              <Link href="/profile" className="block ml-1 shrink-0">
                 {navImage ? (
                   // OM BILD FINNS
                   <img
@@ -138,7 +141,7 @@ export default function Navbar() {
             </>
           ) : (
             /* LOGGA IN KNAPP */
-            <Link to="/login" className="px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors active:scale-95">
+            <Link href="/login" className="px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors active:scale-95">
               <span className="min-[450px]:hidden">Logga in</span>
               <span className="hidden min-[450px]:inline">Logga In / Registrera</span>
             </Link>

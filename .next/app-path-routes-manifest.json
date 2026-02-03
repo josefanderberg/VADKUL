@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/about/page": "/about",
+  "/admin/page": "/admin",
+  "/chat/page": "/chat",
+  "/create/page": "/create",
+  "/event/[id]/edit/page": "/event/[id]/edit",
+  "/event/[id]/opengraph-image/route": "/event/[id]/opengraph-image",
+  "/event/[id]/page": "/event/[id]",
+  "/login/page": "/login",
+  "/page": "/",
+  "/profile/[uid]/page": "/profile/[uid]",
+  "/profile/page": "/profile",
+  "/public-profile/[uid]/page": "/public-profile/[uid]",
+  "/settings/page": "/settings"
+}

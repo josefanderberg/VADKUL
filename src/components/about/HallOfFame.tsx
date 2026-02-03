@@ -1,6 +1,6 @@
 // src/components/about/HallOfFame.tsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Trophy, Star, Flame, Calendar, Users } from 'lucide-react';
 import { eventService } from '../../services/eventService';
 
@@ -22,7 +22,7 @@ export default function HallOfFame() {
     const [topInviters, setTopInviters] = useState<LeaderboardUser[]>([]);
     const [topEventsByCategory, setTopEventsByCategory] = useState<{ category: EventCategoryType, event: AppEvent }[]>([]);
 
-    const navigate = useNavigate();
+    const router = useRouter();
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -211,7 +211,7 @@ export default function HallOfFame() {
                                     return (
                                         <div
                                             key={event.id}
-                                            onClick={() => navigate(`/public-profile/${event.host.uid}`)} // Link to host profile as requested or event? Ideally EventDetails? 
+                                            onClick={() => router.push(`/public-profile/${event.host.uid}`)} // Link to host profile as requested or event? Ideally EventDetails? 
                                             // The user said "jämte info" and "can stand which month". Usually Hall of Fame links to profiles, but for an EVENT, maybe link to event? 
                                             // But previous feedback was about clicking to profile. I'll link to Profile for now as it's a Hall of Fame for USERS mostly.
                                             // Actally, let's link to the Event if it's about the event. But past events aren't clickable/viewable usually?
@@ -291,7 +291,7 @@ export default function HallOfFame() {
 // Since PodiumCard is a separate function component defined in the same file, it can use hooks.
 
 function PodiumCard({ user, place, type }: { user: LeaderboardUser, place: number, type: 'creator' | 'host' | 'inviter' }) {
-    const navigate = useNavigate(); // Hook must be used inside the component
+    const router = useRouter(); // Hook must be used inside the component
 
     const isGold = place === 1;
     const isSilver = place === 2;
@@ -326,7 +326,7 @@ function PodiumCard({ user, place, type }: { user: LeaderboardUser, place: numbe
 
     return (
         <div
-            onClick={() => navigate(`/public-profile/${user.uid}`)}
+            onClick={() => router.push(`/public-profile/${user.uid}`)}
             className={`relative w-full max-w-[140px] md:max-w-[160px] cursor-pointer group ${heightClass} flex flex-col items-center justify-end p-4 rounded-t-2xl border-x border-t ${borderClass} ${bgClass} ${shadowClass} transition-all duration-500 hover:scale-105 hover:brightness-110`}
             title={`Gå till ${user.name}s profil`}
         >

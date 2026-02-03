@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/about/page": "app/about/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/chat/page": "app/chat/page.js",
+  "/create/page": "app/create/page.js",
+  "/event/[id]/edit/page": "app/event/[id]/edit/page.js",
+  "/event/[id]/opengraph-image/route": "app/event/[id]/opengraph-image/route.js",
+  "/event/[id]/page": "app/event/[id]/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/profile/[uid]/page": "app/profile/[uid]/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/public-profile/[uid]/page": "app/public-profile/[uid]/page.js",
+  "/settings/page": "app/settings/page.js"
+}

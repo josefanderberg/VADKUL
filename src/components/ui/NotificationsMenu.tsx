@@ -1,6 +1,6 @@
 // src/components/ui/NotificationsMenu.tsx
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Bell, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationService } from '../../services/notificationService';
@@ -12,7 +12,7 @@ interface NotificationsMenuProps {
 
 export default function NotificationsMenu({ notifications }: NotificationsMenuProps) {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +32,7 @@ export default function NotificationsMenu({ notifications }: NotificationsMenuPr
   const handleClickNotif = async (notif: AppNotification) => {
     await notificationService.markAsRead(notif.id);
     setIsOpen(false);
-    if (notif.link) navigate(notif.link);
+    if (notif.link) router.push(notif.link);
   };
 
   const markAllRead = async () => {

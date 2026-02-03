@@ -1,10 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,7 +15,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
-    const navigate = useNavigate();
+    const router = useRouter();
     const { user } = useAuth();
 
     // --- DATA ---
@@ -22,21 +23,25 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     const emoji = category.emoji;
 
     // Bild-logik (prioritera eventets bild, annars kategori-default)
-    const coverImage = event.coverImage || category.defaultImage;
+    const rawCoverImage = event.coverImage || category.defaultImage;
+    const coverImage = typeof rawCoverImage === 'string' ? rawCoverImage : rawCoverImage.src;
 
     // --- DISTANS BERÄKNING (NYTT) ---
-    const distance = useMemo(() => {
-        // Prioritera redan uträknat avstånd (från Home.tsx)
+    const [distance, setDistance] = useState<number | null>(
+        typeof event.location.distance === 'number' ? event.location.distance : null
+    );
+
+    useEffect(() => {
         if (typeof event.location.distance === 'number') {
-            return event.location.distance;
+            setDistance(event.location.distance);
+            return;
         }
 
         // Fallback: Räkna ut från localStorage
         const userLoc = loadLocationFromLocalStorage();
         if (userLoc && event.lat && event.lng) {
-            return calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng);
+            setDistance(calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng));
         }
-        return null;
     }, [event.lat, event.lng, event.location.distance]);
 
     const formatDistance = (d: number) => {
@@ -60,7 +65,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     const [imageLoaded, setImageLoaded] = useState(false);
 
     return (
-        <Link to={`/event/${event.id}`} className="block h-full group relative">
+        <Link href={`/event/${event.id}`} className="block h-full group relative">
             <div
                 className="relative flex flex-col h-full transition-transform duration-300 hover:-translate-y-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]"
                 style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.06))' }}
@@ -181,9 +186,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         if (event.host.uid) {
                                             // Om det är jag själv som är värd, gå till min profil
                                             if (user && user.uid === event.host.uid) {
-                                                navigate('/profile');
+                                                router.push('/profile');
                                             } else {
-                                                navigate(`/public-profile/${event.host.uid}`);
+                                                router.push(`/public-profile/${event.host.uid}`);
                                             }
                                         }
                                     }}

@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import type { UserProfile } from '../../types';
 
 interface FriendsListModalProps {
@@ -10,7 +10,7 @@ interface FriendsListModalProps {
 }
 
 export default function FriendsListModal({ isOpen, onClose, friends, loading }: FriendsListModalProps) {
-    const navigate = useNavigate();
+    const router = useRouter();
 
     if (!isOpen) return null;
 
@@ -52,7 +52,7 @@ export default function FriendsListModal({ isOpen, onClose, friends, loading }: 
                                     className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-border"
                                     onClick={() => {
                                         onClose();
-                                        navigate(`/public-profile/${friend.uid}`);
+                                        router.push(`/public-profile/${friend.uid}`);
                                     }}
                                 >
                                     <img

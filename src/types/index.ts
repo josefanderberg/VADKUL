@@ -1,5 +1,5 @@
 // src/types/index.ts
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 import type { EventCategoryType } from '../utils/categories';
 
 export interface UserProfile {
