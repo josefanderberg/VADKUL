@@ -372,7 +372,7 @@ export default function PublicProfile() {
 
                     {/* OVERLAY FOR NON-AUTH */}
                     {!currentUser && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pt-20 bg-background/60 backdrop-blur-sm rounded-xl border border-white/20">
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-32 bg-background/60 backdrop-blur-sm rounded-xl border border-white/20">
                             <div className="bg-card p-8 rounded-2xl shadow-2xl border border-border max-w-md text-center transform hover:scale-105 transition-transform duration-300">
                                 <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary animate-pulse">
                                     <UserPlus size={32} />

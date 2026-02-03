@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -21,11 +23,13 @@ import { userService } from '../services/userService';
 
 // VIKTIGT: Importera kategorier för att få rätt markör-färg
 import { EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../utils/categories';
+import { useAdmin } from '../context/AdminContext';
 
 export default function EventDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { isAdmin } = useAdmin();
 
     const [event, setEvent] = useState<AppEvent | null>(null);
     const [loading, setLoading] = useState(true);
@@ -239,11 +243,38 @@ export default function EventDetails() {
         }
     };
 
-    const handleReport = () => {
+    const handleReport = async () => {
         setShowMenu(false);
-        if (window.confirm("Vill du rapportera detta event som olämpligt?")) {
-            // Här skulle vi anropa backend för att flagga eventet
+
+        if (!user) {
+            toast.error("Du måste logga in för att rapportera ett event.");
+            return;
+        }
+
+        // Safety check (should block undefined values)
+        if (!event) {
+            toast.error("Kunde inte hitta eventdata.");
+            return;
+        }
+
+        const reason = window.prompt("Ange anledning till rapportering:", "Olämpligt innehåll");
+        if (!reason) return; // User cancelled
+
+        try {
+            await addDoc(collection(db, 'reports'), {
+                eventId: event.id, // Verified exists
+                eventTitle: event.title || 'Okänt event',
+                reporterId: user.uid,
+                reporterEmail: user.email || 'Anonym',
+                reason: reason,
+                status: 'pending',
+                createdAt: Timestamp.now()
+            });
             toast.success("Tack! Vi har mottagit din anmälan och kommer granska eventet.");
+        } catch (error: any) {
+            console.error("Report error:", error);
+            // Show the actual error message to help debugging
+            toast.error(`Fel vid rapportering: ${error.message}`);
         }
     };
 
@@ -349,7 +380,7 @@ export default function EventDetails() {
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
                                     <div className="absolute right-0 top-full mt-2 w-56 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden py-1">
-                                        {isHost ? (
+                                        {(isHost || isAdmin) ? (
                                             <>
                                                 <button
                                                     onClick={handleToggleVisibility}

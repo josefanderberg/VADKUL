@@ -10,10 +10,11 @@ import Layout from '../components/layout/Layout';
 import EventCard from '../components/ui/EventCard';
 import RateUserModal from '../components/profile/RateUserModal';
 import InviteModal from '../components/profile/InviteModal';
-import { Star, LogOut, Settings, CheckCircle2, MessageSquare, UserPlus, Users } from 'lucide-react';
+import { Star, LogOut, Settings, CheckCircle2, MessageSquare, UserPlus, Users, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loading from '../components/ui/Loading';
 import FriendsListModal from '../components/profile/FriendsListModal';
+import RedeemCodeModal from '../components/profile/RedeemCodeModal';
 
 export default function Profile() {
     const { user, logout } = useAuth();
@@ -38,7 +39,9 @@ export default function Profile() {
     // Modal state
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-    const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false); // NY
+    const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
+    const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false); // NY: Redeem Modal
+
 
     // Cache flags
     const [hasLoadedHosted, setHasLoadedHosted] = useState(false);
@@ -407,10 +410,62 @@ export default function Profile() {
                             )}
                         </div>
 
-                        {/* Top Right Actions (Now only Settings/Logout/Chat/Invite) */}
-                        <div className="flex gap-2 absolute top-4 right-4 md:static self-start">
+                        {/* ACTIONS CONTAINER */}
+
+                        {/* 1. MOBILE LAYOUT (Absolute, Split Left/Right) */}
+                        <div className="absolute top-0 left-0 w-full p-4 flex justify-between md:hidden pointer-events-none">
+                            {/* Left Group (Redeem & Invite) - Pointer events auto to enable clicking */}
+                            <div className="flex gap-2 pointer-events-auto">
+                                {isMyProfile && (
+                                    <>
+                                        <button
+                                            onClick={() => setIsRedeemModalOpen(true)}
+                                            className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-full transition-colors bg-background/50 backdrop-blur-sm shadow-sm"
+                                            title="Lös in kod"
+                                        >
+                                            <KeyRound size={20} />
+                                        </button>
+                                        <button
+                                            onClick={() => setIsInviteModalOpen(true)}
+                                            className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors bg-background/50 backdrop-blur-sm shadow-sm"
+                                            title="Bjud in vänner"
+                                        >
+                                            <UserPlus size={20} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Right Group (Settings & Logout) */}
+                            <div className="flex gap-2 pointer-events-auto">
+                                {isMyProfile ? (
+                                    <>
+                                        <button onClick={() => navigate('/settings')} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors bg-background/50 backdrop-blur-sm shadow-sm">
+                                            <Settings size={20} />
+                                        </button>
+                                        <button onClick={() => logout()} className="p-2 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors bg-background/50 backdrop-blur-sm shadow-sm">
+                                            <LogOut size={20} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={startChat} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-full transition-colors bg-background/50 backdrop-blur-sm shadow-sm" title="Skicka meddelande">
+                                        <MessageSquare size={20} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 2. DESKTOP LAYOUT (Static, Grouped Right) */}
+                        <div className="hidden md:flex gap-2 self-start ml-auto">
                             {isMyProfile ? (
                                 <>
+                                    <button
+                                        onClick={() => setIsRedeemModalOpen(true)}
+                                        className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-full transition-colors"
+                                        title="Lös in kod"
+                                    >
+                                        <KeyRound size={20} />
+                                    </button>
                                     <button
                                         onClick={() => setIsInviteModalOpen(true)}
                                         className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
@@ -555,6 +610,17 @@ export default function Profile() {
                     friends={friends}
                     loading={profileLoading && friends.length === 0}
                 />
+
+                <RedeemCodeModal
+                    isOpen={isRedeemModalOpen}
+                    onClose={() => setIsRedeemModalOpen(false)}
+                    onSuccess={() => {
+                        if (user) {
+                            userService.getUserProfile(user.uid).then(p => { if (p) setProfile(p) });
+                        }
+                    }}
+                />
+
 
             </div>
         </Layout >

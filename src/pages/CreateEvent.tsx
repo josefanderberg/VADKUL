@@ -171,6 +171,42 @@ export default function CreateEvent() {
     const [showPromoModal, setShowPromoModal] = useState(false);
     const [showLoginAlert, setShowLoginAlert] = useState(false);
 
+    // LIMIT CHECK STATE
+    const [hasActiveLimitValues, setHasActiveLimitValues] = useState<{ count: number; isPremium: boolean } | null>(null);
+    const [showLimitModal, setShowLimitModal] = useState(false);
+
+    // CHECK LIMIT ON MOUNT
+    useEffect(() => {
+        if (!user) return;
+
+        async function checkLimit() {
+            if (!user) return; // Repetated check for type narrowing in async closure
+            setLoading(true);
+            try {
+                // 1. Check premium status
+                const p = await userService.getUserProfile(user.uid);
+                const isPremium = (p?.redeemedCodes?.length || 0) > 0;
+
+                // 2. Check active events
+                const hosted = await eventService.getHostedEvents(user.uid);
+                const now = new Date();
+                const activeCount = hosted.filter(e => new Date(e.time) >= now).length;
+
+                setHasActiveLimitValues({ count: activeCount, isPremium });
+
+                // If NOT premium AND limit reached -> Block
+                if (!isPremium && activeCount >= 3 && !isEditMode) {
+                    setShowLimitModal(true);
+                }
+            } catch (e) {
+                console.error("Failed to check limit", e);
+            } finally {
+                setLoading(false);
+            }
+        }
+        checkLimit();
+    }, [user, isEditMode]);
+
     // --- CLEANUP & PERSISTENCE ---
 
     // Spara till sessionStorage vid ändring (om ej edit mode)
@@ -339,6 +375,32 @@ export default function CreateEvent() {
         if (!user.email) return;
         setLoading(true);
 
+        // --- SUBMIT-TIME LIMIT CHECK (Double Check) ---
+        if (!isEditMode) {
+            try {
+                const p = await userService.getUserProfile(user.uid);
+                const isPremium = (p?.redeemedCodes?.length || 0) > 0;
+
+                if (!isPremium) {
+                    const hosted = await eventService.getHostedEvents(user.uid);
+                    const now = new Date();
+                    // Räkna aktiva events (starttid i framtiden)
+                    const activeCount = hosted.filter(e => new Date(e.time) >= now).length;
+
+                    if (activeCount >= 3) {
+                        setShowLimitModal(true); // Visa modalen
+                        setLoading(false);
+                        return; // Stoppa sparande
+                    }
+                }
+            } catch (checkErr) {
+                console.error("Limit double-check failed", checkErr);
+                // Vi låter det passera om checken failar (fail open) eller blockar? Fail safe (block) kanske bättre men irriterande.
+                // Låt oss logga och fortsätta för nu, eller blocka?
+                // Vi kör vidare för att inte blockera vid nätverksfel, men loggar.
+            }
+        }
+
         const finalDate = new Date(formData.date);
         const [h, m] = formData.timeStr.split(':').map(Number);
         finalDate.setHours(h, m);
@@ -452,6 +514,42 @@ export default function CreateEvent() {
 
         return days;
     }, [currentMonth]);
+
+
+    // --- LIMIT BLOCKING UI ---
+    if (showLimitModal && hasActiveLimitValues) {
+        return (
+            <Layout>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+                    <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 text-center animate-in zoom-in-95">
+                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <KeyRound size={32} />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">Maxgräns nådd!</h2>
+                        <p className="text-muted-foreground mb-6">
+                            Du har {hasActiveLimitValues.count} aktiva events. <br />
+                            För att skapa fler måste du hitta en hemlig kod på campus!
+                        </p>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => navigate('/profile')}
+                                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+                            >
+                                Jag har en kod! (Gå till Profil)
+                            </button>
+                            <button
+                                onClick={() => navigate('/')}
+                                className="block w-full text-sm font-semibold text-muted-foreground hover:text-foreground py-2"
+                            >
+                                Gå tillbaka till startsidan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
 
 
     return (

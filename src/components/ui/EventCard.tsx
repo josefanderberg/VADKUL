@@ -4,7 +4,7 @@ import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -56,6 +56,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
 
 
+    // --- LOADING STATE ---
+    const [imageLoaded, setImageLoaded] = useState(false);
+
     return (
         <Link to={`/event/${event.id}`} className="block h-full group relative">
             <div
@@ -68,23 +71,33 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                 >
                     {/* --- OMSLAGSBILD --- */}
                     <div className={`relative w-full bg-muted overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
+
+                        {/* Skeleton Pulse while loading */}
+                        {!imageLoaded && (
+                            <div className="absolute inset-0 bg-muted animate-pulse z-10" />
+                        )}
+
                         {/* Bilden */}
                         <img
                             src={coverImage}
                             alt={event.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            loading="lazy"
+                            decoding="async"
+                            onLoad={() => setImageLoaded(true)}
+                            className={`w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                         />
-                        {/* Overlay Gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
 
-                        {/* Kategori Badge */}
-                        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-md backdrop-blur-md bg-white/90 text-slate-900`}>
+                        {/* Overlay Gradient (Fades in with image) */}
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 transition-opacity duration-500 ${imageLoaded ? 'opacity-60' : 'opacity-0'}`}></div>
+
+                        {/* Kategori Badge (Fades in with image) */}
+                        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-md backdrop-blur-md bg-white/90 text-slate-900 transition-all duration-500 delay-100 ${imageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
                             <span className="text-sm">{emoji}</span>
                             {category.label}
                         </div>
 
-                        {/* Datum Badge */}
-                        <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 font-bold px-2 py-1 rounded-lg text-xs shadow-sm flex flex-col items-center leading-tight">
+                        {/* Datum Badge (Fades in with image) */}
+                        <div className={`absolute bottom-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 font-bold px-2 py-1 rounded-lg text-xs shadow-sm flex flex-col items-center leading-tight transition-all duration-500 delay-100 ${imageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                             <span className="text-[9px] uppercase text-red-500">{event.time.toLocaleDateString('sv-SE', { month: 'short' })}</span>
                             <span className="text-lg">{event.time.getDate()}</span>
                         </div>

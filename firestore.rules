@@ -108,10 +108,22 @@ service cloud.firestore {
       allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid; // TILLÅT uppdatering (markera som läst)
     }
     
-    // 5. FEEDBACK (För din nya funktion)
+    // 5. FEEDBACK
     match /feedback/{feedbackId} {
-        allow create: if true; // Eller isAuthenticated()
+        allow create: if true; 
         allow read: if isAdmin();
+    }
+
+    // 6. REPORTS (Rapportering av events)
+    match /reports/{reportId} {
+        allow create: if isAuthenticated();
+        allow read, update, delete: if isAdmin();
+    }
+
+    // 7. PUBLIC SETTINGS
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

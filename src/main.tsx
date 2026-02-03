@@ -5,6 +5,7 @@ import './index.css'
 import 'leaflet/dist/leaflet.css'; // <--- DENNA RAD MÅSTE FINNAS HÄR!
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
+import { AdminProvider } from './context/AdminContext'
 import { BrowserRouter } from 'react-router-dom'
 
 // Register Service Worker for PWA
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <AdminProvider>
+            <App />
+          </AdminProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -1,7 +1,5 @@
-// src/pages/Home.tsx
-
-
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Added
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,10 +10,11 @@ import EventFilters from '../components/home/EventFilters';
 import WelcomeModal from '../components/ui/WelcomeModal';
 
 import { eventService } from '../services/eventService';
+import { settingsService } from '../services/settingsService';
 import type { AppEvent } from '../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../utils/categories';
-import { ArrowUpDown, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowUpDown, ArrowRight, ArrowLeft, Trophy } from 'lucide-react'; // Added Trophy
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -66,6 +65,8 @@ function MapStateTracker() {
 }
 
 export default function Home() {
+    const navigate = useNavigate();
+
     // 1. Initiera events från cache för att slippa "blink"
     const [events, setEvents] = useState<AppEvent[]>(() => {
         try {
@@ -114,10 +115,24 @@ export default function Home() {
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
 
+    // Settings (Init from cache to avoid flicker)
+    const [showHallOfFame, setShowHallOfFame] = useState(() => {
+        const cached = settingsService.getCachedSettings();
+        return cached ? cached.showHallOfFame : true;
+    });
+
     // --- Persist View State ---
     useEffect(() => {
         sessionStorage.setItem('vadkul_home_view', view);
     }, [view]);
+
+    // --- Fetch Settings ---
+    useEffect(() => {
+        const unsub = settingsService.subscribe((settings) => {
+            setShowHallOfFame(settings.showHallOfFame);
+        });
+        return () => unsub();
+    }, []);
 
     // --- AGGRESSIVE SCROLL RESTORATION ---
     // 1. Disable browser's auto restoration to avoid conflicts
@@ -216,6 +231,31 @@ export default function Home() {
             setLoading(false);
         }
     }
+
+    // --- HALL OF FAME LOGIC ---
+    const hallOfFameEvent = useMemo(() => {
+        if (!events || events.length === 0) return null;
+
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // 1. Filtrera events skapade denna månad
+        const thisMonthEvents = events.filter(e => {
+            if (!e.createdAt) return false;
+            // Ensure createdAt is a Date object (state initializer handles this but good to be safe)
+            const created = new Date(e.createdAt);
+            return created >= startOfMonth;
+        });
+
+        if (thisMonthEvents.length === 0) return null;
+
+        // 2. Sortera på antal deltagare (högst först)
+        return thisMonthEvents.sort((a, b) => {
+            const countA = a.attendees?.length || 0;
+            const countB = b.attendees?.length || 0;
+            return countB - countA;
+        })[0];
+    }, [events]);
 
     // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
     const filteredEvents = useMemo(() => {
@@ -371,12 +411,43 @@ export default function Home() {
                     setSearchQuery={setSearchQuery}
                 />
 
+
+
                 {/* Spacer för att kompensera för fixed filter-bar (ca 70px) */}
                 <div className="h-[72px] w-full" />
 
+                {/* HALL OF FAME (Efter spacer, precis över sortering) */}
+                {view === 'list' && showHallOfFame && hallOfFameEvent && (
+                    <div className="max-w-6xl mx-auto px-4 mt-4 mb-0 relative z-20 pointer-events-auto">
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Clicking Hall of Fame:", hallOfFameEvent.host);
+                                if (hallOfFameEvent.host?.uid) {
+                                    navigate(`/public-profile/${hallOfFameEvent.host.uid}`);
+                                }
+                            }}
+                            className="bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
+                        >
+                            <div className="absolute -right-4 -top-4 text-yellow-500/10"> <Trophy size={120} /> </div>
+                            <div className="bg-yellow-400 text-yellow-900 p-3 rounded-full flex-shrink-0 z-10 shadow-md"> <Trophy size={24} fill="currentColor" /> </div>
+                            <div className="z-10 flex-1">
+                                <p className="text-xs font-bold text-yellow-600 uppercase tracking-wider mb-1">
+                                    {new Date().toLocaleString('sv-SE', { month: 'long' }).charAt(0).toUpperCase() + new Date().toLocaleString('sv-SE', { month: 'long' }).slice(1)} Hall of Fame 🏆
+                                </p>
+                                <h3 className="font-bold text-lg text-yellow-900 leading-tight line-clamp-1">
+                                    {hallOfFameEvent.title}
+                                </h3>
+                                <p className="text-sm text-yellow-800">
+                                    Skapat av <span className="font-bold">{hallOfFameEvent.host?.name || 'Okänd'}</span> • <span className="font-bold">{hallOfFameEvent.attendees?.length || 0} deltagare</span>!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Sortering - Också flex-shrink-0 för att inte tryckas ihop */}
-                <div className="max-w-6xl mx-auto px-4 pt-4 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">
+                <div className="max-w-6xl mx-auto px-4 pt-2 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">
                     <div className="flex items-center gap-1 text-muted-foreground pointer-events-auto bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-border">
                         <ArrowUpDown size={14} />
                         <span className="text-xs font-bold uppercase mr-1">Sortera (topp 30):</span>
@@ -406,7 +477,7 @@ export default function Home() {
                             <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
                         </div>
                     ) : view === 'list' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20 animate-in fade-in duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
                             {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
                         </div>
                     ) : (

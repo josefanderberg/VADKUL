@@ -125,9 +125,9 @@ export default function About() {
                             <div className="max-w-6xl mx-auto space-y-24">
                                 <div className="grid md:grid-cols-2 gap-12 items-center">
                                     <div className="space-y-6 order-2 md:order-1">
-                                        <div className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-sm">
+                                        <Link to="/admin" className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-sm hover:underline cursor-pointer">
                                             <Globe size={16} /> Lokalt Liv
-                                        </div>
+                                        </Link>
                                         <h2 className="text-4xl font-bold tracking-tight">Väck liv i grannskapet</h2>
                                         <p className="text-lg text-muted-foreground leading-relaxed">
                                             Vi har blivit experter på att ignorera våra grannar samtidigt som vi "connectar" med främlingar på internet.

@@ -1,41 +1,51 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, Timestamp, writeBatch, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, writeBatch, doc, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../context/AdminContext';
 import Layout from '../components/layout/Layout';
 import { CATEGORY_LIST, type EventCategoryType } from '../utils/categories';
 import { notificationService } from '../services/notificationService';
-import { CheckCircle2, XCircle, ShieldAlert, User, MessageSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, ShieldAlert, User, MessageSquare, Flag } from 'lucide-react';
 import { feedbackService } from '../services/feedbackService';
+import { settingsService } from '../services/settingsService';
 import type { FeedbackItem } from '../types';
 import toast from 'react-hot-toast';
 
 // --- KONFIGURATION & KONSTANTER ---
 
-const SWEDISH_CITIES = [
+const VAXJO_AREAS = [
   { name: 'Växjö', lat: 56.87767, lng: 14.80906 },
-  { name: 'Stockholm', lat: 59.3293, lng: 18.0686 },
-  { name: 'Göteborg', lat: 57.7089, lng: 11.9746 },
-  { name: 'Malmö', lat: 55.6050, lng: 13.0038 },
-  { name: 'Uppsala', lat: 59.8586, lng: 17.6389 },
-  { name: 'Lund', lat: 55.7047, lng: 13.1910 },
-  { name: 'Umeå', lat: 63.8258, lng: 20.2630 },
-  { name: 'Linköping', lat: 58.4109, lng: 15.6214 },
-  { name: 'Örebro', lat: 59.2753, lng: 15.2134 },
-  { name: 'Helsingborg', lat: 56.0465, lng: 12.6945 }
+  { name: 'Växjö Campus', lat: 56.8550, lng: 14.8300 },
+  { name: 'Alvesta', lat: 56.8994, lng: 14.5556 },
+  { name: 'Gemla', lat: 56.8667, lng: 14.6500 },
+  { name: 'Rottne', lat: 57.0271, lng: 14.9080 },
+  { name: 'Ingelstad', lat: 56.7444, lng: 14.9333 },
+  { name: 'Braås', lat: 57.0667, lng: 15.0500 },
+  { name: 'Hovmantorp', lat: 56.7833, lng: 15.1500 },
+  { name: 'Åryd', lat: 56.8333, lng: 14.9667 },
+  { name: 'Vederslöv', lat: 56.8200, lng: 14.7300 }, // Rural
+  { name: 'Tävelsås', lat: 56.7800, lng: 14.8100 },  // Rural
+  { name: 'Lammhult', lat: 57.1700, lng: 14.5800 },
+  { name: 'Växjö Landsbygd', lat: 56.9000, lng: 14.7500 }, // Generic rural
+  { name: 'Furuby', lat: 56.8600, lng: 14.9500 },
+  { name: 'Kalvsvik', lat: 56.7200, lng: 14.7200 }   // Rural
 ];
 
-
-
-// Hjälpfunktion för slumpad position i Sverige
-const getRandomLocationInSweden = () => {
-  const city = SWEDISH_CITIES[Math.floor(Math.random() * SWEDISH_CITIES.length)];
-  const latOffset = (Math.random() - 0.5) * 0.15;
-  const lngOffset = (Math.random() - 0.5) * 0.15;
+// Hjälpfunktion för slumpad position runt Växjö
+// Hjälpfunktion för slumpad position runt Växjö
+const getRandomLocationAroundVaxjo = (index?: number) => {
+  // Om index skickas med, rotera genom listan för jämn spridning. Annars slumpa.
+  const area = typeof index === 'number'
+    ? VAXJO_AREAS[index % VAXJO_AREAS.length]
+    : VAXJO_AREAS[Math.floor(Math.random() * VAXJO_AREAS.length)];
+  // Ökad spridning (ca 5-6 km) för mer "ute på landet" känsla
+  const latOffset = (Math.random() - 0.5) * 0.08;
+  const lngOffset = (Math.random() - 0.5) * 0.08;
   return {
-    lat: city.lat + latOffset,
-    lng: city.lng + lngOffset,
-    cityName: city.name
+    lat: area.lat + latOffset,
+    lng: area.lng + lngOffset,
+    cityName: area.name
   };
 };
 
@@ -49,6 +59,7 @@ const getRandomCategory = (): EventCategoryType => {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { isAdmin, enableAdmin, disableAdmin } = useAdmin();
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -60,6 +71,7 @@ export default function AdminDashboard() {
 
   // Feedback State
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
 
   // Pagination for user list
   const [visibleCount, setVisibleCount] = useState(5);
@@ -67,6 +79,9 @@ export default function AdminDashboard() {
   // State för varningsmeddelande
   const [selectedUserId, setSelectedUserId] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
+
+  // Settings State
+  const [showHallOfFame, setShowHallOfFame] = useState(true);
 
   // Hämta användare vid start (för dropdown-listan)
   useEffect(() => {
@@ -91,12 +106,42 @@ export default function AdminDashboard() {
       setFeedback(data);
     };
 
+    const fetchReports = async () => {
+      try {
+        const q = query(collection(db, 'reports'), where('status', '==', 'pending'));
+        const snap = await getDocs(q);
+        setReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const fetchSettings = async () => {
+      const settings = await settingsService.getGlobalSettings();
+      setShowHallOfFame(settings.showHallOfFame);
+    };
+
     fetchUsers();
     fetchFeedback();
+    fetchSettings();
+    if (isAdmin) fetchReports();
 
-  }, [loading]); // Reload when loading finishes (e.g. after action)
+  }, [loading, isAdmin]); // Reload when loading finishes or admin status changes
 
   const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+
+  const handleToggleHallOfFame = async () => {
+    const newValue = !showHallOfFame;
+    setShowHallOfFame(newValue);
+    try {
+      await settingsService.updateGlobalSettings({ showHallOfFame: newValue });
+      toast.success(`Hall of Fame är nu ${newValue ? 'PÅ' : 'AV'}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Kunde inte spara inställning.");
+      setShowHallOfFame(!newValue); // Revert
+    }
+  };
 
   // ---------------------------------------------------------
   // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
@@ -314,7 +359,7 @@ export default function AdminDashboard() {
 
       for (let i = 0; i < count; i++) {
         const randomUser = users[Math.floor(Math.random() * users.length)];
-        const location = getRandomLocationInSweden();
+        const location = getRandomLocationAroundVaxjo();
         const category = getRandomCategory(); // Hämta slumpmässig kategori (e.g. 'sport', 'social')
 
         // Look up templates properly
@@ -480,23 +525,37 @@ export default function AdminDashboard() {
   // ---------------------------------------------------------
   // FUNKTION [NEW]: BLI ADMIN
   // ---------------------------------------------------------
-  const handleBecomeAdmin = async () => {
+  // ---------------------------------------------------------
+  // FUNKTION [NEW]: BLI ADMIN / TA BORT ADMIN
+  // ---------------------------------------------------------
+  const handleToggleAdmin = async () => {
     if (!user) {
       toast.error("Du måste vara inloggad först.");
       return;
     }
-    if (!confirm("Vill du ge dig själv admin-rättigheter?")) return;
+
+    const action = isAdmin ? "ta bort dina admin-rättigheter" : "ge dig själv admin-rättigheter";
+    if (!confirm(`Vill du ${action}?`)) return;
 
     setLoading(true);
-    addLog(`👑 Uppdaterar rättigheter för ${user.email}...`);
+    const newStatus = !isAdmin;
 
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
-        isAdmin: true
+        isAdmin: newStatus
       });
-      addLog(`✅ KLART! Du är nu admin.`);
-      toast.success("Du är nu admin! 👑");
+
+      if (newStatus) {
+        enableAdmin();
+        toast.success("Du är nu admin! 👑");
+        addLog(`👑 ${user.email} aktiverade admin-läge.`);
+      } else {
+        disableAdmin();
+        toast.success("Admin-läge avaktiverat.");
+        addLog(`👤 ${user.email} avaktiverade admin-läge.`);
+      }
+
     } catch (error: any) {
       addLog(`❌ Fel: ${error.message}`);
       toast.error("Kunde inte uppdatera rättigheter.");
@@ -551,6 +610,13 @@ export default function AdminDashboard() {
   const handleAcceptVerification = async (user: any) => {
     if (!confirm(`Godkänn verifiering för ${user.displayName}?`)) return;
     setLoading(true);
+    // Check if duplicate click / already processed
+    if (user.verificationStatus === 'verified') {
+      toast.error("Användaren är redan verifierad.");
+      setLoading(false);
+      return;
+    }
+
     addLog(`🔍 Godkänner verifiering för ${user.displayName}...`);
 
     try {
@@ -625,6 +691,32 @@ export default function AdminDashboard() {
     }
   };
 
+
+  const handleDismissReport = async (reportId: string) => {
+    try {
+      await updateDoc(doc(db, 'reports', reportId), { status: 'resolved' });
+      setReports(prev => prev.filter(r => r.id !== reportId));
+      toast.success("Rapport avfärdad.");
+    } catch (e) {
+      toast.error("Kunde inte avfärda.");
+    }
+  };
+
+  const handleDeleteReportedEvent = async (reportId: string, eventId: string) => {
+    if (!confirm("Vill du ta bort eventet och stänga rapporten?")) return;
+    try {
+      // Delete event
+      await deleteDoc(doc(db, 'events', eventId));
+      // Resolve report
+      await updateDoc(doc(db, 'reports', reportId), { status: 'resolved', resolution: 'event_deleted' });
+
+      setReports(prev => prev.filter(r => r.id !== reportId));
+      toast.success("Event borttaget och rapport stängd.");
+    } catch (e) {
+      toast.error("Kunde inte ta bort eventet.");
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-slate-50 p-6">
@@ -640,6 +732,47 @@ export default function AdminDashboard() {
             {/* VÄNSTER KOLUMN: ACTIONS */}
             <div className="space-y-6">
 
+              {/* KORT: Rapporterade Events */}
+              {reports.length > 0 && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-red-100 ring-4 ring-red-50">
+                  <h2 className="text-xl font-bold mb-4 text-red-900 flex items-center gap-2">
+                    <Flag className="text-red-600" />
+                    Rapporterade Events ({reports.length})
+                  </h2>
+                  <div className="space-y-4">
+                    {reports.map((report) => (
+                      <div key={report.id} className="border border-red-200 rounded-lg p-4 bg-red-50/50">
+                        <div className="flex flex-col gap-2 mb-3">
+                          <p className="font-bold text-red-900">{report.eventTitle}</p>
+                          <p className="text-sm text-red-800">Anledning: "{report.reason}"</p>
+                          <div className="text-xs text-red-600 flex gap-2">
+                            <span>Rapporterad av: {report.reporterEmail || 'Anonym'}</span>
+                            <span>•</span>
+                            <span>{report.createdAt?.toDate().toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <a href={`/event/${report.eventId}`} target="_blank" rel="noreferrer" className="flex-1 py-2 bg-white text-slate-700 font-bold rounded-lg text-sm border border-slate-300 hover:bg-slate-50 flex items-center justify-center">
+                            Visa Event
+                          </a>
+                          <button
+                            onClick={() => handleDismissReport(report.id)}
+                            className="flex-1 py-2 bg-white text-slate-700 font-bold rounded-lg text-sm border border-slate-300 hover:bg-slate-50"
+                          >
+                            Avfärda
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReportedEvent(report.id, report.eventId)}
+                            className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg text-sm hover:bg-red-700"
+                          >
+                            Ta bort
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* KORT: Senaste Feedback */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-purple-100 ring-4 ring-purple-50">
@@ -667,6 +800,25 @@ export default function AdminDashboard() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+
+              {/* KORT: Inställningar */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+                  Inställningar
+                </h2>
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
+                  <div>
+                    <p className="font-bold text-slate-900">Visa Hall of Fame på startsidan</p>
+                    <p className="text-sm text-slate-500">Om avstängd döljs "Månadens Event"-kortet.</p>
+                  </div>
+                  <button
+                    onClick={handleToggleHallOfFame}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 ${showHallOfFame ? 'bg-green-500' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showHallOfFame ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
               </div>
 
@@ -787,11 +939,14 @@ export default function AdminDashboard() {
                   </button>
 
                   <button
-                    onClick={handleBecomeAdmin}
+                    onClick={handleToggleAdmin}
                     disabled={loading}
-                    className="w-full bg-amber-100 text-amber-800 py-2 px-4 rounded-lg font-medium hover:bg-amber-200 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    className={`w-full py-2 px-4 rounded-lg font-medium transition disabled:opacity-50 flex items-center justify-center gap-2
+                        ${isAdmin
+                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                        : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'}`}
                   >
-                    👑 Bli Admin (Lös rättighetsproblem)
+                    {isAdmin ? '👤 Avaktivera Admin-läge' : '👑 Bli Admin (Lös rättighetsproblem)'}
                   </button>
                 </div>
               </div>

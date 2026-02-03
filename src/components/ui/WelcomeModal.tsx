@@ -47,7 +47,7 @@ export default function WelcomeModal() {
                     </div>
 
                     <h2 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                        Välkommen till VadKul
+                        Välkommen till VADKUL
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 mb-8 text-lg">
                         Hitta på något kul!

@@ -130,5 +130,50 @@ export const userService = {
     const q = query(collection(db, 'users', targetUid, 'reviews'), orderBy('createdAt', 'desc'), limit(10));
     const snap = await getDocs(q);
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  // Lös in kod
+  async redeemCode(uid: string, code: string): Promise<{ success: boolean; message: string }> {
+    const VALID_CODES = ['H2K2']; // Hardcoded for now
+    const normalizedCode = code.toUpperCase().trim();
+
+    if (!VALID_CODES.includes(normalizedCode)) {
+      return { success: false, message: 'Ogiltig kod.' };
+    }
+
+    const userRef = doc(db, 'users', uid);
+
+    try {
+      // Use a variable to capture the result message from within the transaction
+      let message = "";
+
+      await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) throw new Error("User does not exist");
+
+        const userData = userDoc.data() as UserProfile;
+        const redeemed = userData.redeemedCodes || [];
+
+        if (redeemed.includes(normalizedCode)) {
+          // TOGGLE OFF
+          const newRedeemed = redeemed.filter(c => c !== normalizedCode);
+          transaction.update(userRef, {
+            redeemedCodes: newRedeemed
+          });
+          message = 'Koden godkänd. Premium avaktiverat.';
+        } else {
+          // TOGGLE ON
+          transaction.update(userRef, {
+            redeemedCodes: [...redeemed, normalizedCode]
+          });
+          message = 'Koden godkänd. Premium aktiverat!';
+        }
+      });
+
+      return { success: true, message };
+    } catch (e: any) {
+      console.error("Redeem error:", e);
+      return { success: false, message: e.message || 'Kunde inte lösa in koden.' };
+    }
   }
 };

@@ -11,7 +11,19 @@ export const eventService = {
   // Hämta alla
   async getAll(): Promise<AppEvent[]> {
     try {
-      const snap = await getDocs(collection(db, COLLECTION));
+      // Filter: Only fetch events that have not ended yet (or start in future)
+      // Note: "time" is the start time. We want events where time >= now.
+      const now = new Date();
+      // Reset time to start of day if we want to include today's earlier events, 
+      // but strictly speaking "future" means >= now. 
+      // Let's keep it simple: time >= now.
+      // But wait, the client implementation `Home.tsx` filters `new Date(event.time) < now`.
+      // So if we filter here, we save the reads.
+      const q = query(
+        collection(db, COLLECTION),
+        where("time", ">=", Timestamp.fromDate(now))
+      );
+      const snap = await getDocs(q);
       return snap.docs.map(doc => {
         const data = doc.data() as FirestoreEventData;
         return {

@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Star, Flame, Calendar, Users } from 'lucide-react';
 import { eventService } from '../../services/eventService';
 
+import type { AppEvent } from '../../types';
+import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
+
 interface LeaderboardUser {
     uid: string;
     name: string;
@@ -17,11 +20,14 @@ export default function HallOfFame() {
     const [topCreators, setTopCreators] = useState<LeaderboardUser[]>([]);
     const [topHosts, setTopHosts] = useState<LeaderboardUser[]>([]);
     const [topInviters, setTopInviters] = useState<LeaderboardUser[]>([]);
+    const [topEventsByCategory, setTopEventsByCategory] = useState<{ category: EventCategoryType, event: AppEvent }[]>([]);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchStats = async () => {
-            const CACHE_KEY = 'vadkul_hof_data_v2'; // Bump version for new field
-            const TIME_KEY = 'vadkul_hof_timestamp_v2';
+            const CACHE_KEY = 'vadkul_hof_data_v3'; // Bump version
+            const TIME_KEY = 'vadkul_hof_timestamp_v3';
             const CACHE_DURATION = 60 * 60 * 1000; // 1 timme
 
             const cached = sessionStorage.getItem(CACHE_KEY);
@@ -30,10 +36,11 @@ export default function HallOfFame() {
 
             if (cached && cacheTime && (now - parseInt(cacheTime) < CACHE_DURATION)) {
                 console.log("Using cached Hall of Fame data");
-                const { creators, hosts, inviters } = JSON.parse(cached);
+                const { creators, hosts, inviters, eventsByCategory } = JSON.parse(cached);
                 setTopCreators(creators);
                 setTopHosts(hosts);
                 setTopInviters(inviters || []);
+                setTopEventsByCategory(eventsByCategory || []);
                 setLoading(false);
                 return;
             }
@@ -43,6 +50,34 @@ export default function HallOfFame() {
             try {
                 const events = await eventService.getAll();
 
+                // --- 0. Top Events per Category (Current Month) ---
+                const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+                const eventsThisMonth = events.filter(e => {
+                    return e.createdAt && new Date(e.createdAt) >= startOfMonth;
+                });
+
+                const bestPerCategory = new Map<EventCategoryType, AppEvent>();
+
+                eventsThisMonth.forEach(event => {
+                    const currentBest = bestPerCategory.get(event.type);
+                    if (!currentBest) {
+                        bestPerCategory.set(event.type, event);
+                    } else {
+                        const currentCount = currentBest.attendees?.length || 0;
+                        const newCount = event.attendees?.length || 0;
+                        if (newCount > currentCount) {
+                            bestPerCategory.set(event.type, event);
+                        }
+                    }
+                });
+
+                // Convert to array and filter out those with 0 attendees if desired (or keep them)
+                const topEvents = Array.from(bestPerCategory.entries())
+                    .map(([category, event]) => ({ category, event }))
+                    .sort((a, b) => (b.event.attendees?.length || 0) - (a.event.attendees?.length || 0));
+
+
                 // --- 1. Top Creators (Most Events) ---
                 const creatorMap = new Map<string, LeaderboardUser>();
 
@@ -50,8 +85,6 @@ export default function HallOfFame() {
                 const hostMap = new Map<string, LeaderboardUser>();
 
                 // --- 3. Top Inviters (MOCK DATA FOR NOW - Randomly pick from hosts) ---
-                // Since we don't track invites yet, we'll simulate it by picking unique users 
-                // and assigning them random "invite scores" for the UI demo.
                 const potentialInviters: LeaderboardUser[] = [];
 
                 events.forEach(event => {
@@ -95,11 +128,10 @@ export default function HallOfFame() {
                     .sort((a, b) => b.score - a.score)
                     .slice(0, 3);
 
-                // Mock logic for invitations: Take 3 random users and give them random scores 5-50
-                // Use a Set to ensure uniqueness if potentialInviters has duplicates (it shouldn't based on logic above but safe to be sure)
+                // Mock logic for invitations
                 const uniquePotential = Array.from(new Map(potentialInviters.map(item => [item.uid, item])).values());
                 const sortedInviters = uniquePotential
-                    .map(u => ({ ...u, score: Math.floor(Math.random() * 45) + 5 })) // Random score 5-50
+                    .map(u => ({ ...u, score: Math.floor(Math.random() * 45) + 5 }))
                     .sort((a, b) => b.score - a.score)
                     .slice(0, 3);
 
@@ -107,9 +139,10 @@ export default function HallOfFame() {
                 setTopCreators(sortedCreators);
                 setTopHosts(sortedHosts);
                 setTopInviters(sortedInviters);
+                setTopEventsByCategory(topEvents);
 
                 // Spara till cache
-                sessionStorage.setItem(CACHE_KEY, JSON.stringify({ creators: sortedCreators, hosts: sortedHosts, inviters: sortedInviters }));
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({ creators: sortedCreators, hosts: sortedHosts, inviters: sortedInviters, eventsByCategory: topEvents }));
                 sessionStorage.setItem(TIME_KEY, now.toString());
 
             } catch (error) {
@@ -127,23 +160,21 @@ export default function HallOfFame() {
 
         return (
             <div className="flex flex-row items-end justify-center gap-2 md:gap-4 py-8 w-full max-w-md mx-auto">
-                {/* Silver (2nd) */}
                 <div className="flex-1 flex justify-end">
                     {users[1] && <PodiumCard user={users[1]} place={2} type={type} />}
                 </div>
-
-                {/* Gold (1st) */}
                 <div className="flex-1 flex justify-center z-10">
                     {users[0] && <PodiumCard user={users[0]} place={1} type={type} />}
                 </div>
-
-                {/* Bronze (3rd) */}
                 <div className="flex-1 flex justify-start">
                     {users[2] && <PodiumCard user={users[2]} place={3} type={type} />}
                 </div>
             </div>
         );
     };
+
+    const currentMonthName = new Date().toLocaleString('sv-SE', { month: 'long' });
+    const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
 
     return (
         <div className="space-y-16 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -152,48 +183,102 @@ export default function HallOfFame() {
                     <Trophy className="text-yellow-500" size={32} /> Hall of Fame
                 </h2>
                 <p className="text-muted-foreground max-w-xl mx-auto">
-                    Månadens mest engagerade medlemmar. De som skapar möten och bygger gemenskap.
+                    Vi hyllar de som gör VADKUL möjligt! Här hittar du månadens hjältar.
                 </p>
             </div>
 
             {loading ? (
                 <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 px-4">
+                <div className="space-y-20">
 
-                    {/* TOP CREATORS */}
-                    <div className="space-y-6 flex flex-col items-center w-full">
+                    {/* --- NEW SECTION: EVENTS PER CATEGORY --- */}
+                    <div className="space-y-8 px-4">
                         <div className="text-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-sm font-bold uppercase mb-2">
-                                <Flame size={14} /> Eldsjälarna
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 text-sm font-bold uppercase mb-2">
+                                <Trophy size={14} /> Månadens Utvalda
                             </div>
-                            <h3 className="text-xl font-bold">Flest Skapade Events</h3>
+                            <h3 className="text-2xl font-bold">{capitalizedMonth}s Största Events per Kategori</h3>
+                            <p className="text-muted-foreground text-sm mt-2">Dessa events drog mest folk inom sin genre denna månad!</p>
                         </div>
-                        {renderPodium(topCreators, 'creator')}
+
+                        {topEventsByCategory.length === 0 ? (
+                            <div className="text-center p-8 bg-muted/30 rounded-xl border border-dashed border-border text-muted-foreground">Inga events skapade denna månad än!</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {topEventsByCategory.map(({ category, event }) => {
+                                    const catInfo = EVENT_CATEGORIES[category];
+                                    return (
+                                        <div
+                                            key={event.id}
+                                            onClick={() => navigate(`/public-profile/${event.host.uid}`)} // Link to host profile as requested or event? Ideally EventDetails? 
+                                            // The user said "jämte info" and "can stand which month". Usually Hall of Fame links to profiles, but for an EVENT, maybe link to event? 
+                                            // But previous feedback was about clicking to profile. I'll link to Profile for now as it's a Hall of Fame for USERS mostly.
+                                            // Actally, let's link to the Event if it's about the event. But past events aren't clickable/viewable usually?
+                                            // Let's stick to Profile for consistency with the rest of HoF.
+                                            className={`relative flex items-center gap-4 p-4 rounded-xl border-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer bg-card ${catInfo.hoverBorder} border-transparent shadow-sm hover:shadow-md`}
+                                        >
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${catInfo.color}`}>
+                                                {catInfo.emoji}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-xs font-bold text-muted-foreground uppercase mb-0.5">{catInfo.label}</div>
+                                                <h4 className="font-bold text-foreground truncate">{event.title}</h4>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Host: <span className="text-primary font-medium">{event.host.name}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-center px-2 py-1 bg-muted rounded-lg">
+                                                <div className="text-lg font-bold">{event.attendees?.length || 0}</div>
+                                                <div className="text-[10px] uppercase text-muted-foreground font-bold">Delt</div>
+                                            </div>
+                                            {/* Badge for #1 */}
+                                            <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-sm">
+                                                <Trophy size={12} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
-                    {/* TOP HOSTS */}
-                    <div className="space-y-6 flex flex-col items-center w-full">
-                        <div className="text-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-sm font-bold uppercase mb-2">
-                                <Users size={14} /> Publikmagneterna
-                            </div>
-                            <h3 className="text-xl font-bold">Flest Deltagare</h3>
-                        </div>
-                        {renderPodium(topHosts, 'host')}
-                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 px-4">
 
-                    {/* TOP INVITERS (NEW) */}
-                    <div className="space-y-6 flex flex-col items-center w-full">
-                        <div className="text-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-sm font-bold uppercase mb-2">
-                                <Star size={14} /> Ambassadörerna
+                        {/* TOP CREATORS */}
+                        <div className="space-y-6 flex flex-col items-center w-full">
+                            <div className="text-center">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-sm font-bold uppercase mb-2">
+                                    <Flame size={14} /> Eldsjälarna
+                                </div>
+                                <h3 className="text-xl font-bold">Flest Skapade Events</h3>
                             </div>
-                            <h3 className="text-xl font-bold">Flest Inbjudna</h3>
+                            {renderPodium(topCreators, 'creator')}
                         </div>
-                        {renderPodium(topInviters, 'inviter')}
-                    </div>
 
+                        {/* TOP HOSTS */}
+                        <div className="space-y-6 flex flex-col items-center w-full">
+                            <div className="text-center">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-sm font-bold uppercase mb-2">
+                                    <Users size={14} /> Publikmagneterna
+                                </div>
+                                <h3 className="text-xl font-bold">Flest Deltagare</h3>
+                            </div>
+                            {renderPodium(topHosts, 'host')}
+                        </div>
+
+                        {/* TOP INVITERS (NEW) */}
+                        <div className="space-y-6 flex flex-col items-center w-full">
+                            <div className="text-center">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-sm font-bold uppercase mb-2">
+                                    <Star size={14} /> Ambassadörerna
+                                </div>
+                                <h3 className="text-xl font-bold">Flest Inbjudna</h3>
+                            </div>
+                            {renderPodium(topInviters, 'inviter')}
+                        </div>
+
+                    </div>
                 </div>
             )}
         </div>

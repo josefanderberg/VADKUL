@@ -15,7 +15,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-orange-600 border-orange-600',
     hoverBorder: 'hover:border-orange-500',
     description: 'Kubb, brännboll, kurragömma eller vattenkrig',
-    defaultImage: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&w=500&q=80'
   },
   sport: {
     id: 'sport',
@@ -28,7 +28,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-red-600 border-red-600',
     hoverBorder: 'hover:border-red-500',
     description: 'Fotbollsmatcher, turneringar och lagidrott',
-    defaultImage: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=500&q=80'
   },
   training: {
     id: 'training',
@@ -41,7 +41,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-emerald-600 border-emerald-600',
     hoverBorder: 'hover:border-emerald-500',
     description: 'Gymmet, löprundan, yoga eller powerwalk',
-    defaultImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=500&q=80'
   },
 
   // --- SOCIALT & CAMPUS ---
@@ -56,7 +56,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-purple-600 border-purple-600',
     hoverBorder: 'hover:border-purple-600',
     description: 'Sittningar, mellanfest, utgång eller korridorsfest',
-    defaultImage: 'https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=500&q=80'
   },
   social: {
     id: 'social',
@@ -69,7 +69,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-amber-600 border-amber-600',
     hoverBorder: 'hover:border-amber-500',
     description: 'Avslappnat häng, kaffe, lunch eller en pratstund',
-    defaultImage: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=500&q=80'
   },
   campus: {
     id: 'campus',
@@ -82,7 +82,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-indigo-600 border-indigo-600',
     hoverBorder: 'hover:border-indigo-500',
     description: 'Evenemang arrangerade av nationer eller kåren',
-    defaultImage: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=500&q=80'
   },
 
   // --- SAMHÄLLE & ENGAGEMANG ---
@@ -97,7 +97,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-cyan-600 border-cyan-600',
     hoverBorder: 'hover:border-cyan-600',
     description: 'Diskussioner, välgörenhet, samarbeten och framtidsfrågor',
-    defaultImage: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=800&q=80' // Ny bild: Volontärer/Händer
+    defaultImage: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=500&q=80' // Ny bild: Volontärer/Händer
   },
   culture: {
     id: 'culture',
@@ -125,7 +125,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-blue-600 border-blue-600',
     hoverBorder: 'hover:border-blue-500',
     description: 'Tenta-P, grupparbeten eller tyst läsning',
-    defaultImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=500&q=80'
   },
   workshop: {
     id: 'workshop',
@@ -138,7 +138,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-sky-600 border-sky-600',
     hoverBorder: 'hover:border-sky-500',
     description: 'Föreläsningar, workshops, språkcafé och nya färdigheter',
-    defaultImage: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80' // Ny bild: Föreläsningssal/Workshop
+    defaultImage: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=500&q=80' // Ny bild: Föreläsningssal/Workshop
   },
   creative: {
     id: 'creative',
@@ -151,7 +151,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-orange-600 border-orange-600',
     hoverBorder: 'hover:border-orange-500',
     description: 'Måla, rita, handarbete, skriva eller byggprojekt',
-    defaultImage: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=800&q=80' // Ny bild: Målarfärger/Penslar
+    defaultImage: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=500&q=80' // Ny bild: Målarfärger/Penslar
   },
 
   // --- MAT & ÖVRIGT ---
@@ -166,7 +166,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-amber-950 border-amber-950',
     hoverBorder: 'hover:border-amber-900',
     description: 'Middag, bakning, grillning eller matlag',
-    defaultImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80'
   },
   game: {
     id: 'game',
@@ -179,7 +179,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-purple-600 border-purple-600',
     hoverBorder: 'hover:border-purple-500',
     description: 'LAN, konsol-gaming, e-sport eller arkad',
-    defaultImage: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=500&q=80'
   },
   boardgame: {
     id: 'boardgame',
@@ -192,7 +192,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-stone-600 border-stone-600',
     hoverBorder: 'hover:border-stone-500',
     description: 'Brädspel, kortspel, rollspel eller schack',
-    defaultImage: 'https://images.unsplash.com/photo-1611195974226-a6a9be9dd763?auto=format&fit=crop&w=800&q=80' // Ny bild: Tärningar/Brädspel
+    defaultImage: 'https://images.unsplash.com/photo-1611195974226-a6a9be9dd763?auto=format&fit=crop&w=500&q=80' // Ny bild: Tärningar/Brädspel
   },
   market: {
     id: 'market',
@@ -205,7 +205,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-emerald-600 border-emerald-600',
     hoverBorder: 'hover:border-emerald-600',
     description: 'Loppis, kurslitteratur eller klädbytardag',
-    defaultImage: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&w=800&q=80' // Ny bild: Loppis/Shopping
+    defaultImage: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&w=500&q=80' // Ny bild: Loppis/Shopping
   },
   outdoor: {
     id: 'outdoor',
@@ -218,7 +218,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-green-600 border-green-600',
     hoverBorder: 'hover:border-green-500',
     description: 'Vandring, picknick, cykling, fiske och friluftsliv',
-    defaultImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=500&q=80'
   },
   movie: {
     id: 'movie',
@@ -231,7 +231,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-cyan-600 border-cyan-600',
     hoverBorder: 'hover:border-cyan-500',
     description: 'Biobesök, filmkvällar eller maraton av en TV-serie',
-    defaultImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'
+    defaultImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80'
   },
   mingle: {
     id: 'mingle',
@@ -257,7 +257,7 @@ export const EVENT_CATEGORIES = {
     activeColor: 'bg-gray-500 border-gray-500',
     hoverBorder: 'hover:border-gray-400',
     description: 'Allt som inte passar in ovan',
-    defaultImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80' // Ny bild: Sparkler/Festligt/Partiklar
+    defaultImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=500&q=80' // Ny bild: Sparkler/Festligt/Partiklar
   }
 } as const;
 
