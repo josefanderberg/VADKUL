@@ -128,49 +128,16 @@ const userService = {
                 ...doc.data()
             }));
     },
-    // Lös in kod
+    // Lös in kod (Via Cloud Function för säkerhet)
     async redeemCode (uid, code) {
-        const VALID_CODES = [
-            'H2K2'
-        ]; // Hardcoded for now
-        const normalizedCode = code.toUpperCase().trim();
-        if (!VALID_CODES.includes(normalizedCode)) {
-            return {
-                success: false,
-                message: 'Ogiltig kod.'
-            };
-        }
-        const userRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], 'users', uid);
         try {
-            // Use a variable to capture the result message from within the transaction
-            let message = "";
-            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["runTransaction"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], async (transaction)=>{
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) throw new Error("User does not exist");
-                const userData = userDoc.data();
-                const redeemed = userData.redeemedCodes || [];
-                if (redeemed.includes(normalizedCode)) {
-                    // TOGGLE OFF
-                    const newRedeemed = redeemed.filter((c)=>c !== normalizedCode);
-                    transaction.update(userRef, {
-                        redeemedCodes: newRedeemed
-                    });
-                    message = 'Koden godkänd. Premium avaktiverat.';
-                } else {
-                    // TOGGLE ON
-                    transaction.update(userRef, {
-                        redeemedCodes: [
-                            ...redeemed,
-                            normalizedCode
-                        ]
-                    });
-                    message = 'Koden godkänd. Premium aktiverat!';
-                }
+            const { httpsCallable } = await __turbopack_context__.A("[project]/source/repos/vadkul/node_modules/firebase/functions/dist/esm/index.esm.js [app-client] (ecmascript, async loader)");
+            const { functions } = await __turbopack_context__.A("[project]/source/repos/vadkul/src/lib/firebase.ts [app-client] (ecmascript, async loader)");
+            const redeemFn = httpsCallable(functions, 'redeemCode');
+            const result = await redeemFn({
+                code
             });
-            return {
-                success: true,
-                message
-            };
+            return result.data;
         } catch (e) {
             console.error("Redeem error:", e);
             return {
@@ -2669,7 +2636,9 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2f$firestore$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/firebase/firestore/dist/esm/index.esm.js [app-client] (ecmascript) <locals>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/@firebase/firestore/dist/index.esm.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/geofire-common/dist/geofire-common/geofire-common.min.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/src/lib/firebase.ts [app-client] (ecmascript)");
+;
 ;
 ;
 const COLLECTION = 'events';
@@ -2698,6 +2667,53 @@ const eventService = {
             });
         } catch (error) {
             console.error("Error fetching events:", error);
+            return [];
+        }
+    },
+    // Hämta events inom en radie (Geo-querying)
+    async getEventsInBounds (center, radiusInMeters) {
+        try {
+            const bounds = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashQueryBounds"])(center, radiusInMeters);
+            const promises = [];
+            const now = new Date(); // Filter only future events
+            for (const b of bounds){
+                const q = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["orderBy"])('geohash'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["startAt"])(b[0]), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["endAt"])(b[1]));
+                promises.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDocs"])(q));
+            }
+            const snapshots = await Promise.all(promises);
+            const matchingDocs = [];
+            const seenIds = new Set();
+            for (const snap of snapshots){
+                for (const doc of snap.docs){
+                    if (seenIds.has(doc.id)) continue;
+                    const data = doc.data();
+                    // 1. Client-side Time Filter (Future events only)
+                    const eventTime = data.time instanceof __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"] ? data.time.toDate() : new Date(data.time);
+                    if (eventTime < now) continue;
+                    // 2. Client-side Distance Filter
+                    // Lat/Lng are required for distance calc
+                    const lat = data.lat;
+                    const lng = data.lng;
+                    if (!lat || !lng) continue;
+                    const distanceInKm = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["distanceBetween"])([
+                        lat,
+                        lng
+                    ], center);
+                    const distanceInM = distanceInKm * 1000;
+                    if (distanceInM <= radiusInMeters) {
+                        seenIds.add(doc.id);
+                        matchingDocs.push({
+                            ...data,
+                            id: doc.id,
+                            time: eventTime,
+                            createdAt: data.createdAt instanceof __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"] ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt || 0) : undefined
+                        });
+                    }
+                }
+            }
+            return matchingDocs;
+        } catch (error) {
+            console.error("Error fetching events in bounds:", error);
             return [];
         }
     },
@@ -2742,9 +2758,14 @@ const eventService = {
     },
     // Skapa
     async create (event) {
+        const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+            event.lat,
+            event.lng
+        ]);
         const payload = {
             ...event,
             views: 0,
+            geohash: hash,
             time: __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].fromDate(event.time),
             createdAt: __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].now() // Use client-side timestamp for simplicity effectively matching server
         };
@@ -2756,9 +2777,15 @@ const eventService = {
         // Vi plockar bort id innan vi sparar till Firestore
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...data } = event;
+        // Recalculate geohash if lat/lng changed (always calculating to be safe)
+        const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+            event.lat,
+            event.lng
+        ]);
         // Sanitize data: Remove undefined fields and convert Dates to Timestamps
         const payload = {
-            ...data
+            ...data,
+            geohash: hash
         };
         // Convert known dates
         payload.time = __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].fromDate(event.time);
@@ -2824,6 +2851,33 @@ const eventService = {
             console.log(`Updated host data for ${updates.length} events.`);
         } catch (error) {
             console.error("Failed to sync host data to events:", error);
+            throw error;
+        }
+    },
+    // Migrera events för att lägga till geohash
+    async migrateEventsToGeo () {
+        try {
+            const snap = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDocs"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION));
+            console.log(`Checking ${snap.size} events for missing geohash...`);
+            let updated = 0;
+            const updates = snap.docs.map(async (docSnap)=>{
+                const data = docSnap.data();
+                // Om geohash saknas men lat/lng finns
+                if (!data.geohash && data.lat && data.lng) {
+                    const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+                        data.lat,
+                        data.lng
+                    ]);
+                    await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["updateDoc"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION, docSnap.id), {
+                        geohash: hash
+                    });
+                    updated++;
+                }
+            });
+            await Promise.all(updates);
+            return updated;
+        } catch (error) {
+            console.error("Migration failed:", error);
             throw error;
         }
     }
@@ -2944,6 +2998,7 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/@tanstack/react-query/build/modern/useQuery.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/next/navigation.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$react$2d$leaflet$2f$lib$2f$MapContainer$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/react-leaflet/lib/MapContainer.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$react$2d$leaflet$2f$lib$2f$TileLayer$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/react-leaflet/lib/TileLayer.js [app-client] (ecmascript)");
@@ -2969,6 +3024,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$leaflet$2f$dist$2f$images$2f$marker$2d$shadow$2e$png__$28$static__in__ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/leaflet/dist/images/marker-shadow.png (static in ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature(), _s2 = __turbopack_context__.k.signature();
+;
 ;
 ;
 ;
@@ -3027,13 +3083,14 @@ _s(MapController, "eigJGSa4KDJZ+y99NtqDSOxj1MY=", false, function() {
     ];
 });
 _c = MapController;
-// Helper to track map state
-function MapStateTracker() {
+// Helper to track map state and trigger fetch
+function MapStateTracker({ onMoveEnd }) {
     _s1();
     const map = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$react$2d$leaflet$2f$lib$2f$hooks$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMapEvents"])({
         moveend: {
             "MapStateTracker.useMapEvents[map]": ()=>{
                 const center = map.getCenter();
+                onMoveEnd(center, map.getZoom());
                 sessionStorage.setItem('vadkul_map_center', JSON.stringify([
                     center.lat,
                     center.lng
@@ -3043,12 +3100,9 @@ function MapStateTracker() {
         }["MapStateTracker.useMapEvents[map]"],
         zoomend: {
             "MapStateTracker.useMapEvents[map]": ()=>{
+                // zoomend also triggers moveend usually, but good to be safe if Logic changes
                 const center = map.getCenter();
-                sessionStorage.setItem('vadkul_map_center', JSON.stringify([
-                    center.lat,
-                    center.lng
-                ]));
-                sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
+            // onMoveEnd handled by moveend
             }
         }["MapStateTracker.useMapEvents[map]"]
     });
@@ -3063,51 +3117,69 @@ _c1 = MapStateTracker;
 function HomeContent() {
     _s2();
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
-    // 1. Initiera events från cache för att slippa "blink"
-    const [events, setEvents] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
+    // 1. Initialisera userLocation från storage eller default 
+    // Vi flyttar upp detta för att kunna använda i queryKey
+    const [userLocation, setUserLocation] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
         "HomeContent.useState": ()=>{
-            try {
-                const cached = sessionStorage.getItem('vadkul_events_cache');
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    // Måste återställa Datum-objekt eftersom JSON gör dem till strängar
-                    return parsed.map({
-                        "HomeContent.useState": (evt)=>({
-                                ...evt,
-                                time: new Date(evt.time),
-                                createdAt: evt.createdAt ? new Date(evt.createdAt) : undefined
-                            })
-                    }["HomeContent.useState"]);
-                }
-                return [];
-            } catch (e) {
-                return [];
+            if ("TURBOPACK compile-time truthy", 1) {
+                const saved = sessionStorage.getItem('vadkul_map_center');
+                return saved ? JSON.parse(saved) : [
+                    56.8556,
+                    14.8250
+                ];
+            }
+            //TURBOPACK unreachable
+            ;
+        }
+    }["HomeContent.useState"]);
+    // 2. State för "Sökfönster" för Query
+    const [fetchRadius, setFetchRadius] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(50000);
+    const [mapState, setMapState] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    // Initial Geolocation fetch (only on mount if no saved pos)
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "HomeContent.useEffect": ()=>{
+            if (!sessionStorage.getItem('vadkul_map_center') && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition({
+                    "HomeContent.useEffect": (pos)=>{
+                        const newLoc = [
+                            pos.coords.latitude,
+                            pos.coords.longitude
+                        ];
+                        setUserLocation(newLoc);
+                        setMapState({
+                            center: newLoc,
+                            zoom: 13
+                        }); // Trigger update
+                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$utils$2f$mapUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["saveLocationToLocalStorage"])(pos.coords.latitude, pos.coords.longitude);
+                    }
+                }["HomeContent.useEffect"]);
             }
         }
-    }["HomeContent.useState"]);
-    // 2. Om vi har data, visa den DIREKT (loading=false)
-    const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
-        "HomeContent.useState": ()=>{
-            // Om vi har data i cache, visa den direkt (loading=false)
-            return !sessionStorage.getItem('vadkul_events_cache');
-        }
-    }["HomeContent.useState"]);
+    }["HomeContent.useEffect"], []);
+    // 3. TanStack Query
+    const { data: events = [], isLoading: loading } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"])({
+        queryKey: [
+            'events',
+            'geo',
+            mapState ? mapState.center : userLocation,
+            fetchRadius
+        ],
+        queryFn: {
+            "HomeContent.useQuery": async ()=>{
+                // Use mapState center if moved, else initial userLocation
+                const center = mapState ? mapState.center : userLocation;
+                return __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$services$2f$eventService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["eventService"].getEventsInBounds(center, fetchRadius);
+            }
+        }["HomeContent.useQuery"],
+        staleTime: 5 * 60 * 1000,
+        placeholderData: {
+            "HomeContent.useQuery": (previousData)=>previousData
+        }["HomeContent.useQuery"]
+    });
     // Initialize view from storage
     const [view, setView] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
         "HomeContent.useState": ()=>{
             return sessionStorage.getItem('vadkul_home_view') || 'list';
-        }
-    }["HomeContent.useState"]);
-    // Initialize userLocation from storage if available (Visual center), else default
-    // We keep userLocation as the "Anchor" but initially set it to saved View center if exists,
-    // to prevent jumping. (Or strictly separate View vs UserPos, but this is simpler)
-    const [userLocation, setUserLocation] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
-        "HomeContent.useState": ()=>{
-            const saved = sessionStorage.getItem('vadkul_map_center');
-            return saved ? JSON.parse(saved) : [
-                56.8556,
-                14.8250
-            ];
         }
     }["HomeContent.useState"]);
     const [selectedEvent, setSelectedEvent] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
@@ -3202,58 +3274,36 @@ function HomeContent() {
     }["HomeContent.useEffect"], [
         view
     ]);
-    // Ladda data varje gång komponenten mountas (vilket sker när man navigerar tillbaka från EventDetails)
+    // --- Ladda data baserat på position ---
+    // Effect to handle Debounced Map Moves (Update Query Params)
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "HomeContent.useEffect": ()=>{
-            loadData();
-            // Only fetch GPS if we DON'T have a saved state, OR just update silent?
-            // If we force update userLocation on mount, we lose the "saved view".
-            // Let's only do it if no saved center exists.
-            if (!sessionStorage.getItem('vadkul_map_center') && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition({
-                    "HomeContent.useEffect": (pos)=>{
-                        setUserLocation([
-                            pos.coords.latitude,
-                            pos.coords.longitude
-                        ]);
-                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$utils$2f$mapUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["saveLocationToLocalStorage"])(pos.coords.latitude, pos.coords.longitude);
-                    }
-                }["HomeContent.useEffect"]);
-            }
+            if (!mapState) return;
+            const timer = setTimeout({
+                "HomeContent.useEffect.timer": ()=>{
+                    // Calculate appropriate radius based on zoom
+                    const r = 40000000 / Math.pow(2, mapState.zoom);
+                    const newRadius = Math.max(2000, Math.min(r, 500000));
+                    setFetchRadius(newRadius);
+                // Updating mapState (handled by handleMapMove) implicitly updates the Query Key via render
+                }
+            }["HomeContent.useEffect.timer"], 500); // 500ms debounce
+            return ({
+                "HomeContent.useEffect": ()=>clearTimeout(timer)
+            })["HomeContent.useEffect"];
         }
-    }["HomeContent.useEffect"], []); // Empty dependency array = run on mount
-    async function loadData() {
-        const CACHE_KEY = 'vadkul_events_cache';
-        const TIME_KEY = 'vadkul_events_cache_time';
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minuter
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        const cacheTime = sessionStorage.getItem(TIME_KEY);
-        const now = Date.now();
-        const isCacheValid = cached && cacheTime && now - parseInt(cacheTime) < CACHE_DURATION;
-        // Om vi har giltig cache, gör INGET (vi har redan laddat från state initializern)
-        if (isCacheValid) {
-            console.log("Using cached events (valid for 5 mins)");
-            setLoading(false);
-            return;
-        }
-        console.log("Fetching fresh events...");
-        // Bara visa spinner om vi INTE har någon data alls
-        // Om vi har "gammal" data, visa den medan vi hämtar nytt (silent update)
-        if (events.length === 0) {
-            setLoading(true);
-        }
-        try {
-            const data = await __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$services$2f$eventService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["eventService"].getAll();
-            setEvents(data);
-            // Spara till cache för nästa gång
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-            sessionStorage.setItem(TIME_KEY, now.toString());
-        } catch (error) {
-            console.error("Failed to load events", error);
-        } finally{
-            setLoading(false);
-        }
-    }
+    }["HomeContent.useEffect"], [
+        mapState
+    ]);
+    const handleMapMove = (center, zoom)=>{
+        setMapState({
+            center: [
+                center.lat,
+                center.lng
+            ],
+            zoom
+        });
+    };
     // --- HALL OF FAME LOGIC ---
     const hallOfFameEvent = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMemo"])({
         "HomeContent.useMemo[hallOfFameEvent]": ()=>{
@@ -3430,7 +3480,7 @@ function HomeContent() {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$components$2f$ui$2f$WelcomeModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                lineNumber: 390,
+                lineNumber: 365,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3452,14 +3502,14 @@ function HomeContent() {
                         setSearchQuery: setSearchQuery
                     }, void 0, false, {
                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                        lineNumber: 399,
+                        lineNumber: 374,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-[72px] w-full"
                     }, void 0, false, {
                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                        lineNumber: 418,
+                        lineNumber: 393,
                         columnNumber: 17
                     }, this),
                     view === 'list' && showHallOfFame && hallOfFameEvent && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3482,14 +3532,14 @@ function HomeContent() {
                                             size: 120
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 433,
+                                            lineNumber: 408,
                                             columnNumber: 91
                                         }, this),
                                         " "
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 433,
+                                    lineNumber: 408,
                                     columnNumber: 29
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3501,14 +3551,14 @@ function HomeContent() {
                                             fill: "currentColor"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 434,
+                                            lineNumber: 409,
                                             columnNumber: 123
                                         }, this),
                                         " "
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 434,
+                                    lineNumber: 409,
                                     columnNumber: 29
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3526,7 +3576,7 @@ function HomeContent() {
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 436,
+                                            lineNumber: 411,
                                             columnNumber: 33
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -3534,7 +3584,7 @@ function HomeContent() {
                                             children: hallOfFameEvent.title
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 439,
+                                            lineNumber: 414,
                                             columnNumber: 33
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3546,7 +3596,7 @@ function HomeContent() {
                                                     children: hallOfFameEvent.host?.name || 'Okänd'
                                                 }, void 0, false, {
                                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                    lineNumber: 443,
+                                                    lineNumber: 418,
                                                     columnNumber: 47
                                                 }, this),
                                                 " • ",
@@ -3558,31 +3608,31 @@ function HomeContent() {
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                    lineNumber: 443,
+                                                    lineNumber: 418,
                                                     columnNumber: 124
                                                 }, this),
                                                 "!"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 442,
+                                            lineNumber: 417,
                                             columnNumber: 33
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 435,
+                                    lineNumber: 410,
                                     columnNumber: 29
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 423,
+                            lineNumber: 398,
                             columnNumber: 25
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                        lineNumber: 422,
+                        lineNumber: 397,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3594,7 +3644,7 @@ function HomeContent() {
                                     size: 14
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 453,
+                                    lineNumber: 428,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3602,7 +3652,7 @@ function HomeContent() {
                                     children: "Sortera (topp 30):"
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 454,
+                                    lineNumber: 429,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -3615,7 +3665,7 @@ function HomeContent() {
                                             children: "Närmast"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 456,
+                                            lineNumber: 431,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3623,7 +3673,7 @@ function HomeContent() {
                                             children: "Tid kvar"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 457,
+                                            lineNumber: 432,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3631,7 +3681,7 @@ function HomeContent() {
                                             children: "Senast tillagd"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 458,
+                                            lineNumber: 433,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3639,24 +3689,24 @@ function HomeContent() {
                                             children: "Populärast"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 459,
+                                            lineNumber: 434,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 455,
+                                    lineNumber: 430,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 452,
+                            lineNumber: 427,
                             columnNumber: 21
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                        lineNumber: 451,
+                        lineNumber: 426,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3668,20 +3718,20 @@ function HomeContent() {
                                     className: "animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 472,
+                                    lineNumber: 447,
                                     columnNumber: 29
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     children: "Laddar events..."
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 473,
+                                    lineNumber: 448,
                                     columnNumber: 29
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 471,
+                            lineNumber: 446,
                             columnNumber: 25
                         }, this) : filteredEvents.length === 0 && view === 'list' ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border",
@@ -3691,7 +3741,7 @@ function HomeContent() {
                                     children: "Inga events hittades."
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 477,
+                                    lineNumber: 452,
                                     columnNumber: 29
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3700,13 +3750,13 @@ function HomeContent() {
                                     children: "Rensa filter"
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 478,
+                                    lineNumber: 453,
                                     columnNumber: 29
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 476,
+                            lineNumber: 451,
                             columnNumber: 25
                         }, this) : view === 'list' ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20",
@@ -3716,17 +3766,17 @@ function HomeContent() {
                                         event: evt
                                     }, void 0, false, {
                                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                        lineNumber: 482,
+                                        lineNumber: 457,
                                         columnNumber: 94
                                     }, this)
                                 }, evt.id, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 482,
+                                    lineNumber: 457,
                                     columnNumber: 57
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 481,
+                            lineNumber: 456,
                             columnNumber: 25
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "relative h-full w-full rounded-2xl overflow-hidden border border-border shadow-inner",
@@ -3747,12 +3797,14 @@ function HomeContent() {
                                             url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 492,
+                                            lineNumber: 467,
                                             columnNumber: 33
                                         }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(MapStateTracker, {}, void 0, false, {
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(MapStateTracker, {
+                                            onMoveEnd: handleMapMove
+                                        }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 493,
+                                            lineNumber: 468,
                                             columnNumber: 33
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(MapController, {
@@ -3760,7 +3812,7 @@ function HomeContent() {
                                             onClick: handleMapClick
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 494,
+                                            lineNumber: 469,
                                             columnNumber: 33
                                         }, this),
                                         filteredEvents.map((evt)=>{
@@ -3779,7 +3831,7 @@ function HomeContent() {
                                                 }
                                             }, evt.id, false, {
                                                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                lineNumber: 498,
+                                                lineNumber: 473,
                                                 columnNumber: 41
                                             }, this);
                                         }),
@@ -3793,18 +3845,18 @@ function HomeContent() {
                                                 children: "Din sökposition"
                                             }, void 0, false, {
                                                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                lineNumber: 512,
+                                                lineNumber: 487,
                                                 columnNumber: 37
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                            lineNumber: 511,
+                                            lineNumber: 486,
                                             columnNumber: 33
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 487,
+                                    lineNumber: 462,
                                     columnNumber: 29
                                 }, this),
                                 selectedEvent && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3819,12 +3871,12 @@ function HomeContent() {
                                                     size: 18
                                                 }, void 0, false, {
                                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                    lineNumber: 525,
+                                                    lineNumber: 500,
                                                     columnNumber: 45
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                lineNumber: 521,
+                                                lineNumber: 496,
                                                 columnNumber: 41
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3834,12 +3886,12 @@ function HomeContent() {
                                                     size: 18
                                                 }, void 0, false, {
                                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                    lineNumber: 533,
+                                                    lineNumber: 508,
                                                     columnNumber: 45
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                lineNumber: 529,
+                                                lineNumber: 504,
                                                 columnNumber: 41
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3849,52 +3901,53 @@ function HomeContent() {
                                                     compact: true
                                                 }, void 0, false, {
                                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                    lineNumber: 537,
+                                                    lineNumber: 512,
                                                     columnNumber: 45
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                                lineNumber: 536,
+                                                lineNumber: 511,
                                                 columnNumber: 41
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                        lineNumber: 518,
+                                        lineNumber: 493,
                                         columnNumber: 37
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                                    lineNumber: 517,
+                                    lineNumber: 492,
                                     columnNumber: 33
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                            lineNumber: 485,
+                            lineNumber: 460,
                             columnNumber: 25
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                        lineNumber: 469,
+                        lineNumber: 444,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-                lineNumber: 395,
+                lineNumber: 370,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx",
-        lineNumber: 389,
+        lineNumber: 364,
         columnNumber: 9
     }, this);
 }
-_s2(HomeContent, "MmY4qoomUdnHVh7YW/asXHD8LH0=", false, function() {
+_s2(HomeContent, "37Mj64ovdF2a1AIBPtapZznhHwg=", false, function() {
     return [
-        __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]
+        __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
     ];
 });
 _c2 = HomeContent;

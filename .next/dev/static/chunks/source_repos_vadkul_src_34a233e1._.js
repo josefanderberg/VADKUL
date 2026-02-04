@@ -128,49 +128,16 @@ const userService = {
                 ...doc.data()
             }));
     },
-    // Lös in kod
+    // Lös in kod (Via Cloud Function för säkerhet)
     async redeemCode (uid, code) {
-        const VALID_CODES = [
-            'H2K2'
-        ]; // Hardcoded for now
-        const normalizedCode = code.toUpperCase().trim();
-        if (!VALID_CODES.includes(normalizedCode)) {
-            return {
-                success: false,
-                message: 'Ogiltig kod.'
-            };
-        }
-        const userRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], 'users', uid);
         try {
-            // Use a variable to capture the result message from within the transaction
-            let message = "";
-            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["runTransaction"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], async (transaction)=>{
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) throw new Error("User does not exist");
-                const userData = userDoc.data();
-                const redeemed = userData.redeemedCodes || [];
-                if (redeemed.includes(normalizedCode)) {
-                    // TOGGLE OFF
-                    const newRedeemed = redeemed.filter((c)=>c !== normalizedCode);
-                    transaction.update(userRef, {
-                        redeemedCodes: newRedeemed
-                    });
-                    message = 'Koden godkänd. Premium avaktiverat.';
-                } else {
-                    // TOGGLE ON
-                    transaction.update(userRef, {
-                        redeemedCodes: [
-                            ...redeemed,
-                            normalizedCode
-                        ]
-                    });
-                    message = 'Koden godkänd. Premium aktiverat!';
-                }
+            const { httpsCallable } = await __turbopack_context__.A("[project]/source/repos/vadkul/node_modules/firebase/functions/dist/esm/index.esm.js [app-client] (ecmascript, async loader)");
+            const { functions } = await __turbopack_context__.A("[project]/source/repos/vadkul/src/lib/firebase.ts [app-client] (ecmascript, async loader)");
+            const redeemFn = httpsCallable(functions, 'redeemCode');
+            const result = await redeemFn({
+                code
             });
-            return {
-                success: true,
-                message
-            };
+            return result.data;
         } catch (e) {
             console.error("Redeem error:", e);
             return {

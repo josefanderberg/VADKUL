@@ -28,18 +28,27 @@ var __turbopack_async_dependencies__ = __turbopack_handle_async_dependencies__([
 // Initialize Firebase Admin
 function getAdminDb() {
     if (!(0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$app__$5b$external$5d$__$28$firebase$2d$admin$2f$app$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["getApps"])().length) {
-        // In a real production scenario, use environment variables:
-        // const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string);
-        // initializeApp({ credential: cert(serviceAccount) });
-        // For this local migration/POC without explicit keys potentially available in env yet:
-        // We will try to initialize without credentials (works in some GCP envs) or fallback.
-        // If this fails locally, we might need to rely on Client SDK or ask user for keys.
-        // Let's try "no-args" init which looks for env vars.
-        try {
-            (0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$app__$5b$external$5d$__$28$firebase$2d$admin$2f$app$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["initializeApp"])();
-        } catch (e) {
-            console.warn("Firebase Admin failed to initialize. SEO tags might be empty.", e);
-            return null;
+        // Försök hämta nyckel från miljövariabler (Prod / Vercel)
+        const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        if (serviceAccountKey) {
+            try {
+                // Notera: JSON.parse kan behöva hantera både strängifierad JSON och base64 encoding beroende på hur man sparar den
+                // Men oftast kopierar man in hela JSON-objektet i Vercel.
+                const serviceAccount = JSON.parse(serviceAccountKey);
+                (0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$app__$5b$external$5d$__$28$firebase$2d$admin$2f$app$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["initializeApp"])({
+                    credential: (0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$app__$5b$external$5d$__$28$firebase$2d$admin$2f$app$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["cert"])(serviceAccount)
+                });
+            } catch (e) {
+                console.error("Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_KEY", e);
+            }
+        } else {
+            // Fallback för lokal dev utan nyckel (kommer ofta misslyckas med att läsa DB om man inte har Google Cloud CLI inloggat)
+            try {
+                (0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$app__$5b$external$5d$__$28$firebase$2d$admin$2f$app$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["initializeApp"])();
+            } catch (e) {
+                console.warn("Firebase Admin failed to initialize.", e);
+                return null;
+            }
         }
     }
     return (0, __TURBOPACK__imported__module__$5b$externals$5d2f$firebase$2d$admin$2f$firestore__$5b$external$5d$__$28$firebase$2d$admin$2f$firestore$2c$__esm_import$2c$__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2d$admin$29$__["getFirestore"])();

@@ -250,5 +250,30 @@ export const eventService = {
       console.error("Failed to sync host data to events:", error);
       throw error;
     }
+  },
+
+  // Migrera events för att lägga till geohash
+  async migrateEventsToGeo() {
+    try {
+      const snap = await getDocs(collection(db, COLLECTION));
+      console.log(`Checking ${snap.size} events for missing geohash...`);
+      let updated = 0;
+
+      const updates = snap.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        // Om geohash saknas men lat/lng finns
+        if (!data.geohash && data.lat && data.lng) {
+          const hash = geohashForLocation([data.lat, data.lng]);
+          await updateDoc(doc(db, COLLECTION, docSnap.id), { geohash: hash });
+          updated++;
+        }
+      });
+
+      await Promise.all(updates);
+      return updated;
+    } catch (error) {
+      console.error("Migration failed:", error);
+      throw error;
+    }
   }
 };

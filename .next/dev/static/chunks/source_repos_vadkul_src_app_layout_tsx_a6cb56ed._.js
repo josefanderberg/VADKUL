@@ -5,8 +5,8 @@
   "static/chunks/628fa_@firebase_auth_dist_esm_cca51407._.js",
   "static/chunks/628fa_@firebase_firestore_dist_index_esm_a88686a1.js",
   "static/chunks/628fa_@firebase_storage_dist_index_esm_baf4efc5.js",
-  "static/chunks/628fa_5fb1fc46._.js",
-  "static/chunks/source_repos_vadkul_src_21c93026._.js"
+  "static/chunks/628fa_6d4ceac9._.js",
+  "static/chunks/source_repos_vadkul_src_a0128ad2._.js"
 ],
     source: "dynamic"
 });

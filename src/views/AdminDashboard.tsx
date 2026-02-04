@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, Timestamp, writeBatch, doc, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { eventService } from '../services/eventService';
 import { useAuth } from '../context/AuthContext';
 import { useAdmin } from '../context/AdminContext';
 import Layout from '../components/layout/Layout';
@@ -209,6 +210,23 @@ export default function AdminDashboard() {
   // ---------------------------------------------------------
   // FUNKTION 1: SKAPA RANDOM EVENTS (SEED)
   // ---------------------------------------------------------
+
+  const handleMigrateGeohash = async () => {
+    if (!confirm("Vill du uppdatera alla events med geohash?")) return;
+    setLoading(true);
+    addLog("🌍 Startar migrering av geohash...");
+    try {
+      const count = await eventService.migrateEventsToGeo();
+      addLog(`✅ Migrering klar! ${count} events uppdaterades.`);
+      toast.success(`Uppdaterade ${count} events!`);
+    } catch (e: any) {
+      addLog(`❌ Fel: ${e.message}`);
+      toast.error("Migrering misslyckades.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSeedEvents = async (count: number) => {
     if (!confirm(`Är du säker på att du vill skapa ${count} nya events?`)) return;
 
@@ -887,13 +905,15 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* KORT 1: Generera Data */}
+              {/* KORT 1: Generera Data & Fixar */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-green-700">🌱 Datahantering</h2>
+                <h2 className="text-xl font-semibold mb-4 text-green-700">🌱 Testdata & Fixar</h2>
                 <div className="space-y-3">
                   <p className="text-sm text-slate-600 mb-4">
                     Hantera testdata och rensa databasen.
                   </p>
+
+                  {/* SEED */}
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleSeedEvents(40)}
@@ -908,6 +928,21 @@ export default function AdminDashboard() {
                       className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
                     >
                       +100 Events
+                    </button>
+                  </div>
+
+                  <hr className="border-slate-100 my-2" />
+
+                  {/* TOOLS */}
+                  <div className="bg-slate-50 p-3 rounded-lg space-y-2 border border-slate-100">
+                    <p className="text-xs font-bold text-slate-500 uppercase">Verktyg</p>
+
+                    <button
+                      onClick={handleMigrateGeohash}
+                      disabled={loading}
+                      className="w-full bg-white text-indigo-700 border border-indigo-200 py-2 px-4 rounded-lg font-bold hover:bg-indigo-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      🌍 Fixa Geohashes (Kartan)
                     </button>
                   </div>
 

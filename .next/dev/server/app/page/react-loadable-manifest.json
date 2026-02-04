@@ -2,9 +2,10 @@
   "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/source/repos/vadkul/src/components/home/HomeContent.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
+      "static/chunks/source_repos_vadkul_3af3f868._.js",
       "static/chunks/source_repos_vadkul_src_28f5d1df._.js",
-      "static/chunks/628fa_3b42965e._.js",
-      "static/chunks/source_repos_vadkul_src_components_home_HomeContent_tsx_3e582402._.js"
+      "static/chunks/628fa_08a2e6da._.js",
+      "static/chunks/source_repos_vadkul_src_components_home_HomeContent_tsx_27267920._.js"
     ]
   }
 }

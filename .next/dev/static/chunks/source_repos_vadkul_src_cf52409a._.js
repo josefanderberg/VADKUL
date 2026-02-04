@@ -128,49 +128,16 @@ const userService = {
                 ...doc.data()
             }));
     },
-    // Lös in kod
+    // Lös in kod (Via Cloud Function för säkerhet)
     async redeemCode (uid, code) {
-        const VALID_CODES = [
-            'H2K2'
-        ]; // Hardcoded for now
-        const normalizedCode = code.toUpperCase().trim();
-        if (!VALID_CODES.includes(normalizedCode)) {
-            return {
-                success: false,
-                message: 'Ogiltig kod.'
-            };
-        }
-        const userRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], 'users', uid);
         try {
-            // Use a variable to capture the result message from within the transaction
-            let message = "";
-            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["runTransaction"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], async (transaction)=>{
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) throw new Error("User does not exist");
-                const userData = userDoc.data();
-                const redeemed = userData.redeemedCodes || [];
-                if (redeemed.includes(normalizedCode)) {
-                    // TOGGLE OFF
-                    const newRedeemed = redeemed.filter((c)=>c !== normalizedCode);
-                    transaction.update(userRef, {
-                        redeemedCodes: newRedeemed
-                    });
-                    message = 'Koden godkänd. Premium avaktiverat.';
-                } else {
-                    // TOGGLE ON
-                    transaction.update(userRef, {
-                        redeemedCodes: [
-                            ...redeemed,
-                            normalizedCode
-                        ]
-                    });
-                    message = 'Koden godkänd. Premium aktiverat!';
-                }
+            const { httpsCallable } = await __turbopack_context__.A("[project]/source/repos/vadkul/node_modules/firebase/functions/dist/esm/index.esm.js [app-client] (ecmascript, async loader)");
+            const { functions } = await __turbopack_context__.A("[project]/source/repos/vadkul/src/lib/firebase.ts [app-client] (ecmascript, async loader)");
+            const redeemFn = httpsCallable(functions, 'redeemCode');
+            const result = await redeemFn({
+                code
             });
-            return {
-                success: true,
-                message
-            };
+            return result.data;
         } catch (e) {
             console.error("Redeem error:", e);
             return {
@@ -1120,7 +1087,9 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$firebase$2f$firestore$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/firebase/firestore/dist/esm/index.esm.js [app-client] (ecmascript) <locals>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/@firebase/firestore/dist/index.esm.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/node_modules/geofire-common/dist/geofire-common/geofire-common.min.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/source/repos/vadkul/src/lib/firebase.ts [app-client] (ecmascript)");
+;
 ;
 ;
 const COLLECTION = 'events';
@@ -1149,6 +1118,53 @@ const eventService = {
             });
         } catch (error) {
             console.error("Error fetching events:", error);
+            return [];
+        }
+    },
+    // Hämta events inom en radie (Geo-querying)
+    async getEventsInBounds (center, radiusInMeters) {
+        try {
+            const bounds = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashQueryBounds"])(center, radiusInMeters);
+            const promises = [];
+            const now = new Date(); // Filter only future events
+            for (const b of bounds){
+                const q = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["orderBy"])('geohash'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["startAt"])(b[0]), (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["endAt"])(b[1]));
+                promises.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDocs"])(q));
+            }
+            const snapshots = await Promise.all(promises);
+            const matchingDocs = [];
+            const seenIds = new Set();
+            for (const snap of snapshots){
+                for (const doc of snap.docs){
+                    if (seenIds.has(doc.id)) continue;
+                    const data = doc.data();
+                    // 1. Client-side Time Filter (Future events only)
+                    const eventTime = data.time instanceof __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"] ? data.time.toDate() : new Date(data.time);
+                    if (eventTime < now) continue;
+                    // 2. Client-side Distance Filter
+                    // Lat/Lng are required for distance calc
+                    const lat = data.lat;
+                    const lng = data.lng;
+                    if (!lat || !lng) continue;
+                    const distanceInKm = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["distanceBetween"])([
+                        lat,
+                        lng
+                    ], center);
+                    const distanceInM = distanceInKm * 1000;
+                    if (distanceInM <= radiusInMeters) {
+                        seenIds.add(doc.id);
+                        matchingDocs.push({
+                            ...data,
+                            id: doc.id,
+                            time: eventTime,
+                            createdAt: data.createdAt instanceof __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"] ? data.createdAt.toDate() : data.createdAt ? new Date(data.createdAt || 0) : undefined
+                        });
+                    }
+                }
+            }
+            return matchingDocs;
+        } catch (error) {
+            console.error("Error fetching events in bounds:", error);
             return [];
         }
     },
@@ -1193,9 +1209,14 @@ const eventService = {
     },
     // Skapa
     async create (event) {
+        const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+            event.lat,
+            event.lng
+        ]);
         const payload = {
             ...event,
             views: 0,
+            geohash: hash,
             time: __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].fromDate(event.time),
             createdAt: __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].now() // Use client-side timestamp for simplicity effectively matching server
         };
@@ -1207,9 +1228,15 @@ const eventService = {
         // Vi plockar bort id innan vi sparar till Firestore
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...data } = event;
+        // Recalculate geohash if lat/lng changed (always calculating to be safe)
+        const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+            event.lat,
+            event.lng
+        ]);
         // Sanitize data: Remove undefined fields and convert Dates to Timestamps
         const payload = {
-            ...data
+            ...data,
+            geohash: hash
         };
         // Convert known dates
         payload.time = __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].fromDate(event.time);
@@ -1275,6 +1302,33 @@ const eventService = {
             console.log(`Updated host data for ${updates.length} events.`);
         } catch (error) {
             console.error("Failed to sync host data to events:", error);
+            throw error;
+        }
+    },
+    // Migrera events för att lägga till geohash
+    async migrateEventsToGeo () {
+        try {
+            const snap = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDocs"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION));
+            console.log(`Checking ${snap.size} events for missing geohash...`);
+            let updated = 0;
+            const updates = snap.docs.map(async (docSnap)=>{
+                const data = docSnap.data();
+                // Om geohash saknas men lat/lng finns
+                if (!data.geohash && data.lat && data.lng) {
+                    const hash = (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f$geofire$2d$common$2f$dist$2f$geofire$2d$common$2f$geofire$2d$common$2e$min$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["geohashForLocation"])([
+                        data.lat,
+                        data.lng
+                    ]);
+                    await (0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["updateDoc"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(__TURBOPACK__imported__module__$5b$project$5d2f$source$2f$repos$2f$vadkul$2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], COLLECTION, docSnap.id), {
+                        geohash: hash
+                    });
+                    updated++;
+                }
+            });
+            await Promise.all(updates);
+            return updated;
+        } catch (error) {
+            console.error("Migration failed:", error);
             throw error;
         }
     }

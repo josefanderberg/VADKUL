@@ -2,9 +2,10 @@
   "[project]/source/repos/vadkul/src/views/Login.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/source/repos/vadkul/src/views/Login.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
+      "static/chunks/source_repos_vadkul_baa0d741._.js",
       "static/chunks/source_repos_vadkul_src_34a233e1._.js",
       "static/chunks/628fa_19bd5582._.js",
-      "static/chunks/source_repos_vadkul_src_views_Login_tsx_013895e1._.js"
+      "static/chunks/source_repos_vadkul_src_views_Login_tsx_e41cdeb8._.js"
     ]
   }
 }
