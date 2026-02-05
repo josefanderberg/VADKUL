@@ -1,102 +1,103 @@
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { AppEvent } from '../types';
+import { db as clientDb } from '@/lib/firebase';
+import { doc as clientDoc, getDoc as clientGetDoc } from 'firebase/firestore';
 
-// NOTE: For this simple proof of concept and migration, we might not have a service account key file locally.
-// If we don't have credentials, we can try to rely on default application credentials or
-// strictly for SEO purposes, we might need a workaround if we can't fully auth.
-// However, Firestore Client SDK *can* be used in Next.js Server Components if we are careful about caching options.
-// But `firebase-admin` is the robust way.
-//
-// ERROR HANDLING STRATEGY:
-// If we lack credentials (common in dev/migrated projects), we catch the error and return partial data or null.
-
-// Initialize Firebase Admin
+// Initialize Firebase Admin (Dynamic Import to avoid bundling issues)
 function getAdminDb() {
-    if (!getApps().length) {
-        // Försök hämta nyckel från miljövariabler (Prod / Vercel)
-        // Försök hämta nyckel från miljövariabler (Prod / Vercel)
-        let serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    try {
+        // Use standard require to bypass webpack/turbopack hashing
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { getApps, initializeApp, cert } = require('firebase-admin/app');
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { getFirestore } = require('firebase-admin/firestore');
 
-        // Om ingen miljövariabel, försök läsa lokal fil (Dev)
-        if (!serviceAccountKey) {
-            try {
-                // Vi använder require för att läsa filen synkront om den finns
-                // Detta fungerar i Node/Next.js server miljö
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const fs = require('fs');
-                const path = require('path');
-                const filePath = path.join(process.cwd(), 'service-account.json');
-                if (fs.existsSync(filePath)) {
-                    console.log("Found local service-account.json, using it.");
-                    const fileContent = fs.readFileSync(filePath, 'utf8');
-                    serviceAccountKey = fileContent;
+        if (!getApps().length) {
+            let serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+            if (!serviceAccountKey) {
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const fs = require('fs');
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const path = require('path');
+                    const filePath = path.join(process.cwd(), 'service-account.json');
+                    if (fs.existsSync(filePath)) {
+                        console.log("Found local service-account.json, using it.");
+                        const fileContent = fs.readFileSync(filePath, 'utf8');
+                        serviceAccountKey = fileContent;
+                    }
+                } catch (e) {
+                    // Ignore
                 }
-            } catch (e) {
-                // Ignore error, file might not exist
             }
-        }
 
-        if (serviceAccountKey) {
-            try {
-                // Notera: JSON.parse kan behöva hantera både strängifierad JSON och base64 encoding beroende på hur man sparar den
-                // Men oftast kopierar man in hela JSON-objektet i Vercel.
-                const serviceAccount = JSON.parse(serviceAccountKey);
-                initializeApp({ credential: cert(serviceAccount) });
-            } catch (e) {
-                console.error("Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_KEY", e);
-            }
-        } else {
-            // Fallback för lokal dev utan nyckel (eller Vercel utan separat service account)
-            // Vi MÅSTE ange projectId explicit för att undvika "Unable to detect a Project Id" error som slöar ner allt.
-            try {
-                // Använd samma ID som i klient-configen (finns i src/lib/firebase.ts)
-                const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'vadkul-f2cb2';
-                console.log(`Initializing Firebase Admin with projectId: ${projectId}`);
-
-                initializeApp({
-                    projectId: projectId
-                });
-            } catch (e) {
-                console.warn("Firebase Admin failed to initialize.", e);
+            if (serviceAccountKey) {
+                try {
+                    const serviceAccount = JSON.parse(serviceAccountKey);
+                    initializeApp({ credential: cert(serviceAccount) });
+                } catch (e) {
+                    console.error("Fel vid parsning av credentials", e);
+                }
+            } else {
+                console.log("No credentials found, skipping Admin SDK init.");
                 return null;
             }
         }
-    }
-    try {
         return getFirestore();
     } catch (e) {
-        // Om vi inte har credentials (t.ex. lokal miljö utan GOOGLE_APPLICATION_CREDENTIALS)
-        // så kastar getFirestore() ett fel. Vi fångar det här och returnerar null.
-        console.warn("Failed to get Firestore instance (likely missing credentials):", e);
-        return null;
+        console.error("Failed to load firebase-admin:", e);
+        return null; // Fallback to client SDK
     }
 }
 
 export const serverEventService = {
     async getEventById(id: string): Promise<AppEvent | null> {
+        // 1. Try Firebase Admin SDK
         try {
             const db = getAdminDb();
-            if (!db) return null;
+            if (db) {
+                const doc = await db.collection('events').doc(id).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data) {
+                        return {
+                            id: doc.id,
+                            ...data,
+                            time: data.time?.toDate ? data.time.toDate() : new Date(data.time),
+                            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : undefined
+                        } as unknown as AppEvent;
+                    }
+                } else {
+                    // Document does not exist in Admin SDK, return null immediately (don't try client)
+                    return null;
+                }
+            }
+        } catch (error) {
+            // In dev environment without credentials, this is expected.
+            // console.warn("Firebase Admin SDK failed (likely missing credentials). Falling back to Client SDK...", error);
+        }
 
-            const doc = await db.collection('events').doc(id).get();
-            if (!doc.exists) return null;
+        // 2. Fallback to Firebase Client SDK
+        try {
+            // Note: clientDb is initialized in @/lib/firebase
+            const docRef = clientDoc(clientDb, "events", id);
+            const snapshot = await clientGetDoc(docRef);
 
-            const data = doc.data();
-            if (!data) return null;
+            if (!snapshot.exists()) {
+                return null;
+            }
 
-            // Convert Firestore timestamps to dates/strings as needed to match AppEvent
+            const data = snapshot.data();
             return {
-                id: doc.id,
+                id: snapshot.id,
                 ...data,
-                // Handle Timestamp conversion if needed
+                // Client SDK Timestamps also have toDate()
                 time: data.time?.toDate ? data.time.toDate() : new Date(data.time),
                 createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : undefined
             } as unknown as AppEvent;
-        } catch (error) {
-            console.error("Error fetching event server-side:", error);
-            // Fallback: If admin fails (e.g. no auth), we return null
-            // The client-side fetch will still show the content, just SEO tags will be generic.
+
+        } catch (clientError) {
+            console.error("Error fetching event with Client SDK fallback:", clientError);
             return null;
         }
     }

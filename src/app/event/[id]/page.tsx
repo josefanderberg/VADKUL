@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
+
 import { serverEventService } from '@/services/serverEventService';
-import EventDetailsWrapper from '@/components/events/EventDetailsWrapper';
+import EventDetails from '@/components/events/EventDetails';
 
 type Props = {
     params: Promise<{ id: string }>;
@@ -55,6 +56,11 @@ export async function generateMetadata(
     };
 }
 
-export default function EventDetailsPage() {
-    return <EventDetailsWrapper />;
+export default async function EventDetailsPage({ params }: Props) {
+    const { id } = await params;
+    // Fetch data server-side
+    const event = await serverEventService.getEventById(id);
+
+    // We pass the data (or null) to the client component
+    return <EventDetails initialEvent={event} />;
 }

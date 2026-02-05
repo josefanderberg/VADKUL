@@ -207,8 +207,10 @@ export default function HomeContent() {
             const dist = calculateDistance(userLocation[0], userLocation[1], event.lat, event.lng);
             event.location.distance = dist; // Spara avståndet på objektet
 
-            // Filtrera bort gamla events (starttid har passerat)
-            if (new Date(event.time) < now) return false;
+            // Filtrera bort gamla events (starttid har passerat midnatt igår)
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            if (new Date(event.time) < startOfToday) return false;
 
             // Filtrera bort gömda events
             if (event.visibility === 'hidden') return false;

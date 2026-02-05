@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
+    metadataBase: new URL('https://vadkul.se'),
     title: 'VADKUL - Hitta kul saker att göra',
     description: 'Se vad som händer i dina trakter',
     manifest: '/manifest.json',

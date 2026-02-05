@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
+
 const PublicProfile = dynamic(() => import('@/views/PublicProfile'), {
     ssr: false,
 });

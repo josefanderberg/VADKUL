@@ -15,11 +15,8 @@ export const eventService = {
       // Filter: Only fetch events that have not ended yet (or start in future)
       // Note: "time" is the start time. We want events where time >= now.
       const now = new Date();
-      // Reset time to start of day if we want to include today's earlier events, 
-      // but strictly speaking "future" means >= now. 
-      // Let's keep it simple: time >= now.
-      // But wait, the client implementation `Home.tsx` filters `new Date(event.time) < now`.
-      // So if we filter here, we save the reads.
+      now.setHours(0, 0, 0, 0); // Start of today
+
       const q = query(
         collection(db, COLLECTION),
         where("time", ">=", Timestamp.fromDate(now))
@@ -45,7 +42,8 @@ export const eventService = {
     try {
       const bounds = geohashQueryBounds(center, radiusInMeters);
       const promises = [];
-      const now = new Date(); // Filter only future events
+      const now = new Date(); // Filter events from start of today
+      now.setHours(0, 0, 0, 0);
 
       for (const b of bounds) {
         const q = query(
@@ -69,7 +67,7 @@ export const eventService = {
 
           const data = doc.data() as FirestoreEventData;
 
-          // 1. Client-side Time Filter (Future events only)
+          // 1. Client-side Time Filter (Events from today onwards)
           const eventTime = data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time);
           if (eventTime < now) continue;
 

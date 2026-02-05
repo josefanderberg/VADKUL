@@ -3,40 +3,44 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '../../lib/firebase';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import {
     Clock, MapPin, ChevronLeft,
     CheckCircle2, Share2, AlertCircle,
     MessageCircle, Info, X, Users, MoreVertical, Flag,
-    Eye, EyeOff, Trash2 // Removed ArrowLeft
+    Eye, EyeOff, Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import Layout from '../components/layout/Layout';
-import EventChat from '../components/events/EventChat';
-import { useAuth } from '../context/AuthContext';
-import { eventService } from '../services/eventService';
-import type { AppEvent } from '../types';
-import { formatEventDate } from '../utils/dateUtils';
-import { notificationService } from '../services/notificationService';
-import { userService } from '../services/userService';
+import Layout from '../layout/Layout';
+import EventChat from './EventChat';
+import { useAuth } from '../../context/AuthContext';
+import { eventService } from '../../services/eventService';
+import type { AppEvent } from '../../types';
+import { formatEventDate } from '../../utils/dateUtils';
+import { notificationService } from '../../services/notificationService';
+import { userService } from '../../services/userService';
 
 // VIKTIGT: Importera kategorier för att få rätt markör-färg
-import { EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../utils/categories';
-import { useAdmin } from '../context/AdminContext';
+import { EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../../utils/categories';
+import { useAdmin } from '../../context/AdminContext';
 
-export default function EventDetails() {
+interface EventDetailsProps {
+    initialEvent?: AppEvent | null;
+}
+
+export default function EventDetails({ initialEvent }: EventDetailsProps) {
     const params = useParams();
     const id = params?.id as string;
     const router = useRouter();
     const { user } = useAuth();
     const { isAdmin } = useAdmin();
 
-    const [event, setEvent] = useState<AppEvent | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [event, setEvent] = useState<AppEvent | null>(initialEvent || null);
+    const [loading, setLoading] = useState(!initialEvent);
+    const [error, setError] = useState(initialEvent === null ? 'Eventet kunde inte hittas.' : '');
     const [joining, setJoining] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'info' | 'chat'>('info');
@@ -55,48 +59,57 @@ export default function EventDetails() {
                 console.error("Failed to increment views:", err);
             }
 
-            // 2. Hämta data EFTER att vi ökat
-            const data = await eventService.getById(id);
-            if (data) {
-                setEvent(data);
-
-                // Self-healing: Check if host data is up to date
-                // ONLY RUN THIS IF I AM THE HOST (Security Rule Requirement)
-                if (user?.uid && data.host?.uid === user.uid) {
-                    try {
-                        const hostProfile = await userService.getUserProfile(data.host.uid);
-                        if (hostProfile) {
-                            const correctPhoto = hostProfile.photoURL || null;
-                            const currentPhoto = data.host.photoURL || null;
-
-                            // If photo changed/missing, update the event
-                            if (correctPhoto !== currentPhoto) {
-                                console.log("Updating stale host data...");
-                                const updatedEvent = {
-                                    ...data,
-                                    host: {
-                                        ...data.host,
-                                        photoURL: correctPhoto,
-                                        // Update other fields if needed, e.g. name if changed
-                                        name: hostProfile.displayName || data.host.name,
-                                        verified: hostProfile.isVerified
-                                    }
-                                };
-                                setEvent(updatedEvent);
-                                await eventService.update(updatedEvent);
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Failed to refresh host data", e);
-                    }
-                }
+            if (initialEvent) {
+                setLoading(false);
             } else {
-                setError('Eventet kunde inte hittas.');
+                // 2. Hämta data EFTER att vi ökat
+                const data = await eventService.getById(id);
+                if (data) {
+                    setEvent(data);
+
+                    // Self-healing: Check if host data is up to date
+                    // ONLY RUN THIS IF I AM THE HOST (Security Rule Requirement)
+                    if (user?.uid && data.host?.uid === user.uid) {
+                        try {
+                            const hostProfile = await userService.getUserProfile(data.host.uid);
+                            if (hostProfile) {
+                                const correctPhoto = hostProfile.photoURL || null;
+                                const currentPhoto = data.host.photoURL || null;
+
+                                // If photo changed/missing, update the event
+                                if (correctPhoto !== currentPhoto) {
+                                    console.log("Updating stale host data...");
+                                    const updatedEvent = {
+                                        ...data,
+                                        host: {
+                                            ...data.host,
+                                            photoURL: correctPhoto,
+                                            // Update other fields if needed, e.g. name if changed
+                                            name: hostProfile.displayName || data.host.name,
+                                            verified: hostProfile.isVerified
+                                        }
+                                    };
+                                    setEvent(updatedEvent);
+                                    await eventService.update(updatedEvent);
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Failed to refresh host data", e);
+                        }
+                    }
+                } else {
+                    setError('Eventet kunde inte hittas.');
+                }
+                setLoading(false);
             }
-            setLoading(false);
+        }
+
+        // Check host data updates separately if needed
+        if (event && user?.uid && event.host?.uid === user.uid) {
+            // ... (existing host check logic can be added here if needed to run on client)
         }
         load();
-    }, [id, user?.uid]);
+    }, [id, user?.uid, initialEvent]);
 
     const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
     const confirmedCount = event ? event.attendees.filter(a => a.status !== 'pending').length : 0;
