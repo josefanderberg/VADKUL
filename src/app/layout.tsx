@@ -22,7 +22,7 @@ export default function RootLayout({
     return (
         <html lang="sv" suppressHydrationWarning>
             <head>
-                <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+                <link rel="icon" type="image/png" href="/pwa-icon-v2.png" />
             </head>
             <body>
                 <Providers>

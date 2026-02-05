@@ -1,3 +1,5 @@
+'use client';
+
 // src/pages/CreateEvent.tsx
 
 import { useState, useEffect, useRef, useMemo } from 'react';

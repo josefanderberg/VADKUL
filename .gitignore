@@ -27,3 +27,6 @@ dist-ssr
 .next/
 out/
 build/
+
+# Firebase Admin SDK
+service-account.json

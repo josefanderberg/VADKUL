@@ -15,7 +15,27 @@ import { AppEvent } from '../types';
 function getAdminDb() {
     if (!getApps().length) {
         // Försök hämta nyckel från miljövariabler (Prod / Vercel)
-        const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        // Försök hämta nyckel från miljövariabler (Prod / Vercel)
+        let serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+        // Om ingen miljövariabel, försök läsa lokal fil (Dev)
+        if (!serviceAccountKey) {
+            try {
+                // Vi använder require för att läsa filen synkront om den finns
+                // Detta fungerar i Node/Next.js server miljö
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const fs = require('fs');
+                const path = require('path');
+                const filePath = path.join(process.cwd(), 'service-account.json');
+                if (fs.existsSync(filePath)) {
+                    console.log("Found local service-account.json, using it.");
+                    const fileContent = fs.readFileSync(filePath, 'utf8');
+                    serviceAccountKey = fileContent;
+                }
+            } catch (e) {
+                // Ignore error, file might not exist
+            }
+        }
 
         if (serviceAccountKey) {
             try {
@@ -27,16 +47,30 @@ function getAdminDb() {
                 console.error("Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_KEY", e);
             }
         } else {
-            // Fallback för lokal dev utan nyckel (kommer ofta misslyckas med att läsa DB om man inte har Google Cloud CLI inloggat)
+            // Fallback för lokal dev utan nyckel (eller Vercel utan separat service account)
+            // Vi MÅSTE ange projectId explicit för att undvika "Unable to detect a Project Id" error som slöar ner allt.
             try {
-                initializeApp();
+                // Använd samma ID som i klient-configen (finns i src/lib/firebase.ts)
+                const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'vadkul-f2cb2';
+                console.log(`Initializing Firebase Admin with projectId: ${projectId}`);
+
+                initializeApp({
+                    projectId: projectId
+                });
             } catch (e) {
                 console.warn("Firebase Admin failed to initialize.", e);
                 return null;
             }
         }
     }
-    return getFirestore();
+    try {
+        return getFirestore();
+    } catch (e) {
+        // Om vi inte har credentials (t.ex. lokal miljö utan GOOGLE_APPLICATION_CREDENTIALS)
+        // så kastar getFirestore() ett fel. Vi fångar det här och returnerar null.
+        console.warn("Failed to get Firestore instance (likely missing credentials):", e);
+        return null;
+    }
 }
 
 export const serverEventService = {

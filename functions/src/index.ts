@@ -8,17 +8,17 @@ const db = admin.firestore();
 // Använd 'europe-west1' (Belgien) typiskt för Firebase projekt i europa om inget annat valts
 const region = functions.region('europe-west1');
 
-export const redeemCode = region.https.onCall(async (request) => {
+export const redeemCode = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
     // 1. Auth Check - Ensure user is logged in
-    if (!request.auth) {
+    if (!context.auth) {
         throw new functions.https.HttpsError(
             'unauthenticated',
             'Du måste vara inloggad för att lösa in koder.'
         );
     }
 
-    const { code } = request.data;
-    const uid = request.auth.uid;
+    const { code } = data;
+    const uid = context.auth.uid;
 
     if (!code || typeof code !== 'string') {
         throw new functions.https.HttpsError(

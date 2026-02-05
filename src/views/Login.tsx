@@ -31,6 +31,7 @@ export default function Login() {
     // Form Data
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState(''); // NY STATE
     const [fullName, setFullName] = useState('');
     const [birthDate, setBirthDate] = useState('');
 
@@ -163,6 +164,10 @@ export default function Login() {
             setError("Lösenordet måste vara minst 6 tecken.");
             return;
         }
+        if (password !== confirmPassword) {
+            setError("Lösenorden matchar inte.");
+            return;
+        }
         setError('');
         setRegStep(2);
     };
@@ -271,14 +276,14 @@ export default function Login() {
 
     return (
         <Layout>
-            <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-8">
+            <div className={`flex flex-col items-center justify-center min-h-screen px-4 pt-8 pb-40 ${!isLoginMode ? 'bg-gradient-to-b from-transparent to-emerald-50/30' : ''}`}>
 
-                <div className="w-full max-w-md bg-card rounded-2xl shadow-xl overflow-hidden border border-border">
+                <div className={`w-full max-w-md bg-card rounded-2xl shadow-xl overflow-hidden border ${!isLoginMode ? 'border-emerald-200 ring-4 ring-emerald-50/50' : 'border-border'}`}>
 
                     {/* Header */}
                     <div className="p-6 border-b border-border flex items-center justify-between">
                         <h2 className="text-xl font-extrabold text-foreground">
-                            {isLoginMode ? 'Välkommen tillbaka' : (regStep === 1 ? 'Skapa konto' : 'Slutför profil')}
+                            {isLoginMode ? 'Välkommen tillbaka' : (regStep === 1 ? '🎉 Skapa nytt konto' : 'Slutför profil')}
                         </h2>
                         {regStep === 2 && (
                             <button onClick={() => setRegStep(1)} className="text-muted-foreground hover:text-primary">
@@ -327,10 +332,15 @@ export default function Login() {
                                 <div>
                                     <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Lösenord</label>
                                     <input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Minst 6 tecken" />
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Minst 6 tecken" />
                                 </div>
-                                <button type="submit" className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md">
-                                    Nästa
+                                <div>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Upprepa Lösenord</label>
+                                    <input type="password" required minLength={6} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Samma lösenord igen" />
+                                </div>
+                                <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all">
+                                    Nästa Steg →
                                 </button>
                                 <p className="text-center text-sm text-muted-foreground mt-4">
                                     Redan konto? <button type="button" onClick={() => setIsLoginMode(true)} className="text-primary font-bold hover:underline">Logga in</button>

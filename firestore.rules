@@ -35,7 +35,11 @@ service cloud.firestore {
       // Man får uppdatera sin egen profil...
       // ELLER om man bara uppdaterar 'rating' och 'ratingCount' (för att ge omdöme)
       allow update: if isOwner(userId) 
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified', 'verificationStatus']))
+        && (
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified']) || request.resource.data.isVerified == false)
+          &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus']) || request.resource.data.verificationStatus in ['pending', 'none'])
+        )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         
       // Admins får göra allt (t.ex. verifiera användare)

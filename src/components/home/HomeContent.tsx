@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
+'use client';
+
+import { useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import dynamic from 'next/dynamic';
 
 import Layout from '../layout/Layout';
 import EventCard from '../ui/EventCard';
@@ -14,58 +14,18 @@ import { eventService } from '../../services/eventService';
 import { settingsService } from '../../services/settingsService';
 import type { AppEvent } from '../../types';
 import { calculateDistance, saveLocationToLocalStorage } from '../../utils/mapUtils';
-import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
-import { ArrowUpDown, ArrowRight, ArrowLeft, Trophy } from 'lucide-react';
+import { ArrowUpDown, Trophy } from 'lucide-react';
 
-// Leaflet icon fixar
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon.src,
-    iconRetinaUrl: markerIcon2x.src,
-    shadowUrl: markerShadow.src,
+// Dynamic import of the Map component to avoid SSR issues with Leaflet
+const HomeMap = dynamic(() => import('./HomeMap'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-muted/50 rounded-2xl border border-border">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <p>Laddar karta...</p>
+        </div>
+    )
 });
-
-function MapController({ center, onClick }: { center: [number, number], onClick: (lat: number, lng: number) => void }) {
-    const map = useMap();
-    const isFirstLoad = useRef(true);
-
-    useEffect(() => {
-        if (center) {
-            if (isFirstLoad.current) {
-                map.setView(center, map.getZoom());
-                isFirstLoad.current = false;
-            } else {
-                map.flyTo(center, map.getZoom(), { duration: 1.5 });
-            }
-        }
-    }, [center, map]);
-
-    useMapEvents({
-        click: (e) => onClick(e.latlng.lat, e.latlng.lng)
-    });
-    return null;
-}
-// Helper to track map state and trigger fetch
-function MapStateTracker({ onMoveEnd }: { onMoveEnd: (center: L.LatLng, zoom: number) => void }) {
-    const map = useMapEvents({
-        moveend: () => {
-            const center = map.getCenter();
-            onMoveEnd(center, map.getZoom());
-            sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
-            sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
-        },
-        zoomend: () => {
-            // zoomend also triggers moveend usually, but good to be safe if Logic changes
-            const center = map.getCenter();
-            // onMoveEnd handled by moveend
-        }
-    });
-    return null;
-}
 
 export default function HomeContent() {
     const router = useRouter();
@@ -110,7 +70,7 @@ export default function HomeContent() {
 
     // Initialize view from storage
     const [view, setView] = useState<'list' | 'map'>(() => {
-        return (sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
+        return (typeof window !== 'undefined' && sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
     });
 
 
@@ -204,7 +164,8 @@ export default function HomeContent() {
         return () => clearTimeout(timer);
     }, [mapState]);
 
-    const handleMapMove = (center: L.LatLng, zoom: number) => {
+    // Define the type for the map move handler parameters locally since we don't import Leaflet types here
+    const handleMapMove = (center: any, zoom: number) => {
         setMapState({ center: [center.lat, center.lng], zoom });
     };
 
@@ -213,20 +174,23 @@ export default function HomeContent() {
         if (!events || events.length === 0) return null;
 
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Ändrat: Titta bakåt 30 dagar istället för strikt "denna månad"
+        // Detta gör att vi alltid har data, även den 1:a i månaden.
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(now.getDate() - 30);
 
-        // 1. Filtrera events skapade denna månad
-        const thisMonthEvents = events.filter(e => {
+        // 1. Filtrera events skapade de senaste 30 dagarna
+        const recentEvents = events.filter(e => {
             if (!e.createdAt) return false;
             // Ensure createdAt is a Date object (state initializer handles this but good to be safe)
             const created = new Date(e.createdAt);
-            return created >= startOfMonth;
+            return created >= thirtyDaysAgo;
         });
 
-        if (thisMonthEvents.length === 0) return null;
+        if (recentEvents.length === 0) return null;
 
         // 2. Sortera på antal deltagare (högst först)
-        return thisMonthEvents.sort((a, b) => {
+        return recentEvents.sort((a, b) => {
             const countA = a.attendees?.length || 0;
             const countB = b.attendees?.length || 0;
             return countB - countA;
@@ -267,7 +231,6 @@ export default function HomeContent() {
             if (filterAge === '13+') {
                 // Ungdom: 13-17 år.
                 // Exkludera barn-events (maxAge < 13) och vuxen-events (minAge >= 18)
-                if (event.minAge >= 18) return false; // För gamla
                 if (event.maxAge && event.maxAge < 13) return false; // För unga
             }
             if (filterAge === '18+') {
@@ -330,24 +293,6 @@ export default function HomeContent() {
         // Lägg till length innan modulo för att hantera negativa tal korrekt
         const prevIndex = (currentIndex - 1 + filteredEvents.length) % filteredEvents.length;
         setSelectedEvent(filteredEvents[prevIndex]);
-    };
-
-    const createCustomIcon = (type: string, isSelected: boolean) => {
-        const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
-        return L.divIcon({
-            className: 'custom-marker-teardrop',
-            html: `
-        <div class="relative group transition-all duration-300 ${isSelected ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1'}">
-            <div class="w-12 h-12 ${category.markerColor} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
-                <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">${category.emoji}</div>
-            </div>
-        </div>
-      `,
-            iconSize: [48, 65],
-            iconAnchor: [24, 58],
-            popupAnchor: [0, -50]
-        });
     };
 
     const resetFilters = () => {
@@ -457,64 +402,16 @@ export default function HomeContent() {
                             {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
                         </div>
                     ) : (
-                        <div className="relative h-full w-full rounded-2xl overflow-hidden border border-border shadow-inner">
-
-                            <MapContainer center={userLocation} zoom={(() => {
-                                // Initialize zoom from storage (inline since we only need it once)
-                                const z = sessionStorage.getItem('vadkul_map_zoom');
-                                return z ? parseInt(z, 10) : 13;
-                            })()} style={{ height: '100%', width: '100%' }}>
-                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <MapStateTracker onMoveEnd={handleMapMove} />
-                                <MapController center={userLocation} onClick={handleMapClick} />
-                                {filteredEvents.map(evt => {
-                                    const isSelected = selectedEvent?.id === evt.id;
-                                    return (
-                                        <Marker
-                                            key={evt.id}
-                                            position={[evt.lat, evt.lng]}
-                                            icon={createCustomIcon(evt.type, isSelected)}
-                                            eventHandlers={{
-                                                click: (e) => {
-                                                    L.DomEvent.stopPropagation(e as any);
-                                                    setSelectedEvent(evt);
-                                                }
-                                            }}
-                                        />
-                                    );
-                                })}
-                                <Marker position={userLocation} icon={L.divIcon({ className: 'user-pos', html: '<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-xl pulse-ring cursor-pointer"></div>' })} >
-                                    <Popup>Din sökposition</Popup>
-                                </Marker>
-                            </MapContainer>
-
-                            {selectedEvent && (
-                                <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-none">
-                                    <div className="relative max-w-sm mx-auto pointer-events-auto">
-
-                                        {/* PREV BUTTON - Aligned with notch (top-20 = 80px) */}
-                                        <button
-                                            onClick={cyclePrevEvent}
-                                            className="absolute top-20 -left-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
-                                        >
-                                            <ArrowLeft size={18} />
-                                        </button>
-
-                                        {/* NEXT BUTTON - Aligned with notch (top-20 = 80px) */}
-                                        <button
-                                            onClick={cycleNextEvent}
-                                            className="absolute top-20 -right-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
-                                        >
-                                            <ArrowRight size={18} />
-                                        </button>
-
-                                        <div className="">
-                                            <EventCard event={selectedEvent} compact={true} />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <HomeMap
+                            userLocation={userLocation}
+                            events={filteredEvents}
+                            selectedEvent={selectedEvent}
+                            setSelectedEvent={setSelectedEvent}
+                            handleMapMove={handleMapMove}
+                            handleMapClick={handleMapClick}
+                            cycleNextEvent={cycleNextEvent}
+                            cyclePrevEvent={cyclePrevEvent}
+                        />
                     )}
                 </div>
             </div>

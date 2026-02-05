@@ -48,39 +48,60 @@ export default function Chat() {
 
     // 2. Initiera chatt från profilsidan om det behövs
     useEffect(() => {
-        // Använd query param
-        if (targetUid && user && !activeChatId) {
-            const initChat = async () => {
-                // Vi måste matcha UserProfile-typen bättre här
+        // Kör bara om vi har en targetUid och chats har laddat klart
+        if (!user || loading || !targetUid) return;
+
+        const handleInit = async () => {
+            try {
+                // Sök i lokala chattar först (Optimering: sparar reads/writes)
+                const existingChat = chats.find(c => c.participants.includes(targetUid));
+
+                if (existingChat) {
+                    // Om vi redan är i denna chatt, gör inget mer än städa URL
+                    if (activeChatId !== existingChat.id) {
+                        setActiveChatId(existingChat.id);
+                    }
+                    router.replace('/chat');
+                    return;
+                }
+
+                // Om inte finns lokalt, måste vi hämta användardata för att skapa chatten snyggt
+                // Vi hämtar profilen för att få namnet (annars kraschar Firestore om name är undefined)
+                const targetProfile = await userService.getUserProfile(targetUid);
+
+                if (!targetProfile) {
+                    toast.error("Användaren kunde inte hittas.");
+                    router.replace('/chat'); // Städa URL ändå
+                    return;
+                }
+
                 const myProfile = {
                     uid: user.uid,
                     displayName: user.displayName || 'Jag',
                     email: user.email || '',
-                    image: user.photoURL,
-                    age: 0,
-                    isVerified: false,
-                    createdAt: new Date()
-                } as any;
+                    photoURL: user.photoURL || null,
+                    // Fyllnad för UserProfile
+                    age: 0, isVerified: false, createdAt: new Date()
+                } as UserProfile;
 
-                try {
-                    // Fetch target profile needed? 
-                    // createOrGetChat expects a full profile object for the target usually OR just uid. 
-                    // Let's rely on chatService handling it or fetch it.
-                    let targetUser: Partial<UserProfile> = { uid: targetUid };
+                const chatId = await chatService.createOrGetChat(myProfile, {
+                    uid: targetProfile.uid,
+                    name: targetProfile.displayName,
+                    image: targetProfile.photoURL || undefined
+                });
 
-                    const chatId = await chatService.createOrGetChat(myProfile, targetUser as any);
-                    setActiveChatId(chatId);
+                setActiveChatId(chatId);
+                router.replace('/chat');
 
-                    // Clear param without reload
-                    router.replace('/chat');
+            } catch (error) {
+                console.error("Kunde inte starta chatt:", error);
+                toast.error("Något gick fel vid start av chatten.");
+            }
+        };
 
-                } catch (error) {
-                    console.error("Kunde inte starta chatt:", error);
-                }
-            };
-            initChat();
-        }
-    }, [targetUid, user, activeChatId, router]);
+        handleInit();
+
+    }, [targetUid, user, loading, chats, router, activeChatId]);
 
     // 3. Lyssna på meddelanden i vald chatt
     useEffect(() => {

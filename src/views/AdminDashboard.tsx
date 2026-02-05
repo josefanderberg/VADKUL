@@ -12,6 +12,7 @@ import { feedbackService } from '../services/feedbackService';
 import { settingsService } from '../services/settingsService';
 import type { FeedbackItem } from '../types';
 import toast from 'react-hot-toast';
+import { geohashForLocation } from 'geofire-common';
 
 // --- KONFIGURATION & KONSTANTER ---
 
@@ -61,6 +62,27 @@ const getRandomCategory = (): EventCategoryType => {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { isAdmin, enableAdmin, disableAdmin } = useAdmin();
+
+  // STRIKT ADMIN-KONTROLL
+  if (!user || user.email !== 'admin@admin.com') {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
+          <ShieldAlert size={64} className="text-destructive mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Åtkomst nekad</h1>
+          <p className="text-muted-foreground mb-6">
+            Du har inte behörighet att se denna sida.
+          </p>
+          <a
+            href="/"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
+          >
+            Gå till startsidan
+          </a>
+        </div>
+      </Layout>
+    );
+  }
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -84,12 +106,21 @@ export default function AdminDashboard() {
   // Settings State
   const [showHallOfFame, setShowHallOfFame] = useState(true);
 
-  // Hämta användare vid start (för dropdown-listan)
+  // Hämta data vid start
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const snap = await getDocs(collection(db, 'users'));
         const userList = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+        // Sortera så senaste användaren hamnar överst
+        userList.sort((a: any, b: any) => {
+          // Hantera att createdAt kan saknas eller vara en timestamp
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return dateB - dateA;
+        });
+
         setUsers(userList);
 
         // Filter pending verifications
@@ -122,10 +153,15 @@ export default function AdminDashboard() {
       setShowHallOfFame(settings.showHallOfFame);
     };
 
-    fetchUsers();
-    fetchFeedback();
+    // Alltid hämta settings (oftast publikt läsbara)
     fetchSettings();
-    if (isAdmin) fetchReports();
+
+    // Endast hämta känslig data om man faktiskt är admin
+    if (isAdmin) {
+      fetchUsers();
+      fetchFeedback();
+      fetchReports();
+    }
 
   }, [loading, isAdmin]); // Reload when loading finishes or admin status changes
 
@@ -205,6 +241,8 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+
 
 
   // ---------------------------------------------------------
@@ -414,6 +452,9 @@ export default function AdminDashboard() {
           minAge: 18,
           maxAge: 99,
           ageCategory: '18+',
+
+          // GENERATE GEOHASH
+          geohash: geohashForLocation([location.lat, location.lng]),
 
           host: {
             uid: randomUser.uid,
@@ -955,6 +996,8 @@ export default function AdminDashboard() {
                   >
                     🗑️ Radera ALLA events
                   </button>
+
+
                 </div>
               </div>
 
@@ -1076,7 +1119,9 @@ export default function AdminDashboard() {
                       <div className="flex-1 min-w-0 text-center md:text-left">
                         <div className="font-bold text-slate-900 truncate">{u.displayName || 'John Doe'}</div>
                         <div className="text-xs text-slate-500 truncate">{u.email}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {u.uid.substring(0, 6)}...</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          ID: {u.uid.substring(0, 6)}... • Skapad: {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : 'N/A'}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-3">

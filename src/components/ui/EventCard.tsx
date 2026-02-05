@@ -50,14 +50,17 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     };
 
     // --- STATUS LOGIK ---
-    const currentCount = event.attendees.length;
+    // Filtrera bort deltagare som väntar på godkännande
+    const confirmedAttendees = event.attendees.filter(a => a.status !== 'pending');
+
+    const currentCount = confirmedAttendees.length;
     const spotsLeft = event.maxParticipants - currentCount;
     const isFull = currentCount >= event.maxParticipants;
     const isGuaranteed = currentCount >= event.minParticipants;
 
     // --- DELTAGAR LOGIK ---
-    const visibleAttendees = event.attendees.slice(0, 3);
-    const hiddenCount = event.attendees.length - visibleAttendees.length;
+    const visibleAttendees = confirmedAttendees.slice(0, 3);
+    const hiddenCount = confirmedAttendees.length - visibleAttendees.length;
 
 
 
@@ -245,7 +248,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                             </div>
                                         )}
 
-                                        {event.attendees.length === 0 && (
+                                        {confirmedAttendees.length === 0 && (
                                             <span className="text-xs text-muted-foreground/60 italic pr-1">Bli först!</span>
                                         )}
                                     </div>
