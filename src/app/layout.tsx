@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
+import Hotjar from '@/components/analytics/Hotjar';
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://vadkul.se'),
@@ -28,6 +29,7 @@ export default function RootLayout({
             <body>
                 <Providers>
                     {children}
+                    <Hotjar />
                 </Providers>
             </body>
         </html>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 import Layout from '../layout/Layout';
@@ -68,8 +68,14 @@ export default function HomeContent() {
         placeholderData: (previousData) => previousData, // Keep data while fetching new
     });
 
-    // Initialize view from storage
+    const searchParams = useSearchParams();
+
+    // Initialize view from storage or URL param
     const [view, setView] = useState<'list' | 'map'>(() => {
+        const viewParam = searchParams.get('view');
+        if (viewParam === 'map') return 'map';
+        if (viewParam === 'list') return 'list';
+
         return (typeof window !== 'undefined' && sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
     });
 
