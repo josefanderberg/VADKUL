@@ -133,3 +133,20 @@ export interface FeedbackItem {
   userAgent?: string;
   userId?: string;
 }
+
+export interface LinkEvent {
+  id: string;
+  title: string;
+  url: string;
+  time: Date;
+  createdAt: Date;
+  locationName: string;
+  lat: number;
+  lng: number;
+  hostName: string;
+}
+
+export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {
+  time: Timestamp;
+  createdAt: Timestamp;
+}

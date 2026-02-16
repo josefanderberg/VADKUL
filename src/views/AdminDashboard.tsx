@@ -776,6 +776,7 @@ export default function AdminDashboard() {
     }
   };
 
+
   return (
     <Layout>
       <div className="min-h-screen bg-slate-50 p-6">
@@ -880,6 +881,25 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* KORT: LINK EVENTS - Nav to dedicated page */}
+              <a
+                href="/admin/link-events"
+                className="block bg-gradient-to-br from-purple-500 to-pink-500 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow text-white"
+              >
+                <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                  🔗 Länk-Events Hantering
+                </h2>
+                <p className="text-purple-50 text-sm mb-3">
+                  Skapa och hantera externa event som visas på startsidan.
+                </p>
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-bold hover:bg-white/30 transition-colors">
+                  <span>Öppna hanteringssida</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </a>
 
               {/* KORT 0: Verifieringsförfrågningar */}
               {pendingVerifications.length > 0 && (

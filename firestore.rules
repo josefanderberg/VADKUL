@@ -129,5 +129,15 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 8. LINK EVENTS
+    match /linkEvents/{eventId} {
+      // Alla kan läsa
+      allow read: if true;
+      
+      // Endast admin kan skapa/radera
+      allow create, delete: if isAuthenticated() 
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
   }
 }

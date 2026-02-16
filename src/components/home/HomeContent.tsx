@@ -7,12 +7,15 @@ import dynamic from 'next/dynamic';
 
 import Layout from '../layout/Layout';
 import EventCard from '../ui/EventCard';
+import LinkEventCard from '../ui/LinkEventCard';
 import EventFilters from './EventFilters';
 import WelcomeModal from '../ui/WelcomeModal';
 
 import { eventService } from '../../services/eventService';
+import { linkEventService } from '../../services/linkEventService';
 import { settingsService } from '../../services/settingsService';
-import type { AppEvent } from '../../types';
+import type { AppEvent, LinkEvent } from '../../types';
+import { useAdmin } from '../../context/AdminContext';
 import { calculateDistance, saveLocationToLocalStorage } from '../../utils/mapUtils';
 import { ArrowUpDown, Trophy } from 'lucide-react';
 
@@ -67,6 +70,17 @@ export default function HomeContent() {
         staleTime: 5 * 60 * 1000, // 5 minutes
         placeholderData: (previousData) => previousData, // Keep data while fetching new
     });
+
+    // 4. Fetch Link Events
+    const { data: linkEvents = [], isLoading: loadingLinkEvents, refetch: refetchLinkEvents } = useQuery({
+        queryKey: ['linkEvents'],
+        queryFn: async () => {
+            return linkEventService.getAll();
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+
+    const { isAdmin } = useAdmin();
 
     const searchParams = useSearchParams();
 
@@ -202,6 +216,20 @@ export default function HomeContent() {
             return countB - countA;
         })[0];
     }, [events]);
+
+    // --- LOGIK: Merge events and link events, then filter regular events ---
+    const mergedEvents = useMemo(() => {
+        // Combine regular events and link events
+        // Add a type discriminator to help with rendering
+        const regularWithType = events.map(e => ({ ...e, _type: 'regular' as const }));
+        const linkWithType = linkEvents.map(e => ({ ...e, _type: 'link' as const }));
+
+        // Merge and sort by time
+        const combined = [...regularWithType, ...linkWithType];
+        combined.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        return combined;
+    }, [events, linkEvents]);
 
     // --- LOGIK: Filtrera -> Sortera på avstånd -> Ta topp 30 -> Sortera på användarens val ---
     const filteredEvents = useMemo(() => {
@@ -406,9 +434,36 @@ export default function HomeContent() {
                             <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
                         </div>
                     ) : view === 'list' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-                            {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
-                        </div>
+                        <>
+                            {/* Regular Events Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+                                {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
+                            </div>
+
+                            {/* Link Events Section - Separate and Less Prominent */}
+                            {linkEvents.length > 0 && (
+                                <div className="mt-12 border-t border-border pt-8">
+                                    <h2 className="text-lg font-semibold text-muted-foreground mb-4 px-2 flex items-center gap-2">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                        Externa Event
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-90">
+                                        {linkEvents.map(linkEvt => (
+                                            <div key={linkEvt.id} className="h-full">
+                                                <LinkEventCard
+                                                    linkEvent={linkEvt}
+                                                    isAdmin={isAdmin}
+                                                    onDelete={() => refetchLinkEvents()}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <HomeMap
                             userLocation={userLocation}
