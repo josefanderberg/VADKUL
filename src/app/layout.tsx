@@ -5,9 +5,17 @@ import Hotjar from '@/components/analytics/Hotjar';
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://vadkul.se'),
-    title: 'VADKUL - Hitta kul saker att göra',
-    description: 'Se vad som händer i dina trakter',
+    title: 'VADKUL - Hitta spontana events',
+    description: 'Upptäck spontana events och aktiviteter i din närhet. Hitta vad som händer just nu på kartan.',
     manifest: '/manifest.json',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'black-translucent',
+        title: 'VADKUL',
+    },
+    other: {
+        'mobile-web-app-capable': 'yes',
+    },
 };
 
 export const viewport: Viewport = {
@@ -25,6 +33,8 @@ export default function RootLayout({
         <html lang="sv" suppressHydrationWarning>
             <head>
                 <link rel="icon" type="image/png" href="/pwa-icon-v2.png" />
+                <link rel="apple-touch-icon" href="/pwa-icon-v2.png" />
+                <meta name="theme-color" content="#16a34a" />
             </head>
             <body>
                 <Providers>

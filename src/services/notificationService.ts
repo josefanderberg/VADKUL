@@ -1,7 +1,7 @@
 // src/services/notificationService.ts
 import {
   collection, addDoc, query, where, orderBy,
-  onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs, limit
+  onSnapshot, Timestamp, doc, updateDoc, writeBatch, getDocs, limit, setDoc, deleteDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AppNotification } from '../types';
@@ -82,5 +82,36 @@ export const notificationService = {
     });
 
     await batch.commit();
+  },
+
+  // ===== FCM TOKEN MANAGEMENT =====
+
+  /**
+   * Save FCM token for a user
+   */
+  async saveFCMToken(userId: string, token: string) {
+    const tokenRef = doc(db, 'fcmTokens', userId, 'tokens', token);
+    await setDoc(tokenRef, {
+      token,
+      createdAt: Timestamp.now(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+    });
+  },
+
+  /**
+   * Delete FCM token for a user
+   */
+  async deleteFCMToken(userId: string, token: string) {
+    const tokenRef = doc(db, 'fcmTokens', userId, 'tokens', token);
+    await deleteDoc(tokenRef);
+  },
+
+  /**
+   * Get all FCM tokens for a user
+   */
+  async getFCMTokens(userId: string): Promise<string[]> {
+    const tokensRef = collection(db, 'fcmTokens', userId, 'tokens');
+    const snapshot = await getDocs(tokensRef);
+    return snapshot.docs.map(doc => doc.data().token);
   }
 };
