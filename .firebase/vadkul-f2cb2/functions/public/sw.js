@@ -88,37 +88,6 @@ self.addEventListener('fetch', (event) => {
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-<<<<<<< HEAD
-// Initialize Firebase in Service Worker
-firebase.initializeApp({
-    apiKey: "AIzaSyD0bkVdGqCzOlwx49-sLfJdj6fiRrnPnGI",
-    authDomain: "vadkul-f2cb2.firebaseapp.com",
-    projectId: "vadkul-f2cb2",
-    storageBucket: "vadkul-f2cb2.firebasestorage.app",
-    messagingSenderId: "866093925820",
-    appId: "1:866093925820:web:ea43aa0df86cfbda7b09cd"
-});
-
-const messaging = firebase.messaging();
-
-// Handle background messages
-messaging.onBackgroundMessage((payload) => {
-    console.log('Background message received:', payload);
-
-    const notificationTitle = payload.notification?.title || 'VADKUL';
-    const notificationOptions = {
-        body: payload.notification?.body || 'Du har en ny notis',
-        icon: '/pwa-icon-v2.png',
-        badge: '/pwa-icon-v2.png',
-        tag: payload.data?.type || 'general',
-        data: payload.data,
-        vibrate: [200, 100, 200],
-        requireInteraction: false,
-    };
-
-    return self.registration.showNotification(notificationTitle, notificationOptions);
-});
-=======
 const urlParams = new URLSearchParams(location.search);
 const apiKey = urlParams.get('firebaseApiKey') || '';
 const projectId = urlParams.get('projectId') || '';
@@ -162,7 +131,6 @@ if (apiKey) {
         console.error('Firebase messaging error in sw.js:', e);
     }
 }
->>>>>>> f40fac0 (ny commit)
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {

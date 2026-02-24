@@ -1,4 +1,6 @@
 import type { LinkEvent } from '../types';
+import { EVENT_CATEGORIES } from './categories';
+import type { EventCategoryType } from './categories';
 import { getVenueCoordinates } from './venueCoordinates';
 
 // JSON format from external sources (e.g. event calendars)
@@ -11,6 +13,7 @@ export interface ExternalEventJSON {
     organizer: string;   // who hosts it
     website: string;     // external URL
     maps_url?: string;   // Google Maps URL (optional)
+    category?: string;   // category key e.g. "sport", "party"
 }
 
 export interface EventImportData {
@@ -88,6 +91,21 @@ export function mapToLinkEvent(externalEvent: any): Omit<LinkEvent, 'id' | 'crea
         // Get coordinates from venue name
         const [lat, lng] = getVenueCoordinates(eventVenue);
 
+        // Resolve category — accept both Swedish label and English key
+        const rawCategory = externalEvent.category || externalEvent.kategori;
+        let resolvedCategory: EventCategoryType | undefined;
+        if (rawCategory) {
+            const key = rawCategory.toLowerCase().trim() as EventCategoryType;
+            if (key in EVENT_CATEGORIES) {
+                resolvedCategory = key;
+                console.log(`[Import] Resolved category for "${eventTitle}":`, resolvedCategory);
+            } else {
+                console.warn(`[Import] Unknown category key: "${rawCategory}" for event "${eventTitle}"`);
+            }
+        } else {
+            console.log(`[Import] No category provided for "${eventTitle}", using default.`);
+        }
+
         return {
             title: eventTitle,
             url: eventWebsite,
@@ -95,7 +113,8 @@ export function mapToLinkEvent(externalEvent: any): Omit<LinkEvent, 'id' | 'crea
             locationName: eventVenue,
             lat,
             lng,
-            hostName: eventOrganizer
+            hostName: eventOrganizer,
+            ...(resolvedCategory ? { category: resolvedCategory } : {})
         };
     } catch (error) {
         console.error('Error mapping event:', error, externalEvent);

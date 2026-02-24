@@ -499,14 +499,15 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted p-2 -ml-2 rounded-lg transition-colors group text-left"
                             >
                                 {event.host.photoURL ? (
-                                    <Image
-                                        src={event.host.photoURL}
-                                        width={32}
-                                        height={32}
-                                        className="rounded-full object-cover shrink-0 ring-2 ring-background shadow-sm"
-                                        style={{ width: '32px', height: '32px' }}
-                                        alt={event.host.name}
-                                    />
+                                    <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden ring-2 ring-background shadow-sm">
+                                        <Image
+                                            src={event.host.photoURL}
+                                            fill
+                                            sizes="32px"
+                                            className="object-cover"
+                                            alt={event.host.name}
+                                        />
+                                    </div>
                                 ) : (
                                     <div
                                         className="w-8 h-8 shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform ring-2 ring-background shadow-sm"
@@ -648,14 +649,15 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                                 <div key={request.uid} className="flex items-center justify-between bg-card p-3 rounded-lg border border-amber-200 dark:border-transparent shadow-sm">
                                                     <div className="flex items-center gap-3">
                                                         {request.photoURL ? (
-                                                            <Image
-                                                                src={request.photoURL}
-                                                                alt={request.displayName}
-                                                                width={40}
-                                                                height={40}
-                                                                className="rounded-full object-cover shrink-0"
-                                                                style={{ width: '40px', height: '40px' }}
-                                                            />
+                                                            <div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-border">
+                                                                <Image
+                                                                    src={request.photoURL}
+                                                                    alt={request.displayName}
+                                                                    fill
+                                                                    sizes="40px"
+                                                                    className="object-cover"
+                                                                />
+                                                            </div>
                                                         ) : (
                                                             <div
                                                                 className="w-10 h-10 shrink-0 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground"
@@ -723,14 +725,15 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                                 const isMe = uid === user?.uid;
 
                                                 const Avatar = photo ? (
-                                                    <Image
-                                                        src={photo}
-                                                        alt={displayStr}
-                                                        width={isHost ? 32 : 24}
-                                                        height={isHost ? 32 : 24}
-                                                        className="rounded-full object-cover shrink-0"
-                                                        style={{ width: isHost ? '32px' : '24px', height: isHost ? '32px' : '24px' }}
-                                                    />
+                                                    <div className={`relative ${isHost ? 'w-8 h-8' : 'w-6 h-6'} shrink-0 rounded-full overflow-hidden`}>
+                                                        <Image
+                                                            src={photo}
+                                                            alt={displayStr}
+                                                            fill
+                                                            sizes={isHost ? "32px" : "24px"}
+                                                            className="object-cover"
+                                                        />
+                                                    </div>
                                                 ) : (
                                                     <div
                                                         className={`shrink-0 ${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}

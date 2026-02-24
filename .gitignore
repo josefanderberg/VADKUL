@@ -30,3 +30,6 @@ build/
 
 # Firebase Admin SDK
 service-account.json
+
+# Firebase CLI
+.firebase/

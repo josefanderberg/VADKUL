@@ -144,6 +144,7 @@ export interface LinkEvent {
   lat: number;
   lng: number;
   hostName: string;
+  category?: EventCategoryType;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {

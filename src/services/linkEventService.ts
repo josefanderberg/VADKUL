@@ -8,16 +8,21 @@ import type { LinkEvent, FirestoreLinkEventData } from '../types';
 const COLLECTION = 'linkEvents';
 
 export const linkEventService = {
-    // Hämta alla aktiva link events (framtida events)
-    async getAll(): Promise<LinkEvent[]> {
+    // Hämta link events (som standard endast framtida)
+    async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0); // Start of today
+            let q;
+            if (onlyFuture) {
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Start of today
+                q = query(
+                    collection(db, COLLECTION),
+                    where("time", ">=", Timestamp.fromDate(now))
+                );
+            } else {
+                q = query(collection(db, COLLECTION));
+            }
 
-            const q = query(
-                collection(db, COLLECTION),
-                where("time", ">=", Timestamp.fromDate(now))
-            );
             const snap = await getDocs(q);
             return snap.docs.map(doc => {
                 const data = doc.data() as FirestoreLinkEventData;

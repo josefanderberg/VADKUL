@@ -201,14 +201,15 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     className="flex items-center gap-2 cursor-pointer group/host"
                                 >
                                     {event.host.photoURL ? (
-                                        <Image
-                                            src={event.host.photoURL}
-                                            alt={event.host.name}
-                                            width={24}
-                                            height={24}
-                                            className="rounded-full object-cover shrink-0 ring-1 ring-border"
-                                            style={{ width: '24px', height: '24px' }}
-                                        />
+                                        <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden ring-1 ring-border">
+                                            <Image
+                                                src={event.host.photoURL}
+                                                alt={event.host.name}
+                                                fill
+                                                sizes="24px"
+                                                className="object-cover"
+                                            />
+                                        </div>
                                     ) : (
                                         <div
                                             className="w-6 h-6 shrink-0 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground ring-1 ring-border"
@@ -238,15 +239,15 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         {visibleAttendees.map((attendee, i) => (
                                             <div key={i} className="relative z-10 hover:z-20 transition-transform hover:scale-110">
                                                 {attendee.photoURL ? (
-                                                    <Image
-                                                        src={attendee.photoURL}
-                                                        alt={attendee.displayName}
-                                                        width={24}
-                                                        height={24}
-                                                        className="rounded-full object-cover shrink-0 ring-2 ring-card bg-muted"
-                                                        style={{ width: '24px', height: '24px' }}
-                                                        title={attendee.displayName}
-                                                    />
+                                                    <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden ring-2 ring-card bg-muted" title={attendee.displayName}>
+                                                        <Image
+                                                            src={attendee.photoURL}
+                                                            alt={attendee.displayName}
+                                                            fill
+                                                            sizes="24px"
+                                                            className="object-cover"
+                                                        />
+                                                    </div>
                                                 ) : (
                                                     <div
                                                         className="w-6 h-6 shrink-0 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"

@@ -1,0 +1,177 @@
+{
+    "city": "Växjö",
+    "timeframe": "Mars 2026",
+    "events": [
+        {
+            "date": "2026-03-02",
+            "time": "18:00",
+            "event": "Innebandyturnering öppen klass",
+            "venue": "Fortnox Arena",
+            "organizer": "Växjö Innebandyklubb",
+            "website": "https://example.com/innebandy",
+            "category": "sport"
+        },
+        {
+            "date": "2026-03-04",
+            "time": "19:00",
+            "event": "Live Jazz & Soul-kväll",
+            "venue": "Konserthuset",
+            "organizer": "Växjö Konserthus",
+            "website": "https://example.com/jazzkväll",
+            "category": "culture"
+        },
+        {
+            "date": "2026-03-05",
+            "time": "17:30",
+            "event": "Vegan-matlagning för studenter",
+            "venue": "Linnékåren",
+            "organizer": "Studenthälsan LNU",
+            "website": "https://example.com/veganmat",
+            "category": "food"
+        },
+        {
+            "date": "2026-03-07",
+            "time": "21:00",
+            "event": "Studentfest: Neon Night",
+            "venue": "Linnékåren",
+            "organizer": "Linnékåren",
+            "website": "https://example.com/neonnight",
+            "category": "party"
+        },
+        {
+            "date": "2026-03-08",
+            "time": "10:00",
+            "event": "Loppis i Grand Samarkand",
+            "venue": "Grand Samarkand",
+            "organizer": "Samarkand Centrum",
+            "website": "https://example.com/loppis",
+            "category": "market"
+        },
+        {
+            "date": "2026-03-09",
+            "time": "14:00",
+            "event": "Söndagsfika & brädspel",
+            "venue": "Kafé de Luxe",
+            "organizer": "Spelföreningen Växjö",
+            "website": "https://example.com/bradspel",
+            "category": "boardgame"
+        },
+        {
+            "date": "2026-03-10",
+            "time": "09:00",
+            "event": "Tenta-plugg maraton",
+            "venue": "Linnéuniversitetet",
+            "organizer": "Studiegruppen LNU",
+            "website": "https://example.com/tentaplugg",
+            "category": "study"
+        },
+        {
+            "date": "2026-03-11",
+            "time": "18:30",
+            "event": "Akvarellmålning-kurs nybörjare",
+            "venue": "Kulturhuset Prisma",
+            "organizer": "Konstföreningen Växjö",
+            "website": "https://example.com/akvarell",
+            "category": "creative"
+        },
+        {
+            "date": "2026-03-12",
+            "time": "17:00",
+            "event": "After Work mingel i stan",
+            "venue": "Bishops Arms Växjö",
+            "organizer": "Växjö Networking Group",
+            "website": "https://example.com/afterwork",
+            "category": "mingle"
+        },
+        {
+            "date": "2026-03-13",
+            "time": "15:00",
+            "event": "LAN-party: CS2 & Valorant",
+            "venue": "Campushallen",
+            "organizer": "E-sport LNU",
+            "website": "https://example.com/lanparty",
+            "category": "game"
+        },
+        {
+            "date": "2026-03-14",
+            "time": "11:00",
+            "event": "Vandring runt Kronobergsruinen",
+            "venue": "Kronobergsruinen",
+            "organizer": "Friluftsfrämjandet Växjö",
+            "website": "https://example.com/vandring",
+            "category": "outdoor"
+        },
+        {
+            "date": "2026-03-15",
+            "time": "14:00",
+            "event": "Fika & häng vid sjön",
+            "venue": "Växjösjön",
+            "organizer": "Studentlivet Växjö",
+            "website": "https://example.com/fikahang",
+            "category": "social"
+        },
+        {
+            "date": "2026-03-16",
+            "time": "07:00",
+            "event": "Morgonyoga i parken",
+            "venue": "Stadsparken",
+            "organizer": "Yogagruppen Växjö",
+            "website": "https://example.com/morgonyoga",
+            "category": "training"
+        },
+        {
+            "date": "2026-03-17",
+            "time": "18:00",
+            "event": "Filmkväll: Oscar-vinnaren 2026",
+            "venue": "Växjö Teater",
+            "organizer": "Filmklubben LNU",
+            "website": "https://example.com/filmkvall",
+            "category": "movie"
+        },
+        {
+            "date": "2026-03-18",
+            "time": "16:00",
+            "event": "Kubb-turnering i Linnéparken",
+            "venue": "Linnéparken",
+            "organizer": "Studentföreningen Kubb",
+            "website": "https://example.com/kubb",
+            "category": "play"
+        },
+        {
+            "date": "2026-03-19",
+            "time": "15:00",
+            "event": "Kårens vårpub",
+            "venue": "Linnékåren",
+            "organizer": "Linnékåren",
+            "website": "https://example.com/varpub",
+            "category": "campus"
+        },
+        {
+            "date": "2026-03-21",
+            "time": "10:00",
+            "event": "Städdag i Stadsparken",
+            "venue": "Stadsparken",
+            "organizer": "Naturskyddsföreningen Växjö",
+            "website": "https://example.com/staddag",
+            "category": "community"
+        },
+        {
+            "date": "2026-03-22",
+            "time": "13:00",
+            "event": "Keramik-workshop för nybörjare",
+            "venue": "Kulturhuset Prisma",
+            "organizer": "Slöjdföreningen Växjö",
+            "website": "https://example.com/keramik",
+            "category": "workshop"
+        },
+        {
+            "date": "2026-03-25",
+            "time": "19:00",
+            "event": "Pub Quiz på engelska",
+            "venue": "Bishops Arms Växjö",
+            "organizer": "English Society LNU",
+            "website": "https://example.com/pubquiz",
+            "category": "other"
+        }
+    ]
+}

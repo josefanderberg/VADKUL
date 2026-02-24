@@ -1,10 +1,39 @@
 import { ExternalLink, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 import type { LinkEvent } from '../../types';
+import type { EventCategoryType } from '../../utils/categories';
 import { formatEventDate } from '../../utils/dateUtils';
 import { linkEventService } from '../../services/linkEventService';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+
+// ─── Category patterns ────────────────────────────────────────────────────────
+import patternBoardgame from '../../assets/categories/patterns/pattern_boardgame.png';
+import patternCampus from '../../assets/categories/patterns/pattern_campus.png';
+import patternCommunity from '../../assets/categories/patterns/pattern_community.png';
+import patternCreative from '../../assets/categories/patterns/pattern_creative.png';
+import patternCulture from '../../assets/categories/patterns/pattern_culture.png';
+import patternFood from '../../assets/categories/patterns/pattern_food.png';
+import patternGame from '../../assets/categories/patterns/pattern_game.png';
+import patternMarket from '../../assets/categories/patterns/pattern_market.png';
+import patternMingle from '../../assets/categories/patterns/pattern_mingle.png';
+import patternMovie from '../../assets/categories/patterns/pattern_movie.png';
+import patternOther from '../../assets/categories/patterns/pattern_other.png';
+import patternOutdoor from '../../assets/categories/patterns/pattern_outdoor.png';
+import patternParty from '../../assets/categories/patterns/pattern_party.png';
+import patternPlay from '../../assets/categories/patterns/pattern_play.png';
+import patternSocial from '../../assets/categories/patterns/pattern_social.png';
+import patternSport from '../../assets/categories/patterns/pattern_sport.png';
+import patternStudy from '../../assets/categories/patterns/pattern_study.png';
+import patternTraining from '../../assets/categories/patterns/pattern_training.png';
+
+const ALL_PATTERNS = [
+    patternBoardgame, patternCampus, patternCommunity, patternCreative,
+    patternCulture, patternFood, patternGame, patternMarket,
+    patternMingle, patternMovie, patternOther, patternOutdoor,
+    patternParty, patternPlay, patternSocial, patternSport,
+    patternStudy, patternTraining
+];
 
 interface LinkEventCardProps {
     linkEvent: LinkEvent;
@@ -13,9 +42,7 @@ interface LinkEventCardProps {
 }
 
 export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: LinkEventCardProps) {
-    const router = useRouter();
     const [isDeleting, setIsDeleting] = useState(false);
-    const [imageLoaded, setImageLoaded] = useState(false);
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -42,10 +69,22 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
     };
 
+    // djb2 hash for better distribution than simple char summation
+    const getHash = (str: string) => {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        }
+        return Math.abs(hash);
+    };
+
+    const patternIndex = getHash(linkEvent.id || linkEvent.title || '') % ALL_PATTERNS.length;
+    const coverSrc = ALL_PATTERNS[patternIndex];
+
     return (
         <div className="block h-full group relative">
             <div className="relative flex flex-col h-full">
-                {/* The Card Itself */}
+                {/* The Card Itself — slightly dimmed so native events feel primary */}
                 <div className="flex flex-col h-full bg-card overflow-hidden rounded-lg border border-border opacity-75">
 
                     {/* Admin Delete Button */}
@@ -60,25 +99,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                         </button>
                     )}
 
-                    {/* Header with subtle grey background */}
-                    <div className="relative w-full h-24 bg-muted/50 overflow-hidden">
-                        {/* Pattern/Texture overlay */}
-                        <div
-                            className="absolute inset-0 opacity-10"
-                            style={{
-                                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'3\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'3\'/%3E%3C/g%3E%3C/svg%3E")'
-                            }}
+                    {/* ── Header: decorative pattern (grayscale look) ── */}
+                    <div className="relative w-full h-24 overflow-hidden bg-muted/50">
+                        {/* Pattern background — forced grayscale per user request */}
+                        <Image
+                            src={coverSrc}
+                            alt=""
+                            fill
+                            sizes="(max-width: 768px) 100vw, 300px"
+                            className="object-cover opacity-60 grayscale contrast-125"
+                            style={{ filter: 'saturate(0)' }}
+                            aria-hidden="true"
                         />
 
-                        {/* Badge */}
-                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded text-[10px] font-medium uppercase tracking-wide flex items-center gap-1.5 bg-muted/80 text-muted-foreground">
+                        {/* "Externt Event" badge */}
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded text-[10px] font-medium uppercase tracking-wide flex items-center gap-1.5 bg-black/30 text-white backdrop-blur-sm">
                             <ExternalLink size={12} />
                             Externt Event
                         </div>
 
-                        {/* Datum Badge */}
-                        <div className="absolute bottom-3 right-3 bg-muted/80 text-muted-foreground font-medium px-2 py-1 rounded text-xs flex flex-col items-center leading-tight">
-                            <span className="text-[9px] uppercase opacity-70">
+                        {/* Date badge */}
+                        <div className="absolute bottom-3 right-3 bg-black/30 backdrop-blur-sm text-white font-medium px-2 py-1 rounded text-xs flex flex-col items-center leading-tight">
+                            <span className="text-[9px] uppercase opacity-80">
                                 {linkEvent.time.toLocaleDateString('sv-SE', { month: 'short' })}
                             </span>
                             <span className="text-lg">{linkEvent.time.getDate()}</span>
@@ -87,13 +129,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
 
                     {/* Content */}
                     <div className="flex flex-col flex-1 p-5 pt-4">
-                        <h3 className="font-bold text-card-foreground leading-tight mb-3 line-clamp-2 text-lg">
+                        {/* Title — white in dark mode, black in light mode */}
+                        <h3 className="font-bold text-black dark:text-white leading-tight mb-3 line-clamp-2 text-lg">
                             {linkEvent.title}
                         </h3>
 
-                        {/* Info */}
+                        {/* Info rows */}
                         <div className="space-y-2 mb-5">
-                            <div className="flex items-center gap-2.5 text-xs font-medium text-muted-foreground">
+                            <div className="flex items-center gap-2.5 text-xs font-medium text-black dark:text-white">
                                 <div className="p-1 rounded bg-muted/50">
                                     <ExternalLink size={14} strokeWidth={2} />
                                 </div>
@@ -101,7 +144,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                             </div>
 
                             {/* Location */}
-                            <div className="flex items-center gap-2.5 text-xs font-medium text-muted-foreground">
+                            <div className="flex items-center gap-2.5 text-xs font-medium text-black dark:text-white">
                                 <div className="p-1 rounded bg-muted/50">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -114,16 +157,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
 
                         {/* Bottom Section */}
                         <div className="mt-auto border-t border-border pt-4 flex items-center justify-between">
-                            {/* Host Info (Dynamic) */}
+                            {/* Host Info */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">
+                                <span className="text-[10px] uppercase font-bold text-black/60 dark:text-white/70 tracking-wider">
                                     Värd
                                 </span>
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-medium">
                                         {linkEvent.hostName?.charAt(0).toUpperCase() || '?'}
                                     </div>
-                                    <span className="text-xs font-medium text-muted-foreground">
+                                    <span className="text-xs font-medium text-black dark:text-white">
                                         {linkEvent.hostName || 'Okänd'}
                                     </span>
                                 </div>
@@ -132,7 +175,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                             {/* Visit Site Button */}
                             <button
                                 onClick={handleVisitSite}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground font-medium rounded text-sm border border-border"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-muted/80 text-black dark:text-white font-medium rounded text-sm border border-border"
                             >
                                 <span>Gå till sida</span>
                                 <ExternalLink size={14} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { linkEventService } from '../../../services/linkEventService';
 import { useAuth } from '../../../context/AuthContext';
@@ -9,6 +9,8 @@ import type { LinkEvent } from '../../../types';
 import toast from 'react-hot-toast';
 import { ExternalLink, Trash2, MapPin, ArrowLeft, Upload, Eye } from 'lucide-react';
 import { parseImportJSON, mapToLinkEvent, compareEvents, type SyncComparison } from '../../../utils/eventImport';
+import { CATEGORY_LIST } from '../../../utils/categories';
+import type { EventCategoryType } from '../../../utils/categories';
 
 export default function LinkEventsAdminPage() {
     const { user } = useAuth();
@@ -25,11 +27,13 @@ export default function LinkEventsAdminPage() {
     const [lat, setLat] = useState('');
     const [lng, setLng] = useState('');
     const [hostName, setHostName] = useState('');
+    const [category, setCategory] = useState<EventCategoryType | ''>('');
 
     // JSON Sync state
     const [jsonInput, setJsonInput] = useState('');
     const [preview, setPreview] = useState<SyncComparison | null>(null);
     const [syncing, setSyncing] = useState(false);
+    const [syncMode, setSyncMode] = useState<'replace' | 'merge'>('merge');
 
     // Strikt admin check
     if (!user || user.email !== 'admin@admin.com') {
@@ -57,11 +61,40 @@ export default function LinkEventsAdminPage() {
 
     const fetchLinkEvents = async () => {
         try {
-            const events = await linkEventService.getAll();
+            // Get ALL events for admin (past and future)
+            const events = await linkEventService.getAll(false);
             setLinkEvents(events);
         } catch (error) {
             console.error('Failed to fetch link events:', error);
             toast.error('Kunde inte hämta länk-events');
+        }
+    };
+
+    const handleClearAll = async () => {
+        if (linkEvents.length === 0) {
+            toast.error('Inga events att rensa');
+            return;
+        }
+
+        if (!confirm(`VARNING: Detta kommer att ta bort ALLA ${linkEvents.length} länk-event permanent. Är du säker?`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const eventIds = linkEvents.map(e => e.id);
+            await linkEventService.bulkDelete(eventIds);
+            toast.success(`${eventIds.length} events rensade!`);
+
+            // Clear inputs and refresh
+            setJsonInput('');
+            setPreview(null);
+            await fetchLinkEvents();
+        } catch (error) {
+            console.error('Failed to clear events:', error);
+            toast.error('Kunde inte rensa events');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -100,7 +133,8 @@ export default function LinkEventsAdminPage() {
                 locationName,
                 lat: latitude,
                 lng: longitude,
-                hostName
+                hostName,
+                ...(category ? { category: category as EventCategoryType } : {})
             });
 
             toast.success('Länk-event skapat!');
@@ -114,6 +148,7 @@ export default function LinkEventsAdminPage() {
             setLat('');
             setLng('');
             setHostName('');
+            setCategory('');
 
             // Refresh list
             await fetchLinkEvents();
@@ -167,7 +202,15 @@ export default function LinkEventsAdminPage() {
             const comparison = compareEvents(linkEvents, mapped);
             setPreview(comparison);
 
-            toast.success(`Förhandsgranskning klar! ${comparison.toAdd.length} nya, ${comparison.toKeep.length} bevarade, ${comparison.toRemove.length} tas bort`);
+            const msg = syncMode === 'replace'
+                ? `Förhandsgranskning klar! %N% nya, %K% bevarade, %R% tas bort`
+                : `Förhandsgranskning klar! Hittade %N% nya events att lägga till.`;
+
+            toast.success(msg
+                .replace('%N%', comparison.toAdd.length.toString())
+                .replace('%K%', comparison.toKeep.length.toString())
+                .replace('%R%', comparison.toRemove.length.toString())
+            );
         } catch (error: any) {
             console.error('Preview error:', error);
             toast.error(error.message || 'Kunde inte tolka JSON');
@@ -181,18 +224,23 @@ export default function LinkEventsAdminPage() {
             return;
         }
 
-        // Confirm if removing events
-        if (preview.toRemove.length > 0) {
+        // Confirm if removing events in replace mode
+        if (syncMode === 'replace' && preview.toRemove.length > 0) {
             const confirmed = confirm(
-                `Detta kommer att ta bort ${preview.toRemove.length} event(s). Är du säker?`
+                `VARNING: Detta kommer att ta bort ${preview.toRemove.length} befintliga event. Är du säker?`
             );
             if (!confirmed) return;
+        } else if (syncMode === 'merge' && preview.toAdd.length === 0) {
+            toast.success('Alla events i JSON finns redan!');
+            setPreview(null);
+            setJsonInput('');
+            return;
         }
 
         setSyncing(true);
         try {
-            // Delete events that are not in JSON
-            if (preview.toRemove.length > 0) {
+            // Delete events ONLY if mode is 'replace'
+            if (syncMode === 'replace' && preview.toRemove.length > 0) {
                 await linkEventService.bulkDelete(preview.toRemove.map(e => e.id));
             }
 
@@ -201,10 +249,13 @@ export default function LinkEventsAdminPage() {
                 await linkEventService.bulkCreate(preview.toAdd);
             }
 
-            toast.success(`Synkronisering klar! +${preview.toAdd.length} nya, -${preview.toRemove.length} borttagna`);
+            const successMsg = syncMode === 'replace'
+                ? `Synkronisering klar! +${preview.toAdd.length} nya, -${preview.toRemove.length} borttagna`
+                : `Klart! Lade till ${preview.toAdd.length} nya events.`;
 
-            // Reset and refresh
-            setJsonInput('');
+            toast.success(successMsg);
+
+            // Reset and refresh (JSON input is kept)
             setPreview(null);
             await fetchLinkEvents();
         } catch (error: any) {
@@ -214,6 +265,43 @@ export default function LinkEventsAdminPage() {
             setSyncing(false);
         }
     };
+
+    const hasAutoLoaded = useRef(false);
+
+    const handleLoadExisting = (silent = false) => {
+        if (linkEvents.length === 0) {
+            if (!silent) toast.error('Inga befintliga events att ladda');
+            return;
+        }
+
+        console.log(`[Admin] Formatting ${linkEvents.length} events for JSON`);
+        const data = {
+            stad: 'Växjö',
+            period: 'Nuvarande',
+            evenemang: linkEvents.map(event => ({
+                datum: event.time.toISOString().split('T')[0],
+                tid: event.time.toTimeString().substring(0, 5),
+                evenemang: event.title,
+                plats: event.locationName,
+                arrangor: event.hostName,
+                webbplats: event.url,
+                kategori: event.category
+            }))
+        };
+
+        const jsonString = JSON.stringify(data, null, 2);
+        setJsonInput(jsonString);
+        setPreview(null);
+        if (!silent) toast.success('Befintliga events laddade till JSON!');
+    };
+
+    // Auto-load existing events once when they are first fetched
+    useEffect(() => {
+        if (linkEvents.length > 0 && !jsonInput) {
+            console.log('[Admin] Proactive auto-load triggering');
+            handleLoadExisting(true);
+        }
+    }, [linkEvents.length, !!jsonInput]);
 
     return (
         <Layout>
@@ -238,20 +326,51 @@ export default function LinkEventsAdminPage() {
                             <Upload className="text-blue-600" />
                             JSON Synkronisering
                         </h2>
-                        <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
-                            Klistra in JSON med events för att synkronisera. Events som inte finns i JSON kommer tas bort.
-                        </p>
-
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                            {/* Sync Mode Toggle */}
+                            <div className="flex items-center gap-4 mb-2">
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Synk-läge:</label>
+                                <div className="flex bg-slate-200 dark:bg-slate-700 p-1 rounded-lg">
+                                    <button
+                                        onClick={() => { setSyncMode('merge'); setPreview(null); }}
+                                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${syncMode === 'merge' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Lägg till nya
+                                    </button>
+                                    <button
+                                        onClick={() => { setSyncMode('replace'); setPreview(null); }}
+                                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${syncMode === 'replace' ? 'bg-red-500 text-white shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Full Synk (Ersätt)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
                                     JSON Data
                                 </label>
+                                <button
+                                    onClick={() => handleLoadExisting()}
+                                    className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 px-2 py-1 rounded transition flex items-center gap-1 text-slate-700 dark:text-slate-300"
+                                >
+                                    <Eye size={12} />
+                                    Ladda befintliga
+                                </button>
+                            </div>
+
+                            {/* Visibility Notice */}
+                            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+                                <p className="font-bold mb-1">💡 Tips om synlighet</p>
+                                <p>Endast event med datum **idag eller framåt** visas på startsidan. Gamla event sparas i databasen men döljs automatiskt för användarna.</p>
+                            </div>
+
+                            <div>
                                 <textarea
                                     value={jsonInput}
                                     onChange={(e) => setJsonInput(e.target.value)}
                                     className="w-full h-48 p-3 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-sm"
-                                    placeholder='{"city": "Växjö", "events": [...]}'
+                                    placeholder='{"city": "Växjö", "evenemang": [...]}'
                                 />
                             </div>
 
@@ -269,10 +388,10 @@ export default function LinkEventsAdminPage() {
                                     <button
                                         onClick={handleSync}
                                         disabled={syncing}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition disabled:opacity-50"
+                                        className={`flex items-center gap-2 px-4 py-2 text-white font-bold rounded-lg transition disabled:opacity-50 ${syncMode === 'replace' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                                     >
                                         <Upload size={18} />
-                                        {syncing ? 'Synkroniserar...' : 'Synkronisera'}
+                                        {syncing ? 'Synkroniserar...' : (syncMode === 'replace' ? 'Full synk (Ersätt allt)' : 'Lägg till nya')}
                                     </button>
                                 )}
                             </div>
@@ -405,6 +524,22 @@ export default function LinkEventsAdminPage() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Kategori (valfritt)</label>
+                                    <select
+                                        value={category}
+                                        onChange={(e) => setCategory(e.target.value as EventCategoryType | '')}
+                                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                                    >
+                                        <option value="">— Ingen kategori —</option>
+                                        {CATEGORY_LIST.map((cat) => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.emoji} {cat.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-2">
                                         <MapPin size={14} />
                                         Platsnamn
@@ -455,9 +590,20 @@ export default function LinkEventsAdminPage() {
 
                         {/* Right: Event List */}
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                            <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-slate-100">
-                                Befintliga Länk-Events ({linkEvents.length})
-                            </h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                    Befintliga Länk-Events ({linkEvents.length})
+                                </h2>
+                                {linkEvents.length > 0 && (
+                                    <button
+                                        onClick={handleClearAll}
+                                        disabled={loading}
+                                        className="text-[10px] font-bold uppercase tracking-wider bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-2 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50"
+                                    >
+                                        Rensa alla
+                                    </button>
+                                )}
+                            </div>
 
                             <div className="space-y-3 max-h-[600px] overflow-y-auto">
                                 {linkEvents.length === 0 ? (
