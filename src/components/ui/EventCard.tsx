@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
@@ -86,13 +87,15 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                         )}
 
                         {/* Bilden */}
-                        <img
+                        <Image
                             src={coverImage}
                             alt={event.title}
-                            loading="lazy"
-                            decoding="async"
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             onLoad={() => setImageLoaded(true)}
-                            className={`w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            className={`object-cover transition-all duration-700 ease-in-out group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            loading="eager"
+                            priority
                         />
 
                         {/* Overlay Gradient (Fades in with image) */}
@@ -198,9 +201,19 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                     className="flex items-center gap-2 cursor-pointer group/host"
                                 >
                                     {event.host.photoURL ? (
-                                        <img src={event.host.photoURL} alt={event.host.name} className="w-6 h-6 rounded-full object-cover ring-1 ring-border" />
+                                        <Image
+                                            src={event.host.photoURL}
+                                            alt={event.host.name}
+                                            width={24}
+                                            height={24}
+                                            className="rounded-full object-cover shrink-0 ring-1 ring-border"
+                                            style={{ width: '24px', height: '24px' }}
+                                        />
                                     ) : (
-                                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                                        <div
+                                            className="w-6 h-6 shrink-0 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground ring-1 ring-border"
+                                            style={{ width: '24px', height: '24px' }}
+                                        >
                                             {event.host.initials}
                                         </div>
                                     )}
@@ -225,16 +238,20 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         {visibleAttendees.map((attendee, i) => (
                                             <div key={i} className="relative z-10 hover:z-20 transition-transform hover:scale-110">
                                                 {attendee.photoURL ? (
-                                                    <img
+                                                    <Image
                                                         src={attendee.photoURL}
                                                         alt={attendee.displayName}
-                                                        className="w-6 h-6 rounded-full object-cover ring-2 ring-card bg-muted"
+                                                        width={24}
+                                                        height={24}
+                                                        className="rounded-full object-cover shrink-0 ring-2 ring-card bg-muted"
+                                                        style={{ width: '24px', height: '24px' }}
                                                         title={attendee.displayName}
                                                     />
                                                 ) : (
                                                     <div
-                                                        className="w-6 h-6 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
+                                                        className="w-6 h-6 shrink-0 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
                                                         title={attendee.displayName}
+                                                        style={{ width: '24px', height: '24px' }}
                                                     >
                                                         {attendee.displayName?.charAt(0).toUpperCase() || '?'}
                                                     </div>
@@ -243,7 +260,10 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                         ))}
 
                                         {hiddenCount > 0 && (
-                                            <div className="w-6 h-6 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0">
+                                            <div
+                                                className="w-6 h-6 shrink-0 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0"
+                                                style={{ minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }}
+                                            >
                                                 +{hiddenCount}
                                             </div>
                                         )}

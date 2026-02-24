@@ -88,6 +88,7 @@ self.addEventListener('fetch', (event) => {
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
+<<<<<<< HEAD
 // Initialize Firebase in Service Worker
 firebase.initializeApp({
     apiKey: "AIzaSyD0bkVdGqCzOlwx49-sLfJdj6fiRrnPnGI",
@@ -117,6 +118,51 @@ messaging.onBackgroundMessage((payload) => {
 
     return self.registration.showNotification(notificationTitle, notificationOptions);
 });
+=======
+const urlParams = new URLSearchParams(location.search);
+const apiKey = urlParams.get('firebaseApiKey') || '';
+const projectId = urlParams.get('projectId') || '';
+const messagingSenderId = urlParams.get('messagingSenderId') || '';
+const appId = urlParams.get('appId') || '';
+
+// Initialize Firebase in Service Worker
+if (apiKey) {
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: apiKey,
+            authDomain: `${projectId}.firebaseapp.com`,
+            projectId: projectId,
+            storageBucket: `${projectId}.firebasestorage.app`,
+            messagingSenderId: messagingSenderId,
+            appId: appId
+        });
+    }
+
+    try {
+        const messaging = firebase.messaging();
+
+        // Handle background messages
+        messaging.onBackgroundMessage((payload) => {
+            console.log('Background message received:', payload);
+
+            const notificationTitle = payload.notification?.title || 'VADKUL';
+            const notificationOptions = {
+                body: payload.notification?.body || 'Du har en ny notis',
+                icon: '/pwa-icon-v2.png',
+                badge: '/pwa-icon-v2.png',
+                tag: payload.data?.type || 'general',
+                data: payload.data,
+                vibrate: [200, 100, 200],
+                requireInteraction: false,
+            };
+
+            return self.registration.showNotification(notificationTitle, notificationOptions);
+        });
+    } catch (e) {
+        console.error('Firebase messaging error in sw.js:', e);
+    }
+}
+>>>>>>> f40fac0 (ny commit)
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {

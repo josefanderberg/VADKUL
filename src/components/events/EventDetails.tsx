@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
@@ -430,12 +431,14 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
 
                 {/* --- HERO IMAGE --- */}
                 <div className="relative h-56 md:h-72 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6 group">
-                    <img
+                    <Image
                         src={coverImage}
                         alt={event.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        priority
+                        className="object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/30 z-10"></div>
 
                     {/* HIDDEN OVERLAY BANNER */}
                     {event.visibility === 'hidden' && (
@@ -496,9 +499,19 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted p-2 -ml-2 rounded-lg transition-colors group text-left"
                             >
                                 {event.host.photoURL ? (
-                                    <img src={event.host.photoURL} className="w-8 h-8 rounded-full object-cover ring-2 ring-background shadow-sm" alt={event.host.name} />
+                                    <Image
+                                        src={event.host.photoURL}
+                                        width={32}
+                                        height={32}
+                                        className="rounded-full object-cover shrink-0 ring-2 ring-background shadow-sm"
+                                        style={{ width: '32px', height: '32px' }}
+                                        alt={event.host.name}
+                                    />
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform ring-2 ring-background shadow-sm">
+                                    <div
+                                        className="w-8 h-8 shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform ring-2 ring-background shadow-sm"
+                                        style={{ width: '32px', height: '32px' }}
+                                    >
                                         {event.host.initials}
                                     </div>
                                 )}
@@ -635,9 +648,19 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                                 <div key={request.uid} className="flex items-center justify-between bg-card p-3 rounded-lg border border-amber-200 dark:border-transparent shadow-sm">
                                                     <div className="flex items-center gap-3">
                                                         {request.photoURL ? (
-                                                            <img src={request.photoURL} className="w-10 h-10 rounded-full object-cover" />
+                                                            <Image
+                                                                src={request.photoURL}
+                                                                alt={request.displayName}
+                                                                width={40}
+                                                                height={40}
+                                                                className="rounded-full object-cover shrink-0"
+                                                                style={{ width: '40px', height: '40px' }}
+                                                            />
                                                         ) : (
-                                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                                                            <div
+                                                                className="w-10 h-10 shrink-0 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground"
+                                                                style={{ width: '40px', height: '40px' }}
+                                                            >
                                                                 {request.displayName.charAt(0)}
                                                             </div>
                                                         )}
@@ -700,13 +723,19 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                                 const isMe = uid === user?.uid;
 
                                                 const Avatar = photo ? (
-                                                    <img
+                                                    <Image
                                                         src={photo}
                                                         alt={displayStr}
-                                                        className={isHost ? "w-8 h-8 rounded-full object-cover" : "w-6 h-6 rounded-full object-cover"}
+                                                        width={isHost ? 32 : 24}
+                                                        height={isHost ? 32 : 24}
+                                                        className="rounded-full object-cover shrink-0"
+                                                        style={{ width: isHost ? '32px' : '24px', height: isHost ? '32px' : '24px' }}
                                                     />
                                                 ) : (
-                                                    <div className={`${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}>
+                                                    <div
+                                                        className={`shrink-0 ${isHost ? 'w-8 h-8' : 'w-6 h-6'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold ${isHost ? 'text-xs' : 'text-[10px]'}`}
+                                                        style={{ width: isHost ? '32px' : '24px', height: isHost ? '32px' : '24px' }}
+                                                    >
                                                         {displayStr.charAt(0).toUpperCase()}
                                                     </div>
                                                 );

@@ -1,6 +1,7 @@
 // src/pages/Profile.tsx
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import { userService } from '../services/userService';
@@ -287,10 +288,12 @@ export default function Profile() {
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
                             {image ? (
-                                <img
+                                <Image
                                     src={image}
                                     alt="Profil"
-                                    className="w-24 h-24 rounded-full object-cover border-4 border-background shadow-lg"
+                                    width={96}
+                                    height={96}
+                                    className="rounded-full object-cover border-4 border-background shadow-lg"
                                 />
                             ) : (
                                 <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-3xl font-extrabold text-primary border-4 border-background shadow-lg">

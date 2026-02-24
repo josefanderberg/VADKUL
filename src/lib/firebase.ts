@@ -6,12 +6,12 @@ import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBk17AJuuOtUOLR8ChInA4MNWqWUYJXtnE",
-  authDomain: "vadkul-f2cb2.firebaseapp.com",
-  projectId: "vadkul-f2cb2",
-  storageBucket: "vadkul-f2cb2.firebasestorage.app",
-  messagingSenderId: "888495806926",
-  appId: "1:888495806926:web:bd0fa8f04023927c61739f"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
