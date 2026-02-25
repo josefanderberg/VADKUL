@@ -135,8 +135,8 @@ service cloud.firestore {
       // Alla kan läsa
       allow read: if true;
       
-      // Endast admin kan skapa/radera
-      allow create, delete: if isAuthenticated() 
+      // Endast admin kan skriva
+      allow create, update, delete: if isAuthenticated() 
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 

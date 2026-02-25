@@ -79,7 +79,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
     };
 
     const patternIndex = getHash(linkEvent.id || linkEvent.title || '') % ALL_PATTERNS.length;
-    const coverSrc = ALL_PATTERNS[patternIndex];
+    const coverSrc = linkEvent.coverImage || ALL_PATTERNS[patternIndex];
+    const isCustomImage = !!linkEvent.coverImage;
+
+    // Helper to get DuckDuckGo Favicon (more reliable than Google for some Swedish sites)
+    const getFaviconUrl = (url: string) => {
+        try {
+            const domain = new URL(url).hostname;
+            return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+        } catch {
+            return null; // Fallback to initial
+        }
+    };
+    const faviconUrl = getFaviconUrl(linkEvent.url);
 
     return (
         <div className="block h-full group relative">
@@ -101,21 +113,46 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
 
                     {/* ── Header: decorative pattern (grayscale look) ── */}
                     <div className="relative w-full h-24 overflow-hidden bg-muted/50">
-                        {/* Pattern background — forced grayscale per user request */}
-                        <Image
-                            src={coverSrc}
-                            alt=""
-                            fill
-                            sizes="(max-width: 768px) 100vw, 300px"
-                            className="object-cover opacity-60 grayscale contrast-125"
-                            style={{ filter: 'saturate(0)' }}
-                            aria-hidden="true"
-                        />
+                        {/* Pattern/Cover background */}
+                        {isCustomImage ? (
+                            <Image
+                                src={coverSrc}
+                                alt=""
+                                fill
+                                sizes="(max-width: 768px) 100vw, 300px"
+                                className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <Image
+                                src={coverSrc}
+                                alt=""
+                                fill
+                                sizes="(max-width: 768px) 100vw, 300px"
+                                className="object-cover opacity-60 grayscale contrast-125"
+                                style={{ filter: 'saturate(0)' }}
+                                aria-hidden="true"
+                            />
+                        )}
 
-                        {/* "Externt Event" badge */}
-                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded text-[10px] font-medium uppercase tracking-wide flex items-center gap-1.5 bg-black/30 text-white backdrop-blur-sm">
-                            <ExternalLink size={12} />
+                        {/* "Externt Event" & Kategori badge */}
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded text-[10px] font-medium uppercase tracking-wide flex items-center bg-black/50 text-white backdrop-blur-sm">
+                            <ExternalLink size={12} className="mr-1.5" />
                             Externt Event
+                            {linkEvent.category && linkEvent.category !== 'other' && (
+                                <>
+                                    <span className="mx-1.5 opacity-50">•</span>
+                                    <span className="text-yellow-400">
+                                        {{
+                                            music: 'Musik', party: 'Fest', food: 'Mat & Dryck',
+                                            culture: 'Kultur', sport: 'Sport', boardgame: 'Sällskapsspel',
+                                            game: 'Spel', study: 'Föreläsning', outdoor: 'Utomhus',
+                                            play: 'Barn & Familj', market: 'Marknad', training: 'Träning',
+                                            social: 'Socialt'
+                                        }[linkEvent.category as string] || linkEvent.category}
+                                    </span>
+                                </>
+                            )}
                         </div>
 
                         {/* Date badge */}
@@ -130,7 +167,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                     {/* Content */}
                     <div className="flex flex-col flex-1 p-5 pt-4">
                         {/* Title — white in dark mode, black in light mode */}
-                        <h3 className="font-bold text-black dark:text-white leading-tight mb-3 line-clamp-2 text-lg">
+                        <h3 className="font-bold text-black dark:text-white leading-tight mb-3 truncate text-lg">
                             {linkEvent.title}
                         </h3>
 
@@ -143,7 +180,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                                 <span>{formatEventDate(linkEvent.time)}</span>
                             </div>
 
-                            {/* Location */}
+                            {/* Location & Price */}
                             <div className="flex items-center gap-2.5 text-xs font-medium text-black dark:text-white">
                                 <div className="p-1 rounded bg-muted/50">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -151,7 +188,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                                         <circle cx="12" cy="10" r="3" />
                                     </svg>
                                 </div>
-                                <span className="truncate">{linkEvent.locationName}</span>
+                                <span className="truncate max-w-[120px]">{linkEvent.locationName}</span>
+
+                                {/* Price (inline with location) */}
+                                {linkEvent.price !== undefined && (
+                                    <>
+                                        <span className="text-muted-foreground">•</span>
+                                        <div className="flex items-center gap-1 text-black dark:text-white">
+                                            <span className="truncate">{linkEvent.price === 0 || String(linkEvent.price).toLowerCase() === 'gratis' ? 'Gratis' : `${linkEvent.price} kr`}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -163,8 +210,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                                     Värd
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-medium">
-                                        {linkEvent.hostName?.charAt(0).toUpperCase() || '?'}
+                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-medium overflow-hidden border border-border bg-white">
+                                        {faviconUrl ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            <img src={faviconUrl} alt={linkEvent.hostName} className="w-4 h-4 object-contain" />
+                                        ) : (
+                                            linkEvent.hostName?.charAt(0).toUpperCase() || '?'
+                                        )}
                                     </div>
                                     <span className="text-xs font-medium text-black dark:text-white">
                                         {linkEvent.hostName || 'Okänd'}

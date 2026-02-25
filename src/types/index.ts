@@ -145,6 +145,8 @@ export interface LinkEvent {
   lng: number;
   hostName: string;
   category?: EventCategoryType;
+  coverImage?: string;
+  price?: number | string;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {

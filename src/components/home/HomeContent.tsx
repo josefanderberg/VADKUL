@@ -291,8 +291,8 @@ export default function HomeContent() {
         // 3. Ta bara de 30 närmaste
         const top30Closest = candidates.slice(0, 30);
 
-        // 4. Lägg till externa event om valt (OCH vi är i kartvyn för att undvika dubbletter i listan)
-        if (showExternal && view === 'map') {
+        // 4. Lägg till externa event om valt (nu visas de i både map och list)
+        if (showExternal) {
             const externalCandidates = linkEvents.map(le => {
                 const dist = calculateDistance(userLocation[0], userLocation[1], le.lat, le.lng);
 
@@ -306,7 +306,7 @@ export default function HomeContent() {
                     lng: le.lng,
                     time: le.time,
                     type: le.category || 'other',
-                    price: 0,
+                    price: le.price || 0,
                     minParticipants: 0,
                     maxParticipants: 999,
                     minAge: 0,
@@ -325,7 +325,8 @@ export default function HomeContent() {
                     views: 0,
                     _isExternal: true, // Flagga för att särkilja
                     _rawLinkEvent: le, // Spara original-objektet för rendering
-                    url: le.url
+                    url: le.url,
+                    coverImage: le.coverImage
                 } as any;
             }).filter(le => {
                 // Samma tids- och sökfilter som vanliga events
@@ -342,22 +343,19 @@ export default function HomeContent() {
                 return true;
             });
 
-            return [...top30Closest, ...externalCandidates].sort((a, b) => {
-                switch (sortBy) {
-                    case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
-                    case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
-                    default: return 0;
-                }
-            });
+            // Combine both regular and external events
+            candidates = [...top30Closest, ...externalCandidates];
+        } else {
+            // Only regular events
+            candidates = [...top30Closest];
         }
 
-        return top30Closest.sort((a, b) => {
+        // 5. Final Sorting
+        return candidates.sort((a, b) => {
             switch (sortBy) {
                 case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
                 case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
                 case 'latest':
-                    // Sortera på createdAt om det finns, annars fallback till time (skapad nyligen = oftast långt fram i tiden?)
-                    // Nej, fallback bör nog vara 0 eller något.
                     if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                     return 0;
                 case 'popular': return (b.attendees?.length || 0) - (a.attendees?.length || 0);
@@ -468,24 +466,22 @@ export default function HomeContent() {
                     <div className="flex justify-between items-center gap-4">
                         {/* 1. Toggle (Vänster) */}
                         <div className="flex-1">
-                            {view === 'map' && (
-                                <div
-                                    id="external-events-toggle"
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
-                                    onClick={() => {
-                                        console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
-                                        setShowExternal(!showExternal);
-                                    }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={showExternal}
-                                        onChange={() => { }}
-                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                                    />
-                                    <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
-                                </div>
-                            )}
+                            <div
+                                id="external-events-toggle"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
+                                onClick={() => {
+                                    console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
+                                    setShowExternal(!showExternal);
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={showExternal}
+                                    onChange={() => { }}
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                />
+                                <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
+                            </div>
                         </div>
 
                         {/* 2. Sortering (Höger) */}
