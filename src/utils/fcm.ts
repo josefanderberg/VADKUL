@@ -1,4 +1,4 @@
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '../lib/firebase';
 
 const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
@@ -7,11 +7,15 @@ let messaging: ReturnType<typeof getMessaging> | null = null;
 
 // Initialize messaging only in browser
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    try {
-        messaging = getMessaging(app);
-    } catch (error) {
-        console.error('Failed to initialize Firebase Messaging:', error);
-    }
+    isSupported().then((supported) => {
+        if (supported) {
+            try {
+                messaging = getMessaging(app);
+            } catch (error) {
+                console.error('Failed to initialize Firebase Messaging:', error);
+            }
+        }
+    }).catch(console.error);
 }
 
 /**

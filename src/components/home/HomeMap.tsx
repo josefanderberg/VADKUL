@@ -5,9 +5,10 @@ import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 're
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
-import { AppEvent } from '../../types';
+import { AppEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import EventCard from '../ui/EventCard';
+import LinkEventCard from '../ui/LinkEventCard';
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -68,6 +69,7 @@ interface HomeMapProps {
     handleMapClick: (lat: number, lng: number) => void;
     cycleNextEvent: (e?: React.MouseEvent) => void;
     cyclePrevEvent: (e?: React.MouseEvent) => void;
+    isAdmin?: boolean;
 }
 
 export default function HomeMap({
@@ -78,7 +80,8 @@ export default function HomeMap({
     handleMapMove,
     handleMapClick,
     cycleNextEvent,
-    cyclePrevEvent
+    cyclePrevEvent,
+    isAdmin = false
 }: HomeMapProps) {
 
     const createCustomIcon = (type: string, isSelected: boolean, isExternal?: boolean) => {
@@ -153,7 +156,14 @@ export default function HomeMap({
                         </button>
 
                         <div className="">
-                            <EventCard event={selectedEvent} compact={true} />
+                            {(selectedEvent as any)?._isExternal && (selectedEvent as any)?._rawLinkEvent ? (
+                                <LinkEventCard
+                                    linkEvent={(selectedEvent as any)._rawLinkEvent}
+                                    isAdmin={isAdmin}
+                                />
+                            ) : (
+                                <EventCard event={selectedEvent} compact={true} />
+                            )}
                         </div>
                     </div>
                 </div>

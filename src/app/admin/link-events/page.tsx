@@ -7,16 +7,27 @@ import { useAuth } from '../../../context/AuthContext';
 import Layout from '../../../components/layout/Layout';
 import type { LinkEvent } from '../../../types';
 import toast from 'react-hot-toast';
-import { ExternalLink, Trash2, MapPin, ArrowLeft, Upload, Eye } from 'lucide-react';
+import { ExternalLink, Trash2, MapPin, ArrowLeft, Upload, Eye, Edit } from 'lucide-react';
 import { parseImportJSON, mapToLinkEvent, compareEvents, type SyncComparison } from '../../../utils/eventImport';
 import { CATEGORY_LIST } from '../../../utils/categories';
 import type { EventCategoryType } from '../../../utils/categories';
+import dynamic from 'next/dynamic';
+
+const AdminLocationPickerMap = dynamic(() => import('../../../components/admin/AdminLocationPickerMap'), {
+    ssr: false,
+    loading: () => (
+        <div className="h-[400px] w-full flex items-center justify-center bg-slate-100 rounded-xl border border-slate-300">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+    )
+});
 
 export default function LinkEventsAdminPage() {
     const { user } = useAuth();
     const router = useRouter();
     const [linkEvents, setLinkEvents] = useState<LinkEvent[]>([]);
     const [loading, setLoading] = useState(false);
+    const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
     // Form state
     const [title, setTitle] = useState('');
@@ -98,7 +109,7 @@ export default function LinkEventsAdminPage() {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleCreateOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!title || !url || !date || !time || !locationName || !lat || !lng || !hostName) {
@@ -126,7 +137,7 @@ export default function LinkEventsAdminPage() {
         try {
             const dateTime = new Date(`${date}T${time}`);
 
-            await linkEventService.create({
+            const eventPayload = {
                 title,
                 url,
                 time: dateTime,
@@ -135,9 +146,15 @@ export default function LinkEventsAdminPage() {
                 lng: longitude,
                 hostName,
                 ...(category ? { category: category as EventCategoryType } : {})
-            });
+            };
 
-            toast.success('Länk-event skapat!');
+            if (editingEventId) {
+                await linkEventService.update(editingEventId, eventPayload);
+                toast.success('Länk-event uppdaterat!');
+            } else {
+                await linkEventService.create(eventPayload);
+                toast.success('Länk-event skapat!');
+            }
 
             // Reset form
             setTitle('');
@@ -149,15 +166,46 @@ export default function LinkEventsAdminPage() {
             setLng('');
             setHostName('');
             setCategory('');
+            setEditingEventId(null);
 
             // Refresh list
             await fetchLinkEvents();
         } catch (error: any) {
-            console.error('Failed to create link event:', error);
-            toast.error('Kunde inte skapa länk-event');
+            console.error('Failed to save link event:', error);
+            toast.error('Kunde inte spara länk-event');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEdit = (event: LinkEvent) => {
+        setTitle(event.title);
+        setUrl(event.url);
+        setDate(event.time.toISOString().split('T')[0]);
+        // Time adjustment for Sweden timezone simply by taking the local time string HH:MM
+        setTime(event.time.toTimeString().substring(0, 5));
+        setLocationName(event.locationName);
+        setLat(event.lat.toString());
+        setLng(event.lng.toString());
+        setHostName(event.hostName);
+        setCategory(event.category || '');
+        setEditingEventId(event.id);
+
+        // Scroll to the top where the form is
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setTitle('');
+        setUrl('');
+        setDate('');
+        setTime('');
+        setLocationName('');
+        setLat('');
+        setLng('');
+        setHostName('');
+        setCategory('');
+        setEditingEventId(null);
     };
 
     const handleDelete = async (id: string, title: string) => {
@@ -468,7 +516,7 @@ export default function LinkEventsAdminPage() {
                                 Skapa Nytt Länk-Event
                             </h2>
 
-                            <form onSubmit={handleCreate} className="space-y-4">
+                            <form onSubmit={handleCreateOrUpdate} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Titel</label>
                                     <input
@@ -555,7 +603,9 @@ export default function LinkEventsAdminPage() {
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Latitud</label>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-2">
+                                            Latitud
+                                        </label>
                                         <input
                                             type="number"
                                             step="any"
@@ -566,7 +616,9 @@ export default function LinkEventsAdminPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Longitud</label>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-2">
+                                            Longitud
+                                        </label>
                                         <input
                                             type="number"
                                             step="any"
@@ -578,13 +630,39 @@ export default function LinkEventsAdminPage() {
                                     </div>
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-bold transition disabled:opacity-50 shadow-md"
-                                >
-                                    {loading ? 'Skapar...' : 'Skapa Länk-Event'}
-                                </button>
+                                <div className="my-4">
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                                        Välj plats på karta (valfritt)
+                                    </label>
+                                    <p className="text-xs text-slate-500 mb-2">Klicka på kartan för att flytta markören och hämta koordinater automatiskt.</p>
+                                    <AdminLocationPickerMap
+                                        initialLat={lat ? parseFloat(lat) : 56.8796} // Default Växjö
+                                        initialLng={lng ? parseFloat(lng) : 14.8094}
+                                        onLocationChange={(newLat, newLng) => {
+                                            setLat(newLat.toFixed(6));
+                                            setLng(newLng.toFixed(6));
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="flex gap-3">
+                                    {editingEventId && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            className="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 px-4 rounded-lg font-bold transition shadow-md"
+                                        >
+                                            Avbryt
+                                        </button>
+                                    )}
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className={`${editingEventId ? 'w-2/3' : 'w-full'} bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-bold transition disabled:opacity-50 shadow-md`}
+                                    >
+                                        {loading ? 'Sparar...' : (editingEventId ? 'Spara Ändringar' : 'Skapa Länk-Event')}
+                                    </button>
+                                </div>
                             </form>
                         </div>
 
@@ -634,14 +712,24 @@ export default function LinkEventsAdminPage() {
                                                     <span>👤 {event.hostName || 'Okänd'}</span>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => handleDelete(event.id, event.title || 'Okänt event')}
-                                                disabled={loading}
-                                                className="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 flex items-center gap-1"
-                                            >
-                                                <Trash2 size={14} />
-                                                Ta bort
-                                            </button>
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(event)}
+                                                    disabled={loading}
+                                                    className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50 flex items-center gap-1 justify-center whitespace-nowrap"
+                                                >
+                                                    <Edit size={14} />
+                                                    Redigera
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(event.id, event.title || 'Okänt event')}
+                                                    disabled={loading}
+                                                    className="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 flex items-center gap-1 justify-center whitespace-nowrap"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    Ta bort
+                                                </button>
+                                            </div>
                                         </div>
                                     ))
                                 )}

@@ -1,5 +1,5 @@
 import {
-    collection, getDocs, addDoc, doc, deleteDoc, Timestamp,
+    collection, getDocs, addDoc, doc, deleteDoc, updateDoc, Timestamp,
     query, where, writeBatch
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -53,6 +53,16 @@ export const linkEventService = {
     async delete(id: string) {
         const ref = doc(db, COLLECTION, id);
         await deleteDoc(ref);
+    },
+
+    // Uppdatera link event
+    async update(id: string, updates: Partial<Omit<LinkEvent, 'id' | 'createdAt'>>) {
+        const ref = doc(db, COLLECTION, id);
+        const payload: any = { ...updates };
+        if (updates.time) {
+            payload.time = Timestamp.fromDate(updates.time);
+        }
+        await updateDoc(ref, payload);
     },
 
     // Bulk create - Skapa flera events samtidigt (atomic operation)
