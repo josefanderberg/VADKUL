@@ -104,6 +104,7 @@ export default function HomeContent() {
     const [filterToday, setFilterToday] = useState(false);
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
+    const [showExternal, setShowExternal] = useState(false); // <--- NY: Visa externa event (default false)
 
     // Settings (Init from cache to avoid flicker)
     const [showHallOfFame, setShowHallOfFame] = useState(() => {
@@ -290,7 +291,66 @@ export default function HomeContent() {
         // 3. Ta bara de 30 närmaste
         const top30Closest = candidates.slice(0, 30);
 
-        // 4. Sortera dessa 30 baserat på vad användaren valt i dropdownen
+        // 4. Lägg till externa event om valt (OCH vi är i kartvyn för att undvika dubbletter i listan)
+        if (showExternal && view === 'map') {
+            const externalCandidates = linkEvents.map(le => {
+                const dist = calculateDistance(userLocation[0], userLocation[1], le.lat, le.lng);
+
+                // Mappa LinkEvent till AppEvent-liknande struktur för kartan/listan
+                return {
+                    id: le.id,
+                    title: le.title,
+                    description: `Externt event hos ${le.hostName}`,
+                    location: { name: le.locationName, distance: dist },
+                    lat: le.lat,
+                    lng: le.lng,
+                    time: le.time,
+                    type: le.category || 'other',
+                    price: 0,
+                    minParticipants: 0,
+                    maxParticipants: 999,
+                    minAge: 0,
+                    maxAge: 99,
+                    ageCategory: 'Alla',
+                    host: {
+                        uid: '',
+                        name: le.hostName,
+                        initials: le.hostName.charAt(0).toUpperCase(),
+                        verified: false,
+                        rating: 5,
+                        email: ''
+                    },
+                    attendees: [],
+                    requiresApproval: false,
+                    views: 0,
+                    _isExternal: true, // Flagga för att särkilja
+                    _rawLinkEvent: le, // Spara original-objektet för rendering
+                    url: le.url
+                } as any;
+            }).filter(le => {
+                // Samma tids- och sökfilter som vanliga events
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                if (new Date(le.time) < startOfToday) return false;
+
+                if (query) {
+                    const matchTitle = le.title.toLowerCase().includes(query);
+                    const matchLoc = le.location.name.toLowerCase().includes(query);
+                    if (!matchTitle && !matchLoc) return false;
+                }
+
+                return true;
+            });
+
+            return [...top30Closest, ...externalCandidates].sort((a, b) => {
+                switch (sortBy) {
+                    case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
+                    case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
+                    default: return 0;
+                }
+            });
+        }
+
         return top30Closest.sort((a, b) => {
             switch (sortBy) {
                 case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
@@ -304,7 +364,7 @@ export default function HomeContent() {
                 default: return 0;
             }
         });
-    }, [events, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery]); // <-- Lade till searchQuery
+    }, [events, linkEvents, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery, showExternal, view]); // <-- Lade till view
 
     const handleMapClick = (lat: number, lng: number) => {
         if (selectedEvent) setSelectedEvent(null);
@@ -403,17 +463,46 @@ export default function HomeContent() {
                     </div>
                 )}
 
-                {/* Sortering - Också flex-shrink-0 för att inte tryckas ihop */}
-                <div className="max-w-6xl mx-auto px-4 pt-2 pb-2 flex justify-end flex-shrink-0 w-full z-10 relative pointer-events-none">
-                    <div className="flex items-center gap-1 text-muted-foreground pointer-events-auto bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-border">
-                        <ArrowUpDown size={14} />
-                        <span className="text-xs font-bold uppercase mr-1">Sortera (topp 30):</span>
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-transparent font-bold text-foreground outline-none cursor-pointer text-sm hover:text-primary transition-colors">
-                            <option value="closest">Närmast</option>
-                            <option value="soonest">Tid kvar</option>
-                            <option value="latest">Senast tillagd</option>
-                            <option value="popular">Populärast</option>
-                        </select>
+                {/* Sortering & Toggle Rad */}
+                <div className="max-w-6xl mx-auto px-4 pt-2 pb-2 w-full z-10 relative">
+                    <div className="flex justify-between items-center gap-4">
+                        {/* 1. Toggle (Vänster) */}
+                        <div className="flex-1">
+                            {view === 'map' && (
+                                <div
+                                    id="external-events-toggle"
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
+                                    onClick={() => {
+                                        console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
+                                        setShowExternal(!showExternal);
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={showExternal}
+                                        onChange={() => { }}
+                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                    />
+                                    <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 2. Sortering (Höger) */}
+                        <div className="flex items-center gap-1 text-muted-foreground bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-border pointer-events-auto">
+                            <ArrowUpDown size={14} />
+                            <span className="text-xs font-bold uppercase mr-1">Sortera:</span>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="bg-transparent font-bold text-foreground outline-none cursor-pointer text-sm hover:text-primary transition-colors"
+                            >
+                                <option value="closest">Närmast</option>
+                                <option value="soonest">Tid kvar</option>
+                                <option value="latest">Senast tillagd</option>
+                                <option value="popular">Populärast</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -474,6 +563,7 @@ export default function HomeContent() {
                             handleMapClick={handleMapClick}
                             cycleNextEvent={cycleNextEvent}
                             cyclePrevEvent={cyclePrevEvent}
+                            isAdmin={isAdmin}
                         />
                     )}
                 </div>

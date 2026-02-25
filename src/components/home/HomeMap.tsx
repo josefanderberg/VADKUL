@@ -81,13 +81,15 @@ export default function HomeMap({
     cyclePrevEvent
 }: HomeMapProps) {
 
-    const createCustomIcon = (type: string, isSelected: boolean) => {
+    const createCustomIcon = (type: string, isSelected: boolean, isExternal?: boolean) => {
         const category = EVENT_CATEGORIES[type as EventCategoryType] || EVENT_CATEGORIES.other;
+        const markerBgColor = isExternal ? 'bg-slate-400 dark:bg-slate-500' : category.markerColor;
+
         return L.divIcon({
             className: 'custom-marker-teardrop',
             html: `
         <div class="relative group transition-all duration-300 ${isSelected ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1'}">
-            <div class="w-12 h-12 ${category.markerColor} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
+            <div class="w-12 h-12 ${markerBgColor} border-[3px] border-white shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
                 <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">${category.emoji}</div>
             </div>
@@ -115,7 +117,7 @@ export default function HomeMap({
                         <Marker
                             key={evt.id}
                             position={[evt.lat, evt.lng]}
-                            icon={createCustomIcon(evt.type, isSelected)}
+                            icon={createCustomIcon(evt.type, isSelected, (evt as any)._isExternal)}
                             eventHandlers={{
                                 click: (e) => {
                                     L.DomEvent.stopPropagation(e as any);

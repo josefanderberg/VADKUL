@@ -139,5 +139,12 @@ service cloud.firestore {
       allow create, delete: if isAuthenticated() 
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
+
+    // 9. FCM TOKENS
+    match /fcmTokens/{userId} {
+      match /tokens/{token} {
+        allow read, write: if isOwner(userId);
+      }
+    }
   }
 }

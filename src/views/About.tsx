@@ -114,7 +114,7 @@ export default function About() {
                                         </div>
                                         <h3 className="text-xl font-bold mb-3">3. Skapa på 30 sek</h3>
                                         <p className="text-muted-foreground">
-                                            Fick du feeling? "Basket i parken kl 18". Bom. Klart. Låt grannarna veta.
+                                            Fick du feeling? "Basket i parken kl 18". Boom. Klart. Låt grannarna veta.
                                         </p>
                                     </div>
                                 </div>

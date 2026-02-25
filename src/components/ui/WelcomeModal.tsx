@@ -1,99 +1,209 @@
 import { useState, useEffect } from 'react';
-import { Map, Calendar, Rocket, X } from 'lucide-react';
+import { X } from 'lucide-react';
+
+/* ── floating emoji config ── */
+const FLOATING_EMOJIS = [
+    { emoji: '🎉', delay: '0s', duration: '4s', left: '8%', top: '12%' },
+    { emoji: '⚡', delay: '0.6s', duration: '3.5s', left: '82%', top: '8%' },
+    { emoji: '🎯', delay: '1.2s', duration: '4.5s', left: '15%', top: '75%' },
+    { emoji: '🔥', delay: '0.3s', duration: '3.8s', left: '78%', top: '70%' },
+    { emoji: '🎶', delay: '0.9s', duration: '4.2s', left: '50%', top: '5%' },
+    { emoji: '✨', delay: '1.5s', duration: '3.2s', left: '88%', top: '40%' },
+    { emoji: '🚀', delay: '0.4s', duration: '3.6s', left: '5%', top: '45%' },
+];
+
+/* ── confetti dots config ── */
+const CONFETTI_COLORS = [
+    'bg-amber-400', 'bg-rose-400', 'bg-violet-400',
+    'bg-emerald-400', 'bg-sky-400', 'bg-pink-400',
+];
+
+const CONFETTI_DOTS = Array.from({ length: 18 }, (_, i) => ({
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    left: `${5 + Math.random() * 90}%`,
+    delay: `${Math.random() * 3}s`,
+    duration: `${3 + Math.random() * 3}s`,
+    size: `${4 + Math.random() * 4}px`,
+}));
+
+/* ── feature pills ── */
+const FEATURES = [
+    { emoji: '🗺️', text: 'Se vad som händer nära dig' },
+    { emoji: '🎪', text: 'Skapa spontana events' },
+    { emoji: '🤝', text: 'Häng med nya & gamla vänner' },
+];
 
 export default function WelcomeModal() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('seen_welcome_modal');
         if (!hasSeenWelcome) {
-            // Small delay for better UX
-            const timer = setTimeout(() => setIsOpen(true), 500);
+            const timer = setTimeout(() => {
+                setIsOpen(true);
+                // Trigger animations after mount
+                requestAnimationFrame(() => setIsVisible(true));
+            }, 400);
             return () => clearTimeout(timer);
         }
     }, []);
 
     const handleClose = () => {
-        setIsOpen(false);
-        localStorage.setItem('seen_welcome_modal', 'true');
+        setIsVisible(false);
+        setTimeout(() => {
+            setIsOpen(false);
+            localStorage.setItem('seen_welcome_modal', 'true');
+        }, 300);
     };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
-            {/* Backdrop with blur */}
+            {/* ── backdrop ── */}
             <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500 animate-in fade-in"
+                className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-500"
+                style={{ opacity: isVisible ? 1 : 0 }}
                 onClick={handleClose}
-            ></div>
+            />
 
-            {/* Modal Content */}
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 border border-slate-200 dark:border-slate-800">
-                {/* Decorative background circle */}
-                <div className="absolute -top-20 -right-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            {/* ── modal card ── */}
+            <div
+                className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/20 shadow-2xl"
+                style={{
+                    animation: isVisible ? 'welcome-bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                    opacity: isVisible ? undefined : 0,
+                }}
+            >
+                {/* ── gradient background ── */}
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-rose-500 to-violet-600" />
 
+                {/* ── confetti dots ── */}
+                {CONFETTI_DOTS.map((dot, i) => (
+                    <div
+                        key={i}
+                        className={`absolute rounded-full ${dot.color} pointer-events-none`}
+                        style={{
+                            left: dot.left,
+                            top: '-10px',
+                            width: dot.size,
+                            height: dot.size,
+                            animation: `welcome-confetti ${dot.duration} ${dot.delay} linear infinite`,
+                            opacity: 0.7,
+                        }}
+                    />
+                ))}
+
+                {/* ── floating emojis ── */}
+                {FLOATING_EMOJIS.map((item, i) => (
+                    <div
+                        key={i}
+                        className="absolute pointer-events-none select-none text-2xl"
+                        style={{
+                            left: item.left,
+                            top: item.top,
+                            animation: `welcome-float ${item.duration} ${item.delay} ease-in-out infinite`,
+                            opacity: 0.6,
+                        }}
+                    >
+                        {item.emoji}
+                    </div>
+                ))}
+
+                {/* ── glass content card ── */}
                 <div className="relative p-8 text-center">
+                    {/* close button */}
                     <button
                         onClick={handleClose}
-                        className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
+                        style={{
+                            animation: isVisible ? 'welcome-slide-up 0.4s 0.8s ease-out both' : 'none',
+                        }}
                     >
-                        <X size={20} />
+                        <X size={22} />
                     </button>
 
-                    <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 text-white">
-                        <span className="text-3xl">👋</span>
+                    {/* ── wiggling hero emoji ── */}
+                    <div
+                        className="inline-flex items-center justify-center w-20 h-20 mb-5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30"
+                        style={{
+                            animation: isVisible
+                                ? 'welcome-slide-up 0.5s 0.15s ease-out both, welcome-wiggle 2s 1s ease-in-out 2'
+                                : 'none',
+                        }}
+                    >
+                        <span className="text-5xl">🎉</span>
                     </div>
 
-                    <h2 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                        Välkommen till VADKUL
+                    {/* ── hero text ── */}
+                    <h2
+                        className="text-4xl font-extrabold text-white mb-2 tracking-tight"
+                        style={{
+                            animation: isVisible ? 'welcome-slide-up 0.5s 0.25s ease-out both' : 'none',
+                            textShadow: '0 2px 10px rgba(0,0,0,0.15)',
+                        }}
+                    >
+                        Vad gör du idag?
                     </h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8 text-lg">
-                        Hitta på något kul!
+
+                    <p
+                        className="text-white/85 text-lg mb-8 leading-relaxed font-medium"
+                        style={{
+                            animation: isVisible ? 'welcome-slide-up 0.5s 0.35s ease-out both' : 'none',
+                        }}
+                    >
+                        Livet är för kort för att sitta hemma.
+                        <br />
+                        <span className="text-white font-bold">Hitta något kul — nu.</span>
                     </p>
 
-                    <div className="space-y-4 text-left mb-8">
-                        <div className="flex items-start gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/50">
-                            <div className="mt-1 p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
-                                <Map size={20} />
+                    {/* ── feature pills ── */}
+                    <div className="space-y-3 mb-8">
+                        {FEATURES.map((feature, i) => (
+                            <div
+                                key={i}
+                                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-left text-white transition-transform hover:scale-[1.02]"
+                                style={{
+                                    animation: isVisible
+                                        ? `welcome-slide-up 0.4s ${0.45 + i * 0.1}s ease-out both`
+                                        : 'none',
+                                }}
+                            >
+                                <span className="text-2xl flex-shrink-0">{feature.emoji}</span>
+                                <span className="font-semibold text-[15px]">{feature.text}</span>
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-slate-900 dark:text-white">Utforska kartan</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Se vad som händer nära dig just nu.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/50">
-                            <div className="mt-1 p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
-                                <Calendar size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-slate-900 dark:text-white">Skapa events</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Bjud in vänner eller gör det öppet för alla.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/50">
-                            <div className="mt-1 p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                                <Rocket size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-slate-900 dark:text-white">Häng på!</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Gå med i aktiviteter med ett knapptryck.</p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
+                    {/* ── CTA button ── */}
                     <button
                         onClick={handleClose}
-                        className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 transform transition-all active:scale-95 text-lg"
+                        className="w-full py-4 bg-white text-rose-600 font-extrabold rounded-2xl text-lg shadow-xl transform transition-all active:scale-95 hover:scale-[1.02]"
+                        style={{
+                            animation: isVisible
+                                ? 'welcome-slide-up 0.5s 0.75s ease-out both, welcome-pulse-glow 2s 1.5s ease-in-out infinite'
+                                : 'none',
+                        }}
                     >
-                        Kom igång
+                        Visa vad som händer! 🚀
                     </button>
+
+                    {/* ── sparkle decorations ── */}
+                    <div
+                        className="absolute top-6 left-6 w-2 h-2 bg-yellow-300 rounded-full pointer-events-none"
+                        style={{ animation: 'welcome-sparkle 2s 0.5s ease-in-out infinite' }}
+                    />
+                    <div
+                        className="absolute bottom-12 right-8 w-1.5 h-1.5 bg-white rounded-full pointer-events-none"
+                        style={{ animation: 'welcome-sparkle 2.5s 1s ease-in-out infinite' }}
+                    />
+                    <div
+                        className="absolute top-20 right-12 w-1 h-1 bg-amber-200 rounded-full pointer-events-none"
+                        style={{ animation: 'welcome-sparkle 1.8s 0.2s ease-in-out infinite' }}
+                    />
                 </div>
             </div>
         </div>
     );
 }
-

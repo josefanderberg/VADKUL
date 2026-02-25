@@ -1,10 +1,10 @@
 // Växjö venue coordinates lookup table
 export const VAXJO_VENUES: Record<string, [number, number]> = {
     // Sports & Entertainment
-    'Vida Arena': [56.8795, 14.8094],
-    'Vida arena': [56.8795, 14.8094],
-    'vida arena': [56.8795, 14.8094],
-    'Fortnox Arena': [56.8795, 14.8094],
+    'Vida Arena': [56.8797, 14.7736],
+    'Vida arena': [56.8797, 14.7736],
+    'vida arena': [56.8797, 14.7736],
+    'Fortnox Arena': [56.8790, 14.7715],
 
     // Culture & Music
     'Växjö Konserthus': [56.8778, 14.8089],
@@ -50,7 +50,8 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     // Community & Misc
     'Växjö Bibliotek': [56.8785, 14.8055],
     'Folkets Park': [56.8830, 14.8030],
-    'Myresjöhus Arena': [56.8770, 14.7990],
+    'Myresjöhus Arena': [56.8767, 14.7758],
+    'Visma Arena': [56.8767, 14.7758],
 
     // Default fallback (Växjö centrum – Stortorget)
     'DEFAULT': [56.8796, 14.8094]

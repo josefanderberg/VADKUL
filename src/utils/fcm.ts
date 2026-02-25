@@ -32,8 +32,19 @@ export async function requestNotificationPermission(): Promise<string | null> {
             return null;
         }
 
-        // Get FCM token
-        const token = await getToken(messaging, { vapidKey });
+        // Get FCM token - explicitly provide the service worker registration
+        // so Firebase doesn't try to look for /firebase-messaging-sw.js
+        const registration = await navigator.serviceWorker.ready;
+
+        if (!registration || !registration.active) {
+            console.warn('FCM: Service worker registration not active yet');
+            return null;
+        }
+
+        const token = await getToken(messaging, {
+            vapidKey,
+            serviceWorkerRegistration: registration
+        });
 
         console.log('FCM Token received:', token);
         return token;

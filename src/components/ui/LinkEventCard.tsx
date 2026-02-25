@@ -84,8 +84,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
     return (
         <div className="block h-full group relative">
             <div className="relative flex flex-col h-full">
-                {/* The Card Itself — slightly dimmed so native events feel primary */}
-                <div className="flex flex-col h-full bg-card overflow-hidden rounded-lg border border-border opacity-75">
+                {/* The Card Itself — solid background for maximum contrast */}
+                <div className="flex flex-col h-full bg-card overflow-hidden rounded-lg border border-border shadow-sm">
 
                     {/* Admin Delete Button */}
                     {isAdmin && (
@@ -159,7 +159,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                         <div className="mt-auto border-t border-border pt-4 flex items-center justify-between">
                             {/* Host Info */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-black/60 dark:text-white/70 tracking-wider">
+                                <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-300 tracking-wider">
                                     Värd
                                 </span>
                                 <div className="flex items-center gap-2">

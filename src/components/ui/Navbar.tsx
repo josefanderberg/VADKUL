@@ -27,6 +27,53 @@ export default function Navbar() {
   // State för notiser (Flyttad från NotificationsMenu)
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
+  // Highlight-sekvens för oinloggade (Info -> Tema -> Tema -> Login)
+  const [activeHighlight, setActiveHighlight] = useState<'info' | 'theme' | 'login' | null>(null);
+
+  useEffect(() => {
+    if (user) return;
+
+    const runSequence = async () => {
+      // 1. Info icon (1s)
+      setActiveHighlight('info');
+      await new Promise(r => setTimeout(r, 1000));
+      setActiveHighlight(null);
+
+      // 2. 1 sek senare den darkmode knappen i 1 sekund
+      await new Promise(r => setTimeout(r, 1000));
+      setActiveHighlight('theme');
+      await new Promise(r => setTimeout(r, 1000));
+      setActiveHighlight(null);
+
+      // 3. sen till baka 2 sek (Då ska info kanppen tändas i en sekund)
+      await new Promise(r => setTimeout(r, 500));
+      setActiveHighlight('info');
+      await new Promise(r => setTimeout(r, 1000));
+      setActiveHighlight(null);
+      await new Promise(r => setTimeout(r, 500));
+
+      // 4. sen till dark igen i 0.5 s
+      setActiveHighlight('theme');
+      await new Promise(r => setTimeout(r, 500));
+      setActiveHighlight(null);
+
+      // 5. och sen login/registrera i en sekund (direkt efter)
+      setActiveHighlight('login');
+      await new Promise(r => setTimeout(r, 1000));
+      setActiveHighlight(null);
+    };
+
+    // Kör direkt vid laddning
+    const initialTimer = setTimeout(runSequence, 1000);
+    // Upprepa var tjugonde sekund för en lagom paus
+    const interval = setInterval(runSequence, 20000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [user]);
+
   // Hämta bilden från databasen när användaren ändras
   useEffect(() => {
     if (user?.uid) {
@@ -93,14 +140,29 @@ export default function Navbar() {
           </Link>
 
           {/* 1.5 INFO (Ny) */}
-          <Link href="/about" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Om VADKUL">
+          <Link
+            href="/about"
+            className={[
+              'p-1.5 md:p-2 rounded-full transition-all duration-300 ease-in-out',
+              activeHighlight === 'info'
+                ? 'bg-accent text-accent-foreground scale-110 shadow-sm'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground scale-100',
+            ].join(' ')}
+            title="Om VADKUL"
+          >
             <Info size={22} />
           </Link>
 
           {/* 2. THEME TOGGLE */}
           <button
             onClick={toggleTheme}
-            className={`p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors ${!user ? 'mr-3' : ''}`}
+            className={[
+              'p-1.5 md:p-2 rounded-full transition-all duration-300 ease-in-out',
+              activeHighlight === 'theme'
+                ? 'bg-accent text-accent-foreground scale-110 shadow-sm'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground scale-100',
+              !user ? 'mr-3' : ''
+            ].join(' ')}
             title="Växla tema"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -141,7 +203,15 @@ export default function Navbar() {
             </>
           ) : (
             /* LOGGA IN KNAPP */
-            <Link href="/login" className="px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors active:scale-95">
+            <Link
+              href="/login"
+              className={[
+                'px-3 py-2 text-sm font-semibold rounded-lg text-white shadow-md transition-all duration-300',
+                activeHighlight === 'login'
+                  ? 'bg-indigo-500 scale-105 shadow-lg'
+                  : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+              ].join(' ')}
+            >
               <span className="min-[450px]:hidden">Logga in</span>
               <span className="hidden min-[450px]:inline">Logga In / Registrera</span>
             </Link>
