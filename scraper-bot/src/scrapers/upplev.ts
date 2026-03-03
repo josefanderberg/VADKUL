@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import { db } from '../config/firebase';
-import { addEventToDb } from '../utils/dbHelper';
-import { getVenueCoordinates } from '../utils/venueCoordinates';
+import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
+import { geocodeVenue, getVenueCoordinates } from '../utils/venueCoordinates';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
 
@@ -78,7 +78,10 @@ export async function scrapeUpplevVaxjo() {
                 const dateStr = dateNo && dateText ? `${dateNo} ${dateText}` : descText;
 
                 // Location
-                const location = article.querySelector('.uv-page-list-item__info-place-text')?.textContent?.trim() || 'Växjö';
+                let location = article.querySelector('.uv-page-list-item__info-place-text')?.textContent?.trim() || 'Växjö';
+                if (location.toLowerCase().startsWith('plats:')) {
+                    location = location.substring(6).trim();
+                }
 
                 // Img
                 let img = article.querySelector('.uv-page-list-item__image img')?.getAttribute('src') ||
@@ -148,22 +151,93 @@ export async function scrapeUpplevVaxjo() {
                 // Ignore incomplete events
                 if (!evt.title || evt.title === 'Okänd Titel') continue;
 
+                // Skip deep dive if we already have this event saved
+                const exists = await eventExistsInDb(evt.link || '');
+                if (exists) {
+                    console.log(`Event already exists: ${evt.title}`);
+                    continue;
+                }
+
                 const parsedDate = parseSwedishDate(evt.dateStr);
 
-                const [lat, lng] = getVenueCoordinates(evt.location);
+                let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
+                let finalLocation = evt.location;
+
+                // DEEP SCRAPING FOR UPPLEV (To find correct prices)
+                if (evt.link && evt.link.includes('upplev.vaxjo.se/evenemang')) {
+                    console.log(`Deep scraping: ${evt.title} (${evt.link})`);
+                    const eventPage = await browser.newPage();
+                    try {
+                        await eventPage.goto(evt.link, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+                        const deepData = await eventPage.evaluate(() => {
+                            let deepPrice: number | string = '';
+
+                            // 1. Check sidebar text explicitly looking for "Pris:" or similar
+                            const infoBlocks = Array.from(document.querySelectorAll('.uv-page-blocks .sv-text-portlet-content'))
+                                .map(el => el.textContent?.toLowerCase() || '');
+
+                            // Join all blocks
+                            const fullContent = infoBlocks.join(' ') + ' ' + (document.querySelector('main')?.textContent?.toLowerCase() || '');
+
+                            if (fullContent.includes('gratis') || fullContent.includes('fri entré') || fullContent.includes('fri entre')) {
+                                deepPrice = 'Gratis';
+                            } else {
+                                // Extract price near "pris", "entré", or just digits + kr
+                                const priceMatch = fullContent.match(/(?:pris|entré|biljett)[\s\S]{0,40}?(\d+)\s*(?:kr|sek)/i) ||
+                                    fullContent.match(/(\d+)\s*(?:kr|sek)/i);
+
+                                if (priceMatch) {
+                                    deepPrice = parseInt(priceMatch[1], 10);
+                                }
+                            }
+
+                            // Check location in deep scrape if surface location was empty or just "Växjö"
+                            let deepLocation = '';
+                            const locationMatch = fullContent.match(/(?:plats|var):\s*([a-zA-ZåäöÅÄÖ0-9\s-]+)(?:\n|$)/i);
+                            if (locationMatch && locationMatch[1]) {
+                                deepLocation = locationMatch[1].trim();
+                            }
+
+                            return { deepPrice, deepLocation };
+                        });
+
+                        if (deepData.deepPrice !== '') {
+                            finalPrice = deepData.deepPrice;
+                        }
+                        if (deepData.deepLocation && deepData.deepLocation.length > 2) {
+                            finalLocation = deepData.deepLocation;
+                        }
+
+                    } catch (e) {
+                        console.warn(`Could not deep scrape Upplev link ${evt.link}, using surface data.`, e);
+                    } finally {
+                        await eventPage.close();
+                    }
+                }
+
+                // Clean up finalLocation
+                if (!finalLocation || finalLocation === 'undefined' || finalLocation.trim() === '') {
+                    finalLocation = 'Växjö';
+                }
+
+                // Try Nominatim API Geocoding, fallback to Vaxjo Centrum if fails
+                const coords = await geocodeVenue(finalLocation);
+                const lat = coords ? coords[0] : 56.8796;
+                const lng = coords ? coords[1] : 14.8094;
 
                 const linkEvent = {
                     title: evt.title,
                     url: evt.link || UPPLEV_URL, // fallback to main page if no specific link
                     time: parsedDate,
-                    locationName: evt.location,
+                    locationName: finalLocation,
                     lat,
                     lng,
                     hostName: 'Upplev Växjö',
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),
                     coverImage: evt.img,
-                    price: evt.price !== '' ? evt.price : 0
+                    price: finalPrice !== undefined ? finalPrice : 0
                 };
 
                 await addEventToDb(linkEvent);

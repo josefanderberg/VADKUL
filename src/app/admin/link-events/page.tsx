@@ -47,6 +47,9 @@ export default function LinkEventsAdminPage() {
     const [syncing, setSyncing] = useState(false);
     const [syncMode, setSyncMode] = useState<'replace' | 'merge'>('merge');
 
+    // Scraper State
+    const [isScraping, setIsScraping] = useState(false);
+
     // Strikt admin check
     if (!user || user.email !== 'admin@admin.com') {
         return (
@@ -316,6 +319,33 @@ export default function LinkEventsAdminPage() {
             toast.error('Kunde inte synkronisera events');
         } finally {
             setSyncing(false);
+        }
+    };
+
+    const handleRunScrapers = async () => {
+        setIsScraping(true);
+        // We use a loading toast that we can dismiss later
+        const toastId = toast.loading('Startar skrap-robotarna i bakgrunden... detta kan ta någon minut.');
+
+        try {
+            const response = await fetch('/api/admin/scrape', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                toast.success(data.message || 'Skrapning slutförd!', { id: toastId });
+                // Refresh list
+                await fetchLinkEvents();
+            } else {
+                toast.error(data.message || 'Något gick fel vid skrapningen.', { id: toastId });
+            }
+        } catch (error) {
+            console.error('Error running scrapers:', error);
+            toast.error('Kunde inte ansluta till skrap-botens API.', { id: toastId });
+        } finally {
+            setIsScraping(false);
         }
     };
 
@@ -688,8 +718,22 @@ export default function LinkEventsAdminPage() {
                         {/* Right: Event List */}
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
                                     Befintliga Länk-Events ({linkEvents.length})
+                                    <button
+                                        onClick={handleRunScrapers}
+                                        disabled={isScraping || loading}
+                                        className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {isScraping ? (
+                                            <>
+                                                <div className="animate-spin h-3 w-3 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                                                Skrapar...
+                                            </>
+                                        ) : (
+                                            <>▶ Kör Skrapor Nu</>
+                                        )}
+                                    </button>
                                 </h2>
                                 {linkEvents.length > 0 && (
                                     <button
@@ -725,13 +769,32 @@ export default function LinkEventsAdminPage() {
                                                     <MapPin size={12} />
                                                     <span className="truncate">{event.locationName}</span>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-300 mt-2">
-                                                    <span>📅 {event.time.toLocaleDateString('sv-SE')}</span>
-                                                    <span>🕐 {event.time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    <span>👤 {event.hostName || 'Okänd'}</span>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600 dark:text-slate-300 mt-2">
+                                                    <span className="flex items-center gap-1 font-medium bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                                        📅 {event.time.toLocaleString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                                        👤 {event.hostName || 'Okänd'}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-1 rounded font-semibold">
+                                                        💰 {event.price !== undefined && event.price !== null ? (typeof event.price === 'number' && event.price === 0 ? 'Gratis' : (typeof event.price === 'number' ? `${event.price} kr` : event.price)) : 'Okänt pris'}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                                        📍 {event.lat ? `${event.lat.toFixed(4)}, ${event.lng?.toFixed(4)}` : 'Saknas'}
+                                                    </span>
+                                                    {event.category && (
+                                                        <span className="flex items-center gap-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded">
+                                                            🏷️ {event.category}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col gap-2">
+                                            {event.coverImage && (
+                                                <div className="hidden sm:block w-24 h-16 bg-slate-200 dark:bg-slate-700 rounded-md overflow-hidden shrink-0 border border-slate-200 dark:border-slate-600">
+                                                    <img src={event.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col gap-2 shrink-0">
                                                 <button
                                                     onClick={() => handleEdit(event)}
                                                     disabled={loading}

@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { getVenueCoordinates } from '../utils/venueCoordinates';
+import { geocodeVenue, getVenueCoordinates } from '../utils/venueCoordinates';
 
 const VAXJOCO_URL = 'https://vaxjoco.se/evenemangssida/kommande-evenemang/';
 
@@ -82,6 +82,14 @@ export async function scrapeVaxjoCo() {
                     img = a.querySelector('img')?.getAttribute('src') || '';
                 }
 
+                // Location handling
+                // Example location DOM context in vaxjoco (often missing on surface level, which is why it was set to Växjö)
+                let location = 'Växjö';
+                const locationNode = a.querySelector('.location, .place, i.fa-map-marker')?.parentElement;
+                if (locationNode) {
+                    location = locationNode.textContent?.replace('Växjö', '')?.trim() || 'Växjö';
+                }
+
                 // Extract text to find price
                 const fullText = a.textContent?.toLowerCase() || '';
                 let price: number | string = 0;
@@ -141,14 +149,39 @@ export async function scrapeVaxjoCo() {
                             }
                         }
 
+                        // Preference for explicitly tagged venue blocks on deep page
+                        let deepLocation = '';
+                        const venueElements = Array.from(document.querySelectorAll('.venue, .event-location, .info-box, .tribe-events-venue-details'));
+                        for (const el of venueElements) {
+                            const text = el.textContent || '';
+                            if (text.toLowerCase().includes('plats:') || text.toLowerCase().includes('var:')) {
+                                // Super crude attempt to grab the word after Plats:
+                                const match = text.match(/(?:plats|var|lokal):\s*([a-zA-ZåäöÅÄÖ0-9\s-]+)(?:\n|$)/i);
+                                if (match && match[1]) {
+                                    deepLocation = match[1].trim();
+                                    break;
+                                }
+                            } else {
+                                // Sometimes it's just raw text inside .venue
+                                if (text.length > 2 && text.length < 50) deepLocation = text.trim();
+                            }
+                        }
+
+                        // Last resort regex on full text
+                        if (!deepLocation) {
+                            const locationMatch = contentText.match(/(?:plats|var|lokal):\s*([a-zA-ZåäöÅÄÖ0-9\s-]{3,30})(?:\n|$|\.)/i);
+                            if (locationMatch && locationMatch[1]) deepLocation = locationMatch[1].trim();
+                        }
+
                         // Prefer the huge hero image if one exists on the detail page instead of the thumbnail
                         const heroImg = document.querySelector('.hero-image img, .event-header img, article img')?.getAttribute('src');
 
-                        return { deepPrice, heroImg };
+                        return { deepPrice, heroImg, deepLocation };
                     });
 
                     if (deepData.deepPrice !== '') finalPrice = deepData.deepPrice;
                     if (deepData.heroImg) finalImg = deepData.heroImg;
+                    if (deepData.deepLocation) evt.location = deepData.deepLocation;
 
                 } catch (e) {
                     console.warn(`Could not deep scrape ${evt.link}, using surface data.`, e);
@@ -156,7 +189,10 @@ export async function scrapeVaxjoCo() {
                     await eventPage.close();
                 }
 
-                const [lat, lng] = getVenueCoordinates(evt.location);
+                // Try Nominatim API Geocoding, fallback to Vaxjo Centrum if fails
+                const coords = await geocodeVenue(evt.location);
+                const lat = coords ? coords[0] : 56.8796;
+                const lng = coords ? coords[1] : 14.8094;
 
                 const linkEvent = {
                     title: evt.title,

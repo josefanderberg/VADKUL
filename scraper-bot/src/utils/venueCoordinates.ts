@@ -59,10 +59,11 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
 
 /**
  * Get coordinates for a venue name
- * Returns coordinates if found in lookup table, otherwise returns Växjö centrum
+ * Returns coordinates if found in lookup table, otherwise returns null 
+ * (so geocoder can try instead)
  */
-export function getVenueCoordinates(venueName: string): [number, number] {
-    if (!venueName) return VAXJO_VENUES.DEFAULT;
+export function getVenueCoordinates(venueName: string): [number, number] | null {
+    if (!venueName) return null;
 
     // Try exact match first
     if (VAXJO_VENUES[venueName]) {
@@ -77,6 +78,63 @@ export function getVenueCoordinates(venueName: string): [number, number] {
         }
     }
 
-    // Return default (Växjö centrum)
-    return VAXJO_VENUES.DEFAULT;
+    // Return null instead of default so we know it failed
+    return null;
+}
+
+/**
+ * Perform a geocoding request to OpenStreetMap Nominatim API
+ * Adds delay to respect API rate limits (max 1 req/sec)
+ */
+export async function geocodeVenue(venueName: string): Promise<[number, number] | null> {
+    if (!venueName) return null;
+
+    // Check local hardcoded list first
+    const localCoords = getVenueCoordinates(venueName);
+    if (localCoords) {
+        return localCoords;
+    }
+
+    // Prepare search query. Strip out common words that confuse the geocoder, and append " Växjö"
+    let query = venueName.toLowerCase();
+
+    // Some basic cleanup for better geocoding results
+    query = query.replace(/(kulturhuset|biograf|restaurang|café|cafe|\d+)/g, '').trim();
+
+    const searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}, Växjö&format=json&limit=1`;
+
+    try {
+        console.log(`[Geocoding] Querying API for: "${venueName}"`);
+        // Nominatim requires a User-Agent
+        const response = await fetch(searchUrl, {
+            headers: {
+                'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)'
+            }
+        });
+
+        if (!response.ok) {
+            console.warn(`[Geocoding] API responded with status: ${response.status}`);
+            return null;
+        }
+
+        const data = await response.json();
+        if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            console.log(`[Geocoding] Success for "${venueName}": [${lat}, ${lng}]`);
+
+            // Respect rate limit: pause for 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            return [lat, lng];
+        }
+
+        console.log(`[Geocoding] No results found for "${venueName}". Falling back to default.`);
+    } catch (error) {
+        console.error(`[Geocoding] Error resolving "${venueName}":`, error);
+    }
+
+    // Wait a little before returning to avoid bursting API if many fail sequentially
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return null;
 }

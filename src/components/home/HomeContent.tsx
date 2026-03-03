@@ -466,22 +466,24 @@ export default function HomeContent() {
                     <div className="flex justify-between items-center gap-4">
                         {/* 1. Toggle (Vänster) */}
                         <div className="flex-1">
-                            <div
-                                id="external-events-toggle"
-                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
-                                onClick={() => {
-                                    console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
-                                    setShowExternal(!showExternal);
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={showExternal}
-                                    onChange={() => { }}
-                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                                />
-                                <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
-                            </div>
+                            {view === 'map' && (
+                                <div
+                                    id="external-events-toggle"
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
+                                    onClick={() => {
+                                        console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
+                                        setShowExternal(!showExternal);
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={showExternal}
+                                        onChange={() => { }}
+                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                    />
+                                    <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* 2. Sortering (Höger) */}
