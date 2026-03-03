@@ -199,13 +199,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     </>
                                 )}
 
-                                {/* Price (inline with location) */}
-                                {linkEvent.price !== undefined && (
+                                {/* Price - only show if actually known (not empty/undefined) */}
+                                {linkEvent.price !== undefined && linkEvent.price !== null && linkEvent.price !== '' && (
                                     <>
                                         <span className="text-muted-foreground">•</span>
-                                        <div className="flex items-center gap-1 text-black dark:text-white">
-                                            <span className="truncate">{linkEvent.price === 0 || String(linkEvent.price).toLowerCase() === 'gratis' ? 'Gratis' : `${linkEvent.price} kr`}</span>
-                                        </div>
+                                        <span className="truncate">
+                                            {linkEvent.price === 0 || String(linkEvent.price).toLowerCase() === 'gratis' ? 'Gratis' : `${linkEvent.price} kr`}
+                                        </span>
                                     </>
                                 )}
                             </div>

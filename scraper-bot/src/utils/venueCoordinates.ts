@@ -1,16 +1,26 @@
 // Växjö venue coordinates lookup table
 export const VAXJO_VENUES: Record<string, [number, number]> = {
-    // Sports & Entertainment
+    // ─── Sports & Entertainment ────────────────────────────────────────────────
     'Vida Arena': [56.8797, 14.7736],
     'Vida arena': [56.8797, 14.7736],
     'vida arena': [56.8797, 14.7736],
     'Fortnox Arena': [56.8790, 14.7715],
+    'fortnox arena': [56.8790, 14.7715],
+    'Myresjöhus Arena': [56.8767, 14.7758],
+    'myresjöhus arena': [56.8767, 14.7758],
+    'Visma Arena': [56.8767, 14.7758],
+    'Hovshaga Arena': [56.8700, 14.7900],
+    'Campushallen': [56.8545, 14.8320],
+    'campushallen': [56.8545, 14.8320],
+    'Grönahuset': [56.8558, 14.8305],
 
-    // Culture & Music
+    // ─── Culture & Music ────────────────────────────────────────────────────────
     'Växjö Konserthus': [56.8778, 14.8089],
     'Vaxjo Konserthus': [56.8778, 14.8089],
     'växjö konserthus': [56.8778, 14.8089],
     'Konserthuset': [56.8778, 14.8089],
+    'konserthuset': [56.8778, 14.8089],
+    'Konserthuset i Växjö': [56.8778, 14.8089],
 
     'Nygatan 6': [56.8796, 14.8061],
     'nygatan 6': [56.8796, 14.8061],
@@ -18,102 +28,144 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     'Växjö Teater': [56.8789, 14.8067],
     'Vaxjo Teater': [56.8789, 14.8067],
     'växjö teater': [56.8789, 14.8067],
+    'Teatern': [56.8789, 14.8067],
 
     'Kulturhuset Prisma': [56.8783, 14.8050],
+    'kulturhuset prisma': [56.8783, 14.8050],
+    'Prisma': [56.8783, 14.8050],
 
-    // University & Campus
+    'Nöjesfabriken': [56.8810, 14.8145],
+    'nöjesfabriken': [56.8810, 14.8145],
+
+    'Filmstaden Växjö': [56.8800, 14.8090],
+    'filmstaden': [56.8800, 14.8090],
+
+    'Wasa Teater': [56.8789, 14.8067],
+
+    // ─── University & Campus ────────────────────────────────────────────────────
     'Linnéuniversitetet': [56.8558, 14.8305],
     'Linneuniversitetet': [56.8558, 14.8305],
+    'linnéuniversitetet': [56.8558, 14.8305],
     'Linnéuniversitetet, Växjö': [56.8558, 14.8305],
     'LNU Campus Växjö': [56.8558, 14.8305],
-    'Campushallen': [56.8545, 14.8320],
+    'LNU': [56.8558, 14.8305],
+    'Linnéuniversitetet Växjö': [56.8558, 14.8305],
     'Linnékåren': [56.8552, 14.8298],
+    'linnékåren': [56.8552, 14.8298],
+    'Kårhuset': [56.8552, 14.8298],
+    'kårhuset': [56.8552, 14.8298],
 
-    // Parks & Outdoor
+    // ─── Parks & Outdoor ────────────────────────────────────────────────────────
     'Stadsparken': [56.8780, 14.8020],
+    'stadsparken': [56.8780, 14.8020],
     'Linnéparken': [56.8810, 14.8110],
+    'linnéparken': [56.8810, 14.8110],
     'Växjösjön': [56.8750, 14.8050],
     'Evedals badplats': [56.8600, 14.8500],
     'Kronobergsruinen': [56.8820, 14.8400],
+    'Kronobergs slottsruin': [56.8820, 14.8400],
 
-    // Restaurants & Cafés
+    // ─── City Centre & Squares ──────────────────────────────────────────────────
     'Stortorget': [56.8796, 14.8094],
+    'stortorget': [56.8796, 14.8094],
+    'Tegnérplatsen': [56.8792, 14.8085],
+    'Rådhuset': [56.8790, 14.8082],
+    'Rådhustorget': [56.8790, 14.8082],
+    'Residenset': [56.8800, 14.8080],
+
+    // ─── Restaurants & Cafés ────────────────────────────────────────────────────
     'PM & Vänner': [56.8791, 14.8078],
+    'pm & vänner': [56.8791, 14.8078],
+    'PM och Vänner': [56.8791, 14.8078],
     'Bishops Arms Växjö': [56.8793, 14.8085],
+    'Bishops Arms': [56.8793, 14.8085],
+    'bishops arms': [56.8793, 14.8085],
     'Kafé de Luxe': [56.8800, 14.8060],
     'Res Thai': [56.8798, 14.8072],
+    'Södra Bar': [56.8780, 14.8070],
 
-    // Shopping & Markets
+    // ─── Hotels ─────────────────────────────────────────────────────────────────
+    'Elite Hotel Växjö': [56.8791, 14.8068],
+    'Elite Hotel': [56.8791, 14.8068],
+    'Clarion Collection Hotel Cardinal': [56.8795, 14.8072],
+    'Hotel Cardinal': [56.8795, 14.8072],
+    'Clarion Hotel Växjö': [56.8795, 14.8072],
+    'Quality Hotel Ekoxen': [56.8800, 14.8040],
+
+    // ─── Shopping & Markets ──────────────────────────────────────────────────────
     'Grand Samarkand': [56.8900, 14.7950],
     'Samarkand': [56.8900, 14.7950],
+    'samarkand': [56.8900, 14.7950],
+    'Teleborgscentrum': [56.8698, 14.8138],
 
-    // Community & Misc
+    // ─── Community & Libraries ──────────────────────────────────────────────────
     'Växjö Bibliotek': [56.8785, 14.8055],
+    'Stadsbiblioteket': [56.8785, 14.8055],
     'Folkets Park': [56.8830, 14.8030],
-    'Myresjöhus Arena': [56.8767, 14.7758],
-    'Visma Arena': [56.8767, 14.7758],
+    'folkets park': [56.8830, 14.8030],
 
-    // Default fallback (Växjö centrum – Stortorget)
+    // ─── Churches ───────────────────────────────────────────────────────────────
+    'Domkyrkan': [56.8793, 14.8098],
+    'Växjö Domkyrka': [56.8793, 14.8098],
+    'Heliga Kors kyrka': [56.8805, 14.8153],
+
+    // ─── Default fallback (Växjö centrum – Stortorget) ──────────────────────────
     'DEFAULT': [56.8796, 14.8094]
 };
 
 /**
- * Get coordinates for a venue name
- * Returns coordinates if found in lookup table, otherwise returns null 
- * (so geocoder can try instead)
+ * Get coordinates for a venue name.
+ * Returns coordinates if found in lookup table, otherwise null.
  */
 export function getVenueCoordinates(venueName: string): [number, number] | null {
     if (!venueName) return null;
 
-    // Try exact match first
-    if (VAXJO_VENUES[venueName]) {
-        return VAXJO_VENUES[venueName];
+    // Exact match
+    if (VAXJO_VENUES[venueName]) return VAXJO_VENUES[venueName];
+
+    // Case-insensitive match
+    const lowerVenue = venueName.toLowerCase().trim();
+    for (const [key, coords] of Object.entries(VAXJO_VENUES)) {
+        if (key.toLowerCase() === lowerVenue) return coords;
     }
 
-    // Try case-insensitive match
-    const lowerVenue = venueName.toLowerCase();
+    // Partial match – venue name contains a known key (e.g. "Scenen på Vida Arena" → "Vida Arena")
     for (const [key, coords] of Object.entries(VAXJO_VENUES)) {
-        if (key.toLowerCase() === lowerVenue) {
+        if (key === 'DEFAULT') continue;
+        if (lowerVenue.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerVenue)) {
             return coords;
         }
     }
 
-    // Return null instead of default so we know it failed
     return null;
 }
 
 /**
- * Perform a geocoding request to OpenStreetMap Nominatim API
- * Adds delay to respect API rate limits (max 1 req/sec)
+ * Geocode a venue name via OpenStreetMap Nominatim.
+ * Respects the 1 req/sec rate limit.
  */
 export async function geocodeVenue(venueName: string): Promise<[number, number] | null> {
     if (!venueName) return null;
 
-    // Check local hardcoded list first
-    const localCoords = getVenueCoordinates(venueName);
-    if (localCoords) {
-        return localCoords;
-    }
+    // Check local list first (fast path)
+    const local = getVenueCoordinates(venueName);
+    if (local) return local;
 
-    // Prepare search query. Strip out common words that confuse the geocoder, and append " Växjö"
-    let query = venueName.toLowerCase();
+    // Build search query
+    let query = venueName
+        .replace(/(kulturhuset|biograf|restaurang|café|cafe)/gi, '')
+        .trim();
 
-    // Some basic cleanup for better geocoding results
-    query = query.replace(/(kulturhuset|biograf|restaurang|café|cafe|\d+)/g, '').trim();
-
-    const searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}, Växjö&format=json&limit=1`;
+    const searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Växjö, Sverige')}&format=json&limit=1&countrycodes=se`;
 
     try {
         console.log(`[Geocoding] Querying API for: "${venueName}"`);
-        // Nominatim requires a User-Agent
         const response = await fetch(searchUrl, {
-            headers: {
-                'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)'
-            }
+            headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
         });
 
         if (!response.ok) {
-            console.warn(`[Geocoding] API responded with status: ${response.status}`);
+            console.warn(`[Geocoding] API status: ${response.status}`);
             return null;
         }
 
@@ -121,20 +173,22 @@ export async function geocodeVenue(venueName: string): Promise<[number, number] 
         if (data && data.length > 0) {
             const lat = parseFloat(data[0].lat);
             const lng = parseFloat(data[0].lon);
-            console.log(`[Geocoding] Success for "${venueName}": [${lat}, ${lng}]`);
 
-            // Respect rate limit: pause for 1 second
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            return [lat, lng];
+            // Sanity check: must be within reasonable distance of Växjö (±0.5°)
+            if (Math.abs(lat - 56.88) < 0.5 && Math.abs(lng - 14.81) < 0.5) {
+                console.log(`[Geocoding] Success for "${venueName}": [${lat}, ${lng}]`);
+                await new Promise(r => setTimeout(r, 1100)); // respect 1 req/sec
+                return [lat, lng];
+            } else {
+                console.warn(`[Geocoding] Result for "${venueName}" is too far from Växjö: [${lat}, ${lng}]`);
+            }
         }
 
-        console.log(`[Geocoding] No results found for "${venueName}". Falling back to default.`);
+        console.log(`[Geocoding] No results for "${venueName}". Using default.`);
     } catch (error) {
-        console.error(`[Geocoding] Error resolving "${venueName}":`, error);
+        console.error(`[Geocoding] Error for "${venueName}":`, error);
     }
 
-    // Wait a little before returning to avoid bursting API if many fail sequentially
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(r => setTimeout(r, 500));
     return null;
 }

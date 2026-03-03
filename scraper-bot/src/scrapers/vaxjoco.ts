@@ -1,57 +1,69 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenue, getVenueCoordinates } from '../utils/venueCoordinates';
+import { geocodeVenue } from '../utils/venueCoordinates';
 
 const VAXJOCO_URL = 'https://vaxjoco.se/evenemangssida/kommande-evenemang/';
 
-// Hjäpfunktion för att gissa kategori baserat på titel
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
-
     if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party')) return 'party';
-    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match')) return 'sport';
-    if (t.includes('quiz') || t.includes('spel') || t.includes('boardgame')) return 'game';
-    if (t.includes('teater') || t.includes('musikal') || t.includes('konsert') || t.includes('standup') || t.includes('humor')) return 'culture';
-    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting')) return 'food';
-    if (t.includes('marknad') || t.includes('loppis')) return 'market';
+    if (t.includes('musik') || t.includes('konsert') || t.includes('kör') || t.includes('orkester')) return 'music';
+    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match') || t.includes('tävling')) return 'sport';
+    if (t.includes('quiz') || t.includes('spel') || t.includes('boardgame') || t.includes('bingo')) return 'game';
+    if (t.includes('teater') || t.includes('musikal') || t.includes('standup') || t.includes('humor') || t.includes('konst') || t.includes('utställning')) return 'culture';
+    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting') || t.includes('provning')) return 'food';
+    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa')) return 'market';
     if (t.includes('utomhus') || t.includes('natur') || t.includes('vandring')) return 'outdoor';
-    if (t.includes('barn') || t.includes('familj') || t.includes('saga')) return 'play';
-    if (t.includes('träning') || t.includes('yoga') || t.includes('gym')) return 'training';
-
+    if (t.includes('barn') || t.includes('familj') || t.includes('saga') || t.includes('junior')) return 'play';
+    if (t.includes('träning') || t.includes('yoga') || t.includes('gym') || t.includes('fitness')) return 'training';
+    if (t.includes('öppet hus') || t.includes('föreläsning') || t.includes('workshop') || t.includes('seminarium')) return 'study';
+    if (t.includes('campus') || t.includes('student') || t.includes('kår')) return 'campus';
     return 'other';
 }
 
-// Enkel svensk datum-parser
 function parseSwedishDate(dateStr: string): Date {
-    // Exempel: "7-8 mars", "11 april 2026", "10 april-17 maj"
-    const months: { [key: string]: number } = {
+    const months: Record<string, number> = {
         'januari': 0, 'februari': 1, 'mars': 2, 'april': 3, 'maj': 4, 'juni': 5,
-        'juli': 6, 'augusti': 7, 'september': 8, 'oktober': 9, 'november': 10, 'december': 11
+        'juli': 6, 'augusti': 7, 'september': 8, 'oktober': 9, 'november': 10, 'december': 11,
+        'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6,
+        'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11
     };
 
     const currentYear = new Date().getFullYear();
     let year = currentYear;
-
-    // Om strängen innehåller ett årtal fyra siffror
     const yearMatch = dateStr.match(/\b(20\d{2})\b/);
-    if (yearMatch) {
-        year = parseInt(yearMatch[1], 10);
-    }
+    if (yearMatch) year = parseInt(yearMatch[1], 10);
 
-    // Hitta första förekomsten av en månad
     let monthIndex = new Date().getMonth();
-    for (const [monthName, index] of Object.entries(months)) {
-        if (dateStr.toLowerCase().includes(monthName)) {
-            monthIndex = index;
-            break;
-        }
+    for (const [name, idx] of Object.entries(months)) {
+        if (dateStr.toLowerCase().includes(name)) { monthIndex = idx; break; }
     }
 
-    // Hitta första siffran (dagen)
     const dayMatch = dateStr.match(/\b(\d{1,2})\b/);
     const day = dayMatch ? parseInt(dayMatch[1], 10) : 1;
+    return new Date(year, monthIndex, day, 12, 0, 0);
+}
 
-    return new Date(year, monthIndex, day, 12, 0, 0); // Sätter tiden till 12:00
+/** Scrape a booking/ticket page for price info */
+async function scrapeBookingPage(browser: any, url: string): Promise<{ price?: number | string }> {
+    const page = await browser.newPage();
+    try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        const result = await page.evaluate(() => {
+            const bodyText = document.body?.textContent?.toLowerCase() || '';
+            let price: number | string | undefined;
+            if (bodyText.includes('gratis') || bodyText.includes('fri entré')) {
+                price = 'Gratis';
+            } else {
+                const m = bodyText.match(/(?:pris|entré|biljett|ticket|kostnad)[^0-9]{0,30}(\d+)\s*(?:kr|sek)/i)
+                    || bodyText.match(/(\d{2,4})\s*(?:kr|sek)/i);
+                if (m) price = parseInt(m[1], 10);
+            }
+            return { price };
+        });
+        return result;
+    } catch { return {}; }
+    finally { await page.close(); }
 }
 
 export async function scrapeVaxjoCo() {
@@ -63,161 +75,208 @@ export async function scrapeVaxjoCo() {
         await page.goto(VAXJOCO_URL, { waitUntil: 'networkidle2' });
 
         const events = await page.evaluate(() => {
-            const eventCards = Array.from(document.querySelectorAll('a:has(figure.zoom-puff), a > figure.zoom-puff'));
-
-            // Hantera om a-taggen är förälder eller dom är syskon (ibland strular DOM:en beroende på hur HTML är skriven)
-            // Vi letar efter a-taggar som direkt eller indirekt wrappar en figure.zoom-puff
             const validLinks = Array.from(document.querySelectorAll('a')).filter(a => a.querySelector('figure.zoom-puff'));
 
             return validLinks.map(a => {
-                const title = a.querySelector('h3')?.textContent?.trim() || 'Okänd Titel';
-                const dateStr = a.querySelector('p.date')?.textContent?.trim() || '';
+                const title = a.querySelector('h3')?.textContent?.trim() || '';
+                const dateStr = a.querySelector('p.date, p.event-date, [class*="date"]')?.textContent?.trim() || '';
                 const link = (a as HTMLAnchorElement).href || '';
-
-                // Get image specifically from the figure inside the a tag
-                let img = a.querySelector('figure.zoom-puff img')?.getAttribute('src') || '';
-
-                // Sometimes the img might be elsewhere if DOM changes slightly
-                if (!img) {
-                    img = a.querySelector('img')?.getAttribute('src') || '';
-                }
-
-                // Location handling
-                // Example location DOM context in vaxjoco (often missing on surface level, which is why it was set to Växjö)
-                let location = 'Växjö';
-                const locationNode = a.querySelector('.location, .place, i.fa-map-marker')?.parentElement;
-                if (locationNode) {
-                    location = locationNode.textContent?.replace('Växjö', '')?.trim() || 'Växjö';
-                }
-
-                // Extract text to find price
+                let img = a.querySelector('figure.zoom-puff img')?.getAttribute('src')
+                    || a.querySelector('img')?.getAttribute('src') || '';
                 const fullText = a.textContent?.toLowerCase() || '';
-                let price: number | string = 0;
-
+                let price: number | string = '';
                 if (fullText.includes('gratis') || fullText.includes('fri entré')) {
                     price = 'Gratis';
                 } else {
-                    const priceMatch = fullText.match(/(\d+)\s*(kr|sek)/);
-                    if (priceMatch) {
-                        price = parseInt(priceMatch[1], 10);
-                    }
+                    const m = fullText.match(/(\d+)\s*(kr|sek)/);
+                    if (m) price = parseInt(m[1], 10);
                 }
-
-                return { title, dateStr, location: 'Växjö', link, img, price };
+                return { title, dateStr, link, img, price };
             });
         });
 
-        console.log(`Found ${events.length} potential events. Processing...`);
+        console.log(`Found ${events.length} events. Processing...`);
 
-        // Deep scrape each new event
         for (const evt of events) {
             try {
-                if (!evt.title || evt.title === 'Okänd Titel' || !evt.link) continue;
+                if (!evt.title || !evt.link) continue;
 
-                // Skip deep dive if we already have this event saved
                 const exists = await eventExistsInDb(evt.link);
-                if (exists) {
-                    console.log(`Event already exists: ${evt.title}`);
-                    continue;
-                }
+                if (exists) { console.log(`Already exists: ${evt.title}`); continue; }
 
-                // Default parsed surface date
                 const parsedDate = parseSwedishDate(evt.dateStr);
 
-                // Deep dive to event subpage
+                let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
+                let finalImg = evt.img;
+                let finalLocation = 'Växjö';
+                let directLat: number | null = null;
+                let directLng: number | null = null;
+
+                // ── Deep scrape event detail page ──────────────────────────────
                 console.log(`Deep scraping: ${evt.title} (${evt.link})`);
                 const eventPage = await browser.newPage();
-
-                let finalPrice: number | string | undefined = evt.price;
-                let finalImg = evt.img;
-
                 try {
                     await eventPage.goto(evt.link, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
                     const deepData = await eventPage.evaluate(() => {
-                        const contentText = document.querySelector('.event-content, article, main')?.textContent?.toLowerCase() || '';
-                        let deepPrice: number | string = '';
+                        // ── 1. JSON-LD structured data ──────────────────────────
+                        let jsonLdPrice: number | string | undefined;
+                        let jsonLdLocation = '';
+                        let jsonLdLat: number | null = null;
+                        let jsonLdLng: number | null = null;
+                        let jsonLdImg = '';
+                        let bookingUrl = '';
 
-                        if (contentText.includes('gratis') || contentText.includes('fri entré') || contentText.includes('fri entre')) {
-                            deepPrice = 'Gratis';
-                        } else {
-                            // Look for digits next to kr/sek near words like "entré" or "pris"
-                            const priceMatch = contentText.match(/(?:pris|entré|biljett)[\s\S]{0,30}?(\d+)\s*(?:kr|sek)/i) ||
-                                contentText.match(/(\d+)\s*(?:kr|sek)/i);
-                            if (priceMatch) {
-                                deepPrice = parseInt(priceMatch[1], 10);
-                            }
-                        }
-
-                        // Preference for explicitly tagged venue blocks on deep page
-                        let deepLocation = '';
-                        const venueElements = Array.from(document.querySelectorAll('.venue, .event-location, .info-box, .tribe-events-venue-details'));
-                        for (const el of venueElements) {
-                            const text = el.textContent || '';
-                            if (text.toLowerCase().includes('plats:') || text.toLowerCase().includes('var:')) {
-                                // Super crude attempt to grab the word after Plats:
-                                const match = text.match(/(?:plats|var|lokal):\s*([a-zA-ZåäöÅÄÖ0-9\s-]+)(?:\n|$)/i);
-                                if (match && match[1]) {
-                                    deepLocation = match[1].trim();
-                                    break;
+                        const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+                        for (const script of scripts) {
+                            try {
+                                let data = JSON.parse(script.textContent || '');
+                                if (data['@graph']) data = data['@graph'].find((d: any) => d['@type'] === 'Event') || data;
+                                if (data['@type'] === 'Event') {
+                                    // Price
+                                    if (data.offers) {
+                                        const offer = Array.isArray(data.offers) ? data.offers[0] : data.offers;
+                                        if (offer.price !== undefined) {
+                                            jsonLdPrice = (offer.price === 0 || offer.price === '0') ? 'Gratis' : offer.price;
+                                        }
+                                        if (offer.url) bookingUrl = offer.url;
+                                    }
+                                    // Location
+                                    if (data.location) {
+                                        const loc = data.location;
+                                        if (loc.name) jsonLdLocation = loc.name;
+                                        if (loc.address?.streetAddress) jsonLdLocation = jsonLdLocation || loc.address.streetAddress;
+                                        if (loc.geo?.latitude) { jsonLdLat = loc.geo.latitude; jsonLdLng = loc.geo.longitude; }
+                                    }
+                                    // Image
+                                    if (data.image) {
+                                        const img = Array.isArray(data.image) ? data.image[0] : data.image;
+                                        jsonLdImg = typeof img === 'string' ? img : (img?.url || '');
+                                    }
                                 }
-                            } else {
-                                // Sometimes it's just raw text inside .venue
-                                if (text.length > 2 && text.length < 50) deepLocation = text.trim();
+                            } catch { /* ignore */ }
+                        }
+
+                        // ── 2. Vaxjoco-specific DOM selectors ──────────────────
+                        const contentEl = document.querySelector('.event-content, article, main, .tribe-events-single');
+                        const contentText = contentEl?.textContent?.toLowerCase() || '';
+
+                        let cssPrice: number | string = '';
+                        if (contentText.includes('gratis') || contentText.includes('fri entré')) {
+                            cssPrice = 'Gratis';
+                        } else {
+                            const m = contentText.match(/(?:pris|entré|biljett|kostnad|inträde)[^0-9]{0,30}(\d+)\s*(?:kr|sek)/i)
+                                || contentText.match(/(\d{2,4})\s*(?:kr|sek)/i);
+                            if (m) cssPrice = parseInt(m[1], 10);
+                        }
+
+                        // Location from known selectors (Tribe Events, WordPress)
+                        let cssLocation = '';
+                        const venueEls = Array.from(document.querySelectorAll(
+                            '.tribe-venue, .tribe-events-venue-details, .venue, .event-location, .event-venue, .address, [itemprop="location"]'
+                        ));
+                        for (const el of venueEls) {
+                            const text = el.textContent?.trim() || '';
+                            if (text.length > 2 && text.length < 100) {
+                                cssLocation = text.replace(/\s+/g, ' ').trim();
+                                break;
                             }
                         }
 
-                        // Last resort regex on full text
-                        if (!deepLocation) {
-                            const locationMatch = contentText.match(/(?:plats|var|lokal):\s*([a-zA-ZåäöÅÄÖ0-9\s-]{3,30})(?:\n|$|\.)/i);
-                            if (locationMatch && locationMatch[1]) deepLocation = locationMatch[1].trim();
+                        // Fallback: "Plats:" text pattern
+                        if (!cssLocation) {
+                            const m = contentText.match(/(?:plats|var|lokal|venue|arena):\s*([^\n.]{3,60})(?:\n|$|\.)/i);
+                            if (m) cssLocation = m[1].trim();
                         }
 
-                        // Prefer the huge hero image if one exists on the detail page instead of the thumbnail
-                        const heroImg = document.querySelector('.hero-image img, .event-header img, article img')?.getAttribute('src');
+                        // Find booking links if not in JSON-LD
+                        if (!bookingUrl) {
+                            const links = Array.from(document.querySelectorAll('a[href]'));
+                            const found = links.find(a => {
+                                const href = (a as HTMLAnchorElement).href.toLowerCase();
+                                const text = a.textContent?.toLowerCase() || '';
+                                return href.includes('boka') || href.includes('biljett') || href.includes('ticket')
+                                    || href.includes('eventbrite') || href.includes('ticketmaster') || href.includes('billetto')
+                                    || text.includes('boka') || text.includes('köp biljett') || text.includes('anmäl')
+                                    || text.includes('biljetter') || text.includes('anmälan');
+                            });
+                            if (found) bookingUrl = (found as HTMLAnchorElement).href;
+                        }
 
-                        return { deepPrice, heroImg, deepLocation };
+                        // Hero image
+                        const heroImg = document.querySelector(
+                            '.hero-image img, .event-header img, article img, .tribe-events-event-image img, .wp-post-image'
+                        )?.getAttribute('src') || '';
+
+                        return { jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, cssPrice, cssLocation, bookingUrl, heroImg };
                     });
 
-                    if (deepData.deepPrice !== '') finalPrice = deepData.deepPrice;
-                    if (deepData.heroImg) finalImg = deepData.heroImg;
-                    if (deepData.deepLocation) evt.location = deepData.deepLocation;
+                    // Apply best available data
+                    if (deepData.jsonLdPrice !== undefined) finalPrice = deepData.jsonLdPrice;
+                    if (deepData.jsonLdLocation) finalLocation = deepData.jsonLdLocation;
+                    if (deepData.jsonLdLat) { directLat = deepData.jsonLdLat; directLng = deepData.jsonLdLng; }
+                    if (deepData.jsonLdImg) finalImg = deepData.jsonLdImg;
+
+                    if (finalPrice === undefined && deepData.cssPrice !== '') finalPrice = deepData.cssPrice;
+                    if (finalLocation === 'Växjö' && deepData.cssLocation) finalLocation = deepData.cssLocation;
+                    if (deepData.heroImg && !finalImg) finalImg = deepData.heroImg;
+
+                    // Follow booking link for price if still missing
+                    if ((finalPrice === undefined || finalPrice === '') && deepData.bookingUrl) {
+                        console.log(`  → Following booking link: ${deepData.bookingUrl}`);
+                        const booking = await scrapeBookingPage(browser, deepData.bookingUrl);
+                        if (booking.price !== undefined) finalPrice = booking.price;
+                    }
 
                 } catch (e) {
-                    console.warn(`Could not deep scrape ${evt.link}, using surface data.`, e);
+                    console.warn(`  Could not deep scrape ${evt.link}: ${e}`);
                 } finally {
                     await eventPage.close();
                 }
 
-                // Try Nominatim API Geocoding, fallback to Vaxjo Centrum if fails
-                const coords = await geocodeVenue(evt.location);
-                const lat = coords ? coords[0] : 56.8796;
-                const lng = coords ? coords[1] : 14.8094;
+                // Clean location
+                finalLocation = finalLocation?.replace(/\s+/g, ' ').trim() || 'Växjö';
+                if (!finalLocation || finalLocation.length < 2) finalLocation = 'Växjö';
+
+                // Resolve coordinates
+                let lat: number;
+                let lng: number;
+
+                if (directLat && directLng) {
+                    lat = directLat;
+                    lng = directLng;
+                    console.log(`  Coords from JSON-LD: [${lat}, ${lng}]`);
+                } else {
+                    const coords = await geocodeVenue(finalLocation);
+                    lat = coords ? coords[0] : 56.8796;
+                    lng = coords ? coords[1] : 14.8094;
+                }
 
                 const linkEvent = {
                     title: evt.title,
                     url: evt.link,
                     time: parsedDate,
-                    locationName: evt.location,
+                    locationName: finalLocation,
                     lat,
                     lng,
                     hostName: 'Växjö & Co',
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),
-                    coverImage: finalImg,
-                    price: finalPrice
+                    coverImage: finalImg || undefined,
+                    price: finalPrice !== undefined ? finalPrice : ''
                 };
 
                 await addEventToDb(linkEvent);
+                console.log(`  ✅ Saved: ${evt.title} @ ${finalLocation} [${lat.toFixed(4)}, ${lng.toFixed(4)}] Pris: ${finalPrice ?? 'okänt'}`);
 
             } catch (err) {
-                console.error(`Failed to process event ${evt.title}:`, err);
+                console.error(`Failed to process event "${evt.title}":`, err);
             }
         }
     } catch (error) {
         console.error('Error during scrape:', error);
     } finally {
         await browser.close();
-        console.log('Scrape complete.');
+        console.log('VäxjöCo scrape complete.');
     }
 }
