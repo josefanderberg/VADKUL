@@ -38,10 +38,11 @@ const ALL_PATTERNS = [
 interface LinkEventCardProps {
     linkEvent: LinkEvent;
     isAdmin?: boolean;
+    distance?: number;
     onDelete?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async (e: React.MouseEvent) => {
@@ -189,6 +190,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, onDelete }: 
                                     </svg>
                                 </div>
                                 <span className="truncate max-w-[120px]">{linkEvent.locationName}</span>
+
+                                {/* Distance */}
+                                {distance !== undefined && (
+                                    <>
+                                        <span className="text-muted-foreground">•</span>
+                                        <span>{distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(1)} km`}</span>
+                                    </>
+                                )}
 
                                 {/* Price (inline with location) */}
                                 {linkEvent.price !== undefined && (

@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
+import { getVenueCoordinates } from '../utils/venueCoordinates';
 
 const VAXJOCO_URL = 'https://vaxjoco.se/evenemangssida/kommande-evenemang/';
 
@@ -72,7 +73,14 @@ export async function scrapeVaxjoCo() {
                 const title = a.querySelector('h3')?.textContent?.trim() || 'Okänd Titel';
                 const dateStr = a.querySelector('p.date')?.textContent?.trim() || '';
                 const link = (a as HTMLAnchorElement).href || '';
-                const img = a.querySelector('img')?.src || '';
+
+                // Get image specifically from the figure inside the a tag
+                let img = a.querySelector('figure.zoom-puff img')?.getAttribute('src') || '';
+
+                // Sometimes the img might be elsewhere if DOM changes slightly
+                if (!img) {
+                    img = a.querySelector('img')?.getAttribute('src') || '';
+                }
 
                 // Extract text to find price
                 const fullText = a.textContent?.toLowerCase() || '';
@@ -148,13 +156,15 @@ export async function scrapeVaxjoCo() {
                     await eventPage.close();
                 }
 
+                const [lat, lng] = getVenueCoordinates(evt.location);
+
                 const linkEvent = {
                     title: evt.title,
                     url: evt.link,
                     time: parsedDate,
                     locationName: evt.location,
-                    lat: 56.8796,
-                    lng: 14.8094,
+                    lat,
+                    lng,
                     hostName: 'Växjö & Co',
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),

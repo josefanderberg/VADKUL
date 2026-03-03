@@ -39,6 +39,7 @@ export default function LinkEventsAdminPage() {
     const [lng, setLng] = useState('');
     const [hostName, setHostName] = useState('');
     const [category, setCategory] = useState<EventCategoryType | ''>('');
+    const [coverImage, setCoverImage] = useState('');
 
     // JSON Sync state
     const [jsonInput, setJsonInput] = useState('');
@@ -145,7 +146,8 @@ export default function LinkEventsAdminPage() {
                 lat: latitude,
                 lng: longitude,
                 hostName,
-                ...(category ? { category: category as EventCategoryType } : {})
+                ...(category ? { category: category as EventCategoryType } : {}),
+                ...(coverImage ? { coverImage } : {})
             };
 
             if (editingEventId) {
@@ -166,6 +168,7 @@ export default function LinkEventsAdminPage() {
             setLng('');
             setHostName('');
             setCategory('');
+            setCoverImage('');
             setEditingEventId(null);
 
             // Refresh list
@@ -189,6 +192,7 @@ export default function LinkEventsAdminPage() {
         setLng(event.lng.toString());
         setHostName(event.hostName);
         setCategory(event.category || '');
+        setCoverImage(event.coverImage || '');
         setEditingEventId(event.id);
 
         // Scroll to the top where the form is
@@ -205,6 +209,7 @@ export default function LinkEventsAdminPage() {
         setLng('');
         setHostName('');
         setCategory('');
+        setCoverImage('');
         setEditingEventId(null);
     };
 
@@ -331,9 +336,12 @@ export default function LinkEventsAdminPage() {
                 tid: event.time.toTimeString().substring(0, 5),
                 evenemang: event.title,
                 plats: event.locationName,
+                latitud: event.lat,
+                longitud: event.lng,
                 arrangor: event.hostName,
                 webbplats: event.url,
-                kategori: event.category
+                kategori: event.category,
+                bild: event.coverImage
             }))
         };
 
@@ -585,6 +593,17 @@ export default function LinkEventsAdminPage() {
                                             </option>
                                         ))}
                                     </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Bild-URL (valfritt)</label>
+                                    <input
+                                        type="url"
+                                        value={coverImage}
+                                        onChange={(e) => setCoverImage(e.target.value)}
+                                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                                        placeholder="https://example.com/image.jpg"
+                                    />
                                 </div>
 
                                 <div>

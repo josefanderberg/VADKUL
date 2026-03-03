@@ -1,0 +1,65 @@
+total 1088
+drwxr-xr-x@ 39 josefanderberg  staff  -        1248 Mar  3 16:12 .
+	com.apple.provenance	    11 
+drwxr-xr-x  84 josefanderberg  staff  -        2688 Mar  2 17:33 ..
+-rw-r--r--   1 josefanderberg  staff  hidden  10244 Feb  6 12:39 .DS_Store
+-rw-r--r--   1 josefanderberg  staff  -         489 Feb 23 17:37 .env.local
+drwxr-xr-x@  4 josefanderberg  staff  -         128 Feb 24 11:04 .firebase
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -          54 Dec 11 02:18 .firebaserc
+	com.apple.provenance	    11 
+drwxr-xr-x@ 15 josefanderberg  staff  -         480 Mar  3 15:31 .git
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         353 Feb 24 15:38 .gitignore
+	com.apple.provenance	    11 
+drwxr-xr-x@ 13 josefanderberg  staff  -         416 Mar  3 15:08 .next
+	com.apple.provenance	    11 
+-rw-r--r--   1 josefanderberg  staff  -          22 Mar  2 19:19 .npmrc
+-rw-r--r--   1 josefanderberg  staff  -           3 Mar  2 19:46 .nvmrc
+drwxr-xr-x@  3 josefanderberg  staff  -          96 Feb  4 21:13 .vscode
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -        2994 Dec  6 20:52 AI_CONTENT.txt
+	com.apple.provenance	    11 
+-rw-r--r--   1 josefanderberg  staff  -        6677 Feb  6 13:27 PROJECT.md
+-rw-r--r--@  1 josefanderberg  staff  -        3160 Dec 18 12:27 README.md
+	com.apple.provenance	    11 
+-rw-r--r--   1 josefanderberg  staff  -        3467 Mar  2 18:36 SEO_GUIDE.md
+-rw-r--r--@  1 josefanderberg  staff  -         302 Dec 10 18:17 cors.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         597 Feb 24 15:38 eslint.config.js
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         549 Feb 17 09:49 firebase.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         869 Dec 11 02:18 firestore.indexes.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -        6061 Feb 25 18:25 firestore.rules
+	com.apple.provenance	    11 
+drwxr-xr-x@  8 josefanderberg  staff  -         256 Feb  5 17:18 functions
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -           0 Mar  3 16:12 ls_output.txt
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         262 Mar  2 21:04 next-env.d.ts
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         335 Feb  5 19:49 next.config.mjs
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -      311148 Mar  3 09:07 package-lock.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -        1427 Mar  2 20:55 package.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -          79 Dec  6 20:42 postcss.config.js
+	com.apple.provenance	    11 
+drwxr-xr-x@ 13 josefanderberg  staff  -         416 Mar  2 18:35 public
+	com.apple.provenance	    11 
+drwxr-xr-x@ 12 josefanderberg  staff  -         384 Mar  3 11:33 scraper-bot
+	com.apple.provenance	    11 
+drwxr-xr-x@ 14 josefanderberg  staff  -         448 Feb  5 18:19 src
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         161 Dec 10 18:17 storage.rules
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -        1547 Feb  4 01:00 tailwind.config.js
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -         774 Feb 25 17:17 tsconfig.json
+	com.apple.provenance	    11 
+-rw-r--r--@  1 josefanderberg  staff  -      132920 Feb 24 12:09 tsconfig.tsbuildinfo
+	com.apple.provenance	    11 
+-rw-r--r--   1 josefanderberg  staff  -         553 Mar  2 18:04 vitest.config.ts

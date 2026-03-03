@@ -14,6 +14,13 @@ export interface ExternalEventJSON {
     website: string;     // external URL
     maps_url?: string;   // Google Maps URL (optional)
     category?: string;   // category key e.g. "sport", "party"
+    lat?: number;        // Optional specific coordinates
+    lng?: number;        // Optional specific coordinates
+    latitud?: number;
+    longitud?: number;
+    bild?: string;       // image URL
+    image?: string;
+    coverImage?: string;
 }
 
 export interface EventImportData {
@@ -88,8 +95,20 @@ export function mapToLinkEvent(externalEvent: any): Omit<LinkEvent, 'id' | 'crea
             return null;
         }
 
-        // Get coordinates from venue name
-        const [lat, lng] = getVenueCoordinates(eventVenue);
+        // Get coordinates from venue name, or use provided
+        let lat = externalEvent.lat || externalEvent.latitud;
+        let lng = externalEvent.lng || externalEvent.longitud;
+
+        if (lat === undefined || lng === undefined) {
+            const coords = getVenueCoordinates(eventVenue);
+            lat = coords[0];
+            lng = coords[1];
+        } else {
+            lat = parseFloat(lat);
+            lng = parseFloat(lng);
+        }
+
+        const coverImage = externalEvent.image || externalEvent.bild || externalEvent.coverImage;
 
         // Resolve category — accept both Swedish label and English key
         const rawCategory = externalEvent.category || externalEvent.kategori;
@@ -114,7 +133,8 @@ export function mapToLinkEvent(externalEvent: any): Omit<LinkEvent, 'id' | 'crea
             lat,
             lng,
             hostName: eventOrganizer,
-            ...(resolvedCategory ? { category: resolvedCategory } : {})
+            ...(resolvedCategory ? { category: resolvedCategory } : {}),
+            ...(coverImage ? { coverImage: coverImage } : {})
         };
     } catch (error) {
         console.error('Error mapping event:', error, externalEvent);

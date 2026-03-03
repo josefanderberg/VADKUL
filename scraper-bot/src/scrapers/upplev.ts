@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import { db } from '../config/firebase';
 import { addEventToDb } from '../utils/dbHelper';
+import { getVenueCoordinates } from '../utils/venueCoordinates';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
 
@@ -80,9 +81,11 @@ export async function scrapeUpplevVaxjo() {
                 const location = article.querySelector('.uv-page-list-item__info-place-text')?.textContent?.trim() || 'Växjö';
 
                 // Img
-                let img = article.querySelector('img')?.src || '';
+                let img = article.querySelector('.uv-page-list-item__image img')?.getAttribute('src') ||
+                    article.querySelector('img')?.getAttribute('src') || '';
+
                 // Fix relative image paths
-                if (img.startsWith('/')) {
+                if (img && img.startsWith('/')) {
                     img = `https://upplev.vaxjo.se${img}`;
                 }
 
@@ -147,13 +150,15 @@ export async function scrapeUpplevVaxjo() {
 
                 const parsedDate = parseSwedishDate(evt.dateStr);
 
+                const [lat, lng] = getVenueCoordinates(evt.location);
+
                 const linkEvent = {
                     title: evt.title,
                     url: evt.link || UPPLEV_URL, // fallback to main page if no specific link
                     time: parsedDate,
                     locationName: evt.location,
-                    lat: 56.8796,
-                    lng: 14.8094,
+                    lat,
+                    lng,
                     hostName: 'Upplev Växjö',
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),

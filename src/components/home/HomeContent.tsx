@@ -522,11 +522,24 @@ export default function HomeContent() {
                         <>
                             {/* Regular Events Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-                                {filteredEvents.map(evt => (<div key={evt.id} className="h-full"><EventCard event={evt} /></div>))}
+                                {filteredEvents.map(evt => (
+                                    <div key={evt.id} className="h-full">
+                                        {(evt as any)._isExternal ? (
+                                            <LinkEventCard
+                                                linkEvent={(evt as any)._rawLinkEvent}
+                                                distance={evt.location?.distance}
+                                                isAdmin={isAdmin}
+                                                onDelete={() => refetchLinkEvents()}
+                                            />
+                                        ) : (
+                                            <EventCard event={evt} />
+                                        )}
+                                    </div>
+                                ))}
                             </div>
 
                             {/* Link Events Section - Separate and Less Prominent */}
-                            {linkEvents.length > 0 && (
+                            {!showExternal && linkEvents.length > 0 && (
                                 <div className="mt-12 border-t border-border pt-8">
                                     <h2 className="text-lg font-semibold text-muted-foreground mb-4 px-2 flex items-center gap-2">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -536,15 +549,19 @@ export default function HomeContent() {
                                         Externa Event
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-90">
-                                        {linkEvents.map(linkEvt => (
-                                            <div key={linkEvt.id} className="h-full">
-                                                <LinkEventCard
-                                                    linkEvent={linkEvt}
-                                                    isAdmin={isAdmin}
-                                                    onDelete={() => refetchLinkEvents()}
-                                                />
-                                            </div>
-                                        ))}
+                                        {linkEvents.map(linkEvt => {
+                                            const dist = calculateDistance(userLocation[0], userLocation[1], linkEvt.lat, linkEvt.lng);
+                                            return (
+                                                <div key={linkEvt.id} className="h-full">
+                                                    <LinkEventCard
+                                                        linkEvent={linkEvt}
+                                                        isAdmin={isAdmin}
+                                                        distance={dist}
+                                                        onDelete={() => refetchLinkEvents()}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
