@@ -63,26 +63,6 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { isAdmin, enableAdmin, disableAdmin } = useAdmin();
 
-  // STRIKT ADMIN-KONTROLL
-  if (!user || user.email !== 'admin@admin.com') {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
-          <ShieldAlert size={64} className="text-destructive mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Åtkomst nekad</h1>
-          <p className="text-muted-foreground mb-6">
-            Du har inte behörighet att se denna sida.
-          </p>
-          <a
-            href="/"
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
-          >
-            Gå till startsidan
-          </a>
-        </div>
-      </Layout>
-    );
-  }
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -105,6 +85,27 @@ export default function AdminDashboard() {
 
   // Settings State
   const [showHallOfFame, setShowHallOfFame] = useState(true);
+
+  // STRIKT ADMIN-KONTROLL
+  if (!user || user.email !== 'admin@admin.com') {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
+          <ShieldAlert size={64} className="text-destructive mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Åtkomst nekad</h1>
+          <p className="text-muted-foreground mb-6">
+            Du har inte behörighet att se denna sida.
+          </p>
+          <a
+            href="/"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
+          >
+            Gå till startsidan
+          </a>
+        </div>
+      </Layout>
+    );
+  }
 
   // Hämta data vid start
   useEffect(() => {

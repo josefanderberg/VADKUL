@@ -17,7 +17,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const stored = localStorage.getItem('isAdminMode');
         if (stored === 'true') {
-            setIsAdmin(true);
+            setTimeout(() => setIsAdmin(true), 0);
         }
     }, []);
 

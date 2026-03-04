@@ -1,19 +1,19 @@
 
 
-export default function Loading({ text = "Laddar...", fullScreen = false }: { text?: string, fullScreen?: boolean }) {
+// Spinner Component
+const Spinner = ({ size = "md" }: { size?: "md" | "lg" }) => {
+    const dims = size === "lg" ? "w-16 h-16 border-[6px]" : "w-10 h-10 border-4";
+    return (
+        <div className={`relative ${size === "lg" ? "w-16 h-16" : "w-10 h-10"}`}>
+            {/* Track */}
+            <div className={`absolute inset-0 ${dims} border-primary/20 rounded-full`}></div>
+            {/* Spinning Segment */}
+            <div className={`absolute inset-0 ${dims} border-primary border-t-transparent rounded-full animate-spin`}></div>
+        </div>
+    );
+};
 
-    // Spinner Component
-    const Spinner = ({ size = "md" }: { size?: "md" | "lg" }) => {
-        const dims = size === "lg" ? "w-16 h-16 border-[6px]" : "w-10 h-10 border-4";
-        return (
-            <div className={`relative ${size === "lg" ? "w-16 h-16" : "w-10 h-10"}`}>
-                {/* Track */}
-                <div className={`absolute inset-0 ${dims} border-primary/20 rounded-full`}></div>
-                {/* Spinning Segment */}
-                <div className={`absolute inset-0 ${dims} border-primary border-t-transparent rounded-full animate-spin`}></div>
-            </div>
-        );
-    };
+export default function Loading({ text = "Laddar...", fullScreen = false }: { text?: string, fullScreen?: boolean }) {
 
     if (fullScreen) {
         return (

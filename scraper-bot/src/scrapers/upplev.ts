@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenue, getVenueCoordinates } from '../utils/venueCoordinates';
+import { geocodeVenue } from '../utils/venueCoordinates';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
 
@@ -21,7 +21,7 @@ function guessCategoryFromTitle(title: string): string {
     return 'other';
 }
 
-const parseSwedishDate = (dateStr: string): Date => {
+const parseSwedishDate = (dateStr: string): { date: Date, hasSpecificTime: boolean } => {
     const months: Record<string, number> = {
         'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'maj': 4, 'jun': 5,
         'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11,
@@ -42,7 +42,22 @@ const parseSwedishDate = (dateStr: string): Date => {
     const dayMatch = dateStr.match(/\b(\d{1,2})\b/);
     const day = dayMatch ? parseInt(dayMatch[1], 10) : new Date().getDate();
 
-    return new Date(year, monthIndex, day, 12, 0, 0);
+    // Extract time (e.g., "19:00" or "19.00")
+    // Fallback till slutet av dagen om ingen specifik starttid angavs
+    let hour = 23;
+    let minute = 59;
+    let hasSpecificTime = false;
+    const timeMatch = dateStr.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+    if (timeMatch) {
+        hour = parseInt(timeMatch[1], 10);
+        minute = parseInt(timeMatch[2], 10);
+        hasSpecificTime = true;
+    }
+
+    return {
+        date: new Date(year, monthIndex, day, hour, minute, 0),
+        hasSpecificTime
+    };
 };
 
 /** Try to extract price/location from a booking/ticket page */
@@ -73,57 +88,72 @@ export async function scrapeUpplevVaxjo() {
     const browser = await puppeteer.launch({ headless: true });
 
     try {
-        const page = await browser.newPage();
-        await page.goto(UPPLEV_URL, { waitUntil: 'networkidle2' });
+        const events: any[] = [];
 
-        // Click "Visa fler evenemang" a few times
-        let hasMore = true;
-        let clicks = 0;
-        while (hasMore && clicks < 5) {
-            const clicked = await page.evaluate(() => {
-                const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('fler evenemang'));
-                if (btn && (btn as HTMLElement).offsetHeight > 0) { (btn as HTMLElement).click(); return true; }
-                return false;
-            });
-            if (clicked) { clicks++; await new Promise(r => setTimeout(r, 2000)); }
-            else hasMore = false;
-        }
-        console.log(`Loaded ${clicks} extra pages.`);
+        // Loop through up to 5 pages
+        for (let pageNum = 1; pageNum <= 5; pageNum++) {
+            const pageUrl = pageNum === 1 ? UPPLEV_URL : `${UPPLEV_URL}?page=${pageNum}`;
+            console.log(`Scraping page ${pageNum}: ${pageUrl}`);
 
-        const events = await page.evaluate(() => {
-            const articles = Array.from(document.querySelectorAll('article.uv-page-list-item__wrapper'));
-            return articles.map(article => {
-                const title = article.querySelector('.uv-page-list-item__title')?.textContent?.trim() || '';
-                const aTag = article.closest('a') || article.querySelector('a');
-                let link = (aTag as HTMLAnchorElement)?.href || '';
-                if (link.startsWith('/')) link = `https://upplev.vaxjo.se${link}`;
+            const page = await browser.newPage();
+            try {
+                await page.goto(pageUrl, { waitUntil: 'networkidle2' });
 
-                const dateNo = article.querySelector('.uv-page-list-item__date-no')?.textContent?.trim() || '';
-                const dateText = article.querySelector('.uv-page-list-item__date-text')?.textContent?.trim() || '';
-                const descText = article.querySelector('.uv-page-list-item__info-date')?.textContent?.trim() || '';
-                const dateStr = dateNo && dateText ? `${dateNo} ${dateText}` : descText;
+                // Check if page has any event articles, if not we've reached the end
+                const hasEvents = await page.evaluate(() => {
+                    return document.querySelectorAll('article.uv-page-list-item__wrapper').length > 0;
+                });
 
-                let location = article.querySelector('.uv-page-list-item__info-place-text')?.textContent?.trim() || '';
-                if (location.toLowerCase().startsWith('plats:')) location = location.substring(6).trim();
-
-                let img = article.querySelector('.uv-page-list-item__image img')?.getAttribute('src')
-                    || article.querySelector('img')?.getAttribute('src') || '';
-                if (img.startsWith('/')) img = `https://upplev.vaxjo.se${img}`;
-
-                const fullText = article.textContent?.toLowerCase() || '';
-                let price: number | string = '';
-                if (fullText.includes('gratis') || fullText.includes('fri entré')) {
-                    price = 'Gratis';
-                } else {
-                    const m = fullText.match(/(\d+)\s*(kr|sek)/);
-                    if (m) price = parseInt(m[1], 10);
+                if (!hasEvents) {
+                    console.log(`No events found on page ${pageNum}. Stopping pagination.`);
+                    await page.close();
+                    break;
                 }
 
-                return { title, dateStr, location, link, img, price };
-            });
-        });
+                const pageEvents = await page.evaluate(() => {
+                    const articles = Array.from(document.querySelectorAll('article.uv-page-list-item__wrapper'));
+                    return articles.map(article => {
+                        const title = article.querySelector('.uv-page-list-item__title')?.textContent?.trim() || '';
+                        const aTag = article.closest('a') || article.querySelector('a');
+                        let link = (aTag as HTMLAnchorElement)?.href || '';
+                        if (link.startsWith('/')) link = `https://upplev.vaxjo.se${link}`;
 
-        console.log(`Found ${events.length} events. Processing...`);
+                        const dateNo = article.querySelector('.uv-page-list-item__date-no')?.textContent?.trim() || '';
+                        const dateText = article.querySelector('.uv-page-list-item__date-text')?.textContent?.trim() || '';
+                        const descText = article.querySelector('.uv-page-list-item__info-date')?.textContent?.trim() || '';
+                        const dateStr = dateNo && dateText ? `${dateNo} ${dateText}` : descText;
+
+                        let location = article.querySelector('.uv-page-list-item__info-place-text')?.textContent?.trim() || '';
+                        if (location.toLowerCase().startsWith('plats:')) location = location.substring(6).trim();
+
+                        let img = article.querySelector('.uv-page-list-item__image img')?.getAttribute('src')
+                            || article.querySelector('img')?.getAttribute('src') || '';
+                        if (img.startsWith('/')) img = `https://upplev.vaxjo.se${img}`;
+
+                        const fullText = article.textContent?.toLowerCase() || '';
+                        let price: number | string = '';
+                        if (fullText.includes('gratis') || fullText.includes('fri entré')) {
+                            price = 'Gratis';
+                        } else {
+                            const m = fullText.match(/(\d+)\s*(kr|sek)/);
+                            if (m) price = parseInt(m[1], 10);
+                        }
+
+                        return { title, dateStr, location, link, img, price };
+                    });
+                });
+
+                events.push(...pageEvents);
+                console.log(`Found ${pageEvents.length} events on page ${pageNum}.`);
+
+            } catch (err) {
+                console.error(`Error scraping page ${pageNum}:`, err);
+            } finally {
+                await page.close();
+            }
+        }
+
+        console.log(`Found total ${events.length} events. Processing...`);
 
         for (const evt of events) {
             try {
@@ -131,12 +161,13 @@ export async function scrapeUpplevVaxjo() {
                 const exists = await eventExistsInDb(evt.link || '');
                 if (exists) { console.log(`Already exists: ${evt.title}`); continue; }
 
-                const parsedDate = parseSwedishDate(evt.dateStr);
+                const parsedDateInfo = parseSwedishDate(evt.dateStr);
+                const parsedDate = parsedDateInfo.date;
+                const hasSpecificTime = parsedDateInfo.hasSpecificTime;
+
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalLocation = evt.location || 'Växjö';
                 let finalImg = evt.img;
-                let directLat: number | null = null;
-                let directLng: number | null = null;
 
                 // ── Deep scrape event detail page ──────────────────────────────
                 if (evt.link && evt.link.includes('upplev.vaxjo.se')) {
@@ -149,8 +180,6 @@ export async function scrapeUpplevVaxjo() {
                             // ── 1. JSON-LD structured data (most reliable) ──
                             let jsonLdPrice: number | string | undefined;
                             let jsonLdLocation = '';
-                            let jsonLdLat: number | null = null;
-                            let jsonLdLng: number | null = null;
                             let jsonLdImg = '';
                             let jsonLdDate = '';
                             let bookingUrl = '';
@@ -170,12 +199,11 @@ export async function scrapeUpplevVaxjo() {
                                             }
                                             if (offer.url) bookingUrl = offer.url;
                                         }
-                                        // Location
+                                        // Location (name + street address; we geocode ourselves, ignore geo coords)
                                         if (data.location) {
                                             const loc = data.location;
                                             if (loc.name) jsonLdLocation = loc.name;
                                             if (loc.address?.streetAddress) jsonLdLocation = jsonLdLocation || loc.address.streetAddress;
-                                            if (loc.geo?.latitude) { jsonLdLat = loc.geo.latitude; jsonLdLng = loc.geo.longitude; }
                                         }
                                         // Image
                                         if (data.image) {
@@ -228,7 +256,7 @@ export async function scrapeUpplevVaxjo() {
                             const heroImg = document.querySelector('.hero-image img, .event-header img, article img, .uv-page-event-info__image img')?.getAttribute('src') || '';
 
                             return {
-                                jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, jsonLdDate,
+                                jsonLdPrice, jsonLdLocation, jsonLdImg, jsonLdDate,
                                 cssPrice, cssLocation, bookingUrl, heroImg
                             };
                         });
@@ -236,7 +264,6 @@ export async function scrapeUpplevVaxjo() {
                         // Apply JSON-LD data (most reliable)
                         if (deepData.jsonLdPrice !== undefined) finalPrice = deepData.jsonLdPrice;
                         if (deepData.jsonLdLocation) finalLocation = deepData.jsonLdLocation;
-                        if (deepData.jsonLdLat) { directLat = deepData.jsonLdLat; directLng = deepData.jsonLdLng; }
                         if (deepData.jsonLdImg) finalImg = deepData.jsonLdImg;
 
                         // Apply CSS fallback if JSON-LD didn't provide it
@@ -264,24 +291,16 @@ export async function scrapeUpplevVaxjo() {
                 finalLocation = finalLocation?.trim() || 'Växjö';
                 if (!finalLocation || finalLocation.length < 2) finalLocation = 'Växjö';
 
-                // Resolve coordinates
-                let lat: number;
-                let lng: number;
-
-                if (directLat && directLng) {
-                    lat = directLat;
-                    lng = directLng;
-                    console.log(`  Coords from JSON-LD: [${lat}, ${lng}]`);
-                } else {
-                    const coords = await geocodeVenue(finalLocation);
-                    lat = coords ? coords[0] : 56.8796;
-                    lng = coords ? coords[1] : 14.8094;
-                }
+                // Resolve coordinates – always geocode by venue name for accuracy
+                const coords = await geocodeVenue(finalLocation);
+                const lat = coords ? coords[0] : 56.8796;
+                const lng = coords ? coords[1] : 14.8094;
 
                 const linkEvent = {
                     title: evt.title,
                     url: evt.link || UPPLEV_URL,
                     time: parsedDate,
+                    hasSpecificTime,
                     locationName: finalLocation,
                     lat,
                     lng,

@@ -21,7 +21,8 @@ export default function Navbar() {
 
   useEffect(() => {
     const cached = localStorage.getItem('cached_avatar_url');
-    if (cached) setNavImage(cached);
+    // Using setTimeout to prevent React warning about synchronous state updates inside effect
+    if (cached) setTimeout(() => setNavImage(cached), 0);
   }, []);
 
   // State för notiser (Flyttad från NotificationsMenu)
@@ -95,7 +96,7 @@ export default function Navbar() {
         }
       });
     } else {
-      setNavImage(null);
+      setTimeout(() => setNavImage(null), 0);
       localStorage.removeItem('cached_avatar_url'); // Rensa vid utloggning
     }
   }, [user]);

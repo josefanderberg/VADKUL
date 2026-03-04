@@ -135,7 +135,8 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                 newAttendees = newAttendees.filter(a => a.email !== user.email);
                 toast.success("Du har avbokat din plats.");
             } else {
-                if (newAttendees.length >= event.maxParticipants) {
+                const currentConfirmedCount = newAttendees.filter(a => a.status !== 'pending').length;
+                if (currentConfirmedCount >= event.maxParticipants) {
                     toast.error("Tyvärr, eventet är fullbokat.");
                     setJoining(false);
                     return;
@@ -431,7 +432,7 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
 
                 {/* --- HERO IMAGE --- */}
                 <div className="relative h-56 md:h-72 w-full md:rounded-b-3xl overflow-hidden -mt-16 md:mt-0 mb-6 group">
-                    <Image
+                    <Image unoptimized
                         src={coverImage}
                         alt={event.title}
                         fill
@@ -500,7 +501,7 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                             >
                                 {event.host.photoURL ? (
                                     <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden ring-2 ring-background shadow-sm">
-                                        <Image
+                                        <Image unoptimized
                                             src={event.host.photoURL}
                                             fill
                                             sizes="32px"
@@ -650,7 +651,7 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                                                     <div className="flex items-center gap-3">
                                                         {request.photoURL ? (
                                                             <div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-border">
-                                                                <Image
+                                                                <Image unoptimized
                                                                     src={request.photoURL}
                                                                     alt={request.displayName}
                                                                     fill
@@ -726,7 +727,7 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
 
                                                 const Avatar = photo ? (
                                                     <div className={`relative ${isHost ? 'w-8 h-8' : 'w-6 h-6'} shrink-0 rounded-full overflow-hidden`}>
-                                                        <Image
+                                                        <Image unoptimized
                                                             src={photo}
                                                             alt={displayStr}
                                                             fill

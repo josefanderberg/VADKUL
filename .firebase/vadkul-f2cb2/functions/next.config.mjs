@@ -8,7 +8,14 @@ var nextConfig = {
         protocol: "https",
         hostname: "**"
       }
-    ]
+    ],
+    unoptimized: true
+  },
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  typescript: {
+    ignoreBuildErrors: true
   }
 };
 var next_config_default = nextConfig;

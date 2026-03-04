@@ -139,6 +139,7 @@ export interface LinkEvent {
   title: string;
   url: string;
   time: Date;
+  hasSpecificTime?: boolean; // <--- NY: Anger om en specifik tid hämtades
   createdAt: Date;
   locationName: string;
   lat: number;

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import path from 'path';
 
-export async function POST() {
+export async function POST(): Promise<NextResponse> {
     return new Promise((resolve) => {
         // Path to the scraper-bot directory
         const scraperDir = path.join(process.cwd(), 'scraper-bot');

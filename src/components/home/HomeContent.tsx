@@ -35,13 +35,16 @@ export default function HomeContent() {
 
     // 1. Initialisera userLocation från storage eller default 
     // Vi flyttar upp detta för att kunna använda i queryKey
-    const [userLocation, setUserLocation] = useState<[number, number]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = sessionStorage.getItem('vadkul_map_center');
-            return saved ? JSON.parse(saved) : [56.8556, 14.8250];
+    // 1. Initialisera userLocation från storage eller default 
+    // Vi flyttar upp detta för att kunna använda i queryKey
+    const [userLocation, setUserLocation] = useState<[number, number]>([56.8556, 14.8250]);
+
+    useEffect(() => {
+        const saved = sessionStorage.getItem('vadkul_map_center');
+        if (saved) {
+            setUserLocation(JSON.parse(saved));
         }
-        return [56.8556, 14.8250];
-    });
+    }, []);
 
     // 2. State för "Sökfönster" för Query
     const [fetchRadius, setFetchRadius] = useState(50000);
@@ -85,13 +88,17 @@ export default function HomeContent() {
     const searchParams = useSearchParams();
 
     // Initialize view from storage or URL param
-    const [view, setView] = useState<'list' | 'map'>(() => {
-        const viewParam = searchParams.get('view');
-        if (viewParam === 'map') return 'map';
-        if (viewParam === 'list') return 'list';
+    const [view, setView] = useState<'list' | 'map'>('list');
 
-        return (typeof window !== 'undefined' && sessionStorage.getItem('vadkul_home_view') as 'list' | 'map') || 'list';
-    });
+    useEffect(() => {
+        const viewParam = searchParams.get('view');
+        if (viewParam === 'map' || viewParam === 'list') {
+            setView(viewParam);
+        } else {
+            const saved = sessionStorage.getItem('vadkul_home_view') as 'list' | 'map';
+            if (saved) setView(saved);
+        }
+    }, [searchParams]);
 
 
 
@@ -291,9 +298,13 @@ export default function HomeContent() {
         // 3. Ta bara de 30 närmaste
         const top30Closest = candidates.slice(0, 30);
 
-        // 4. Lägg till externa event om valt (nu visas de i både map och list)
+        // Vi filtrerar ändå externa event här om showExternal är sant,
+        // men för list-vyn mappar vi dem separat i sin egen lista nedan, 
+        // medan de för kart-vyn (och om man vill) returneras tillsammans.
+        let externalCandidates: any[] = [];
+
         if (showExternal) {
-            const externalCandidates = linkEvents.map(le => {
+            externalCandidates = linkEvents.map(le => {
                 const dist = calculateDistance(userLocation[0], userLocation[1], le.lat, le.lng);
 
                 // Mappa LinkEvent till AppEvent-liknande struktur för kartan/listan
@@ -342,16 +353,15 @@ export default function HomeContent() {
 
                 return true;
             });
-
-            // Combine both regular and external events
-            candidates = [...top30Closest, ...externalCandidates];
-        } else {
-            // Only regular events
-            candidates = [...top30Closest];
         }
 
-        // 5. Final Sorting
-        return candidates.sort((a, b) => {
+        // 4. Returnera uppdelad data
+        // För att inte bryta HomeMap etc, returnerar vi en array som går att använda i kartan.
+        // Arrayen contains vanliga event om showExternal är falskt, annars båda.
+        let mapCandidates = showExternal ? [...top30Closest, ...externalCandidates] : [...top30Closest];
+
+        // 5. Final Sorting för main candidates
+        mapCandidates.sort((a, b) => {
             switch (sortBy) {
                 case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
                 case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
@@ -362,6 +372,13 @@ export default function HomeContent() {
                 default: return 0;
             }
         });
+
+        // Returnera objekt för att hantera separation.
+        return {
+            mapCandidates, // Alla (inkl externa) efter sortering (används för kartan och "närmsta", etc)
+            regularEvents: mapCandidates.filter(e => !e._isExternal),
+            externalEvents: mapCandidates.filter(e => e._isExternal)
+        };
     }, [events, linkEvents, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery, showExternal, view]); // <-- Lade till view
 
     const handleMapClick = (lat: number, lng: number) => {
@@ -374,19 +391,19 @@ export default function HomeContent() {
 
     const cycleNextEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.length === 0) return;
-        const currentIndex = filteredEvents.findIndex(evt => evt.id === selectedEvent.id);
-        const nextIndex = (currentIndex + 1) % filteredEvents.length;
-        setSelectedEvent(filteredEvents[nextIndex]);
+        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
+        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
+        const nextIndex = (currentIndex + 1) % filteredEvents.mapCandidates.length;
+        setSelectedEvent(filteredEvents.mapCandidates[nextIndex]);
     };
 
     const cyclePrevEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.length === 0) return;
-        const currentIndex = filteredEvents.findIndex(evt => evt.id === selectedEvent.id);
+        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
+        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
         // Lägg till length innan modulo för att hantera negativa tal korrekt
-        const prevIndex = (currentIndex - 1 + filteredEvents.length) % filteredEvents.length;
-        setSelectedEvent(filteredEvents[prevIndex]);
+        const prevIndex = (currentIndex - 1 + filteredEvents.mapCandidates.length) % filteredEvents.mapCandidates.length;
+        setSelectedEvent(filteredEvents.mapCandidates[prevIndex]);
     };
 
     const resetFilters = () => {
@@ -466,24 +483,22 @@ export default function HomeContent() {
                     <div className="flex justify-between items-center gap-4">
                         {/* 1. Toggle (Vänster) */}
                         <div className="flex-1">
-                            {view === 'map' && (
-                                <div
-                                    id="external-events-toggle"
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
-                                    onClick={() => {
-                                        console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
-                                        setShowExternal(!showExternal);
-                                    }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={showExternal}
-                                        onChange={() => { }}
-                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                                    />
-                                    <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
-                                </div>
-                            )}
+                            <div
+                                id="external-events-toggle"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-lg shadow-sm border border-border cursor-pointer hover:bg-accent/50 transition-colors pointer-events-auto"
+                                onClick={() => {
+                                    console.log('TOGGLE: showExternal from', showExternal, 'to', !showExternal);
+                                    setShowExternal(!showExternal);
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={showExternal}
+                                    onChange={() => { }}
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                />
+                                <span className="text-xs font-bold text-foreground whitespace-nowrap">Visa externa event</span>
+                            </div>
                         </div>
 
                         {/* 2. Sortering (Höger) */}
@@ -515,7 +530,7 @@ export default function HomeContent() {
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                             <p>Laddar events...</p>
                         </div>
-                    ) : filteredEvents.length === 0 && view === 'list' ? (
+                    ) : filteredEvents.mapCandidates.length === 0 && view === 'list' ? (
                         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
                             <p className="text-slate-500 font-medium mb-2">Inga events hittades.</p>
                             <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
@@ -523,47 +538,37 @@ export default function HomeContent() {
                     ) : view === 'list' ? (
                         <>
                             {/* Regular Events Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-                                {filteredEvents.map(evt => (
-                                    <div key={evt.id} className="h-full">
-                                        {(evt as any)._isExternal ? (
-                                            <LinkEventCard
-                                                linkEvent={(evt as any)._rawLinkEvent}
-                                                distance={evt.location?.distance}
-                                                isAdmin={isAdmin}
-                                                onDelete={() => refetchLinkEvents()}
-                                            />
-                                        ) : (
+                            {filteredEvents.regularEvents.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+                                    {filteredEvents.regularEvents.map(evt => (
+                                        <div key={evt.id} className="h-full">
                                             <EventCard event={evt} />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                            {/* Link Events Section - Separate and Less Prominent */}
-                            {!showExternal && linkEvents.length > 0 && (
-                                <div className="mt-12 border-t border-border pt-8">
-                                    <h2 className="text-lg font-semibold text-muted-foreground mb-4 px-2 flex items-center gap-2">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            {/* External Link Events Section at the bottom */}
+                            {showExternal && filteredEvents.externalEvents.length > 0 && (
+                                <div className="mt-8 border-t border-border pt-8 pb-8">
+                                    <h2 className="text-xl font-bold text-foreground mb-6 px-2 flex items-center gap-2">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-indigo-600">
                                             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                                             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                                         </svg>
-                                        Externa Event
+                                        Externa event
                                     </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-90">
-                                        {linkEvents.map(linkEvt => {
-                                            const dist = calculateDistance(userLocation[0], userLocation[1], linkEvt.lat, linkEvt.lng);
-                                            return (
-                                                <div key={linkEvt.id} className="h-full">
-                                                    <LinkEventCard
-                                                        linkEvent={linkEvt}
-                                                        isAdmin={isAdmin}
-                                                        distance={dist}
-                                                        onDelete={() => refetchLinkEvents()}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {filteredEvents.externalEvents.map(evt => (
+                                            <div key={evt.id} className="h-full">
+                                                <LinkEventCard
+                                                    linkEvent={evt._rawLinkEvent}
+                                                    distance={evt.location?.distance}
+                                                    isAdmin={isAdmin}
+                                                    onDelete={() => refetchLinkEvents()}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -571,7 +576,7 @@ export default function HomeContent() {
                     ) : (
                         <HomeMap
                             userLocation={userLocation}
-                            events={filteredEvents}
+                            events={filteredEvents.mapCandidates}
                             selectedEvent={selectedEvent}
                             setSelectedEvent={setSelectedEvent}
                             handleMapMove={handleMapMove}

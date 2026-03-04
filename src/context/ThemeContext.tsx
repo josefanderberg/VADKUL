@@ -16,10 +16,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      setTheme('dark');
+      setTimeout(() => setTheme('dark'), 0);
       document.documentElement.classList.add('dark');
     } else {
-      setTheme('light');
+      setTimeout(() => setTheme('light'), 0);
       document.documentElement.classList.remove('dark');
     }
   }, []);

@@ -116,7 +116,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     <div className="relative w-full h-24 overflow-hidden bg-muted/50">
                         {/* Pattern/Cover background */}
                         {isCustomImage ? (
-                            <Image
+                            <Image unoptimized
                                 src={coverSrc}
                                 alt=""
                                 fill
@@ -125,7 +125,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 aria-hidden="true"
                             />
                         ) : (
-                            <Image
+                            <Image unoptimized
                                 src={coverSrc}
                                 alt=""
                                 fill
@@ -178,7 +178,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 <div className="p-1 rounded bg-muted/50">
                                     <ExternalLink size={14} strokeWidth={2} />
                                 </div>
-                                <span>{formatEventDate(linkEvent.time)}</span>
+                                <span>{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
                             </div>
 
                             {/* Location & Price */}
@@ -195,7 +195,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 {distance !== undefined && (
                                     <>
                                         <span className="text-muted-foreground">•</span>
-                                        <span>{distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(1)} km`}</span>
+                                        <span>{distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`}</span>
                                     </>
                                 )}
 

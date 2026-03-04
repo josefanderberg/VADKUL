@@ -21,7 +21,7 @@ function guessCategoryFromTitle(title: string): string {
     return 'other';
 }
 
-function parseSwedishDate(dateStr: string): Date {
+function parseSwedishDate(dateStr: string): { date: Date, hasSpecificTime: boolean } {
     const months: Record<string, number> = {
         'januari': 0, 'februari': 1, 'mars': 2, 'april': 3, 'maj': 4, 'juni': 5,
         'juli': 6, 'augusti': 7, 'september': 8, 'oktober': 9, 'november': 10, 'december': 11,
@@ -41,7 +41,23 @@ function parseSwedishDate(dateStr: string): Date {
 
     const dayMatch = dateStr.match(/\b(\d{1,2})\b/);
     const day = dayMatch ? parseInt(dayMatch[1], 10) : 1;
-    return new Date(year, monthIndex, day, 12, 0, 0);
+
+    // Extract time (e.g., "19:00" or "19.00")
+    // Fallback till slutet av dagen om ingen specifik starttid angavs
+    let hour = 23;
+    let minute = 59;
+    let hasSpecificTime = false;
+    const timeMatch = dateStr.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+    if (timeMatch) {
+        hour = parseInt(timeMatch[1], 10);
+        minute = parseInt(timeMatch[2], 10);
+        hasSpecificTime = true;
+    }
+
+    return {
+        date: new Date(year, monthIndex, day, hour, minute, 0),
+        hasSpecificTime
+    };
 }
 
 /** Scrape a booking/ticket page for price info */
@@ -104,7 +120,9 @@ export async function scrapeVaxjoCo() {
                 const exists = await eventExistsInDb(evt.link);
                 if (exists) { console.log(`Already exists: ${evt.title}`); continue; }
 
-                const parsedDate = parseSwedishDate(evt.dateStr);
+                const parsedDateInfo = parseSwedishDate(evt.dateStr);
+                const parsedDate = parsedDateInfo.date;
+                const hasSpecificTime = parsedDateInfo.hasSpecificTime;
 
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalImg = evt.img;
@@ -256,6 +274,7 @@ export async function scrapeVaxjoCo() {
                     title: evt.title,
                     url: evt.link,
                     time: parsedDate,
+                    hasSpecificTime,
                     locationName: finalLocation,
                     lat,
                     lng,

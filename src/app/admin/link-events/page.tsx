@@ -443,14 +443,13 @@ export default function LinkEventsAdminPage() {
                                     <div className="text-slate-600 italic">Inga loggar än...</div>
                                 )}
                                 {scraperLogs.map((log, i) => (
-                                    <div key={i} className={`leading-relaxed whitespace-pre-wrap ${
-                                        log.type === 'error' ? 'text-red-400' :
-                                        log.type === 'warn' ? 'text-yellow-400' :
-                                        log.type === 'done' ? 'text-green-400 font-bold' :
-                                        log.type === 'start' ? 'text-cyan-400 font-bold' :
-                                        log.type === 'info' ? 'text-blue-400' :
-                                        'text-slate-300'
-                                    }`}>
+                                    <div key={i} className={`leading-relaxed whitespace-pre-wrap ${log.type === 'error' ? 'text-red-400' :
+                                            log.type === 'warn' ? 'text-yellow-400' :
+                                                log.type === 'done' ? 'text-green-400 font-bold' :
+                                                    log.type === 'start' ? 'text-cyan-400 font-bold' :
+                                                        log.type === 'info' ? 'text-blue-400' :
+                                                            'text-slate-300'
+                                        }`}>
                                         {(log.type === 'log') ? `> ${log.message}` : log.message}
                                     </div>
                                 ))}
@@ -736,6 +735,20 @@ export default function LinkEventsAdminPage() {
                                             <LayoutGrid size={14} />
                                         </button>
                                     </div>
+                                    <button
+                                        onClick={handleRunScrapers}
+                                        disabled={isScraping}
+                                        className="text-[10px] font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        {isScraping ? (
+                                            <>
+                                                <div className="animate-spin h-3 w-3 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                                                Skrapar...
+                                            </>
+                                        ) : (
+                                            <>▶ Skrapa</>
+                                        )}
+                                    </button>
                                     {linkEvents.length > 0 && (
                                         <button
                                             onClick={handleClearAll}

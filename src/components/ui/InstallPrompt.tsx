@@ -8,14 +8,15 @@ export default function InstallPrompt() {
 
     useEffect(() => {
         // Detect if already installed related (standalone mode)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as unknown as { standalone?: boolean }).standalone;
         if (isStandalone) {
-            setIsAppInstalled(true);
+            // setTimeout to avoid sync state update in effect during render phase triggering Next.js warning, though usually it's fine
+            setTimeout(() => setIsAppInstalled(true), 0);
             return;
         }
 
         // Android / Desktop logic
-        const handler = (e: any) => {
+        const handler = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
         };

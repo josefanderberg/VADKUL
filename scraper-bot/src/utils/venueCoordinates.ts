@@ -140,6 +140,27 @@ export function getVenueCoordinates(venueName: string): [number, number] | null 
     return null;
 }
 
+const NOMINATIM_DELAY_MS = 1100; // respect 1 req/sec
+
+async function nominatimSearch(query: string): Promise<[number, number] | null> {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se`;
+    const response = await fetch(url, {
+        headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
+    });
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    for (const result of data ?? []) {
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        // Sanity check: must be within ~80 km of Växjö centrum
+        if (Math.abs(lat - 56.88) < 0.7 && Math.abs(lng - 14.81) < 0.7) {
+            return [lat, lng];
+        }
+    }
+    return null;
+}
+
 /**
  * Geocode a venue name via OpenStreetMap Nominatim.
  * Respects the 1 req/sec rate limit.
@@ -151,44 +172,35 @@ export async function geocodeVenue(venueName: string): Promise<[number, number] 
     const local = getVenueCoordinates(venueName);
     if (local) return local;
 
-    // Build search query
-    let query = venueName
-        .replace(/(kulturhuset|biograf|restaurang|café|cafe)/gi, '')
-        .trim();
+    console.log(`[Geocoding] Querying Nominatim for: "${venueName}"`);
 
-    const searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Växjö, Sverige')}&format=json&limit=1&countrycodes=se`;
-
-    try {
-        console.log(`[Geocoding] Querying API for: "${venueName}"`);
-        const response = await fetch(searchUrl, {
-            headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
-        });
-
-        if (!response.ok) {
-            console.warn(`[Geocoding] API status: ${response.status}`);
-            return null;
-        }
-
-        const data = await response.json();
-        if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lng = parseFloat(data[0].lon);
-
-            // Sanity check: must be within reasonable distance of Växjö (±0.5°)
-            if (Math.abs(lat - 56.88) < 0.5 && Math.abs(lng - 14.81) < 0.5) {
-                console.log(`[Geocoding] Success for "${venueName}": [${lat}, ${lng}]`);
-                await new Promise(r => setTimeout(r, 1100)); // respect 1 req/sec
-                return [lat, lng];
-            } else {
-                console.warn(`[Geocoding] Result for "${venueName}" is too far from Växjö: [${lat}, ${lng}]`);
-            }
-        }
-
-        console.log(`[Geocoding] No results for "${venueName}". Using default.`);
-    } catch (error) {
-        console.error(`[Geocoding] Error for "${venueName}":`, error);
+    // Strategy 1: full name + Växjö
+    let result = await nominatimSearch(`${venueName}, Växjö, Sverige`);
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    if (result) {
+        console.log(`[Geocoding] Found (strategy 1) "${venueName}": [${result[0]}, ${result[1]}]`);
+        return result;
     }
 
-    await new Promise(r => setTimeout(r, 500));
+    // Strategy 2: just name + Växjö (without "Sverige" to widen search)
+    result = await nominatimSearch(`${venueName}, Växjö`);
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    if (result) {
+        console.log(`[Geocoding] Found (strategy 2) "${venueName}": [${result[0]}, ${result[1]}]`);
+        return result;
+    }
+
+    // Strategy 3: strip common prefix words and retry
+    const simplified = venueName.replace(/^(scenen på|i |på |vid )/gi, '').trim();
+    if (simplified !== venueName) {
+        result = await nominatimSearch(`${simplified}, Växjö, Sverige`);
+        await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+        if (result) {
+            console.log(`[Geocoding] Found (strategy 3) "${simplified}": [${result[0]}, ${result[1]}]`);
+            return result;
+        }
+    }
+
+    console.log(`[Geocoding] No results for "${venueName}".`);
     return null;
 }

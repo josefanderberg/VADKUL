@@ -9,7 +9,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 
 if (typeof window !== 'undefined') {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: string })._getIconUrl;
     L.Icon.Default.mergeOptions({
         iconUrl: '/leaflet/marker-icon.png',
         iconRetinaUrl: '/leaflet/marker-icon-2x.png',

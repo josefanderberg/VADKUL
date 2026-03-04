@@ -11,8 +11,8 @@ export default function About() {
     // Handle direct linking to tabs (Checking window.location.hash in useEffect as we don't have useLocation hook same way)
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            if (window.location.hash === '#hall-of-fame') setActiveTab('hall-of-fame');
-            if (window.location.hash === '#feedback') setActiveTab('feedback');
+            if (window.location.hash === '#hall-of-fame') setTimeout(() => setActiveTab('hall-of-fame'), 0);
+            if (window.location.hash === '#feedback') setTimeout(() => setActiveTab('feedback'), 0);
         }
     }, []);
 

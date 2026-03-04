@@ -160,6 +160,7 @@ export default function HomeMap({
                                 <LinkEventCard
                                     linkEvent={(selectedEvent as any)._rawLinkEvent}
                                     isAdmin={isAdmin}
+                                    distance={selectedEvent.location?.distance}
                                 />
                             ) : (
                                 <EventCard event={selectedEvent} compact={true} />

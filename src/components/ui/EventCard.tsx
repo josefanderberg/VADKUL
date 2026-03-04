@@ -28,22 +28,21 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     const coverImage = typeof rawCoverImage === 'string' ? rawCoverImage : rawCoverImage.src;
 
     // --- DISTANS BERÄKNING (NYTT) ---
-    const [distance, setDistance] = useState<number | null>(
-        typeof event.location.distance === 'number' ? event.location.distance : null
-    );
+    const initialDistance = typeof event.location.distance === 'number'
+        ? event.location.distance
+        : null;
+
+    const [distance, setDistance] = useState<number | null>(initialDistance);
 
     useEffect(() => {
-        if (typeof event.location.distance === 'number') {
-            setDistance(event.location.distance);
-            return;
+        // Fallback: Räkna ut från localStorage bara om vi inte redan har ett avstånd
+        if (distance === null) {
+            const userLoc = loadLocationFromLocalStorage();
+            if (userLoc && event.lat && event.lng) {
+                setDistance(calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng));
+            }
         }
-
-        // Fallback: Räkna ut från localStorage
-        const userLoc = loadLocationFromLocalStorage();
-        if (userLoc && event.lat && event.lng) {
-            setDistance(calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng));
-        }
-    }, [event.lat, event.lng, event.location.distance]);
+    }, [event.lat, event.lng, distance]);
 
     const formatDistance = (d: number) => {
         if (d < 1) return `${Math.round(d * 1000)} m`;
@@ -128,7 +127,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                 <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
                                     <Clock size={14} strokeWidth={2.5} />
                                 </div>
-                                <span>{formatEventDate(event.time)}</span>
+                                <span>{formatEventDate(event.time, (event as any).hasSpecificTime !== false)}</span>
                             </div>
 
                             <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -202,7 +201,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                                 >
                                     {event.host.photoURL ? (
                                         <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden ring-1 ring-border">
-                                            <Image
+                                            <Image unoptimized
                                                 src={event.host.photoURL}
                                                 alt={event.host.name}
                                                 fill

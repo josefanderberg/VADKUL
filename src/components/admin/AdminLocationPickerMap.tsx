@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Leaflet icon fixes for Next.js
 if (typeof window !== 'undefined') {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: string })._getIconUrl;
     L.Icon.Default.mergeOptions({
         iconUrl: '/leaflet/marker-icon.png',
         iconRetinaUrl: '/leaflet/marker-icon-2x.png',

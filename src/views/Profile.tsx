@@ -288,7 +288,7 @@ export default function Profile() {
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
                             {image ? (
-                                <Image
+                                <Image unoptimized
                                     src={image}
                                     alt="Profil"
                                     width={96}
