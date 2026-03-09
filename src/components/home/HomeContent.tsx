@@ -111,7 +111,7 @@ export default function HomeContent() {
     const [filterToday, setFilterToday] = useState(false);
     const [sortBy, setSortBy] = useState('closest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
-    const [showExternal, setShowExternal] = useState(false); // <--- NY: Visa externa event (default false)
+    const [showExternal, setShowExternal] = useState(true); // <--- NY: Visa externa event (default false)
 
     // Settings (Init from cache to avoid flicker)
     const [showHallOfFame, setShowHallOfFame] = useState(() => {
@@ -504,7 +504,7 @@ export default function HomeContent() {
                         {/* 2. Sortering (Höger) */}
                         <div className="flex items-center gap-1 text-muted-foreground bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-border pointer-events-auto">
                             <ArrowUpDown size={14} />
-                            <span className="text-xs font-bold uppercase mr-1">Sortera:</span>
+                            <span className="hidden [@media(min-width:450px)]:inline text-xs font-bold uppercase mr-1">Sortera:</span>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}

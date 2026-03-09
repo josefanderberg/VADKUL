@@ -23,7 +23,7 @@
     "firebase-functions": "^6.0.1"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "server.js"
 }

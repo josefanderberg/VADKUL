@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 /* ── floating emoji config ── */
 const FLOATING_EMOJIS = [
@@ -34,6 +35,7 @@ const FEATURES = [
 ];
 
 export default function WelcomeModal() {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -55,6 +57,11 @@ export default function WelcomeModal() {
             setIsOpen(false);
             localStorage.setItem('seen_welcome_modal', 'true');
         }, 300);
+    };
+
+    const handleNavigationClose = () => {
+        handleClose();
+        router.push('/?view=map');
     };
 
     if (!isOpen) return null;
@@ -161,9 +168,10 @@ export default function WelcomeModal() {
                     {/* ── feature pills ── */}
                     <div className="space-y-3 mb-8">
                         {FEATURES.map((feature, i) => (
-                            <div
+                            <button
                                 key={i}
-                                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-left text-white transition-transform hover:scale-[1.02]"
+                                onClick={handleNavigationClose}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-left text-white transition-all hover:scale-[1.02] hover:bg-white/25 active:scale-95"
                                 style={{
                                     animation: isVisible
                                         ? `welcome-slide-up 0.4s ${0.45 + i * 0.1}s ease-out both`
@@ -172,13 +180,13 @@ export default function WelcomeModal() {
                             >
                                 <span className="text-2xl flex-shrink-0">{feature.emoji}</span>
                                 <span className="font-semibold text-[15px]">{feature.text}</span>
-                            </div>
+                            </button>
                         ))}
                     </div>
 
                     {/* ── CTA button ── */}
                     <button
-                        onClick={handleClose}
+                        onClick={handleNavigationClose}
                         className="w-full py-4 bg-white text-rose-600 font-extrabold rounded-2xl text-lg shadow-xl transform transition-all active:scale-95 hover:scale-[1.02]"
                         style={{
                             animation: isVisible
