@@ -14,7 +14,7 @@ export async function registerServiceWorker() {
 
         // Check for updates periodically
         setInterval(() => {
-            registration.update();
+            registration.update().catch(err => console.debug('SW update check failed:', err));
         }, 60 * 60 * 1000); // Check every hour
 
         // Handle updates
@@ -32,6 +32,14 @@ export async function registerServiceWorker() {
 
         return registration;
     } catch (error) {
-        console.error('Service Worker registration failed:', error);
+        if (error instanceof Error) {
+            console.error('Service Worker registration failed:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+        } else {
+            console.error('Service Worker registration failed with unknown error:', error);
+        }
     }
 }

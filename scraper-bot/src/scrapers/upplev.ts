@@ -162,8 +162,8 @@ export async function scrapeUpplevVaxjo() {
                 if (exists) { console.log(`Already exists: ${evt.title}`); continue; }
 
                 const parsedDateInfo = parseSwedishDate(evt.dateStr);
-                const parsedDate = parsedDateInfo.date;
-                const hasSpecificTime = parsedDateInfo.hasSpecificTime;
+                let parsedDate = parsedDateInfo.date;
+                let hasSpecificTime = parsedDateInfo.hasSpecificTime;
 
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalLocation = evt.location || 'Växjö';
@@ -255,9 +255,15 @@ export async function scrapeUpplevVaxjo() {
                             // Hero image
                             const heroImg = document.querySelector('.hero-image img, .event-header img, article img, .uv-page-event-info__image img')?.getAttribute('src') || '';
 
+                            let cssTimeMatch = '';
+                            if (!jsonLdDate || !jsonLdDate.includes('T')) {
+                                const timeMatch = mainText.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+                                if (timeMatch) cssTimeMatch = timeMatch[0].replace('.', ':');
+                            }
+
                             return {
                                 jsonLdPrice, jsonLdLocation, jsonLdImg, jsonLdDate,
-                                cssPrice, cssLocation, bookingUrl, heroImg
+                                cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch
                             };
                         });
 
@@ -272,6 +278,24 @@ export async function scrapeUpplevVaxjo() {
                             if (deepData.cssLocation) finalLocation = deepData.cssLocation;
                         }
                         if (deepData.heroImg && !finalImg) finalImg = deepData.heroImg;
+
+                        // Try to extract specific time
+                        if (!hasSpecificTime) {
+                            if (deepData.jsonLdDate && deepData.jsonLdDate.includes('T')) {
+                                const timePart = deepData.jsonLdDate.split('T')[1]?.substring(0, 5);
+                                if (timePart && timePart.length >= 5) {
+                                    const timeParts = timePart.split(':');
+                                    parsedDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0);
+                                    hasSpecificTime = true;
+                                    console.log(`  → Found time in JSON-LD: ${timePart}`);
+                                }
+                            } else if (deepData.cssTimeMatch) {
+                                const timeParts = deepData.cssTimeMatch.split(':');
+                                parsedDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0);
+                                hasSpecificTime = true;
+                                console.log(`  → Found time in text: ${deepData.cssTimeMatch}`);
+                            }
+                        }
 
                         // Follow booking link for price if still unknown
                         if ((finalPrice === undefined || finalPrice === '') && deepData.bookingUrl) {

@@ -121,8 +121,8 @@ export async function scrapeVaxjoCo() {
                 if (exists) { console.log(`Already exists: ${evt.title}`); continue; }
 
                 const parsedDateInfo = parseSwedishDate(evt.dateStr);
-                const parsedDate = parsedDateInfo.date;
-                const hasSpecificTime = parsedDateInfo.hasSpecificTime;
+                let parsedDate = parsedDateInfo.date;
+                let hasSpecificTime = parsedDateInfo.hasSpecificTime;
 
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalImg = evt.img;
@@ -143,6 +143,7 @@ export async function scrapeVaxjoCo() {
                         let jsonLdLat: number | null = null;
                         let jsonLdLng: number | null = null;
                         let jsonLdImg = '';
+                        let jsonLdDate = '';
                         let bookingUrl = '';
 
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
@@ -171,6 +172,8 @@ export async function scrapeVaxjoCo() {
                                         const img = Array.isArray(data.image) ? data.image[0] : data.image;
                                         jsonLdImg = typeof img === 'string' ? img : (img?.url || '');
                                     }
+                                    // Date
+                                    if (data.startDate) jsonLdDate = data.startDate;
                                 }
                             } catch { /* ignore */ }
                         }
@@ -226,7 +229,21 @@ export async function scrapeVaxjoCo() {
                             '.hero-image img, .event-header img, article img, .tribe-events-event-image img, .wp-post-image'
                         )?.getAttribute('src') || '';
 
-                        return { jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, cssPrice, cssLocation, bookingUrl, heroImg };
+                        let cssTimeMatch = '';
+                        if (!jsonLdDate || !jsonLdDate.includes('T')) {
+                            const timeMatch = contentText.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+                            if (timeMatch) cssTimeMatch = timeMatch[0].replace('.', ':');
+
+                            if (!cssTimeMatch) {
+                                const timeEl = document.querySelector('.tribe-events-schedule, .event-time, .time');
+                                if (timeEl) {
+                                    const m = !!timeEl.textContent && timeEl.textContent.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+                                    if (m) cssTimeMatch = m[0].replace('.', ':');
+                                }
+                            }
+                        }
+
+                        return { jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, jsonLdDate, cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch };
                     });
 
                     // Apply best available data
@@ -244,6 +261,24 @@ export async function scrapeVaxjoCo() {
                         console.log(`  → Following booking link: ${deepData.bookingUrl}`);
                         const booking = await scrapeBookingPage(browser, deepData.bookingUrl);
                         if (booking.price !== undefined) finalPrice = booking.price;
+                    }
+
+                    // Try to extract specific time
+                    if (!hasSpecificTime) {
+                        if (deepData.jsonLdDate && deepData.jsonLdDate.includes('T')) {
+                            const timePart = deepData.jsonLdDate.split('T')[1]?.substring(0, 5);
+                            if (timePart && timePart.length >= 5) {
+                                const timeParts = timePart.split(':');
+                                parsedDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0);
+                                hasSpecificTime = true;
+                                console.log(`  → Found time in JSON-LD: ${timePart}`);
+                            }
+                        } else if (deepData.cssTimeMatch) {
+                            const timeParts = deepData.cssTimeMatch.split(':');
+                            parsedDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0);
+                            hasSpecificTime = true;
+                            console.log(`  → Found time in text: ${deepData.cssTimeMatch}`);
+                        }
                     }
 
                 } catch (e) {

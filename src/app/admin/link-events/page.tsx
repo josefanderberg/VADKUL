@@ -97,9 +97,9 @@ export default function LinkEventsAdminPage() {
         fetchLinkEvents();
     }, []);
 
-    // Auto-scroll terminal logs
+    // Auto-scroll terminal logs (disabled to prevent map from jumping)
     useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [scraperLogs]);
 
     const fetchLinkEvents = async () => {
@@ -444,11 +444,11 @@ export default function LinkEventsAdminPage() {
                                 )}
                                 {scraperLogs.map((log, i) => (
                                     <div key={i} className={`leading-relaxed whitespace-pre-wrap ${log.type === 'error' ? 'text-red-400' :
-                                            log.type === 'warn' ? 'text-yellow-400' :
-                                                log.type === 'done' ? 'text-green-400 font-bold' :
-                                                    log.type === 'start' ? 'text-cyan-400 font-bold' :
-                                                        log.type === 'info' ? 'text-blue-400' :
-                                                            'text-slate-300'
+                                        log.type === 'warn' ? 'text-yellow-400' :
+                                            log.type === 'done' ? 'text-green-400 font-bold' :
+                                                log.type === 'start' ? 'text-cyan-400 font-bold' :
+                                                    log.type === 'info' ? 'text-blue-400' :
+                                                        'text-slate-300'
                                         }`}>
                                         {(log.type === 'log') ? `> ${log.message}` : log.message}
                                     </div>

@@ -109,7 +109,7 @@ export default function HomeContent() {
     const [filterAge, setFilterAge] = useState('all');
     const [filterFree, setFilterFree] = useState(false);
     const [filterToday, setFilterToday] = useState(false);
-    const [sortBy, setSortBy] = useState('closest'); // Default: närmast
+    const [sortBy, setSortBy] = useState('soonest'); // Default: närmast
     const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
     const [showExternal, setShowExternal] = useState(true); // <--- NY: Visa externa event (default false)
 

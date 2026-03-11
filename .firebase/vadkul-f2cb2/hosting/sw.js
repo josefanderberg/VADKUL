@@ -84,30 +84,31 @@ self.addEventListener('fetch', (event) => {
 // PUSH NOTIFICATIONS (FCM)
 // ==============================
 
-// Import Firebase Messaging (via importScripts for SW context)
-importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
+try {
+    // Import Firebase Messaging (via importScripts for SW context)
+    importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
+    importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-const urlParams = new URLSearchParams(location.search);
-const apiKey = urlParams.get('firebaseApiKey') || '';
-const projectId = urlParams.get('projectId') || '';
-const messagingSenderId = urlParams.get('messagingSenderId') || '';
-const appId = urlParams.get('appId') || '';
+    const urlParams = new URLSearchParams(location.search);
+    const apiKey = urlParams.get('firebaseApiKey') || '';
+    const projectId = urlParams.get('projectId') || '';
+    const messagingSenderId = urlParams.get('messagingSenderId') || '';
+    const appId = urlParams.get('appId') || '';
 
-// Initialize Firebase in Service Worker
-if (apiKey) {
-    if (!firebase.apps.length) {
-        firebase.initializeApp({
-            apiKey: apiKey,
-            authDomain: `${projectId}.firebaseapp.com`,
-            projectId: projectId,
-            storageBucket: `${projectId}.firebasestorage.app`,
-            messagingSenderId: messagingSenderId,
-            appId: appId
-        });
-    }
+    // Initialize Firebase in Service Worker
+    // Check if firebase is defined (might fail if importScripts failed)
+    if (typeof firebase !== 'undefined' && apiKey) {
+        if (!firebase.apps.length) {
+            firebase.initializeApp({
+                apiKey: apiKey,
+                authDomain: `${projectId}.firebaseapp.com`,
+                projectId: projectId,
+                storageBucket: `${projectId}.firebasestorage.app`,
+                messagingSenderId: messagingSenderId,
+                appId: appId
+            });
+        }
 
-    try {
         const messaging = firebase.messaging();
 
         // Handle background messages
@@ -127,9 +128,9 @@ if (apiKey) {
 
             return self.registration.showNotification(notificationTitle, notificationOptions);
         });
-    } catch (e) {
-        console.error('Firebase messaging error in sw.js:', e);
     }
+} catch (e) {
+    console.error('Service Worker: Failed to initialize Firebase messaging. Push notifications might not work.', e);
 }
 
 // Handle notification clicks
