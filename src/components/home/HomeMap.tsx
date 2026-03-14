@@ -121,6 +121,7 @@ export default function HomeMap({
                             key={evt.id}
                             position={[evt.lat, evt.lng]}
                             icon={createCustomIcon(evt.type, isSelected, (evt as any)._isExternal)}
+                            zIndexOffset={isSelected ? 1000 : 0}
                             eventHandlers={{
                                 click: (e) => {
                                     L.DomEvent.stopPropagation(e as any);

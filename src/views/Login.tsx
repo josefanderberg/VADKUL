@@ -315,9 +315,22 @@ export default function Login() {
                                 <button type="submit" disabled={loading} className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md disabled:opacity-70">
                                     {loading ? 'Loggar in...' : 'Logga In'}
                                 </button>
-                                <p className="text-center text-sm text-muted-foreground mt-4">
-                                    Inget konto? <button type="button" onClick={() => setIsLoginMode(false)} className="text-primary font-bold hover:underline">Registrera dig</button>
-                                </p>
+                                <div className="relative py-4">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-border"></div>
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-card px-2 text-muted-foreground font-bold">eller</span>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsLoginMode(false)}
+                                    className="w-full py-3.5 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 font-black rounded-xl hover:bg-emerald-100 transition-all active:scale-[0.98] uppercase tracking-wider text-sm shadow-sm"
+                                >
+                                    Skapa nytt konto ✨
+                                </button>
                             </form>
                         )}
 
@@ -339,7 +352,7 @@ export default function Login() {
                                     <input type="password" required minLength={6} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                                         className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Samma lösenord igen" />
                                 </div>
-                                <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all">
+                                <button type="submit" className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-black rounded-2xl shadow-[0_8px_0_0_rgba(6,78,59,1)] hover:shadow-[0_6px_0_0_rgba(6,78,59,1)] active:shadow-none active:translate-y-2 transition-all duration-150 uppercase tracking-wider">
                                     Nästa Steg →
                                 </button>
                                 <p className="text-center text-sm text-muted-foreground mt-4">
@@ -460,7 +473,7 @@ export default function Login() {
                                 <button
                                     onClick={handleRegister}
                                     disabled={loading || !fullName || !birthDate}
-                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                                    className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-black rounded-2xl shadow-[0_8px_0_0_rgba(6,78,59,1)] hover:shadow-[0_6px_0_0_rgba(6,78,59,1)] active:shadow-none active:translate-y-2 disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all duration-150 mt-6 uppercase tracking-wider"
                                 >
                                     {loading ? 'Skapar konto...' : 'Slutför Registrering'}
                                 </button>

@@ -32,39 +32,37 @@ export default function Navbar() {
   // State för notiser (Flyttad från NotificationsMenu)
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // Highlight-sekvens för oinloggade (Info -> Tema -> Tema -> Login)
-  const [activeHighlight, setActiveHighlight] = useState<'info' | 'theme' | 'login' | null>(null);
+  // Highlight-sekvens för oinloggade (Plus -> Info -> Theme -> Login)
+  const [activeHighlight, setActiveHighlight] = useState<'plus' | 'info' | 'theme' | 'login' | null>(null);
 
   useEffect(() => {
     if (user) return;
 
     const runSequence = async () => {
-      // 1. Info icon (1s)
+      const stepTime = 1000;
+      const pauseTime = 1000;
+
+      // 1. Plus (Create)
+      setActiveHighlight('plus');
+      await new Promise(r => setTimeout(r, stepTime));
+      setActiveHighlight(null);
+      await new Promise(r => setTimeout(r, pauseTime));
+
+      // 2. Info
       setActiveHighlight('info');
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, stepTime));
       setActiveHighlight(null);
+      await new Promise(r => setTimeout(r, pauseTime));
 
-      // 2. 1 sek senare den darkmode knappen i 1 sekund
-      await new Promise(r => setTimeout(r, 1000));
+      // 3. Theme
       setActiveHighlight('theme');
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, stepTime));
       setActiveHighlight(null);
+      await new Promise(r => setTimeout(r, pauseTime));
 
-      // 3. sen till baka 2 sek (Då ska info kanppen tändas i en sekund)
-      await new Promise(r => setTimeout(r, 500));
-      setActiveHighlight('info');
-      await new Promise(r => setTimeout(r, 1000));
-      setActiveHighlight(null);
-      await new Promise(r => setTimeout(r, 500));
-
-      // 4. sen till dark igen i 0.5 s
-      setActiveHighlight('theme');
-      await new Promise(r => setTimeout(r, 500));
-      setActiveHighlight(null);
-
-      // 5. och sen login/registrera i en sekund (direkt efter)
+      // 4. Login
       setActiveHighlight('login');
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, stepTime));
       setActiveHighlight(null);
     };
 
@@ -155,9 +153,17 @@ export default function Navbar() {
 
         <div className="flex items-center gap-0.5 md:gap-2">
 
-          {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
-          {/* 1. SKAPA EVENT (Nu placerad FÖRE Theme Toggle) */}
-          <Link href="/create" className="p-1.5 md:p-2 text-primary hover:bg-accent hover:text-accent-foreground rounded-full transition-colors" title="Skapa Event">
+          {/* 1. SKAPA EVENT */}
+          <Link 
+            href="/create" 
+            className={[
+              'p-1.5 md:p-2 rounded-full transition-all duration-300 ease-in-out',
+              activeHighlight === 'plus'
+                ? 'bg-accent text-accent-foreground scale-110 shadow-sm'
+                : 'text-primary hover:bg-accent hover:text-accent-foreground scale-100',
+            ].join(' ')}
+            title="Skapa Event"
+          >
             <Plus size={24} strokeWidth={2.5} />
           </Link>
 

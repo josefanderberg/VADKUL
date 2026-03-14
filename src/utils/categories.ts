@@ -1,6 +1,7 @@
 // src/utils/categories.ts
 import mingleImage from '../assets/categories/mingle.png';
 import cultureImage from '../assets/categories/culture.png';
+import servicesImage from '../assets/categories/services.png';
 
 export const EVENT_CATEGORIES = {
   // --- AKTIVITET & HÄLSA ---
@@ -245,6 +246,19 @@ export const EVENT_CATEGORIES = {
     hoverBorder: 'hover:border-teal-500',
     description: 'Professionellt nätverkande, lokala samarbeten och after work',
     defaultImage: mingleImage // Updated
+  },
+  services: {
+    id: 'services',
+    label: 'Tjänster & Hjälp',
+    emoji: '🛠️',
+    markerColor: 'bg-indigo-600',
+    color: 'bg-indigo-100 text-indigo-700',
+    badgeStyle: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30',
+    iconColor: 'text-indigo-600',
+    activeColor: 'bg-indigo-600 border-indigo-600',
+    hoverBorder: 'hover:border-indigo-600',
+    description: 'Hjälp med flytt, läxhjälp, hundvakt eller andra tjänster',
+    defaultImage: servicesImage
   },
   other: {
     id: 'other',
