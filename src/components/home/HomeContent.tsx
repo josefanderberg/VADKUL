@@ -391,19 +391,19 @@ export default function HomeContent() {
 
     const cycleNextEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
-        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
-        const nextIndex = (currentIndex + 1) % filteredEvents.mapCandidates.length;
-        setSelectedEvent(filteredEvents.mapCandidates[nextIndex]);
+        if (!selectedEvent || filteredEvents.regularEvents.length === 0) return;
+        const currentIndex = filteredEvents.regularEvents.findIndex(evt => evt.id === selectedEvent.id);
+        const nextIndex = (currentIndex + 1) % filteredEvents.regularEvents.length;
+        setSelectedEvent(filteredEvents.regularEvents[nextIndex]);
     };
 
     const cyclePrevEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
-        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
+        if (!selectedEvent || filteredEvents.regularEvents.length === 0) return;
+        const currentIndex = filteredEvents.regularEvents.findIndex(evt => evt.id === selectedEvent.id);
         // Lägg till length innan modulo för att hantera negativa tal korrekt
-        const prevIndex = (currentIndex - 1 + filteredEvents.mapCandidates.length) % filteredEvents.mapCandidates.length;
-        setSelectedEvent(filteredEvents.mapCandidates[prevIndex]);
+        const prevIndex = (currentIndex - 1 + filteredEvents.regularEvents.length) % filteredEvents.regularEvents.length;
+        setSelectedEvent(filteredEvents.regularEvents[prevIndex]);
     };
 
     const resetFilters = () => {
