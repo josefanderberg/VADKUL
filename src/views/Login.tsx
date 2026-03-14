@@ -364,59 +364,57 @@ export default function Login() {
                         {/* --- REGISTRERING STEG 2 (Profil & Kamera) --- */}
                         {!isLoginMode && regStep === 2 && (
                             <>
-                                <div className="space-y-5 mb-8">
-                                    <div className="grid grid-cols-10 gap-3">
-                                        <div className="col-span-3">
-                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
-                                            <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                                                className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt namn" />
-                                        </div>
-                                        <div className="col-span-7">
-                                            <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Födelsedatum</label>
-                                            <div className="grid grid-cols-10 gap-2">
-                                                {/* ÅR */}
-                                                <div className="col-span-4">
-                                                    <input
-                                                        ref={yearRef}
-                                                        type="text"
-                                                        placeholder="ÅÅÅÅ"
-                                                        maxLength={4}
-                                                        value={bYear}
-                                                        onChange={handleYearChange}
-                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
-                                                        required
-                                                    />
-                                                </div>
-                                                {/* MÅNAD */}
-                                                <div className="col-span-3">
-                                                    <input
-                                                        ref={monthRef}
-                                                        type="text"
-                                                        placeholder="MM"
-                                                        maxLength={2}
-                                                        value={bMonth}
-                                                        onChange={handleMonthChange}
-                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
-                                                        required
-                                                    />
-                                                </div>
-                                                {/* DAG */}
-                                                <div className="col-span-3">
-                                                    <input
-                                                        ref={dayRef}
-                                                        type="text"
-                                                        placeholder="DD"
-                                                        maxLength={2}
-                                                        value={bDay}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                                            setBDay(val);
-                                                            updateBirthDate(bYear, bMonth, val);
-                                                        }}
-                                                        className="w-full p-3 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
-                                                        required
-                                                    />
-                                                </div>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Namn</label>
+                                        <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                                            className="w-full p-3.5 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary" placeholder="Ditt fullständiga namn" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Födelsedatum</label>
+                                        <div className="grid grid-cols-10 gap-2">
+                                            {/* ÅR */}
+                                            <div className="col-span-4">
+                                                <input
+                                                    ref={yearRef}
+                                                    type="text"
+                                                    placeholder="ÅÅÅÅ"
+                                                    maxLength={4}
+                                                    value={bYear}
+                                                    onChange={handleYearChange}
+                                                    className="w-full p-3.5 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                    required
+                                                />
+                                            </div>
+                                            {/* MÅNAD */}
+                                            <div className="col-span-3">
+                                                <input
+                                                    ref={monthRef}
+                                                    type="text"
+                                                    placeholder="MM"
+                                                    maxLength={2}
+                                                    value={bMonth}
+                                                    onChange={handleMonthChange}
+                                                    className="w-full p-3.5 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                    required
+                                                />
+                                            </div>
+                                            {/* DAG */}
+                                            <div className="col-span-3">
+                                                <input
+                                                    ref={dayRef}
+                                                    type="text"
+                                                    placeholder="DD"
+                                                    maxLength={2}
+                                                    value={bDay}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                                        setBDay(val);
+                                                        updateBirthDate(bYear, bMonth, val);
+                                                    }}
+                                                    className="w-full p-3.5 rounded-xl border border-border bg-muted/50 text-foreground outline-none focus:ring-2 focus:ring-primary text-center placeholder-muted-foreground/50"
+                                                    required
+                                                />
                                             </div>
                                         </div>
                                     </div>

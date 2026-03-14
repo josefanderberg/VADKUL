@@ -186,19 +186,20 @@ export default function CreateEvent() {
             if (!user) return; // Repetated check for type narrowing in async closure
             setLoading(true);
             try {
-                // 1. Check premium status
+                // 1. Check verified/premium status
                 const p = await userService.getUserProfile(user.uid);
-                const isPremium = (p?.redeemedCodes?.length || 0) > 0;
+                const isVerified = p?.isVerified || (p?.redeemedCodes?.length || 0) > 0;
 
                 // 2. Check active events
                 const hosted = await eventService.getHostedEvents(user.uid);
                 const now = new Date();
                 const activeCount = hosted.filter(e => new Date(e.time) >= now).length;
 
-                setHasActiveLimitValues({ count: activeCount, isPremium });
+                setHasActiveLimitValues({ count: activeCount, isPremium: isVerified });
 
-                // If NOT premium AND limit reached -> Block
-                if (!isPremium && activeCount >= 3 && !isEditMode) {
+                // New logic: 1 base, 3 if verified
+                const limit = isVerified ? 3 : 1;
+                if (activeCount >= limit && !isEditMode) {
                     setShowLimitModal(true);
                 }
             } catch (e) {
@@ -382,19 +383,17 @@ export default function CreateEvent() {
         if (!isEditMode) {
             try {
                 const p = await userService.getUserProfile(user.uid);
-                const isPremium = (p?.redeemedCodes?.length || 0) > 0;
+                const isVerified = p?.isVerified || (p?.redeemedCodes?.length || 0) > 0;
+                const limit = isVerified ? 3 : 1;
 
-                if (!isPremium) {
-                    const hosted = await eventService.getHostedEvents(user.uid);
-                    const now = new Date();
-                    // Räkna aktiva events (starttid i framtiden)
-                    const activeCount = hosted.filter(e => new Date(e.time) >= now).length;
+                const hosted = await eventService.getHostedEvents(user.uid);
+                const now = new Date();
+                const activeCount = hosted.filter(e => new Date(e.time) >= now).length;
 
-                    if (activeCount >= 3) {
-                        setShowLimitModal(true); // Visa modalen
-                        setLoading(false);
-                        return; // Stoppa sparande
-                    }
+                if (activeCount >= limit) {
+                    setShowLimitModal(true);
+                    setLoading(false);
+                    return;
                 }
             } catch (checkErr) {
                 console.error("Limit double-check failed", checkErr);
@@ -530,8 +529,10 @@ export default function CreateEvent() {
                         </div>
                         <h2 className="text-2xl font-bold mb-2">Maxgräns nådd!</h2>
                         <p className="text-muted-foreground mb-6">
-                            Du har {hasActiveLimitValues.count} aktiva events. <br />
-                            För att skapa fler måste du hitta en hemlig kod på campus!
+                            Du har {hasActiveLimitValues.count} aktiv{hasActiveLimitValues.count === 1 ? '' : 'a'} event{hasActiveLimitValues.count === 1 ? '' : 's'}. <br />
+                            {hasActiveLimitValues.isPremium 
+                                ? "Du har nått maxgränsen för verifierade användare (3 st)." 
+                                : "Som ny användare kan du ha 1 event aktivt åt gången. Verifiera dig för att låsa upp fler!"}
                         </p>
 
                         <div className="space-y-3">
