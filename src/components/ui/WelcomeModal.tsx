@@ -28,23 +28,48 @@ const CONFETTI_DOTS = Array.from({ length: 18 }, (_, i) => ({
 }));
 
 /* ── feature pills ── */
-const FEATURES = [
-    { emoji: '🗺️', text: 'Se vad som händer nära dig' },
-    { emoji: '🎪', text: 'Skapa spontana events' },
-    { emoji: '🤝', text: 'Häng med nya & gamla vänner' },
+const ONBOARDING_STEPS = [
+    {
+        emoji: '🎉',
+        title: 'Vad gör du idag?',
+        description: 'Livet är för kort för att sitta hemma.',
+        subText: 'Hitta något kul — nu.',
+        buttonText: 'Berätta mer! ✨',
+    },
+    {
+        emoji: '🗺️',
+        title: 'Upptäck vad som händer',
+        description: 'Se vad som händer nära dig just nu.',
+        subText: 'Hitta spontana events i realtid.',
+        buttonText: 'Coolt, vad mer? 🎪',
+    },
+    {
+        emoji: '🤝',
+        title: 'Bli en värd',
+        description: 'Skapa egna events på 30 sekunder.',
+        subText: 'Padel, fika eller fest? Du bestämmer!',
+        buttonText: 'Låter bra! 🚀',
+    },
+    {
+        emoji: '✨',
+        title: 'Gemenskapen väntar',
+        description: 'Häng med nya och gamla vänner.',
+        subText: 'Skapa ett konto för att börja delta!',
+        buttonText: 'Kom igång! 🔓',
+    }
 ];
 
 export default function WelcomeModal() {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
+    const [currentStep, setCurrentStep] = useState(0);
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('seen_welcome_modal');
         if (!hasSeenWelcome) {
             const timer = setTimeout(() => {
                 setIsOpen(true);
-                // Trigger animations after mount
                 requestAnimationFrame(() => setIsVisible(true));
             }, 400);
             return () => clearTimeout(timer);
@@ -59,12 +84,22 @@ export default function WelcomeModal() {
         }, 300);
     };
 
+    const handleNext = () => {
+        if (currentStep < ONBOARDING_STEPS.length - 1) {
+            setCurrentStep(prev => prev + 1);
+        } else {
+            handleNavigationClose();
+        }
+    };
+
     const handleNavigationClose = () => {
         handleClose();
-        router.push('/?view=map');
+        router.push('/login');
     };
 
     if (!isOpen) return null;
+
+    const step = ONBOARDING_STEPS[currentStep];
 
     return (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
@@ -119,83 +154,77 @@ export default function WelcomeModal() {
                 ))}
 
                 {/* ── glass content card ── */}
-                <div className="relative p-8 text-center">
-                    {/* close button */}
-                    <button
-                        onClick={handleClose}
-                        className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
-                        style={{
-                            animation: isVisible ? 'welcome-slide-up 0.4s 0.8s ease-out both' : 'none',
-                        }}
-                    >
-                        <X size={22} />
-                    </button>
+                <div className="relative p-8 text-center min-h-[480px] flex flex-col justify-between">
+                    <div>
+                        {/* close button */}
+                        <button
+                            onClick={handleClose}
+                            className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
+                        >
+                            <X size={22} />
+                        </button>
 
-                    {/* ── wiggling hero emoji ── */}
-                    <div
-                        className="inline-flex items-center justify-center w-20 h-20 mb-5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30"
-                        style={{
-                            animation: isVisible
-                                ? 'welcome-slide-up 0.5s 0.15s ease-out both, welcome-wiggle 2s 1s ease-in-out 2'
-                                : 'none',
-                        }}
-                    >
-                        <span className="text-5xl">🎉</span>
+                        {/* ── hero emoji ── */}
+                        <div
+                            key={`emoji-${currentStep}`}
+                            className="inline-flex items-center justify-center w-20 h-20 mb-5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 animate-in zoom-in duration-300"
+                        >
+                            <span className="text-5xl">{step.emoji}</span>
+                        </div>
+
+                        {/* ── hero text ── */}
+                        <h2
+                            key={`title-${currentStep}`}
+                            className="text-3xl font-extrabold text-white mb-2 tracking-tight animate-in slide-in-from-bottom-2 duration-300"
+                            style={{ textShadow: '0 2px 10px rgba(0,0,0,0.15)' }}
+                        >
+                            {step.title}
+                        </h2>
+
+                        <div
+                            key={`body-${currentStep}`}
+                            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                        >
+                            <p className="text-white/90 text-lg leading-relaxed font-medium">
+                                {step.description}
+                                <br />
+                                <span className="text-white font-bold">{step.subText}</span>
+                            </p>
+                        </div>
                     </div>
 
-                    {/* ── hero text ── */}
-                    <h2
-                        className="text-4xl font-extrabold text-white mb-2 tracking-tight"
-                        style={{
-                            animation: isVisible ? 'welcome-slide-up 0.5s 0.25s ease-out both' : 'none',
-                            textShadow: '0 2px 10px rgba(0,0,0,0.15)',
-                        }}
-                    >
-                        Vad gör du idag?
-                    </h2>
+                    <div className="mt-8 space-y-6">
+                        {/* ── step dots ── */}
+                        <div className="flex justify-center gap-2">
+                            {ONBOARDING_STEPS.map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                                        i === currentStep ? 'w-6 bg-white' : 'w-1.5 bg-white/30'
+                                    }`}
+                                />
+                            ))}
+                        </div>
 
-                    <p
-                        className="text-white/85 text-lg mb-8 leading-relaxed font-medium"
-                        style={{
-                            animation: isVisible ? 'welcome-slide-up 0.5s 0.35s ease-out both' : 'none',
-                        }}
-                    >
-                        Livet är för kort för att sitta hemma.
-                        <br />
-                        <span className="text-white font-bold">Hitta något kul — nu.</span>
-                    </p>
-
-                    {/* ── feature pills ── */}
-                    <div className="space-y-3 mb-8">
-                        {FEATURES.map((feature, i) => (
+                        {/* ── action button ── */}
+                        <div className="space-y-3">
                             <button
-                                key={i}
-                                onClick={handleNavigationClose}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-left text-white transition-all hover:scale-[1.02] hover:bg-white/25 active:scale-95"
-                                style={{
-                                    animation: isVisible
-                                        ? `welcome-slide-up 0.4s ${0.45 + i * 0.1}s ease-out both`
-                                        : 'none',
-                                }}
+                                onClick={handleNext}
+                                className="w-full py-4 bg-white text-rose-600 font-extrabold rounded-2xl text-lg shadow-xl transform transition-all active:scale-95 hover:scale-[1.02] flex items-center justify-center gap-2"
                             >
-                                <span className="text-2xl flex-shrink-0">{feature.emoji}</span>
-                                <span className="font-semibold text-[15px]">{feature.text}</span>
+                                {step.buttonText}
                             </button>
-                        ))}
-                    </div>
 
-                    {/* ── CTA button ── */}
-                    <button
-                        onClick={handleNavigationClose}
-                        className="w-full py-4 bg-white text-rose-600 font-extrabold rounded-2xl text-lg shadow-xl transform transition-all active:scale-95 hover:scale-[1.02]"
-                        style={{
-                            animation: isVisible
-                                ? 'welcome-slide-up 0.5s 0.75s ease-out both, welcome-pulse-glow 2s 1.5s ease-in-out infinite'
-                                : 'none',
-                        }}
-                    >
-                        Visa vad som händer! 🚀
-                    </button>
+                            {currentStep < ONBOARDING_STEPS.length - 1 && (
+                                <button
+                                    onClick={handleClose}
+                                    className="text-white/70 text-sm font-bold hover:text-white transition-colors"
+                                >
+                                    Hoppa över
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
                     {/* ── sparkle decorations ── */}
                     <div

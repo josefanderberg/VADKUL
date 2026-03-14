@@ -126,7 +126,7 @@ export default function About() {
                             <div className="max-w-6xl mx-auto space-y-24">
                                 <div className="grid md:grid-cols-2 gap-12 items-center">
                                     <div className="space-y-6 order-2 md:order-1">
-                                        <Link href="/admin" className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-sm hover:underline cursor-pointer">
+                                        <Link href="/" className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-sm hover:underline cursor-pointer">
                                             <Globe size={16} /> Lokalt Liv
                                         </Link>
                                         <h2 className="text-4xl font-bold tracking-tight">Väck liv i grannskapet</h2>
@@ -212,7 +212,7 @@ export default function About() {
                             <div className="max-w-3xl mx-auto relative">
                                 <h2 className="text-4xl md:text-5xl font-bold mb-8">Vågar du vara spontan?</h2>
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <Link href="/events" className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25 hover:-translate-y-1">
+                                    <Link href="/" className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25 hover:-translate-y-1">
                                         Hitta något nu
                                     </Link>
                                     <Link href="/create" className="inline-flex items-center justify-center gap-2 bg-background border-2 border-primary/20 text-foreground px-10 py-4 rounded-full font-bold text-lg hover:bg-muted transition-all">

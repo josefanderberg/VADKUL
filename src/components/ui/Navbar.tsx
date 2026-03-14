@@ -1,6 +1,7 @@
 // src/components/layout/Navbar.tsx
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { userService } from '../../services/userService';
@@ -15,6 +16,9 @@ import type { AppNotification } from '../../types';
 export default function Navbar() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // State för bilden i navbaren - Initiera med null för SSR, hämta i useEffect
   const [navImage, setNavImage] = useState<string | null>(null);
@@ -123,12 +127,29 @@ export default function Navbar() {
 
   const unreadChatCount = chatNotifications.filter(n => !n.read).length;
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Om vi är på startsidan, växla mellan karta och lista
+    if (pathname === '/') {
+      const currentView = searchParams.get('view') || 'map';
+      const nextView = currentView === 'map' ? 'list' : 'map';
+      router.push(`/?view=${nextView}`);
+    } else {
+      // Om vi kommer från en annan sida, gå direkt till kartan
+      router.push('/?view=map');
+    }
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md shadow-sm z-50 border-b border-border h-16 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 md:px-8 h-full flex justify-between items-center">
 
         {/* LOGO */}
-        <Link href="/" className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors">
+        <Link 
+          href="/" 
+          onClick={handleLogoClick}
+          className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors"
+        >
           VADKUL
         </Link>
 
