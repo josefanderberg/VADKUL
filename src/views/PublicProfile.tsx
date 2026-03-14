@@ -225,154 +225,19 @@ export default function PublicProfile() {
                     <ArrowLeft size={20} /> <span className="font-bold ml-1">Tillbaka</span>
                 </button>
 
-                {/* --- PROFIL HEADER (Liknande Profile.tsx) --- */}
-                <div className="bg-card rounded-2xl shadow-xl overflow-hidden border border-border mb-8">
-
-                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
-
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                            {profile.photoURL ? (
-                                <img
-                                    src={profile.photoURL}
-                                    alt={profile.displayName}
-                                    className="w-32 h-32 rounded-full border-4 border-background object-cover shadow-lg"
-                                />
-                            ) : (
-                                <div className="w-32 h-32 rounded-full border-4 border-background bg-primary/20 flex items-center justify-center shadow-lg text-4xl font-extrabold text-primary">
-                                    {initials}
-                                </div>
-                            )}
-                            {profile.isVerified && (
-                                <div className="absolute bottom-2 right-2 bg-background rounded-full p-1.5 shadow-sm">
-                                    <CheckCircle2 size={24} className="text-blue-500 fill-blue-50" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Namn & Info */}
-                        <div className="flex-1 w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-4 mb-4">
-                                <div>
-                                    <h1 className="text-3xl font-black text-foreground mb-1">
-                                        {profile.displayName}
-                                    </h1>
-
-                                    {profile.bio && (
-                                        <p className="text-muted-foreground text-sm md:text-base max-w-lg mx-auto md:mx-0 leading-relaxed mb-3">
-                                            {profile.bio}
-                                        </p>
-                                    )}
-
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-muted-foreground">
-                                        {profile.age > 0 && <span>{profile.age} år</span>}
-
-                                        <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20">
-                                            <Star size={14} fill="currentColor" />
-                                            <span className="font-bold">{ratingValue}</span>
-                                            <span className="opacity-70 text-xs font-normal">({profile.ratingCount || 0})</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5">
-                                            <MapPin size={14} />
-                                            <span>Växjö</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Calendar size={14} />
-                                            <span>Medlem sedan {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Nyligen'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Desktop Top Right Report Button */}
-                                {!isMe && !isLegacy && (
-                                    <button onClick={handleReport} className="hidden md:block p-2 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors self-start" title="Rapportera">
-                                        <Flag size={20} />
-                                    </button>
-                                )}
-                            </div>
-
-
-                            {/* --- ACTIONS BAR --- */}
-                            {!isMe && !isLegacy && (
-                                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mt-2">
-
-                                    {/* 1. VÄN-KNAPP LOGIK */}
-                                    {friendStatus === 'none' && (
-                                        <button
-                                            onClick={handleFriendRequest}
-                                            className="flex-1 md:flex-none bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            <UserPlus size={18} /> Lägg till vän
-                                        </button>
-                                    )}
-                                    {friendStatus === 'pending' && (
-                                        <button disabled className="flex-1 md:flex-none bg-muted text-muted-foreground px-5 py-2.5 rounded-xl font-bold border border-border cursor-not-allowed flex items-center justify-center gap-2">
-                                            Vänförfrågan skickad
-                                        </button>
-                                    )}
-                                    {friendStatus === 'incoming' && (
-                                        <button onClick={handleAcceptFriend} className="flex-1 md:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2">
-                                            <UserPlus size={18} /> Acceptera vän
-                                        </button>
-                                    )}
-                                    {friendStatus === 'accepted' && (
-                                        <div className="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold border border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
-                                            <CheckCircle2 size={18} /> Vänner
-                                        </div>
-                                    )}
-
-                                    {/* 2. BETYGSÄTT KNAPP */}
-                                    {hasRated ? (
-                                        <button disabled className="flex-1 md:flex-none bg-muted/50 text-amber-600/70 border border-amber-500/10 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 cursor-default" title="Du har redan betygsatt">
-                                            <Star size={18} fill="currentColor" /> Betygsatt
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => setIsRateModalOpen(true)}
-                                            className="flex-1 md:flex-none bg-card text-foreground border border-border hover:bg-muted px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            <Star size={18} /> Betygsätt
-                                        </button>
-                                    )}
-
-                                    {/* 3. CHAT KNAPP */}
-                                    <button
-                                        onClick={startChat}
-                                        className="flex-1 md:flex-none bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-                                    >
-                                        <MessageCircle size={18} /> Chatta
-                                    </button>
-
-                                    {/* Mobile Report Button (In Action Row) */}
-                                    <button
-                                        onClick={handleReport}
-                                        className="md:hidden p-3 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
-                                        title="Rapportera"
-                                    >
-                                        <Flag size={20} className="text-destructive/80" />
-                                    </button>
-
-                                </div>
-                            )}
-
-                        </div>
-                    </div>
-                </div>
-
                 {/* --- BLURRED CONTENT WRAPPER FOR NON-AUTH USERS --- */}
                 <div className="relative">
 
                     {/* OVERLAY FOR NON-AUTH */}
                     {!currentUser && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-32 bg-background/60 backdrop-blur-sm rounded-xl border border-white/20">
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 md:pt-32 bg-background/60 backdrop-blur-sm rounded-xl border border-white/20">
                             <div className="bg-card p-8 rounded-2xl shadow-2xl border border-border max-w-md text-center transform hover:scale-105 transition-transform duration-300">
                                 <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 text-primary animate-pulse">
                                     <UserPlus size={32} />
                                 </div>
                                 <h2 className="text-2xl font-bold mb-2">Nyfiken på {profile.displayName}?</h2>
                                 <p className="text-muted-foreground mb-6">
-                                    Logga in för att se vilka events {profile.displayName} ska gå på, vilka vänner hen har och mycket mer!
+                                    Logga in för att se {profile.displayName}s profil, vilka events hen ska gå på, vilka vänner hen har och mycket mer!
                                 </p>
                                 <div className="flex flex-col gap-3">
                                     <button
@@ -388,6 +253,142 @@ export default function PublicProfile() {
 
                     {/* ACTUAL CONTENT (Blurred if !currentUser) */}
                     <div className={!currentUser ? 'filter blur-md pointer-events-none select-none opacity-50' : ''}>
+
+                        {/* --- PROFIL HEADER (Liknande Profile.tsx) --- */}
+                        <div className="bg-card rounded-2xl shadow-xl overflow-hidden border border-border mb-8">
+
+                            <div className="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 relative">
+
+                                {/* Avatar */}
+                                <div className="relative flex-shrink-0">
+                                    {profile.photoURL ? (
+                                        <img
+                                            src={profile.photoURL}
+                                            alt={profile.displayName}
+                                            className="w-32 h-32 rounded-full border-4 border-background object-cover shadow-lg"
+                                        />
+                                    ) : (
+                                        <div className="w-32 h-32 rounded-full border-4 border-background bg-primary/20 flex items-center justify-center shadow-lg text-4xl font-extrabold text-primary">
+                                            {initials}
+                                        </div>
+                                    )}
+                                    {profile.isVerified && (
+                                        <div className="absolute bottom-2 right-2 bg-background rounded-full p-1.5 shadow-sm">
+                                            <CheckCircle2 size={24} className="text-blue-500 fill-blue-50" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Namn & Info */}
+                                <div className="flex-1 w-full">
+                                    <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-4 mb-4">
+                                        <div>
+                                            <h1 className="text-3xl font-black text-foreground mb-1">
+                                                {profile.displayName}
+                                            </h1>
+
+                                            {profile.bio && (
+                                                <p className="text-muted-foreground text-sm md:text-base max-w-lg mx-auto md:mx-0 leading-relaxed mb-3">
+                                                    {profile.bio}
+                                                </p>
+                                            )}
+
+                                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-muted-foreground">
+                                                {profile.age > 0 && <span>{profile.age} år</span>}
+
+                                                <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20">
+                                                    <Star size={14} fill="currentColor" />
+                                                    <span className="font-bold">{ratingValue}</span>
+                                                    <span className="opacity-70 text-xs font-normal">({profile.ratingCount || 0})</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5">
+                                                    <MapPin size={14} />
+                                                    <span>Växjö</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar size={14} />
+                                                    <span>Medlem sedan {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Nyligen'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Desktop Top Right Report Button */}
+                                        {!isMe && !isLegacy && (
+                                            <button onClick={handleReport} className="hidden md:block p-2 text-muted-foreground hover:text-destructive hover:bg-muted rounded-full transition-colors self-start" title="Rapportera">
+                                                <Flag size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+
+
+                                    {/* --- ACTIONS BAR --- */}
+                                    {!isMe && !isLegacy && (
+                                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto mt-2">
+
+                                            {/* 1. VÄN-KNAPP LOGIK */}
+                                            {friendStatus === 'none' && (
+                                                <button
+                                                    onClick={handleFriendRequest}
+                                                    className="flex-1 md:flex-none bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <UserPlus size={18} /> Lägg till vän
+                                                </button>
+                                            )}
+                                            {friendStatus === 'pending' && (
+                                                <button disabled className="flex-1 md:flex-none bg-muted text-muted-foreground px-5 py-2.5 rounded-xl font-bold border border-border cursor-not-allowed flex items-center justify-center gap-2">
+                                                    Vänförfrågan skickad
+                                                </button>
+                                            )}
+                                            {friendStatus === 'incoming' && (
+                                                <button onClick={handleAcceptFriend} className="flex-1 md:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2">
+                                                    <UserPlus size={18} /> Acceptera vän
+                                                </button>
+                                            )}
+                                            {friendStatus === 'accepted' && (
+                                                <div className="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold border border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
+                                                    <CheckCircle2 size={18} /> Vänner
+                                                </div>
+                                            )}
+
+                                            {/* 2. BETYGSÄTT KNAPP */}
+                                            {hasRated ? (
+                                                <button disabled className="flex-1 md:flex-none bg-muted/50 text-amber-600/70 border border-amber-500/10 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 cursor-default" title="Du har redan betygsatt">
+                                                    <Star size={18} fill="currentColor" /> Betygsatt
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setIsRateModalOpen(true)}
+                                                    className="flex-1 md:flex-none bg-card text-foreground border border-border hover:bg-muted px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                >
+                                                    <Star size={18} /> Betygsätt
+                                                </button>
+                                            )}
+
+                                            {/* 3. CHAT KNAPP */}
+                                            <button
+                                                onClick={startChat}
+                                                className="flex-1 md:flex-none bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <MessageCircle size={18} /> Chatta
+
+                                            </button>
+
+                                            {/* Mobile Report Button (In Action Row) */}
+                                            <button
+                                                onClick={handleReport}
+                                                className="md:hidden p-3 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+                                                title="Rapportera"
+                                            >
+                                                <Flag size={20} className="text-destructive/80" />
+                                            </button>
+
+                                        </div>
+                                    )}
+
+                                </div>
+                            </div>
+                        </div>
 
                         {/* --- TABS --- */}
                         <div className="border-b border-border">
