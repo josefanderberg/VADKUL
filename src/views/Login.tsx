@@ -13,8 +13,15 @@ export default function Login() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Fånga referral code vid mount
+    // Fånga läge eller referral code vid mount
     useEffect(() => {
+        const mode = searchParams?.get('mode');
+        if (mode === 'register') {
+            setIsLoginMode(false);
+        } else if (mode === 'login') {
+            setIsLoginMode(true);
+        }
+
         const ref = searchParams?.get('ref');
         if (ref) {
             console.log("Referral detected:", ref);

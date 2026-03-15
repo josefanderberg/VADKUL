@@ -94,7 +94,7 @@ export default function WelcomeModal() {
 
     const handleNavigationClose = () => {
         handleClose();
-        router.push('/login');
+        router.push('/login?mode=register');
     };
 
     if (!isOpen) return null;
