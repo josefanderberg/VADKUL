@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { CATEGORY_LIST } from '../../utils/categories';
 
 /* ── floating emoji config ── */
 const FLOATING_EMOJIS = [
@@ -59,11 +60,25 @@ const ONBOARDING_STEPS = [
     }
 ];
 
-export default function WelcomeModal() {
+interface WelcomeModalProps {
+    onClose?: () => void;
+}
+
+export default function WelcomeModal({ onClose }: WelcomeModalProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+
+    const toggleCategory = (id: string) => {
+        setSelectedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('seen_welcome_modal');
@@ -76,25 +91,30 @@ export default function WelcomeModal() {
         }
     }, []);
 
-    const handleClose = () => {
+    const handleClose = (shouldRedirect = false) => {
+        try {
+            localStorage.setItem('seen_welcome_modal', 'true');
+        } catch (error) {
+            console.warn('Could not save to localStorage', error);
+        }
+        
         setIsVisible(false);
         setTimeout(() => {
             setIsOpen(false);
-            localStorage.setItem('seen_welcome_modal', 'true');
+            if (shouldRedirect) {
+                router.push('/login?mode=register');
+            } else if (onClose) {
+                onClose();
+            }
         }, 300);
     };
 
-    const handleNext = () => {
-        if (currentStep < ONBOARDING_STEPS.length - 1) {
-            setCurrentStep(prev => prev + 1);
-        } else {
-            handleNavigationClose();
-        }
+    const handleDismiss = () => {
+        handleClose(false);
     };
 
     const handleNavigationClose = () => {
-        handleClose();
-        router.push('/login?mode=register');
+        handleClose(true);
     };
 
     if (!isOpen) return null;
@@ -107,7 +127,7 @@ export default function WelcomeModal() {
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-500"
                 style={{ opacity: isVisible ? 1 : 0 }}
-                onClick={handleClose}
+                onClick={handleDismiss}
             />
 
             {/* ── modal card ── */}
@@ -118,9 +138,9 @@ export default function WelcomeModal() {
                     opacity: isVisible ? undefined : 0,
                 }}
             >
-                {/* ── gradient background ── */}
+                {/* ── vibrant gradient backdrop ── */}
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-rose-500 to-violet-600" />
-
+                
                 {/* ── confetti dots ── */}
                 {CONFETTI_DOTS.map((dot, i) => (
                     <div
@@ -158,7 +178,7 @@ export default function WelcomeModal() {
                     <div>
                         {/* close button */}
                         <button
-                            onClick={handleClose}
+                            onClick={handleDismiss}
                             className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
                         >
                             <X size={22} />
@@ -191,6 +211,30 @@ export default function WelcomeModal() {
                                 <span className="text-white font-bold">{step.subText}</span>
                             </p>
                         </div>
+
+                        {/* ── category grid (Only Slide 2) ── */}
+                        {currentStep === 1 && (
+                            <div className="mt-6 flex flex-wrap gap-2 justify-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                {CATEGORY_LIST.slice(0, 9).map((cat) => {
+                                    const isSelected = selectedCategories.has(cat.id);
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => toggleCategory(cat.id)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all duration-300 transform active:scale-95 ${
+                                                isSelected 
+                                                ? `${cat.activeColor} text-white shadow-lg scale-105 border-transparent` 
+                                                : 'bg-white/10 text-white/90 border border-white/20 hover:bg-white/20'
+                                            }`}
+                                        >
+                                            <span>{cat.emoji}</span>
+                                            <span>{cat.label}</span>
+                                        </button>
+                                    );
+                                })}
+                                <div className="text-[10px] text-white/50 w-full mt-1">Klicka för att välja dina favoriter ✨</div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-8 space-y-6">
@@ -209,20 +253,19 @@ export default function WelcomeModal() {
                         {/* ── action button ── */}
                         <div className="space-y-3">
                             <button
-                                onClick={handleNext}
+                                onClick={() => {
+                                    if (currentStep < ONBOARDING_STEPS.length - 1) {
+                                        setCurrentStep(prev => prev + 1);
+                                    } else {
+                                        handleNavigationClose();
+                                    }
+                                }}
                                 className="w-full py-4 bg-white text-rose-600 font-extrabold rounded-2xl text-lg shadow-xl transform transition-all active:scale-95 hover:scale-[1.02] flex items-center justify-center gap-2"
                             >
                                 {step.buttonText}
                             </button>
 
-                            {currentStep < ONBOARDING_STEPS.length - 1 && (
-                                <button
-                                    onClick={handleClose}
-                                    className="text-white/70 text-sm font-bold hover:text-white transition-colors"
-                                >
-                                    Hoppa över
-                                </button>
-                            )}
+
                         </div>
                     </div>
 

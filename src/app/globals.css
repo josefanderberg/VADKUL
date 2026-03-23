@@ -157,3 +157,13 @@
   70% { transform: scale(0.98) translateY(2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+@keyframes category-ticker-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes category-ticker-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}

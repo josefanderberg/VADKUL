@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -16,8 +16,9 @@ import { linkEventService } from '../../services/linkEventService';
 import { settingsService } from '../../services/settingsService';
 import type { AppEvent, LinkEvent } from '../../types';
 import { useAdmin } from '../../context/AdminContext';
+import { useAuth } from '../../context/AuthContext';
 import { calculateDistance, saveLocationToLocalStorage } from '../../utils/mapUtils';
-import { ArrowUpDown, Trophy } from 'lucide-react';
+import { ArrowUpDown, Trophy, Lock } from 'lucide-react';
 
 // Dynamic import of the Map component to avoid SSR issues with Leaflet
 const HomeMap = dynamic(() => import('./HomeMap'), {
@@ -84,6 +85,7 @@ export default function HomeContent() {
     });
 
     const { isAdmin } = useAdmin();
+    const { user } = useAuth();
 
     const searchParams = useSearchParams();
 
@@ -292,22 +294,14 @@ export default function HomeContent() {
             return true;
         });
 
-        // 2. Sortera ALLA kandidater på avstånd (närmast först)
-        candidates.sort((a, b) => (a.location.distance || 0) - (b.location.distance || 0));
+        // 2. Mappa och märk vanliga event
+        const regularSorted = candidates.map(e => ({ ...e, _isExternal: false as const }));
 
-        // 3. Ta bara de 30 närmaste
-        const top30Closest = candidates.slice(0, 30);
-
-        // Vi filtrerar ändå externa event här om showExternal är sant,
-        // men för list-vyn mappar vi dem separat i sin egen lista nedan, 
-        // medan de för kart-vyn (och om man vill) returneras tillsammans.
-        let externalCandidates: any[] = [];
-
+        // 3. Mappa externa event
+        let externalSorted: any[] = [];
         if (showExternal) {
-            externalCandidates = linkEvents.map(le => {
+            externalSorted = linkEvents.map(le => {
                 const dist = calculateDistance(userLocation[0], userLocation[1], le.lat, le.lng);
-
-                // Mappa LinkEvent till AppEvent-liknande struktur för kartan/listan
                 return {
                     id: le.id,
                     title: le.title,
@@ -334,34 +328,26 @@ export default function HomeContent() {
                     attendees: [],
                     requiresApproval: false,
                     views: 0,
-                    _isExternal: true, // Flagga för att särkilja
-                    _rawLinkEvent: le, // Spara original-objektet för rendering
+                    _isExternal: true,
+                    _rawLinkEvent: le,
                     url: le.url,
                     coverImage: le.coverImage
                 } as any;
             }).filter(le => {
-                // Samma tids- och sökfilter som vanliga events
                 const startOfToday = new Date();
                 startOfToday.setHours(0, 0, 0, 0);
                 if (new Date(le.time) < startOfToday) return false;
-
                 if (query) {
                     const matchTitle = le.title.toLowerCase().includes(query);
                     const matchLoc = le.location.name.toLowerCase().includes(query);
                     if (!matchTitle && !matchLoc) return false;
                 }
-
                 return true;
             });
         }
 
-        // 4. Returnera uppdelad data
-        // För att inte bryta HomeMap etc, returnerar vi en array som går att använda i kartan.
-        // Arrayen contains vanliga event om showExternal är falskt, annars båda.
-        let mapCandidates = showExternal ? [...top30Closest, ...externalCandidates] : [...top30Closest];
-
-        // 5. Final Sorting för main candidates
-        mapCandidates.sort((a, b) => {
+        // 4. Sorterings-helper
+        const sortFn = (a: any, b: any) => {
             switch (sortBy) {
                 case 'closest': return (a.location.distance || 0) - (b.location.distance || 0);
                 case 'soonest': return new Date(a.time).getTime() - new Date(b.time).getTime();
@@ -371,15 +357,19 @@ export default function HomeContent() {
                 case 'popular': return (b.attendees?.length || 0) - (a.attendees?.length || 0);
                 default: return 0;
             }
-        });
+        };
+
+        // Applicera sortering på båda listorna oberoende
+        regularSorted.sort(sortFn);
+        externalSorted.sort(sortFn);
 
         // Returnera objekt för att hantera separation.
         return {
-            mapCandidates, // Alla (inkl externa) efter sortering (används för kartan och "närmsta", etc)
-            regularEvents: mapCandidates.filter(e => !e._isExternal),
-            externalEvents: mapCandidates.filter(e => e._isExternal)
+            mapCandidates: [...regularSorted, ...externalSorted], // För kartan
+            regularEvents: regularSorted,
+            externalEvents: externalSorted
         };
-    }, [events, linkEvents, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery, showExternal, view]); // <-- Lade till view
+    }, [events, linkEvents, userLocation, filterType, filterAge, filterFree, filterToday, sortBy, searchQuery, showExternal, view, user]); // <-- Lade till view och user
 
     const handleMapClick = (lat: number, lng: number) => {
         if (selectedEvent) setSelectedEvent(null);
@@ -418,7 +408,7 @@ export default function HomeContent() {
 
     return (
         <Layout>
-            <WelcomeModal />
+            <WelcomeModal onClose={() => setView('map')} />
             {/* SCROLL FIXEN:
           List-vy: Overflow-y-auto på container.
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.
@@ -533,46 +523,92 @@ export default function HomeContent() {
                     ) : filteredEvents.mapCandidates.length === 0 && view === 'list' ? (
                         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
                             <p className="text-slate-500 font-medium mb-2">Inga events hittades.</p>
-                            <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
+                    <button onClick={resetFilters} className="text-indigo-600 font-bold hover:underline">Rensa filter</button>
                         </div>
                     ) : view === 'list' ? (
-                        <>
-                            {/* Regular Events Grid */}
-                            {filteredEvents.regularEvents.length > 0 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-                                    {filteredEvents.regularEvents.map(evt => (
-                                        <div key={evt.id} className="h-full">
-                                            <EventCard event={evt} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                        <div className="relative min-h-[500px]">
+                            {/* Combined Grid (Regular + External mixed by sorting) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 relative">
+                                {(() => {
+                                    const { regularEvents, externalEvents } = filteredEvents;
+                                    const totalCount = regularEvents.length + externalEvents.length;
+                                    const isLimited = !user && totalCount > 9;
 
-                            {/* External Link Events Section at the bottom */}
-                            {showExternal && filteredEvents.externalEvents.length > 0 && (
-                                <div className="mt-8 border-t border-border pt-8 pb-8">
-                                    <h2 className="text-xl font-bold text-foreground mb-6 px-2 flex items-center gap-2">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-indigo-600">
-                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                        </svg>
-                                        Externa event
-                                    </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {filteredEvents.externalEvents.map(evt => (
-                                            <div key={evt.id} className="h-full">
-                                                <LinkEventCard
-                                                    linkEvent={evt._rawLinkEvent}
-                                                    distance={evt.location?.distance}
-                                                    isAdmin={isAdmin}
-                                                    onDelete={() => refetchLinkEvents()}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                                    // Limit total items for anonymous users
+                                    let regToShow = regularEvents;
+                                    let extToShow = externalEvents;
+                                    
+                                    if (isLimited) {
+                                        regToShow = regularEvents.slice(0, 12);
+                                        const remainingRoom = Math.max(0, 12 - regToShow.length);
+                                        extToShow = externalEvents.slice(0, remainingRoom);
+                                    }
+
+                                    return (
+                                        <>
+                                            {/* Våra egna event */}
+                                            {regToShow.map((evt) => (
+                                                <div key={evt.id} className="h-full">
+                                                    <EventCard event={evt} />
+                                                </div>
+                                            ))}
+
+                                            {/* Rubrik för externa event */}
+                                            {showExternal && extToShow.length > 0 && (
+                                                <div className="col-span-full mt-8 mb-4 border-t border-border pt-12">
+                                                    <h2 className="text-2xl font-bold text-foreground mb-6 px-2 flex items-center gap-2">
+                                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-indigo-600">
+                                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                                        </svg>
+                                                        Externa event
+                                                    </h2>
+                                                </div>
+                                            )}
+
+                                            {/* Externa event */}
+                                            {showExternal && extToShow.map((evt) => (
+                                                <div key={evt.id} className="h-full">
+                                                    <LinkEventCard
+                                                        linkEvent={evt._rawLinkEvent}
+                                                        distance={evt.location?.distance}
+                                                        isAdmin={isAdmin}
+                                                        onDelete={() => refetchLinkEvents()}
+                                                    />
+                                                </div>
+                                            ))}
+
+                                            {/* Premium Fade Wall for Anonymous Users */}
+                                            {isLimited && (
+                                                <div className="absolute inset-x-0 bottom-0 top-[40%] z-[60] flex flex-col items-center justify-end pointer-events-none">
+                                                    {/* The Gradient Overlay */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-auto" />
+                                                    
+                                                    {/* The Login Card */}
+                                                    <div className="relative mb-32 px-4 w-full max-w-lg pointer-events-auto">
+                                                        <div className="bg-background/80 dark:bg-white/5 backdrop-blur-2xl p-10 rounded-[3rem] border border-border dark:border-white/10 shadow-[0_32px_128px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_32px_128px_-16px_rgba(0,0,0,0.6)] text-center transform transition-all">
+                                                            <div className="bg-indigo-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(79,70,229,0.5)]">
+                                                                 <Lock className="text-white" size={48} />
+                                                            </div>
+                                                            <h2 className="text-4xl font-black text-foreground dark:text-white mb-6 tracking-tight">Vad kul! <span className="text-indigo-600 dark:text-indigo-400">Upptäck mer.</span></h2>
+                                                            <p className="text-muted-foreground dark:text-gray-200 mb-12 text-xl font-medium leading-relaxed">
+                                                                Det här är bara början. Skapa ett gratiskonto för att se alla event och börja hänga!
+                                                            </p>
+                                                            <button 
+                                                                onClick={() => router.push('/login')}
+                                                                className="w-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-white dark:text-indigo-600 dark:hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] font-black py-6 px-8 rounded-3xl shadow-2xl transition-all text-2xl flex items-center justify-center gap-3"
+                                                            >
+                                                                Skapa gratiskonto
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        </div>
                     ) : (
                         <HomeMap
                             userLocation={userLocation}
