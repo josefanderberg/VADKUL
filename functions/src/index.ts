@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions/v1";
+
 import * as admin from "firebase-admin";
 
 admin.initializeApp();
@@ -85,7 +86,8 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
  */
 export const sendPushNotification = region.firestore
     .document('notifications/{notificationId}')
-    .onCreate(async (snap, context) => {
+    .onCreate(async (snap: functions.firestore.QueryDocumentSnapshot, context: functions.EventContext) => {
+
         const notification = snap.data();
         const recipientId = notification.recipientId;
 

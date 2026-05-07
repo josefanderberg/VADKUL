@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import Hotjar from '@/components/analytics/Hotjar';
+import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://vadkul.se'),
@@ -40,6 +41,7 @@ export default function RootLayout({
                 <Providers>
                     {children}
                     <Hotjar />
+                    <FirebaseAnalytics />
                 </Providers>
             </body>
         </html>
