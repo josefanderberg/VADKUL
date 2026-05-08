@@ -65,8 +65,12 @@ export default function HomeContent() {
 
     // 3. TanStack Query
     const { data: events = [], isLoading: loading } = useQuery({
-        queryKey: ['events', 'geo', mapState ? mapState.center : userLocation, fetchRadius],
+        queryKey: ['events', 'geo', mapState ? mapState.center : userLocation, fetchRadius, searchQuery],
         queryFn: async () => {
+            // Om användaren söker (mer än 2 tecken), hämta ALLA events för att tillåta sökning utanför kartan
+            if (searchQuery.trim().length > 2) {
+                return eventService.getAll();
+            }
             // Use mapState center if moved, else initial userLocation
             const center = mapState ? mapState.center : userLocation;
             return eventService.getEventsInBounds(center, fetchRadius);
@@ -431,6 +435,7 @@ export default function HomeContent() {
                     resetFilters={resetFilters}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
+                    availableEvents={events}
                 />
 
 

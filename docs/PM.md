@@ -1,0 +1,1 @@
+Här vill jag att vi bygger ut det här systemet. Vi ska ha en kartvy (vilket vi redan har) men vi behöver en bättre sökfunktion, med auto-complete, som låter oss söka bland alla Events, inte bara de som är nära oss. 

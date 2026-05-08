@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SlidersHorizontal, List, Map as MapIcon, Search, X, ChevronDown } from 'lucide-react';
 import { CATEGORY_LIST, EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
+import type { AppEvent } from '../../types';
 
 interface EventFiltersProps {
   filterType: string;
@@ -17,6 +18,7 @@ interface EventFiltersProps {
   resetFilters: () => void;
   searchQuery: string;
   setSearchQuery: (val: string) => void;
+  availableEvents: AppEvent[];
 }
 
 export default function EventFilters({
@@ -32,7 +34,8 @@ export default function EventFilters({
   setFilterAge,
   resetFilters,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  availableEvents
 }: EventFiltersProps) {
 
   const selectedCategory = EVENT_CATEGORIES[filterType as EventCategoryType] || null;
@@ -70,6 +73,26 @@ export default function EventFilters({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  // --- AUTOCOMPLETE LOGIC ---
+  const [suggestions, setSuggestions] = useState<AppEvent[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery.trim().length > 1) {
+      const filtered = availableEvents
+        .filter(e => 
+          e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.location.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 5);
+      setSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery, availableEvents]);
+
 
   // Navbar är normalt 64px (h-16). Vi sätter top-16 för att hamna precis under den.
   // Transform används för att skjuta upp den under navbaren.
@@ -102,6 +125,25 @@ export default function EventFilters({
               >
                 <X size={14} />
               </button>
+            )}
+
+            {/* AUTOCOMPLETE DROPDOWN */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setSearchQuery(s.title);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-muted flex flex-col gap-0.5 border-b border-border/50 last:border-0"
+                  >
+                    <span className="text-sm font-bold text-foreground">{s.title}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{s.location.name}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
