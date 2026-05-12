@@ -4,6 +4,12 @@ import { geocodeVenue } from '../utils/venueCoordinates';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
 
+// --- DATE FILTER: Kommande 7 dagar ---
+const now = new Date();
+now.setHours(0, 0, 0, 0);
+const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
+
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
     if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party')) return 'party';
@@ -90,8 +96,8 @@ export async function scrapeUpplevVaxjo() {
     try {
         const events: any[] = [];
 
-        // Loop through up to 5 pages
-        for (let pageNum = 1; pageNum <= 5; pageNum++) {
+        // Loop through up to 10 pages
+        for (let pageNum = 1; pageNum <= 10; pageNum++) {
             const pageUrl = pageNum === 1 ? UPPLEV_URL : `${UPPLEV_URL}?page=${pageNum}`;
             console.log(`Scraping page ${pageNum}: ${pageUrl}`);
 
@@ -153,7 +159,7 @@ export async function scrapeUpplevVaxjo() {
             }
         }
 
-        console.log(`Found total ${events.length} events. Processing...`);
+        console.log(`Found total ${events.length} events. Processing (filtering to next 7 days)...`);
 
         for (const evt of events) {
             try {
@@ -164,6 +170,12 @@ export async function scrapeUpplevVaxjo() {
                 const parsedDateInfo = parseSwedishDate(evt.dateStr);
                 let parsedDate = parsedDateInfo.date;
                 let hasSpecificTime = parsedDateInfo.hasSpecificTime;
+
+                // --- 1-WEEK DATE FILTER ---
+                if (parsedDate < now || parsedDate > oneWeekFromNow) {
+                    console.log(`  Skipping (outside 1 week): ${evt.title} @ ${parsedDate.toLocaleDateString('sv-SE')}`);
+                    continue;
+                }
 
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalLocation = evt.location || 'Växjö';
