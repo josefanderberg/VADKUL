@@ -5,6 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "dashboard": "ts-node src/scripts/dashboard.ts",
+    "create": "ts-node src/scripts/create-event.ts",
+    "publish-fb": "ts-node src/scripts/publish-fb.ts",
+    "scrape-fb": "ts-node src/scrapers/facebook.ts",
+    "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,7 +20,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
     "firebase-admin": "^13.6.1",
-    "puppeteer": "^24.37.5"
+    "puppeteer": "^24.43.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",

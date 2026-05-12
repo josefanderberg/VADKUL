@@ -2,7 +2,23 @@ import * as cheerio from 'cheerio';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenue } from '../utils/venueCoordinates';
 
-const TICKSTER_URL = 'https://www.tickster.com/se/sv/events/search?q=v%C3%A4xj%C3%B6';
+const TICKSTER_URLS = [
+    'https://www.tickster.com/se/sv/events/search?q=v%C3%A4xj%C3%B6',
+    'https://www.tickster.com/se/sv/events/search?q=kronoberg',
+    'https://www.tickster.com/se/sv/events/search?q=alvesta',
+    'https://www.tickster.com/se/sv/events/search?q=ljungby',
+    'https://www.tickster.com/se/sv/events/search?q=%C3%A4lmhult',
+];
+
+// --- DATE FILTER: Kommande 7 dagar ---
+const now = new Date();
+now.setHours(0, 0, 0, 0);
+const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
+
+function isWithinOneWeek(date: Date): boolean {
+    return date >= now && date <= oneWeekFromNow;
+}
 
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
@@ -22,41 +38,53 @@ function guessCategoryFromTitle(title: string): string {
 }
 
 export async function scrapeTickster() {
-    console.log(`Starting scrape of ${TICKSTER_URL}`);
-    try {
-        const response = await fetch(TICKSTER_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html'
-            }
-        });
+    console.log('Starting Tickster scraper for multiple URLs...');
+    const allEventLinks: { href: string; img: string; dateFromUrl: string }[] = [];
+    const seenHrefs = new Set<string>();
 
-        if (!response.ok) {
-            console.error(`Tickster returned status ${response.status}`);
-            return;
+    for (const TICKSTER_URL of TICKSTER_URLS) {
+        console.log(`  Fetching: ${TICKSTER_URL}`);
+        try {
+            const response = await fetch(TICKSTER_URL, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'text/html'
+                }
+            });
+
+            if (!response.ok) {
+                console.error(`Tickster returned status ${response.status} for ${TICKSTER_URL}`);
+                continue;
+            }
+
+            const text = await response.text();
+            const $ = cheerio.load(text);
+
+            $('a[href*="/events/"]').each((_, el) => {
+                const href = $(el).attr('href') || '';
+                const urlMatch = href.match(/\/events\/[a-z0-9]+\/(\d{4}-\d{2}-\d{2})\/[a-z0-9-]+$/);
+                if (urlMatch) {
+                    const fullHref = `https://www.tickster.com${href}`;
+                    if (!seenHrefs.has(fullHref)) {
+                        // --- 1-WEEK DATE FILTER on URL date ---
+                        const eventDate = new Date(urlMatch[1] + 'T00:00:00');
+                        if (!isWithinOneWeek(eventDate)) {
+                            console.log(`  Skipping (outside 1 week): ${urlMatch[1]}`);
+                        } else {
+                            seenHrefs.add(fullHref);
+                            const img = $(el).find('img').attr('src') || '';
+                            allEventLinks.push({ href: fullHref, img, dateFromUrl: urlMatch[1] });
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error(`Error fetching ${TICKSTER_URL}:`, err);
         }
+    }
 
-        const text = await response.text();
-        const $ = cheerio.load(text);
-
-        const eventLinks: { href: string; img: string; dateFromUrl: string }[] = [];
-        $('a[href*="/events/"]').each((_, el) => {
-            const href = $(el).attr('href') || '';
-            // Match pattern like /se/sv/events/z5jlzlgf6yu6xzx/2026-03-21/daniel-kane-impossible-magic
-            const urlMatch = href.match(/\/events\/[a-z0-9]+\/(\d{4}-\d{2}-\d{2})\/[a-z0-9-]+$/);
-            if (urlMatch) {
-                const img = $(el).find('img').attr('src') || '';
-                eventLinks.push({
-                    href: `https://www.tickster.com${href}`,
-                    img,
-                    dateFromUrl: urlMatch[1]
-                });
-            }
-        });
-
-        // Deduplicate links
-        const uniqueEvents = Array.from(new Map(eventLinks.map(e => [e.href, e])).values());
-        console.log(`Found ${uniqueEvents.length} Tickster events to process.`);
+    console.log(`Found ${allEventLinks.length} Tickster events (within 1 week) to process.`);
+    const uniqueEvents = Array.from(new Map(allEventLinks.map(e => [e.href, e])).values());
 
         for (const evt of uniqueEvents) {
             try {
@@ -198,8 +226,4 @@ export async function scrapeTickster() {
         }
 
         console.log('Tickster scrape complete.');
-
-    } catch (error) {
-        console.error('Error during Tickster scrape:', error);
-    }
 }
