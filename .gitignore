@@ -33,3 +33,4 @@ service-account.json
 
 # Firebase CLI
 .firebase/
+vadkul-*-firebase-adminsdk-*.json

@@ -23,6 +23,7 @@ import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { notificationService } from '../../services/notificationService';
 import { userService } from '../../services/userService';
+import { calculateDistance } from '../../utils/mapUtils';
 
 // VIKTIGT: Importera kategorier för att få rätt markör-färg
 import { EVENT_CATEGORIES, AGE_CATEGORIES, type EventCategoryType } from '../../utils/categories';
@@ -111,6 +112,42 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
         }
         load();
     }, [id, user?.uid, initialEvent]);
+
+    // --- SEQUENTIAL NAVIGATION LOGIC ---
+    const [nextEventId, setNextEventId] = useState<string | null>(null);
+    const [prevEventId, setPrevEventId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (event) {
+            // Hämta användarens position (från localStorage som vi sparar i HomeContent)
+            const userLat = localStorage.getItem('user_lat');
+            const userLng = localStorage.getItem('user_lng');
+            
+            // Om vi inte har position, använd det första eventets position som "ankare" 
+            // så att listan blir konsekvent under hela sessionen.
+            const anchorLat = userLat ? parseFloat(userLat) : event.lat;
+            const anchorLng = userLng ? parseFloat(userLng) : event.lng;
+
+            eventService.getAll().then(allEvents => {
+                // Sortera ALLA event efter avstånd från ANKARET (inte från nuvarande event)
+                const sorted = [...allEvents].sort((a, b) => {
+                    const distA = calculateDistance(anchorLat, anchorLng, a.lat, a.lng);
+                    const distB = calculateDistance(anchorLat, anchorLng, b.lat, b.lng);
+                    return distA - distB;
+                });
+
+                const currentIndex = sorted.findIndex(e => e.id === event.id);
+                
+                if (currentIndex !== -1) {
+                    if (currentIndex > 0) setPrevEventId(sorted[currentIndex - 1].id);
+                    else setPrevEventId(null);
+
+                    if (currentIndex < sorted.length - 1) setNextEventId(sorted[currentIndex + 1].id);
+                    else setNextEventId(null);
+                }
+            });
+        }
+    }, [event?.id]);
 
     const isJoined = user?.email && event ? event.attendees.some(a => a.email === user.email) : false;
     const confirmedCount = event ? event.attendees.filter(a => a.status !== 'pending').length : 0;
@@ -368,6 +405,28 @@ export default function EventDetails({ initialEvent }: EventDetailsProps) {
                         <ChevronLeft size={20} />
                         <span className="font-bold text-sm ml-1 hidden md:inline">Tillbaka</span>
                     </button>
+
+                    {/* NAVIGATION STEPS */}
+                    <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-full border border-border/50">
+                        <button
+                            disabled={!prevEventId}
+                            onClick={() => prevEventId && router.push(`/event/${prevEventId}`, { scroll: false })}
+                            className={`p-1.5 rounded-full transition-all ${!prevEventId ? 'opacity-20 cursor-not-allowed' : 'hover:bg-background hover:text-primary text-muted-foreground'}`}
+                            title="Föregående event"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground px-1 tracking-tighter">Stega event</span>
+                        <button
+                            disabled={!nextEventId}
+                            onClick={() => nextEventId && router.push(`/event/${nextEventId}`, { scroll: false })}
+                            className={`p-1.5 rounded-full transition-all ${!nextEventId ? 'opacity-20 cursor-not-allowed' : 'hover:bg-background hover:text-primary text-muted-foreground'}`}
+                            title="Nästa event"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+
                     <div className="flex gap-2 relative">
                         {isHost && (
                             <button

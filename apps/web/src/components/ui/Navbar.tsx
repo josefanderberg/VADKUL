@@ -142,13 +142,13 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md shadow-sm z-50 border-b border-border h-16 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 md:px-8 h-full flex justify-between items-center">
 
-        {/* LOGO */}
         <Link 
           href="/" 
           onClick={handleLogoClick}
-          className="text-3xl font-extrabold italic text-primary tracking-tight hover:text-primary/90 transition-colors"
+          className="flex items-center gap-2 group"
         >
-          VADKUL
+          <img src="/pwa-icon-v2.png" alt="VADKUL" className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+          <span className="text-2xl md:text-3xl font-extrabold italic text-primary tracking-tight">VADKUL</span>
         </Link>
 
         <div className="flex items-center gap-0.5 md:gap-2">

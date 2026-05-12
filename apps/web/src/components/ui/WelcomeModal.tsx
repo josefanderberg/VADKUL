@@ -42,7 +42,15 @@ const ONBOARDING_STEPS = [
         title: 'Upptäck vad som händer',
         description: 'Se vad som händer nära dig just nu.',
         subText: 'Hitta spontana events i realtid.',
-        buttonText: 'Coolt, vad mer? 🎪',
+        buttonText: 'Visa mig ett exempel! 🔍',
+    },
+    {
+        emoji: '🎬',
+        title: 'Se hur det funkar',
+        description: 'Här ser du hur enkelt det är att hitta på något.',
+        subText: 'Spana in videon för att se VADKUL i action!',
+        buttonText: 'Grymt, vad mer? 🎪',
+        isVideoStep: true,
     },
     {
         emoji: '🤝',
@@ -78,6 +86,10 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
             else next.add(id);
             return next;
         });
+        // Skicka användaren till nästa steg (Videon/Exemplet) när de valt en kategori
+        setTimeout(() => {
+            setCurrentStep(2);
+        }, 600);
     };
 
     useEffect(() => {
@@ -232,7 +244,25 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
                                         </button>
                                     );
                                 })}
-                                <div className="text-[10px] text-white/50 w-full mt-1">Klicka för att välja dina favoriter ✨</div>
+                                <div className="text-[10px] text-white/50 w-full mt-1 font-bold">Klicka på en kategori för att börja! ✨</div>
+                            </div>
+                        )}
+
+                        {/* ── VIDEO / SAMPLE EVENT PLACEHOLDER (Slide 3) ── */}
+                        {(step as any).isVideoStep && (
+                            <div className="mt-6 aspect-video bg-black/20 rounded-2xl border border-white/30 flex flex-col items-center justify-center gap-3 overflow-hidden relative group cursor-pointer animate-in zoom-in duration-500">
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                <div className="w-12 h-12 rounded-full bg-white/90 text-rose-600 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </div>
+                                <p className="text-white text-xs font-bold z-10">Klicka för att spela demo-video</p>
+                                
+                                {/* Dekoration för att simulera video-innehåll */}
+                                <div className="absolute bottom-2 left-2 right-2 h-1 bg-white/20 rounded-full overflow-hidden">
+                                    <div className="w-1/3 h-full bg-white/60" />
+                                </div>
                             </div>
                         )}
                     </div>
