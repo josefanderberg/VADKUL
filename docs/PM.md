@@ -1,1 +1,45 @@
-Här vill jag att vi bygger ut det här systemet. Vi ska ha en kartvy (vilket vi redan har) men vi behöver en bättre sökfunktion, med auto-complete, som låter oss söka bland alla Events, inte bara de som är nära oss. 
+# VADKUL – Produktplan
+
+> Enkel översikt för att hålla koll på vad vi bygger, varför och vad som är på gång.
+
+## Note
+npm run dashboard
+
+npm run dev
+
+npm run today
+
+npm run create-event
+
+npm run start
+
+## 📚 Dokument & resurser
+
+[PROJECT.md](bio/PROJECT.md) – Teknisk projektöversikt och arkitektur
+[README.md](bio/README.md) – Introduktion och kom-igång-guide
+[AI_CONTENT.txt](bio/AI_CONTENT.txt) – AI-genererat innehåll och texter
+[social.md](social.md) – Facebook-scraping och marknadsföring
+
+## 🎯 Vision
+
+**Hitta spontana events nära dig – i realtid.**
+
+VADKUL hjälper folk att upptäcka vad som händer just nu. Enkel sökning, bra karta, snabb bokning.
+
+## 🗂️ Områden
+
+### 1. Sökning & Upptäck
+**Mål:** Bättre sökfunktion med autocomplete som täcker alla events – inte bara de nära dig.
+
+- [ ] Autocomplete-sökning på alla events
+- [ ] Kartvy (redan klar ✅)
+- [ ] Snabb-modal / detaljsida när man klickar på ett event
+
+### 2. Event-scraping
+**Mål:** Fyll appen med lokalt innehåll automatiskt.
+
+- [ ] Tickster / Upplev Växjö (utöka geografiskt)
+- [ ] Eventbrite – Kronoberg-regionen
+
+### 3. Marknadsföring
+Se [social.md](social.md) för Facebook-scraping och videotexter.

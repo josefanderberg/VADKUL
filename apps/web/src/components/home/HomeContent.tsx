@@ -63,6 +63,17 @@ export default function HomeContent() {
         }
     }, []);
 
+    const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+
+    // Filter states (Avstånd borttaget)
+    const [filterType, setFilterType] = useState('all');
+    const [filterAge, setFilterAge] = useState('all');
+    const [filterFree, setFilterFree] = useState(false);
+    const [filterToday, setFilterToday] = useState(false);
+    const [sortBy, setSortBy] = useState('soonest'); // Default: närmast
+    const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
+    const [showExternal, setShowExternal] = useState(true); // <--- NY: Visa externa event (default false)
+
     // 3. TanStack Query
     const { data: events = [], isLoading: loading } = useQuery({
         queryKey: ['events', 'geo', mapState ? mapState.center : userLocation, fetchRadius, searchQuery],
@@ -107,17 +118,6 @@ export default function HomeContent() {
     }, [searchParams]);
 
 
-
-    const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
-
-    // Filter states (Avstånd borttaget)
-    const [filterType, setFilterType] = useState('all');
-    const [filterAge, setFilterAge] = useState('all');
-    const [filterFree, setFilterFree] = useState(false);
-    const [filterToday, setFilterToday] = useState(false);
-    const [sortBy, setSortBy] = useState('soonest'); // Default: närmast
-    const [searchQuery, setSearchQuery] = useState(''); // <--- NY: Söksträng
-    const [showExternal, setShowExternal] = useState(true); // <--- NY: Visa externa event (default false)
 
     // Settings (Init from cache to avoid flicker)
     const [showHallOfFame, setShowHallOfFame] = useState(() => {

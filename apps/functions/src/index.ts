@@ -9,6 +9,35 @@ const db = admin.firestore();
 // Använd 'europe-west1' (Belgien) typiskt för Firebase projekt i europa om inget annat valts
 const region = functions.region('europe-west1');
 
+import { scrapeTickster } from './scrapers/tickster';
+import { scrapeEventbrite } from './scrapers/eventbrite';
+
+/**
+ * Daily Scraper Bot
+ * Runs every day at 06:00 Stockholm time
+ */
+export const dailyScraper = region.pubsub
+    .schedule('0 6 * * *')
+    .timeZone('Europe/Stockholm')
+    .onRun(async (context) => {
+        console.log('--- DAILY SCRAPER BOT STARTING ---');
+        console.log(`Time: ${new Date().toISOString()}`);
+
+        try {
+            // Run scrapers that don't require a browser
+            console.log('Running Tickster Scraper...');
+            await scrapeTickster();
+
+            console.log('Running Eventbrite Scraper...');
+            await scrapeEventbrite();
+
+            console.log('--- DAILY SCRAPER BOT FINISHED ---');
+        } catch (error) {
+            console.error('Scraper Bot encountered an error:', error);
+        }
+        return null;
+    });
+
 export const redeemCode = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
     // 1. Auth Check - Ensure user is logged in
     if (!context.auth) {
