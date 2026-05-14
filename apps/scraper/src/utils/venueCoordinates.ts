@@ -109,6 +109,13 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     'Växjö Domkyrka': [56.8793, 14.8098],
     'Heliga Kors kyrka': [56.8805, 14.8153],
 
+    'Teleborgshallen': [56.8570, 14.8210],
+    'Arabyvalen': [56.8870, 14.7930],
+    'Bäckaslöv': [56.8740, 14.7950],
+    'Växjö Cricket Club': [56.8870, 14.7930],
+    'Sigfridbassängen': [56.8650, 14.8250],
+    'Sigfridsområdet': [56.8650, 14.8250],
+
     // ─── Default fallback (Växjö centrum – Stortorget) ──────────────────────────
     'DEFAULT': [56.8796, 14.8094]
 };
@@ -198,6 +205,21 @@ export async function geocodeVenue(venueName: string): Promise<[number, number] 
         if (result) {
             console.log(`[Geocoding] Found (strategy 3) "${simplified}": [${result[0]}, ${result[1]}]`);
             return result;
+        }
+    }
+
+    // Strategy 4: If there is a comma, try only the part after the first comma (often the address)
+    if (venueName.includes(',')) {
+        const parts = venueName.split(',');
+        const addressOnly = parts.slice(1).join(',').trim();
+        if (addressOnly.length > 5) {
+            console.log(`[Geocoding] Trying strategy 4 (address only): "${addressOnly}"`);
+            result = await nominatimSearch(addressOnly);
+            await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+            if (result) {
+                console.log(`[Geocoding] Found (strategy 4) "${addressOnly}": [${result[0]}, ${result[1]}]`);
+                return result;
+            }
         }
     }
 

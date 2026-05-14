@@ -34,3 +34,6 @@ service-account.json
 # Firebase CLI
 .firebase/
 vadkul-*-firebase-adminsdk-*.json
+
+# Facebook Profile
+.fb_profile/
