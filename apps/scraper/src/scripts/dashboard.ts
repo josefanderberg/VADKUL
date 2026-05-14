@@ -36,7 +36,7 @@ interface Stats {
 }
 
 let stats: Stats = { total: 0, today: 0, week: 0, bySource: {}, updated: 'laddar...' };
-let activeJob: { name: string; startedAt: Date } | null = null;
+let activeJob: { name: string; startedAt: Date; status?: string } | null = null;
 let currentView: 'menu' | 'list' | 'running' = 'menu';
 
 // ─── Statistik ────────────────────────────────────────────────────────────────
@@ -53,8 +53,13 @@ async function fetchStats(): Promise<Stats> {
 
     let today = 0, week = 0;
     const bySource: Record<string, number> = {};
-    for (const doc of snap.docs) {
-        const d = doc.data();
+    for (const e of snap.docs) {
+        const d = e.data();
+        const date = d.time?.toDate ? d.time.toDate().toLocaleDateString('sv-SE') : 'Okänt datum';
+        console.log(`  ${c('cyan', bold('•'))} ${bold(d.title.slice(0, 40))} (${c('gray', date)})`);
+        console.log(`    ${c('gray', 'Källa:')} ${d.hostName} | ${c('gray', 'Bild:')} ${d.coverImage ? c('green', 'FINNS') : c('red', 'SAKNAS')}`);
+        if (d.coverImage) console.log(`    ${c('dim', d.coverImage.slice(0, 60) + '...')}`);
+        console.log('');
         const t: Date = d.time?.toDate?.() ?? new Date(0);
         if (t <= todayEnd) today++;
         if (t <= weekEnd) week++;
@@ -64,7 +69,7 @@ async function fetchStats(): Promise<Stats> {
     return { total: snap.size, today, week, bySource, updated: now.toLocaleTimeString('sv-SE') };
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
+// ─── Render ───────────────────────────────────────────────────────────
 function renderHeader() {
     console.log(c('cyan', `\n╔${'═'.repeat(W - 2)}╗`));
     console.log(c('cyan', '║') + pad(c('cyan', bold(' 🎯  VADKUL SCRAPER DASHBOARD')), W - 2) + c('cyan', '║'));
@@ -92,6 +97,9 @@ function draw(msg?: string) {
     if (activeJob) {
         const elapsed = Math.round((Date.now() - activeJob.startedAt.getTime()) / 1000);
         console.log(c('yellow', `\n  ⏳ Bakgrundsjobb: ${activeJob.name} (${elapsed}s)`));
+        if (activeJob.status) {
+            console.log(c('gray', `     Status: ${activeJob.status}`));
+        }
     }
 
     // Meny-del
@@ -106,6 +114,7 @@ function draw(msg?: string) {
         { k: '6', i: '🔄', l: 'Uppdatera statistik', s: '' },
         { k: '7', i: '📱', l: 'Publicera till Facebook', s: 'Postar dagens events till FB' },
         { k: '8', i: '👥', l: 'Skrapa Facebook (Live)', s: 'Loggar in och skrapar grupper' },
+        { k: '9', i: '🔥', l: 'Nollställ ALLA externa',     s: 'Rensar hela linkEvents-listan' },
         { k: 'q', i: '❌', l: 'Avsluta', s: '' },
     ];
     for (const x of items) {
@@ -139,7 +148,7 @@ async function listEvents() {
     if (snap.empty) {
         console.log(c('dim', '  Inga externa event hittades i linkEvents.'));
     } else {
-        console.log(c('gray', `  ${'Titel'.padEnd(30)} ${'Datum'.padEnd(13)} ${'Plats'.padEnd(20)} Källa`));
+        console.log(c('gray', `  ${'Titel'.padEnd(28)} ${'Datum'.padEnd(12)} ${'Plats'.padEnd(18)} ${'Deltagare'.padEnd(10)} Källa`));
         console.log(sep());
         for (const doc of snap.docs) {
             const d = doc.data();
@@ -147,10 +156,11 @@ async function listEvents() {
             const isToday = t.toDateString() === new Date().toDateString();
             const dateStr = t.toLocaleDateString('sv-SE', { weekday: 'short', month: 'short', day: 'numeric' });
             console.log(
-                `  ${c(isToday ? 'green' : 'white', (d.title || '').slice(0, 28).padEnd(28))}` +
-                `  ${c('yellow', dateStr.padEnd(12))}` +
-                `  ${c('dim', (d.locationName || '').slice(0, 18).padEnd(18))}` +
-                `  ${c('gray', (d.hostName || d.host?.name || 'Extern').slice(0, 14))}`
+                `  ${c(isToday ? 'green' : 'white', (d.title || '').slice(0, 26).padEnd(26))}` +
+                `  ${c('yellow', dateStr.padEnd(11))}` +
+                `  ${c('dim', (d.locationName || '').slice(0, 16).padEnd(16))}` +
+                `  ${c('cyan', String(d.attendees || 0).padEnd(9))}` +
+                `  ${c('gray', (d.hostName || d.host?.name || 'Extern').slice(0, 12))}`
             );
         }
     }
@@ -161,13 +171,20 @@ async function listEvents() {
 // ─── Kör bakgrundsjobb ────────────────────────────────────────────────────────
 function runBackground(script: string, label: string, onDone: (saved: number) => void) {
     const dir = path.resolve(__dirname, '../../');
-    activeJob = { name: label, startedAt: Date.now() as any };
+    activeJob = { name: label, startedAt: new Date(), status: 'Startar...' };
 
     let output = '';
     const child = cp.spawn('npm', ['run', script], {
         cwd: dir, stdio: ['ignore', 'pipe', 'pipe'], shell: true,
     });
-    child.stdout?.on('data', (d: Buffer) => { output += d.toString(); });
+    child.stdout?.on('data', (d: Buffer) => { 
+        const str = d.toString();
+        output += str; 
+        const lastLine = str.split('\n').filter(l => l.trim().length > 3).pop();
+        if (lastLine && activeJob) {
+            activeJob.status = lastLine.trim().slice(0, 60);
+        }
+    });
     child.stderr?.on('data', (d: Buffer) => { output += d.toString(); });
 
     child.on('close', async () => {
@@ -264,6 +281,18 @@ async function main() {
             await runLive('scrape-fb', 'Facebook-skrapning (Webbläsare öppnas)');
             stats = await fetchStats();
             draw(c('green', '✅ Facebook-skrapning klar!'));
+        } else if (k === '9') {
+            currentView = 'running';
+            clr(); renderHeader(); console.log(c('red', '\n  🔥 Rensar ALLA externa event...'));
+            const snap = await db!.collection('linkEvents').get();
+            if (!snap.empty) {
+                const batch = db!.batch();
+                snap.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            }
+            stats = await fetchStats();
+            currentView = 'menu';
+            draw(c('yellow', `✅ Databasen rensad. Tog bort ${snap.size} event.`));
         } else {
             draw();
         }

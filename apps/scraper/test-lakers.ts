@@ -24,6 +24,7 @@ async function fetchLakersPuppeteer() {
         console.log(events.slice(0, 5));
 
     } catch (e) {
+
         console.error(e);
     } finally {
         await browser.close();

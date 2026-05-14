@@ -533,7 +533,7 @@ export default function HomeContent() {
                     ) : view === 'list' ? (
                         <div className="relative min-h-[500px]">
                             {/* Combined Grid (Regular + External mixed by sorting) */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 relative">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-24 relative">
                                 {(() => {
                                     const { regularEvents, externalEvents } = filteredEvents;
                                     const totalCount = regularEvents.length + externalEvents.length;
