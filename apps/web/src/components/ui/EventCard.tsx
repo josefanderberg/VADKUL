@@ -6,7 +6,7 @@ import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 import { MapPin, CheckCircle2, Star, Clock, ArrowRight } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -18,272 +18,190 @@ interface EventCardProps {
 export default function EventCard({ event, compact = false }: EventCardProps) {
     const router = useRouter();
     const { user } = useAuth();
+    const [revealStep, setRevealStep] = useState(0);
 
-    // --- DATA ---
     const category = EVENT_CATEGORIES[event.type as EventCategoryType] || EVENT_CATEGORIES.other;
-    const emoji = category.emoji;
-
-    // Bild-logik (prioritera eventets bild, annars kategori-default)
     const rawCoverImage = event.coverImage || category.defaultImage;
     const coverImage = typeof rawCoverImage === 'string' ? rawCoverImage : rawCoverImage.src;
 
-    // --- DISTANS BERÄKNING (NYTT) ---
-    const initialDistance = typeof event.location.distance === 'number'
-        ? event.location.distance
-        : null;
-
-    const [distance, setDistance] = useState<number | null>(initialDistance);
-
+    const [distance, setDistance] = useState<number | null>(null);
     useEffect(() => {
-        // Fallback: Räkna ut från localStorage bara om vi inte redan har ett avstånd
-        if (distance === null) {
-            const userLoc = loadLocationFromLocalStorage();
-            if (userLoc && event.lat && event.lng) {
-                setDistance(calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng));
-            }
+        const userLoc = loadLocationFromLocalStorage();
+        if (userLoc && event.lat && event.lng) {
+            setDistance(calculateDistance(userLoc.lat, userLoc.lng, event.lat, event.lng));
         }
-    }, [event.lat, event.lng, distance]);
+    }, [event.lat, event.lng]);
 
     const formatDistance = (d: number) => {
         if (d < 1) return `${Math.round(d * 1000)} m`;
         return `${d.toFixed(1)} km`;
     };
 
-    // --- STATUS LOGIK ---
-    // Filtrera bort deltagare som väntar på godkännande
     const confirmedAttendees = event.attendees.filter(a => a.status !== 'pending');
+    const spotsLeft = event.maxParticipants - confirmedAttendees.length;
+    const isFull = confirmedAttendees.length >= event.maxParticipants;
+    const isGuaranteed = confirmedAttendees.length >= event.minParticipants;
 
-    const currentCount = confirmedAttendees.length;
-    const spotsLeft = event.maxParticipants - currentCount;
-    const isFull = currentCount >= event.maxParticipants;
-    const isGuaranteed = currentCount >= event.minParticipants;
+    const handleHeaderClick = () => {
+        setRevealStep(prev => prev === 0 ? 1 : 0);
+    };
 
-    // --- DELTAGAR LOGIK ---
-    const visibleAttendees = confirmedAttendees.slice(0, 3);
-    const hiddenCount = confirmedAttendees.length - visibleAttendees.length;
-
-
-
-    // --- LOADING STATE ---
-    const [imageLoaded, setImageLoaded] = useState(false);
+    const handleContentClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setRevealStep(prev => prev === 1 ? 2 : 1);
+    };
 
     return (
-        <Link href={`/event/${event.id}`} className="block h-full group relative">
-            <div
-                className="relative flex flex-col h-full transition-transform duration-300 hover:-translate-y-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]"
-                style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.06))' }}
+        <div className="w-full bg-card border-b border-border flex flex-col group">
+            {/* 1. Header (Always visible) */}
+            <div 
+                className="p-4 md:p-6 pt-5 flex flex-col w-full relative cursor-pointer"
+                onClick={handleHeaderClick}
             >
-                {/* The Ticket Itself (Masked) */}
-                <div
-                    className="flex flex-col h-full bg-card overflow-hidden rounded-xl"
-                >
-                    {/* --- OMSLAGSBILD --- */}
-                    <div className={`relative w-full bg-muted overflow-hidden ${compact ? 'h-20' : 'h-24'}`}>
+                <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors pr-10">
+                        {event.title}
+                    </h3>
+                    {revealStep >= 1 && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); router.push(`/event/${event.id}`); }}
+                            className="shrink-0 bg-green-600 hover:bg-green-700 text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg animate-in fade-in zoom-in duration-300"
+                        >
+                            GÅ TILL
+                        </button>
+                    )}
+                </div>
 
-                        {/* Skeleton Pulse while loading */}
-                        {!imageLoaded && (
-                            <div className="absolute inset-0 bg-muted animate-pulse z-10" />
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-primary" />
+                        <span>{formatEventDate(event.time, (event as any).hasSpecificTime !== false)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-primary" />
+                        <span className="text-sm">{event.location.name}</span>
+                        {distance !== null && (
+                            <span className="text-[10px] text-muted-foreground font-normal">• {formatDistance(distance)} bort</span>
                         )}
-
-                        {/* Bilden */}
-                        <Image
-                            src={coverImage}
-                            alt={event.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            onLoad={() => setImageLoaded(true)}
-                            className={`object-cover transition-all duration-700 ease-in-out group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                            loading="eager"
-                            priority
-                        />
-
-                        {/* Overlay Gradient (Fades in with image) */}
-                        <div className={`absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 transition-opacity duration-500 ${imageLoaded ? 'opacity-60' : 'opacity-0'}`}></div>
-
-                        {/* Kategori Badge (Fades in with image) */}
-                        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-md backdrop-blur-md bg-white/90 text-slate-900 transition-all duration-500 delay-100 ${imageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
-                            <span className="text-sm">{emoji}</span>
-                            {category.label}
+                    </div>
+                    {isGuaranteed && (
+                        <div className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            <CheckCircle2 size={9} strokeWidth={3} />
+                            <span>Blir av!</span>
                         </div>
+                    )}
+                </div>
 
-                        {/* Datum Badge (Fades in with image) */}
-                        <div className={`absolute bottom-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 font-bold px-2 py-1 rounded-lg text-xs shadow-sm flex flex-col items-center leading-tight transition-all duration-500 delay-100 ${imageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-                            <span className="text-[9px] uppercase text-red-500">{event.time.toLocaleDateString('sv-SE', { month: 'short' })}</span>
-                            <span className="text-lg">{event.time.getDate()}</span>
+                <div className="border-t border-border pt-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest shrink-0">Värd:</span>
+                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center border border-border overflow-hidden shrink-0">
+                            {event.host.photoURL ? (
+                                <img src={event.host.photoURL} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="font-bold text-[8px]">{event.host.initials}</span>
+                            )}
                         </div>
+                        <span className="text-xs font-black text-black dark:text-white truncate">{event.host.name}</span>
                     </div>
 
-
-
-                    {/* --- CONTENT --- */}
-                    <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-5'} pt-4`}>
-                        <h3 className={`font-bold text-card-foreground leading-tight mb-3 group-hover:text-primary transition-colors line-clamp-2 ${compact ? 'text-base' : 'text-lg'}`}>
-                            {event.title}
-                        </h3>
-
-                        {/* --- INFO --- */}
-                        <div className="space-y-2 mb-5">
-                            <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                                <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
-                                    <Clock size={14} strokeWidth={2.5} />
-                                </div>
-                                <span>{formatEventDate(event.time, (event as any).hasSpecificTime !== false)}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                                <div className={`p-1 rounded-md bg-slate-50 dark:bg-slate-700/50 ${category.iconColor}`}>
-                                    <MapPin size={14} strokeWidth={2.5} />
-                                </div>
-                                <div className="flex items-center justify-between flex-1 min-w-0 gap-2">
-                                    <div className="flex items-center gap-1 overflow-hidden">
-                                        <span className="truncate">{event.location.name}</span>
-                                        {distance !== null && (
-                                            <span className="shrink-0 text-[10px] text-muted-foreground/80 font-normal">
-                                                • {formatDistance(distance)} bort
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Status Badge moved here */}
-                                    <div className="shrink-0">
-                                        {isGuaranteed ? (
-                                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md">
-                                                <CheckCircle2 size={10} strokeWidth={3} />
-                                                <span>Blir av!</span>
-                                            </div>
-                                        ) : (
-                                            spotsLeft > 0 && (
-                                                (event.minParticipants - currentCount) <= 0 ? (
-                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2 py-0.5 rounded-md">
-                                                        <CheckCircle2 size={10} strokeWidth={3} />
-                                                        <span>Blir av!</span>
-                                                    </div>
-                                                ) : (event.minParticipants - currentCount) === 1 ? (
-                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-md">
-                                                        <Clock size={10} strokeWidth={3} />
-                                                        <span>Söker 1 till!</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-500/20 dark:text-orange-300 px-2 py-0.5 rounded-md">
-                                                        <Clock size={10} strokeWidth={3} />
-                                                        <span>Söker {event.minParticipants - currentCount} till</span>
-                                                    </div>
-                                                )
-                                            )
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Status</span>
+                            <span className="text-[10px] font-bold text-slate-600 leading-none mt-0.5">{isFull ? 'Fullt' : `${spotsLeft} kvar`}</span>
                         </div>
-
-                        {/* --- BOTTOM SECTION --- */}
-                        <div className="mt-auto border-t border-border pt-4 flex items-end justify-between">
-
-                            {/* VÄNSTER: Värd Info */}
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Värd</span>
-                                <div
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (event.host.uid) {
-                                            // Om det är jag själv som är värd, gå till min profil
-                                            if (user && user.uid === event.host.uid) {
-                                                router.push('/profile');
-                                            } else {
-                                                router.push(`/public-profile/${event.host.uid}`);
-                                            }
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 cursor-pointer group/host"
-                                >
-                                    {event.host.photoURL ? (
-                                        <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden ring-1 ring-border">
-                                            <Image unoptimized
-                                                src={event.host.photoURL}
-                                                alt={event.host.name}
-                                                fill
-                                                sizes="24px"
-                                                className="object-cover"
-                                            />
-                                        </div>
+                        
+                        <div className="flex -space-x-2 overflow-hidden py-1">
+                            {(event.attendees || []).slice(0, 4).map((attendee, i) => (
+                                <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-card bg-slate-100 overflow-hidden border border-border/10">
+                                    {attendee.photoURL ? (
+                                        <img src={attendee.photoURL} alt="" className="h-full w-full object-cover" />
                                     ) : (
-                                        <div
-                                            className="w-6 h-6 shrink-0 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground ring-1 ring-border"
-                                            style={{ width: '24px', height: '24px' }}
-                                        >
-                                            {event.host.initials}
+                                        <div className="h-full w-full flex items-center justify-center text-[9px] font-bold bg-slate-200 text-slate-600">
+                                            {attendee.displayName?.charAt(0).toUpperCase()}
                                         </div>
                                     )}
-                                    <span className="text-xs font-semibold text-foreground group-hover/host:text-primary transition-colors">
-                                        {event.host.name.split(' ')[0]}
-                                    </span>
-                                    <div className="flex items-center text-[10px] text-amber-500 bg-amber-500/15 dark:bg-amber-500/20 px-1 rounded">
-                                        <Star size={8} fill="currentColor" className="mr-0.5" />
-                                        {event.host.rating.toFixed(1)}
-                                    </div>
                                 </div>
-                            </div>
-
-                            {/* HÖGER: Deltagare */}
-                            <div className="flex flex-col items-end gap-1">
-                                <span className="text-[10px] font-bold text-muted-foreground/70">
-                                    {isFull ? 'Fullbokat' : `${spotsLeft} platser kvar`}
-                                </span>
-
-                                <div className="flex items-center pl-2 h-6">
-                                    <div className="flex -space-x-2">
-                                        {visibleAttendees.map((attendee, i) => (
-                                            <div key={i} className="relative z-10 hover:z-20 transition-transform hover:scale-110">
-                                                {attendee.photoURL ? (
-                                                    <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden ring-2 ring-card bg-muted" title={attendee.displayName}>
-                                                        <Image
-                                                            src={attendee.photoURL}
-                                                            alt={attendee.displayName}
-                                                            fill
-                                                            sizes="24px"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="w-6 h-6 shrink-0 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground cursor-default"
-                                                        title={attendee.displayName}
-                                                        style={{ width: '24px', height: '24px' }}
-                                                    >
-                                                        {attendee.displayName?.charAt(0).toUpperCase() || '?'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-
-                                        {hiddenCount > 0 && (
-                                            <div
-                                                className="w-6 h-6 shrink-0 rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold text-muted-foreground z-0"
-                                                style={{ minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }}
-                                            >
-                                                +{hiddenCount}
-                                            </div>
-                                        )}
-
-                                        {confirmedAttendees.length === 0 && (
-                                            <span className="text-xs text-muted-foreground/60 italic pr-1">Bli först!</span>
-                                        )}
-                                    </div>
+                            ))}
+                            {(event.attendees || []).length > 4 && (
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 ring-2 ring-card text-[9px] font-bold text-white">
+                                    +{(event.attendees || []).length - 4}
                                 </div>
-                            </div>
+                            )}
                         </div>
-
-                        {/* Hover Arrow */}
-                        <div className="absolute bottom-4 right-4 z-50 opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300">
-                            <ArrowRight size={20} className="text-primary" />
-                        </div>
-
                     </div>
                 </div>
             </div>
-        </Link>
+
+            {/* Step 0 Peek: Small slice of the image at the bottom when collapsed */}
+            {revealStep === 0 && (
+                <div 
+                    className="w-full h-12 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-16 transition-all duration-500"
+                    onClick={handleHeaderClick}
+                >
+                    <Image unoptimized
+                        src={coverImage}
+                        alt=""
+                        fill
+                        className="object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                </div>
+            )}
+
+            {/* 2. Revealed Content (Image + Description) */}
+            {revealStep >= 1 && (
+                <div className="flex flex-col w-full animate-in fade-in slide-in-from-top-2 duration-300">
+                    {/* Image */}
+                    <div 
+                        className="relative w-full h-48 md:h-64 bg-muted/30 border-t border-border cursor-pointer overflow-hidden"
+                        onClick={handleContentClick}
+                    >
+                        <Image unoptimized
+                            src={coverImage}
+                            alt={event.title}
+                            fill
+                            sizes="100vw"
+                            className="object-cover transition-transform duration-700 hover:scale-105"
+                        />
+                    </div>
+
+                    {/* Description Section */}
+                    <div 
+                        className="p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border cursor-pointer"
+                        onClick={handleContentClick}
+                    >
+                        <p className={`text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium ${revealStep === 1 ? 'line-clamp-3' : ''}`}>
+                            {event.description || 'Ingen beskrivning tillgänglig.'}
+                        </p>
+                        
+                        {revealStep === 1 && event.description && (
+                            <div className="mt-3 text-green-600 font-black flex items-center gap-1 text-[10px] uppercase tracking-widest">
+                                <span>Läs hela beskrivningen</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        )}
+
+                        {revealStep === 2 && (
+                            <div className="mt-6 flex flex-col gap-4">
+                                <button
+                                    onClick={() => router.push(`/event/${event.id}`)}
+                                    className="flex items-center justify-center gap-4 w-full py-4 bg-green-600 hover:bg-green-700 text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
+                                >
+                                    <span>GÅ TILL EVENT</span>
+                                    <ArrowRight size={24} />
+                                </button>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setRevealStep(0); }}
+                                    className="text-[10px] text-slate-400 hover:text-slate-600 font-bold py-2 uppercase tracking-widest text-center"
+                                >
+                                    Stäng detaljer
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

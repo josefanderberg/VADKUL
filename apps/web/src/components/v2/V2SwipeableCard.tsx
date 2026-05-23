@@ -122,7 +122,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     return (
         <div className="fixed bottom-6 left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
             <div 
-                className="relative w-full max-w-sm h-auto pointer-events-auto"
+                className="relative w-full max-w-4xl h-auto pointer-events-auto"
                 onPointerDown={onPointerDown}
                 style={{
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
