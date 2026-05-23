@@ -140,7 +140,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-card/80 backdrop-blur-md shadow-sm z-50 border-b border-border h-16 transition-colors duration-200">
-      <div className="max-w-6xl mx-auto px-4 md:px-8 h-full flex justify-between items-center">
+      <div className="w-full mx-auto px-4 md:px-8 h-full flex justify-between items-center">
 
         <Link 
           href="/" 

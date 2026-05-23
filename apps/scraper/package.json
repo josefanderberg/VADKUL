@@ -9,6 +9,7 @@
     "create": "ts-node src/scripts/create-event.ts",
     "publish-fb": "ts-node src/scripts/publish-fb.ts",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
+    "clear-db": "ts-node clear-db.ts",
     "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

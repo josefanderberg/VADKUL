@@ -55,51 +55,70 @@ export async function applyDateFilters(page: Page, filters: string[]) {
     }
 }
 
-/**
- * Scrolls the page to load more events and extracts all relevant event URLs.
- */
 export async function discoverEventUrls(page: Page): Promise<{ url: string, day: string }[]> {
     console.log(`    ⬇️ Scrollar ner för att ladda fler event...`);
-    for (let i = 0; i < 15; i++) {
-        await page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
-            for (const btn of buttons) {
-                if (btn.textContent?.match(/Se mer|See More|Visa fler/i) && !btn.textContent?.match(/Tidigare/i)) {
-                    (btn as HTMLElement).click();
+    let lastHeight = 0;
+    for (let i = 0; i < 10; i++) {
+        try {
+            const currentHeight = await page.evaluate(() => {
+                const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
+                for (const btn of buttons) {
+                    if (btn.textContent?.match(/Se mer|See More|Visa fler/i) && !btn.textContent?.match(/Tidigare/i)) {
+                        (btn as HTMLElement).click();
+                    }
                 }
+                window.scrollTo(0, document.body.scrollHeight);
+                return document.body.scrollHeight;
+            });
+
+            // Om höjden inte har ändrats på två försök, anta att vi är klara
+            if (currentHeight === lastHeight) {
+                break;
             }
-            window.scrollTo(0, document.body.scrollHeight);
-        });
-        await new Promise(r => setTimeout(r, 2000));
+            lastHeight = currentHeight;
+        } catch (e) {
+            console.log(`      ⚠️ Scroll-försök ${i + 1} misslyckades (t.ex. pga sidomladdning/detached frame), väntar och försöker igen...`);
+            await new Promise(r => setTimeout(r, 2000));
+            lastHeight = 0; // Tvinga re-evaluation
+        }
+        await new Promise(r => setTimeout(r, 1500));
     }
 
-    return await page.evaluate(() => {
-        const results: { url: string, day: string }[] = [];
-        const foundUrls = new Set<string>();
-        
-        const links = Array.from(document.querySelectorAll('a[href*="/events/"]'));
-        
-        for (const el of links) {
-            const href = (el as HTMLAnchorElement).href;
-            const match = href.match(/\/events\/(?:[a-zA-Z0-9_-]+\/)*(\d{10,})/);
-            if (match) {
-                const eventUrl = `https://www.facebook.com/events/${match[1]}/`;
-                if (foundUrls.has(eventUrl)) continue;
+    for (let retry = 0; retry < 3; retry++) {
+        try {
+            return await page.evaluate(() => {
+                const results: { url: string, day: string }[] = [];
+                const foundUrls = new Set<string>();
+                
+                const links = Array.from(document.querySelectorAll('a[href*="/events/"]'));
+                
+                for (const el of links) {
+                    const href = (el as HTMLAnchorElement).href;
+                    const match = href.match(/\/events\/(?:[a-zA-Z0-9_-]+\/)*(\d{10,})/);
+                    if (match) {
+                        const eventUrl = `https://www.facebook.com/events/${match[1]}/`;
+                        if (foundUrls.has(eventUrl)) continue;
 
-                const card = el.closest('div[role="article"]') || el.parentElement?.parentElement?.parentElement;
-                const cardText = card?.textContent?.toLowerCase() || el.textContent?.toLowerCase() || '';
-                
-                let day = 'idag';
-                if (cardText.includes('i morgon') || cardText.includes('imorgon') || cardText.includes('tomorrow')) {
-                    day = 'i morgon';
-                } else if (cardText.includes('idag') || cardText.includes('i dag') || cardText.includes('today')) {
-                    day = 'idag';
+                        const card = el.closest('div[role="article"]') || el.parentElement?.parentElement?.parentElement;
+                        const cardText = card?.textContent?.toLowerCase() || el.textContent?.toLowerCase() || '';
+                        
+                        let day = 'idag';
+                        if (cardText.includes('i morgon') || cardText.includes('imorgon') || cardText.includes('tomorrow')) {
+                            day = 'i morgon';
+                        } else if (cardText.includes('idag') || cardText.includes('i dag') || cardText.includes('today')) {
+                            day = 'idag';
+                        }
+                        
+                        results.push({ url: eventUrl, day });
+                        foundUrls.add(eventUrl);
+                    }
                 }
-                
-                results.push({ url: eventUrl, day });
-                foundUrls.add(eventUrl);
-            }
+                return results;
+            });
+        } catch (e) {
+            console.log(`      ⚠️ Länkhämtning misslyckades, försöker igen (${retry + 1}/3)...`);
+            await new Promise(r => setTimeout(r, 2000));
         }
-        return results;
-    });
+    }
+    return [];
 }

@@ -56,8 +56,9 @@ async function fetchStats(): Promise<Stats> {
     for (const e of snap.docs) {
         const d = e.data();
         const date = d.time?.toDate ? d.time.toDate().toLocaleDateString('sv-SE') : 'Okänt datum';
+        const attendees = d.attendees ? ` | ${c('cyan', 'Deltagare:')} ${bold(String(d.attendees))}` : '';
         console.log(`  ${c('cyan', bold('•'))} ${bold(d.title.slice(0, 40))} (${c('gray', date)})`);
-        console.log(`    ${c('gray', 'Källa:')} ${d.hostName} | ${c('gray', 'Bild:')} ${d.coverImage ? c('green', 'FINNS') : c('red', 'SAKNAS')}`);
+        console.log(`    ${c('gray', 'Källa:')} ${d.hostName} | ${c('gray', 'Bild:')} ${d.coverImage ? c('green', 'FINNS') : c('red', 'SAKNAS')}${attendees}`);
         if (d.coverImage) console.log(`    ${c('dim', d.coverImage.slice(0, 60) + '...')}`);
         console.log('');
         const t: Date = d.time?.toDate?.() ?? new Date(0);

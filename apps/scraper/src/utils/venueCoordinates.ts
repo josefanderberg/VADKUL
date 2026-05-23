@@ -30,6 +30,15 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     'växjö teater': [56.8789, 14.8067],
     'Teatern': [56.8789, 14.8067],
 
+    'Palladium Folkets Bio Växjö': [56.8793, 14.8065],
+    'Palladium Växjö': [56.8793, 14.8065],
+    'Palladium': [56.8793, 14.8065],
+    'palladium': [56.8793, 14.8065],
+
+    'IOGT Vattentorget': [56.8770, 14.8115],
+    'iogt vattentorget': [56.8770, 14.8115],
+    'Vattentorget': [56.8770, 14.8115],
+
     'Kulturhuset Prisma': [56.8783, 14.8050],
     'kulturhuset prisma': [56.8783, 14.8050],
     'Prisma': [56.8783, 14.8050],
@@ -168,18 +177,42 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
     return null;
 }
 
+export function cleanVenueName(name: string): string {
+    if (!name) return '';
+    let cleaned = name.trim();
+    
+    // 1. Remove redundant country names
+    cleaned = cleaned.replace(/\b(SWEDEN|Sweden|Sverige)\b/gi, '');
+    
+    // 2. Remove duplicate city names (Växjö)
+    const matchCount = (cleaned.match(/växjö/gi) || []).length;
+    if (matchCount > 1) {
+        cleaned = cleaned.replace(/växjö/gi, '');
+        cleaned = cleaned.trim().replace(/,$/, '') + ', Växjö';
+    }
+    
+    // 3. Clean up multiple commas, spaces, and trailing/leading punctuation
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    cleaned = cleaned.replace(/,\s*,/g, ',');
+    cleaned = cleaned.trim().replace(/^,|,$/g, '');
+    
+    return cleaned.trim();
+}
+
 /**
  * Geocode a venue name via OpenStreetMap Nominatim.
  * Respects the 1 req/sec rate limit.
  */
-export async function geocodeVenue(venueName: string): Promise<[number, number] | null> {
-    if (!venueName) return null;
+export async function geocodeVenue(rawVenueName: string): Promise<[number, number] | null> {
+    if (!rawVenueName) return null;
+
+    const venueName = cleanVenueName(rawVenueName);
 
     // Check local list first (fast path)
     const local = getVenueCoordinates(venueName);
     if (local) return local;
 
-    console.log(`[Geocoding] Querying Nominatim for: "${venueName}"`);
+    console.log(`[Geocoding] Querying Nominatim for: "${venueName}" (original: "${rawVenueName}")`);
 
     // Strategy 1: full name + Växjö
     let result = await nominatimSearch(`${venueName}, Växjö, Sverige`);

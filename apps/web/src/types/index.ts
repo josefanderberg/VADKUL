@@ -149,6 +149,7 @@ export interface LinkEvent {
   coverImage?: string;
   price?: number | string;
   isLocationVerified?: boolean;
+  attendees?: number;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {

@@ -15,9 +15,11 @@ const V2MapDynamic = dynamic(() => import('../../components/v2/V2Map'), {
 
 export default function V2Page() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
+    const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
+    const [dayOffset, setDayOffset] = useState(0);
 
     useEffect(() => {
         async function fetchEvents() {
@@ -31,6 +33,24 @@ export default function V2Page() {
         }
         fetchEvents();
     }, []);
+
+    // Filtrera events för den specifika dagen
+    useEffect(() => {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + dayOffset);
+        
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const filtered = events.filter(evt => {
+            return evt.time >= startOfDay && evt.time <= endOfDay;
+        });
+        
+        setFilteredEvents(filtered);
+    }, [events, dayOffset]);
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -71,11 +91,11 @@ export default function V2Page() {
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
             {/* 1. Svävande transparent Navbar överst */}
-            <FloatingNavbar />
+            <FloatingNavbar dayOffset={dayOffset} setDayOffset={setDayOffset} />
 
             {/* 2. Fullskärmskarta underst */}
             <V2MapDynamic 
-                events={events} 
+                events={filteredEvents} 
                 selectedEvent={selectedEvent} 
                 onSelectEvent={setSelectedEvent} 
                 savedEventIds={savedEventIds}
@@ -84,7 +104,7 @@ export default function V2Page() {
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <V2SwipeableCard 
-                events={events}
+                events={filteredEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}

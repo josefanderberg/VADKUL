@@ -1,29 +1,52 @@
 import puppeteer from 'puppeteer';
 import * as path from 'path';
-import * as readline from 'readline';
+import * as fs from 'fs';
 import { addEventToDb, eventExistsInDb } from '../../utils/dbHelper';
-import { geocodeVenue } from '../../utils/venueCoordinates';
+import { geocodeVenue, cleanVenueName } from '../../utils/venueCoordinates';
 import { applyDateFilters, discoverEventUrls } from './discovery';
 import { extractEventDetails } from './extractor';
 import { HostInstrument } from './host';
 import { LocationInstrument } from './location';
 import { FacebookSource } from './types';
 
-// Funktion för att vänta på att användaren trycker på Enter
-function waitForEnter(msg: string) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise(resolve => rl.question(msg, ans => { rl.close(); resolve(ans); }));
+/**
+ * Automatically dismisses cookie banners and overlay login walls if they appear.
+ */
+async function handleBannersAndModals(page: any) {
+    try {
+        await page.evaluate(() => {
+            // 1. Dismiss cookie banners (clicking Decline Optional or Allow All depending on what is available)
+            const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
+            for (const btn of buttons) {
+                const txt = btn.textContent?.trim().toLowerCase() || '';
+                if (txt === 'neka valfria cookies' || txt === 'decline optional cookies' || txt.includes('tillåt') || txt.includes('allow') || txt.includes('neka') || txt.includes('decline')) {
+                    (btn as HTMLElement).click();
+                    break;
+                }
+            }
+
+            // 2. Dismiss login popups/modals (by clicking close icons/buttons)
+            const closeButtons = Array.from(document.querySelectorAll('div[role="button"], button, i'));
+            for (const btn of closeButtons) {
+                const label = btn.getAttribute('aria-label')?.toLowerCase() || '';
+                const txt = btn.textContent?.trim().toLowerCase() || '';
+                if (label.includes('stäng') || label.includes('close') || txt === '✕' || txt === 'x') {
+                    (btn as HTMLElement).click();
+                }
+            }
+        });
+    } catch (e) {
+        // Ignore evaluation errors
+    }
 }
 
 export async function scrapeFacebookEvents() {
     console.log('🚀 Startar Facebook-skrapan (Refactored)...');
+    const scrapedEventsLog: any[] = [];
     
-    const userDataDir = path.resolve(__dirname, '../../../.fb_profile');
-
     const browser = await puppeteer.launch({
-        headless: false,
-        userDataDir,
-        args: ['--no-sandbox', '--disable-notifications', '--start-maximized']
+        headless: true, // Run headless to avoid popping up windows in background execution
+        args: ['--no-sandbox', '--disable-notifications', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
@@ -33,14 +56,12 @@ export async function scrapeFacebookEvents() {
         console.log('🔐 Navigerar till Facebook...');
         await page.goto('https://www.facebook.com/events/search/?q=V%C3%A4xj%C3%B6', { waitUntil: 'networkidle2' });
         
-        const needsLogin = await page.$('#email, input[name="email"]');
-        if (needsLogin) {
-            console.log('🔑 Du behöver logga in på Facebook i det öppnade fönstret.');
-            await waitForEnter('\n👉 Logga in i webbläsarfönstret och tryck sedan på ENTER här i terminalen när du är klar: ');
-        }
+        console.log('🍪 Hanterar eventuella cookie-val och inloggningsrutor...');
+        await handleBannersAndModals(page);
+        await new Promise(r => setTimeout(r, 3000));
 
         const SOURCES: FacebookSource[] = [
-            { url: 'https://www.facebook.com/events/search/?q=Växjö', filters: ['idag' /*, 'i morgon'*/] }
+            { url: 'https://www.facebook.com/events/search/?q=V%C3%A4xj%C3%B6', filters: [] }
         ];
 
         const allEventUrls = new Map<string, string>();
@@ -72,7 +93,8 @@ export async function scrapeFacebookEvents() {
             try {
                 console.log(`  📄 Detaljer för: ${url}`);
                 await page.goto(url, { waitUntil: 'networkidle2' });
-                await new Promise(r => setTimeout(r, 2000));
+                await handleBannersAndModals(page);
+                await new Promise(r => setTimeout(r, 4000));
 
                 // Expandera beskrivning
                 await page.evaluate(() => {
@@ -111,34 +133,29 @@ export async function scrapeFacebookEvents() {
 
                 // --- INSTRUMENT: PLATS (LOCATION) ---
                 const locInfo = await LocationInstrument.extractInfo(page, details.title);
+                
+                const extractedAddress = locInfo.fullAddress;
+                const geocodedQuery = cleanVenueName(extractedAddress);
+                
+                console.log(`    Extracted Address: "${extractedAddress}"`);
+                console.log(`    Geocoded Query: "${geocodedQuery}"`);
+
                 let finalLat = 56.8777, finalLng = 14.8091;
                 let isLocationVerified = false;
 
-                if (locInfo.url && locInfo.url.includes('/places/')) {
-                    const coords = await LocationInstrument.verifyCoordinates(page, locInfo.url);
+                if (extractedAddress !== 'Växjö') {
+                    const coords = await geocodeVenue(extractedAddress);
                     if (coords) {
-                        finalLat = coords.lat;
-                        finalLng = coords.lng;
+                        finalLat = coords[0];
+                        finalLng = coords[1];
                         isLocationVerified = true;
-                    }
-                    await new Promise(r => setTimeout(r, 1000)); // Synlighet
-                    await page.goto(url, { waitUntil: 'networkidle2' }); // Gå tillbaka
-                }
-
-                // Fallback till geokodning om vi inte fick exakta koordinater från FB
-                if (!isLocationVerified) {
-                    const locationToGeocode = locInfo.name !== 'Växjö' ? locInfo.name : details.locationName;
-                    if (locationToGeocode !== 'Växjö') {
-                        const coords = await geocodeVenue(locationToGeocode);
-                        if (coords) { 
-                            finalLat = coords[0]; finalLng = coords[1]; 
-                            isLocationVerified = true;
-                        } else { 
-                            finalLat += (Math.random()-0.5)*0.01; finalLng += (Math.random()-0.5)*0.01; 
-                        }
                     } else {
-                        finalLat += (Math.random()-0.5)*0.005; finalLng += (Math.random()-0.5)*0.005;
+                        finalLat += (Math.random() - 0.5) * 0.01;
+                        finalLng += (Math.random() - 0.5) * 0.01;
                     }
+                } else {
+                    finalLat += (Math.random() - 0.5) * 0.005;
+                    finalLng += (Math.random() - 0.5) * 0.005;
                 }
 
                 // Hantera tid och datum
@@ -154,6 +171,26 @@ export async function scrapeFacebookEvents() {
                         eventTime.setHours(parsedIso.getHours(), parsedIso.getMinutes(), 0, 0);
                     }
                 }
+
+                const eventObj = {
+                    title: details.title,
+                    url: url,
+                    time: eventTime.toISOString(),
+                    locationName: locInfo.name,
+                    extractedAddress: extractedAddress,
+                    geocodedQuery: geocodedQuery,
+                    lat: finalLat,
+                    lng: finalLng,
+                    hostName: finalHostName,
+                    category: 'other',
+                    coverImage: finalImage,
+                    description: details.description,
+                    attendees: details.going,
+                    createdAt: new Date().toISOString(),
+                    isLocationVerified,
+                    isHostVerified
+                };
+                scrapedEventsLog.push(eventObj);
 
                 await addEventToDb({
                     title: details.title,
@@ -171,7 +208,7 @@ export async function scrapeFacebookEvents() {
                     isHostVerified
                 });
                 saved++;
-                console.log(`  ✅ Sparade: ${details.title}`);
+                console.log(`  ✅ Sparade: ${details.title} (${details.going} deltagare)`);
             } catch (e) {
                 console.log(`    ❌ Fel vid ${url}`);
             }
@@ -180,6 +217,13 @@ export async function scrapeFacebookEvents() {
     } catch (err) {
         console.error('❌ Fel i skrapan:', err);
     } finally {
+        const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
+        try {
+            fs.writeFileSync(logPath, JSON.stringify(scrapedEventsLog, null, 2), 'utf-8');
+            console.log(`💾 Sparade ${scrapedEventsLog.length} skrapade objekt till: ${logPath}`);
+        } catch (writeErr) {
+            console.error('⚠️ Kunde inte skriva scraped_events.json:', writeErr);
+        }
         await browser.close();
     }
 }

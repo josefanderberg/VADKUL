@@ -96,6 +96,17 @@ export const HostInstrument = {
         console.log(`    🔍 HostInstrument: Besöker värdens sida: ${hostUrl}`);
         try {
             await page.goto(hostUrl, { waitUntil: 'networkidle2' });
+            // Dismiss login popups/modals
+            await page.evaluate(() => {
+                const closeButtons = Array.from(document.querySelectorAll('div[role="button"], button, i'));
+                for (const btn of closeButtons) {
+                    const label = btn.getAttribute('aria-label')?.toLowerCase() || '';
+                    const txt = btn.textContent?.trim().toLowerCase() || '';
+                    if (label.includes('stäng') || label.includes('close') || txt === '✕' || txt === 'x') {
+                        (btn as HTMLElement).click();
+                    }
+                }
+            }).catch(() => {});
             await new Promise(r => setTimeout(r, 2000)); // Vänta på rendering
 
             const profilePic = await page.evaluate(() => {
