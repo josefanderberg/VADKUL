@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { User, MessageSquare, Bell, Plus, Search, Calendar, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface FloatingNavbarProps {
@@ -8,6 +9,19 @@ interface FloatingNavbarProps {
 }
 
 export default function FloatingNavbar({ dayOffset, setDayOffset }: FloatingNavbarProps) {
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setProfileMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const getDayLabel = (offset: number) => {
         if (offset === 0) return 'Idag';
         if (offset === 1) return 'Imorgon';
@@ -62,22 +76,37 @@ export default function FloatingNavbar({ dayOffset, setDayOffset }: FloatingNavb
                         <button className="bg-green-500 p-3 rounded-full shadow-lg hover:bg-green-400 transition-colors">
                             <Plus size={24} className="text-white" />
                         </button>
-                        <button className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors">
-                            <User size={24} className="text-slate-800" />
-                        </button>
-                    </div>
-                </div>
 
-                {/* Bottom Row (Aligned Right) */}
-                <div className="flex justify-end w-full">
-                    <div className="flex gap-3 pointer-events-auto">
-                        <button className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative">
-                            <MessageSquare size={20} className="text-slate-800" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
-                        <button className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative">
-                            <Bell size={20} className="text-slate-800" />
-                        </button>
+                        {/* Profile + kolumn-meny nedåt med Meddelanden och Notiser */}
+                        <div className="relative" ref={profileMenuRef}>
+                            <button
+                                type="button"
+                                onClick={() => setProfileMenuOpen(o => !o)}
+                                className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors"
+                                aria-label="Öppna profilmeny"
+                                aria-expanded={profileMenuOpen}
+                            >
+                                <User size={24} className="text-slate-800" />
+                            </button>
+
+                            {profileMenuOpen && (
+                                <div className="absolute right-0 top-full mt-3 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                                    <button
+                                        className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative"
+                                        title="Meddelanden"
+                                    >
+                                        <MessageSquare size={20} className="text-slate-800" />
+                                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                                    </button>
+                                    <button
+                                        className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative"
+                                        title="Notiser"
+                                    >
+                                        <Bell size={20} className="text-slate-800" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -11,6 +11,7 @@ export interface IFacebookEventScrapeResult {
     hostName: string;
     hostUrl: string | null;
     locationUrl: string | null;
+    ogDescription?: string;
 }
 
 export interface FacebookSource {

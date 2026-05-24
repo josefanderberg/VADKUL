@@ -1,14 +1,6 @@
-import * as cheerio from 'cheerio';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenue } from '../utils/venueCoordinates';
-
-const TICKSTER_URLS = [
-    'https://www.tickster.com/se/sv/events/search?q=v%C3%A4xj%C3%B6',
-    'https://www.tickster.com/se/sv/events/search?q=kronoberg',
-    'https://www.tickster.com/se/sv/events/search?q=alvesta',
-    'https://www.tickster.com/se/sv/events/search?q=ljungby',
-    'https://www.tickster.com/se/sv/events/search?q=%C3%A4lmhult',
-];
+import { geocodeVenueSweden } from '../utils/venueCoordinates';
 
 // --- DATE FILTER: Kommande 7 dagar ---
 const now = new Date();
@@ -16,214 +8,360 @@ now.setHours(0, 0, 0, 0);
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
 
+const todayStr = now.toISOString().split('T')[0];
+const endStr = oneWeekFromNow.toISOString().split('T')[0];
+
+// Sverige-bred sökning — idag prioriteras, sedan hela veckan
+const SEARCH_URLS = [
+    // --- IDAG FÖRST (prioritet) ---
+    `https://www.tickster.com/se/sv/events/search?q=&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=konsert&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=musik&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=sport&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=teater&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=standup&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=dans&date_from=${todayStr}&date_to=${todayStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=barn&date_from=${todayStr}&date_to=${todayStr}`,
+    // --- KOMMANDE VECKA ---
+    `https://www.tickster.com/se/sv/events/search?q=&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=konsert&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=musik&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=festival&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=teater&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=sport&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=standup&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=mat&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=krog&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=dans&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=barn&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=marknad&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=konst&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=quiz&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=yoga&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=utomhus&date_from=${todayStr}&date_to=${endStr}`,
+    `https://www.tickster.com/se/sv/events/search?q=expo&date_from=${todayStr}&date_to=${endStr}`,
+];
+
 function isWithinOneWeek(date: Date): boolean {
     return date >= now && date <= oneWeekFromNow;
 }
 
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
-    if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party')) return 'party';
-    if (t.includes('musik') || t.includes('konsert') || t.includes('kör') || t.includes('orkester') || t.includes('tour')) return 'music';
-    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match') || t.includes('tävling') || t.includes('lakers') || t.includes('hockey')) return 'sport';
+    if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party') || t.includes('krog')) return 'party';
+    if (t.includes('musik') || t.includes('konsert') || t.includes('kör') || t.includes('orkester') || t.includes('tour') || t.includes('band')) return 'music';
+    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match') || t.includes('tävling') || t.includes('hockey') || t.includes('fotboll') || t.includes('handboll')) return 'sport';
     if (t.includes('quiz') || t.includes('spel') || t.includes('boardgame') || t.includes('bingo')) return 'game';
     if (t.includes('teater') || t.includes('musikal') || t.includes('standup') || t.includes('humor') || t.includes('konst') || t.includes('utställning') || t.includes('komedi') || t.includes('magic')) return 'culture';
-    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting') || t.includes('provning')) return 'food';
-    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa') || t.includes('megaloppis')) return 'market';
+    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting') || t.includes('provning') || t.includes('middag')) return 'food';
+    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa')) return 'market';
     if (t.includes('utomhus') || t.includes('natur') || t.includes('vandring')) return 'outdoor';
     if (t.includes('barn') || t.includes('familj') || t.includes('saga') || t.includes('junior')) return 'play';
     if (t.includes('träning') || t.includes('yoga') || t.includes('gym') || t.includes('fitness')) return 'training';
-    if (t.includes('öppet hus') || t.includes('föreläsning') || t.includes('workshop') || t.includes('seminarium') || t.includes('mässa')) return 'study';
-    if (t.includes('campus') || t.includes('student') || t.includes('kår')) return 'campus';
+    if (t.includes('festival')) return 'music';
     return 'other';
 }
 
-export async function scrapeTickster() {
-    console.log('Starting Tickster scraper for multiple URLs...');
-    const allEventLinks: { href: string; img: string; dateFromUrl: string }[] = [];
-    const seenHrefs = new Set<string>();
+/**
+ * Extraherar event-links från en renderad Tickster-listsida via Puppeteer.
+ */
+async function discoverEventLinks(page: Page, url: string): Promise<{ href: string; dateFromUrl: string }[]> {
+    try {
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+        // Vänta på event-links
+        await page.waitForSelector('a[href*="/events/"]', { timeout: 8000 }).catch(() => {});
 
-    for (const TICKSTER_URL of TICKSTER_URLS) {
-        console.log(`  Fetching: ${TICKSTER_URL}`);
-        try {
-            const response = await fetch(TICKSTER_URL, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'text/html'
+        const links = await page.evaluate(() => {
+            const anchors = Array.from(document.querySelectorAll('a[href*="/events/"]'));
+            return anchors
+                .map(a => (a as HTMLAnchorElement).href)
+                .filter(href => /\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}\//.test(href));
+        });
+
+        const result: { href: string; dateFromUrl: string }[] = [];
+        for (const href of links) {
+            const m = href.match(/\/events\/[a-z0-9]+\/(\d{4}-\d{2}-\d{2})\//);
+            if (m) {
+                const eventDate = new Date(m[1] + 'T00:00:00');
+                if (isWithinOneWeek(eventDate)) {
+                    result.push({ href, dateFromUrl: m[1] });
                 }
-            });
-
-            if (!response.ok) {
-                console.error(`Tickster returned status ${response.status} for ${TICKSTER_URL}`);
-                continue;
             }
+        }
+        return result;
+    } catch (err) {
+        console.error(`  ⚠️ Kunde inte hämta listsida: ${url}`, err);
+        return [];
+    }
+}
 
-            const text = await response.text();
-            const $ = cheerio.load(text);
+/**
+ * Extraherar event-detaljer från en renderad Tickster-eventsida.
+ * Hämtar: titel, tid, pris, venue-namn, adress (street + city + postalcode), bild.
+ */
+async function extractEventDetails(page: Page, href: string, dateFromUrl: string) {
+    await page.goto(href, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.waitForSelector('h1', { timeout: 8000 }).catch(() => {});
 
-            $('a[href*="/events/"]').each((_, el) => {
-                const href = $(el).attr('href') || '';
-                const urlMatch = href.match(/\/events\/[a-z0-9]+\/(\d{4}-\d{2}-\d{2})\/[a-z0-9-]+$/);
-                if (urlMatch) {
-                    const fullHref = `https://www.tickster.com${href}`;
-                    if (!seenHrefs.has(fullHref)) {
-                        // --- 1-WEEK DATE FILTER on URL date ---
-                        const eventDate = new Date(urlMatch[1] + 'T00:00:00');
-                        if (!isWithinOneWeek(eventDate)) {
-                            console.log(`  Skipping (outside 1 week): ${urlMatch[1]}`);
-                        } else {
-                            seenHrefs.add(fullHref);
-                            const img = $(el).find('img').attr('src') || '';
-                            allEventLinks.push({ href: fullHref, img, dateFromUrl: urlMatch[1] });
+    return await page.evaluate((dateStr: string) => {
+        // Titel
+        const title = (document.querySelector('h1')?.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!title) return null;
+
+        // Bild
+        const ogImg = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
+        const firstImg = (document.querySelector('img[src*="cdn"], img[src*="cloudfront"], img[src*="tickster"]') as HTMLImageElement)?.src || '';
+        const coverImage = ogImg || firstImg || '';
+
+        // JSON-LD
+        let jsonTime = '';
+        let jsonVenue = '';
+        let jsonStreet = '';
+        let jsonCity = '';
+        let jsonPostal = '';
+        let jsonLat: number | null = null;
+        let jsonLng: number | null = null;
+        let jsonPrice: string | number = '';
+
+        const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+        for (const s of scripts) {
+            try {
+                const d = JSON.parse(s.textContent || '');
+                if (d['@type'] === 'Event') {
+                    jsonTime = d.startDate || '';
+                    if (d.location) {
+                        jsonVenue = d.location.name || '';
+                        if (d.location.address) {
+                            jsonStreet = d.location.address.streetAddress || '';
+                            jsonCity = d.location.address.addressLocality || '';
+                            jsonPostal = d.location.address.postalCode || '';
+                        }
+                        if (d.location.geo) {
+                            jsonLat = d.location.geo.latitude ?? null;
+                            jsonLng = d.location.geo.longitude ?? null;
                         }
                     }
+                    if (d.offers?.price !== undefined) {
+                        const p = d.offers.price;
+                        jsonPrice = (p === 0 || p === '0') ? 'Gratis' : parseInt(p, 10);
+                    }
                 }
-            });
-        } catch (err) {
-            console.error(`Error fetching ${TICKSTER_URL}:`, err);
+            } catch (_) {}
         }
-    }
 
-    console.log(`Found ${allEventLinks.length} Tickster events (within 1 week) to process.`);
-    const uniqueEvents = Array.from(new Map(allEventLinks.map(e => [e.href, e])).values());
+        // Microdata — venue address från Schema.org markup (event-specifik, ej Tickster AB)
+        // Tickster-sidor har FLERA address-block; vi vill det som hör till eventet, ej footer
+        // Strategi: ta det block som är närmast h1 i DOM, dvs det första som inte är i footer
+        let microdataStreet = '';
+        let microdataCity = '';
+        let microdataPostal = '';
+        let microdataVenue = '';
 
-        for (const evt of uniqueEvents) {
+        const eventScope = document.querySelector('[itemtype*="Event"]');
+        if (eventScope) {
+            microdataVenue = (eventScope.querySelector('[itemprop="location"] [itemprop="name"]') as HTMLElement)?.textContent?.trim() || '';
+            microdataStreet = (eventScope.querySelector('[itemprop="streetAddress"]') as HTMLElement)?.textContent?.trim() || '';
+            microdataCity = (eventScope.querySelector('[itemprop="addressLocality"]') as HTMLElement)?.textContent?.trim() || '';
+            microdataPostal = (eventScope.querySelector('[itemprop="postalCode"]') as HTMLElement)?.textContent?.trim() || '';
+        }
+
+        // Fallback: sök i sidans synliga text efter adress-mönster (SE-XXX XX STAD eller GATUNAMN N)
+        let textStreet = '';
+        let textCity = '';
+
+        // Kolla body text för tydliga address-mönster
+        const allText = Array.from(document.querySelectorAll('p, span, div, li, address'))
+            .map(el => el.textContent?.trim() || '')
+            .filter(t => t.length > 3 && t.length < 120);
+
+        const streetPattern = /^[A-ZÅÄÖ][a-zåäöA-ZÅÄÖ]+(gatan|vägen|allén|plan|torg|platsen|gränd|backe|väg|gat)\s+\d+/i;
+        const cityPattern = /\b(Stockholm|Göteborg|Malmö|Uppsala|Västerås|Örebro|Linköping|Helsingborg|Jönköping|Norrköping|Lund|Umeå|Gävle|Borås|Eskilstuna|Södertälje|Karlstad|Täby|Sundsvall|Luleå|Östersund|Växjö|Kalmar|Halmstad|Falun|Skellefteå|Kristianstad|Växjö)\b/i;
+
+        for (const t of allText) {
+            if (!textStreet && streetPattern.test(t)) textStreet = t;
+            if (!textCity) {
+                const m = t.match(cityPattern);
+                if (m) textCity = m[1];
+            }
+            if (textStreet && textCity) break;
+        }
+
+        // Konsolidera adress
+        const venue = jsonVenue || microdataVenue || '';
+        const street = jsonStreet || microdataStreet || textStreet || '';
+        const city = jsonCity || microdataCity || textCity || '';
+        const postal = jsonPostal || microdataPostal || '';
+
+        // Bygg geocodnings-sträng
+        const addressParts = [street, postal, city].filter(Boolean);
+        const geocodeQuery = addressParts.length > 0
+            ? addressParts.join(', ')
+            : venue || 'Sverige';
+
+        // Tid
+        let parsedTime = dateStr + 'T00:00:00';
+        let hasSpecificTime = false;
+        if (jsonTime && jsonTime.includes('T')) {
+            parsedTime = jsonTime;
+            hasSpecificTime = true;
+        } else {
+            // Sök tid i body text
+            const bodyText = document.body.textContent || '';
+            const timeMatch = bodyText.match(/\b([01]?\d|2[0-3])[:.:]([0-5]\d)\b/);
+            if (timeMatch) {
+                const h = parseInt(timeMatch[1], 10);
+                const m = parseInt(timeMatch[2], 10);
+                if (h >= 6) {
+                    parsedTime = dateStr + `T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+                    hasSpecificTime = true;
+                }
+            }
+        }
+
+        return {
+            title,
+            venue,
+            street,
+            city,
+            postal,
+            geocodeQuery,
+            parsedTime,
+            hasSpecificTime,
+            jsonLat,
+            jsonLng,
+            coverImage,
+            jsonPrice,
+        };
+    }, dateFromUrl);
+}
+
+export async function scrapeTickster() {
+    console.log('🎟️  Starting Tickster scraper (Puppeteer, Sverige-bred)...');
+
+    let browser: Browser | null = null;
+
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 900 });
+        await page.setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        );
+
+        // Blockera tung media för snabbare laddning
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+            const type = req.resourceType();
+            if (['image', 'font', 'media', 'stylesheet'].includes(type)) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        // --- Fas 1: Samla alla event-URLs ---
+        const seenHrefs = new Set<string>();
+        const allLinks: { href: string; dateFromUrl: string }[] = [];
+
+        for (const searchUrl of SEARCH_URLS) {
+            console.log(`  🔍 Söker: ${searchUrl}`);
+            const links = await discoverEventLinks(page, searchUrl);
+            let newCount = 0;
+            for (const link of links) {
+                if (!seenHrefs.has(link.href)) {
+                    seenHrefs.add(link.href);
+                    allLinks.push(link);
+                    newCount++;
+                }
+            }
+            console.log(`     → ${newCount} nya event-URLs (totalt: ${allLinks.length})`);
+        }
+
+        console.log(`\n📋 Totalt ${allLinks.length} unika Tickster-events att processa.`);
+
+        // --- Fas 2: Deep-scrape varje event (i batchar om 10) ---
+        let saved = 0;
+        let skipped = 0;
+
+        for (const evt of allLinks) {
             try {
-                // Check DB first to save network requests
-                const exists = await eventExistsInDb(evt.href);
-                if (exists) {
-                    console.log(`Already exists: ${evt.href}`);
+                // Kolla DB först
+                if (await eventExistsInDb(evt.href)) {
+                    skipped++;
                     continue;
                 }
 
-                console.log(`Deep scraping: ${evt.href}`);
-                const detailRes = await fetch(evt.href, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-                });
+                console.log(`  📄 Scraping: ${evt.href}`);
+                const details = await extractEventDetails(page, evt.href, evt.dateFromUrl);
 
-                if (!detailRes.ok) continue;
-
-                const detailHtml = await detailRes.text();
-                const $detail = cheerio.load(detailHtml);
-
-                const title = $detail('h1').first().text().replace(/\s+/g, ' ').trim();
-                if (!title) continue;
-
-                const bodyText = $detail('body').text().replace(/\s+/g, ' ');
-
-                // --- Extract date from URL ---
-                const parsedDate = new Date(evt.dateFromUrl + 'T00:00:00');
-                let hasSpecificTime = false;
-
-                // --- Try JSON-LD first (some pages may have it) ---
-                let jsonLdLat: number | null = null;
-                let jsonLdLng: number | null = null;
-                let jsonLdPrice: number | string | undefined;
-                let jsonLdLocation = '';
-                let jsonLdImg = evt.img;
-
-                $detail('script[type="application/ld+json"]').each((_, el) => {
-                    try {
-                        const data = JSON.parse($detail(el).html() || '');
-                        if (data['@type'] === 'Event') {
-                            if (data.offers && data.offers.price) {
-                                jsonLdPrice = (data.offers.price === 0 || data.offers.price === '0') ? 'Gratis' : parseInt(data.offers.price, 10);
-                            }
-                            if (data.location && data.location.name) jsonLdLocation = data.location.name;
-                            if (data.location && data.location.geo) {
-                                jsonLdLat = data.location.geo.latitude;
-                                jsonLdLng = data.location.geo.longitude;
-                            }
-                            if (data.startDate) {
-                                const jd = data.startDate;
-                                if (jd.includes('T')) {
-                                    const timePart = jd.split('T')[1]?.substring(0, 5);
-                                    if (timePart && timePart.length >= 5) {
-                                        const tp = timePart.split(':');
-                                        parsedDate.setHours(parseInt(tp[0], 10), parseInt(tp[1], 10), 0);
-                                        hasSpecificTime = true;
-                                    }
-                                }
-                            }
-                            if (data.image) {
-                                jsonLdImg = typeof data.image === 'string' ? data.image : data.image[0];
-                            }
-                        }
-                    } catch (e) { }
-                });
-
-                // --- Fallback: extract time from body text ---
-                if (!hasSpecificTime) {
-                    const timeMatches = bodyText.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g);
-                    if (timeMatches && timeMatches.length > 0) {
-                        // Use the first reasonable time (skip very early times like 00:00)
-                        for (const tm of timeMatches) {
-                            const normalized = tm.replace('.', ':');
-                            const parts = normalized.split(':');
-                            const h = parseInt(parts[0], 10);
-                            const m = parseInt(parts[1], 10);
-                            if (h >= 6) { // Skip midnight-ish times
-                                parsedDate.setHours(h, m, 0);
-                                hasSpecificTime = true;
-                                console.log(`  → Found time in text: ${normalized}`);
-                                break;
-                            }
-                        }
-                    }
+                if (!details || !details.title) {
+                    console.log(`     ⚠️  Ingen titel, hoppar.`);
+                    continue;
                 }
 
-                // --- Fallback: extract location from body text ---
-                let finalLocation = jsonLdLocation;
-                if (!finalLocation) {
-                    const knownVenues = [
-                        'Vida Arena', 'Fortnox Arena', 'Växjö Konserthus', 'Konserthuset',
-                        'Kulturhuset', 'Tipshallen', 'Arenastaden', 'Stadsparken',
-                        'Utvandrarnas hus', 'Smålands Museum', 'Domkyrkan'
-                    ];
-                    for (const venue of knownVenues) {
-                        if (bodyText.toLowerCase().includes(venue.toLowerCase())) {
-                            finalLocation = venue;
-                            break;
-                        }
-                    }
-                    if (!finalLocation) finalLocation = 'Växjö';
-                }
-                finalLocation = finalLocation.replace(/\s+/g, ' ').trim();
-
-                // --- Resolve coordinates ---
+                // Koordinater
                 let lat: number;
                 let lng: number;
 
-                if (jsonLdLat && jsonLdLng) {
-                    lat = jsonLdLat;
-                    lng = jsonLdLng;
+                if (details.jsonLat && details.jsonLng) {
+                    lat = details.jsonLat;
+                    lng = details.jsonLng;
+                    console.log(`     📍 Koordinater från JSON-LD: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
                 } else {
-                    const coords = await geocodeVenue(finalLocation);
-                    lat = coords ? coords[0] : 56.8796;
-                    lng = coords ? coords[1] : 14.8094;
+                    // Geocoda adressen med Sverige-bred sökning
+                    console.log(`     🗺️  Geocodar: "${details.geocodeQuery}"`);
+                    const coords = await geocodeVenueSweden(details.geocodeQuery);
+                    if (coords) {
+                        lat = coords[0];
+                        lng = coords[1];
+                        console.log(`     📍 Geocodad: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
+                    } else {
+                        // Geocoda bara stad som fallback
+                        const cityCoords = details.city ? await geocodeVenueSweden(details.city) : null;
+                        lat = cityCoords ? cityCoords[0] : 59.3293; // Stockholm centrum som yttersta fallback
+                        lng = cityCoords ? cityCoords[1] : 18.0686;
+                        console.log(`     📍 Fallback stad: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
+                    }
                 }
 
+                const locationName = [details.venue, details.street, details.city]
+                    .filter(Boolean)
+                    .join(', ') || details.city || 'Sverige';
+
                 const linkEvent = {
-                    title: title,
+                    title: details.title,
                     url: evt.href,
-                    time: parsedDate,
-                    hasSpecificTime,
-                    locationName: finalLocation,
+                    time: new Date(details.parsedTime),
+                    hasSpecificTime: details.hasSpecificTime,
+                    locationName,
                     lat,
                     lng,
                     hostName: 'Tickster',
-                    category: guessCategoryFromTitle(title),
+                    category: guessCategoryFromTitle(details.title),
                     createdAt: new Date(),
-                    coverImage: jsonLdImg || undefined,
-                    price: jsonLdPrice !== undefined ? jsonLdPrice : ''
+                    coverImage: details.coverImage || '',
+                    price: details.jsonPrice !== undefined && details.jsonPrice !== null ? details.jsonPrice : '',
                 };
 
                 await addEventToDb(linkEvent);
-                console.log(`  ✅ Saved: ${title} @ ${finalLocation} [${lat.toFixed(4)}, ${lng.toFixed(4)}] Tid: ${hasSpecificTime ? parsedDate.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : 'okänd'}`);
+                saved++;
+                const timeStr = details.hasSpecificTime
+                    ? new Date(details.parsedTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+                    : 'okänd tid';
+                console.log(`  ✅ Sparat: ${details.title} @ ${locationName} [${lat.toFixed(4)}, ${lng.toFixed(4)}] — ${timeStr}`);
 
             } catch (err) {
-                console.error(`Failed to process Tickster event ${evt.href}:`, err);
+                console.error(`  ❌ Fel för ${evt.href}:`, err);
             }
         }
 
-        console.log('Tickster scrape complete.');
+        console.log(`\n🎉 Tickster klart! Sparade ${saved} nya event. (${skipped} redan i DB)`);
+
+    } finally {
+        if (browser) await browser.close();
+    }
 }

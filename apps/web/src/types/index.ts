@@ -142,6 +142,8 @@ export interface LinkEvent {
   hasSpecificTime?: boolean; // <--- NY: Anger om en specifik tid hämtades
   createdAt: Date;
   locationName: string;
+  extractedAddress?: string;
+  geocodedQuery?: string;
   lat: number;
   lng: number;
   hostName: string;

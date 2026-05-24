@@ -1,5 +1,5 @@
 // src/components/layout/Navbar.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -9,7 +9,7 @@ import { notificationService } from '../../services/notificationService';
 import NotificationsMenu from '../ui/NotificationsMenu';
 import {
   Sun, Moon,
-  Plus, MessageSquare, Info
+  Plus, MessageSquare, Info, User as UserIcon
 } from 'lucide-react';
 import type { AppNotification } from '../../types';
 
@@ -31,6 +31,20 @@ export default function Navbar() {
 
   // State för notiser (Flyttad från NotificationsMenu)
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  // State för profil-menyn (visar Notiser + Chatt nedåt)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Highlight-sekvens för oinloggade (Plus -> Info -> Theme -> Login)
   const [activeHighlight, setActiveHighlight] = useState<'plus' | 'info' | 'theme' | 'login' | null>(null);
@@ -196,39 +210,70 @@ export default function Navbar() {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {/* 3. RESTERANDE MENY (Notiser, Chatt, Profil eller Login) */}
+          {/* 3. RESTERANDE MENY (Profil-knapp som öppnar kolumn med Notiser + Chatt, eller Login) */}
           {user ? (
-            <>
-              {/* NOTISER (Endast generella) */}
-              <NotificationsMenu notifications={generalNotifications} />
-
-              {/* CHATT */}
-              <Link href="/chat" className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors relative">
-                <MessageSquare size={20} />
-                {unreadChatCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background animate-in zoom-in">
-                    {unreadChatCount > 9 ? '9+' : unreadChatCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* PROFILBILD */}
-              <Link href="/profile" className="block ml-1 shrink-0">
+            <div className="relative ml-1 shrink-0" ref={profileMenuRef}>
+              {/* PROFILBILD - klickbar knapp som togglar kolumn-menyn */}
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen(o => !o)}
+                className="block relative"
+                aria-label="Öppna profilmeny"
+                aria-expanded={profileMenuOpen}
+              >
                 {navImage ? (
-                  // OM BILD FINNS
                   <img
                     src={navImage}
                     alt="Profil"
                     className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-border shadow-sm hover:border-ring transition-colors"
                   />
                 ) : (
-                  // FALLBACK: Initialer
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-extrabold text-xs border-2 border-border shadow-sm hover:border-ring transition-colors">
                     {getInitials()}
                   </div>
                 )}
-              </Link>
-            </>
+                {(unreadChatCount > 0 || generalNotifications.some(n => !n.read)) && !profileMenuOpen && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background animate-in zoom-in">
+                    {(unreadChatCount + generalNotifications.filter(n => !n.read).length) > 9
+                      ? '9+'
+                      : (unreadChatCount + generalNotifications.filter(n => !n.read).length)}
+                  </span>
+                )}
+              </button>
+
+              {/* KOLUMN NEDÅT med Notiser, Chatt och Min profil */}
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-2 flex flex-col items-center gap-1 p-1.5 bg-card rounded-full shadow-xl border border-border z-50 animate-in fade-in slide-in-from-top-2">
+                  {/* NOTISER (Endast generella) */}
+                  <NotificationsMenu notifications={generalNotifications} />
+
+                  {/* CHATT */}
+                  <Link
+                    href="/chat"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors relative"
+                    title="Meddelanden"
+                  >
+                    <MessageSquare size={20} />
+                    {unreadChatCount > 0 && (
+                      <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background animate-in zoom-in">
+                        {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* MIN PROFIL */}
+                  <Link
+                    href="/profile"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="p-1.5 md:p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full transition-colors"
+                    title="Min profil"
+                  >
+                    <UserIcon size={20} />
+                  </Link>
+                </div>
+              )}
+            </div>
           ) : (
             /* LOGGA IN KNAPP */
             <Link

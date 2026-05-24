@@ -1,6 +1,6 @@
 import {
     collection, getDocs, addDoc, doc, deleteDoc, updateDoc, Timestamp,
-    query, where, writeBatch
+    query, where, writeBatch, onSnapshot
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { LinkEvent, FirestoreLinkEventData } from '../types';
@@ -99,5 +99,37 @@ export const linkEventService = {
 
         await batch.commit();
         return eventIds.length;
+    },
+
+    // Real-time listener — triggas direkt när scraper skriver till DB
+    subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
+        let q;
+        if (onlyFuture) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            q = query(
+                collection(db, COLLECTION),
+                where('time', '>=', Timestamp.fromDate(now))
+            );
+        } else {
+            q = query(collection(db, COLLECTION));
+        }
+
+        const unsubscribe = onSnapshot(q, (snap) => {
+            const events = snap.docs.map(d => {
+                const data = d.data() as FirestoreLinkEventData;
+                return {
+                    ...data,
+                    id: d.id,
+                    time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
+                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
+                } as LinkEvent;
+            });
+            callback(events);
+        }, (error) => {
+            console.error('onSnapshot error:', error);
+        });
+
+        return unsubscribe;
     }
 };

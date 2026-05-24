@@ -55,8 +55,8 @@ export const LocationInstrument = {
             }
 
             // Extract Display Place Name from the isolated pin row
-            let displayName = 'Växjö';
-            let pinRowAddress = 'Växjö';
+            let displayName = '';
+            let pinRowAddress = '';
             let locationUrl: string | null = null;
 
             if (locationRow) {
@@ -162,7 +162,7 @@ export const LocationInstrument = {
             }
 
             // Final consolidation
-            const name = displayName || 'Växjö';
+            const name = displayName;
             // Prefer the precise address found on the page if it scores high, fall back to pin row address
             const fullAddress = (highestAddressScore >= 5 && bestAddressText) ? bestAddressText : pinRowAddress;
 

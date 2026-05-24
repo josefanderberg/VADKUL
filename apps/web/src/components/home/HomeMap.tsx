@@ -140,21 +140,22 @@ export default function HomeMap({
                 <div className="absolute bottom-4 left-4 right-4 z-[1000] animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-none">
                     <div className="relative max-w-sm mx-auto pointer-events-auto">
 
-                        {/* PREV BUTTON - Aligned with notch (top-20 = 80px) */}
-                        <button
-                            onClick={cyclePrevEvent}
-                            className="absolute top-20 -left-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
-                        >
-                            <ArrowLeft size={18} />
-                        </button>
-
-                        {/* NEXT BUTTON - Aligned with notch (top-20 = 80px) */}
-                        <button
-                            onClick={cycleNextEvent}
-                            className="absolute top-20 -right-5 -translate-y-1/2 bg-white text-slate-900 border border-slate-200 p-2.5 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center transform"
-                        >
-                            <ArrowRight size={18} />
-                        </button>
+                        {/* NÄSTA BUTTON (Green) - Above the card */}
+                        <div className="flex justify-between items-center w-full mb-3">
+                            <button
+                                onClick={cyclePrevEvent}
+                                className="bg-white/90 backdrop-blur text-slate-700 border border-slate-200 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+                                aria-label="Föregående"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+                            <button
+                                onClick={cycleNextEvent}
+                                className="bg-green-600 text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:bg-green-500 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-green-500/50"
+                            >
+                                Nästa <ArrowRight size={18} />
+                            </button>
+                        </div>
 
                         <div className="">
                             {(selectedEvent as any)?._isExternal && (selectedEvent as any)?._rawLinkEvent ? (
