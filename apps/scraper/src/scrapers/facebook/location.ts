@@ -163,8 +163,10 @@ export const LocationInstrument = {
 
             // Final consolidation
             const name = displayName;
-            // Prefer the precise address found on the page if it scores high, fall back to pin row address
-            const fullAddress = (highestAddressScore >= 5 && bestAddressText) ? bestAddressText : pinRowAddress;
+            // Prefer the structured pin-row address (anchored to the event's location field).
+            // Only fall back to the page-wide scored address if the pin row gave us nothing,
+            // since the page-wide scan can pick up addresses from "Related Events" further down.
+            const fullAddress = pinRowAddress || ((highestAddressScore >= 5 && bestAddressText) ? bestAddressText : '');
 
             return { name, fullAddress, url: locationUrl };
         }, eventTitle);
