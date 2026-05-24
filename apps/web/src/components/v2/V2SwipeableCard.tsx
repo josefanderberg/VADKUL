@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
+import { ArrowRight } from 'lucide-react';
 
 interface V2SwipeableCardProps {
     events: LinkEvent[];
@@ -111,16 +112,91 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         }, 200); // 200ms matches the CSS transition
     };
 
+    const handlePrevious = () => {
+        if (!selectedEvent || events.length === 0) return;
+
+        const idx = events.findIndex(evt => evt.id === selectedEvent.id);
+        if (idx < 0) return;
+
+        let prevIdx = (idx - 1 + events.length) % events.length;
+        let loopCounter = 0;
+
+        while (
+            (discardedEventIds.has(events[prevIdx].id) || events[prevIdx].id === selectedEvent.id)
+            && loopCounter < events.length
+        ) {
+            prevIdx = (prevIdx - 1 + events.length) % events.length;
+            loopCounter++;
+        }
+
+        if (loopCounter < events.length) {
+            onSelectEvent(events[prevIdx]);
+        }
+
+        setExitX(null);
+        setDragX(0);
+    };
+
+    const handleNextOnly = () => {
+        if (!selectedEvent || events.length === 0) return;
+        
+        const idx = events.findIndex(evt => evt.id === selectedEvent.id);
+        let nextIdx = (idx + 1) % events.length;
+        let loopCounter = 0;
+        
+        while (
+            (discardedEventIds.has(events[nextIdx].id) || events[nextIdx].id === selectedEvent.id) 
+            && loopCounter < events.length
+        ) {
+            nextIdx = (nextIdx + 1) % events.length;
+            loopCounter++;
+        }
+        
+        if (loopCounter < events.length) {
+            onSelectEvent(events[nextIdx]);
+        } else {
+            onSelectEvent(null);
+        }
+        
+        setExitX(null);
+        setDragX(0);
+    };
+
     if (!selectedEvent) return null;
 
     // Calculate dynamic rotation based on drag
     const rotation = (dragX / window.innerWidth) * 20; // Max 20 degrees rotation
-    
+
     // Calculate opacity (slightly fades out at edges)
     const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
 
+    // Position-indikator: vilket event i vyn vi tittar på just nu
+    const currentIndex = events.findIndex(evt => evt.id === selectedEvent.id);
+    const positionLabel = currentIndex >= 0 ? `${currentIndex + 1}/${events.length}` : '';
+
     return (
-        <div className="fixed bottom-6 left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
+        <div className="fixed bottom-6 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
+            {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}
+            <div className="w-full max-w-4xl flex justify-center items-center gap-3 mb-4">
+                {positionLabel && (
+                    <button
+                        type="button"
+                        onClick={handlePrevious}
+                        aria-label="Föregående event"
+                        title="Gå tillbaka ett steg"
+                        className="bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 pointer-events-auto tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                        {positionLabel}
+                    </button>
+                )}
+                <button
+                    onClick={handleNextOnly}
+                    className="bg-green-600 text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:bg-green-500 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-green-500/50 pointer-events-auto"
+                >
+                    Nästa <ArrowRight size={18} />
+                </button>
+            </div>
+
             <div 
                 className="relative w-full max-w-4xl h-auto pointer-events-auto"
                 onPointerDown={onPointerDown}
@@ -144,7 +220,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 )}
 
                 <div className={`w-full h-full shadow-[0_10px_40px_rgba(0,0,0,0.2)] rounded-lg ${isDragging.current ? 'pointer-events-none' : ''}`}>
-                    <LinkEventCard linkEvent={selectedEvent} isAdmin={false} />
+                    <LinkEventCard linkEvent={selectedEvent} isAdmin={false} showFullAddress />
                 </div>
             </div>
         </div>
