@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPushNotification = exports.redeemCode = void 0;
+exports.sendPushNotification = exports.redeemCode = exports.dailyScraper = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
@@ -41,6 +41,31 @@ const db = admin.firestore();
 // Sätt region till europa för lägre latency (matcha klienten)
 // Använd 'europe-west1' (Belgien) typiskt för Firebase projekt i europa om inget annat valts
 const region = functions.region('europe-west1');
+const tickster_1 = require("./scrapers/tickster");
+const eventbrite_1 = require("./scrapers/eventbrite");
+/**
+ * Daily Scraper Bot
+ * Runs every day at 06:00 Stockholm time
+ */
+exports.dailyScraper = region.pubsub
+    .schedule('0 6 * * *')
+    .timeZone('Europe/Stockholm')
+    .onRun(async (context) => {
+    console.log('--- DAILY SCRAPER BOT STARTING ---');
+    console.log(`Time: ${new Date().toISOString()}`);
+    try {
+        // Run scrapers that don't require a browser
+        console.log('Running Tickster Scraper...');
+        await (0, tickster_1.scrapeTickster)();
+        console.log('Running Eventbrite Scraper...');
+        await (0, eventbrite_1.scrapeEventbrite)();
+        console.log('--- DAILY SCRAPER BOT FINISHED ---');
+    }
+    catch (error) {
+        console.error('Scraper Bot encountered an error:', error);
+    }
+    return null;
+});
 exports.redeemCode = region.https.onCall(async (data, context) => {
     // 1. Auth Check - Ensure user is logged in
     if (!context.auth) {
