@@ -3,7 +3,7 @@ import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { linkEventService } from '../../services/linkEventService';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
@@ -51,11 +51,18 @@ interface LinkEventCardProps {
     onDelete?: () => void;
     isPanelMode?: boolean;
     showFullAddress?: boolean;
+    onRevealStepChange?: (step: number) => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [revealStep, setRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+
+    // Notifiera förälder när expansionsnivån ändras (för t.ex. karta-offset)
+    useEffect(() => {
+        onRevealStepChange?.(revealStep);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [revealStep]);
 
     // Sekundärrad: visa specifik extractedAddress om vi har en, annars koordinater (placeringen på kartan).
     const secondaryAddress = (() => {

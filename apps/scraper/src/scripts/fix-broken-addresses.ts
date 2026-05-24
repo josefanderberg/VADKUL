@@ -106,7 +106,7 @@ interface BrokenEvent {
 }
 
 /**
- * Bygger en dynamisk blacklist av adresser som dyker upp på ≥3 olika event.
+ * Bygger en dynamisk blacklist av adresser som dyker upp på ≥2 olika event.
  * Det fångar varje rotation av FB:s UI-chrome (Hovmantorp → Universitetsplatsen
  * → Ronneby Brunnspark → …) utan att vi behöver hårdkoda varje variant.
  */
@@ -119,9 +119,31 @@ function buildChromeBlacklist(events: BrokenEvent[]): Set<string> {
     }
     const blacklist = new Set<string>();
     for (const [a, n] of counts) {
-        if (n >= 3) blacklist.add(a);
+        if (n >= 2) blacklist.add(a);
     }
     return blacklist;
+}
+
+/**
+ * Poängsätter en adress-kandidat. Högre = mer trovärdig.
+ *   100  Gata + nr + postnr + stad   ("Storgatan 5, 352 30 Växjö")
+ *    80  Postnr + stad               ("352 30 Växjö")
+ *    60  Gata + nr + stad            ("Bärnstensv 12, Bomhus, Gävle")
+ *    40  Venue, stad / bara stad     ("Arbis, Norrköping")
+ *    20  Bara venue-namn             ("Her Space")
+ */
+function scoreCandidate(addr: string): number {
+    if (!addr) return 0;
+    const cityAlt = SWEDISH_CITIES.join('|');
+    const hasPostal = /\d{3}\s?\d{2}\b/.test(addr);
+    const hasStreet = /(gatan|vägen|allén|allé|torget|gränd|backen|stigen|plan)\b\.?\s*\d+/i.test(addr);
+    const hasCity = new RegExp(`\\b(${cityAlt})\\b`, 'i').test(addr);
+
+    if (hasStreet && hasPostal && hasCity) return 100;
+    if (hasPostal && hasCity) return 80;
+    if (hasStreet && hasCity) return 60;
+    if (hasCity) return 40;
+    return 20;
 }
 
 const isBlacklisted = (addr: string | null | undefined, blacklist: Set<string>): boolean => {
@@ -236,6 +258,49 @@ function extractAddressFromTitle(title: string): string | null {
 }
 
 /**
+ * Scannar HELA FB-eventets DOM efter svenska adresser. Returnerar alla unika
+ * träffar med postnummer eller gata+stad-mönster.
+ *
+ * Detta är ett tyngre alternativ till pin-rowens ofta-trunkerade text — fångar
+ * adressrader som ligger i "Plats"-sektionen utan att vi behöver hitta rätt
+ * selector.
+ */
+async function findAddressesOnPage(page: Page): Promise<string[]> {
+    return await page.evaluate((cities: string[]) => {
+        const text = (document.body.innerText || '').replace(/\u00a0/g, ' ');
+        const found = new Set<string>();
+
+        // Mönster A: Gata + nr + ev. postnr + stad
+        const reStreet = new RegExp(
+            '([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|allén|allé|plan|torget|torg|gränd|backen|stigen)\\s+\\d+[A-Za-z]?(?:\\s*,)?\\s*\\d{3}\\s?\\d{2}\\s+[A-ZÅÄÖ][A-ZÅÄÖa-zåäö-]+)',
+            'g'
+        );
+        let m: RegExpExecArray | null;
+        while ((m = reStreet.exec(text)) !== null) {
+            found.add(m[1].trim());
+        }
+
+        // Mönster B: Postnr + stad
+        const rePostal = /(\d{3}\s?\d{2}\s+[A-ZÅÄÖ][A-ZÅÄÖa-zåäö-]+)/g;
+        while ((m = rePostal.exec(text)) !== null) {
+            found.add(m[1].trim());
+        }
+
+        // Mönster C: Gata + nr + stad utan postnr
+        const cityAlt = cities.join('|');
+        const reStreetCity = new RegExp(
+            `([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|v|allén|allé|plan|torget|torg|gränd|backen|stigen)\\.?\\s*\\d+[A-Za-z]?(?:\\s*,\\s*[A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+)?\\s*,\\s*(?:${cityAlt})\\b)`,
+            'gi'
+        );
+        while ((m = reStreetCity.exec(text)) !== null) {
+            found.add(m[1].trim());
+        }
+
+        return Array.from(found);
+    }, SWEDISH_CITIES);
+}
+
+/**
  * Söker eventets titel på FB events. Identisk logik som tidigare — sista fallback.
  */
 async function searchFbForLocation(page: Page, evt: BrokenEvent): Promise<string | null> {
@@ -307,7 +372,7 @@ async function listOnly() {
 
     console.log(`📋 Hittade ${broken.length} event med trasig/saknad adress.`);
     if (chromeBlacklist.size > 0) {
-        console.log(`🚫 Auto-detekterad chrome (≥3 förekomster): ${chromeBlacklist.size} st`);
+        console.log(`🚫 Auto-detekterad chrome (≥2 förekomster): ${chromeBlacklist.size} st`);
         for (const a of chromeBlacklist) console.log(`     • "${a}"`);
     }
     console.log('');
@@ -364,7 +429,7 @@ async function fixAll() {
 
     const chromeBlacklist = buildChromeBlacklist(broken);
     if (chromeBlacklist.size > 0) {
-        console.log(`🚫 Auto-detekterad chrome (≥3 förekomster), kommer aldrig användas:`);
+        console.log(`🚫 Auto-detekterad chrome (≥2 förekomster), kommer aldrig användas:`);
         for (const a of chromeBlacklist) console.log(`     • "${a}"`);
     }
     console.log('');
@@ -420,61 +485,75 @@ async function fixAll() {
             const details = await extractEventDetails(page);
             const loc = await LocationInstrument.extractInfo(page, details.title);
 
-            // ── Kandidat-pipeline: description → title → pin-row → fb-search ─
-            let candidateAddr: string | null = null;
-            let candidateName: string | null = null;
-            let method: string = 'none';
+            // ── Samla kandidater från ALLA källor ────────────────────────────
+            type Candidate = { addr: string; name: string | null; method: string; score: number };
+            const candidates: Candidate[] = [];
+            const seen = new Set<string>();
 
-            const fromDesc = extractAddressFromDescription(details.description || evt.description || '');
-            if (fromDesc && !isBlacklisted(fromDesc, chromeBlacklist)) {
-                candidateAddr = fromDesc;
-                method = 'description';
-                console.log(`   📖 Beskrivning: "${fromDesc}"`);
-            }
+            const addCand = (addr: string | null | undefined, method: string, name: string | null = null) => {
+                if (!addr) return;
+                const trimmed = addr.trim();
+                if (!trimmed || seen.has(trimmed)) return;
+                if (isBlacklisted(trimmed, chromeBlacklist)) return;
+                if (looksForeign(trimmed)) return;
+                seen.add(trimmed);
+                candidates.push({ addr: trimmed, name, method, score: scoreCandidate(trimmed) });
+            };
 
-            if (!candidateAddr) {
-                const fromTitle = extractAddressFromTitle(evt.title);
-                if (fromTitle && !isBlacklisted(fromTitle, chromeBlacklist)) {
-                    candidateAddr = fromTitle;
-                    method = 'title';
-                    console.log(`   🏷️  Titel: "${fromTitle}"`);
-                }
-            }
+            addCand(extractAddressFromDescription(details.description || evt.description || ''), 'description');
+            addCand(extractAddressFromTitle(evt.title), 'title');
 
-            if (!candidateAddr && loc.fullAddress && !isBlacklisted(loc.fullAddress, chromeBlacklist)) {
-                candidateAddr = loc.fullAddress;
-                candidateName = loc.name || null;
-                method = 'pin-row';
-                console.log(`   📍 Pin-row: "${loc.fullAddress}"`);
-            }
+            const pageAddrs = await findAddressesOnPage(page);
+            for (const a of pageAddrs) addCand(a, 'page-scan');
 
-            if (!candidateAddr) {
+            addCand(loc.fullAddress, 'pin-row', loc.name || null);
+
+            // Endast om vi inte har en kandidat med postnr/stad, försök FB-sök
+            const hasGoodCandidate = candidates.some(c => c.score >= 60);
+            if (!hasGoodCandidate) {
                 console.log('   🔎 Söker på FB events efter titeln...');
                 const fromSearch = await searchFbForLocation(page, evt);
-                if (fromSearch && !isBlacklisted(fromSearch, chromeBlacklist)) {
-                    candidateAddr = fromSearch;
-                    method = 'fb-search';
-                    console.log(`   🔎 FB-sök: "${fromSearch}"`);
-                }
+                addCand(fromSearch, 'fb-search');
             }
 
-            if (!candidateAddr) {
+            if (candidates.length === 0) {
                 console.log('   ⏭️  Ingen kandidat hittades — rör inte raden.');
                 noCandidate++;
                 summary.push({ id: evt.id, title: evt.title, before: evt.extractedAddress, after: null, method: 'none', status: 'no-candidate' });
                 continue;
             }
 
-            // ── Geokoda och validera ─────────────────────────────────────────
-            const geo = await geocodeVenueSweden(candidateAddr);
-            if (!geo || !isValidSwedishCoord(geo[0], geo[1])) {
-                console.log(`   ❌ Kandidat "${candidateAddr}" gav ogiltig svensk koord — rör inte raden.`);
-                invalidCoord++;
-                summary.push({ id: evt.id, title: evt.title, before: evt.extractedAddress, after: candidateAddr, method, status: 'invalid-coord' });
-                continue;
+            // ── Ranka efter kvalitetspoäng, högst först ──────────────────────
+            candidates.sort((a, b) => b.score - a.score);
+            console.log(`   📊 Kandidater (${candidates.length}):`);
+            for (const c of candidates.slice(0, 5)) {
+                console.log(`        [${c.score}] ${c.method.padEnd(11)} "${c.addr.slice(0, 70)}"`);
             }
 
-            const [newLat, newLng] = geo;
+            // ── Försök geokoda i ordning tills någon ger giltig svensk koord ─
+            let candidateAddr: string | null = null;
+            let candidateName: string | null = null;
+            let method: string = 'none';
+            let newLat = 0, newLng = 0;
+
+            for (const c of candidates) {
+                const geo = await geocodeVenueSweden(c.addr);
+                if (geo && isValidSwedishCoord(geo[0], geo[1])) {
+                    candidateAddr = c.addr;
+                    candidateName = c.name;
+                    method = c.method;
+                    newLat = geo[0];
+                    newLng = geo[1];
+                    break;
+                }
+            }
+
+            if (!candidateAddr) {
+                console.log(`   ❌ Ingen av ${candidates.length} kandidater gav giltig svensk koord — rör inte raden.`);
+                invalidCoord++;
+                summary.push({ id: evt.id, title: evt.title, before: evt.extractedAddress, after: candidates[0].addr, method: candidates[0].method, status: 'invalid-coord' });
+                continue;
+            }
 
             // ── Skippa om inget faktiskt förändras ──────────────────────────
             const sameAddr = candidateAddr === evt.extractedAddress;

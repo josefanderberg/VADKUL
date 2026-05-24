@@ -80,9 +80,10 @@ interface V2SwipeableCardProps {
     onSaveEvent: (eventId: string) => void;
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
+    onCardExpandedChange?: (expanded: boolean) => void;
 }
 
-export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds }: V2SwipeableCardProps) {
+export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange }: V2SwipeableCardProps) {
     const [dragX, setDragX] = useState(0);
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
@@ -297,7 +298,12 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 )}
 
                 <div className={`w-full h-full shadow-[0_10px_40px_rgba(0,0,0,0.2)] rounded-lg ${isDragging.current ? 'pointer-events-none' : ''}`}>
-                    <LinkEventCard linkEvent={selectedEvent} isAdmin={false} showFullAddress />
+                    <LinkEventCard
+                        linkEvent={selectedEvent}
+                        isAdmin={false}
+                        showFullAddress
+                        onRevealStepChange={step => onCardExpandedChange?.(step > 0)}
+                    />
                 </div>
             </div>
         </div>

@@ -18,17 +18,42 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow.src,
 });
 
-function MapController({ selectedEvent }: { selectedEvent: LinkEvent | null }) {
+function MapController({ selectedEvent, cardExpanded }: { selectedEvent: LinkEvent | null; cardExpanded: boolean }) {
     const map = useMap();
-    
+    // Kom ihåg vilken zoom användaren hade INNAN expansionen så vi kan zoom:a tillbaka.
+    const baseZoomRef = useRef<number | null>(null);
+
     useEffect(() => {
-        if (selectedEvent && selectedEvent.lat && selectedEvent.lng) {
-            const currentZoom = map.getZoom();
-            
-            // Flytta till exakt center utan offset och behåll nuvarande zoomnivå
-            map.flyTo([selectedEvent.lat, selectedEvent.lng], currentZoom, { duration: 1.5 });
+        if (!selectedEvent || !selectedEvent.lat || !selectedEvent.lng) return;
+
+        const currentZoom = map.getZoom();
+        const maxZoom = map.getMaxZoom();
+
+        // När kortet är expanderat → zooma in 1 steg extra. När det kollapsas → tillbaka till basen.
+        if (cardExpanded) {
+            if (baseZoomRef.current == null) baseZoomRef.current = currentZoom;
         }
-    }, [selectedEvent, map]);
+        const targetZoom = cardExpanded
+            ? Math.min((baseZoomRef.current ?? currentZoom) + 1, maxZoom)
+            : (baseZoomRef.current ?? currentZoom);
+        if (!cardExpanded) baseZoomRef.current = null;
+
+        const targetLatLng = L.latLng(selectedEvent.lat, selectedEvent.lng);
+
+        // Önskad Y-position för markören på skärmen.
+        //   Expanderat kort: 25% från toppen (markören hög upp så kortet inte täcker).
+        //   Kollapsat kort:  45% från toppen (lite över mitten).
+        const targetYRatio = cardExpanded ? 0.25 : 0.45;
+
+        // Räkna om till en map-center som placerar markören vid targetYRatio,
+        // i den zoom-nivå vi siktar på.
+        const mapSize = map.getSize();
+        const targetPx = map.project(targetLatLng, targetZoom);
+        const newCenterPx = L.point(targetPx.x, targetPx.y + mapSize.y * (0.5 - targetYRatio));
+        const newCenter = map.unproject(newCenterPx, targetZoom);
+
+        map.flyTo(newCenter, targetZoom, { duration: 1.5 });
+    }, [selectedEvent, cardExpanded, map]);
 
     return null;
 }
@@ -39,9 +64,10 @@ interface V2MapProps {
     onSelectEvent: (evt: LinkEvent | null) => void;
     savedEventIds?: Set<string>;
     discardedEventIds?: Set<string>;
+    cardExpanded?: boolean;
 }
 
-export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set() }: V2MapProps) {
+export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false }: V2MapProps) {
 
     const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean) => {
         
@@ -85,7 +111,7 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 />
                 
-                <MapController selectedEvent={selectedEvent} />
+                <MapController selectedEvent={selectedEvent} cardExpanded={cardExpanded} />
                 
                 <MapEvents onMapClick={() => onSelectEvent(null)} />
 

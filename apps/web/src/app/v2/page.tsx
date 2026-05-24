@@ -13,6 +13,43 @@ const V2MapDynamic = dynamic(() => import('../../components/v2/V2Map'), {
     loading: () => <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">Laddar karta...</div>
 });
 
+// Haversine-avstånd i km mellan två punkter
+const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+const hasValidCoords = (evt: LinkEvent) =>
+    typeof evt.lat === 'number' && typeof evt.lng === 'number' &&
+    !(evt.lat === 0 && evt.lng === 0);
+
+/**
+ * Vid dagbyte: välj eventet som ligger närmast användarens nuvarande position
+ * (det tidigare selectedEvent). Faller tillbaka till första event i listan om
+ * ankare saknar koords eller om inget event för dagen har koords.
+ */
+const pickNearestForDay = (anchor: LinkEvent | null, dayEvents: LinkEvent[]): LinkEvent | null => {
+    if (dayEvents.length === 0) return null;
+    if (!anchor || !hasValidCoords(anchor)) return dayEvents[0];
+
+    let nearest: LinkEvent | null = null;
+    let nearestDist = Infinity;
+    for (const evt of dayEvents) {
+        if (!hasValidCoords(evt)) continue;
+        const d = haversineKm(anchor.lat, anchor.lng, evt.lat, evt.lng);
+        if (d < nearestDist) {
+            nearestDist = d;
+            nearest = evt;
+        }
+    }
+    return nearest ?? dayEvents[0];
+};
+
 export default function V2Page() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
     const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
@@ -23,6 +60,7 @@ export default function V2Page() {
     const [isLive, setIsLive] = useState(false);
     const [newEventCount, setNewEventCount] = useState(0);
     const [prevEventCount, setPrevEventCount] = useState(0);
+    const [cardExpanded, setCardExpanded] = useState(false);
     const prevDayOffset = useRef(dayOffset);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
@@ -60,10 +98,10 @@ export default function V2Page() {
         });
 
         setFilteredEvents(filtered);
-        // När dagen byts: välj automatiskt det tidigaste eventet för dagen
+        // När dagen byts: välj eventet som ligger närmast nuvarande position
         // (gör det inte vid varje Firestore-uppdatering — bara när användaren bytt dag)
         if (prevDayOffset.current !== dayOffset) {
-            setSelectedEvent(filtered[0] ?? null);
+            setSelectedEvent(prev => pickNearestForDay(prev, filtered));
             prevDayOffset.current = dayOffset;
         }
     }, [events, dayOffset]);
@@ -171,22 +209,24 @@ export default function V2Page() {
             `}</style>
 
             {/* 2. Fullskärmskarta underst */}
-            <V2MapDynamic 
-                events={filteredEvents} 
-                selectedEvent={selectedEvent} 
-                onSelectEvent={setSelectedEvent} 
+            <V2MapDynamic
+                events={filteredEvents}
+                selectedEvent={selectedEvent}
+                onSelectEvent={setSelectedEvent}
                 savedEventIds={savedEventIds}
                 discardedEventIds={discardedEventIds}
+                cardExpanded={cardExpanded}
             />
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
-            <V2SwipeableCard 
+            <V2SwipeableCard
                 events={filteredEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
+                onCardExpandedChange={setCardExpanded}
             />
         </main>
     );
