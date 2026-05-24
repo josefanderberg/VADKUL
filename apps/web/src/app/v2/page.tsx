@@ -114,8 +114,9 @@ export default function V2Page() {
                 <div
                     style={{
                         position: 'absolute',
-                        top: '70px',
-                        right: '12px',
+                        top: '32px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         zIndex: 1000,
                         display: 'flex',
                         alignItems: 'center',
