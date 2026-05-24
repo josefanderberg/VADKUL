@@ -1,0 +1,778 @@
+{
+  "runAt": "2026-05-24T14:53:37.808Z",
+  "total": 110,
+  "fixed": 109,
+  "stillBroken": 1,
+  "items": [
+    {
+      "id": "0siV6dCVJFuhLvIDjiZw",
+      "title": "Meet and Eat Örebro",
+      "before": "Saluhallen Örebro",
+      "after": "Saluhallen Örebro",
+      "method": "pin-row"
+    },
+    {
+      "id": "23Bpq7HdtO6SXIFdvU2Y",
+      "title": "BabySam Uppsala - Uppsala",
+      "before": "BabySam Uppsala Gränbystaden Marknadsgatan 1 Uppsala",
+      "after": "BabySam Uppsala Gränbystaden Marknadsgatan 1 Uppsala",
+      "method": "pin-row"
+    },
+    {
+      "id": "2lJU2gav8OhswNimColZ",
+      "title": "Ledarträff KalmarBudoklubb ",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "2n1g7nrBeeu8RUcOHjlC",
+      "title": "Spring Festival 2026",
+      "before": "Multiespacio Rabasa",
+      "after": "Multiespacio Rabasa",
+      "method": "pin-row"
+    },
+    {
+      "id": "3WbeYOlzVUnsm4NTXeD8",
+      "title": "Bussutflykt till Örebro",
+      "before": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "3pQllXOHNa2MgZbGQgne",
+      "title": "Morning standup show",
+      "before": "Community Cup",
+      "after": "Community Cup",
+      "method": "pin-row"
+    },
+    {
+      "id": "3qxsIYfVm39iHoswyxjP",
+      "title": "Loppis idag sön 24/5 kl 10-13 på Bärnstensv 12, Bomhus,Gävle.  Välkomna!!!!",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "4iivVceM5dATgnLn9ZdI",
+      "title": "Onsdagsturen",
+      "before": "Shell A6",
+      "after": "Shell A6",
+      "method": "pin-row"
+    },
+    {
+      "id": "5CBACG9gQxLbb7R7k8an",
+      "title": "Takvandring på Uppsala slott!",
+      "before": "Takvandring på Uppsala slott",
+      "after": "Takvandring på Uppsala slott",
+      "method": "pin-row"
+    },
+    {
+      "id": "5dKSNSzcjLraeaIvmshG",
+      "title": "Corb Lund - Victoria",
+      "before": "The Starlite Room",
+      "after": "The Starlite Room",
+      "method": "pin-row"
+    },
+    {
+      "id": "5hmGf0eOn1ZByVIF9fuJ",
+      "title": "Lekextra Växjö - Kostnadsfri barn- och familjefotografering",
+      "before": "Lekextra Storgatan 26 Växjö",
+      "after": "Lekextra Storgatan 26 Växjö",
+      "method": "pin-row"
+    },
+    {
+      "id": "695wHPiHI46VPf2Fjw2m",
+      "title": "Afterwork Voyages ",
+      "before": "Mama Shelter Paris East",
+      "after": "Mama Shelter Paris East",
+      "method": "pin-row"
+    },
+    {
+      "id": "6McFNKyxKWDMBHvU3LbP",
+      "title": "British Country Show Berkshire",
+      "before": "Farley Estate, RG71UL",
+      "after": "Farley Estate, RG71UL",
+      "method": "pin-row"
+    },
+    {
+      "id": "6mkLvJyChOAJRiZ975B7",
+      "title": "Kuparilyhdyn standup-ilta!",
+      "before": "Ravintola Kuparilyhty",
+      "after": "Ravintola Kuparilyhty",
+      "method": "pin-row"
+    },
+    {
+      "id": "6yYRZasNyYtwVnn330Jz",
+      "title": "English språkkafè",
+      "before": "Medborgarskolan (Lund)",
+      "after": "Medborgarskolan (Lund)",
+      "method": "pin-row"
+    },
+    {
+      "id": "7JvnOdBMFwOTzfwMxlYM",
+      "title": "Skräpplockardag på cykel i Umeå",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "7U9BJrr7wV6DtqwhWoum",
+      "title": "Corb Lund - Victoria",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "7jZ6ZOEiYylcFgn4dIxk",
+      "title": "Quiz Night | Scarborough",
+      "before": "23-27 Hastings Street, Scarborough, WA, Australia, Western Australia 6019",
+      "after": "23-27 Hastings Street, Scarborough, WA, Australia, Western Australia 6019",
+      "method": "pin-row"
+    },
+    {
+      "id": "7kFpNPs5HYKMTRXbJydC",
+      "title": "Docent Död  | Arbis, Norrköping",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Universitetsplatsen 1, 35252 Växjö, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "806MkAEsqwe7wkMMzwFJ",
+      "title": "Standup på Prøverøret",
+      "before": "Dattera til Hagen",
+      "after": "Dattera til Hagen",
+      "method": "pin-row"
+    },
+    {
+      "id": "8nhZ5TnlQpjsIlv2PkXm",
+      "title": "LABRADOR - Falun Gong (Chi Gong) Exercise and Meditation WEEKLY",
+      "before": "Labrador - Harley Park - 371 Marine Parade (near rotunda & ninja warrior course)",
+      "after": "Labrador - Harley Park - 371 Marine Parade (near rotunda & ninja warrior course)",
+      "method": "pin-row"
+    },
+    {
+      "id": "9mV8qFET34d0DmIUevM5",
+      "title": "The Peace Process",
+      "before": "C:nen Östersund",
+      "after": "C:nen Östersund",
+      "method": "pin-row"
+    },
+    {
+      "id": "AIfrp0AyzGvqfIQCZ4Fa",
+      "title": "RV Fest 2026",
+      "before": "45°38'19.0\"N 25°59'55.6\"E",
+      "after": "45°38'19.0\"N 25°59'55.6\"E",
+      "method": "pin-row"
+    },
+    {
+      "id": "BamwT8RdkEDyLmtl3ndd",
+      "title": "Cabarrus Celtic Festival",
+      "before": "Cabarrus Brewing Company",
+      "after": "Cabarrus Brewing Company",
+      "method": "pin-row"
+    },
+    {
+      "id": "BhPGjuJkzjfmMk4QJYqZ",
+      "title": "9D Breathwork | Malmö",
+      "before": "Her Space",
+      "after": "Her Space",
+      "method": "pin-row"
+    },
+    {
+      "id": "ByioaZXFxamS6jqRp9Bx",
+      "title": "Standup på Løkka",
+      "before": "Nieu Grünerløkka",
+      "after": null,
+      "method": "error"
+    },
+    {
+      "id": "CVF7y53RRVjM3yyU3ruF",
+      "title": "Klubb PANKST på Stage",
+      "before": "Stage Umeå",
+      "after": "Stage Umeå",
+      "method": "pin-row"
+    },
+    {
+      "id": "DUeBnGRsicvbvIIsBjxy",
+      "title": "Frekvensbalansering i Karlstad",
+      "before": "Yogainstitutet",
+      "after": "Yogainstitutet",
+      "method": "pin-row"
+    },
+    {
+      "id": "GBkMu8GjcYGuaCwDwcCS",
+      "title": "DJ Riptide",
+      "before": "937 Phillips Ln, Louisville, KY, United States, Kentucky 40209",
+      "after": "937 Phillips Ln, Louisville, KY, United States, Kentucky 40209",
+      "method": "pin-row"
+    },
+    {
+      "id": "GkNND7Em5Cqrz2jXhYXg",
+      "title": "SMINK OUTLET I TROLLHÄTTAN - SPARA OPP TIL 80% 💄",
+      "before": "Etage Shopping - Överby",
+      "after": "Etage Shopping - Överby",
+      "method": "pin-row"
+    },
+    {
+      "id": "HHdHqCWQa5xtKlk3bNEY",
+      "title": "Årsmöte VT26",
+      "before": "Linnéuniversitet Växjö",
+      "after": "Linnéuniversitet Växjö",
+      "method": "pin-row"
+    },
+    {
+      "id": "IcZPHdqfrQZNGureRLXJ",
+      "title": "Independent Paddle Canoeing, Kayaking, and and Standup Paddleboarding at Hickory Hill on Falls Lake",
+      "before": "Durham, NC, United States, North Carolina",
+      "after": "Durham, NC, United States, North Carolina",
+      "method": "pin-row"
+    },
+    {
+      "id": "If5jYnN1iw9Y40pdOil6",
+      "title": "MALENY - Falun Gong (Chi Gong) Exercise and Meditation WEEKLY",
+      "before": "MALENY - Bicentennial Park, Bicentennial Lane WEEKLY",
+      "after": "MALENY - Bicentennial Park, Bicentennial Lane WEEKLY",
+      "method": "pin-row"
+    },
+    {
+      "id": "ImaADuL56JtZONj9MaPc",
+      "title": "Mordmysterium + Middag = Succé (Göteborg)",
+      "before": "GTS konferens & festvåning",
+      "after": "GTS konferens & festvåning",
+      "method": "pin-row"
+    },
+    {
+      "id": "JfGYQBRXuRwpBEhF7nsq",
+      "title": "Nya Taekwondo klubb startas ",
+      "before": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "KI8n6HSA0mKX1IVHz9ZS",
+      "title": "Festival Food Truck",
+      "before": "Herrlisheim-près-Colmar",
+      "after": "Herrlisheim-près-Colmar",
+      "method": "pin-row"
+    },
+    {
+      "id": "KeFSdfuBCvqaleBBIfvW",
+      "title": "Quiz Night 🔍",
+      "before": "Unit 6 The Exchange, Exchange Street, Aylesbury",
+      "after": "Unit 6 The Exchange, Exchange Street, Aylesbury",
+      "method": "pin-row"
+    },
+    {
+      "id": "LIU4kAnHpzbe6a9GfvpD",
+      "title": "Zumba® i Gamla Linköping - Hela sommaren!",
+      "before": "Dansbanan I Gamla Linköping",
+      "after": "Dansbanan I Gamla Linköping",
+      "method": "pin-row"
+    },
+    {
+      "id": "MSJgmaudzRvoFPFZudDs",
+      "title": "Pridefest | Arbis, Norrköping",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "NDVJPCAvuYnmFp357xvS",
+      "title": "Orden i mig våren 2026",
+      "before": "Biblioteken i Falun",
+      "after": "Biblioteken i Falun",
+      "method": "pin-row"
+    },
+    {
+      "id": "OIJbpDoSyFpbK6pHGHlD",
+      "title": "East Pride Norrköping med HBTQ+S Östergötland",
+      "before": "Norrköpings stadsbibliotek",
+      "after": "Norrköpings stadsbibliotek",
+      "method": "pin-row"
+    },
+    {
+      "id": "OL0VpED9XDveGi3QBP9T",
+      "title": "SY-LAN Sundsvall ",
+      "before": "ABF Västernorrland Sundsvall",
+      "after": "ABF Västernorrland Sundsvall",
+      "method": "pin-row"
+    },
+    {
+      "id": "PLvqmpme0YLFYV2Y58hA",
+      "title": "NZ Art Show ",
+      "before": "TSB Bank Arena",
+      "after": "TSB Bank Arena",
+      "method": "pin-row"
+    },
+    {
+      "id": "QAYh6g9U9MaOMne3sTiW",
+      "title": "DJ Saturday",
+      "before": "3381 St Rose Pkwy, Henderson, NV, United States, Nevada 89052",
+      "after": "3381 St Rose Pkwy, Henderson, NV, United States, Nevada 89052",
+      "method": "pin-row"
+    },
+    {
+      "id": "QApUSlijrn8iGUyM37mO",
+      "title": "FESTIVAL ROCKMETALCAMP#13",
+      "before": "Lac De Plaisance",
+      "after": "Lac De Plaisance",
+      "method": "pin-row"
+    },
+    {
+      "id": "QENAWrun2dodJOgmc2XG",
+      "title": "KarriOelke Fest 2026",
+      "before": "Press Box, 251 Forest Avenue, Fond du Lac, WI, 54935",
+      "after": "Press Box, 251 Forest Avenue, Fond du Lac, WI, 54935",
+      "method": "pin-row"
+    },
+    {
+      "id": "QTbEHJURx1r6mXv35oam",
+      "title": "Moveat Original - Eskilstuna",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "QqnS6SONLTjk6X9cNW7N",
+      "title": "Standup Comedy  ",
+      "before": "Die Stadtmitte Karlsruhe",
+      "after": "Die Stadtmitte Karlsruhe",
+      "method": "pin-row"
+    },
+    {
+      "id": "RnhhanEnqHMqNVy0YyGG",
+      "title": "Rejs Kalmar",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "S3UeqABbk8Kc2m7TRFqh",
+      "title": "Zumba+Lift i Equmeniakyrkan (anpassat för Zumba Gold®)",
+      "before": "Equmeniakyrkan Konferens Linköping",
+      "after": "Equmeniakyrkan Konferens Linköping",
+      "method": "pin-row"
+    },
+    {
+      "id": "ULZD2fOu2C6qj86oZNdx",
+      "title": "DJ Amine ",
+      "before": "6 Gordon Street, Moncton, NB, Canada, New Brunswick E1C 1L7",
+      "after": "6 Gordon Street, Moncton, NB, Canada, New Brunswick E1C 1L7",
+      "method": "pin-row"
+    },
+    {
+      "id": "UUAuFfzByPpYq6a0Blub",
+      "title": "Veterandagen i Skellefteå 2026",
+      "before": "Veteranplatsen i Skellefteå (Nordanå vid älven)",
+      "after": "Veteranplatsen i Skellefteå (Nordanå vid älven)",
+      "method": "pin-row"
+    },
+    {
+      "id": "WDmQjszIErvKtYuSTx7A",
+      "title": "Fenix Svart 18:00 - Söndag",
+      "before": "Centrumkyrkan i Norrköping",
+      "after": "Centrumkyrkan i Norrköping",
+      "method": "pin-row"
+    },
+    {
+      "id": "WOWSVTTTbO3vTZmPrBts",
+      "title": "The Big Garden Party - Bounce & Fun Edition @ Vidas Art Arena, 31.05-10.06",
+      "before": "Vidas Art Arena",
+      "after": "Vidas Art Arena",
+      "method": "pin-row"
+    },
+    {
+      "id": "WqDibZgzdwcob9oTcGio",
+      "title": "Pentecost Fest 2026",
+      "before": "Kunjalo Love Fellowship Tabernacle",
+      "after": "Kunjalo Love Fellowship Tabernacle",
+      "method": "pin-row"
+    },
+    {
+      "id": "XMljaWZW4rCABcS9iBHg",
+      "title": "MEDpub Malmö",
+      "before": "Paddys Restaurang",
+      "after": "Paddys Restaurang",
+      "method": "pin-row"
+    },
+    {
+      "id": "Xew4xiNtBpTjZxizoWcB",
+      "title": "Classic Motor Show",
+      "before": "Kenward Place",
+      "after": "Kenward Place",
+      "method": "pin-row"
+    },
+    {
+      "id": "XpKUYL8XSVbyF7Jq8eLV",
+      "title": "Privat spelning",
+      "before": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "YAyIsSDBVYoG3fqrG8JP",
+      "title": "veteran marknad",
+      "before": "Bolist Broby",
+      "after": "Bolist Broby",
+      "method": "pin-row"
+    },
+    {
+      "id": "YV7mj1aZgXOjmLkyJsG7",
+      "title": "Borås Bil Rallysprint",
+      "before": "Borås Bil gruppen",
+      "after": "Borås Bil gruppen",
+      "method": "pin-row"
+    },
+    {
+      "id": "YVZZ1XCfVz5pIadteYkX",
+      "title": "Barn- och ungdomscykling",
+      "before": "Varierande plats, första gången Ursberget",
+      "after": "Varierande plats, första gången Ursberget",
+      "method": "pin-row"
+    },
+    {
+      "id": "ZViFVHvbDAKaqyG5BsuF",
+      "title": "Speeddate Västerås 45+",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "a7blB8LslIvcJiHL3A36",
+      "title": "LOPPIS",
+      "before": "Ulricehamn City",
+      "after": "Ulricehamn City",
+      "method": "pin-row"
+    },
+    {
+      "id": "aIhF7OTgw5f5I4CpvjLu",
+      "title": "Kom i gång – styrke- och konditionsträning vid VAIS-torpet",
+      "before": "Växjö AIS",
+      "after": "Växjö AIS",
+      "method": "pin-row"
+    },
+    {
+      "id": "aWpgtnMSIzMqxpL4VrXN",
+      "title": "Soenda Festival 2026",
+      "before": "Recreatiegebied Ruigenhoekse polder",
+      "after": "Recreatiegebied Ruigenhoekse polder",
+      "method": "pin-row"
+    },
+    {
+      "id": "c0dswpdFjXOTFAX9mDp6",
+      "title": "Ćwiczenia Falun Dafa - Gdańsk - Park Oliwski",
+      "before": "http://pl.falundafa.org/polski-kontakt.html",
+      "after": "http://pl.falundafa.org/polski-kontakt.html",
+      "method": "pin-row"
+    },
+    {
+      "id": "caAfWPuxqdfem2wDzRtS",
+      "title": "Rogaining med Team Nordic Trail Helsingborg och HSOK!",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "comlM8WZNU9gWLEMyOCw",
+      "title": "Stickcafé för barn",
+      "before": "Eskilstuna stadsbibliotek",
+      "after": "Eskilstuna stadsbibliotek",
+      "method": "pin-row"
+    },
+    {
+      "id": "dEUlp8vj43Ha0joU5gNV",
+      "title": "Arsenal - Gävle Torg",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "e0nWMiNaURqrOte1hhw3",
+      "title": "Nossebro Marknad",
+      "before": "Visitnossebro & Nossebro Marknad",
+      "after": "Visitnossebro & Nossebro Marknad",
+      "method": "pin-row"
+    },
+    {
+      "id": "e7SSfOFk9gfGMRq3exAd",
+      "title": "Konsert: Welcome to Broadway ",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "eDjLSKMPJ28RLOOhGCQo",
+      "title": "🧠ARENA QUIZ NIGHT🏆",
+      "before": "Arena Gamer Bar",
+      "after": "Arena Gamer Bar",
+      "method": "pin-row"
+    },
+    {
+      "id": "gXQItaAbd37d14lcWgja",
+      "title": "Webinar Pengenalan Falun Dafa ke - 161",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "hD3p5BleaElvDxJEFCHJ",
+      "title": "Quiz Về NCS",
+      "before": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "hMSRicMpiK4hkngPkyTR",
+      "title": "DUŽENOS FEST #9",
+      "before": "Herkus Kantas",
+      "after": "Herkus Kantas",
+      "method": "pin-row"
+    },
+    {
+      "id": "hxQFtB28sayWJy1CCq65",
+      "title": "Mayday Fest 2026",
+      "before": "GSF Skatepark",
+      "after": "GSF Skatepark",
+      "method": "pin-row"
+    },
+    {
+      "id": "iHzdi9J3IzbfLN8MPFsA",
+      "title": "Språkcafé i Umeå / Language Café in Umeå",
+      "before": "SLU-biblioteket Umeå",
+      "after": "SLU-biblioteket Umeå",
+      "method": "pin-row"
+    },
+    {
+      "id": "j07cU2vqjh2WfDDW1XIx",
+      "title": "среща на българите в Jönköping  и района ",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "jLfRorsR6Q0E9BDIoKVu",
+      "title": "𝐁𝐀𝐍𝐀𝐓𝐎𝐍 𝐅𝐄𝐒𝐓 𝟐𝟎𝟐𝟔",
+      "before": "Timisoara",
+      "after": "Timisoara",
+      "method": "pin-row"
+    },
+    {
+      "id": "k5RddNzcL5SMb0aOGZtH",
+      "title": "KONSERT - Vokalensemblen SOT",
+      "before": "Nylöse församling",
+      "after": "Nylöse församling",
+      "method": "pin-row"
+    },
+    {
+      "id": "l5XMvF3DGnejQOUw4Xtq",
+      "title": "utställnings- och miljöträning!",
+      "before": "vekerumsvägen 330-32, 37493 Karlshamn, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "l8MwyxlRKA0PxUGFfa8K",
+      "title": "Garbage @ Vidas Art Arena, Sofia, 28.05.2026",
+      "before": "Vidas Art Arena",
+      "after": "Vidas Art Arena",
+      "method": "pin-row"
+    },
+    {
+      "id": "mJy2regyXdDZCVNK0YmM",
+      "title": "Gudstjänst",
+      "before": "Församlingen Klippan Falun",
+      "after": "Församlingen Klippan Falun",
+      "method": "pin-row"
+    },
+    {
+      "id": "n2i94rHBHGjIGo2MIrpe",
+      "title": "Parkdans med Swingkatten",
+      "before": "Danspaviljongen i Uppsala",
+      "after": "Danspaviljongen i Uppsala",
+      "method": "pin-row"
+    },
+    {
+      "id": "nRcgUbbEQuzkxMUGnp31",
+      "title": "KARIN PARK | Släppfest 29 maj | Rådhuskällaren, Falun",
+      "before": "Rådhuskällaren Falun",
+      "after": "Rådhuskällaren Falun",
+      "method": "pin-row"
+    },
+    {
+      "id": "nmtdZF0beqerwYjYfiWb",
+      "title": "Borås Jeepklubb Softtrail 2026",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "nv57EKjV2zI26az4M7BF",
+      "title": "Pantbankens värderingsdag i Uppsala!",
+      "before": "Övre Slotts Event & Studios",
+      "after": "Övre Slotts Event & Studios",
+      "method": "pin-row"
+    },
+    {
+      "id": "pSpTJl6e1Tifol562onr",
+      "title": "Cykelskola i regi av Luleå kommun",
+      "before": "Södra Hamnen Luleå",
+      "after": "Södra Hamnen Luleå",
+      "method": "pin-row"
+    },
+    {
+      "id": "pWUAkDbl8Gc90MPHBONC",
+      "title": "Standup Comedy Openmic",
+      "before": "Updown bar",
+      "after": "Updown bar",
+      "method": "pin-row"
+    },
+    {
+      "id": "pvextVFN9BJtkfJ6Skqm",
+      "title": "Prideparad i Norrköping",
+      "before": "Södra Promenaden utanför stadsbiblioteket",
+      "after": "Södra Promenaden utanför stadsbiblioteket",
+      "method": "pin-row"
+    },
+    {
+      "id": "pxkl7EXgoRy7prmHh1qQ",
+      "title": "Speeddate Västerås 25+",
+      "before": "Parkgatan 1, 365 42 Hovmantorp, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "qH4nbPtzlm0DUznu25Gw",
+      "title": "Städdag på klubben ",
+      "before": "Lilla Edets Judoklubb",
+      "after": "Lilla Edets Judoklubb",
+      "method": "pin-row"
+    },
+    {
+      "id": "qUn98cxG7OV1mOVqJP9J",
+      "title": "DJ DENNY OH",
+      "before": "100 E Taylor Ave, Wildwood, NJ, United States, New Jersey 08260",
+      "after": "100 E Taylor Ave, Wildwood, NJ, United States, New Jersey 08260",
+      "method": "pin-row"
+    },
+    {
+      "id": "qfnU9zg5rZQnFTsUL6Pn",
+      "title": "Ingen badkruka!",
+      "before": "Evedals Badplats",
+      "after": "Evedals Badplats",
+      "method": "pin-row"
+    },
+    {
+      "id": "qrafFO6kx3YbcBLY2kkx",
+      "title": "Uppsala Camp #3",
+      "before": "Moc z Żywiołów",
+      "after": "Moc z Żywiołów",
+      "method": "pin-row"
+    },
+    {
+      "id": "qsCpPVFgAYeJQfUVmT7q",
+      "title": "Yin och Yogamassage ",
+      "before": "vekerumsvägen 330-32, 37493 Karlshamn, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "qxy6PJEPOFzvi5uA3lVY",
+      "title": "Hårdrockskören i Helsingborg",
+      "before": "Brandstationen Gåsebäck",
+      "after": "Brandstationen Gåsebäck",
+      "method": "pin-row"
+    },
+    {
+      "id": "r4PRyxqylZWumtRMahzG",
+      "title": "Cykelgruppen i Västerås",
+      "before": "The Fishery Färjkajen Västerås",
+      "after": "The Fishery Färjkajen Västerås",
+      "method": "pin-row"
+    },
+    {
+      "id": "rjdKITwZOljYCRoraYt3",
+      "title": "Magnus Betnér – Mellan Oss • 29/5 • Kristianstad",
+      "before": "Kulturkvarteret Kristianstad",
+      "after": "Kulturkvarteret Kristianstad",
+      "method": "pin-row"
+    },
+    {
+      "id": "sY2KXBZAhhjsexsweFpT",
+      "title": "Gudstjänst i Borås ",
+      "before": "ST:A Birgittas Griftegård",
+      "after": "ST:A Birgittas Griftegård",
+      "method": "pin-row"
+    },
+    {
+      "id": "tV9v5U41RxY4x8dZIemz",
+      "title": "Birkenstock Trunk Show",
+      "before": "2644 Henry St, Muskegon, MI",
+      "after": "2644 Henry St, Muskegon, MI",
+      "method": "pin-row"
+    },
+    {
+      "id": "thtUvW27SXLngZFFZnPU",
+      "title": "Klubb Dag",
+      "before": "Motor-Teknikk AS",
+      "after": "Motor-Teknikk AS",
+      "method": "pin-row"
+    },
+    {
+      "id": "u4xC3aodWrwyCIVPucfU",
+      "title": "Kiddo Fest 2.0",
+      "before": "Sr No 217, Pashan Sus Road, Pune, India 411021, Maharashtra",
+      "after": "Sr No 217, Pashan Sus Road, Pune, India 411021, Maharashtra",
+      "method": "pin-row"
+    },
+    {
+      "id": "uDYdZCvShX4FmlqotQMg",
+      "title": "Klubb Common People | Debaser Klubben",
+      "before": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "after": "Ronneby Brunnspark, 37238 Ronneby, Sweden",
+      "method": "pin-row"
+    },
+    {
+      "id": "uVUhZdm5f8IDw7NJwZbi",
+      "title": "«Klubb kreativ torsdag»",
+      "before": "Arna Makerspace",
+      "after": "Arna Makerspace",
+      "method": "pin-row"
+    },
+    {
+      "id": "uX2KxWkMpv3f3iZ94HSV",
+      "title": "Konsert i försommartid",
+      "before": "Mikaels församling, Svenska kyrkan i Örebro",
+      "after": "Mikaels församling, Svenska kyrkan i Örebro",
+      "method": "pin-row"
+    },
+    {
+      "id": "upw53kBmMwOIMjcKpzbw",
+      "title": "Flavour Fest",
+      "before": "The Piazza, Plymouth City Centre.",
+      "after": "The Piazza, Plymouth City Centre.",
+      "method": "pin-row"
+    },
+    {
+      "id": "v0M07GdDbOS6jd9n2Ihn",
+      "title": "Reiki 2 - fortsättningskurs Usui Reiki i Växjö",
+      "before": "Minos Manus Friskvårdsklinik",
+      "after": "Minos Manus Friskvårdsklinik",
+      "method": "pin-row"
+    },
+    {
+      "id": "vKbvrtJGH6Yg2DQ6mv06",
+      "title": "Between-klubb",
+      "before": "Gol Bedehus",
+      "after": "Gol Bedehus",
+      "method": "pin-row"
+    },
+    {
+      "id": "wftZPNonajAA1XHdcQkv",
+      "title": "Foxkväll i Växjö!",
+      "before": "Jivers Dancing Club",
+      "after": "Jivers Dancing Club",
+      "method": "pin-row"
+    }
+  ]
+}
