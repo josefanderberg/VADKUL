@@ -15,6 +15,7 @@
     "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
     "test:regression": "ts-node src/scripts/test-regression.ts",
     "backfill-images": "ts-node src/scripts/backfill_images.ts",
+    "cleanup-old": "ts-node src/scripts/cleanup-old-events.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
