@@ -22,9 +22,21 @@ export async function applyDateFilters(page: Page, filters: string[]) {
                 return false;
             };
 
-            const tomorrowNames = ['i morgon', 'imorgon', 'tomorrow'];
-            const todayNames = ['idag', 'i dag', 'today'];
-            const targetNames = fName.includes('morgon') ? tomorrowNames : todayNames;
+            let targetNames: string[] = [];
+            const nameLower = fName.toLowerCase();
+            if (nameLower.includes('idag') || nameLower.includes('i dag') || nameLower === 'today') {
+                targetNames = ['idag', 'i dag', 'today'];
+            } else if (nameLower.includes('morgon') || nameLower === 'tomorrow') {
+                targetNames = ['i morgon', 'imorgon', 'tomorrow'];
+            } else if (nameLower.includes('den här veckan') || nameLower.includes('denna vecka') || nameLower.includes('this week')) {
+                targetNames = ['den här veckan', 'denna vecka', 'this week'];
+            } else if (nameLower.includes('i helgen') || nameLower.includes('helg') || nameLower.includes('weekend')) {
+                targetNames = ['i helgen', 'this weekend', 'weekend'];
+            } else if (nameLower.includes('nästa vecka') || nameLower.includes('next week')) {
+                targetNames = ['nästa vecka', 'next week'];
+            } else {
+                targetNames = [fName];
+            }
 
             const hasFilter = Array.from(document.querySelectorAll('span, div')).some(el => {
                 const txt = el.textContent?.trim().toLowerCase() || '';
@@ -58,15 +70,42 @@ export async function applyDateFilters(page: Page, filters: string[]) {
 export async function discoverEventUrls(page: Page): Promise<{ url: string, day: string }[]> {
     console.log(`    ⬇️ Scrollar ner för att ladda fler event...`);
     let lastHeight = 0;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
         try {
             const currentHeight = await page.evaluate(() => {
+                // 1. Bypass scroll lock by forcing overflow to auto
+                document.body.style.setProperty('overflow', 'auto', 'important');
+                document.documentElement.style.setProperty('overflow', 'auto', 'important');
+
+                // 2. Dismiss login modals if present
+                const closeButtons = Array.from(document.querySelectorAll('div[role="button"], button, i'));
+                for (const btn of closeButtons) {
+                    const label = btn.getAttribute('aria-label')?.toLowerCase() || '';
+                    const txt = btn.textContent?.trim().toLowerCase() || '';
+                    if (label.includes('stäng') || label.includes('close') || txt === '✕' || txt === 'x') {
+                        (btn as HTMLElement).click();
+                    }
+                }
+
+                // 3. Remove login overlays that block interaction or view
+                const overlays = Array.from(document.querySelectorAll('div')).filter(el => {
+                    const style = window.getComputedStyle(el);
+                    return style.position === 'fixed' && parseInt(style.zIndex) > 100;
+                });
+                for (const overlay of overlays) {
+                    if (overlay.textContent?.includes('Logga in') || overlay.textContent?.includes('Se mer av')) {
+                        overlay.remove();
+                    }
+                }
+
+                // 4. Click expansion buttons
                 const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
                 for (const btn of buttons) {
                     if (btn.textContent?.match(/Se mer|See More|Visa fler/i) && !btn.textContent?.match(/Tidigare/i)) {
                         (btn as HTMLElement).click();
                     }
                 }
+                
                 window.scrollTo(0, document.body.scrollHeight);
                 return document.body.scrollHeight;
             });

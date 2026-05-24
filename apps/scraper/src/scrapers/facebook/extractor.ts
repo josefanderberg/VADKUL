@@ -164,6 +164,7 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
             if (mapLink) locationUrl = mapLink.href;
         } catch(e) {}
 
-        return { title, image, going, description, locationName, exactTime, isoDate, textContent, hostName, hostUrl, locationUrl };
+        const ogDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+        return { title, image, going, description, locationName, exactTime, isoDate, textContent, hostName, hostUrl, locationUrl, ogDescription };
     });
 }

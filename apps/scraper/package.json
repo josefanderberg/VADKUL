@@ -11,6 +11,8 @@
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
     "clear-db": "ts-node clear-db.ts",
     "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
+    "test:regression": "ts-node src/scripts/test-regression.ts",
+    "backfill-images": "ts-node src/scripts/backfill_images.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

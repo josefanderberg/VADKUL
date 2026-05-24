@@ -97,7 +97,7 @@ export default function BottomSheetEvent({ events, selectedEvent, onSelectEvent 
                     className="w-full mb-8 cursor-grab active:cursor-grabbing"
                     onPointerDown={onPointerDown}
                 >
-                    <LinkEventCard linkEvent={selectedEvent} isAdmin={false} isPanelMode={true} />
+                    <LinkEventCard linkEvent={selectedEvent} isAdmin={false} isPanelMode={true} showFullAddress />
                 </div>
 
                 {/* Listan över andra event */}
@@ -110,7 +110,7 @@ export default function BottomSheetEvent({ events, selectedEvent, onSelectEvent 
                                 setSheetY(0);
                                 setIsAnimating(true);
                             }} className="cursor-pointer border-b border-gray-100 pb-4">
-                                <LinkEventCard linkEvent={evt} isAdmin={false} />
+                                <LinkEventCard linkEvent={evt} isAdmin={false} showFullAddress />
                             </div>
                         ))}
                         {events.length <= 1 && (

@@ -6,6 +6,16 @@ import { linkEventService } from '../../services/linkEventService';
 import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 
+// Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
+const ADDRESS_FALLBACKS = new Set(['växjö', 'vaxjo', 'stockholm', 'sverige', 'sweden', '']);
+
+function isSpecificAddress(addr: string | undefined | null): boolean {
+    if (!addr) return false;
+    const trimmed = addr.trim();
+    if (trimmed.length === 0) return false;
+    return !ADDRESS_FALLBACKS.has(trimmed.toLowerCase());
+}
+
 // ─── Category patterns ────────────────────────────────────────────────────────
 import patternBoardgame from '../../assets/categories/patterns/pattern_boardgame.png';
 import patternCampus from '../../assets/categories/patterns/pattern_campus.png';
@@ -40,11 +50,25 @@ interface LinkEventCardProps {
     distance?: number;
     onDelete?: () => void;
     isPanelMode?: boolean;
+    showFullAddress?: boolean;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [revealStep, setRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+
+    // Sekundärrad: visa specifik extractedAddress om vi har en, annars koordinater (placeringen på kartan).
+    const secondaryAddress = (() => {
+        if (!showFullAddress) return null;
+        if (isSpecificAddress(linkEvent.extractedAddress)
+            && linkEvent.extractedAddress !== linkEvent.locationName) {
+            return linkEvent.extractedAddress as string;
+        }
+        if (typeof linkEvent.lat === 'number' && typeof linkEvent.lng === 'number') {
+            return `${linkEvent.lat.toFixed(4)}, ${linkEvent.lng.toFixed(4)}`;
+        }
+        return null;
+    })();
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -143,9 +167,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         <Clock size={14} className="text-primary" />
                         <span>{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <MapPin size={14} className="text-primary" />
                         <span className="text-sm">{linkEvent.locationName}</span>
+                        {secondaryAddress && (
+                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                · {secondaryAddress}
+                            </span>
+                        )}
                     </div>
                 </div>
 
