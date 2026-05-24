@@ -68,7 +68,8 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
         // 4. Attendees
         const textContent = (main as any).innerText || '';
         let going = 0;
-        const goingMatch = textContent.match(/([\d\s\.,kK]+)\s*(?:ska gå|going|deltagare|gäster|svarade|intresserade|personer)/i);
+        // Förbättrad regex för att fånga både "ska gå", "intresserade" och "personer svarade"
+        const goingMatch = textContent.match(/([\d\s\.,kK]+)\s*(?:ska gå|going|deltagare|gäster|svarade|intresserade|personer|interested)/i);
         if (goingMatch) {
             let numStr = goingMatch[1].toLowerCase().replace(/\s/g, '').replace(',', '.');
             if (numStr.includes('k')) going = parseFloat(numStr) * 1000;
@@ -100,6 +101,9 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
             }
             description = longestText;
         }
+
+        // Clean up common Facebook UI artifacts from the description
+        description = description.replace(/Visa mindre$/i, '').replace(/See less$/i, '').trim();
         
         if (!description || description.length < 20) {
             const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content');
@@ -160,6 +164,7 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
             if (mapLink) locationUrl = mapLink.href;
         } catch(e) {}
 
-        return { title, image, going, description, locationName, exactTime, isoDate, textContent, hostName, hostUrl, locationUrl };
+        const ogDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+        return { title, image, going, description, locationName, exactTime, isoDate, textContent, hostName, hostUrl, locationUrl, ogDescription };
     });
 }

@@ -1,21 +1,33 @@
 import * as cheerio from 'cheerio';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenue } from '../utils/venueCoordinates';
+import { geocodeVenueSweden } from '../utils/venueCoordinates';
 
 // --- SCRAPE TARGETS ---
-// Eventbrite online-search för Växjö och Kronoberg-regionen
-const EVENTBRITE_URLS = [
-    'https://www.eventbrite.se/d/sweden--v%C3%A4xj%C3%B6/events/',
-    'https://www.eventbrite.se/d/sweden--kronoberg/events/',
+// Alla större svenska städer
+const SWEDISH_CITIES = [
+    'stockholm', 'göteborg', 'malmö', 'uppsala', 'linköping',
+    'örebro', 'helsingborg', 'norrköping', 'jönköping', 'umeå',
+    'lund', 'västerås', 'sundsvall', 'karlstad', 'växjö', 'gävle',
+    'borås', 'eskilstuna', 'halmstad', 'östersund', 'kronoberg',
 ];
+
+const EVENTBRITE_URLS = SWEDISH_CITIES.map(
+    city => `https://www.eventbrite.se/d/sweden--${encodeURIComponent(city)}/events/`
+);
 
 // --- DATE FILTER ---
 const now = new Date();
+now.setHours(0, 0, 0, 0);
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
+const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
 function isWithinOneWeek(date: Date): boolean {
     return date >= now && date <= oneWeekFromNow;
+}
+
+function isToday(date: Date): boolean {
+    return date >= now && date <= todayEnd;
 }
 
 function guessCategoryFromTitle(title: string): string {
@@ -109,10 +121,14 @@ export async function scrapeEventbrite() {
                         : '';
                     const coverImage = typeof evt.image === 'string' ? evt.image : evt.image?.[0] || undefined;
 
-                    let resolvedLat = lat || 56.8796;
-                    let resolvedLng = lng || 14.8094;
+                    let resolvedLat = lat || 0;
+                    let resolvedLng = lng || 0;
                     if (!lat || !lng) {
-                        const coords = await geocodeVenue(locationName);
+                        const address = [
+                            evt.location?.address?.streetAddress,
+                            evt.location?.address?.addressLocality,
+                        ].filter(Boolean).join(', ');
+                        const coords = await geocodeVenueSweden(address || locationName);
                         if (coords) { resolvedLat = coords[0]; resolvedLng = coords[1]; }
                     }
 
@@ -129,9 +145,10 @@ export async function scrapeEventbrite() {
                         createdAt: new Date(),
                         coverImage,
                         price,
+                        isLocationVerified: resolvedLat !== 0,
                     });
                     totalSaved++;
-                    console.log(`  ✅ Saved (JSON-LD): ${title} @ ${locationName}`);
+                    console.log(`  ✅ ${isToday(startDate) ? '[IDAG] ' : ''}Saved: ${title} @ ${locationName}`);
                 } catch (e) {
                     console.error('  Failed to save JSON-LD event:', e);
                 }

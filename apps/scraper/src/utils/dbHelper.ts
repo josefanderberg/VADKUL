@@ -6,6 +6,13 @@ export async function eventExistsInDb(url: string): Promise<boolean> {
     return !snapshot.empty;
 }
 
+export async function getEventFromDb(url: string): Promise<any | null> {
+    if (!db) return null;
+    const snapshot = await db.collection('linkEvents').where('url', '==', url).limit(1).get();
+    if (snapshot.empty) return null;
+    return snapshot.docs[0].data();
+}
+
 export async function addEventToDb(eventData: any) {
     if (!db) {
         console.warn('Firebase not initialized. Cannot save to DB:', eventData.title);
@@ -24,3 +31,4 @@ export async function addEventToDb(eventData: any) {
         console.error('Failed to add event to DB:', error);
     }
 }
+

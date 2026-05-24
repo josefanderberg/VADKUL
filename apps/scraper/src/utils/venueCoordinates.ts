@@ -30,6 +30,15 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     'växjö teater': [56.8789, 14.8067],
     'Teatern': [56.8789, 14.8067],
 
+    'Palladium Folkets Bio Växjö': [56.8793, 14.8065],
+    'Palladium Växjö': [56.8793, 14.8065],
+    'Palladium': [56.8793, 14.8065],
+    'palladium': [56.8793, 14.8065],
+
+    'IOGT Vattentorget': [56.8770, 14.8115],
+    'iogt vattentorget': [56.8770, 14.8115],
+    'Vattentorget': [56.8770, 14.8115],
+
     'Kulturhuset Prisma': [56.8783, 14.8050],
     'kulturhuset prisma': [56.8783, 14.8050],
     'Prisma': [56.8783, 14.8050],
@@ -149,6 +158,7 @@ export function getVenueCoordinates(venueName: string): [number, number] | null 
 
 const NOMINATIM_DELAY_MS = 1100; // respect 1 req/sec
 
+// Lokalt (Växjö-region, ~80 km)
 async function nominatimSearch(query: string): Promise<[number, number] | null> {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se`;
     const response = await fetch(url, {
@@ -168,18 +178,62 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
     return null;
 }
 
+// Sverige-bred (inga geografiska begränsningar, bara Sverige)
+async function nominatimSearchSweden(query: string): Promise<[number, number] | null> {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se`;
+    const response = await fetch(url, {
+        headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
+    });
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    for (const result of data ?? []) {
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        // Sanity check: must be within Sweden's bounding box
+        if (lat >= 55.0 && lat <= 69.5 && lng >= 10.5 && lng <= 24.2) {
+            return [lat, lng];
+        }
+    }
+    return null;
+}
+
+export function cleanVenueName(name: string): string {
+    if (!name) return '';
+    let cleaned = name.trim();
+    
+    // 1. Remove redundant country names
+    cleaned = cleaned.replace(/\b(SWEDEN|Sweden|Sverige)\b/gi, '');
+    
+    // 2. Remove duplicate city names (Växjö)
+    const matchCount = (cleaned.match(/växjö/gi) || []).length;
+    if (matchCount > 1) {
+        cleaned = cleaned.replace(/växjö/gi, '');
+        cleaned = cleaned.trim().replace(/,$/, '') + ', Växjö';
+    }
+    
+    // 3. Clean up multiple commas, spaces, and trailing/leading punctuation
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    cleaned = cleaned.replace(/,\s*,/g, ',');
+    cleaned = cleaned.trim().replace(/^,|,$/g, '');
+    
+    return cleaned.trim();
+}
+
 /**
  * Geocode a venue name via OpenStreetMap Nominatim.
  * Respects the 1 req/sec rate limit.
  */
-export async function geocodeVenue(venueName: string): Promise<[number, number] | null> {
-    if (!venueName) return null;
+export async function geocodeVenue(rawVenueName: string): Promise<[number, number] | null> {
+    if (!rawVenueName) return null;
+
+    const venueName = cleanVenueName(rawVenueName);
 
     // Check local list first (fast path)
     const local = getVenueCoordinates(venueName);
     if (local) return local;
 
-    console.log(`[Geocoding] Querying Nominatim for: "${venueName}"`);
+    console.log(`[Geocoding] Querying Nominatim for: "${venueName}" (original: "${rawVenueName}")`);
 
     // Strategy 1: full name + Växjö
     let result = await nominatimSearch(`${venueName}, Växjö, Sverige`);
@@ -224,5 +278,42 @@ export async function geocodeVenue(venueName: string): Promise<[number, number] 
     }
 
     console.log(`[Geocoding] No results for "${venueName}".`);
+    return null;
+}
+
+/**
+ * Sverige-bred geocoding — söker i hela Sverige via Nominatim.
+ * Används av Tickster-scrapen och andra rikstäckande scrapers.
+ */
+export async function geocodeVenueSweden(rawQuery: string): Promise<[number, number] | null> {
+    if (!rawQuery) return null;
+
+    // Skippa Ticksters kontoradress (Magasinsgatan 8 är Tickster AB:s kontor)
+    const cleaned = rawQuery.replace(/Magasinsgatan\s*8,?\s*/gi, '').trim().replace(/^,\s*/, '');
+    if (!cleaned) return null;
+
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+
+    // Försök 1: full fråga
+    let result = await nominatimSearchSweden(cleaned);
+    if (result) {
+        console.log(`[Geocoding/SE] Found "${cleaned}": [${result[0]}, ${result[1]}]`);
+        return result;
+    }
+
+    // Försök 2: om komma finns, testa sista delen (ofta stad)
+    if (cleaned.includes(',')) {
+        const city = cleaned.split(',').map(s => s.trim()).filter(Boolean).pop() || '';
+        if (city && city !== cleaned) {
+            await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+            result = await nominatimSearchSweden(city);
+            if (result) {
+                console.log(`[Geocoding/SE] Found city "${city}": [${result[0]}, ${result[1]}]`);
+                return result;
+            }
+        }
+    }
+
+    console.log(`[Geocoding/SE] No results for "${cleaned}".`);
     return null;
 }

@@ -37,7 +37,7 @@ interface Stats {
 
 let stats: Stats = { total: 0, today: 0, week: 0, bySource: {}, updated: 'laddar...' };
 let activeJob: { name: string; startedAt: Date; status?: string } | null = null;
-let currentView: 'menu' | 'list' | 'running' = 'menu';
+let currentView: 'menu' | 'list' | 'running' | 'submenu-fb' = 'menu';
 
 // ─── Statistik ────────────────────────────────────────────────────────────────
 async function fetchStats(): Promise<Stats> {
@@ -56,8 +56,9 @@ async function fetchStats(): Promise<Stats> {
     for (const e of snap.docs) {
         const d = e.data();
         const date = d.time?.toDate ? d.time.toDate().toLocaleDateString('sv-SE') : 'Okänt datum';
+        const attendees = d.attendees ? ` | ${c('cyan', 'Deltagare:')} ${bold(String(d.attendees))}` : '';
         console.log(`  ${c('cyan', bold('•'))} ${bold(d.title.slice(0, 40))} (${c('gray', date)})`);
-        console.log(`    ${c('gray', 'Källa:')} ${d.hostName} | ${c('gray', 'Bild:')} ${d.coverImage ? c('green', 'FINNS') : c('red', 'SAKNAS')}`);
+        console.log(`    ${c('gray', 'Källa:')} ${d.hostName} | ${c('gray', 'Bild:')} ${d.coverImage ? c('green', 'FINNS') : c('red', 'SAKNAS')}${attendees}`);
         if (d.coverImage) console.log(`    ${c('dim', d.coverImage.slice(0, 60) + '...')}`);
         console.log('');
         const t: Date = d.time?.toDate?.() ?? new Date(0);
@@ -77,7 +78,30 @@ function renderHeader() {
     console.log(c('cyan', `╚${'═'.repeat(W - 2)}╝`));
 }
 
+function drawFbSubmenu(msg?: string) {
+    clr();
+    renderHeader();
+    console.log(c('white', `\n  👥  ${bold('SKRAPA FACEBOOK')}`));
+    console.log(sep());
+    const items = [
+        { k: 'a', i: '🌐', l: 'Full skrapning (alla sökord)', s: 'Det normala flödet' },
+        { k: 'b', i: '🛠️ ', l: 'Fixa trasiga adresser', s: 'Re-skrapar event utan giltig plats' },
+        { k: 'c', i: '🔍', l: 'Lista trasiga adresser', s: 'Förhandsvisa innan fix (ingen ändring)' },
+        { k: 'Esc', i: '↩️ ', l: 'Tillbaka till huvudmeny', s: '' },
+    ];
+    for (const x of items) {
+        console.log(`  ${c('cyan', bold(` [${x.k}] `))} ${x.i} ${pad(bold(x.l), 32)} ${c('gray', x.s)}`);
+    }
+    console.log(sep());
+    if (msg) console.log(`\n  ${msg}`);
+    process.stdout.write(c('cyan', '\n  → Ditt val: '));
+}
+
 function draw(msg?: string) {
+    if (currentView === 'submenu-fb') {
+        drawFbSubmenu(msg);
+        return;
+    }
     if (currentView !== 'menu') return; // Rör inte skärmen om vi är i en annan vy
 
     clr();
@@ -234,6 +258,35 @@ async function main() {
     process.stdin.on('keypress', async (ch, key) => {
         if (key?.ctrl && key?.name === 'c') process.exit(0);
 
+        // FB-submeny: hantera egna val här innan vi faller tillbaka
+        if (currentView === 'submenu-fb') {
+            if (key?.name === 'escape') {
+                currentView = 'menu';
+                draw();
+                return;
+            }
+            const sk = (ch || '').toLowerCase();
+            if (sk === 'a') {
+                await runLive('scrape-fb', 'Facebook-skrapning (Webbläsare öppnas)');
+                stats = await fetchStats();
+                // Skärmen behåller runLives output + "Tryck valfri tangent...".
+                // Användarens nästa tangenttryck fångas av generella `currentView !== 'menu'`-blocket.
+                return;
+            }
+            if (sk === 'b') {
+                await runLive('fix-addresses', 'Fixar trasiga adresser (re-skrapar)');
+                stats = await fetchStats();
+                return;
+            }
+            if (sk === 'c') {
+                await runLive('list-broken', 'Listar event med trasiga/saknade adresser');
+                return;
+            }
+            // Annars stanna kvar i submenyn
+            drawFbSubmenu();
+            return;
+        }
+
         // Om vi är i en sub-vy, gå bara tillbaka till menyn
         if (currentView !== 'menu') {
             currentView = 'menu';
@@ -278,9 +331,8 @@ async function main() {
         } else if (k === '7') {
             await runLive('publish-fb', 'Publicerar till Facebook');
         } else if (k === '8') {
-            await runLive('scrape-fb', 'Facebook-skrapning (Webbläsare öppnas)');
-            stats = await fetchStats();
-            draw(c('green', '✅ Facebook-skrapning klar!'));
+            currentView = 'submenu-fb';
+            drawFbSubmenu();
         } else if (k === '9') {
             currentView = 'running';
             clr(); renderHeader(); console.log(c('red', '\n  🔥 Rensar ALLA externa event...'));

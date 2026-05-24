@@ -107,7 +107,7 @@ export default function EventFilters({
       <div className="bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
 
         {/* RAD 1: SÖK + FILTER BUTTON + VIEW */}
-        <div className="max-w-6xl mx-auto px-4 py-3 pb-2 flex gap-3 items-center">
+        <div className="w-full   py-3 pb-2 flex gap-3 items-center">
           {/* Sökfält */}
           <div className="flex-grow relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
@@ -137,7 +137,7 @@ export default function EventFilters({
                       setSearchQuery(s.title);
                       setShowSuggestions(false);
                     }}
-                    className="w-full px-4 py-3 text-left hover:bg-muted flex flex-col gap-0.5 border-b border-border/50 last:border-0"
+                    className="w-full  py-3 text-left hover:bg-muted flex flex-col gap-0.5 border-b border-border/50 last:border-0"
                   >
                     <span className="text-sm font-bold text-foreground">{s.title}</span>
                     <span className="text-[10px] text-muted-foreground uppercase">{s.location.name}</span>
@@ -187,7 +187,7 @@ export default function EventFilters({
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-[60px] opacity-100' : 'max-h-0 opacity-0'}`}
         >
-          <div className="max-w-6xl mx-auto px-4 pb-3 pt-0 flex items-center justify-between gap-2">
+          <div className="w-full   pb-3 pt-0 flex items-center justify-between gap-2">
 
             {/* VÄNSTER SIDA: Filterval */}
             <div className="flex items-center gap-2 flex-grow">

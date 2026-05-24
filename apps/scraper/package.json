@@ -9,7 +9,12 @@
     "create": "ts-node src/scripts/create-event.ts",
     "publish-fb": "ts-node src/scripts/publish-fb.ts",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
+    "fix-addresses": "ts-node src/scripts/fix-broken-addresses.ts",
+    "list-broken": "ts-node src/scripts/fix-broken-addresses.ts --list",
+    "clear-db": "ts-node clear-db.ts",
     "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
+    "test:regression": "ts-node src/scripts/test-regression.ts",
+    "backfill-images": "ts-node src/scripts/backfill_images.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

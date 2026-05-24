@@ -385,19 +385,19 @@ export default function HomeContent() {
 
     const cycleNextEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.regularEvents.length === 0) return;
-        const currentIndex = filteredEvents.regularEvents.findIndex(evt => evt.id === selectedEvent.id);
-        const nextIndex = (currentIndex + 1) % filteredEvents.regularEvents.length;
-        setSelectedEvent(filteredEvents.regularEvents[nextIndex]);
+        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
+        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
+        const nextIndex = (currentIndex + 1) % filteredEvents.mapCandidates.length;
+        setSelectedEvent(filteredEvents.mapCandidates[nextIndex]);
     };
 
     const cyclePrevEvent = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (!selectedEvent || filteredEvents.regularEvents.length === 0) return;
-        const currentIndex = filteredEvents.regularEvents.findIndex(evt => evt.id === selectedEvent.id);
+        if (!selectedEvent || filteredEvents.mapCandidates.length === 0) return;
+        const currentIndex = filteredEvents.mapCandidates.findIndex(evt => evt.id === selectedEvent.id);
         // Lägg till length innan modulo för att hantera negativa tal korrekt
-        const prevIndex = (currentIndex - 1 + filteredEvents.regularEvents.length) % filteredEvents.regularEvents.length;
-        setSelectedEvent(filteredEvents.regularEvents[prevIndex]);
+        const prevIndex = (currentIndex - 1 + filteredEvents.mapCandidates.length) % filteredEvents.mapCandidates.length;
+        setSelectedEvent(filteredEvents.mapCandidates[prevIndex]);
     };
 
     const resetFilters = () => {
@@ -445,7 +445,7 @@ export default function HomeContent() {
 
                 {/* HALL OF FAME (Efter spacer, precis över sortering) */}
                 {view === 'list' && showHallOfFame && hallOfFameEvent && (
-                    <div className="max-w-6xl mx-auto px-4 mt-4 mb-0 relative z-20 pointer-events-auto">
+                    <div className="w-full mt-4 mb-0 relative z-20 pointer-events-auto">
                         <div
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -474,7 +474,7 @@ export default function HomeContent() {
                 )}
 
                 {/* Sortering & Toggle Rad */}
-                <div className="max-w-6xl mx-auto px-4 pt-2 pb-2 w-full z-10 relative">
+                <div className="w-full pt-2 pb-2 z-10 relative">
                     <div className="flex justify-between items-center gap-4">
                         {/* 1. Toggle (Vänster) */}
                         <div className="flex-1">
@@ -519,7 +519,7 @@ export default function HomeContent() {
             Map: Flex-1 för att ta RESTEN av höjden (borde bli exakt rätt).
             List: Min-height för scroll.
         */}
-                <div className={`max-w-6xl mx-auto px-4 pb-4 w-full ${view === 'map' ? 'flex-1 h-full min-h-0' : 'min-h-[500px]'}`}>
+                <div className={`w-full ${view === 'map' ? 'flex-1 h-full min-h-0' : 'min-h-[500px]'}`}>
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 pt-20">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -533,7 +533,7 @@ export default function HomeContent() {
                     ) : view === 'list' ? (
                         <div className="relative min-h-[500px]">
                             {/* Combined Grid (Regular + External mixed by sorting) */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-24 relative">
+                            <div className="grid grid-cols-1 w-full pb-24 relative">
                                 {(() => {
                                     const { regularEvents, externalEvents } = filteredEvents;
                                     const totalCount = regularEvents.length + externalEvents.length;
@@ -590,9 +590,9 @@ export default function HomeContent() {
                                                     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-auto" />
                                                     
                                                     {/* The Login Card */}
-                                                    <div className="relative mb-32 px-4 w-full max-w-lg pointer-events-auto">
+                                                    <div className="relative mb-32  w-full max-w-lg pointer-events-auto">
                                                         <div className="bg-background/80 dark:bg-white/5 backdrop-blur-2xl p-10 rounded-[3rem] border border-border dark:border-white/10 shadow-[0_32px_128px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_32px_128px_-16px_rgba(0,0,0,0.6)] text-center transform transition-all">
-                                                            <div className="bg-indigo-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(79,70,229,0.5)]">
+                                                            <div className="bg-indigo-600 w-24 h-24 rounded-[2rem] flex items-center justify-center  mb-10 shadow-[0_0_50px_rgba(79,70,229,0.5)]">
                                                                  <Lock className="text-white" size={48} />
                                                             </div>
                                                             <h2 className="text-4xl font-black text-foreground dark:text-white mb-6 tracking-tight">Vad kul! <span className="text-indigo-600 dark:text-indigo-400">Upptäck mer.</span></h2>
