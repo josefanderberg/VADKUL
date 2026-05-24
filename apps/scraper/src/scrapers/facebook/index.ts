@@ -77,12 +77,40 @@ export async function scrapeFacebookEvents() {
     console.log('🚀 Startar Facebook-skrapan (Refactored)...');
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
+    const keywordStatsPath = path.resolve(__dirname, '../../../../keyword_stats.json');
+    const runStartedAt = new Date().toISOString();
 
     const writeLogFile = () => {
         try {
             fs.writeFileSync(logPath, JSON.stringify(scrapedEventsLog, null, 2), 'utf-8');
         } catch (writeErr) {
             console.error('⚠️ Kunde inte skriva scraped_events.json:', writeErr);
+        }
+    };
+
+    const writeKeywordStats = (
+        sourceStats: { keyword: string; filter: string; found: number; unique: number; duplicates: number }[],
+        perKeywordTotals: { [keyword: string]: { found: number; unique: number; duplicates: number } },
+        totalUniqueUrls: number,
+        totalDuplicateHits: number,
+    ) => {
+        try {
+            // Sortera per stoppord efter "unique" (mest givande sökord överst)
+            const rankedKeywords = Object.entries(perKeywordTotals)
+                .map(([keyword, totals]) => ({ keyword, ...totals }))
+                .sort((a, b) => b.unique - a.unique);
+
+            const payload = {
+                runStartedAt,
+                lastUpdatedAt: new Date().toISOString(),
+                totalUniqueUrls,
+                totalDuplicateHits,
+                perKeywordTotals: rankedKeywords,
+                perQuery: sourceStats,
+            };
+            fs.writeFileSync(keywordStatsPath, JSON.stringify(payload, null, 2), 'utf-8');
+        } catch (writeErr) {
+            console.error('⚠️ Kunde inte skriva keyword_stats.json:', writeErr);
         }
     };
 
@@ -96,23 +124,35 @@ export async function scrapeFacebookEvents() {
 
     try {
         // === SÖKKONFIGURATION ===
-        // Stora svenska städer
+        // Svenska städer — så vi får "vad händer i stan"-täckning
         const SWEDISH_CITIES = [
             'Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping',
             'Örebro', 'Helsingborg', 'Norrköping', 'Jönköping', 'Umeå',
             'Lund', 'Västerås', 'Sundsvall', 'Karlstad', 'Växjö', 'Gävle',
-            'Borås', 'Eskilstuna', 'Halmstad', 'Östersund'
+            'Borås', 'Eskilstuna', 'Halmstad', 'Östersund', 'Kalmar',
+            'Trollhättan', 'Luleå', 'Skellefteå', 'Kristianstad', 'Falun'
         ];
 
-        // Vanliga svenska ord → bred täckning, surfar upp lokala event oavsett stad
-        const BROAD_KEYWORDS = ['och', 'i', 'med', 'på', 'kväll', 'musik', 'konsert', 'fest', 'show'];
+        // Breda sökord – event-typer, aktiviteter, tider. Inga stad-bindningar här.
+        const BROAD_KEYWORDS = [
+            // Event-typer
+            'konsert', 'live', 'klubb', 'fest', 'dj', 'quiz', 'spelning', 'show',
+            'standup', 'gig', 'festival', 'marknad', 'loppis', 'pubrunda', 'afterwork',
+            // Aktiviteter
+            'musik', 'dans', 'teater', 'comedy', 'sport', 'yoga', 'kurs', 'workshop',
+            'föreläsning', 'utställning', 'film', 'bio',
+            // Tider / vardagsord
+            'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag',
+            // Funkade tidigare
+            'och'
+        ];
 
-        // Datumfilter: idag + den här veckan + nästa vecka täcker idag + ~14 dagar
-        const DATE_FILTERS = ['idag', 'den här veckan', 'nästa vecka'];
+        // Datumfilter: idag + denna vecka
+        const DATE_FILTERS = ['idag', 'den här veckan'];
 
         const SOURCES: FacebookSource[] = [];
 
-        // 1. Stadsspecifika sökningar för hela Sverige
+        // 1. Städer × datumfilter
         for (const city of SWEDISH_CITIES) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
@@ -122,7 +162,7 @@ export async function scrapeFacebookEvents() {
             }
         }
 
-        // 2. Breda sökordsökningar – förlitar sig på Facebooks IP-baserade platsdetektering
+        // 2. Breda sökord × datumfilter
         for (const keyword of BROAD_KEYWORDS) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
@@ -132,31 +172,95 @@ export async function scrapeFacebookEvents() {
             }
         }
 
-        // 3. Kända Växjö-platser som säkra källor
-        for (const q of ['Kafé de luxe', 'Växjö Konserthus', 'Jivers Växjö', 'Vida Arena', 'Växjö Teater', 'PM & Vänner', 'Quiz Växjö', 'Livemusik Växjö']) {
-            SOURCES.push({ url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(q)}`, filters: [] });
-        }
-        // Utforska-sida för Växjö
-        SOURCES.push({ url: 'https://www.facebook.com/events/explore/v%C3%A4xj%C3%B6-sweden/112613522086438/', filters: [] });
+        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter = ${SOURCES.length} queries totalt.`);
 
         const allEventUrls = new Map<string, string>();
 
-        for (const source of SOURCES) {
-            console.log(`\n🔍 Letar event på: ${source.url} med filter: [${source.filters.join(', ')}]`);
-            await page.goto(source.url, { waitUntil: 'networkidle2' });
-            await handleBannersAndModals(page);
-            await new Promise(r => setTimeout(r, 3000));
+        // Statistik per (keyword, filter)-kombination
+        type SourceStat = { keyword: string; filter: string; found: number; unique: number; duplicates: number };
+        const sourceStats: SourceStat[] = [];
+        // Aggregerad statistik per stoppord
+        const perKeywordTotals: { [keyword: string]: { found: number; unique: number; duplicates: number } } = {};
+        let totalDuplicateHits = 0;
 
-            await applyDateFilters(page, source.filters);
-            const discovered = await discoverEventUrls(page);
-            
-            discovered.forEach(item => {
-                if (!allEventUrls.has(item.url)) {
-                    allEventUrls.set(item.url, item.day);
+        for (const source of SOURCES) {
+            const keyword = decodeURIComponent(source.url.split('q=')[1] || '');
+            const filterLabel = source.filters.join(', ') || '(inget)';
+            console.log(`\n🔍 Letar event på: ${source.url} med filter: [${filterLabel}]`);
+
+            try {
+                await page.goto(source.url, { waitUntil: 'networkidle2' });
+                await handleBannersAndModals(page);
+                await new Promise(r => setTimeout(r, 3000));
+
+                await applyDateFilters(page, source.filters);
+                const discovered = await discoverEventUrls(page);
+
+                let uniqueThisSource = 0;
+                let duplicatesThisSource = 0;
+                discovered.forEach(item => {
+                    if (!allEventUrls.has(item.url)) {
+                        allEventUrls.set(item.url, item.day);
+                        uniqueThisSource++;
+                    } else {
+                        duplicatesThisSource++;
+                        totalDuplicateHits++;
+                    }
+                });
+
+                sourceStats.push({
+                    keyword,
+                    filter: filterLabel,
+                    found: discovered.length,
+                    unique: uniqueThisSource,
+                    duplicates: duplicatesThisSource,
+                });
+
+                if (!perKeywordTotals[keyword]) {
+                    perKeywordTotals[keyword] = { found: 0, unique: 0, duplicates: 0 };
                 }
-            });
-            console.log(`    📌 Hittade ${discovered.length} event-länkar under detta filter.`);
+                perKeywordTotals[keyword].found += discovered.length;
+                perKeywordTotals[keyword].unique += uniqueThisSource;
+                perKeywordTotals[keyword].duplicates += duplicatesThisSource;
+
+                console.log(`    📌 Hittade ${discovered.length} länkar — ${uniqueThisSource} nya, ${duplicatesThisSource} dubbletter.`);
+            } catch (e: any) {
+                console.log(`    ⚠️ Hoppar över "${keyword}" [${filterLabel}] pga fel: ${e?.message || e}`);
+                sourceStats.push({
+                    keyword,
+                    filter: filterLabel,
+                    found: 0,
+                    unique: 0,
+                    duplicates: 0,
+                });
+                if (!perKeywordTotals[keyword]) {
+                    perKeywordTotals[keyword] = { found: 0, unique: 0, duplicates: 0 };
+                }
+                // Försök att återställa sidan så nästa query har en fungerande context
+                try {
+                    await page.goto('about:blank');
+                } catch { /* page kan vara helt död, ignorera */ }
+            }
+
+            // Spara stoppords-statistik inkrementellt så vi har datan kvar även om körningen avbryts
+            writeKeywordStats(sourceStats, perKeywordTotals, allEventUrls.size, totalDuplicateHits);
         }
+
+        // === STATISTIK-SAMMANSTÄLLNING ===
+        console.log('\n==========================================');
+        console.log('📊 DISCOVERY-STATISTIK PER QUERY:');
+        console.log('==========================================');
+        sourceStats.forEach(s => {
+            console.log(`  "${s.keyword}" [${s.filter}] → ${s.found} hittade, ${s.unique} nya, ${s.duplicates} dubbletter`);
+        });
+
+        console.log('\n📊 SUMMA PER STOPPORD:');
+        Object.entries(perKeywordTotals).forEach(([keyword, totals]) => {
+            console.log(`  "${keyword}" → ${totals.found} hittade, ${totals.unique} nya, ${totals.duplicates} dubbletter`);
+        });
+
+        console.log(`\n📊 TOTALT: ${allEventUrls.size} unika event efter dedup, ${totalDuplicateHits} totala dubblett-träffar över alla queries.`);
+        console.log('==========================================');
 
         // --- HARDCODE SECURE EVENTS ---
         try {

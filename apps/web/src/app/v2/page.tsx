@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LinkEvent } from '../../types';
 import { linkEventService } from '../../services/linkEventService';
 import FloatingNavbar from '../../components/v2/FloatingNavbar';
@@ -23,6 +23,7 @@ export default function V2Page() {
     const [isLive, setIsLive] = useState(false);
     const [newEventCount, setNewEventCount] = useState(0);
     const [prevEventCount, setPrevEventCount] = useState(0);
+    const prevDayOffset = useRef(dayOffset);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
@@ -57,8 +58,14 @@ export default function V2Page() {
         const filtered = events.filter(evt => {
             return evt.time >= startOfDay && evt.time <= endOfDay;
         });
-        
+
         setFilteredEvents(filtered);
+        // När dagen byts: välj automatiskt det tidigaste eventet för dagen
+        // (gör det inte vid varje Firestore-uppdatering — bara när användaren bytt dag)
+        if (prevDayOffset.current !== dayOffset) {
+            setSelectedEvent(filtered[0] ?? null);
+            prevDayOffset.current = dayOffset;
+        }
     }, [events, dayOffset]);
 
     // Stäng av scroll på body så kartan tar över helt
