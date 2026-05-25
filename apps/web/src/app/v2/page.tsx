@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LinkEvent } from '../../types';
 import { linkEventService } from '../../services/linkEventService';
 import FloatingNavbar from '../../components/v2/FloatingNavbar';
@@ -62,6 +62,12 @@ export default function V2Page() {
     const [prevEventCount, setPrevEventCount] = useState(0);
     const [cardExpanded, setCardExpanded] = useState(false);
     const prevDayOffset = useRef(dayOffset);
+    // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
+    // 'editing' = modal öppen med formulär. (Drop-animationen körs internt i FloatingNavbar.)
+    const [creationMode, setCreationMode] = useState<'idle' | 'placing' | 'editing'>('idle');
+    const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+    const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [newEventTitle, setNewEventTitle] = useState('');
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
@@ -128,6 +134,11 @@ export default function V2Page() {
         });
     };
 
+    // Stabil referens så V2Map:s useEffect inte loopar.
+    const handleMapCenterChange = useCallback((lat: number, lng: number) => {
+        setMapCenter({ lat, lng });
+    }, []);
+
     const handleDiscardEvent = (eventId: string) => {
         setDiscardedEventIds(prev => {
             const next = new Set(prev);
@@ -145,7 +156,17 @@ export default function V2Page() {
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
             {/* 1. Svävande transparent Navbar överst */}
-            <FloatingNavbar dayOffset={dayOffset} setDayOffset={setDayOffset} />
+            <FloatingNavbar
+                dayOffset={dayOffset}
+                setDayOffset={setDayOffset}
+                creationMode={creationMode}
+                onStartCreate={() => setCreationMode('placing')}
+                onConfirmPlacement={() => {
+                    if (!mapCenter) return;
+                    setPickedLocation(mapCenter);
+                    setCreationMode('editing');
+                }}
+            />
 
             {/* Live-indikator — visas när Firestore-lyssnar är aktiv */}
             {isLive && (
@@ -216,7 +237,56 @@ export default function V2Page() {
                 savedEventIds={savedEventIds}
                 discardedEventIds={discardedEventIds}
                 cardExpanded={cardExpanded}
+                onCenterChange={handleMapCenterChange}
             />
+
+            {/* Modal för att skapa event */}
+            {creationMode === 'editing' && pickedLocation && (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
+                        <h2 className="text-xl font-bold text-slate-800">Skapa event</h2>
+                        <p className="text-xs text-slate-500 tabular-nums">
+                            {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
+                        </p>
+                        <input
+                            type="text"
+                            value={newEventTitle}
+                            onChange={e => setNewEventTitle(e.target.value)}
+                            placeholder="Namn på event"
+                            autoFocus
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-green-500 focus:outline-none text-slate-800"
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setCreationMode('idle');
+                                    setPickedLocation(null);
+                                    setNewEventTitle('');
+                                }}
+                                className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
+                            >
+                                Avbryt
+                            </button>
+                            <button
+                                type="button"
+                                disabled={!newEventTitle.trim()}
+                                onClick={() => {
+                                    // TODO: koppla mot linkEventService.create() när event-schemat är klart
+                                    // eslint-disable-next-line no-console
+                                    console.log('Skapa event', { title: newEventTitle, ...pickedLocation });
+                                    setCreationMode('idle');
+                                    setPickedLocation(null);
+                                    setNewEventTitle('');
+                                }}
+                                className="px-5 py-2 rounded-full bg-green-600 text-white font-bold disabled:opacity-40 hover:bg-green-500 transition-colors"
+                            >
+                                Skapa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <V2SwipeableCard

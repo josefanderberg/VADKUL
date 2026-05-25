@@ -6,11 +6,63 @@ import { User, MessageSquare, Bell, Plus, Search, Calendar, ChevronRight, Rotate
 interface FloatingNavbarProps {
     dayOffset: number;
     setDayOffset: (offset: number) => void;
+    creationMode?: 'idle' | 'placing' | 'editing';
+    onStartCreate?: () => void;
+    onConfirmPlacement?: () => void;
 }
 
-export default function FloatingNavbar({ dayOffset, setDayOffset }: FloatingNavbarProps) {
+export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode = 'idle', onStartCreate, onConfirmPlacement }: FloatingNavbarProps) {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+    const plusBtnRef = useRef<HTMLButtonElement>(null);
+    const animationRef = useRef<Animation | null>(null);
+    const [plusDropping, setPlusDropping] = useState(false);
+
+    // När create-flödet avbryts/avslutas (creationMode → 'idle'), avbryt WAAPI-animationen
+    // så att knappen snäpper tillbaka till sin ursprungliga position i navbaren.
+    useEffect(() => {
+        if (creationMode === 'idle' && animationRef.current) {
+            animationRef.current.cancel();
+            animationRef.current = null;
+            setPlusDropping(false);
+        }
+    }, [creationMode]);
+
+    const handlePlusClick = () => {
+        // I 'placing'-läget: klicket bekräftar platsvalet → modal öppnas via parent.
+        if (creationMode === 'placing') {
+            onConfirmPlacement?.();
+            return;
+        }
+        if (plusDropping || creationMode !== 'idle') return;
+        const btn = plusBtnRef.current;
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        const dx = window.innerWidth / 2 - (rect.left + rect.width / 2);
+        const dy = window.innerHeight / 2 - (rect.top + rect.height / 2);
+
+        setPlusDropping(true);
+
+        // Web Animations API: kurvad bana med rotation från + till X. fill:forwards
+        // håller kvar slutläget (mitt på skärmen, roterad 45°) tills animationen avbryts.
+        const animation = btn.animate(
+            [
+                { transform: 'translate(0px, 0px) rotate(0deg)', easing: 'ease-in-out' },
+                { transform: `translate(0px, ${dy}px) rotate(0deg)`, offset: 0.5, easing: 'ease-in-out' },
+                { transform: `translate(${dx}px, ${dy}px) rotate(45deg)` },
+            ],
+            {
+                duration: 800,
+                fill: 'forwards',
+            },
+        );
+        animationRef.current = animation;
+
+        animation.onfinish = () => {
+            onStartCreate?.();
+            setPlusDropping(false);
+        };
+    };
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -73,9 +125,18 @@ export default function FloatingNavbar({ dayOffset, setDayOffset }: FloatingNavb
                         <button className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors">
                             <Search size={24} className="text-slate-800" />
                         </button>
-                        <button className="bg-green-500 p-3 rounded-full shadow-lg hover:bg-green-400 transition-colors">
-                            <Plus size={24} className="text-white" />
-                        </button>
+                        {creationMode !== 'editing' && (
+                            <button
+                                ref={plusBtnRef}
+                                type="button"
+                                onClick={handlePlusClick}
+                                disabled={plusDropping}
+                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
+                                className="bg-green-500 w-12 h-12 rounded-full shadow-lg hover:bg-green-400 transition-colors flex items-center justify-center relative z-[1100]"
+                            >
+                                <Plus size={24} className="text-white" />
+                            </button>
+                        )}
 
                         {/* Profile + kolumn-meny nedåt med Meddelanden och Notiser */}
                         <div className="relative" ref={profileMenuRef}>

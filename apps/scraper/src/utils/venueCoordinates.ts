@@ -178,9 +178,9 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
     return null;
 }
 
-// Sverige-bred (inga geografiska begränsningar, bara Sverige)
+// Nordic-bred (Sverige, Danmark, Norge)
 async function nominatimSearchSweden(query: string): Promise<[number, number] | null> {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se,dk,no`;
     const response = await fetch(url, {
         headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
     });
@@ -190,8 +190,8 @@ async function nominatimSearchSweden(query: string): Promise<[number, number] | 
     for (const result of data ?? []) {
         const lat = parseFloat(result.lat);
         const lng = parseFloat(result.lon);
-        // Sanity check: must be within Sweden's bounding box
-        if (lat >= 55.0 && lat <= 69.5 && lng >= 10.5 && lng <= 24.2) {
+        // Sanity check: must be within Nordic bounding box (SE/DK/NO)
+        if (lat >= 54.5 && lat <= 71.5 && lng >= 4.0 && lng <= 31.5) {
             return [lat, lng];
         }
     }
@@ -288,8 +288,15 @@ export async function geocodeVenue(rawVenueName: string): Promise<[number, numbe
 export async function geocodeVenueSweden(rawQuery: string): Promise<[number, number] | null> {
     if (!rawQuery) return null;
 
-    // Skippa Ticksters kontoradress (Magasinsgatan 8 är Tickster AB:s kontor)
-    const cleaned = rawQuery.replace(/Magasinsgatan\s*8,?\s*/gi, '').trim().replace(/^,\s*/, '');
+    // Skippa endast Ticksters faktiska kontoradress (Magasinsgatan 8, 411 18 Göteborg).
+    // Tidigare strippade vi "Magasinsgatan 8" globalt, vilket förstörde adresser
+    // som "Fat Daves, Magasinsgatan 8, Malmö" (samma gatunamn finns i andra städer).
+    const cleaned = rawQuery
+        .replace(/Magasinsgatan\s*8\s*,?\s*\d{3}\s*\d{2}\s+Göteborg/gi, '')
+        .replace(/Magasinsgatan\s*8\s*,\s*Göteborg\b/gi, '')
+        .trim()
+        .replace(/^,\s*|\s*,\s*$/g, '')
+        .replace(/,\s*,/g, ',');
     if (!cleaned) return null;
 
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
