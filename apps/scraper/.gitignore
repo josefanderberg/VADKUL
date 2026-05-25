@@ -1,3 +1,9 @@
 # Local Puppeteer profiles
 .fb_profile
 test-fb.ts
+
+# Firebase emulator runtime data (genereras av `npm run emulator:*`)
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

@@ -65,19 +65,25 @@ interface V2MapProps {
     savedEventIds?: Set<string>;
     discardedEventIds?: Set<string>;
     cardExpanded?: boolean;
+    onCenterChange?: (lat: number, lng: number) => void;
 }
 
-export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false }: V2MapProps) {
+export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false, onCenterChange }: V2MapProps) {
 
-    const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean) => {
-        
+    const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1) => {
+
         // Sparat event: Vit bakgrund med en vit prick
         // Vanligt event: Slate-bakgrund med vit ram
         const bgClass = isSaved ? 'bg-white border-white' : 'bg-slate-800 border-white';
         const emoji = '🎟️'; // Använd biljett för båda
-        
+
         // Om markerad som avvisad (swipad vänster), gör den semi-transparent och klickbar men diskret
         const opacityClass = isDiscarded ? 'opacity-30 grayscale' : '';
+
+        // Badge med antal events på samma punkt (när >1 event delar koord).
+        const countBadge = count > 1
+            ? `<div class="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 bg-blue-600 text-white text-[11px] font-bold rounded-full border-2 border-white shadow-md flex items-center justify-center">${count > 99 ? '99+' : count}</div>`
+            : (isSaved ? '<div class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-slate-200 shadow-md animate-pulse"></div>' : '');
 
         return L.divIcon({
             className: 'custom-marker-teardrop',
@@ -87,13 +93,22 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                 <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-black/5 to-transparent"></div>
                 <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">${emoji}</div>
             </div>
-            ${isSaved ? '<div class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-slate-200 shadow-md animate-pulse"></div>' : ''}
+            ${countBadge}
         </div>
       `,
             iconSize: [48, 65],
             iconAnchor: [24, 58],
         });
     };
+
+    // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
+    const groups = new Map<string, LinkEvent[]>();
+    for (const evt of events) {
+        if (!evt.lat || !evt.lng) continue;
+        const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+        const bucket = groups.get(key);
+        if (bucket) bucket.push(evt); else groups.set(key, [evt]);
+    }
 
     // Default to Växjö
     const initialCenter: [number, number] = [56.8777, 14.8091];
@@ -112,26 +127,33 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                 />
                 
                 <MapController selectedEvent={selectedEvent} cardExpanded={cardExpanded} />
-                
-                <MapEvents onMapClick={() => onSelectEvent(null)} />
 
-                {events.map(evt => {
-                    if (!evt.lat || !evt.lng) return null;
-                    
-                    const isSelected = selectedEvent?.id === evt.id;
-                    const isSaved = savedEventIds.has(evt.id);
-                    const isDiscarded = discardedEventIds.has(evt.id);
-                    
+                <MapEvents onMapClick={() => onSelectEvent(null)} onCenterChange={onCenterChange} />
+
+                {Array.from(groups.values()).map(group => {
+                    const count = group.length;
+                    // Välj ett representativt event för markörens läge/klick:
+                    // 1) det valda (om i gruppen), annars
+                    // 2) första icke-discardade, annars
+                    // 3) första.
+                    const inGroupSelected = group.find(e => e.id === selectedEvent?.id);
+                    const firstNonDiscarded = group.find(e => !discardedEventIds.has(e.id));
+                    const rep = inGroupSelected || firstNonDiscarded || group[0];
+
+                    const isSelected = !!inGroupSelected;
+                    const isSaved = group.some(e => savedEventIds.has(e.id));
+                    const isDiscarded = group.every(e => discardedEventIds.has(e.id));
+
                     return (
                         <Marker
-                            key={evt.id}
-                            position={[evt.lat, evt.lng]}
-                            icon={createCustomIcon(isSelected, isSaved, isDiscarded)}
+                            key={rep.id}
+                            position={[rep.lat!, rep.lng!]}
+                            icon={createCustomIcon(isSelected, isSaved, isDiscarded, count)}
                             zIndexOffset={isSelected ? 1000 : (isSaved ? 500 : (isDiscarded ? -100 : 0))}
                             eventHandlers={{
                                 click: (e) => {
                                     L.DomEvent.stopPropagation(e as any);
-                                    onSelectEvent(evt);
+                                    onSelectEvent(rep);
                                 }
                             }}
                         />
@@ -142,9 +164,20 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
     );
 }
 
-function MapEvents({ onMapClick }: { onMapClick: () => void }) {
-    useMapEvents({
+function MapEvents({ onMapClick, onCenterChange }: { onMapClick: () => void; onCenterChange?: (lat: number, lng: number) => void }) {
+    const map = useMapEvents({
         click: () => onMapClick(),
+        move: () => {
+            if (!onCenterChange) return;
+            const c = map.getCenter();
+            onCenterChange(c.lat, c.lng);
+        },
     });
+    // Rapportera initialt center direkt så parent har en lat/lng även innan första rörelsen.
+    useEffect(() => {
+        if (!onCenterChange) return;
+        const c = map.getCenter();
+        onCenterChange(c.lat, c.lng);
+    }, [map, onCenterChange]);
     return null;
 }
