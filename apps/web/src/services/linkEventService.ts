@@ -1,135 +1,119 @@
-import {
-    collection, getDocs, addDoc, doc, deleteDoc, updateDoc, Timestamp,
-    query, where, writeBatch, onSnapshot
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { LinkEvent, FirestoreLinkEventData } from '../types';
-
-const COLLECTION = 'linkEvents';
+import type { LinkEvent } from '../types';
 
 export const linkEventService = {
-    // Hämta link events (som standard endast framtida)
+    // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            let q;
-            if (onlyFuture) {
-                const now = new Date();
-                now.setHours(0, 0, 0, 0); // Start of today
-                q = query(
-                    collection(db, COLLECTION),
-                    where("time", ">=", Timestamp.fromDate(now))
-                );
-            } else {
-                q = query(collection(db, COLLECTION));
-            }
-
-            const snap = await getDocs(q);
-            return snap.docs.map(doc => {
-                const data = doc.data() as FirestoreLinkEventData;
-                return {
-                    ...data,
-                    id: doc.id,
-                    time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
-                };
-            });
+            const res = await fetch(`/api/link-events${onlyFuture ? '' : '?all=true'}`);
+            if (!res.ok) throw new Error('Failed to fetch link events');
+            const data = await res.json();
+            
+            return data.map((evt: any) => ({
+                ...evt,
+                time: new Date(evt.time),
+                createdAt: new Date(evt.createdAt)
+            }));
         } catch (error) {
-            console.error("Error fetching link events:", error);
+            console.error("Error fetching link events from SQLite:", error);
             return [];
         }
     },
 
     // Skapa nytt link event
     async create(linkEvent: Omit<LinkEvent, 'id' | 'createdAt'>) {
-        const payload = {
-            ...linkEvent,
-            time: Timestamp.fromDate(linkEvent.time),
-            createdAt: Timestamp.now()
-        };
-        return await addDoc(collection(db, COLLECTION), payload);
+        const res = await fetch('/api/link-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(linkEvent)
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to create link event');
+        }
+        return await res.json();
     },
 
     // Ta bort link event
     async delete(id: string) {
-        const ref = doc(db, COLLECTION, id);
-        await deleteDoc(ref);
+        const res = await fetch(`/api/link-events?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to delete link event');
+        }
+        return await res.json();
     },
 
     // Uppdatera link event
     async update(id: string, updates: Partial<Omit<LinkEvent, 'id' | 'createdAt'>>) {
-        const ref = doc(db, COLLECTION, id);
-        const payload: any = { ...updates };
-        if (updates.time) {
-            payload.time = Timestamp.fromDate(updates.time);
+        const res = await fetch(`/api/link-events?id=${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to update link event');
         }
-        await updateDoc(ref, payload);
+        return await res.json();
     },
 
-    // Bulk create - Skapa flera events samtidigt (atomic operation)
+    // Bulk create
     async bulkCreate(linkEvents: Omit<LinkEvent, 'id' | 'createdAt'>[]): Promise<number> {
         if (linkEvents.length === 0) return 0;
-
-        const batch = writeBatch(db);
-        const collectionRef = collection(db, COLLECTION);
-
-        linkEvents.forEach(event => {
-            const docRef = doc(collectionRef); // Auto-generate ID
-            const payload = {
-                ...event,
-                time: Timestamp.fromDate(event.time),
-                createdAt: Timestamp.now()
-            };
-            batch.set(docRef, payload);
+        
+        const res = await fetch('/api/link-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'bulkCreate',
+                events: linkEvents
+            })
         });
 
-        await batch.commit();
-        return linkEvents.length;
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to bulk create link events');
+        }
+
+        const data = await res.json();
+        return data.count || linkEvents.length;
     },
 
-    // Bulk delete - Ta bort flera events samtidigt (atomic operation)
+    // Bulk delete
     async bulkDelete(eventIds: string[]): Promise<number> {
         if (eventIds.length === 0) return 0;
 
-        const batch = writeBatch(db);
-
-        eventIds.forEach(id => {
-            const docRef = doc(db, COLLECTION, id);
-            batch.delete(docRef);
+        const res = await fetch('/api/link-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'bulkDelete',
+                ids: eventIds
+            })
         });
 
-        await batch.commit();
-        return eventIds.length;
-    },
-
-    // Real-time listener — triggas direkt när scraper skriver till DB
-    subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
-        let q;
-        if (onlyFuture) {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            q = query(
-                collection(db, COLLECTION),
-                where('time', '>=', Timestamp.fromDate(now))
-            );
-        } else {
-            q = query(collection(db, COLLECTION));
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to bulk delete link events');
         }
 
-        const unsubscribe = onSnapshot(q, (snap) => {
-            const events = snap.docs.map(d => {
-                const data = d.data() as FirestoreLinkEventData;
-                return {
-                    ...data,
-                    id: d.id,
-                    time: data.time instanceof Timestamp ? data.time.toDate() : new Date(data.time),
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
-                } as LinkEvent;
-            });
-            callback(events);
-        }, (error) => {
-            console.error('onSnapshot error:', error);
-        });
+        const data = await res.json();
+        return data.count || eventIds.length;
+    },
 
-        return unsubscribe;
+    // Polling-baserad realtidslyssnare för SQLite (ersätter Firestore onSnapshot)
+    subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
+        // Hämta första gången direkt
+        this.getAll(onlyFuture).then(callback);
+
+        // Polla databasen var 10:e sekund för uppdateringar
+        const intervalId = setInterval(() => {
+            this.getAll(onlyFuture).then(callback);
+        }, 10000);
+
+        // Returnera avprenumerations-funktion för att stänga polling-intervallet vid unmount
+        return () => clearInterval(intervalId);
     }
 };
