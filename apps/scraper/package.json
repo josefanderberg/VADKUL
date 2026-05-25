@@ -6,9 +6,13 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "dashboard": "ts-node src/scripts/dashboard.ts",
+    "dashboard:local": "DB_TARGET=2 ts-node src/scripts/dashboard.ts",
+    "dashboard:test": "DB_TARGET=3 ts-node src/scripts/dashboard.ts",
     "create": "ts-node src/scripts/create-event.ts",
     "publish-fb": "ts-node src/scripts/publish-fb.ts",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
+    "scrape-fb:local": "DB_TARGET=2 ts-node src/scrapers/facebook.ts",
+    "scrape-fb:test": "DB_TARGET=3 ts-node src/scrapers/facebook.ts",
     "fix-addresses": "ts-node src/scripts/fix-broken-addresses.ts",
     "list-broken": "ts-node src/scripts/fix-broken-addresses.ts --list",
     "clear-db": "ts-node clear-db.ts",
@@ -16,12 +20,16 @@
     "test:regression": "ts-node src/scripts/test-regression.ts",
     "backfill-images": "ts-node src/scripts/backfill_images.ts",
     "cleanup-old": "ts-node src/scripts/cleanup-old-events.ts",
+    "sync-to-sqlite": "ts-node src/scripts/sync-firestore-to-sqlite.ts",
+    "emulator:dev": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.json --project demo-vadkul-local",
+    "emulator:test": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.test.json --project demo-vadkul-test",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "cheerio": "^1.2.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
@@ -29,6 +37,7 @@
     "puppeteer": "^24.43.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.3.0",
     "@types/puppeteer": "^5.4.7",
     "ts-node": "^10.9.2",

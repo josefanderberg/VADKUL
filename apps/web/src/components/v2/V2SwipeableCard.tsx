@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 // Haversine-avstånd i km mellan två punkter
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -88,6 +88,8 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
     const [visitedEventIds, setVisitedEventIds] = useState<Set<string>>(new Set());
+    // Browse-historik: event-id:n vi tittade på innan vi gick vidare. Pushas vid Nästa/swipe/sekventiell-knapp.
+    const [historyStack, setHistoryStack] = useState<string[]>([]);
     const isDragging = useRef(false);
     const startX = useRef(0);
     const startDragX = useRef(0);
@@ -177,12 +179,16 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setExitX(null); // Reset any exit animation
     };
 
+    const pushHistory = (id: string) => {
+        setHistoryStack(prev => [...prev, id]);
+    };
+
     const handleSwipeOut = (direction: 'left' | 'right') => {
         if (!selectedEvent) return;
 
         // Animate off screen
         setExitX(direction === 'right' ? window.innerWidth : -window.innerWidth);
-        
+
         // Trigger save or discard state immediately
         if (direction === 'right') {
             onSaveEvent(selectedEvent.id);
@@ -190,12 +196,15 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
             onDiscardEvent(selectedEvent.id);
         }
 
+        const previousId = selectedEvent.id;
+
         // Wait for animation, then change event
         setTimeout(() => {
             if (events.length === 0) return;
 
             // Hoppa till det geografiskt närmaste event som inte är bortkastat eller besökt
             const next = pickNext(selectedEvent);
+            if (next) pushHistory(previousId);
             onSelectEvent(next);
 
             // Reset position immediately for the new card
@@ -204,25 +213,39 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         }, 200); // 200ms matches the CSS transition
     };
 
-    const handlePrevious = () => {
+    // Bakåt-knapp uppe vid LIVE: gå till det event vi tittade på innan vi gick vidare.
+    // Detta är browse-historik, INTE föregående i nummerordning.
+    const handleHistoryBack = () => {
+        if (historyStack.length === 0) return;
+        const prevId = historyStack[historyStack.length - 1];
+        const prevEvent = events.find(e => e.id === prevId);
+        setHistoryStack(prev => prev.slice(0, -1));
+        if (prevEvent) onSelectEvent(prevEvent);
+        setExitX(null);
+        setDragX(0);
+    };
+
+    // 51/72-knappen: gå till nästa nummer (52/72). Skippar bortkastade event.
+    const handleNextSequential = () => {
         if (!selectedEvent || events.length === 0) return;
 
         const idx = events.findIndex(evt => evt.id === selectedEvent.id);
         if (idx < 0) return;
 
-        let prevIdx = (idx - 1 + events.length) % events.length;
+        let nextIdx = (idx + 1) % events.length;
         let loopCounter = 0;
 
         while (
-            (discardedEventIds.has(events[prevIdx].id) || events[prevIdx].id === selectedEvent.id)
+            (discardedEventIds.has(events[nextIdx].id) || events[nextIdx].id === selectedEvent.id)
             && loopCounter < events.length
         ) {
-            prevIdx = (prevIdx - 1 + events.length) % events.length;
+            nextIdx = (nextIdx + 1) % events.length;
             loopCounter++;
         }
 
         if (loopCounter < events.length) {
-            onSelectEvent(events[prevIdx]);
+            pushHistory(selectedEvent.id);
+            onSelectEvent(events[nextIdx]);
         }
 
         setExitX(null);
@@ -234,6 +257,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
 
         // Hoppa till det geografiskt närmaste event som inte är bortkastat eller besökt
         const next = pickNext(selectedEvent);
+        if (next) pushHistory(selectedEvent.id);
         onSelectEvent(next);
 
         setExitX(null);
@@ -253,18 +277,32 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     const positionLabel = currentIndex >= 0 ? `${currentIndex + 1}/${events.length}` : '';
 
     return (
+        <>
+            {/* Position-knapp (51/72) ovanför LIVE-indikatorn i toppen — klick går till nästa nummer */}
+            {positionLabel && (
+                <button
+                    type="button"
+                    onClick={handleNextSequential}
+                    aria-label="Gå till nästa event i nummerordning"
+                    title="Gå till nästa nummer"
+                    className="fixed left-1/2 -translate-x-1/2 z-[1001] bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    style={{ top: 64 }}
+                >
+                    {positionLabel}
+                </button>
+            )}
         <div className="fixed bottom-6 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
             {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}
             <div className="w-full max-w-4xl flex justify-center items-center gap-3 mb-4">
-                {positionLabel && (
+                {historyStack.length > 0 && (
                     <button
                         type="button"
-                        onClick={handlePrevious}
-                        aria-label="Föregående event"
-                        title="Gå tillbaka ett steg"
-                        className="bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 pointer-events-auto tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        onClick={handleHistoryBack}
+                        aria-label="Gå tillbaka till föregående event"
+                        title="Gå tillbaka"
+                        className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 pointer-events-auto hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
-                        {positionLabel}
+                        <ArrowLeft size={16} />
                     </button>
                 )}
                 <button
@@ -307,5 +345,6 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 </div>
             </div>
         </div>
+        </>
     );
 }

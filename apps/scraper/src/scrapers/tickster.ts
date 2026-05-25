@@ -303,6 +303,31 @@ export async function scrapeTickster() {
                     continue;
                 }
 
+                // Sanera bort Tickster AB:s kontoradress (Magasinsgatan 8, 411 18
+                // Göteborg ≈ 57.7088, 11.967). Den läcker in på event utan venue
+                // via text-fallback eller JSON-LD och ger fel locationName + GPS.
+                const isTicksterOfficeStreet = /Magasinsgatan\s*8\b/i.test(details.street || '');
+                const isTicksterOfficePostal = /^411\s*1[58]\b/.test((details.postal || '').replace(/\s+/g, ''));
+                const cityIsGoteborg = /^\s*g(ö|o)teborg\s*$/i.test(details.city || '');
+                if ((isTicksterOfficeStreet || isTicksterOfficePostal) && !cityIsGoteborg) {
+                    console.log(`     🧹 Tickster-kontorsadress detekterad (street="${details.street}", postal="${details.postal}", city="${details.city}") — kastar street/postal.`);
+                    details.street = '';
+                    details.postal = '';
+                    const parts = [details.city].filter(Boolean);
+                    details.geocodeQuery = parts.length > 0 ? parts.join(', ') : (details.venue || 'Sverige');
+                }
+                const ticksterLat = 57.7088, ticksterLng = 11.967;
+                if (
+                    typeof details.jsonLat === 'number' && typeof details.jsonLng === 'number' &&
+                    Math.abs(details.jsonLat - ticksterLat) < 0.005 &&
+                    Math.abs(details.jsonLng - ticksterLng) < 0.005 &&
+                    !cityIsGoteborg
+                ) {
+                    console.log(`     🧹 Tickster-kontorskoord detekterad (${details.jsonLat}, ${details.jsonLng}) — geokoda istället.`);
+                    details.jsonLat = null;
+                    details.jsonLng = null;
+                }
+
                 // Koordinater
                 let lat: number;
                 let lng: number;

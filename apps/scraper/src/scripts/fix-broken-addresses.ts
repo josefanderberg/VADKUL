@@ -38,14 +38,19 @@ const SWEDISH_CITIES = [
     'Ronneby', 'Karlskrona', 'Karlshamn', 'Hovmantorp',
 ];
 
-// Sverige-bbox (grov men tight nog för att kasta utländska träffar).
-const SE_BBOX = { latMin: 55.0, latMax: 69.5, lngMin: 10.0, lngMax: 24.5 };
+// Nordic-bbox (SE/DK/NO — grov men tight nog för att kasta övriga utländska träffar).
+const SE_BBOX = { latMin: 54.5, latMax: 71.5, lngMin: 4.0, lngMax: 31.5 };
 
 // Hårdkodade kända falska adresser (förstärks dynamiskt vid runtime).
 const STATIC_BAD_ADDRESS_PATTERNS: RegExp[] = [
     /Hovmantorp/i,
     /365\s*42/,
     /Parkgatan\s*1\b/i,
+    // Tickster AB:s kontoradress läcker in på event utan venue.
+    /Magasinsgatan\s*8.*G(ö|o)teborg/i,
+    /G(ö|o)teborg.*Magasinsgatan\s*8/i,
+    /^\s*411\s*1[58]\s+G(ö|o)teborg\s*$/i,
+    /^\s*411\s*0?5\s+G(ö|o)teborg\s*$/i,
 ];
 
 // Markörer för utländska event — om något av fälten matchar skippar vi helt.
@@ -53,12 +58,10 @@ const FOREIGN_MARKERS: RegExp[] = [
     // UK-postnummer t.ex. "RG7 1UL"
     /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\b/,
     // Tydliga icke-svenska land- och stadsnamn
-    /\b(Germany|Deutschland|France|England|Wales|Scotland|Ireland|Spain|España|Italy|Italia|Portugal|Netherlands|Nederland|Belgium|Belgien|Greece|Hellas|Poland|Polska|Czech|Hungary|Romania|Bulgaria|Croatia|Serbia|USA|United\s*States|Canada|UK|United\s*Kingdom|Denmark|Danmark|Norway|Norge|Finland|Suomi|Estonia|Latvia|Lithuania|Iceland|Island|Brazil|Argentina|Mexico|Japan|China|India|Australia|Western\s*Australia)\b/i,
+    /\b(Germany|Deutschland|France|England|Wales|Scotland|Ireland|Spain|España|Italy|Italia|Portugal|Netherlands|Nederland|Belgium|Belgien|Greece|Hellas|Poland|Polska|Czech|Hungary|Romania|Bulgaria|Croatia|Serbia|USA|United\s*States|Canada|UK|United\s*Kingdom|Finland|Suomi|Estonia|Latvia|Lithuania|Iceland|Island|Brazil|Argentina|Mexico|Japan|China|India|Australia|Western\s*Australia)\b/i,
     /\b(Berlin|Hamburg|München|Munich|Köln|Cologne|Frankfurt|Düsseldorf|Leipzig|Dresden|Magdeburg|Bremen|Stuttgart)\b/i,
     /\b(Paris|Lyon|Marseille|Toulouse|Bordeaux|Nantes|Nice)\b/i,
     /\b(London|Manchester|Liverpool|Birmingham|Glasgow|Edinburgh|Bristol|Leeds|Sheffield|Berkshire|Scarborough)\b/i,
-    /\b(Copenhagen|København|Aarhus|Odense|Helsingør|Frederiksberg|Humlebæk|Islands\s*Brygge)\b/i,
-    /\b(Oslo|Bergen|Trondheim|Stavanger|Grünerløkka|Drammen|Tromsø)\b/i,
     /\b(Helsinki|Helsingfors|Tampere|Turku|Espoo|Vantaa|Kuparilyhty)\b/i,
     /\b(New\s*York|Los\s*Angeles|Chicago|Boston|Austin|Seattle|Brooklyn|Manhattan|Cabarrus|Portland|Atlanta)\b/i,
     /\b(Sydney|Melbourne|Brisbane|Perth|Adelaide)\b/i,
@@ -86,12 +89,20 @@ const looksForeign = (...fields: (string | undefined | null)[]): boolean => {
 };
 
 const isEventBroken = (d: any): boolean => {
-    if (isStaticallyBroken(d.extractedAddress)) return true;
-    if (!d.locationName || d.locationName.trim() === '') return true;
+    const addr: string = d.extractedAddress || '';
+    const hasAddr = addr.trim() !== '';
+    const addrLooksBad = hasAddr && STATIC_BAD_ADDRESS_PATTERNS.some(p => p.test(addr));
+    const hasLoc = d.locationName && d.locationName.trim() !== '';
     const lat = d.lat ?? 0;
     const lng = d.lng ?? 0;
-    if (!isValidSwedishCoord(lat, lng)) return true;
-    return false;
+    const validCoord = isValidSwedishCoord(lat, lng);
+
+    // Statiskt trasig addr (Hovmantorp etc.) = FB-chrome-läckage → alltid broken.
+    if (addrLooksBad) return true;
+    // Annars: om koord + locationName redan är giltiga litar vi på dem även om
+    // extractedAddress råkar vara tom. Rör inte sådana rader.
+    if (validCoord && hasLoc) return false;
+    return true;
 };
 
 interface BrokenEvent {
@@ -124,19 +135,24 @@ function buildChromeBlacklist(events: BrokenEvent[]): Set<string> {
     return blacklist;
 }
 
+// Gata/väg + nummer (SE/DK/NO-varianter). Krävs för att en kandidat ska
+// accepteras — utan gatunummer hamnar alla events på samma postnr-centrum.
+const STREET_NUMBER_RE =
+    /(gatan|gata|gade|gate|vägen|väg|vej|veien|vei|allén|allé|alle|torget|torv|torg|gränd|backen|stigen|plan|plads|plass)\b\.?\s*\d+/i;
+
 /**
  * Poängsätter en adress-kandidat. Högre = mer trovärdig.
  *   100  Gata + nr + postnr + stad   ("Storgatan 5, 352 30 Växjö")
- *    80  Postnr + stad               ("352 30 Växjö")
+ *    80  Postnr + stad               ("352 30 Växjö") — förkastas senare, saknar gata+nr
  *    60  Gata + nr + stad            ("Bärnstensv 12, Bomhus, Gävle")
- *    40  Venue, stad / bara stad     ("Arbis, Norrköping")
- *    20  Bara venue-namn             ("Her Space")
+ *    40  Venue, stad / bara stad     ("Arbis, Norrköping") — förkastas senare
+ *    20  Bara venue-namn             ("Her Space")        — förkastas senare
  */
 function scoreCandidate(addr: string): number {
     if (!addr) return 0;
     const cityAlt = SWEDISH_CITIES.join('|');
     const hasPostal = /\d{3}\s?\d{2}\b/.test(addr);
-    const hasStreet = /(gatan|vägen|allén|allé|torget|gränd|backen|stigen|plan)\b\.?\s*\d+/i.test(addr);
+    const hasStreet = STREET_NUMBER_RE.test(addr);
     const hasCity = new RegExp(`\\b(${cityAlt})\\b`, 'i').test(addr);
 
     if (hasStreet && hasPostal && hasCity) return 100;
@@ -383,7 +399,7 @@ async function listOnly() {
         'Chrome (auto-detekterad)': [],
         'Statiskt känd falsk (Hovmantorp/Parkgatan)': [],
         'Tom locationName': [],
-        'Ogiltig koord (0/0 eller utanför Sverige)': [],
+        'Ogiltig koord (0/0 eller utanför SE/DK/NO)': [],
     };
 
     for (const e of broken) {
@@ -396,7 +412,7 @@ async function listOnly() {
         } else if (!e.locationName) {
             byReason['Tom locationName'].push(e);
         } else {
-            byReason['Ogiltig koord (0/0 eller utanför Sverige)'].push(e);
+            byReason['Ogiltig koord (0/0 eller utanför SE/DK/NO)'].push(e);
         }
     }
 
@@ -537,6 +553,9 @@ async function fixAll() {
             let newLat = 0, newLng = 0;
 
             for (const c of candidates) {
+                // Kräv gata + nummer. Annars hamnar alla events på samma
+                // postnr-centroid (t.ex. "411 05 Göteborg" → exakt en punkt).
+                if (!STREET_NUMBER_RE.test(c.addr)) continue;
                 const geo = await geocodeVenueSweden(c.addr);
                 if (geo && isValidSwedishCoord(geo[0], geo[1])) {
                     candidateAddr = c.addr;
@@ -549,7 +568,7 @@ async function fixAll() {
             }
 
             if (!candidateAddr) {
-                console.log(`   ❌ Ingen av ${candidates.length} kandidater gav giltig svensk koord — rör inte raden.`);
+                console.log(`   ❌ Ingen av ${candidates.length} kandidater gav giltig nordisk koord (SE/DK/NO) — rör inte raden.`);
                 invalidCoord++;
                 summary.push({ id: evt.id, title: evt.title, before: evt.extractedAddress, after: candidates[0].addr, method: candidates[0].method, status: 'invalid-coord' });
                 continue;
