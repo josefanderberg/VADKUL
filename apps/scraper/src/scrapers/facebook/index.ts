@@ -180,7 +180,8 @@ export async function scrapeFacebookEvents() {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
                     url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}`,
-                    filters: [filter]
+                    filters: [filter],
+                    city: city
                 });
             }
         }
@@ -197,7 +198,7 @@ export async function scrapeFacebookEvents() {
 
         console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter = ${SOURCES.length} queries totalt.`);
 
-        const allEventUrls = new Map<string, string>();
+        const allEventUrls = new Map<string, { expectedDay: string; city?: string }>();
 
         // Statistik per (keyword, filter)-kombination
         type SourceStat = { keyword: string; filter: string; found: number; unique: number; duplicates: number };
@@ -223,7 +224,7 @@ export async function scrapeFacebookEvents() {
                 let duplicatesThisSource = 0;
                 discovered.forEach(item => {
                     if (!allEventUrls.has(item.url)) {
-                        allEventUrls.set(item.url, item.day);
+                        allEventUrls.set(item.url, { expectedDay: item.day, city: source.city });
                         uniqueThisSource++;
                     } else {
                         duplicatesThisSource++;
@@ -293,7 +294,7 @@ export async function scrapeFacebookEvents() {
                 let injected = 0;
                 goldenEvents.forEach((evt: any) => {
                     if (evt.url && !allEventUrls.has(evt.url)) {
-                        allEventUrls.set(evt.url, 'okänd'); // We don't know the exact search day filter, but the detail scraper will parse the real date anyway.
+                        allEventUrls.set(evt.url, { expectedDay: 'okänd', city: 'Växjö' }); // Default to Växjö for secure events
                         injected++;
                     }
                 });
@@ -308,7 +309,8 @@ export async function scrapeFacebookEvents() {
 
         let saved = 0;
         let processed = 0;
-        for (const [url, expectedDay] of allEventUrls.entries()) {
+        for (const [url, itemData] of allEventUrls.entries()) {
+            const { expectedDay, city } = itemData;
             processed++;
             console.log(`\n📊 [${processed}/${totalToProcess}] Behandlar event (sparade hittills: ${scrapedEventsLog.length})`);
             try {
@@ -419,7 +421,12 @@ export async function scrapeFacebookEvents() {
                 let isLocationVerified = false;
 
                 if (extractedAddress) {
-                    const coords = await geocodeVenueSweden(extractedAddress);
+                    let geocodeQuery = extractedAddress;
+                    // Om stadsnamn inte redan ingår i adressen, lägg till kontext-staden som hittades vid sökningen
+                    if (city && !extractedAddress.toLowerCase().includes(city.toLowerCase())) {
+                        geocodeQuery = `${extractedAddress}, ${city}`;
+                    }
+                    const coords = await geocodeVenueSweden(geocodeQuery);
                     if (coords) {
                         finalLat = coords[0];
                         finalLng = coords[1];

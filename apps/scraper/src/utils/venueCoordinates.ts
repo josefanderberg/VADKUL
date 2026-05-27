@@ -156,6 +156,25 @@ export function getVenueCoordinates(venueName: string): [number, number] | null 
     return null;
 }
 
+/**
+ * Checks if the address contains foreign indicators (outside Sweden, Denmark, Norway, Finland)
+ * to avoid false partial matches in Nominatim geocoding.
+ */
+export function isForeignAddress(address: string): boolean {
+    if (!address) return false;
+    const lower = address.toLowerCase();
+    const foreignIndicators = [
+        'usa', 'united states', 'new zealand', 'united kingdom', 'great britain', 'england',
+        'australia', 'canada', 'germany', 'deutschland', 'france', 'spain', 'italy',
+        'new york', 'london', 'auckland', 'california', 'florida', 'texas',
+        'switzerland', 'belgium', 'austria', 'netherlands'
+    ];
+    return foreignIndicators.some(indicator => {
+        const regex = new RegExp(`\\b${indicator}\\b`, 'i');
+        return regex.test(lower);
+    });
+}
+
 const NOMINATIM_DELAY_MS = 1100; // respect 1 req/sec
 
 // Lokalt (Växjö-region, ~80 km)
@@ -227,6 +246,11 @@ export function cleanVenueName(name: string): string {
 export async function geocodeVenue(rawVenueName: string): Promise<[number, number] | null> {
     if (!rawVenueName) return null;
 
+    if (isForeignAddress(rawVenueName)) {
+        console.log(`[Geocoding] Skipped foreign venue: "${rawVenueName}"`);
+        return null;
+    }
+
     const venueName = cleanVenueName(rawVenueName);
 
     // Check local list first (fast path)
@@ -287,6 +311,11 @@ export async function geocodeVenue(rawVenueName: string): Promise<[number, numbe
  */
 export async function geocodeVenueSweden(rawQuery: string): Promise<[number, number] | null> {
     if (!rawQuery) return null;
+
+    if (isForeignAddress(rawQuery)) {
+        console.log(`[Geocoding/SE] Skipped foreign query: "${rawQuery}"`);
+        return null;
+    }
 
     // Skippa endast Ticksters faktiska kontoradress (Magasinsgatan 8, 411 18 Göteborg).
     // Tidigare strippade vi "Magasinsgatan 8" globalt, vilket förstörde adresser

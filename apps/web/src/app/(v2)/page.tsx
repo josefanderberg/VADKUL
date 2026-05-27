@@ -5,6 +5,7 @@ import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import V2SwipeableCard from '@/components/v2/V2SwipeableCard';
+import CloudPopup from '@/components/ui/CloudPopup';
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
 
@@ -155,6 +156,10 @@ export default function HomePage() {
 
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
+            <CloudPopup
+                message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
+                autoDismissMs={0}
+            />
             {/* 1. Svävande transparent Navbar överst */}
             <FloatingNavbar
                 dayOffset={dayOffset}

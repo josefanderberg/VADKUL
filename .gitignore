@@ -37,3 +37,8 @@ vadkul-*-firebase-adminsdk-*.json
 
 # Facebook Profile
 .fb_profile/
+
+# Environment variables
+.env
+.env.*
+!.env.example

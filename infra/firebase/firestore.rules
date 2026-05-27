@@ -146,5 +146,11 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
     }
+
+    // 10. AGGREGATED EVENTS (Progressive event layers)
+    match /aggregatedEvents/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

@@ -415,7 +415,7 @@ export default function HomeContent() {
         <Layout>
             <WelcomeModal onClose={() => setView('map')} />
             <CloudPopup
-                message="Kolla alla event som händer just idag. Det kan dyka upp en ny vilken sekund som helst. Så håll utkik! 👀"
+                message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
                 autoDismissMs={0}
             />
             {/* SCROLL FIXEN:

@@ -30,6 +30,7 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
     setLeaving(true);
     setTimeout(() => {
       setVisible(false);
+      setLeaving(false);
       onDismiss?.();
     }, 500);
   };
@@ -38,18 +39,20 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
     >
       {/* Overlay – very subtle, just dims behind the cloud */}
       <div
-        className={`absolute inset-0 bg-black/10 pointer-events-auto transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
+        role="button"
+        className={`absolute inset-0 bg-black/[0.02] cursor-pointer transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
         onClick={dismiss}
       />
 
       {/* The cloud itself */}
       <div
+        role="button"
         onClick={dismiss}
-        className={`relative pointer-events-auto cursor-pointer select-none transition-all duration-500
+        className={`relative cursor-pointer select-none transition-all duration-500
           ${leaving ? 'opacity-0 scale-75 -translate-y-10' : 'opacity-100 scale-100 translate-y-0'}
           animate-cloud-float
         `}
@@ -58,14 +61,14 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
         {/* Cloud SVG background */}
         <svg
           viewBox="0 0 340 200"
-          className="w-[320px] sm:w-[380px] drop-shadow-2xl"
+          className="w-[370px] sm:w-[440px] drop-shadow-2xl"
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Shadow / depth layer */}
           <ellipse cx="170" cy="195" rx="140" ry="10" fill="rgba(0,0,0,0.08)" />
 
-          {/* Main cloud body */}
-          <g filter="url(#cloud-blur)">
+          {/* Main cloud body with 85% opacity */}
+          <g filter="url(#cloud-blur)" fillOpacity="0.85">
             {/* Large bottom dome */}
             <ellipse cx="170" cy="165" rx="135" ry="48" fill="white" />
             {/* Left bump */}
@@ -89,14 +92,10 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
           </defs>
         </svg>
 
-        {/* Text overlay – centred inside the cloud */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-8 pb-4">
-          <span className="text-2xl mb-1">☀️</span>
-          <p className="text-center text-slate-700 font-bold text-sm sm:text-[15px] leading-snug max-w-[220px]">
+        {/* Text overlay – beautifully positioned inside the semi-transparent cloud */}
+        <div className="absolute inset-0 flex items-center justify-center px-12 pt-8">
+          <p className="text-center text-slate-700 font-semibold text-base sm:text-[17px] leading-relaxed max-w-[240px]">
             {message}
-          </p>
-          <p className="mt-2 text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-            Klicka för att stänga
           </p>
         </div>
       </div>

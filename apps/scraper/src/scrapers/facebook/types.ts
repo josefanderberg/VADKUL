@@ -17,4 +17,5 @@ export interface IFacebookEventScrapeResult {
 export interface FacebookSource {
     url: string;
     filters: string[];
+    city?: string;
 }

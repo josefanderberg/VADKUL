@@ -30,7 +30,7 @@ const useEmulator =
     process.env.NEXT_PUBLIC_USE_EMULATOR === 'true' ||
     !!process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST ||
     firebaseConfig.projectId?.startsWith('demo-') ||
-    window.location.hostname === 'localhost' // Som fallback vid lokal dev
+    (window.location.hostname === 'localhost' && process.env.NEXT_PUBLIC_USE_EMULATOR !== 'false')
   );
 
 if (useEmulator) {
