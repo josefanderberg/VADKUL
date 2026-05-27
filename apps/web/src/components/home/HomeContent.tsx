@@ -10,6 +10,7 @@ import EventCard from '../ui/EventCard';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventFilters from './EventFilters';
 import WelcomeModal from '../ui/WelcomeModal';
+import CloudPopup from '../ui/CloudPopup';
 
 import { eventService } from '../../services/eventService';
 import { linkEventService } from '../../services/linkEventService';
@@ -413,6 +414,10 @@ export default function HomeContent() {
     return (
         <Layout>
             <WelcomeModal onClose={() => setView('map')} />
+            <CloudPopup
+                message="Kolla alla event som händer just idag. Det kan dyka upp en ny vilken sekund som helst. Så håll utkik! 👀"
+                autoDismissMs={0}
+            />
             {/* SCROLL FIXEN:
           List-vy: Overflow-y-auto på container.
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.

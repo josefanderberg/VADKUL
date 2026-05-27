@@ -2,19 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { linkEventService } from '../../../services/linkEventService';
-import { useAuth } from '../../../context/AuthContext';
-import Layout from '../../../components/layout/Layout';
-import type { LinkEvent } from '../../../types';
+import { linkEventService } from '@/services/linkEventService';
+import { useAuth } from '@/context/AuthContext';
+import Layout from '@/components/layout/Layout';
+import type { LinkEvent } from '@/types';
 import toast from 'react-hot-toast';
 import { ExternalLink, Trash2, MapPin, ArrowLeft, Upload, Eye, Edit, Map, LayoutGrid, List, Terminal } from 'lucide-react';
-import { parseImportJSON, mapToLinkEvent, compareEvents, type SyncComparison } from '../../../utils/eventImport';
-import { CATEGORY_LIST } from '../../../utils/categories';
-import type { EventCategoryType } from '../../../utils/categories';
+import { parseImportJSON, mapToLinkEvent, compareEvents, type SyncComparison } from '@/utils/eventImport';
+import { CATEGORY_LIST } from '@/utils/categories';
+import type { EventCategoryType } from '@/utils/categories';
 import dynamic from 'next/dynamic';
-import LinkEventCard from '../../../components/ui/LinkEventCard';
+import LinkEventCard from '@/components/ui/LinkEventCard';
 
-const AdminLocationPickerMap = dynamic(() => import('../../../components/admin/AdminLocationPickerMap'), {
+const AdminLocationPickerMap = dynamic(() => import('@/components/admin/AdminLocationPickerMap'), {
     ssr: false,
     loading: () => (
         <div className="h-[400px] w-full flex items-center justify-center bg-slate-100 rounded-xl border border-slate-300">
@@ -23,7 +23,7 @@ const AdminLocationPickerMap = dynamic(() => import('../../../components/admin/A
     )
 });
 
-const AdminLinkEventsMap = dynamic(() => import('../../../components/admin/AdminLinkEventsMap'), {
+const AdminLinkEventsMap = dynamic(() => import('@/components/admin/AdminLinkEventsMap'), {
     ssr: false,
     loading: () => (
         <div className="h-[500px] w-full flex items-center justify-center bg-slate-100 rounded-xl border border-slate-300">

@@ -44,24 +44,28 @@ async function scrapeNojesguiden(): Promise<number> {
     const url = 'https://ng.se/kalendarium';
     console.log(`  [Nöjesguiden] Hämtar: ${url}`);
     let saved = 0;
+    let skippedNoTitleOrLink = 0;
+    let skippedDuplicate = 0;
 
     try {
         const res = await fetch(url, { headers: HEADERS });
+        console.log(`  [Nöjesguiden] HTTP ${res.status} (${res.headers.get('content-type') || '?'})`);
         if (!res.ok) return 0;
-        const $ = cheerio.load(await res.text());
+        const html = await res.text();
+        const $ = cheerio.load(html);
 
         const eventElements = $('.event-list-item, .kalendarium-item');
-        console.log(`  [Nöjesguiden] Hittade ${eventElements.length} i listan.`);
+        console.log(`  [Nöjesguiden] Selektor-träffar: ${eventElements.length} (HTML ${html.length} bytes)`);
 
         for (const el of eventElements.toArray()) {
             const title = $(el).find('h2, h3').first().text().trim();
             const link = $(el).find('a').first().attr('href');
             const location = $(el).find('.venue, .location').first().text().trim() || 'Sverige';
-            
-            if (!title || !link) continue;
+
+            if (!title || !link) { skippedNoTitleOrLink++; continue; }
             const fullUrl = link.startsWith('http') ? link : `https://ng.se${link}`;
-            
-            if (await eventExistsInDb(fullUrl)) continue;
+
+            if (await eventExistsInDb(fullUrl)) { skippedDuplicate++; continue; }
 
             await addEventToDb({
                 title, url: fullUrl, time: new Date(), // NG visar ofta dagens direkt
@@ -71,39 +75,15 @@ async function scrapeNojesguiden(): Promise<number> {
             });
             saved++;
         }
+        console.log(`  [Nöjesguiden] Sparade ${saved}, hoppade ${skippedDuplicate} dubblett, ${skippedNoTitleOrLink} utan titel/länk.`);
     } catch (e) { console.error('  [Nöjesguiden] Fel:', e); }
     return saved;
 }
 
-// ─── 2. TICKSTER ──────────────────────────────────────────────────────────────
-async function scrapeTicksterToday(todayStr: string): Promise<number> {
-    const url = `https://www.tickster.com/se/sv/events/search?q=&date_from=${todayStr}&date_to=${todayStr}`;
-    console.log(`  [Tickster] Hämtar: ${url}`);
-    let saved = 0;
-    try {
-        const res = await fetch(url, { headers: HEADERS });
-        if (!res.ok) return 0;
-        const $ = cheerio.load(await res.text());
-        const links: string[] = [];
-        $('a[href*="/events/"]').each((_, el) => {
-            const href = $(el).attr('href') || '';
-            if (href.includes(todayStr)) {
-                const full = href.startsWith('http') ? href : `https://www.tickster.com${href}`;
-                if (!links.includes(full)) links.push(full);
-            }
-        });
-        for (const link of links) {
-            if (await eventExistsInDb(link)) continue;
-            await addEventToDb({
-                title: 'Tickster Event', url: link, time: new Date(todayStr),
-                locationName: 'Sverige', lat: 59.3293, lng: 18.0686,
-                hostName: 'Tickster', category: 'other', createdAt: new Date()
-            });
-            saved++;
-        }
-    } catch (e) {}
-    return saved;
-}
+// Tidigare hade vi en scrapeTicksterToday här som matchade `href.includes(todayStr)`.
+// Det matchade söklistans EGEN URL (?date_from=YYYY-MM-DD) och sparade
+// listsidor som event med titeln "Tickster Event". 8 skräpevents i DB innan vi
+// tog bort. tickster.ts täcker idag-fönstret korrekt. Se docs/scrapers/inaktiva.md.
 
 // ─── HUVUD-EXPORT ─────────────────────────────────────────────────────────────
 export async function scrapeTodaySweden(): Promise<void> {
@@ -111,11 +91,9 @@ export async function scrapeTodaySweden(): Promise<void> {
     console.log(`\n📅 Scraping events för idag (${todayStr}) – hela Sverige\n`);
 
     const n1 = await scrapeNojesguiden();
-    const t1 = await scrapeTicksterToday(todayStr);
 
-    const total = n1 + t1;
-    console.log(`\n✅ Klar! Sparade ${total} nya event för idag.`);
-    console.log(`   Nöjesguiden: ${n1}  |  Tickster: ${t1}`);
+    console.log(`\n✅ Klar! Sparade ${n1} nya event för idag.`);
+    console.log(`   Nöjesguiden: ${n1}`);
 
     // Aggregera all data till progressiva lager direkt efter insamling
     try {

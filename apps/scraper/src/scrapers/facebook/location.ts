@@ -87,86 +87,12 @@ export const LocationInstrument = {
                 }
             }
 
-            // 2. Scan the entire page for a high-precision physical address
-            let bestAddressText = '';
-            let highestAddressScore = 0;
-
-            const scoreAddress = (text: string) => {
-                const lower = text.toLowerCase();
-                
-                // Exclude very long texts or typical noise
-                if (text.length > 100 || text.length < 3) return 0;
-                
-                const noiseKeywords = [
-                    'visa karta', 'show map', 'vägbeskrivning', 'get directions', 
-                    'directions', 'karta', 'map', 'svarat', 'svarade', 'personer', 
-                    'went', 'interested', 'intresserad', 'intresserade', 'gick',
-                    'facebook', 'copyright', 'logga in', 'evenemang av'
-                ];
-                if (noiseKeywords.some(keyword => lower.includes(keyword))) return 0;
-                if (lower === displayName.toLowerCase()) return 0;
-
-                let score = 0;
-                
-                // Street suffix keywords (Swedish and English)
-                const streetKeywords = [
-                    'vägen', 'gatan', 'allé', 'plan', 'torg', 'platsen', 
-                    'backe', 'gränd', 'väg', 'gat', 'road', 'street', 
-                    'avenue', 'storgatan', 'rådjursvägen', 'vattentorget', 
-                    'st.', 'rd.', 'ave'
-                ];
-                if (streetKeywords.some(kw => lower.includes(kw))) {
-                    score += 10;
-                }
-
-                // Country indicators
-                if (lower.includes('sverige') || lower.includes('sweden')) {
-                    score += 10;
-                }
-
-                // Postal code matching (e.g. 352 45, 35245, SE-35245)
-                if (lower.match(/(?:se-)?\d{3}\s?\d{2}/i)) {
-                    score += 10;
-                }
-
-                // Street number matching (e.g. 2, 2A, 12, 12B)
-                if (lower.match(/\b\d+[a-z]?\b/i)) {
-                    score += 5;
-                }
-
-                // City indicator
-                if (lower.includes('växjö') || lower.includes('vaxjo')) {
-                    score += 2;
-                }
-
-                // Structure tie-breakers
-                if (lower.includes(',')) score += 1;
-                if (lower.includes('se-')) score += 1;
-                
-                return score;
-            };
-
-            // Query all leaf text nodes across the entire body
-            const leafNodes = Array.from(document.body.querySelectorAll('span, div')).filter(el => {
-                return el.children.length === 0 && el.textContent?.trim();
-            });
-
-            const uniquePageTexts = Array.from(new Set(leafNodes.map(el => el.textContent?.trim() || '').filter(Boolean)));
-
-            for (const text of uniquePageTexts) {
-                const score = scoreAddress(text);
-                if (score > highestAddressScore) {
-                    highestAddressScore = score;
-                    bestAddressText = text;
-                }
-            }
-
-            // Final consolidation
+            // Använd endast pin-radens adress. Tidigare hade vi en body-wide
+            // address-scoring som fallback — den plockade FB:s UI-chrome
+            // (Universitetsplatsen/Hovmantorp/Ronneby Brunnspark-rotation) och
+            // gav 61 events fel koord. Se docs/scrapers/facebook.md.
             const name = displayName;
-            // Prefer the structured pin-row address (anchored to the event's location field).
-            // Only fall back to the page-wide scored address if the pin row gave us nothing,
-            // since the page-wide scan can pick up addresses from "Related Events" further down.
-            const fullAddress = pinRowAddress || ((highestAddressScore >= 5 && bestAddressText) ? bestAddressText : '');
+            const fullAddress = pinRowAddress || '';
 
             return { name, fullAddress, url: locationUrl };
         }, eventTitle);

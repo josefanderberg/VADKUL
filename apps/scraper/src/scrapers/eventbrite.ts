@@ -50,9 +50,11 @@ function guessCategoryFromTitle(title: string): string {
 export async function scrapeEventbrite() {
     console.log('Starting Eventbrite scraper...');
     let totalSaved = 0;
+    const summary: { url: string; status: number; bytes: number; links: number; jsonLd: number; saved: number }[] = [];
 
     for (const url of EVENTBRITE_URLS) {
         console.log(`  Fetching: ${url}`);
+        const savedBefore = totalSaved;
         try {
             const res = await fetch(url, {
                 headers: {
@@ -64,6 +66,7 @@ export async function scrapeEventbrite() {
 
             if (!res.ok) {
                 console.warn(`  Eventbrite returned ${res.status} for ${url}`);
+                summary.push({ url, status: res.status, bytes: 0, links: 0, jsonLd: 0, saved: 0 });
                 continue;
             }
 
@@ -93,7 +96,8 @@ export async function scrapeEventbrite() {
                 } catch {}
             });
 
-            console.log(`  Found ${eventLinks.length} event links and ${jsonEvents.length} JSON-LD events on ${url}`);
+            console.log(`  HTTP ${res.status} · ${html.length} bytes · ${eventLinks.length} länkar · ${jsonEvents.length} JSON-LD events`);
+            summary.push({ url, status: res.status, bytes: html.length, links: eventLinks.length, jsonLd: jsonEvents.length, saved: 0 });
 
             // Process JSON-LD events first (most reliable)
             for (const evt of jsonEvents) {
@@ -157,7 +161,13 @@ export async function scrapeEventbrite() {
         } catch (err) {
             console.error(`  Error fetching ${url}:`, err);
         }
+
+        if (summary.length > 0) summary[summary.length - 1].saved = totalSaved - savedBefore;
     }
 
+    console.log(`\n[Eventbrite] Sammanställning (${summary.length} URLs):`);
+    for (const r of summary) {
+        console.log(`  ${r.status} · ${r.bytes}B · links=${r.links} json=${r.jsonLd} saved=${r.saved}  ${r.url}`);
+    }
     console.log(`Eventbrite scrape complete. Saved ${totalSaved} new events.`);
 }

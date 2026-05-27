@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LinkEvent } from '../../types';
-import { linkEventService } from '../../services/linkEventService';
-import FloatingNavbar from '../../components/v2/FloatingNavbar';
-import V2SwipeableCard from '../../components/v2/V2SwipeableCard';
+import { LinkEvent } from '@/types';
+import { linkEventService } from '@/services/linkEventService';
+import FloatingNavbar from '@/components/v2/FloatingNavbar';
+import V2SwipeableCard from '@/components/v2/V2SwipeableCard';
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
 
-const V2MapDynamic = dynamic(() => import('../../components/v2/V2Map'), {
+const V2MapDynamic = dynamic(() => import('@/components/v2/V2Map'), {
     ssr: false,
     loading: () => <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">Laddar karta...</div>
 });
@@ -50,7 +50,7 @@ const pickNearestForDay = (anchor: LinkEvent | null, dayEvents: LinkEvent[]): Li
     return nearest ?? dayEvents[0];
 };
 
-export default function V2Page() {
+export default function HomePage() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
     const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
@@ -254,7 +254,7 @@ export default function V2Page() {
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder="Namn på event"
                             autoFocus
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-green-500 focus:outline-none text-slate-800"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
                         <div className="flex justify-end gap-2 mt-2">
                             <button

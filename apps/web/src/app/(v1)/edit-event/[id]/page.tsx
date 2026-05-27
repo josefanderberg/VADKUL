@@ -1,6 +1,6 @@
 'use client';
 
-import CreateEvent from '../../../views/CreateEvent';
+import CreateEvent from '@/views/CreateEvent';
 
 
 // Vi återanvänder samma vykomponent eftersom den har inbyggd logik för både "skapa" och "redigera"

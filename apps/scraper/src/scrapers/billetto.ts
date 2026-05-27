@@ -148,13 +148,16 @@ export async function scrapeBilletto() {
     console.log('Starting Billetto scraper...');
     let totalSaved = 0;
     const seenUrls = new Set<string>();
+    const summary: { url: string; status: number; bytes: number; links: number; jsonLd: number; saved: number }[] = [];
 
     for (const url of BILLETTO_URLS) {
         console.log(`  Fetching: ${url}`);
+        const savedBefore = totalSaved;
         try {
             const res = await fetch(url, { headers: HEADERS });
             if (!res.ok) {
                 console.warn(`  Billetto returned ${res.status} for ${url}`);
+                summary.push({ url, status: res.status, bytes: 0, links: 0, jsonLd: 0, saved: 0 });
                 continue;
             }
 
@@ -162,7 +165,8 @@ export async function scrapeBilletto() {
             const jsonEvents = extractJsonLdEvents(html);
             const eventLinks = extractEventLinks(html, url);
 
-            console.log(`  Found ${jsonEvents.length} JSON-LD events, ${eventLinks.length} links`);
+            console.log(`  HTTP ${res.status} · ${html.length} bytes · ${eventLinks.length} länkar · ${jsonEvents.length} JSON-LD events`);
+            summary.push({ url, status: res.status, bytes: html.length, links: eventLinks.length, jsonLd: jsonEvents.length, saved: 0 });
 
             // Processa JSON-LD direkt (snabbt, ingen extra request)
             for (const evt of jsonEvents) {
@@ -192,7 +196,13 @@ export async function scrapeBilletto() {
         } catch (err) {
             console.error(`  Error fetching ${url}:`, err);
         }
+
+        if (summary.length > 0) summary[summary.length - 1].saved = totalSaved - savedBefore;
     }
 
+    console.log(`\n[Billetto] Sammanställning (${summary.length} URLs):`);
+    for (const r of summary) {
+        console.log(`  ${r.status} · ${r.bytes}B · links=${r.links} json=${r.jsonLd} saved=${r.saved}  ${r.url}`);
+    }
     console.log(`Billetto scrape complete. Saved ${totalSaved} new events.`);
 }

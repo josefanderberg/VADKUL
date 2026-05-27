@@ -49,6 +49,32 @@ export default function EventFilters({
   const [filterMode] = useState<0 | 1>(0);
   const [showFilters, setShowFilters] = useState(false);
 
+  // --- TODAY CLOUD HINT ---
+  const [showTodayHint, setShowTodayHint] = useState(false);
+  const [hintLeaving, setHintLeaving] = useState(false);
+
+  // Show the cloud hint shortly after mount (only once per session)
+  // Also auto-open the filter row so the "Idag" button is visible
+  useEffect(() => {
+    const already = sessionStorage.getItem('vadkul_today_hint_seen');
+    if (already) return;
+    const t = setTimeout(() => {
+      setShowFilters(true);  // open the filter row so Idag button is visible
+      setShowTodayHint(true);
+    }, 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const dismissTodayHint = () => {
+    setHintLeaving(true);
+    setTimeout(() => {
+      setShowTodayHint(false);
+      setHintLeaving(false);
+      setShowFilters(false);  // close filter row after hint is dismissed
+      sessionStorage.setItem('vadkul_today_hint_seen', '1');
+    }, 400);
+  };
+
   // --- SCROLL LOGIC ---
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -215,12 +241,52 @@ export default function EventFilters({
               {filterMode === 0 ? (
                 <>
                   {/* MODE 0: TID & PRIS */}
-                  <button
-                    onClick={() => setFilterToday(!filterToday)}
-                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterToday ? 'bg-primary text-primary-foreground border-primary scale-105' : 'bg-background text-muted-foreground border-border hover:border-primary/50'}`}
-                  >
-                    Idag
-                  </button>
+                  <div className="relative inline-flex items-center">
+                    <button
+                      onClick={() => setFilterToday(!filterToday)}
+                      className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterToday ? 'bg-primary text-primary-foreground border-primary scale-105' : 'bg-background text-muted-foreground border-border hover:border-primary/50'}`}
+                    >
+                      Idag
+                    </button>
+
+
+                    {/* Cloud hint bubble */}
+                    {showTodayHint && (
+                      <div
+                        onClick={dismissTodayHint}
+                        className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 cursor-pointer z-50
+                          transition-all duration-400
+                          ${hintLeaving ? 'opacity-0 scale-75 translate-y-2' : 'opacity-100 scale-100 translate-y-0 animate-cloud-mini'}
+                        `}
+                        style={{ width: 180 }}
+                      >
+                        {/* Cloud SVG */}
+                        <svg viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-lg">
+                          <filter id="cloud-blur-mini">
+                            <feGaussianBlur stdDeviation="1.5" />
+                          </filter>
+                          <g filter="url(#cloud-blur-mini)">
+                            <ellipse cx="90" cy="82" rx="72" ry="24" fill="white" />
+                            <circle cx="42" cy="62" r="26" fill="white" />
+                            <circle cx="130" cy="58" r="30" fill="white" />
+                            <circle cx="76" cy="48" r="34" fill="white" />
+                            <circle cx="112" cy="54" r="28" fill="white" />
+                            <circle cx="22" cy="74" r="18" fill="white" />
+                            <circle cx="158" cy="72" r="16" fill="white" />
+                          </g>
+                          {/* Tail pointing down */}
+                          <polygon points="85,96 95,96 90,106" fill="white" />
+                        </svg>
+                        {/* Text */}
+                        <div className="absolute inset-0 flex items-center justify-center pb-3 px-4">
+                          <p className="text-center text-slate-700 font-bold text-[10px] leading-snug">
+                            Här byter du dag! Klicka för att filtrera på idag.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     onClick={() => setFilterFree(!filterFree)}
                     className={`px-3 py-2 rounded-full text-xs font-bold transition-all border ${filterFree ? 'bg-primary text-primary-foreground border-primary scale-105' : 'bg-background text-muted-foreground border-border hover:border-primary/50'}`}

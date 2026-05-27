@@ -50,7 +50,7 @@ const pickNearestForDay = (anchor: LinkEvent | null, dayEvents: LinkEvent[]): Li
     return nearest ?? dayEvents[0];
 };
 
-export default function HomePage() {
+export default function V2Page() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
     const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
@@ -254,7 +254,7 @@ export default function HomePage() {
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder="Namn på event"
                             autoFocus
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-green-500 focus:outline-none text-slate-800"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
                         <div className="flex justify-end gap-2 mt-2">
                             <button

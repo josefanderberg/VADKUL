@@ -122,6 +122,7 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
         let jsonLat: number | null = null;
         let jsonLng: number | null = null;
         let jsonPrice: string | number = '';
+        let jsonDescription = '';
 
         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
         for (const s of scripts) {
@@ -129,6 +130,7 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                 const d = JSON.parse(s.textContent || '');
                 if (d['@type'] === 'Event') {
                     jsonTime = d.startDate || '';
+                    if (d.description) jsonDescription = String(d.description);
                     if (d.location) {
                         jsonVenue = d.location.name || '';
                         if (d.location.address) {
@@ -231,6 +233,7 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
             jsonLng,
             coverImage,
             jsonPrice,
+            jsonDescription,
         };
     }, dateFromUrl);
 }
@@ -357,18 +360,27 @@ export async function scrapeTickster() {
                     .filter(Boolean)
                     .join(', ') || details.city || 'Sverige';
 
+                const extractedAddress = [details.street, details.postal, details.city]
+                    .filter(Boolean)
+                    .join(', ');
+
                 const linkEvent = {
                     title: details.title,
                     url: evt.href,
                     time: new Date(details.parsedTime),
                     hasSpecificTime: details.hasSpecificTime,
                     locationName,
+                    extractedAddress,
+                    geocodedQuery: details.geocodeQuery,
                     lat,
                     lng,
                     hostName: 'Tickster',
                     category: guessCategoryFromTitle(details.title),
                     createdAt: new Date(),
                     coverImage: details.coverImage || '',
+                    description: details.jsonDescription || '',
+                    isLocationVerified: !!(details.jsonLat && details.jsonLng),
+                    isHostVerified: false,
                     price: details.jsonPrice !== undefined && details.jsonPrice !== null ? details.jsonPrice : '',
                 };
 
