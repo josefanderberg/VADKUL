@@ -2,6 +2,14 @@
 
 Scrapers som är inkopplade i [index.ts](../../apps/scraper/src/index.ts) men gav 0 användbara events i senaste körningen.
 
+**Status 2026-05-27:** diagnostik-loggning tillagd + Tickster-idag borttagen. Test-körning gav konkreta orsaker:
+
+- **Nöjesguiden**: HTTP **404** på `https://ng.se/kalendarium`. URL existerar inte. (Hypotes B var rätt grupp men fel symptom — det är URL:n inte selektorn.)
+- **Billetto**: 9/9 URLs HTTP **404**. URL-strukturen ändrad. SPA-hypotesen var fel.
+- **Eventbrite**: 21/21 URLs HTTP **200** med 290–830 KB HTML, men 0 JSON-LD och 0–6 länkar per stad. Klassisk SPA — events renderas client-side. Cheerio räcker inte. (Cloudflare-hypotesen avfärdad.)
+
+Slutsats: alla tre kräver omdesign innan de kan ge data. Inga snabbfixar möjliga.
+
 | Källa | Events i DB | Status |
 |---|---|---|
 | Eventbrite | 0 | Tyst miss |
