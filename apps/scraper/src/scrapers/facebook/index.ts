@@ -77,7 +77,7 @@ export async function scrapeFacebookEvents() {
     console.log('🚀 Startar Facebook-skrapan (Refactored)...');
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
-    const keywordStatsPath = path.resolve(__dirname, '../../../../keyword_stats.json');
+    const keywordStatsPath = path.resolve(__dirname, '../../../keyword_stats.json');
     const runStartedAt = new Date().toISOString();
 
     const writeLogFile = () => {
@@ -124,27 +124,50 @@ export async function scrapeFacebookEvents() {
 
     try {
         // === SÖKKONFIGURATION ===
-        // Svenska städer — så vi får "vad händer i stan"-täckning
+        // Svenska städer — så vi får "vad händer i stan"-täckning (110 städer totalt)
         const SWEDISH_CITIES = [
+            // Topp 30 städer
             'Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping',
             'Örebro', 'Helsingborg', 'Norrköping', 'Jönköping', 'Umeå',
             'Lund', 'Västerås', 'Sundsvall', 'Karlstad', 'Växjö', 'Gävle',
             'Borås', 'Eskilstuna', 'Halmstad', 'Östersund', 'Kalmar',
-            'Trollhättan', 'Luleå', 'Skellefteå', 'Kristianstad', 'Falun'
+            'Trollhättan', 'Luleå', 'Skellefteå', 'Kristianstad', 'Falun',
+            'Karlskrona', 'Skövde', 'Motala', 'Nyköping',
+            // Nästa våg av städer
+            'Örnsköldsvik', 'Varberg', 'Visby', 'Lidköping', 'Alingsås',
+            'Borlänge', 'Trelleborg', 'Ystad', 'Västervik', 'Katrineholm',
+            'Norrtälje', 'Enköping', 'Hässleholm', 'Piteå', 'Karlskoga',
+            'Värnamo', 'Uddevalla', 'Kungsbacka', 'Falkenberg', 'Ängelholm',
+            'Landskrona', 'Karlshamn', 'Ronneby', 'Oskarshamn', 'Vetlanda',
+            'Nässjö', 'Tranås', 'Ljungby', 'Arvika', 'Kristinehamn',
+            // Fler expansiva orter
+            'Mariestad', 'Kumla', 'Hallsberg', 'Köping', 'Sala',
+            'Fagersta', 'Ludvika', 'Mora', 'Sandviken', 'Bollnäs',
+            'Söderhamn', 'Hudiksvall', 'Härnösand', 'Sollefteå', 'Kramfors',
+            'Boden', 'Kiruna', 'Gällivare', 'Lycksele', 'Åre',
+            // Skåne & Halland orter
+            'Eslöv', 'Staffanstorp', 'Kävlinge', 'Vellinge', 'Höganäs',
+            'Bromölla', 'Skanör', 'Falsterbo', 'Sjöbo', 'Simrishamn',
+            'Laholm', 'Onsala', 'Åsa', 'Båstad',
+            // Småland & Blekinge orter
+            'Eksjö', 'Vimmerby', 'Hultsfred', 'Nybro', 'Sölvesborg',
+            'Olofström', 'Lessebo', 'Alvesta', 'Tingsryd', 'Älmhult',
+            // Mellansverige orter
+            'Finspång', 'Mjölby', 'Söderköping', 'Åtvidaberg', 'Trosa',
+            'Strängnäs', 'Flen', 'Nora', 'Lindesberg'
         ];
 
-        // Breda sökord – event-typer, aktiviteter, tider. Inga stad-bindningar här.
+        // Breda sökord – event-typer, aktiviteter, tider (40 sökord totalt)
         const BROAD_KEYWORDS = [
             // Event-typer
             'konsert', 'live', 'klubb', 'fest', 'dj', 'quiz', 'spelning', 'show',
             'standup', 'gig', 'festival', 'marknad', 'loppis', 'pubrunda', 'afterwork',
+            'vernissage', 'teater', 'föreställning', 'musikal', 'opera',
             // Aktiviteter
             'musik', 'dans', 'teater', 'comedy', 'sport', 'yoga', 'kurs', 'workshop',
-            'föreläsning', 'utställning', 'film', 'bio',
+            'föreläsning', 'utställning', 'film', 'bio', 'konst', 'hantverk',
             // Tider / vardagsord
-            'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag',
-            // Funkade tidigare
-            'och'
+            'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag'
         ];
 
         // Datumfilter: idag + denna vecka

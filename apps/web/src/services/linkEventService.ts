@@ -1,20 +1,125 @@
 import type { LinkEvent } from '../types';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
+    // 1. Try Firestore Client SDK first
+    try {
+        if (db) {
+            const docRef = doc(db, 'aggregatedEvents', layerName);
+            const snapshot = await getDoc(docRef);
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                if (data) return data;
+            }
+        }
+    } catch (e) {
+        console.warn(`Firestore read failed for layer "${layerName}". Falling back to static JSON:`, e);
+    }
+
+    // 2. Fallback to fetching static JSON from the public directory
+    try {
+        const res = await fetch(`/events-${layerName}.json`);
+        if (res.ok) {
+            return await res.json();
+        }
+    } catch (e) {
+        console.error(`Static JSON fetch failed for layer "${layerName}":`, e);
+    }
+
+    return null;
+}
+
+function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
+    return events.map((evt: any) => ({
+        id: evt.id,
+        url: evt.id,
+        title: evt.title,
+        time: new Date(evt.time),
+        createdAt: new Date(),
+        locationName: evt.locationName,
+        lat: evt.lat,
+        lng: evt.lng,
+        hostName: '',
+        category: evt.category || 'other',
+        coverImage: '',
+        description: '',
+        attendees: 0,
+        isLocationVerified: evt.isLocationVerified || false
+    }));
+}
+
+function mergeCardsWithDestinations(destEvents: LinkEvent[], cards: any[]): LinkEvent[] {
+    const cardMap = new Map<string, any>();
+    cards.forEach(c => cardMap.set(c.id, c));
+
+    return destEvents.map(evt => {
+        const card = cardMap.get(evt.id);
+        if (!card) return evt;
+        return {
+            ...evt,
+            coverImage: card.coverImage,
+            hostName: card.hostName,
+            attendees: card.attendees,
+            isLocationVerified: card.isLocationVerified,
+            isHostVerified: card.isHostVerified,
+            url: card.url || evt.url
+        };
+    });
+}
+
+function mergeDescriptionsWithEvents(events: LinkEvent[], descMap: Record<string, string>): LinkEvent[] {
+    return events.map(evt => {
+        const desc = descMap[evt.id];
+        if (!desc) return evt;
+        return {
+            ...evt,
+            description: desc
+        };
+    });
+}
 
 export const linkEventService = {
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            const res = await fetch(`/api/link-events${onlyFuture ? '' : '?all=true'}`);
-            if (!res.ok) throw new Error('Failed to fetch link events');
-            const data = await res.json();
-            
-            return data.map((evt: any) => ({
-                ...evt,
-                time: new Date(evt.time),
-                createdAt: new Date(evt.createdAt)
-            }));
+            // First load destinations and cards in parallel
+            const [destData, cardsData] = await Promise.all([
+                fetchLayer('destinations'),
+                fetchLayer('cards')
+            ]);
+
+            if (!destData) return [];
+
+            let events = mapDestinationsToLinkEvents(destData.events || []);
+
+            if (cardsData) {
+                events = mergeCardsWithDestinations(events, cardsData.events || []);
+            }
+
+            // Fetch descriptions in background or in parallel if needed
+            const descData = await fetchLayer('descriptions');
+            if (descData && descData.data) {
+                events = mergeDescriptionsWithEvents(events, descData.data);
+            }
+
+            return events;
         } catch (error) {
-            console.error("Error fetching link events from SQLite:", error);
+            console.error("Error in linkEventService.getAll:", error);
+            // Fallback to SQLite API
+            try {
+                const res = await fetch(`/api/link-events${onlyFuture ? '' : '?all=true'}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.map((evt: any) => ({
+                        ...evt,
+                        time: new Date(evt.time),
+                        createdAt: new Date(evt.createdAt)
+                    }));
+                }
+            } catch (fallbackErr) {
+                console.error("SQLite API fallback failed:", fallbackErr);
+            }
             return [];
         }
     },
@@ -105,15 +210,56 @@ export const linkEventService = {
 
     // Polling-baserad realtidslyssnare för SQLite (ersätter Firestore onSnapshot)
     subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
-        // Hämta första gången direkt
-        this.getAll(onlyFuture).then(callback);
+        let active = true;
 
-        // Polla databasen var 10:e sekund för uppdateringar
+        async function loadProgressively() {
+            try {
+                // 1. Fetch and render Destinations instantly
+                const destData = await fetchLayer('destinations');
+                if (!active || !destData) return;
+
+                let events = mapDestinationsToLinkEvents(destData.events || []);
+                callback(events);
+
+                // 2. Fetch and merge Cards
+                const cardsData = await fetchLayer('cards');
+                if (!active) return;
+
+                if (cardsData) {
+                    events = mergeCardsWithDestinations(events, cardsData.events || []);
+                    callback(events);
+                }
+
+                // 3. Fetch and merge Descriptions
+                const descData = await fetchLayer('descriptions');
+                if (!active) return;
+
+                if (descData && descData.data) {
+                    events = mergeDescriptionsWithEvents(events, descData.data);
+                    callback(events);
+                }
+            } catch (err) {
+                console.error("Error loading events progressively:", err);
+                // Fallback to standard SQLite getAll
+                if (active) {
+                    linkEventService.getAll(onlyFuture).then(evts => {
+                        if (active) callback(evts);
+                    });
+                }
+            }
+        }
+
+        loadProgressively();
+
+        // Polla var 30:e sekund för progressiva lager
         const intervalId = setInterval(() => {
-            this.getAll(onlyFuture).then(callback);
-        }, 10000);
+            loadProgressively();
+        }, 30000);
 
         // Returnera avprenumerations-funktion för att stänga polling-intervallet vid unmount
-        return () => clearInterval(intervalId);
+        return () => {
+            active = false;
+            clearInterval(intervalId);
+        };
     }
 };

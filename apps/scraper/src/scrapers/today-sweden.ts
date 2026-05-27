@@ -116,4 +116,12 @@ export async function scrapeTodaySweden(): Promise<void> {
     const total = n1 + t1;
     console.log(`\n✅ Klar! Sparade ${total} nya event för idag.`);
     console.log(`   Nöjesguiden: ${n1}  |  Tickster: ${t1}`);
+
+    // Aggregera all data till progressiva lager direkt efter insamling
+    try {
+        const { runAggregation } = require('../scripts/aggregate-events');
+        await runAggregation();
+    } catch (aggErr) {
+        console.error('⚠️ Det gick inte att köra aggregations-scriptet:', aggErr);
+    }
 }

@@ -30,6 +30,14 @@ async function runAllScrapers() {
     await scrapeVaxjoCo();       // Växjö & Co (officiell evenemangsida)
     await scrapeUpplevVaxjo();   // Upplev Växjö (kommunens guide)
 
+    // 5. Aggregera all data till progressiva lager
+    try {
+        const { runAggregation } = require('./scripts/aggregate-events');
+        await runAggregation();
+    } catch (aggErr) {
+        console.error('⚠️ Det gick inte att köra aggregations-scriptet:', aggErr);
+    }
+
     console.log('--- ALL SCRAPERS FINISHED ---');
     process.exit(0);
 }

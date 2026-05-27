@@ -21,8 +21,8 @@ JOB_NAME="${1:-unknown}"
 NPM_SCRIPT="${2:-}"
 WITH_CLEANUP="${3:-}"
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-SCRAPER_DIR="$REPO_ROOT/scraper"
+REPO_ROOT="$(cd "$(dirname "$0")/../../../" && pwd)"
+SCRAPER_DIR="$REPO_ROOT/apps/scraper"
 LOG_DIR="$HOME/Library/Logs/vadkul-scraper"
 LOG_FILE="$LOG_DIR/$JOB_NAME.log"
 SECRET_FILE="$HOME/.vadkul-secrets/env"
@@ -80,8 +80,37 @@ END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
-SAVED_COUNT="$(grep -cE '✅ Saved:' "$LOG_FILE" || echo 0)"
-ERROR_COUNT="$(grep -cE '^❌|kraschade|Error:' "$LOG_FILE" || echo 0)"
+SAVED_COUNT="$(grep -cE '✅ Saved:|✅ Sparat:|✅.*Sparade' "$LOG_FILE" || echo 0)"
+SKIPPED_COUNT="$(grep -cE 'already exists:|Event already exists:' "$LOG_FILE" || echo 0)"
+ERROR_COUNT="$(grep -cE '❌ Fel|^❌|kraschade|Error:|Failed to add' "$LOG_FILE" || echo 0)"
+
+# ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
+echo "" >> "$LOG_FILE"
+echo "── STATS ──" >> "$LOG_FILE"
+STATS_OUTPUT="$(npm run stats --silent 2>> "$LOG_FILE")"
+
+# Parsa STAT_*=värde rader till shell-variabler
+STAT_TOTAL_EVENTS=""
+STAT_DUPLICATE_LOCATIONS=""
+STAT_TOP_HOTSPOTS=""
+STAT_DAILY_BREAKDOWN=""
+STAT_FB_UNIQUE_URLS=""
+STAT_FB_DUPLICATE_HITS=""
+STAT_FB_TOP_KEYWORDS=""
+STAT_FB_STATS_AGE_H=""
+while IFS='=' read -r key value; do
+    case "$key" in
+        STAT_TOTAL_EVENTS)         STAT_TOTAL_EVENTS="$value" ;;
+        STAT_DUPLICATE_LOCATIONS)  STAT_DUPLICATE_LOCATIONS="$value" ;;
+        STAT_TOP_HOTSPOTS)         STAT_TOP_HOTSPOTS="$value" ;;
+        STAT_DAILY_BREAKDOWN)      STAT_DAILY_BREAKDOWN="$value" ;;
+        STAT_FB_UNIQUE_URLS)       STAT_FB_UNIQUE_URLS="$value" ;;
+        STAT_FB_DUPLICATE_HITS)    STAT_FB_DUPLICATE_HITS="$value" ;;
+        STAT_FB_TOP_KEYWORDS)      STAT_FB_TOP_KEYWORDS="$value" ;;
+        STAT_FB_STATS_AGE_H)       STAT_FB_STATS_AGE_H="$value" ;;
+    esac
+done <<< "$STATS_OUTPUT"
+echo "Stats: total=$STAT_TOTAL_EVENTS, dup-locations=$STAT_DUPLICATE_LOCATIONS, fb-urls=$STAT_FB_UNIQUE_URLS" >> "$LOG_FILE"
 
 # ─── Status ─────────────────────────────────────────────────────────────────
 if [ "$EXIT_CODE" -eq 0 ]; then
@@ -103,35 +132,121 @@ STATUS_COLOR="$STATUS_COLOR" \
 DURATION="$DURATION" \
 DELETED_COUNT="$DELETED_COUNT" \
 SAVED_COUNT="$SAVED_COUNT" \
+SKIPPED_COUNT="$SKIPPED_COUNT" \
 ERROR_COUNT="$ERROR_COUNT" \
+STAT_TOTAL_EVENTS="$STAT_TOTAL_EVENTS" \
+STAT_DUPLICATE_LOCATIONS="$STAT_DUPLICATE_LOCATIONS" \
+STAT_TOP_HOTSPOTS="$STAT_TOP_HOTSPOTS" \
+STAT_DAILY_BREAKDOWN="$STAT_DAILY_BREAKDOWN" \
+STAT_FB_UNIQUE_URLS="$STAT_FB_UNIQUE_URLS" \
+STAT_FB_DUPLICATE_HITS="$STAT_FB_DUPLICATE_HITS" \
+STAT_FB_TOP_KEYWORDS="$STAT_FB_TOP_KEYWORDS" \
+STAT_FB_STATS_AGE_H="$STAT_FB_STATS_AGE_H" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
 import os, json
 
-job = os.environ["JOB_NAME"]
-emoji = os.environ["STATUS_EMOJI"]
-status = os.environ["STATUS_TEXT"]
-color = os.environ["STATUS_COLOR"]
-duration = os.environ["DURATION"]
-deleted = os.environ.get("DELETED_COUNT", "")
-saved = os.environ["SAVED_COUNT"]
-errors = os.environ["ERROR_COUNT"]
+job        = os.environ["JOB_NAME"]
+emoji      = os.environ["STATUS_EMOJI"]
+status     = os.environ["STATUS_TEXT"]
+color      = os.environ["STATUS_COLOR"]
+duration_s = os.environ["DURATION"]
+deleted    = os.environ.get("DELETED_COUNT", "")
+saved      = os.environ["SAVED_COUNT"]
+skipped    = os.environ.get("SKIPPED_COUNT", "0")
+errors     = os.environ["ERROR_COUNT"]
+
+# Formatera varaktighet (duration) snyggt
+try:
+    secs = int(duration_s)
+    mins = secs // 60
+    rem_s = secs % 60
+    duration_formatted = f"{mins} min {rem_s} sek" if mins > 0 else f"{rem_s} sek"
+except Exception:
+    duration_formatted = f"{duration_s} sek"
+
+total_events    = os.environ.get("STAT_TOTAL_EVENTS", "")
+dup_locations   = os.environ.get("STAT_DUPLICATE_LOCATIONS", "")
+top_hotspots    = os.environ.get("STAT_TOP_HOTSPOTS", "")
+daily_breakdown = os.environ.get("STAT_DAILY_BREAKDOWN", "")
+fb_urls         = os.environ.get("STAT_FB_UNIQUE_URLS", "")
+fb_dup_hits     = os.environ.get("STAT_FB_DUPLICATE_HITS", "")
+fb_top_kw       = os.environ.get("STAT_FB_TOP_KEYWORDS", "")
+fb_age_h        = os.environ.get("STAT_FB_STATS_AGE_H", "")
 
 try:
     with open(os.environ["LOG_FILE_PATH"], "r", encoding="utf-8", errors="replace") as f:
         lines = f.readlines()
-    tail = "".join(lines[-8:]).rstrip() or "(tom logg)"
+    tail = "".join(lines[-6:]).rstrip() or "(tom logg)"
 except Exception as e:
     tail = f"(kunde inte läsa logg: {e})"
 
-facts = [
-    {"title": "Status", "value": f"{emoji} {status}"},
-    {"title": "Duration", "value": f"{duration}s"},
+# ── Scraper-resultat ──
+run_facts = [
+    {"title": "Status",              "value": f"{emoji} {status}"},
+    {"title": "Körde (duration)",    "value": duration_formatted},
 ]
 if deleted:
-    facts.append({"title": "Cleanup", "value": f"{deleted} event raderade"})
-facts.append({"title": "Sparade event", "value": saved})
-facts.append({"title": "Fel i logg", "value": errors})
+    run_facts.append({"title": "🗑️ Cleanup", "value": f"{deleted} gamla event raderade"})
+run_facts.append({"title": "✅ Nya event sparade",       "value": saved})
+run_facts.append({"title": "⏭️ Redan i DB (skippade)",   "value": skipped})
+run_facts.append({"title": "❌ Fel i logg",              "value": errors})
+
+# ── Kartstats ──
+map_facts = []
+if total_events:
+    map_facts.append({"title": "📍 Totalt i Firebase",        "value": f"{total_events} event"})
+if dup_locations:
+    map_facts.append({"title": "📌 Platser med 1+ event",      "value": f"{dup_locations} platser"})
+if top_hotspots:
+    map_facts.append({"title": "🔥 Heta platser (lat,lng)",    "value": top_hotspots})
+if daily_breakdown:
+    map_facts.append({"title": "📅 Kommande 7 dagar",          "value": daily_breakdown})
+
+# ── Facebook-stats ──
+fb_facts = []
+if fb_urls:
+    fb_facts.append({"title": "🔗 Unika FB-event hittade",  "value": fb_urls})
+if fb_dup_hits:
+    fb_facts.append({"title": "🔁 Dubblett-träffar",        "value": fb_dup_hits})
+if fb_top_kw:
+    fb_facts.append({"title": "🎯 Bästa sökord",             "value": fb_top_kw})
+if fb_age_h:
+    age_note = "(senaste körning)" if float(fb_age_h) < 4 else f"({fb_age_h}h sedan)"
+    fb_facts.append({"title": "⏰ FB-stats ålder",           "value": age_note})
+
+body = [
+    {
+        "type": "TextBlock",
+        "text": f"{emoji} VADKUL daily — {job}",
+        "weight": "Bolder",
+        "size": "Large",
+        "color": color,
+    },
+    # Scraper-resultat
+    {"type": "TextBlock", "text": "🚀 Scraper-resultat", "weight": "Bolder", "spacing": "Medium"},
+    {"type": "FactSet", "facts": run_facts},
+]
+
+if map_facts:
+    body.append({"type": "TextBlock", "text": "🗺️ Kartstatistik", "weight": "Bolder", "spacing": "Medium"})
+    body.append({"type": "FactSet", "facts": map_facts})
+
+if fb_facts:
+    body.append({"type": "TextBlock", "text": "👤 Facebook Events", "weight": "Bolder", "spacing": "Medium"})
+    body.append({"type": "FactSet", "facts": fb_facts})
+
+body += [
+    {"type": "TextBlock", "text": "📝 Logg (tail)", "weight": "Bolder", "spacing": "Medium"},
+    {
+        "type": "TextBlock",
+        "text": tail,
+        "wrap": True,
+        "fontType": "Monospace",
+        "size": "Small",
+        "isSubtle": True,
+    },
+]
 
 card = {
     "type": "message",
@@ -142,30 +257,7 @@ card = {
             "type": "AdaptiveCard",
             "version": "1.4",
             "msteams": {"width": "Full"},
-            "body": [
-                {
-                    "type": "TextBlock",
-                    "text": f"{emoji} VADKUL daily — {job}",
-                    "weight": "Bolder",
-                    "size": "Large",
-                    "color": color,
-                },
-                {"type": "FactSet", "facts": facts},
-                {
-                    "type": "TextBlock",
-                    "text": "Tail",
-                    "weight": "Bolder",
-                    "spacing": "Medium",
-                },
-                {
-                    "type": "TextBlock",
-                    "text": tail,
-                    "wrap": True,
-                    "fontType": "Monospace",
-                    "size": "Small",
-                    "isSubtle": True,
-                },
-            ],
+            "body": body,
         },
     }],
 }

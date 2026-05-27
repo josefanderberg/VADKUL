@@ -47,7 +47,7 @@ export async function addEventToDb(eventData: any) {
         const ref = await db.collection('linkEvents').add(eventData);
         // Spara firestoreId tillbaka i SQLite så vi kan korsa referenser
         upsertEvent({ ...eventData, firestoreId: ref.id });
-        console.log(`Successfully added to DB: ${eventData.title}`);
+        console.log(`✅ Saved: ${eventData.title}`);
     } catch (error) {
         console.error('Failed to add event to Firestore (SQLite-versionen är sparad):', error);
     }

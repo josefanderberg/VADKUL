@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig = {
     reactStrictMode: false, // Sometimes helpful to disable for map/ref issues dev mode
+    serverExternalPackages: ['better-sqlite3', 'firebase-admin'],
     images: {
         remotePatterns: [
             {
