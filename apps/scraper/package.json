@@ -23,6 +23,7 @@
     "stats": "ts-node src/scripts/post-run-stats.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "sync-to-sqlite": "ts-node src/scripts/sync-firestore-to-sqlite.ts",
+    "llm-enrich": "ts-node src/scripts/llm-enrich-missing.ts",
     "emulator:dev": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.json --project demo-vadkul-local",
     "emulator:test": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.test.json --project demo-vadkul-test",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -2,7 +2,8 @@ import puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHelper';
-import { geocodeVenueSweden, cleanVenueName } from '../../utils/venueCoordinates';
+import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress } from '../../utils/venueCoordinates';
+import { classifyEvent } from '../../utils/classify';
 import { searchGoogleImage } from '../../utils/imageSearch';
 import { applyDateFilters, discoverEventUrls } from './discovery';
 import { extractEventDetails } from './extractor';
@@ -74,6 +75,7 @@ function parseDateFromText(text: string): Date | null {
 }
 
 export async function scrapeFacebookEvents() {
+    const fbStart = Date.now();
     console.log('🚀 Startar Facebook-skrapan (Refactored)...');
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
@@ -164,7 +166,7 @@ export async function scrapeFacebookEvents() {
             'standup', 'gig', 'festival', 'marknad', 'loppis', 'pubrunda', 'afterwork',
             'vernissage', 'teater', 'föreställning', 'musikal', 'opera',
             // Aktiviteter
-            'musik', 'dans', 'teater', 'comedy', 'sport', 'yoga', 'kurs', 'workshop',
+            'musik', 'dans', 'comedy', 'sport', 'yoga', 'kurs', 'workshop',
             'föreläsning', 'utställning', 'film', 'bio', 'konst', 'hantverk',
             // Tider / vardagsord
             'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag'
@@ -417,16 +419,47 @@ export async function scrapeFacebookEvents() {
                 console.log(`    Extracted Address: "${extractedAddress}"`);
                 console.log(`    Geocoded Query: "${geocodedQuery}"`);
 
+                // Hoppa över event med utländsk adress — de är inte relevanta för appen
+                if (extractedAddress && isForeignAddress(extractedAddress)) {
+                    console.log(`    ⏩ Skippar utländskt event: "${details.title}" (addr: "${extractedAddress}")`);
+                    continue;
+                }
+
                 let finalLat = 0, finalLng = 0;
                 let isLocationVerified = false;
 
                 if (extractedAddress) {
                     let geocodeQuery = extractedAddress;
-                    // Om stadsnamn inte redan ingår i adressen, lägg till kontext-staden som hittades vid sökningen
+                    // Om stadsnamn inte redan ingår i adressen, lägg till kontext-staden från sök-kön
                     if (city && !extractedAddress.toLowerCase().includes(city.toLowerCase())) {
                         geocodeQuery = `${extractedAddress}, ${city}`;
                     }
-                    const coords = await geocodeVenueSweden(geocodeQuery);
+                    let coords = await geocodeVenueSweden(geocodeQuery);
+
+                    // Retry 1: skanna extractedAddress efter inbäddad stad (t.ex. "Foajén - Örebro Konserthus")
+                    if (!coords) {
+                        const cityInAddr = SWEDISH_GEO_CITIES.find(c =>
+                            new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress)
+                        );
+                        if (cityInAddr && cityInAddr.toLowerCase() !== (city || '').toLowerCase()) {
+                            const retryQ = `${extractedAddress}, ${cityInAddr}`;
+                            if (retryQ !== geocodeQuery) {
+                                coords = await geocodeVenueSweden(retryQ);
+                                if (coords) console.log(`    📍 Geocoding retry (city-scan): "${cityInAddr}" → [${coords[0]}, ${coords[1]}]`);
+                            }
+                        }
+                    }
+
+                    // Retry 2: stad-nivå fallback — ger åtminstone ungefärlig position
+                    if (!coords) {
+                        const fallbackCity = city
+                            || SWEDISH_GEO_CITIES.find(c => new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress));
+                        if (fallbackCity) {
+                            coords = await geocodeVenueSweden(`${fallbackCity}, Sverige`);
+                            if (coords) console.log(`    📍 Geocoding city-fallback: "${fallbackCity}" → [${coords[0]}, ${coords[1]}]`);
+                        }
+                    }
+
                     if (coords) {
                         finalLat = coords[0];
                         finalLng = coords[1];
@@ -507,7 +540,7 @@ export async function scrapeFacebookEvents() {
                     lat: finalLat,
                     lng: finalLng,
                     hostName: finalHostName,
-                    category: 'other',
+                    category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
                     attendees: details.going,
@@ -527,7 +560,7 @@ export async function scrapeFacebookEvents() {
                     geocodedQuery,
                     lat: finalLat, lng: finalLng,
                     hostName: finalHostName,
-                    category: 'other',
+                    category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
                     attendees: details.going,
@@ -583,6 +616,11 @@ export async function scrapeFacebookEvents() {
     } catch (err) {
         console.error('❌ Fel i skrapan:', err);
     } finally {
+        const fbElapsed = Math.round((Date.now() - fbStart) / 1000);
+        const fbMins = Math.floor(fbElapsed / 60);
+        const fbSecs = fbElapsed % 60;
+        const fbDuration = fbMins > 0 ? `${fbMins} min ${fbSecs} sek` : `${fbSecs} sek`;
+        console.log(`⏱️ Facebook-skrapan tog: ${fbDuration}`);
         writeLogFile();
         console.log(`💾 Slutligen sparade ${scrapedEventsLog.length} skrapade objekt till: ${logPath}`);
         await browser.close();

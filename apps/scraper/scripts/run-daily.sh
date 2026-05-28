@@ -79,6 +79,15 @@ fi
 END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
+# ─── K4: LLM-enrichment (Ollama) ────────────────────────────────────────────
+echo "" >> "$LOG_FILE"
+echo "── K4: LLM-ENRICHMENT ──" >> "$LOG_FILE"
+if npm run llm-enrich >> "$LOG_FILE" 2>&1; then
+    echo "K4 OK" >> "$LOG_FILE"
+else
+    echo "⚠️ K4 misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
 SAVED_COUNT="$(grep -cE '✅ Saved:|✅ Sparat:|✅.*Sparade' "$LOG_FILE" || echo 0)"
 SKIPPED_COUNT="$(grep -cE 'already exists:|Event already exists:' "$LOG_FILE" || echo 0)"

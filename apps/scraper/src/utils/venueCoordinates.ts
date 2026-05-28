@@ -156,6 +156,23 @@ export function getVenueCoordinates(venueName: string): [number, number] | null 
     return null;
 }
 
+// Används av geocodeVenueSweden för att skanna adresser efter inbäddad stad.
+export const SWEDISH_GEO_CITIES = [
+    'Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping', 'Örebro', 'Helsingborg',
+    'Norrköping', 'Jönköping', 'Umeå', 'Lund', 'Västerås', 'Sundsvall', 'Karlstad',
+    'Växjö', 'Gävle', 'Borås', 'Eskilstuna', 'Halmstad', 'Östersund', 'Kalmar',
+    'Trollhättan', 'Luleå', 'Skellefteå', 'Kristianstad', 'Falun', 'Karlskrona',
+    'Skövde', 'Motala', 'Nyköping', 'Örnsköldsvik', 'Varberg', 'Visby', 'Lidköping',
+    'Alingsås', 'Borlänge', 'Trelleborg', 'Ystad', 'Västervik', 'Katrineholm',
+    'Norrtälje', 'Enköping', 'Hässleholm', 'Piteå', 'Uddevalla', 'Kungsbacka',
+    'Falkenberg', 'Ängelholm', 'Landskrona', 'Karlshamn', 'Ronneby', 'Oskarshamn',
+    'Nässjö', 'Ljungby', 'Arvika', 'Kristinehamn', 'Mariestad', 'Sandviken',
+    'Söderhamn', 'Hudiksvall', 'Härnösand', 'Boden', 'Kiruna', 'Gällivare',
+    'Lycksele', 'Eslöv', 'Staffanstorp', 'Sjöbo', 'Simrishamn', 'Laholm',
+    'Eksjö', 'Vimmerby', 'Nybro', 'Sölvesborg', 'Olofström', 'Älmhult',
+    'Finspång', 'Mjölby', 'Strängnäs', 'Nora', 'Lindesberg',
+];
+
 /**
  * Checks if the address contains foreign indicators (outside Sweden, Denmark, Norway, Finland)
  * to avoid false partial matches in Nominatim geocoding.
@@ -164,10 +181,19 @@ export function isForeignAddress(address: string): boolean {
     if (!address) return false;
     const lower = address.toLowerCase();
     const foreignIndicators = [
+        // Engelsktalande länder
         'usa', 'united states', 'new zealand', 'united kingdom', 'great britain', 'england',
         'australia', 'canada', 'germany', 'deutschland', 'france', 'spain', 'italy',
         'new york', 'london', 'auckland', 'california', 'florida', 'texas',
-        'switzerland', 'belgium', 'austria', 'netherlands'
+        'switzerland', 'belgium', 'austria', 'netherlands',
+        // Danska städer/ord (ø/æ är falsk-positiv-risk i svenska, använd ordfragment)
+        'københavn', 'aarhus', 'odense', 'aalborg', 'esbjerg', 'randers',
+        'søndag', 'lørdag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag',
+        // Norska städer
+        'oslo', 'bergen', 'trondheim', 'stavanger', 'drammen', 'tromsø', 'tromsoe',
+        'kristiansand', 'fredrikstad',
+        // Finska städer (ej del av nordiska bbox)
+        'helsinki', 'helsingfors', 'tampere', 'turku', 'oulu',
     ];
     return foreignIndicators.some(indicator => {
         const regex = new RegExp(`\\b${indicator}\\b`, 'i');
@@ -347,6 +373,32 @@ export async function geocodeVenueSweden(rawQuery: string): Promise<[number, num
                 console.log(`[Geocoding/SE] Found city "${city}": [${result[0]}, ${result[1]}]`);
                 return result;
             }
+        }
+    }
+
+    // Försök 3: skanna query efter inbäddad stad (hanterar "Foajén - Örebro Konserthus" etc.)
+    const foundCity = SWEDISH_GEO_CITIES.find(c => {
+        const pattern = new RegExp(`\\b${c}\\b`, 'i');
+        return pattern.test(cleaned);
+    });
+    if (foundCity) {
+        const withCity = cleaned.toLowerCase().endsWith(foundCity.toLowerCase())
+            ? cleaned
+            : `${cleaned}, ${foundCity}`;
+        if (withCity !== cleaned) {
+            await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+            result = await nominatimSearchSweden(withCity);
+            if (result) {
+                console.log(`[Geocoding/SE] Found via city-scan "${withCity}": [${result[0]}, ${result[1]}]`);
+                return result;
+            }
+        }
+        // Sista chansen: bara stadsnamnet (stad-nivå precision)
+        await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+        result = await nominatimSearchSweden(`${foundCity}, Sverige`);
+        if (result) {
+            console.log(`[Geocoding/SE] City-level fallback "${foundCity}": [${result[0]}, ${result[1]}]`);
+            return result;
         }
     }
 

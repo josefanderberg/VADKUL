@@ -160,7 +160,7 @@ export default function HomePage() {
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
             <CloudPopup
-                message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
+                message={`Det finns ${events.length} unika event idag. Det fylls på med nya hela tiden.`}
                 autoDismissMs={0}
                 onDismiss={() => {
                     setShowTodayHint(true);

@@ -1,1507 +1,13 @@
 {
-  "updatedAt": "2026-05-27T19:44:01.352Z",
+  "updatedAt": "2026-05-28T01:08:38.104Z",
   "events": [
     {
-      "id": "https://www.facebook.com/events/995995136462854/",
-      "title": "EID AL- ADHA",
-      "time": "2026-05-26T22:00:00.000Z",
-      "lat": 64.7520185,
-      "lng": 20.959339,
-      "locationName": "Skellefteå, Västerbottens län",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/822577493531614/",
-      "title": "Are wrestling ",
-      "time": "2026-05-26T22:00:00.000Z",
-      "lat": 56.8547257,
-      "lng": 14.8311069,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1486601886284149/",
-      "title": "Oleg Buzatu - Nora mea❤️(Official Video 2026)",
-      "time": "2026-05-26T22:02:00.000Z",
-      "lat": 56.8547257,
-      "lng": 14.8311069,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1277724871164826/",
-      "title": "KVINNOCIRKEL ",
-      "time": "2026-05-26T22:05:00.000Z",
-      "lat": 61.7275356,
-      "lng": 17.1151457,
-      "locationName": "Storgatan 56, Hudiksvall",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/search?date_from=2026-05-27&date_to=2026-05-27",
-      "title": "Tickster Event",
-      "time": "2026-05-27T00:00:00.000Z",
-      "lat": 59.3293,
-      "lng": 18.0686,
-      "locationName": "Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/en/events/search?date_from=2026-05-27&date_to=2026-05-27",
-      "title": "Tickster Event",
-      "time": "2026-05-27T00:00:00.000Z",
-      "lat": 59.3293,
-      "lng": 18.0686,
-      "locationName": "Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/nb/events/search?date_from=2026-05-27&date_to=2026-05-27",
-      "title": "Tickster Event",
-      "time": "2026-05-27T00:00:00.000Z",
-      "lat": 59.3293,
-      "lng": 18.0686,
-      "locationName": "Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/da/events/search?date_from=2026-05-27&date_to=2026-05-27",
-      "title": "Tickster Event",
-      "time": "2026-05-27T00:00:00.000Z",
-      "lat": 59.3293,
-      "lng": 18.0686,
-      "locationName": "Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1601866520948066/",
-      "title": "Dans dagen i gang i Absalon",
-      "time": "2026-05-27T05:45:00.000Z",
-      "lat": 55.6779686,
-      "lng": 12.5799758,
-      "locationName": "Absalon",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/883053684610023/",
-      "title": "Bundaberg Show 2026",
-      "time": "2026-05-27T06:00:00.000Z",
-      "lat": 59.3301208,
-      "lng": 18.0556548,
-      "locationName": "University Drive, Bundaberg, QLD, Australia",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1103608029492097/",
-      "title": "Suffolk Show 2026",
-      "time": "2026-05-27T06:00:00.000Z",
-      "lat": 59.3335687,
-      "lng": 18.1058108,
-      "locationName": "Felixstowe Road, IP3 8UH Ipswich, United Kingdom",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1993357511581751/",
-      "title": "🧺 Torvedag på Axeltorv · Hver onsdag og lørdag 🍐",
-      "time": "2026-05-27T06:00:00.000Z",
-      "lat": 55.2306206,
-      "lng": 11.7582247,
-      "locationName": "Axeltorv, 4700 Næstved, Danmark",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4232613870402379/",
-      "title": "Utställning: En hamn i ständig utveckling ",
-      "time": "2026-05-27T06:00:00.000Z",
-      "lat": 56.6751384,
-      "lng": 12.8619842,
-      "locationName": "Biblioteken i Halmstad, Stadsbiblioteket (Halmstad)",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1261567612569376/",
-      "title": "Nossebro Marknad",
-      "time": "2026-05-27T06:00:00.000Z",
+      "id": "https://www.facebook.com/events/970117849126919/",
+      "title": "Offset Konsert Globen",
+      "time": "2026-05-27T22:00:00.000Z",
       "lat": 0,
       "lng": 0,
-      "locationName": "Visitnossebro & Nossebro Marknad",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/987441720914647/",
-      "title": "Vårvisning i Sundsvall",
-      "time": "2026-05-27T07:00:00.000Z",
-      "lat": 62.3907552,
-      "lng": 17.3071024,
-      "locationName": "Sundsvall",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1463191051909239/",
-      "title": "Dans de dimineață",
-      "time": "2026-05-27T07:00:00.000Z",
-      "lat": 59.3427633,
-      "lng": 18.0721653,
-      "locationName": "Ferdinand 70, 021382 Bucharest, Romania",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/26363382903279933/",
-      "title": "Staffordshire County Show",
-      "time": "2026-05-27T07:00:00.000Z",
-      "lat": 59.3335687,
-      "lng": 18.1058108,
-      "locationName": "County Showground, Weston Rd, ST18 0BD Stafford, United Kingdom",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1864649927534770/",
-      "title": "✨ WORKSHOP NẾN THƠM ✨",
-      "time": "2026-05-27T07:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "CDC Building 25 Lê Đại Hành, Hai Bà Trưng, Hà Nội",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1903971923579514/",
-      "title": "Orden i mig våren 2026",
-      "time": "2026-05-27T07:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Biblioteken i Falun",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1290114846204581/",
-      "title": "Seniormässan | 27 maj 2026 | Umeå",
-      "time": "2026-05-27T08:00:00.000Z",
-      "lat": 63.8333059,
-      "lng": 20.241484,
-      "locationName": "Nolia, Signalvägen 3 Umeå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1279632760982924/",
-      "title": "Öppenträning dagtid",
-      "time": "2026-05-27T08:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Lidköpings Brukshundklubb",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2031289444482294/",
-      "title": "OrtoSulan ❤️ Hälsokraft Piteå",
-      "time": "2026-05-27T08:00:00.000Z",
-      "lat": 65.3159602,
-      "lng": 21.4817592,
-      "locationName": "Gallerian Piteå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1702327617854681/",
-      "title": "Veteran OL Uddevalla OK",
-      "time": "2026-05-27T08:00:00.000Z",
-      "lat": 58.3490555,
-      "lng": 11.9382855,
-      "locationName": "Uddevalla, Västra Götalands län",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1184619323599372/",
-      "title": "Bridge-klubb",
-      "time": "2026-05-27T08:30:00.000Z",
-      "lat": 59.913061,
-      "lng": 10.8369,
-      "locationName": "Tvetenveien 101, Oslo",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/892590500488042/",
-      "title": "We are hiring ",
-      "time": "2026-05-27T08:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Gatineau",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1294826065612936/",
-      "title": "rullatorpromenad Västerås",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 59.6259722,
-      "lng": 16.5810339,
-      "locationName": "Malmabergs mötesplats",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/916063591052131/",
-      "title": "Eskilstuna International Food Festival 2026",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 59.3707345,
-      "lng": 16.513925,
-      "locationName": "Fristadstorget",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/971548019061829/",
-      "title": "Mr. Lángos in Eskilstuna 2026",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 59.3707345,
-      "lng": 16.513925,
-      "locationName": "Fristadstorget, Eskilstuna, Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/977290474814626/",
-      "title": "Hälsodag och stadsdelskamp",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 59.3714278,
-      "lng": 17.8287647,
-      "locationName": "Loviselundsvägen 100, Hässelby",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2145619566191662/",
-      "title": "Borlänge drömmer",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 60.4871472,
-      "lng": 15.4348792,
-      "locationName": "Borganäsvägen 44, 78433 Borlänge, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1250882027027326/",
-      "title": "Utställning: På festhumör",
-      "time": "2026-05-27T09:00:00.000Z",
-      "lat": 57.7857177,
-      "lng": 16.6064639,
-      "locationName": "Georgsgatan 27, 00100 Helsingfors, Finland",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1655698105686477/",
-      "title": "Vårmarknad utomhus på Dundrets äldreboende i Jönköping ",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 57.7790114,
-      "lng": 14.174966,
-      "locationName": "Boktryckargatan 26, Jönköping",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2140083413233132/",
-      "title": "Feel the Flow",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 65.5881071,
-      "lng": 22.1504363,
-      "locationName": "Luleå Energi Arena",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1872465173407840/",
-      "title": "Vaccination ICA Kvantum Ystad",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 55.444405,
-      "lng": 13.80948,
-      "locationName": "ICA Kvantum Ystad",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1689123495433828/",
-      "title": "Vaccination ICA Kvantum Hässleholm",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 56.1546935,
-      "lng": 13.7594815,
-      "locationName": "ICA Kvantum Hässleholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1989086998388506/",
-      "title": "Manifestation ",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 61.3015574,
-      "lng": 17.0505052,
-      "locationName": "Rådhuset Söderhamn",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/710856782115817/",
-      "title": "Onsdagssallad med tema",
-      "time": "2026-05-27T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sollefteå Församlingsgård",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4920824901477623/",
-      "title": "Medlemslunch med Futura",
-      "time": "2026-05-27T10:15:00.000Z",
-      "lat": 62.9329131,
-      "lng": 17.7865502,
-      "locationName": "Limstagatan",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1026535373381107/",
-      "title": "Helsingborg för ett fritt Palestina",
-      "time": "2026-05-27T11:00:00.000Z",
-      "lat": 56.0407952,
-      "lng": 12.7010088,
-      "locationName": "Mäster Palms plats",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/864184652988456/",
-      "title": "Stick- och virkcafe hos Planet Wool",
-      "time": "2026-05-27T11:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Planet Wool Malmö - Garnbutik",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1354535863223069/",
-      "title": "Nora Windfeldt - eksamenskonsert ",
-      "time": "2026-05-27T11:00:00.000Z",
-      "lat": 59.932476,
-      "lng": 10.7139601,
-      "locationName": "Levinsalen, Norges Musikkhøgskole",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/hktt6ta25meubty/2026-05-27/biodlaren",
-      "title": "Biodlaren",
-      "time": "2026-05-27T11:20:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 1, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/g7bz0l2dhwpbw5f/2026-05-27/strejkarna",
-      "title": "Strejkarna",
-      "time": "2026-05-27T11:20:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 2, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/rnjhmuvmhhwh3f0/2026-05-27/fuori-konsten-att-gladjas",
-      "title": "Fuori - Konsten att glädjas",
-      "time": "2026-05-27T11:35:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 3, Lund",
-      "category": "culture"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/acz88rg2pajb8aj/2026-05-27/josef-mengeles-forsvinnande",
-      "title": "Josef Mengeles försvinnande",
-      "time": "2026-05-27T11:35:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 4, Lund",
-      "category": "food"
-    },
-    {
-      "id": "https://www.facebook.com/events/2087020448435227/",
-      "title": "The Cher Show",
-      "time": "2026-05-27T12:00:00.000Z",
-      "lat": 56.4730372,
-      "lng": 14.7062358,
-      "locationName": "7901 N Federal Hwy, Boca Raton, FL, United States, Florida 33487",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/972171301987877/",
-      "title": "Fagersta med omnejd",
-      "time": "2026-05-27T12:00:00.000Z",
-      "lat": 60.0064574,
-      "lng": 15.788365,
-      "locationName": "Valonen,  Fagersta centrum",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1281479250517291/",
-      "title": "Holiröstyoga 5 dagars Retreat på Österlen.",
-      "time": "2026-05-27T12:00:00.000Z",
-      "lat": 59.6749712,
-      "lng": 14.5208584,
-      "locationName": "Gladsax Stenaberga gård, SE-272 94 Simrishamn, Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/8p36l842k7dxu7p/2026-05-27/nyarsfesten-tal-danska-text-svenska",
-      "title": "Nyårsfesten (Tal: Danska) (Text: Svenska)",
-      "time": "2026-05-27T13:00:00.000Z",
-      "lat": 60.3469718,
-      "lng": 15.7486886,
-      "locationName": "Biosalongen, Säter",
-      "category": "party"
-    },
-    {
-      "id": "https://www.facebook.com/events/26002006269452274/",
-      "title": "Explore Ystad",
-      "time": "2026-05-27T13:00:00.000Z",
-      "lat": 55.4281662,
-      "lng": 13.8244097,
-      "locationName": "Sankt Knuts torg, SE-271 42 Ystad, Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/946011141530434/",
-      "title": "Is That Just a Knife or Are You Flirting with Me?",
-      "time": "2026-05-27T13:00:00.000Z",
-      "lat": 58.7090136,
-      "lng": 13.8210963,
-      "locationName": "Karlagatan Mariestad",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1697007595054173/",
-      "title": "expo /// NICROBE /// vernissage jeudi 07 mai",
-      "time": "2026-05-27T13:00:00.000Z",
-      "lat": 59.3388532,
-      "lng": 18.0793072,
-      "locationName": "22 quai de versailles, 44000 Nantes, France",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/2v4d6df3787n99k/2026-05-27/saltstigen",
-      "title": "Saltstigen",
-      "time": "2026-05-27T13:20:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 2, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/769618096223015/",
-      "title": "Studiecirkel Mitt val",
-      "time": "2026-05-27T13:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Motala huvudbibliotek",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/5c9u46zrmk6rrfb/2026-05-27/je-mappelle-agneta",
-      "title": "Je m'appelle Agneta",
-      "time": "2026-05-27T13:50:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 3, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/25857842030574958/",
-      "title": "Blodomloppet Uppsala",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 59.8814592,
-      "lng": 17.6614971,
-      "locationName": "Gränby Sportfält",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/983549137497807/",
-      "title": "CROCHET CAFÉ LUND",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 55.701343,
-      "lng": 13.1968116,
-      "locationName": "Mårtenstorget 10, SE-223 51 Lund, Sverige",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1489565316075861/",
-      "title": "Kalvinknatet i Kristianstad",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 56.0180518,
-      "lng": 14.1375614,
-      "locationName": "Kristianstad Idrottsplats",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/852890040578823/",
-      "title": "Afterwork på spa",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 56.434934,
-      "lng": 12.8386486,
-      "locationName": "Hotel Skansen",
-      "category": "other"
-    },
-    {
-      "id": "https://www.meetup.com/hop-vine-events/events/314196403/",
-      "title": "Weekly Open Board Game Evening (every Wednesday)",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 59.3339549,
-      "lng": 18.0651906,
-      "locationName": "Hop & Vine",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1837736853587146/",
-      "title": " SPRÅKCAFÉ ",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 56.0745913,
-      "lng": 14.4701407,
-      "locationName": "Hermansens gata 22, 295 31  Bromölla Bromölla, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/982462397773751/",
-      "title": "Afterwork Salsa",
-      "time": "2026-05-27T14:00:00.000Z",
-      "lat": 58.8986365,
-      "lng": 5.7225185,
-      "locationName": "Heddeveien 141, 4034 Stavanger, Norge",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/rvvde0ubafjx4fr/2026-05-27/viktlos",
-      "title": "Viktlös",
-      "time": "2026-05-27T14:05:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Kino 4, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/982331154347349/",
-      "title": "Onsdagsturen",
-      "time": "2026-05-27T14:30:00.000Z",
-      "lat": 55.3081302,
-      "lng": 11.4287189,
-      "locationName": "Shell A6",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/989000713582683/",
-      "title": "Brännboll med Vän i Umeå",
-      "time": "2026-05-27T14:30:00.000Z",
-      "lat": 63.8368965,
-      "lng": 20.3155267,
-      "locationName": "Mariehemsängarna",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1288390399921593/",
-      "title": "Öppen föreläsning med Josefina Johannisson",
-      "time": "2026-05-27T14:30:00.000Z",
-      "lat": 56.8804699,
-      "lng": 14.8005655,
-      "locationName": "Växjö stadsbibliotek",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2405446073230861/",
-      "title": "Språkcafé på biblioteket i Kulturmagasinet",
-      "time": "2026-05-27T14:30:00.000Z",
-      "lat": 62.3917653,
-      "lng": 17.3118642,
-      "locationName": "Kulturmagasinet Sundsvall",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/926701717078638/",
-      "title": "Valpträff",
-      "time": "2026-05-27T14:45:00.000Z",
-      "lat": 59.601483,
-      "lng": 15.1987184,
-      "locationName": "Bandygatan 2, Lindesberg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/mkh79w0r34bg7nt/2026-05-27/albert-lee-band-uk-extrakonsert",
-      "title": "Albert Lee Band (UK) extrakonsert",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "medley – musik, mat & mer, Malmö",
-      "category": "music"
-    },
-    {
-      "id": "https://www.meetup.com/stockholm-mlops-community/events/314322402/",
-      "title": "Unlocking Enterprise AI Productivity",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 59.3471387,
-      "lng": 18.0309607,
-      "locationName": "Crowd Collective",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/896135896267932/",
-      "title": "Handarbetscafé på Våffelstugan ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 58.4064396,
-      "lng": 15.5888612,
-      "locationName": "Hovslagaregatan 4, Linköping",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2508564532928085/",
-      "title": "AW på Örebro Segelflygklubb ✈️ ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 59.2276878,
-      "lng": 15.0494861,
-      "locationName": "Örebro Segelflygklubb",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4539318986353022/",
-      "title": "Klubb PANKST på Stage",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Stage Umeå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1216851223740710/",
-      "title": "Kalmár Ákos előadása - A boldogság ára",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 59.3291946,
-      "lng": 18.0428488,
-      "locationName": "Damjanich u. 2., 24420 Magyarkanizsa, Serbia",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/826575453283940/",
-      "title": "Free Falun Dafa Online Class (Webinar) ~ Stretching Exercises, Meditation",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.8547315,
-      "lng": 14.831005,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1135070318691663/",
-      "title": "KreaKlubben",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 55.670249,
-      "lng": 10.3333283,
-      "locationName": "Skolebakken 5, st. tv., 8000 Aarhus, Denmark",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1709258206413933/",
-      "title": "Øl-Yoga",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 63.3977536,
-      "lng": 10.396389,
-      "locationName": "Sluppenvegen 11, 7037 Trondheim, Norway",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1109544327984622/",
-      "title": "Onsdagsflyg och korvgrillning",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.0624788,
-      "lng": 12.7468522,
-      "locationName": "Österleden, Helsingborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2394091791036212/",
-      "title": "Onsdagsflyg",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.0624788,
-      "lng": 12.7468522,
-      "locationName": "Österleden, Helsingborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/26247070154992066/",
-      "title": "YinYoga med Liza",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.8782541,
-      "lng": 14.8002121,
-      "locationName": "Sandgärdsgatan 23, Växjö",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1677851733303509/",
-      "title": "Emad ❤️ Mora",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "‎كنيسة السيدة العذراء و الشهيد مارمينا العجايبي بمدينة نصر‎",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1716028832735461/",
-      "title": "H.K.H Prinsessan Madeleines Pokal",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 61.3434429,
-      "lng": 16.3445297,
-      "locationName": "Sävstaås, Bollnäs",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1364741325705254/",
-      "title": "Vårmarknad och familjedag",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 61.3434429,
-      "lng": 16.3445297,
-      "locationName": "Sävstaås, Bollnäs",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1495743902187429/",
-      "title": "Föreläsning \"När ditt huvud blir ditt fängelse, om att bli fri 27/5 ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 61.2998501,
-      "lng": 17.0607599,
-      "locationName": "Söderhamn, Gävleborgs län",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/902896662208314/",
-      "title": "Läxhjälp & tala svenska på biblioteket",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 63.1673476,
-      "lng": 17.2702095,
-      "locationName": "Sollefteå bibliotek",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1472610984054771/",
-      "title": "QDC/BOD 5@ 41 Romano Vineyard Way ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.8547257,
-      "lng": 14.8311069,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/26401262336169417/",
-      "title": "Experiencia Com Realidade Aumentada Voo Virtual Asa-Delta Sobre a Serra do Rio do Rastro",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Opa Bier Cervejaria",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1938858396729732/",
-      "title": "BASALT  Rainer Maria Schubert  Vernissage",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Weltecho",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2118367062284704/",
-      "title": "Pickleball Pro Workshop ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "300 Taylor Notion Rd, Cape Carteret, NC, United States, North Carolina 28584",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1518345186369592/",
-      "title": "SHORT RIB ONSDAG ",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 56.135205,
-      "lng": 8.983761,
-      "locationName": "Silkeborgvej 5, 7400 Herning, Denmark",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1638442224129210/",
-      "title": "Utlämning av konst",
-      "time": "2026-05-27T15:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Jönköping",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2367040613739357/",
-      "title": "Drop in-kör innan Taizémässan",
-      "time": "2026-05-27T15:15:00.000Z",
-      "lat": 55.5569777,
-      "lng": 14.3489499,
-      "locationName": "Sankt Nicolai kyrka, Simrishamn",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/hjkzgfp03cchwva/2026-05-27/kalejdoskop-xxxviii",
-      "title": "Kalejdoskop XXXVIII",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 59.6543555,
-      "lng": 12.5916225,
-      "locationName": "Stora konsertsalen, Musikhögskolan Ingesund, Arvika",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/v69z3303z8nvhr5/2026-05-27/magnus-betner-mellan-oss-lund",
-      "title": "Magnus Betnér – \"Mellan oss\" - Lund",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Lunds Stadsteater, Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/ytt4pfvnk52cwtm/2026-05-27/quiz-med-kristoffer-jonzon",
-      "title": "Quiz med Kristoffer Jonzon",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Mejeriet, Lund",
-      "category": "game"
-    },
-    {
-      "id": "https://www.meetup.com/owasp-gothenburg-meetup-group/events/314872670/",
-      "title": "OWASP Gotheburg: Unofficial Security Fest Pre-Party",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 57.7002357,
-      "lng": 11.9564439,
-      "locationName": "Assured",
-      "category": "party"
-    },
-    {
-      "id": "https://www.facebook.com/events/1989458644933289/",
-      "title": "Knatteknatet Jönköping",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 57.7775881,
-      "lng": 14.1885321,
-      "locationName": "Knektaparken",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/3948224778811492/",
-      "title": "Walk and Talk ",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 58.2748808,
-      "lng": 12.2856437,
-      "locationName": "Hjortmossegatan, Trollhättan",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1303965501684609/",
-      "title": "Utställning: Ljus",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 57.6535631,
-      "lng": 11.9096695,
-      "locationName": "Valthornsgatan 13, 42146 Västra Frölunda, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/997906006506145/",
-      "title": "REKO Motala",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 59.3476826,
-      "lng": 17.961831,
-      "locationName": "Swedol",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1689063499182971/",
-      "title": "💚✨ÄnglaKväll✨💚FULLBOKAD❣️",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 57.2557336,
-      "lng": 16.4462749,
-      "locationName": "Stengatan 13, Oskarshamn",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1689914728701010/",
-      "title": "Breathwork och te-cirkel ",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Mora Yogastudio",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/26590709123883500/",
-      "title": "neMUDRUj a BODKa.",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "BODKa.",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1286318946167850/",
-      "title": "Afterwork marché ",
-      "time": "2026-05-27T15:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Cellier  Lançon-Provence",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1721052689052506/",
-      "title": "REKO NYKÖPING ",
-      "time": "2026-05-27T15:45:00.000Z",
-      "lat": 58.7545409,
-      "lng": 17.0120656,
-      "locationName": "Nyköping, Södermanlands län",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/82u3r6ahbf724dx/2026-05-27/sodermalms-svenska-standup-komedi-onsdag",
-      "title": "Södermalms Svenska Standup Komedi- Onsdag",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Mariatorget Pitchers-Casino, Stockholm",
-      "category": "culture"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/vvwp3l3rhuwh5nu/2026-05-27/konstnarsvisning-av-min-farmor-hedi-fried",
-      "title": "Konstnärsvisning av Min farmor Hédi Fried",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.3371302,
-      "lng": 18.0425517,
-      "locationName": "Torsgatan 19, Torsgatan 19, Stockholm",
-      "category": "culture"
-    },
-    {
-      "id": "https://www.facebook.com/events/1289062396433356/",
-      "title": "Företagsstafetten Malmö ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 55.6010136,
-      "lng": 12.9908274,
-      "locationName": "Lördagsplan",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2125556041525240/",
-      "title": "Företagsstafetten Malmö ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 55.6010136,
-      "lng": 12.9908274,
-      "locationName": "Lördagsplan",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1938476876816314/",
-      "title": "✨Nästan Verkligt✨ Vernissage och utställning Umeå Konstskola ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 63.8374386,
-      "lng": 20.1607186,
-      "locationName": "Aktörgränd 36 Umeå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/25004966605822570/",
-      "title": "Dramatiserad historisk stadsvandring i Växjö med f.d. landshövding Anders Koskull",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.87737,
-      "lng": 14.8121306,
-      "locationName": "Växjö domkyrka",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1454802625484152/",
-      "title": "Stor seans i Borås med Kicki Johansson. OBS! ONS 27 MAJ kl 18:00- 19:30",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Nykterhetsgården Lönnen. Kasernvägen 6 Borås",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1557454542139907/",
-      "title": "Vårens taizémässor och gudstjänster i Tomaskyrkan",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.3567755,
-      "lng": 16.4778117,
-      "locationName": "Tomaskyrkan, Eskilstuna",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1760169915349119/",
-      "title": "Torgkonsert i Halmstad med Livgardets dragonmusikkår",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 55.6050909,
-      "lng": 12.9987743,
-      "locationName": "Lilla Torg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1660787858268057/",
-      "title": "Cykelskola i regi av Luleå kommun",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Södra Hamnen Luleå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4438976433055802/",
-      "title": "Nya Taekwondo klubb startas ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.8547315,
-      "lng": 14.831005,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/26383039031307882/",
-      "title": "Föreläsning: Klimakteriet",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Hälsokraft Boden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.meetup.com/psychology-discussion-fika/events/314878889/",
-      "title": "Presence",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.3324814,
-      "lng": 18.0626743,
-      "locationName": "Åhléns City 2. floor - Sally Voltaire & Systrar",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1489722299252006/",
-      "title": "Träningskväll - onsdagar ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 62.4407566,
-      "lng": 17.2605054,
-      "locationName": "Sundsvalls Brukshundklubb",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2056875291840549/",
-      "title": "Gratis webbinarium | Solceller & batterier | Trelleborgs Energi",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.8547257,
-      "lng": 14.8311069,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1967472350514534/",
-      "title": "OBS! FULLBOKAT! KULTURKANON: Jazz på svenska - Gunnar Eriksson mfl",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 58.3469118,
-      "lng": 11.9311561,
-      "locationName": "Folkets Hus Uddevalla",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1950185952290165/",
-      "title": "Onsdags-mtb ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.8332467,
-      "lng": 13.9408222,
-      "locationName": "Stora Torget Ljungby",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/730857120018150/",
-      "title": "Rallylydnad Bankurs ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 58.7107872,
-      "lng": 13.8324681,
-      "locationName": "Milstensgatan 7, 542 33 Mariestad, Mariestad",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/762324756462498/",
-      "title": "Socialdans - Bugg och fox! Våravslutning ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 60.1430286,
-      "lng": 15.1905246,
-      "locationName": "Bergsgatan 10, Ludvika",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/976405798638060/",
-      "title": "Onsdags körning! ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "MMCK Klubbkåken",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1565875458442082/",
-      "title": "Floravandring Tosteberga ängar",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.0107169,
-      "lng": 14.4598646,
-      "locationName": "Tosteberga ängar",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2555344181548697/",
-      "title": "Seminarium med Thomas Totto Heiderup",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.0798958,
-      "lng": 14.4710356,
-      "locationName": "Alviksvägen 4, Bromölla",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2811752799157535/",
-      "title": "Taizémässa",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 55.5569777,
-      "lng": 14.3489499,
-      "locationName": "Sankt Nicolai kyrka, Simrishamn",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1524407255691483/",
-      "title": "Öppet styrelsemöte ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.605497,
-      "lng": 15.2023828,
-      "locationName": "Löpargatan 8, 71194 Lindesberg, Lindesberg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/995895732928139/",
-      "title": "Musikalen Showtime",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 56.1714231,
-      "lng": 14.8621761,
-      "locationName": "Carl Gustafs kyrka",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1441040426914356/",
-      "title": "Musik för drömmare",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 59.3189738,
-      "lng": 18.0672255,
-      "locationName": "Maria Magdalena kyrka",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1633079877962913/",
-      "title": "Urkraft-dans ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 54.7722969,
-      "lng": 11.8835794,
-      "locationName": "4800",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1411273491015159/",
-      "title": "Summer sport sweepers",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "K-State Student Union",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/962239986675687/",
-      "title": "Öppen föreläsning ",
-      "time": "2026-05-27T16:00:00.000Z",
-      "lat": 57.7606496,
-      "lng": 11.9704786,
-      "locationName": "Backatorpsskolan",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/aujnnlba4uc9bz4/2026-05-27/jens-hult-dennis-quintero",
-      "title": "Jens Hult + Dennis Quintero",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Kollektivet Livet, Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.meetup.com/stockholm-mingle-and-making-new-friends/events/314878265/",
-      "title": "Lilla Lördag Mingle at Taperia",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 59.3304402,
-      "lng": 18.0666553,
-      "locationName": "Taparia Tapas Bar",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1503112840714478/",
-      "title": "Nordsamiska språkträffar",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 65.600886,
-      "lng": 22.131173,
-      "locationName": "Luleå centrum",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4363151337276132/",
-      "title": "Öppen träningsgrupp Skellefteå 2026",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 64.7520185,
-      "lng": 20.959339,
-      "locationName": "Skellefteå",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/729604939600445/",
-      "title": "Yoga Kurs ",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "villa havelland, Potsdamer Str. 25, 14669 Ketzin",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1248793030112781/",
-      "title": "Medlemsmöte och socialdans",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Bergnäsgården",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/997308469304318/",
-      "title": "Vardagslydnad steg 1! Start den 27/5",
-      "time": "2026-05-27T16:30:00.000Z",
-      "lat": 63.1782228,
-      "lng": 14.6496813,
-      "locationName": "Campus Östersund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/wc7yxgm7k4vdrpz/2026-05-27/musik-pa-djursholms-slott-schuback-and-samuelsson",
-      "title": "Musik på Djursholms slott- Schuback & Samuelsson",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.3973535,
-      "lng": 18.0880625,
-      "locationName": "Djursholms slott, Djursholm",
-      "category": "music"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/zm22wzm80ll86ek/2026-05-27/ingrepp-en-revy-pa-bacchi-syre",
-      "title": "Ingrepp -En Revy, På Bacchi Syre!",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Bacchi Syre, Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1934524320763901/",
-      "title": "Saskia | Nalen, Stockholm",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.336994,
-      "lng": 18.0675869,
-      "locationName": "Nalen",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1387710316428018/",
-      "title": "Affärspresentation Örebro",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.2672789,
-      "lng": 15.1930178,
-      "locationName": "Idrottsvägen 16, 70232 Örebro, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1417472206544199/",
-      "title": "Västerås Sinfonietta: Vårcaprice",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.6088754,
-      "lng": 16.5500173,
-      "locationName": "Kopparbergsvägen 1, 722 12 Västerås, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/2271566313331268/",
-      "title": "Vårruset Karlstad 2026",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.6749712,
-      "lng": 14.5208584,
-      "locationName": "Sundstaområdet, Karlstad, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/824758563642704/",
-      "title": "Haremskandalen i Luleå",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 65.5845554,
-      "lng": 22.1534611,
-      "locationName": "Kulturcentrum Ebeneser",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/971090508739631/",
-      "title": "Dj Bingo",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Para Hills Community Club",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1480006253505894/",
-      "title": "🧠ARENA QUIZ NIGHT🏆",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Arena Gamer Bar",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1503259224851023/",
-      "title": "Biodlaren på Bio Hjärtat ",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 62.5084936,
-      "lng": 17.5098013,
-      "locationName": "Folketshusvägen 10, 860 35 Söråker, Sweden",
-      "category": "other"
-    },
-    {
-      "id": "https://upplev.vaxjo.se/evenemang/evenemang/2025-12-12-pianofavoriter-med-norrdans-sommarspecial",
-      "title": "Pianofavoriter med Norrdans sommarspecial",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 56.8789,
-      "lng": 14.8067,
-      "locationName": "Regionteatern Blekinge Kronoberg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1494955058774982/",
-      "title": "Rullskidintervaller från Borgen",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 57.1442249,
-      "lng": 13.9905132,
-      "locationName": "Borgen Värnamo",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1492477415846053/",
-      "title": "PILATES 7-veckor-program ",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 56.2100417,
-      "lng": 15.2760355,
-      "locationName": "Ronneby, Blekinge län",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1434949271279417/",
-      "title": "Medlemsmöte",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Oskarshamns Brukshundsklubb",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1313358430860889/",
-      "title": "Medlemsmöte",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Oskarshamns Brukshundsklubb",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1289604289702043/",
-      "title": "Kulturmingel på Nora Stadshotell",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.5189347,
-      "lng": 15.0392987,
-      "locationName": "Nora Stadshotell",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/821494657250617/",
-      "title": "Vernazza Opera Concerts",
-      "time": "2026-05-27T17:00:00.000Z",
-      "lat": 59.3233364,
-      "lng": 18.1114948,
-      "locationName": "Via Roma, 24, 19018 Vernazza, Italy",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/k5trnhz2yxh1aah/2026-05-27/songs-to-keep-you-company-on-a-dark-night",
-      "title": "Songs To Keep You Company On A Dark Night",
-      "time": "2026-05-27T17:30:00.000Z",
-      "lat": 59.6543555,
-      "lng": 12.5916225,
-      "locationName": "Lilla konsertsalen, Musikhögskolan Ingesund, Arvika",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1869163160427851/",
-      "title": "Așa mi-a venit! | Show de comedie on the spot (pe terasă)",
-      "time": "2026-05-27T17:30:00.000Z",
-      "lat": 56.8486124,
-      "lng": 13.774314,
-      "locationName": "The Fool",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/918376191068588/",
-      "title": "Mercredis Quiz @ LAO",
-      "time": "2026-05-27T17:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "152, rue Principale, Aylmer, QC, Canada, Quebec J9H 3M8",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1293308979666229/",
-      "title": "AFTERWORK COMEDY OPENMIC",
-      "time": "2026-05-27T17:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Bar Grand’Place - Luxembourg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.tickster.com/se/sv/events/rmbwua2fg5k5x2x/2026-05-27/dont-get-your-hopes-up",
-      "title": "Don't Get Your Hopes Up",
-      "time": "2026-05-27T18:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Musikens Hus / Hängmattan Scen, Magasinsgatan 8, Göteborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1397915221861858/",
-      "title": "Quiz!",
-      "time": "2026-05-27T18:00:00.000Z",
-      "lat": 59.932276,
-      "lng": 10.712547,
-      "locationName": "Slemdalsveien 15, 0369 Oslo, Norway",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1511538230503787/",
-      "title": "Standup på Prøverøret",
-      "time": "2026-05-27T18:00:00.000Z",
-      "lat": 59.9133045,
-      "lng": 10.7601304,
-      "locationName": "Dattera til Hagen",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/1370042908222838/",
-      "title": "Corb Lund - Victoria",
-      "time": "2026-05-27T18:00:00.000Z",
-      "lat": 56.8547257,
-      "lng": 14.8311069,
-      "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.facebook.com/events/4576377799302628/",
-      "title": "🎸 90s MusikFest På Nattsudd Örebro",
-      "time": "2026-05-27T19:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Nattsudd",
+      "locationName": "Arenavägen 75 - event och festlokal",
       "category": "other"
     },
     {
@@ -1541,6 +47,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/861557079826228/",
+      "title": "Bästa Starten (BS)",
+      "time": "2026-05-28T06:00:00.000Z",
+      "lat": 57.4881317,
+      "lng": 12.0768863,
+      "locationName": "Storgatan 25, Kungsbacka",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1896039204618774/",
       "title": "Handledningsmetodik 1",
       "time": "2026-05-28T06:30:00.000Z",
@@ -1550,12 +65,48 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1250599683723804/",
+      "title": "Hallandsloppet 2026",
+      "time": "2026-05-28T06:30:00.000Z",
+      "lat": 56.6739826,
+      "lng": 12.8574827,
+      "locationName": "Utsiktstornet Galgberget",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1491354272435724/",
       "title": "Stängd sektion",
       "time": "2026-05-28T07:00:00.000Z",
       "lat": 57.7594186,
       "lng": 16.6385035,
       "locationName": "Södravarvsgatan 19, Västervik",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/882610541011959/",
+      "title": "Torsdag på tunet",
+      "time": "2026-05-28T07:00:00.000Z",
+      "lat": 58.8684643,
+      "lng": 5.7108327,
+      "locationName": "Somaveien 130, Sandnes, Norway",
+      "category": "other"
+    },
+    {
+      "id": "https://upplev.vaxjo.se/evenemang/evenemang/2026-05-27-baltic-cup-27-maj---31-maj-2026---internationell-hoppning-ponny-och-hast",
+      "title": "Baltic Cup 27 maj - 31 maj 2026 - Internationell hoppning ponny och häst",
+      "time": "2026-05-28T07:00:00.000Z",
+      "lat": 56.8796,
+      "lng": 14.8094,
+      "locationName": "Växjöortens Fältrittklubb i Bergunda",
+      "category": "sport"
+    },
+    {
+      "id": "https://www.facebook.com/events/4077305712518844/",
+      "title": "SY I FÅRSKINN- Kreativ caféträff på Sparven – Torsdagar, kl.9:30",
+      "time": "2026-05-28T07:30:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Fixpunkten, Ringvägen 44, 61432 Söderköping, Sweden",
       "category": "other"
     },
     {
@@ -1628,6 +179,105 @@
       "lat": 55.732528,
       "lng": 12.354344,
       "locationName": "Lindevænget 23. 2750 Ballerup",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1636753857520171/",
+      "title": "Royal Alloy Demodag - Ronnys Cykel & Mopedservice i Linköping",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 58.4112971,
+      "lng": 15.6448216,
+      "locationName": "Ronnys cykel & mopedservice",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2181033512710033/",
+      "title": "Mockberg Archive Sale Örebro (Marieberg)",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 59.216963,
+      "lng": 15.1393431,
+      "locationName": "Säljarevägen 1, SE-702 36 Örebro, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3754877594655070/",
+      "title": "Torsdags Loppis på Framtid",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 56.0132685,
+      "lng": 12.7308072,
+      "locationName": "Landskronavägen 14, 25232 Helsingborg, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1330858222474542/",
+      "title": "Tjejkväll i Västerås 28/5 - Butiken öppen till 21!",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 59.6150997,
+      "lng": 16.5420397,
+      "locationName": "Vasagatan, Västerås, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1666194904424538/",
+      "title": "Tjejkväll Västerås City",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 59.6110992,
+      "lng": 16.5463679,
+      "locationName": "Kvarteret Igor",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1292799763062047/",
+      "title": "BEREDSKAPSMÄSSA TRÖGDSGÅRDEN, ENKÖPING",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 59.6356115,
+      "lng": 17.077856,
+      "locationName": "Trögdsgården",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1380593147151093/",
+      "title": "Norrlands Tulpan Festival 2026",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 63.3212341,
+      "lng": 17.3383306,
+      "locationName": "Backsjön 221, 88192 Sollefteå, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/4433845060269337/",
+      "title": "Norrlands Tulpan Festival 2026",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 63.3212341,
+      "lng": 17.3383306,
+      "locationName": "Backsjön 221, 88192 Sollefteå, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1635932294210453/",
+      "title": "We Are Water MN Exhibit at CRWD",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "595 Aldine Street, Saint Paul, MN, United States, Minnesota 55104",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1160953622592452/",
+      "title": "Barseltreff på Villa Nora🤍",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 59.533333,
+      "lng": 15.016667,
+      "locationName": "Amtmand  Bangsgt. 1, 3019 Drammen, Norway",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1958483538088937/",
+      "title": "Arts & Crafts Market",
+      "time": "2026-05-28T08:00:00.000Z",
+      "lat": 60.1677716,
+      "lng": 10.2549154,
+      "locationName": "410 Surfside Drive, Surfside Beach, SC 29575",
       "category": "other"
     },
     {
@@ -1775,6 +425,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1186446426340738/",
+      "title": "Som bröder. ",
+      "time": "2026-05-28T11:00:00.000Z",
+      "lat": 56.0509702,
+      "lng": 12.6878945,
+      "locationName": "Karl Johans gata 1, 25267 Helsingborg, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1407703461378704/",
+      "title": "Workshop i handskurna ljus 🇸🇪",
+      "time": "2026-05-28T11:00:00.000Z",
+      "lat": 57.7210839,
+      "lng": 12.9407407,
+      "locationName": "Borås Borås",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1581768746174702/",
       "title": "Biblio Bio 14",
       "time": "2026-05-28T12:00:00.000Z",
@@ -1799,6 +467,15 @@
       "lat": 60.6138122,
       "lng": 16.7701642,
       "locationName": "Seegatan 1, 81133 Sandviken, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/894933169847416/",
+      "title": "Hantverksträff för seniorer",
+      "time": "2026-05-28T12:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Hantverkargatan 9, 98231 Gällivare, Sweden",
       "category": "other"
     },
     {
@@ -1955,12 +632,57 @@
       "category": "other"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/cjkgna7m0fmj0py/2026-05-28/albert-lee-band-uk",
+      "title": "Albert Lee Band (UK)",
+      "time": "2026-05-28T14:00:00.000Z",
+      "lat": 55.6052931,
+      "lng": 13.0001566,
+      "locationName": "medley – musik, mat & mer, Malmö",
+      "category": "music"
+    },
+    {
+      "id": "https://www.facebook.com/events/1202580941985867/",
+      "title": "3 lätta mil på cykel i utkanten av Linköping",
+      "time": "2026-05-28T14:00:00.000Z",
+      "lat": 58.4098135,
+      "lng": 15.6245252,
+      "locationName": "Citygross, Djurgården",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1593495515101083/",
+      "title": "Dressyrträning",
+      "time": "2026-05-28T14:00:00.000Z",
+      "lat": 57.7594186,
+      "lng": 16.6385035,
+      "locationName": "Stuverums Gård",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1326955109352854/",
+      "title": "Handarbetscafé",
+      "time": "2026-05-28T14:00:00.000Z",
+      "lat": 67.1355574,
+      "lng": 20.6616537,
+      "locationName": "Hantverkaregatan 5, 98231 Gällivare, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1583695702855489/",
       "title": "Tofarvet linoleumstryk - Workshop",
       "time": "2026-05-28T14:30:00.000Z",
       "lat": 56.15497,
       "lng": 10.207033,
       "locationName": "Søndergade 22, Aarhus",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1532438498276739/",
+      "title": "Kulturskolans kväll",
+      "time": "2026-05-28T14:30:00.000Z",
+      "lat": 59.0276918,
+      "lng": 12.2349721,
+      "locationName": "Majbergsvägen 1, Bengtsfors",
       "category": "other"
     },
     {
@@ -2108,6 +830,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/860046486897318/",
+      "title": "Magasinsvisning – omvärlden i Malmö",
+      "time": "2026-05-28T15:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Malmö Stadsarkiv",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1807033340470724/",
+      "title": "Afterwork Dinner ",
+      "time": "2026-05-28T15:00:00.000Z",
+      "lat": 56.7078611,
+      "lng": 8.2141739,
+      "locationName": "Taunusstraße 49, Wiesbaden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2168544673636962/",
       "title": "Kurs szydełkowania",
       "time": "2026-05-28T15:15:00.000Z",
@@ -2123,6 +863,24 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Orionskolan, Visby waldorfskola",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1951413432288358/",
+      "title": "Yoga Posturale",
+      "time": "2026-05-28T15:15:00.000Z",
+      "lat": 55.7030411,
+      "lng": 13.1901763,
+      "locationName": "Via Dalmazio Birago, 60, 73100 Lecce LE, Italia",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/751200241287381/",
+      "title": "Kurs TaiChi Yang24 ",
+      "time": "2026-05-28T15:15:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Tkalnia",
       "category": "other"
     },
     {
@@ -2240,6 +998,42 @@
       "lat": 56.565268,
       "lng": 14.1697235,
       "locationName": "Älmhults golfklubb",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1298059948950621/",
+      "title": "Mountainbikecykling på Gula stigen med Actic Uppsala!",
+      "time": "2026-05-28T15:30:00.000Z",
+      "lat": 59.8543501,
+      "lng": 17.6401556,
+      "locationName": "Svandammen, Uppsala",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1556079425401782/",
+      "title": "Stand-up sessions Makeriet vår 2026",
+      "time": "2026-05-28T15:30:00.000Z",
+      "lat": 59.2720305,
+      "lng": 15.2155799,
+      "locationName": "Kungsgatan 3, 702 11 Örebro, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/961747296607792/",
+      "title": "Yinyoga TEA-lokalen Torsdagar",
+      "time": "2026-05-28T15:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "TEA-lokalen Storgatan 4 Flen",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1361351938794706/",
+      "title": "Afterwork 🍺🍸",
+      "time": "2026-05-28T15:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "5 place de Toscane, Serris",
       "category": "other"
     },
     {
@@ -2549,6 +1343,51 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/880811941037162/",
+      "title": "Monolord // Plan B – Malmö",
+      "time": "2026-05-28T16:00:00.000Z",
+      "lat": 55.5839411,
+      "lng": 13.0272499,
+      "locationName": "Norra Grängesbergsgatan 26, 21450 Malmö, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1304824511191423/",
+      "title": "Skogsbad i Brunnsskogen",
+      "time": "2026-05-28T16:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Gymnastikpromenaden 2, 37236 Ronneby, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2273332389799019/",
+      "title": "Trim i sal",
+      "time": "2026-05-28T16:00:00.000Z",
+      "lat": 59.9202268,
+      "lng": 16.6056444,
+      "locationName": "Kirkenes videregående skole",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/943542214674175/",
+      "title": "South Theater Performance",
+      "time": "2026-05-28T16:00:00.000Z",
+      "lat": 57.1951812,
+      "lng": 13.3473782,
+      "locationName": "171 Ash St, Stoughton, MA",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2398361537350876/",
+      "title": "Västpanik - Föreställning av teatertvåorna på Schillerska.",
+      "time": "2026-05-28T16:00:00.000Z",
+      "lat": 57.7009059,
+      "lng": 11.9520331,
+      "locationName": "Olof Palmes Plats 1, 413 04 Gothenburg, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/7ttz5pyu5xb6e3d/2026-05-28/danskvall-huddinge-big-band",
       "title": "Danskväll: Huddinge Big Band",
       "time": "2026-05-28T16:15:00.000Z",
@@ -2717,6 +1556,24 @@
       "lat": 0,
       "lng": 0,
       "locationName": "The Blind Lion Jazz",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1302411015315680/",
+      "title": "Workshop + social 21/5 & 28/5 ",
+      "time": "2026-05-28T16:30:00.000Z",
+      "lat": 63.8268412,
+      "lng": 20.2665717,
+      "locationName": "Umeå Folkets Hus",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1028605396876543/",
+      "title": "Ängla seans ",
+      "time": "2026-05-28T16:30:00.000Z",
+      "lat": 59.6343943,
+      "lng": 17.0814858,
+      "locationName": "Torggatan 14, Enköping",
       "category": "other"
     },
     {
@@ -2945,12 +1802,57 @@
       "category": "other"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/xgt9xgjfb2tp6nc/2026-05-28/worldpeace-dmt-the-femcels-support-guccisamo",
+      "title": "Worldpeace DMT + The Femcels (+support: Guccisamo)",
+      "time": "2026-05-28T17:00:00.000Z",
+      "lat": 59.3251172,
+      "lng": 18.0710935,
+      "locationName": "Kollektivet Livet, Stockholm",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/3grtda53j73cb5y/2026-05-28/anna-von-hausswolff",
+      "title": "Anna von Hausswolff",
+      "time": "2026-05-28T17:00:00.000Z",
+      "lat": 55.7029296,
+      "lng": 13.1929449,
+      "locationName": "Mejeriet, Lund",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/814651018029162/",
+      "title": "Festival Charivarue #3",
+      "time": "2026-05-28T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Parc Marguerite Lacroix, 42140 Chazelles-sur-Lyon",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1899598144080807/",
       "title": "Jinx Comedy @ Headquarters",
       "time": "2026-05-28T17:30:00.000Z",
       "lat": 56.152105,
       "lng": 10.19937,
       "locationName": "Headquarters",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1499692734896246/",
+      "title": "Marie Swane - Klubben",
+      "time": "2026-05-28T17:30:00.000Z",
+      "lat": 55.955647,
+      "lng": 12.535098,
+      "locationName": "Gl Strandvej 109, 3050 Humlebæk",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2037450053855385/",
+      "title": "FringeMI Festival 2026",
+      "time": "2026-05-28T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "20127 Milan, Italy",
       "category": "other"
     },
     {
@@ -3035,6 +1937,87 @@
       "category": "other"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/vkpgveh7pk7xb53/2026-05-28/hippop-and-friends",
+      "title": "HipPoP & Friends",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 59.3251172,
+      "lng": 18.0710935,
+      "locationName": "Biblioteket Live, Stockholm",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2172728156468057/",
+      "title": "Torsdags karaoke - Azalee Malmö",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 55.589748,
+      "lng": 13.0080953,
+      "locationName": "Claesgatan 8, SE-214 26 Malmö, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1377643340697305/",
+      "title": "KARAOKEKLUBBEN ",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 57.722697,
+      "lng": 12.9411872,
+      "locationName": "Allégatan 21, Borås",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/974598818608289/",
+      "title": "Friends meet on live- asa katha heba",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1494341134897830/",
+      "title": "Friends meet on live- asa katha heba",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1258495582757758/",
+      "title": "Friends meet on live- asa katha heba",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1776728339967859/",
+      "title": "Nora ▪️ Spectacol ▪️ FRAME Festival",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 59.533333,
+      "lng": 15.016667,
+      "locationName": "Studio Radu Stanca FTT",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1086695296910488/",
+      "title": "STAND’IMPRO SHOW",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Rue vautier 13, 1227 Carouge, Switzerland",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/966952026072342/",
+      "title": "Festival PERSPECTIVES | FOOD",
+      "time": "2026-05-28T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Scène de L’Hôtel de Ville - Sarreguemines",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/882335444717730/",
       "title": "Quiz Night 🔍",
       "time": "2026-05-28T18:30:00.000Z",
@@ -3107,12 +2090,39 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1596523051394547/",
+      "title": "Queer-kväll",
+      "time": "2026-05-28T22:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1831841300863065/",
+      "title": "AW @ Bullangeriet",
+      "time": "2026-05-28T22:02:00.000Z",
+      "lat": 56.0475732,
+      "lng": 12.6941246,
+      "locationName": "Kullagatan 8, 25220 Helsingborg, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1427788605780056/",
       "title": "Hittaut Luleå 2026",
       "time": "2026-05-29T06:00:00.000Z",
       "lat": 65.5831187,
       "lng": 22.1459535,
       "locationName": "Luleå",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2030245757535153/",
+      "title": "Frukost på Stugan",
+      "time": "2026-05-29T06:00:00.000Z",
+      "lat": 58.4064396,
+      "lng": 15.5888612,
+      "locationName": "Hovslagaregatan 4, 58246 Linköping, Sweden",
       "category": "other"
     },
     {
@@ -3194,6 +2204,15 @@
       "lat": 59.1991159,
       "lng": 9.6144096,
       "locationName": "Skien videregående skole",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/895976946707075/",
+      "title": "Yoga för alla",
+      "time": "2026-05-29T07:30:00.000Z",
+      "lat": 59.3177076,
+      "lng": 18.0621247,
+      "locationName": "Mötesplats Mariatorget",
       "category": "other"
     },
     {
@@ -3395,6 +2414,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1323868609589327/",
+      "title": "VeteranParad Stockholm 🇸🇪🥁🎺",
+      "time": "2026-05-29T08:00:00.000Z",
+      "lat": 59.3317431,
+      "lng": 18.0712889,
+      "locationName": "Kungsträdgården",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1828863074478994/",
+      "title": "Gemorama Gem Show ",
+      "time": "2026-05-29T08:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Plant City Strawberry Festival",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1141261968128694/",
       "title": "NZ Art Show ",
       "time": "2026-05-29T09:00:00.000Z",
@@ -3437,6 +2474,15 @@
       "lat": 56.0745913,
       "lng": 14.4701407,
       "locationName": "Hermansens gata 22, 295 31  Bromölla Bromölla, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/td2by8etayb2nf6/2026-05-29/oppen-repetition",
+      "title": "ÖPPEN REPETITION",
+      "time": "2026-05-29T09:30:00.000Z",
+      "lat": 57.7825634,
+      "lng": 14.165719,
+      "locationName": "Konsertsalen i Spira, Jönköping",
       "category": "other"
     },
     {
@@ -3527,6 +2573,33 @@
       "lat": 55.6308335,
       "lng": 13.7084811,
       "locationName": "ICA Kvantum Sjöbo",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1641352750473772/",
+      "title": "Fotbollströjefredag ( Dribbla mot psykisk ohälsa) ",
+      "time": "2026-05-29T10:00:00.000Z",
+      "lat": 63.1791716,
+      "lng": 14.6354877,
+      "locationName": "Stortorget, Östersund",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/876617905469985/",
+      "title": "Utställningen BEHIND THE EDGE",
+      "time": "2026-05-29T10:00:00.000Z",
+      "lat": 59.5973833,
+      "lng": 15.2106111,
+      "locationName": "Skogstorpsvägen 3a, SE-711 34 Lindesberg, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/35965727079740966/",
+      "title": "Utställningen BEHIND THE EDGE",
+      "time": "2026-05-29T10:00:00.000Z",
+      "lat": 59.5973833,
+      "lng": 15.2106111,
+      "locationName": "Skogstorpsvägen 3a, SE-711 34 Lindesberg, Sverige",
       "category": "other"
     },
     {
@@ -3638,6 +2711,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/2871498499864975/",
+      "title": "Stampflehmseminar für Wand und Boden",
+      "time": "2026-05-29T12:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Hauptstraße 73a, 96182 Reckendorf, Germany",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2364548633986710/",
       "title": "Bokcafé",
       "time": "2026-05-29T12:30:00.000Z",
@@ -3653,6 +2735,15 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Valli Motorrad - Concessionaria BMW Motorrad",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1384782799550167/",
+      "title": "Lekia/Babya Helsingborg - Kostnadsfri barn- och familjefotografering",
+      "time": "2026-05-29T12:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Lekia Babya Berga Helsingborg",
       "category": "other"
     },
     {
@@ -3782,6 +2873,33 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/833833293107273/",
+      "title": "Live musik",
+      "time": "2026-05-29T13:00:00.000Z",
+      "lat": 55.714408,
+      "lng": 10.011508,
+      "locationName": "Juelsgade 2, Juelsminde",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1489354022821241/",
+      "title": "Föreläsning och samtal: Livet med utlandstjänst ur ett familjeperspektiv",
+      "time": "2026-05-29T13:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Marinmuseum / The Naval Museum",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1638371057212451/",
+      "title": "Textilakademins utställning 2026",
+      "time": "2026-05-29T13:00:00.000Z",
+      "lat": 57.1906852,
+      "lng": 14.0303185,
+      "locationName": "Västhorjavägen 9, 331 22 Värnamo, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1800071897631122/",
       "title": "Föreläsning & branschmingel ",
       "time": "2026-05-29T13:30:00.000Z",
@@ -3789,6 +2907,24 @@
       "lng": 11.9750678,
       "locationName": "Clarion Hotel Post",
       "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/9k9wb5fhnllwjue/2026-05-29/den-ofrivillige-premiarministern",
+      "title": "Den ofrivillige premiärministern",
+      "time": "2026-05-29T13:50:00.000Z",
+      "lat": 55.7029296,
+      "lng": 13.1929449,
+      "locationName": "Kino 3, Lund",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/kcxvc0p69xfxr2u/2026-05-29/nyarsfesten",
+      "title": "Nyårsfesten",
+      "time": "2026-05-29T13:50:00.000Z",
+      "lat": 55.7029296,
+      "lng": 13.1929449,
+      "locationName": "Kino 4, Lund",
+      "category": "party"
     },
     {
       "id": "https://www.facebook.com/events/1905973030296568/",
@@ -3962,6 +3098,51 @@
       "category": "other"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/nedbng0jpnxzdwp/2026-05-29/the-courettes-bra-dk-leadfoot-tea-uk",
+      "title": "The Courettes (BRA/DK) + Leadfoot Tea (UK)",
+      "time": "2026-05-29T14:00:00.000Z",
+      "lat": 55.6052931,
+      "lng": 13.0001566,
+      "locationName": "medley – musik, mat & mer, Malmö",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1601727220924020/",
+      "title": "Fredagsmys med Moderaterna i Trollhättan",
+      "time": "2026-05-29T14:00:00.000Z",
+      "lat": 58.2827931,
+      "lng": 12.2908612,
+      "locationName": "Systembolaget (Oden, TROLLHÄTTAN)",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/976873855090797/",
+      "title": "Spela Tv-spel",
+      "time": "2026-05-29T14:00:00.000Z",
+      "lat": 57.4882635,
+      "lng": 15.8406741,
+      "locationName": "Valhall Hultsfred",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1300512095562723/",
+      "title": "Dansuppvisning",
+      "time": "2026-05-29T14:10:00.000Z",
+      "lat": 57.4882635,
+      "lng": 15.8406741,
+      "locationName": "Valhall Hultsfred",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/7xuej7mtmpdyvt2/2026-05-29/djavulen-bar-prada-2",
+      "title": "Djävulen bär Prada 2",
+      "time": "2026-05-29T14:20:00.000Z",
+      "lat": 55.7029296,
+      "lng": 13.1929449,
+      "locationName": "Kino 1, Lund",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2698344877189537/",
       "title": "Avslappning och meditation i Luleå domkyrka, våren 2026",
       "time": "2026-05-29T14:30:00.000Z",
@@ -3980,12 +3161,48 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1426010829567227/",
+      "title": "Proletarische Landnahme - Boden für alle",
+      "time": "2026-05-29T14:30:00.000Z",
+      "lat": 65.8275004,
+      "lng": 21.6964105,
+      "locationName": "Absberggasse, 1100 Wien, Österreich",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1510870447057916/",
+      "title": "Utställningsträning - kom och värm upp inför våren & sommarens utställningar",
+      "time": "2026-05-29T14:30:00.000Z",
+      "lat": 59.601483,
+      "lng": 15.1987184,
+      "locationName": "Bandygatan 2, 71134 Lindesberg, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2597623747287379/",
+      "title": "Teologisk fredag ",
+      "time": "2026-05-29T14:30:00.000Z",
+      "lat": 55.231471,
+      "lng": 10.533454,
+      "locationName": "Graabjergvej 4, Ryslinge",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/863889736245827/",
       "title": "Dans weekenden i gang i Absalon",
       "time": "2026-05-29T14:45:00.000Z",
       "lat": 55.6653188,
       "lng": 12.5506675,
       "locationName": "Folkehuset Absalon",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1130003103519228/",
+      "title": "Bioelektrisk Yoga i Karlskrona",
+      "time": "2026-05-29T14:45:00.000Z",
+      "lat": 56.1620033,
+      "lng": 15.5871355,
+      "locationName": "Ronnebygatan 41, 373 13 Karlskrona, Sweden",
       "category": "other"
     },
     {
@@ -4184,6 +3401,78 @@
       "lat": 56.8796,
       "lng": 14.8094,
       "locationName": "Växjö Konsthall",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/wm3gx029gx38c30/2026-05-29/musikhogskolan-och-svenska-kammarorkestern",
+      "title": "Musikhögskolan och Svenska Kammarorkestern",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 59.2747287,
+      "lng": 15.2151181,
+      "locationName": "Konsertsalen, Örebro Konserthus, Örebro",
+      "category": "music"
+    },
+    {
+      "id": "https://www.facebook.com/events/2022708941911839/",
+      "title": "BIG AW-PREBENS PÅGAR || THE TIVOLI || HELSINGBORG ",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Köpenhamnskajen 1, 252 21 Helsingborg, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1283333457332637/",
+      "title": "Stick-AW",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 60.4879978,
+      "lng": 15.4305152,
+      "locationName": "Hotell Galaxen Borlänge",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/25857740597257980/",
+      "title": "ABBA AW",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 57.7601978,
+      "lng": 16.6417334,
+      "locationName": "Slottsholmsvägen 10, 59333 Västervik, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1723407405745956/",
+      "title": "Allsång för hela familjen",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 57.4882635,
+      "lng": 15.8406741,
+      "locationName": "Valhall Hultsfred",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1326887216060564/",
+      "title": "Countrylife AW - Premiär av festivalölen",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 56.0506535,
+      "lng": 14.5871906,
+      "locationName": "Restaurang Blåregn",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/25693718590250305/",
+      "title": "The Portuguese Festival ",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 59.3130102,
+      "lng": 18.1014452,
+      "locationName": "Johannesburg, South Africa",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2888004904925007/",
+      "title": "Pontiac Arts Crawl 2026",
+      "time": "2026-05-29T15:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "150 N Saginaw St, Pontiac, MI, United States, Michigan 48342",
       "category": "other"
     },
     {
@@ -4430,6 +3719,60 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1460029412125503/",
+      "title": "GUDINNEAFTON ",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 61.7275356,
+      "lng": 17.1151457,
+      "locationName": "Storgatan 56, 824 52 Hudiksvall, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1018647510517893/",
+      "title": "Veterandagen i Lycksele 2026",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 64.6,
+      "lng": 18.166667,
+      "locationName": "Gammplatsen, Ruselegården",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1911151002911190/",
+      "title": "🇮🇹🍕Pizza's are Back! 🇮🇹🍕",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "100 Jones Street, Balcatta, Perth, WA, Australia, Western Australia 6021",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/988371020408720/",
+      "title": "vernissage",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2040884466639954/",
+      "title": "Hundkafe´kväll ",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 63.0802629,
+      "lng": 14.8288198,
+      "locationName": "Gränsvägen 11, SE-834 31 Brunflo, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2007677236624813/",
+      "title": "SEN KVÄLL PÅ MODERNA MUSEET",
+      "time": "2026-05-29T16:00:00.000Z",
+      "lat": 59.325856,
+      "lng": 18.0843509,
+      "locationName": "Exercisplan 4, Stockholm, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/988569523502626/",
       "title": "VARIETÉ CALEIDOSKOP - Das Spiel- & Verzehr-Theater",
       "time": "2026-05-29T16:15:00.000Z",
@@ -4517,6 +3860,42 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Liftoff Coworking Iroda",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/770pxc0ykgadnyn/2026-05-29/musikerlinjens-egna-favoriter",
+      "title": "Musikerlinjens egna favoriter",
+      "time": "2026-05-29T16:30:00.000Z",
+      "lat": 58.7545409,
+      "lng": 17.0120656,
+      "locationName": "Nyköpings Teater, Nyköping",
+      "category": "music"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/65c5djtdywpm8ep/2026-05-29/shrek-the-musical-premiar",
+      "title": "Shrek the musical PREMIÄR!",
+      "time": "2026-05-29T16:30:00.000Z",
+      "lat": 59.3717379,
+      "lng": 16.5051474,
+      "locationName": "Eskilstuna teater, Eskilstuna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/983063540996894/",
+      "title": "Vernissage Cez'Art",
+      "time": "2026-05-29T16:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "30160 Bessèges, France",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3730675450573379/",
+      "title": "Farlig Fredag ",
+      "time": "2026-05-29T16:30:00.000Z",
+      "lat": 56.803616,
+      "lng": 9.502377,
+      "locationName": "messevej 1, 9600 Aars, Denmark",
       "category": "other"
     },
     {
@@ -4745,6 +4124,51 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1503582371446570/",
+      "title": "FÖRENINGSMATCHEN | SOLLEFTEÅ GIF – KRAMFORS-ALLIANSEN",
+      "time": "2026-05-29T17:00:00.000Z",
+      "lat": 63.383333,
+      "lng": 16.916667,
+      "locationName": "Nipvallen",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2232968377475254/",
+      "title": "Konsert: Ahlberg, Ek & Roswall med Ulrika Bodén",
+      "time": "2026-05-29T17:00:00.000Z",
+      "lat": 65.8275004,
+      "lng": 21.6964105,
+      "locationName": "Högdalsplan 16, Önskehemsgatan 21-25, 124 21 Högdalen, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3670536683084186/",
+      "title": "Välgörenhetskonsert i Mariakapellet - \"Kampen mot cancer\"",
+      "time": "2026-05-29T17:00:00.000Z",
+      "lat": 67.8518437,
+      "lng": 20.2370273,
+      "locationName": "Kyrkogatan 4, SE-981 31 Kiruna, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/967208006284567/",
+      "title": "𝐀𝐅𝐓𝐄𝐑𝐖𝐎𝐑𝐊 𝐄𝐍𝐓𝐑𝐄𝐏𝐑𝐄𝐍𝐄𝐔𝐑𝐒",
+      "time": "2026-05-29T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "NRG Center 111 avenue du général Leclerc 77400 Lagny sur Marne",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/941579658850507/",
+      "title": "Opera Cabaret",
+      "time": "2026-05-29T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "425 Jefferson Ave, Ste 601, Toledo, OH, United States, Ohio 43604",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/868853815555424/",
       "title": "DJ & Dine",
       "time": "2026-05-29T17:30:00.000Z",
@@ -4778,6 +4202,15 @@
       "lat": 59.7170061,
       "lng": 12.4706774,
       "locationName": "Lincoln Center - New York, NY",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/893605780375973/",
+      "title": "Comedy Soup @ Great Falls Comedy Club",
+      "time": "2026-05-29T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Great Falls Comedy Club",
       "category": "other"
     },
     {
@@ -4859,6 +4292,24 @@
       "lat": 60.8883936,
       "lng": 11.5395386,
       "locationName": "103 Industrial St, Denton, TX, United States, Texas 76201",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1696621441373484/",
+      "title": "OPÉRA | Messa da Requiem",
+      "time": "2026-05-29T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Opéra national de Nancy-Lorraine",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1517467796433201/",
+      "title": "QUIZ KVÄLL",
+      "time": "2026-05-29T18:00:00.000Z",
+      "lat": 59.3743821,
+      "lng": 17.0303304,
+      "locationName": "Trädgårdsgatan 5, Strängnäs",
       "category": "other"
     },
     {
@@ -4961,6 +4412,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/884811617497928/",
+      "title": "Concerto dell'Italian Opera Taormina",
+      "time": "2026-05-29T19:15:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Teatro Nazarena Taormina",
+      "category": "other"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/m0yktnl1yf7aemp/2026-05-29/club-momnt",
       "title": "CLUB MOMNT",
       "time": "2026-05-29T20:00:00.000Z",
@@ -5057,6 +4517,15 @@
       "lat": 59.374981,
       "lng": 17.0291385,
       "locationName": "Strängnäs KonstGalleri",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1309499864341877/",
+      "title": "Lyckeby Loppis Vintern Våren 2026",
+      "time": "2026-05-29T22:02:00.000Z",
+      "lat": 56.2171768,
+      "lng": 15.6419442,
+      "locationName": "Tennvägen 1, 37150 Karlskrona, Sweden",
       "category": "other"
     },
     {
@@ -5201,6 +4670,15 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Bolist Broby",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/977021968208575/",
+      "title": "Mås eget Spin of hope",
+      "time": "2026-05-30T06:00:00.000Z",
+      "lat": 55.65,
+      "lng": 13.2,
+      "locationName": "Mås Träningcenter",
       "category": "other"
     },
     {
@@ -5384,6 +4862,42 @@
       "category": "other"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/6akzc16f4eu7tmp/2026-05-30/gastronoma-academy-grillkurs-int-enkoping",
+      "title": "GASTRONOMA Academy, Grillkurs Int. - Enköping",
+      "time": "2026-05-30T07:00:00.000Z",
+      "lat": 59.6356115,
+      "lng": 17.077856,
+      "locationName": "Skuggans Café, Enköping",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/923672187315324/",
+      "title": "Knix 30 maj Nya Pepparrotsbanan, Enköping",
+      "time": "2026-05-30T07:00:00.000Z",
+      "lat": 59.6356115,
+      "lng": 17.077856,
+      "locationName": "Nya Pepparrotsbanan (Göta Ms)",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1294860956185801/",
+      "title": "Nytt försök LVG  91 km . Start Coop 9.00 lördagen 30 maj.",
+      "time": "2026-05-30T07:00:00.000Z",
+      "lat": 56.2381604,
+      "lng": 12.8759401,
+      "locationName": "Coop Ängelholm",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/912709058060302/",
+      "title": "NH Kurs - Nybörjare - Säker Häst Kurs",
+      "time": "2026-05-30T07:00:00.000Z",
+      "lat": 59.6212835,
+      "lng": 18.5493502,
+      "locationName": "Tysättravägen 14, 761 13 Riala, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.meetup.com/hike-around-skane/events/314848144/",
       "title": "Ramlösa to Landskrona Hike",
       "time": "2026-05-30T07:03:00.000Z",
@@ -5471,6 +4985,24 @@
       "lat": 55.101735,
       "lng": 14.69942,
       "locationName": "Store Torv 9, 3700 Rønne, Denmark",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/972449465390843/",
+      "title": "MTB Göteborg",
+      "time": "2026-05-30T07:30:00.000Z",
+      "lat": 57.7044887,
+      "lng": 12.0358552,
+      "locationName": "Skatås Motionscentrum",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1458831885936315/",
+      "title": "Smakvandring på Gränsö, Västervik",
+      "time": "2026-05-30T07:30:00.000Z",
+      "lat": 57.7594186,
+      "lng": 16.6385035,
+      "locationName": "Gränsöleden",
       "category": "other"
     },
     {
@@ -6338,6 +5870,240 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1282520130422521/",
+      "title": "Kakaoceremoni & Soundhealing i Göteborg",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 57.7072326,
+      "lng": 11.9670171,
+      "locationName": "Yoga Treats",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2751695061850671/",
+      "title": "GÖTEBORG — VI ÖPPNAR BUTIK 🔥",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 57.7057089,
+      "lng": 11.9678168,
+      "locationName": "Drottninggatan 37, SE-411 14 Göteborg, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1712576160194916/",
+      "title": "BARNKLÄDER - Loppis i Malmö",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 55.6078358,
+      "lng": 13.048436,
+      "locationName": "Södra Bulltoftavägen 17, SE-212 22 Malmö, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1579786643255646/",
+      "title": "SÄSONGSPREMIÄR CYKELLOPPIS!!! LÖRDAG 28/2 ALLA LÖRDAGAR I MARS 2026",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.8082325,
+      "lng": 17.6253763,
+      "locationName": "Bröderna Berwalds väg 70, 75658 Uppsala, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1359603735852335/",
+      "title": "CYKELLOPPIS ALLA LÖRDAGAR 10-14:30 & SÖNDAGAR 11-14. VÄLKOMMEN!",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.8082325,
+      "lng": 17.6253763,
+      "locationName": "Bröderna Berwalds väg 70, 75658 Uppsala, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1283546740547244/",
+      "title": "Sportbilsdagen lördag 30 maj - Porsche Center Uppsala",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Typsnittgatan 3, 75454 Uppsala, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1464040635227439/",
+      "title": "Loppis på Öster i Örebro 30 maj 2026",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.2691543,
+      "lng": 15.2279643,
+      "locationName": "Oskarstorget, SE-702 14 Örebro, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/972595642142418/",
+      "title": "Kalmars Trädgårdsdag - Vi är på plats",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 56.6628826,
+      "lng": 16.3662382,
+      "locationName": "Skälby gård, Kalmar",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/960623290053088/",
+      "title": "Stor klädloppis på Bergvikskurvan",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 65.5937904,
+      "lng": 22.157025,
+      "locationName": "Grindgatan",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1522547499503623/",
+      "title": "Öppet hus",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Motala Hundsällskap",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1869491587235829/",
+      "title": "Promenadloppis i Solbacka-området ",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.7753592,
+      "lng": 18.7269163,
+      "locationName": "Solbacka, Norrtälje",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/846004604733583/",
+      "title": "Loppis i Härnevi Rotbrunna 25 Enköping ",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.7131342,
+      "lng": 17.0852992,
+      "locationName": "Härnevi-Rotbrunna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/972631712299556/",
+      "title": "Loppis i Härnevi Rotbrunna 25 Enköping ",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.7131342,
+      "lng": 17.0852992,
+      "locationName": "Härnevi-Rotbrunna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1650298869519083/",
+      "title": "Loppis i Härnevi Rotbrunna 25 Enköping",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.7131342,
+      "lng": 17.0852992,
+      "locationName": "Härnevi-Rotbrunna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2027140914821673/",
+      "title": "Loppis i Härnevi Rotbrunna 25 Enköping ",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.7131342,
+      "lng": 17.0852992,
+      "locationName": "Härnevi-Rotbrunna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/988930727069329/",
+      "title": "Spring Makers Market Mora MN - Unicorn Overall Art will be attending",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 60.5987854,
+      "lng": 15.6110496,
+      "locationName": "Mora High School/Activities - Mora, MN",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1277326987615726/",
+      "title": "Kommunikation am Boden / im Sattel - Ausbildungsmodule ",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 65.8275004,
+      "lng": 21.6964105,
+      "locationName": "Hofgut Hüttenmühle, Friedrichsdorf Köppern",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1010847721500709/",
+      "title": "En dag för barnen med Söderköpings kommun",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 58.4806106,
+      "lng": 16.3227877,
+      "locationName": "Hagatorget, SE-614 30 Söderköping, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1741842963469538/",
+      "title": "Pelle Svanslös på Hagatorget",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 58.4806106,
+      "lng": 16.3227877,
+      "locationName": "Hagatorget, SE-614 30 Söderköping, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/982983227606691/",
+      "title": "Kaninhoppning på Nora gård",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.3157219,
+      "lng": 18.5509998,
+      "locationName": "Noravägen 17, Värmdö kommun",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1348136280569454/",
+      "title": "Loppis",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1790343531940250/",
+      "title": "Sport en mai",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Jardin public Fernand Chapsal",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1990545885222541/",
+      "title": "Kurs i fönsterrenovering",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Klåverödsgården, SE-268 76 Kågeröd, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2695542404158191/",
+      "title": "Acroyoga Beginners Workshop",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 55.6891475,
+      "lng": 12.5475784,
+      "locationName": "Hans Tavsens park",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/923161010353108/",
+      "title": "Lampeskærm workshop",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 55.969669,
+      "lng": 12.5412029,
+      "locationName": "Gl. Strandvej, Humlebæk",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1965772800736795/",
+      "title": "Bakluckeloppis, hantverk och utställning",
+      "time": "2026-05-30T08:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Folkets Hus, Västeråsvägen 9, 73141 Köping, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/8f73zddmju5xbwu/2026-05-30/varshower-2026",
       "title": "Vårshower 2026",
       "time": "2026-05-30T08:30:00.000Z",
@@ -6842,6 +6608,132 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/827706783218333/",
+      "title": "Pantbankens värderingsdag i Uppsala!",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 59.8586126,
+      "lng": 17.6387436,
+      "locationName": "Övre Slotts Event & Studios",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1475288730778011/",
+      "title": "Plantloppis at Clarion Hotel Örebro",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 59.2704304,
+      "lng": 15.2137937,
+      "locationName": "Kungsgatan 14, 702 11 Örebro",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2156805045158311/",
+      "title": "IKEA Umeås stora bakluckeloppis",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 63.8053343,
+      "lng": 20.2570282,
+      "locationName": "Marknadsgatan 1, 90422 Umeå",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/742391062140410/",
+      "title": "Ladies Run",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 61.3692582,
+      "lng": 16.3925772,
+      "locationName": "Bollnäs Norr",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1285904470403494/",
+      "title": "Audi Performance & Enthusiast Meet 2026",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 61.7171573,
+      "lng": 17.0929498,
+      "locationName": "Västra vägen 3, SE-824 40 Hudiksvall, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1244359127424300/",
+      "title": "Hästloppis",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 63.1495788,
+      "lng": 17.3884264,
+      "locationName": "Tjäll 250, SE-881 93 Sollefteå, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2268231533920058/",
+      "title": "Loppis i cementfabriken ",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/934569532535100/",
+      "title": "Sjödagens Loppis",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/996701069988975/",
+      "title": "LOPPIS I BOSVEDJAN",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Tryck på bilden för mer information 😉 Bågevägen 59 Ovanför föreningslokalen på gångvägen .",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1291810189302838/",
+      "title": "Yoga with Tej",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Dothan Houston County Library System",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/26225372057136180/",
+      "title": "Föreläsning med Joakim Medin ",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 57.7722376,
+      "lng": 12.2670373,
+      "locationName": "Torpskolan",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1344405013723739/",
+      "title": "Springfield Farmers & Arts Market",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 59.858486,
+      "lng": 17.6823288,
+      "locationName": "1352 North main street, Jacksonville, Fl 32206, Jacksonville, FL",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1414084350475735/",
+      "title": "Eklunds strumpläst-konst",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 59.5137434,
+      "lng": 15.9970475,
+      "locationName": "St Olovsgatan 52, Köping",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1307961201475613/",
+      "title": "UKRAINSKT HANTVERK & MAT",
+      "time": "2026-05-30T09:00:00.000Z",
+      "lat": 59.2000414,
+      "lng": 16.2255788,
+      "locationName": "Hökärr 1, Västra Näshulta",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1504756571036898/",
       "title": "Kristianstad Pride med HBTQ+ Socialdemokraterna Kristianstad ",
       "time": "2026-05-30T09:30:00.000Z",
@@ -6875,6 +6767,51 @@
       "lat": 62.916667,
       "lng": 17.666667,
       "locationName": "Kramfors",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/9arpbrdnnet80zf/2026-05-30/uppsala-dansakademi-dagsforestallning",
+      "title": "Uppsala Dansakademi – Dagsföreställning",
+      "time": "2026-05-30T09:30:00.000Z",
+      "lat": 59.8586126,
+      "lng": 17.6387436,
+      "locationName": "Uppsala Konsert & Kongress, Stora salen, Uppsala",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/771935355636890/",
+      "title": "Morsdags Brunch ",
+      "time": "2026-05-30T09:30:00.000Z",
+      "lat": 61.7281607,
+      "lng": 17.105575,
+      "locationName": "Håstaholmen 1, SE-824 44 Hudiksvall, Sverige, Hudiksvall",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/26527682846854707/",
+      "title": "Orange Day",
+      "time": "2026-05-30T09:30:00.000Z",
+      "lat": 67.8496111,
+      "lng": 20.30625,
+      "locationName": "Luossavaara vid foten av berget., Kiruna",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3431499180365784/",
+      "title": "Saturday Sign-waving - Nora - Antifas Begin Driving Back Fascists",
+      "time": "2026-05-30T09:30:00.000Z",
+      "lat": 59.533333,
+      "lng": 15.016667,
+      "locationName": "Monon Trail",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1515506327035517/",
+      "title": "Lego, Lørdag & Latte",
+      "time": "2026-05-30T09:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Salonen4xk",
       "category": "other"
     },
     {
@@ -7076,6 +7013,42 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1620119039286889/",
+      "title": "Vernissage ",
+      "time": "2026-05-30T10:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Nora Bryggeriområdet",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1713229113041439/",
+      "title": "Kurs: Polaroid transfer",
+      "time": "2026-05-30T10:00:00.000Z",
+      "lat": 61.1529386,
+      "lng": 8.7876653,
+      "locationName": "Waldemar Thranesgate 84A, 0175 Oslo, Norway",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2090838574999995/",
+      "title": "Perfume making workshop ",
+      "time": "2026-05-30T10:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Fargo, ND, United States, Fargo, ND",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/27518226011102995/",
+      "title": "Pop-up workshop! ",
+      "time": "2026-05-30T10:00:00.000Z",
+      "lat": 57.4671946,
+      "lng": 15.8540574,
+      "locationName": "Herrstorpet, Hultsfred",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2084501006276467/",
       "title": "Life force activation (fd KAP) Norrköping ",
       "time": "2026-05-30T10:15:00.000Z",
@@ -7202,6 +7175,69 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/2257774481694837/",
+      "title": "30års jubileum ",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Kopparsviksgatan 6 visby",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/988408787028496/",
+      "title": "Årsmöte ideell förening Underhoven",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 59.2592008,
+      "lng": 18.0946582,
+      "locationName": "Uddevalla, Söndagsvägen 4",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/25985422527826125/",
+      "title": "Växt- och trädgårdsloppis",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 61.3043581,
+      "lng": 17.0534565,
+      "locationName": "Norrtullsgatan 11, SE-826 31 Söderhamn, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/970696972594119/",
+      "title": "Hundlek i vår stora inhägnad!",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 55.6377378,
+      "lng": 13.268606,
+      "locationName": "Flintevångsvägen 233, Staffanstorp",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1464831205084238/",
+      "title": "Motswako Winter Fest",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Rio Casino Hotel, Klerksdorp",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1243847684589445/",
+      "title": "Brooklyn Wine Fest",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Brooklyn Navy Yard",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1427792088838918/",
+      "title": "Swedish Pronunciation workshop",
+      "time": "2026-05-30T11:00:00.000Z",
+      "lat": 55.6004662,
+      "lng": 12.9943956,
+      "locationName": "Kung Oscars väg 11, 205 80 Malmö, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1532342095144297/",
       "title": "Konsert med Dissonantia",
       "time": "2026-05-30T11:30:00.000Z",
@@ -7316,6 +7352,51 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Zorg Leuven",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/wz20vtyc55frreb/2026-05-30/varshow-2026-14-00",
+      "title": "Vårshow 2026 14:00",
+      "time": "2026-05-30T12:00:00.000Z",
+      "lat": 59.4043647,
+      "lng": 18.0358505,
+      "locationName": "Aulan i Danderyds Gymnasium, Danderyd",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/972628151980859/",
+      "title": "Avslutningsfest YWAM Transform i Linköping",
+      "time": "2026-05-30T12:00:00.000Z",
+      "lat": 58.4146081,
+      "lng": 15.6297965,
+      "locationName": "Södra Stånggatan 2, 582 73 Linköping, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/4314447485476715/",
+      "title": "Minifestival i Lund ",
+      "time": "2026-05-30T12:00:00.000Z",
+      "lat": 55.7029296,
+      "lng": 13.1929449,
+      "locationName": "Eidsfoss, Vestfold, Norge",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2273982919802086/",
+      "title": "Karavan till Trollhättan ",
+      "time": "2026-05-30T12:00:00.000Z",
+      "lat": 58.2827931,
+      "lng": 12.2908612,
+      "locationName": "Never Closed Ucklum",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2035866417279151/",
+      "title": "Firefly festival 2026",
+      "time": "2026-05-30T12:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
       "category": "other"
     },
     {
@@ -7436,6 +7517,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1675180473632468/",
+      "title": "Världens Drinkvandring – en del av Världens Fest på stan ",
+      "time": "2026-05-30T13:00:00.000Z",
+      "lat": 62.9316928,
+      "lng": 17.7766881,
+      "locationName": "Torggatan 14, 872 30 Kramfors, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2001625427134428/",
       "title": "On the Rocks - på Vetlandafesten",
       "time": "2026-05-30T13:15:00.000Z",
@@ -7535,6 +7625,42 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/889681357490686/",
+      "title": "Den blomstertid nu kommer",
+      "time": "2026-05-30T14:00:00.000Z",
+      "lat": 61.3513005,
+      "lng": 16.3972013,
+      "locationName": "Sankt Lars kapell, Bollnäs",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1239963811348169/",
+      "title": "Kulturfest ",
+      "time": "2026-05-30T14:00:00.000Z",
+      "lat": 61.7278595,
+      "lng": 17.1018024,
+      "locationName": "Norra Kyrkogatan 9, 824 30 Hudiksvall",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/905144005203704/",
+      "title": "Vårkonsert med S:t Nicolai kyrkokör",
+      "time": "2026-05-30T14:00:00.000Z",
+      "lat": 55.5569777,
+      "lng": 14.3489499,
+      "locationName": "Sankt Nicolai kyrka, Simrishamn",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1717895656051065/",
+      "title": "Körkonsert med sånger från film och musikal",
+      "time": "2026-05-30T14:00:00.000Z",
+      "lat": 59.1964018,
+      "lng": 17.821299,
+      "locationName": "Scheelevägen 41, SE-147 31 Tumba, Sverige",
+      "category": "other"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/yrhmg711l1m8dyh/2026-05-30/raw-gbg-david-batra-thanos-hasse-bronten-xtra",
       "title": "RAW GBG | David Batra, Thanos, Hasse Brontén, XTRA",
       "time": "2026-05-30T14:30:00.000Z",
@@ -7550,6 +7676,15 @@
       "lat": 0,
       "lng": 0,
       "locationName": "VetlandaFesten",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1026384966489072/",
+      "title": "Big AL & ODB’S Meat & Greet comin in Hott to Mora,Mn Beer Club brewery",
+      "time": "2026-05-30T14:30:00.000Z",
+      "lat": 61.0086787,
+      "lng": 14.5442519,
+      "locationName": "BeerClub Brewing",
       "category": "other"
     },
     {
@@ -7649,6 +7784,24 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Ljudaborg",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1653484939316200/",
+      "title": "sala límite tobarra ",
+      "time": "2026-05-30T15:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/27256305813963968/",
+      "title": "Discomaskerad, en kväll fylld av disco, glamour och maskeradstämning. ",
+      "time": "2026-05-30T15:00:00.000Z",
+      "lat": 58.1935946,
+      "lng": 15.0551212,
+      "locationName": "Boxholms Bryggeri",
       "category": "other"
     },
     {
@@ -7784,6 +7937,15 @@
       "lat": 59.328762,
       "lng": 18.0435646,
       "locationName": "Agadair, Agadir, Morocco",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1507001267741359/",
+      "title": "Erica Dans 2026",
+      "time": "2026-05-30T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
       "category": "other"
     },
     {
@@ -7985,6 +8147,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/874329815622900/",
+      "title": "Kurs KOBIDO- Rzeszów ",
+      "time": "2026-05-30T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Celsus Akademia Masażu & terapii",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1452558136442811/",
       "title": "Blackmon Theater",
       "time": "2026-05-30T17:30:00.000Z",
@@ -8066,6 +8237,33 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/943740298221922/",
+      "title": "SPUTNIK ARE BACK",
+      "time": "2026-05-30T18:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Brycee's Tav",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2375747342910615/",
+      "title": "Bo Sundström",
+      "time": "2026-05-30T18:00:00.000Z",
+      "lat": 58.4793798,
+      "lng": 16.3306361,
+      "locationName": "Skönbergagatan 35, 61430 Söderköping, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1607450883633646/",
+      "title": "🪩💃🕺Dansfest - Örebro Salsafriends firar 25-år! 🥳🎈🎉",
+      "time": "2026-05-30T18:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Foajén - Örebro Konserthus",
+      "category": "other"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/vhz9m8ywplxuruj/2026-05-30/magnus-blom",
       "title": "Magnus Blom",
       "time": "2026-05-30T19:00:00.000Z",
@@ -8108,6 +8306,15 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Tierney's Tavern",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1587957399532874/",
+      "title": "MARIN DJ kväll",
+      "time": "2026-05-30T19:00:00.000Z",
+      "lat": 59.3289106,
+      "lng": 18.0658088,
+      "locationName": "Fredsgatan",
       "category": "other"
     },
     {
@@ -8207,6 +8414,24 @@
       "lat": 59.377535,
       "lng": 17.0306732,
       "locationName": "Storgatan 26, Strängnäs",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1246822734071626/",
+      "title": "Live band Tiny Lizard",
+      "time": "2026-05-30T20:00:00.000Z",
+      "lat": 61.3010914,
+      "lng": 17.0495486,
+      "locationName": "Oxtorgsgatan 14, 82632 Söderhamn, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1662846348045796/",
+      "title": "Dj i Kellervenner",
+      "time": "2026-05-30T20:00:00.000Z",
+      "lat": 55.664791,
+      "lng": 12.599539,
+      "locationName": "Hollænderdybet 1, 2300",
       "category": "other"
     },
     {
@@ -8354,6 +8579,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/877797898281608/",
+      "title": "Art + Yoga | Ticketed",
+      "time": "2026-05-31T06:45:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Stanley Place, South Brisbane , Brisbane, QLD, Australia, Queensland 4101",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1191192549763887/",
       "title": "Søndags legestue",
       "time": "2026-05-31T07:00:00.000Z",
@@ -8378,6 +8612,42 @@
       "lat": 56.8547257,
       "lng": 14.8311069,
       "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1299193185222265/",
+      "title": "Sala Skarbek ",
+      "time": "2026-05-31T07:00:00.000Z",
+      "lat": 59.9202268,
+      "lng": 16.6056444,
+      "locationName": "Bełchatów, Bełchatów",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/986893717035637/",
+      "title": "Söndagsrull 31/5 09:00",
+      "time": "2026-05-31T07:00:00.000Z",
+      "lat": 56.0524211,
+      "lng": 14.5869181,
+      "locationName": "Stortorget Sölvesborg",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1423011036275906/",
+      "title": "Neurofeedback avancerad kurs",
+      "time": "2026-05-31T07:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Medeon Science Park, Per Albin Hanssons väg 41, 20512 Malmö, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1999299667621969/",
+      "title": "SUPER søndag",
+      "time": "2026-05-31T07:00:00.000Z",
+      "lat": 56.034641,
+      "lng": 10.035924,
+      "locationName": "Virringvej 77, 8660 Skanderborg, Denmark",
       "category": "other"
     },
     {
@@ -8534,6 +8804,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/766335489206971/",
+      "title": "You are Invited! ",
+      "time": "2026-05-31T08:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Rowlett Community Center",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3753517274805632/",
+      "title": "Hobby & Hantverk Försäljning i logen, LOPPIS på parkeringen",
+      "time": "2026-05-31T08:00:00.000Z",
+      "lat": 65.3883722,
+      "lng": 21.3231875,
+      "locationName": "Älvsbyvägen 376, 94191 Böle, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1149079273969653/",
       "title": "Spela Go (baduk/weiqi) med Visby Go-klubb på Studiefrämjandet",
       "time": "2026-05-31T08:30:00.000Z",
@@ -8549,6 +8837,15 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Teatro Massimo Palermo",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2501594510263222/",
+      "title": "Föreläsning om hälsa, återhämtning och vaskulär-therapi",
+      "time": "2026-05-31T08:30:00.000Z",
+      "lat": 58.2971156,
+      "lng": 12.3417275,
+      "locationName": "Kardanvägen 37, Trollhättans kommun",
       "category": "other"
     },
     {
@@ -8777,12 +9074,39 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1302935624712834/",
+      "title": "Schlossführung: Vom Keller bis zum Boden",
+      "time": "2026-05-31T09:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Sörnziger Weg 1, 09306 Rochlitz, Germany",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1663470858201462/",
       "title": "MORS DAG BRUNCH ✨",
       "time": "2026-05-31T09:30:00.000Z",
       "lat": 55.6410603,
       "lng": 13.2147207,
       "locationName": "Stationsvägen 2, 245 32 Staffanstorp, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.meetup.com/international-board-gamers-gbg/events/312393651/",
+      "title": "🎲 Playing board games at Museum of World Culture 🌍",
+      "time": "2026-05-31T09:30:00.000Z",
+      "lat": 57.6946514,
+      "lng": 11.9895809,
+      "locationName": "Museum of World Culture",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1092871453043448/",
+      "title": "Nya Stockholm – sekelskiftet i ett nötskal",
+      "time": "2026-05-31T09:30:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Ryssgården, Slussen, 116 46 Stockholm, Sweden",
       "category": "other"
     },
     {
@@ -8831,6 +9155,42 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/964227739835873/",
+      "title": "Välkommen att besöka vårt visningshus på Husknuten i Göteborg!",
+      "time": "2026-05-31T10:00:00.000Z",
+      "lat": 57.7072326,
+      "lng": 11.9670171,
+      "locationName": "Husknuten, SE-421 32 Västra Frölunda, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1242530747950937/",
+      "title": "Morsdag brunch at Clarion Hotel Örebro",
+      "time": "2026-05-31T10:00:00.000Z",
+      "lat": 59.2704304,
+      "lng": 15.2137937,
+      "locationName": "Kungsgatan 14, 702 11 Örebro",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1423067966288811/",
+      "title": "Utställning: Ur våra gömmor",
+      "time": "2026-05-31T10:00:00.000Z",
+      "lat": 61.3010358,
+      "lng": 17.0446047,
+      "locationName": "Oxtorgsgatan 5, 82632 Söderhamn, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/992350059972272/",
+      "title": "Fae Fest",
+      "time": "2026-05-31T10:00:00.000Z",
+      "lat": 60.6926603,
+      "lng": 10.7996426,
+      "locationName": "BREC's Forest Community Park (Baton Rouge, LA)",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/815908120799924/",
       "title": "Söndagsvisning av domkyrkan ",
       "time": "2026-05-31T10:30:00.000Z",
@@ -8873,6 +9233,24 @@
       "lat": 57.4837397,
       "lng": 12.0764323,
       "locationName": "Kungsbacka Teater",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1355532669762253/",
+      "title": "Blommor & Betong Textol & Akvarell ",
+      "time": "2026-05-31T11:00:00.000Z",
+      "lat": 59.2765933,
+      "lng": 14.0539056,
+      "locationName": "Skulpturvägen 4 Kristinehamn",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/953025067636115/",
+      "title": "Fira mors dag på Maritim",
+      "time": "2026-05-31T11:00:00.000Z",
+      "lat": 55.5569152,
+      "lng": 14.3534232,
+      "locationName": "Hamngatan 31, Simrishamn",
       "category": "other"
     },
     {
@@ -8954,6 +9332,15 @@
       "lat": 56.8547257,
       "lng": 14.8311069,
       "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1453560609901363/",
+      "title": "Mors dag med afternoon tea på Slottsholmen",
+      "time": "2026-05-31T12:00:00.000Z",
+      "lat": 57.7601978,
+      "lng": 16.6417334,
+      "locationName": "Slottsholmsvägen 10, 59333 Västervik, Sweden",
       "category": "other"
     },
     {
@@ -9065,6 +9452,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/836111825587819/",
+      "title": "Elins stora längtan",
+      "time": "2026-05-31T13:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "IOGT-NTO 79 Vidar Söderköping",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1099442035692583/",
       "title": "Opera Bio: ROYAL BALLET & OPERA 🎵",
       "time": "2026-05-31T13:30:00.000Z",
@@ -9155,6 +9551,42 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1296707925936646/",
+      "title": "Baked Beans Jazzers hos Gladjazz i Helsingborg",
+      "time": "2026-05-31T14:00:00.000Z",
+      "lat": 56.0505397,
+      "lng": 12.6882711,
+      "locationName": "Helsingborgs stadsteater",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1006534228579436/",
+      "title": "Älmhults IF - IFK Värnamo",
+      "time": "2026-05-31T14:00:00.000Z",
+      "lat": 56.5555901,
+      "lng": 14.132938,
+      "locationName": "Idrottsgatan 1, 34336 Älmhult, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/949908217926686/",
+      "title": "Nora's Graduation Party",
+      "time": "2026-05-31T14:00:00.000Z",
+      "lat": 59.533333,
+      "lng": 15.016667,
+      "locationName": "North Shelter, Winterset City Park",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/952648470960758/",
+      "title": "SJÆLEFULD SØNDAG ",
+      "time": "2026-05-31T14:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Houseofmindbodyandsoul",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1487418433075976/",
       "title": "SUMMER CAMP 2026",
       "time": "2026-05-31T14:15:00.000Z",
@@ -9215,6 +9647,24 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Kristinehamn Conference Centre",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/951371017660463/",
+      "title": "Sundays are back @ the Stark Brewing Company",
+      "time": "2026-05-31T15:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Stark Brewing Company",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/962222759925658/",
+      "title": "ABBA-konsert",
+      "time": "2026-05-31T15:00:00.000Z",
+      "lat": 56.0097041,
+      "lng": 12.9504909,
+      "locationName": "Ekeby Kyrka, Skåne",
       "category": "other"
     },
     {
@@ -9281,6 +9731,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/3529268010583547/",
+      "title": "En underbar låtskatt",
+      "time": "2026-05-31T16:00:00.000Z",
+      "lat": 58.347871,
+      "lng": 11.9400808,
+      "locationName": "Uddevalla kyrka",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2139590920162887/",
+      "title": "Quiz night ",
+      "time": "2026-05-31T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Gilwern bowls club",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1195843672502885/",
       "title": "Bio i Kosta: Saltstigen",
       "time": "2026-05-31T16:30:00.000Z",
@@ -9335,6 +9803,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1331674592148217/",
+      "title": "ÓPERA AIDA ",
+      "time": "2026-05-31T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Nuevo Teatro Infanta Leonor",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1062768426922818/",
       "title": "Jens med Nöje - Quiz",
       "time": "2026-05-31T17:30:00.000Z",
@@ -9376,6 +9853,33 @@
       "time": "2026-05-31T22:00:00.000Z",
       "lat": 56.8547257,
       "lng": 14.8311069,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1307276437628356/",
+      "title": "Öppet möte om arbete och arbetslöshet i Härnösand Aktiv arbetsmarknadspolitik i fokus",
+      "time": "2026-05-31T22:00:00.000Z",
+      "lat": 62.6427257,
+      "lng": 17.932043,
+      "locationName": "Härnösands folkhögskola",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/885233741003815/",
+      "title": "Asa SOSIALY ",
+      "time": "2026-05-31T22:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1550871306447900/",
+      "title": "Asa SOSIALY ",
+      "time": "2026-05-31T22:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
       "locationName": "",
       "category": "other"
     },
@@ -9488,12 +9992,39 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/852193380919403/",
+      "title": "Dans&glede ",
+      "time": "2026-06-01T15:00:00.000Z",
+      "lat": 58.8684643,
+      "lng": 5.7108327,
+      "locationName": "Somaveien 130, Sandnes, Norway",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/2332446513835172/",
       "title": "Yoga",
       "time": "2026-06-01T15:30:00.000Z",
       "lat": 0,
       "lng": 0,
       "locationName": "250 Trail Dr, Moundsville, WV, United States, West Virginia 26041",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1516338433435064/",
+      "title": "NW IN THE PARK - Gratis utomhusträning med Nordic Wellness",
+      "time": "2026-06-01T15:30:00.000Z",
+      "lat": 59.2659239,
+      "lng": 15.2292258,
+      "locationName": "Isgatan 7, 70223 Örebro",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/695056127024357/",
+      "title": "Gokart-träning Mittsverigebanan",
+      "time": "2026-06-01T15:30:00.000Z",
+      "lat": 62.5982681,
+      "lng": 17.810295,
+      "locationName": "Tjärnsjö 100, 87191 Härnösand, Sweden",
       "category": "other"
     },
     {
@@ -9587,6 +10118,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/807702435405341/",
+      "title": "Fiber Arts Craft Session",
+      "time": "2026-06-01T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "2260 S Vandeventer Ave, St Louis, MO 63110-3363, United States",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/900691268963910/",
       "title": "SIND-klubben Dianalund",
       "time": "2026-06-01T16:30:00.000Z",
@@ -9614,6 +10154,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1441930800253870/",
+      "title": "Kundalini Yoga",
+      "time": "2026-06-01T16:45:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "158 Rue Théodore Verhaegen, 1060 Brussels, Belgium",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1554741955588331/",
       "title": "AdemDans",
       "time": "2026-06-01T17:00:00.000Z",
@@ -9638,6 +10187,33 @@
       "lat": 55.6549009,
       "lng": 13.645316,
       "locationName": "Björka kyrkoväg 33 27594 Sjöbo",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/727534490429066/",
+      "title": "Pub Quiz!",
+      "time": "2026-06-01T17:00:00.000Z",
+      "lat": 56.0482015,
+      "lng": 12.6942519,
+      "locationName": "Norra Storgatan 14, 252 20 Helsingborg, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1332469301649412/",
+      "title": "Séance de sport ",
+      "time": "2026-06-01T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Nice, Côte d'Azur, France",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/983989381277337/",
+      "title": "USG 3D dan 4D",
+      "time": "2026-06-01T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Manukan Lor",
       "category": "other"
     },
     {
@@ -9677,6 +10253,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/731113636601652/",
+      "title": "Kurs tańca towarzyskiego",
+      "time": "2026-06-01T18:00:00.000Z",
+      "lat": 59.3414317,
+      "lng": 18.0736136,
+      "locationName": "ul. Kościelna 65, 05 - 462 Wiazowna, Poland",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1661723285014870/",
       "title": "Marknadsförsäljning av GOD IN ACTION",
       "time": "2026-06-02T06:00:00.000Z",
@@ -9710,6 +10295,24 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Järpen Bion",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/960641156352285/",
+      "title": "Babysång – för dig som är föräldraledig i Gällivare",
+      "time": "2026-06-02T08:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Kvarnbacksvägen 1, SE-982 34 Gällivare, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1430142351430298/",
+      "title": "VAUBAN SPORT SESSIONS",
+      "time": "2026-06-02T10:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "43°35 N- 07°08'E, 06600 Antibes, France",
       "category": "other"
     },
     {
@@ -9767,6 +10370,15 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1344446327498064/",
+      "title": "Romantasy på 30 minuter",
+      "time": "2026-06-02T15:00:00.000Z",
+      "lat": 67.84933,
+      "lng": 20.3022864,
+      "locationName": "Stadshustorget 10, 98185 Kiruna, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/1650796752922941/",
       "title": "Kristen djupmeditation",
       "time": "2026-06-02T15:30:00.000Z",
@@ -9794,6 +10406,24 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1398768255159181/",
+      "title": "Afterwork jeux",
+      "time": "2026-06-02T15:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "le bourg, 43260 Saint-Étienne-Lardeyrol, France",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/3098671920325788/",
+      "title": "Pilates begynner kurs",
+      "time": "2026-06-02T15:30:00.000Z",
+      "lat": 58.8404029,
+      "lng": 5.71112,
+      "locationName": "Beryllveien 2B, 4318 Sandnes, Norge",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/4210736002506683/",
       "title": "Trim i Sal",
       "time": "2026-06-02T16:00:00.000Z",
@@ -9812,12 +10442,30 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/1510440690477259/",
+      "title": "Bachata Fusion danskurs",
+      "time": "2026-06-02T16:00:00.000Z",
+      "lat": 59.2695781,
+      "lng": 15.214773,
+      "locationName": "Nygatan 38, 702 11 Örebro, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/4296033697326202/",
       "title": "Livsyoga - Kundalini i Visby",
       "time": "2026-06-02T16:30:00.000Z",
       "lat": 0,
       "lng": 0,
       "locationName": "Gotlands Hälsocenter",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/4748014538816288/",
+      "title": "Klubbkvällar tisdagar kl 18.30",
+      "time": "2026-06-02T16:30:00.000Z",
+      "lat": 62.6414822,
+      "lng": 17.9584068,
+      "locationName": "Sälsten 9, SE-871 33 Härnösand, Sverige",
       "category": "other"
     },
     {
@@ -9836,6 +10484,24 @@
       "lat": 58.9395679,
       "lng": 5.7027385,
       "locationName": "78 Picton Street, Howick, Auckland, New Zealand 2145",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1929303974551105/",
+      "title": "Kizomba Tuesdays Stockholm  Outdoor ",
+      "time": "2026-06-02T17:00:00.000Z",
+      "lat": 59.328633,
+      "lng": 18.0250783,
+      "locationName": "Rålambshovsparken",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1895332924743638/",
+      "title": "Bibeln från början till slut - en läsecirkel med Svenska kyrkan i Örebro",
+      "time": "2026-06-02T17:00:00.000Z",
+      "lat": 59.2798953,
+      "lng": 15.2197173,
+      "locationName": "Sofiagatan 2d, SE-703 64 Örebro, Sverige",
       "category": "other"
     },
     {
@@ -9866,6 +10532,33 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/864296603194841/",
+      "title": "Beta Stand-up @ Palatset, Linköping - VT26",
+      "time": "2026-06-02T18:00:00.000Z",
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Drottningatan 23, Linköping, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/924075520682996/",
+      "title": "Karaoke World Championships are Coming to Woodstock",
+      "time": "2026-06-02T18:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Good Times Woodstock",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1217216620090530/",
+      "title": "Offene Yoga Stunde",
+      "time": "2026-06-02T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Yoga Vidya Zentrum Dresden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/882984334089787/",
       "title": "AFTERWORK SALSA/BACHATA",
       "time": "2026-06-02T18:45:00.000Z",
@@ -9875,12 +10568,93 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/766604466391609/",
+      "title": "Morgonmässa",
+      "time": "2026-06-03T06:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Härnösands domkyrka - Svenska kyrkan Härnösand",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/797126729351958/",
+      "title": "Zumba Gold® med fika i Dansarnas lokal i Linköping, onsdagar året om",
+      "time": "2026-06-03T07:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "S:t Larsgatan 3, Linköping (ingång Järnvägsgatan)",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/942252151823768/",
       "title": "ICA Supermarket Stationen Landskrona",
       "time": "2026-06-03T10:00:00.000Z",
       "lat": 0,
       "lng": 0,
       "locationName": "ICA Stationen Landskrona",
+      "category": "other"
+    },
+    {
+      "id": "https://upplev.vaxjo.se/evenemang/evenemang/2026-05-26-lnu-design---examensutstallning",
+      "title": "LNU Design - Examensutställning",
+      "time": "2026-06-03T13:00:00.000Z",
+      "lat": 56.877,
+      "lng": 14.8115,
+      "locationName": "Mötesplats Vattentorget",
+      "category": "culture"
+    },
+    {
+      "id": "https://www.facebook.com/events/1769220744487582/",
+      "title": "Gratis kvällsträning i Hoglands park",
+      "time": "2026-06-03T14:15:00.000Z",
+      "lat": 56.1609731,
+      "lng": 15.5867036,
+      "locationName": "Trossö, 37115 Karlskrona, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.meetup.com/stockholm-mlops-community/events/314439389/",
+      "title": "Air-Gapped MLOps",
+      "time": "2026-06-03T15:00:00.000Z",
+      "lat": 59.3251172,
+      "lng": 18.0710935,
+      "locationName": "Stockholm",
+      "category": "other"
+    },
+    {
+      "id": "https://www.meetup.com/seb-in-the-service-of-enterprise/events/314860055/",
+      "title": "Trustworthy AI in Finance",
+      "time": "2026-06-03T15:00:00.000Z",
+      "lat": 59.3311834,
+      "lng": 18.0727292,
+      "locationName": "SEB Office",
+      "category": "other"
+    },
+    {
+      "id": "https://www.meetup.com/tech-education-and-mentorship/events/314945008/",
+      "title": "Building AI-Driven Products in Practice",
+      "time": "2026-06-03T15:00:00.000Z",
+      "lat": 56.0477698,
+      "lng": 12.6917867,
+      "locationName": "Drottninggatan 20",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1851305312195916/",
+      "title": "Wednesday evenings are for WildHood",
+      "time": "2026-06-03T15:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "WildWood Outfitters",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/723468763960689/",
+      "title": "Hatha Vinyasa YOGA",
+      "time": "2026-06-03T15:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Arendseer Straße 4, 39606 Osterburg (Altmark), Germany",
       "category": "other"
     },
     {
@@ -9902,6 +10676,42 @@
       "category": "culture"
     },
     {
+      "id": "https://www.facebook.com/events/2482923488786451/",
+      "title": "Kurs i yoga & meditation på Linköpings buddhistcenter",
+      "time": "2026-06-03T16:00:00.000Z",
+      "lat": 58.4160283,
+      "lng": 15.6189238,
+      "locationName": "Stureplan 2, 58221 Linköping, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/874244565234992/",
+      "title": "Den Heliga Cirkeln - första onsdagen varje månad",
+      "time": "2026-06-03T16:00:00.000Z",
+      "lat": 56.1620033,
+      "lng": 15.5871355,
+      "locationName": "Ronnebygatan 41, 371 33 Karlskrona, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/25604156675919318/",
+      "title": "Afterwork Special",
+      "time": "2026-06-03T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Langendorfer Straße 155, 56564 Neuwied, Germany",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2171934813650951/",
+      "title": "Chakra Dans & Yoga För Kvinnor",
+      "time": "2026-06-03T16:00:00.000Z",
+      "lat": 57.6949784,
+      "lng": 11.9310911,
+      "locationName": "Koopmansgatan 10, 41456 Gothenburg, Sweden",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/649904011210264/",
       "title": "Yoga at BrewHound",
       "time": "2026-06-03T16:30:00.000Z",
@@ -9920,12 +10730,192 @@
       "category": "other"
     },
     {
+      "id": "https://www.facebook.com/events/4518260281735358/",
+      "title": "PUBQUIZ",
+      "time": "2026-06-03T17:00:00.000Z",
+      "lat": 59.3765362,
+      "lng": 17.027521,
+      "locationName": "Gyllenhjelmsgatan 20, Strängnäs",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1558902542140311/",
+      "title": "BioEnergetica",
+      "time": "2026-06-03T17:15:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Laborratorio Olistico Samsara, Via Pacinotti 24bis Torino",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/26029709703359182/",
+      "title": "Sevillanas are Back",
+      "time": "2026-06-03T17:30:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Happy Soul Dance Studios",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2955636944626833/",
+      "title": "Tura de la Nora",
+      "time": "2026-06-03T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Timișoara, Restaurant Nora, Bd. Dâmbovița 40",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1618294295937951/",
+      "title": "Tecnica Femminile - Nora Withanowski ",
+      "time": "2026-06-03T17:30:00.000Z",
+      "lat": 59.533333,
+      "lng": 15.016667,
+      "locationName": "Art Gallery Civico 103",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1621457712412552/",
+      "title": "MediYoga-kurs",
+      "time": "2026-06-03T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Yoga Livet",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1136944681880149/",
+      "title": "Quiz Night",
+      "time": "2026-06-03T18:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "23 Church Street, Madeley, Telford",
+      "category": "other"
+    },
+    {
       "id": "https://www.facebook.com/events/858194877015717/",
       "title": "OperaPub",
       "time": "2026-06-03T18:30:00.000Z",
       "lat": 60.391402,
       "lng": 5.321364,
       "locationName": "Vaskerelven 8, 5014 Bergen, Norway",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1737467944353320/",
+      "title": "Marknad på Kungsbacka torg",
+      "time": "2026-06-04T06:00:00.000Z",
+      "lat": 57.3172006,
+      "lng": 12.1748904,
+      "locationName": "Kungsbacka Torg",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/gpfnel94kgfpblb/2026-06-04/sagotraffar-med-barselevisning-for-foraldralediga",
+      "title": "Sagoträffar med bärselevisning för föräldralediga",
+      "time": "2026-06-04T11:00:00.000Z",
+      "lat": 59.3251172,
+      "lng": 18.0710935,
+      "locationName": "Etnografiska museet, Stockholm",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1644739663175012/",
+      "title": "Himlakul 0-100 i Lindesberg",
+      "time": "2026-06-04T14:30:00.000Z",
+      "lat": 59.5914993,
+      "lng": 15.2263031,
+      "locationName": "Kungsgatan 17, SE-711 30 Lindesberg, Sverige",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/881022681417029/",
+      "title": "Casual Vinprovning",
+      "time": "2026-06-04T15:00:00.000Z",
+      "lat": 55.7907888,
+      "lng": 13.1100792,
+      "locationName": "Stenhuggaregatan 4, 24430 Kävlinge, Sweden",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/fh9v6kxpgr61ye9/2026-06-04/ville-och-valle-och-viktor-premiar",
+      "title": "Ville och Valle och Viktor premiär",
+      "time": "2026-06-04T15:40:00.000Z",
+      "lat": 64.7520185,
+      "lng": 20.959339,
+      "locationName": "Medleforsparken, Skellefteå",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/wk1u4rgjuuj05yp/2026-06-04/full-english-standup-comedy",
+      "title": "Full English Standup Comedy",
+      "time": "2026-06-04T16:00:00.000Z",
+      "lat": 59.3251172,
+      "lng": 18.0710935,
+      "locationName": "Mariatorget Pitchers-Casino, Stockholm",
+      "category": "culture"
+    },
+    {
+      "id": "https://www.facebook.com/events/1796276551322359/",
+      "title": "All Crafts Are Beautiful",
+      "time": "2026-06-04T16:00:00.000Z",
+      "lat": 63.4010888,
+      "lng": 13.0822241,
+      "locationName": "Dortheavej 61, 2400 Copenhagen, Denmark",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/2674536232907637/",
+      "title": "Theater Thursday",
+      "time": "2026-06-04T16:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "7 W Carolina Ave, Memphis, TN, United States, Tennessee 38103",
+      "category": "other"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/zgmtzkm7fww3ut5/2026-06-04/pianos-and-strings-beyond-borders",
+      "title": "Pianos and Strings Beyond Borders",
+      "time": "2026-06-04T16:30:00.000Z",
+      "lat": 59.8586126,
+      "lng": 17.6387436,
+      "locationName": "Uppsala Konsert & Kongress, Sal B, Uppsala",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1852020395431334/",
+      "title": "SuperQuiz // Terminalen ",
+      "time": "2026-06-04T17:00:00.000Z",
+      "lat": 61.1529386,
+      "lng": 8.7876653,
+      "locationName": "Keiser Wilhelmsgate 6, 6003 Ålesund, Norway",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/26049176138033786/",
+      "title": "Plankan Comedy Club",
+      "time": "2026-06-04T17:00:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Musikhuset Gävle",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1936051544009094/",
+      "title": "🎶 Ruby DJ Nights 🎶",
+      "time": "2026-06-04T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Ruby Marie Hotel & Bar (Wien, Austria)",
+      "category": "other"
+    },
+    {
+      "id": "https://www.facebook.com/events/1413339360434604/",
+      "title": "Comedy Open Mic",
+      "time": "2026-06-04T17:30:00.000Z",
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Hub City Station Event Center",
       "category": "other"
     },
     {

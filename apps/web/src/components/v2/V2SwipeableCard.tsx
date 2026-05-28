@@ -273,25 +273,23 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     // Calculate opacity (slightly fades out at edges)
     const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
 
-    // Position-indikator: visa "X/Y" när ett event är valt, annars "Y Unika Event"
     const currentIndex = selectedEvent ? events.findIndex(evt => evt.id === selectedEvent.id) : -1;
-    const positionLabel = selectedEvent && currentIndex >= 0
-        ? `${currentIndex + 1}/${events.length}`
-        : `${events.length} Unika Event`;
 
     return (
         <>
-            {/* Position-knapp under Idag-knappen i vänsterkanten — klick går till nästa nummer (eller väljer första) */}
+            {/* Position-knapp under Idag-knappen — visas bara när ett event är valt */}
+            {selectedEvent && currentIndex >= 0 && (
             <button
                 type="button"
-                onClick={selectedEvent ? handleNextSequential : () => onSelectEvent(events[0])}
-                aria-label={selectedEvent ? 'Gå till nästa event i nummerordning' : 'Välj första eventet'}
-                title={selectedEvent ? 'Gå till nästa nummer' : 'Välj första eventet'}
+                onClick={handleNextSequential}
+                aria-label="Gå till nästa event i nummerordning"
+                title="Gå till nästa nummer"
                 className={`fixed left-4 z-[1001] bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer ${highlightPosition ? 'animate-today-pulse' : ''}`}
                 style={{ top: 80 }}
             >
-                {positionLabel}
+                {`${currentIndex + 1}/${events.length}`}
             </button>
+            )}
         {selectedEvent && (
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
             {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}

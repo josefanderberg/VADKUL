@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -52,7 +52,7 @@ function MapController({ selectedEvent, cardExpanded }: { selectedEvent: LinkEve
         const newCenterPx = L.point(targetPx.x, targetPx.y + mapSize.y * (0.5 - targetYRatio));
         const newCenter = map.unproject(newCenterPx, targetZoom);
 
-        map.flyTo(newCenter, targetZoom, { duration: 1.5 });
+        map.setView(newCenter, targetZoom, { animate: true, duration: 0.5 } as any);
     }, [selectedEvent, cardExpanded, map]);
 
     return null;
@@ -70,22 +70,23 @@ interface V2MapProps {
 
 export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false, onCenterChange }: V2MapProps) {
 
+    // Cache icon objects — Leaflet re-creates DOM for every new icon reference.
+    // Key: "selected:saved:discarded:count" → stable object across renders.
+    const iconCache = useRef<Map<string, L.DivIcon>>(new Map());
+
     const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1) => {
+        const cacheKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}`;
+        const cached = iconCache.current.get(cacheKey);
+        if (cached) return cached;
 
-        // Sparat event: Vit bakgrund med en vit prick
-        // Vanligt event: Slate-bakgrund med vit ram
         const bgClass = isSaved ? 'bg-white border-white' : 'bg-slate-800 border-white';
-        const emoji = '🎟️'; // Använd biljett för båda
-
-        // Om markerad som avvisad (swipad vänster), gör den semi-transparent och klickbar men diskret
+        const emoji = '🎟️';
         const opacityClass = isDiscarded ? 'opacity-30 grayscale' : '';
-
-        // Badge med antal events på samma punkt (när >1 event delar koord).
         const countBadge = count > 1
             ? `<div class="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 bg-blue-600 text-white text-[11px] font-bold rounded-full border-2 border-white shadow-md flex items-center justify-center">${count > 99 ? '99+' : count}</div>`
             : (isSaved ? '<div class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-slate-200 shadow-md animate-pulse"></div>' : '');
 
-        return L.divIcon({
+        const icon = L.divIcon({
             className: 'custom-marker-teardrop',
             html: `
         <div class="relative group transition-all duration-300 ${isSelected ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1'} ${opacityClass}">
@@ -99,16 +100,21 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
             iconSize: [48, 65],
             iconAnchor: [24, 58],
         });
+        iconCache.current.set(cacheKey, icon);
+        return icon;
     };
 
     // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
-    const groups = new Map<string, LinkEvent[]>();
-    for (const evt of events) {
-        if (!evt.lat || !evt.lng) continue;
-        const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
-        const bucket = groups.get(key);
-        if (bucket) bucket.push(evt); else groups.set(key, [evt]);
-    }
+    const groups = useMemo(() => {
+        const map = new Map<string, LinkEvent[]>();
+        for (const evt of events) {
+            if (!evt.lat || !evt.lng) continue;
+            const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+            const bucket = map.get(key);
+            if (bucket) bucket.push(evt); else map.set(key, [evt]);
+        }
+        return map;
+    }, [events]);
 
     // Default to Växjö
     const initialCenter: [number, number] = [56.8777, 14.8091];
@@ -167,7 +173,9 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
 function MapEvents({ onMapClick, onCenterChange }: { onMapClick: () => void; onCenterChange?: (lat: number, lng: number) => void }) {
     const map = useMapEvents({
         click: () => onMapClick(),
-        move: () => {
+        // moveend fires once when panning stops — not 60×/sec like 'move'.
+        // mapCenter is only needed for event placement (creationMode), so this is fine.
+        moveend: () => {
             if (!onCenterChange) return;
             const c = map.getCenter();
             onCenterChange(c.lat, c.lng);

@@ -85,12 +85,12 @@ export default function CloudPopup({
           ${leaving ? 'opacity-0' : 'opacity-100'}
           animate-cloud-float
         `}
-        style={{ willChange: 'opacity' }}
+        style={{ willChange: 'opacity', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.18))' }}
       >
         {/* Cloud SVG background */}
         <svg
           viewBox="0 0 340 240"
-          className={`${sizeClass} drop-shadow-2xl`}
+          className={sizeClass}
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Main cloud body – overlapping puffs all around for a soft, irregular silhouette */}

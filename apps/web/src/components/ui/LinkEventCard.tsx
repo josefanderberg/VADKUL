@@ -64,15 +64,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [revealStep]);
 
-    // Sekundärrad: visa specifik extractedAddress om vi har en, annars koordinater (placeringen på kartan).
     const secondaryAddress = (() => {
         if (!showFullAddress) return null;
         if (isSpecificAddress(linkEvent.extractedAddress)
             && linkEvent.extractedAddress !== linkEvent.locationName) {
             return linkEvent.extractedAddress as string;
-        }
-        if (typeof linkEvent.lat === 'number' && typeof linkEvent.lng === 'number') {
-            return `${linkEvent.lat.toFixed(4)}, ${linkEvent.lng.toFixed(4)}`;
         }
         return null;
     })();
@@ -155,12 +151,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </button>
                 )}
 
-                <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors pr-10">
-                        {linkEvent.title}
-                    </h3>
+                <div className="flex justify-between items-center mb-3">
+                    {/* Fixed 2-line height — single-line titles center vertically */}
+                    <div className="flex-1 min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden">
+                        <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors pr-10 line-clamp-2 w-full">
+                            {linkEvent.title}
+                        </h3>
+                    </div>
                     {revealStep >= 1 && (
-                        <button 
+                        <button
                             onClick={handleVisitSite}
                             className="shrink-0 bg-green-600 hover:bg-green-700 text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg animate-in fade-in zoom-in duration-300"
                         >
@@ -169,16 +168,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-x-4 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden">
+                    <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
-                        <span>{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
+                        <span className="whitespace-nowrap">{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <MapPin size={14} className="text-primary" />
-                        <span className="text-sm">{linkEvent.locationName}</span>
+                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                        <MapPin size={14} className="text-primary shrink-0" />
+                        <span className="text-sm truncate">{linkEvent.locationName}</span>
                         {secondaryAddress && (
-                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
                                 · {secondaryAddress}
                             </span>
                         )}
@@ -198,8 +197,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         <span className="text-xs font-black text-black dark:text-white truncate">{linkEvent.hostName || 'Okänd'}</span>
                     </div>
 
-                    <div className="flex items-center shrink-0">
-                        {attendeeCount > 0 && (
+                    <div className="flex items-center shrink-0 h-9">
+                        {attendeeCount > 0 ? (
                             <div className="flex -space-x-2 overflow-hidden py-1">
                                 {dummyAvatars.map((src, i) => (
                                     <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-card bg-slate-100 overflow-hidden border border-border/10">
@@ -210,6 +209,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     {attendeeCount > 2 ? `+${attendeeCount - 2}` : `+${attendeeCount}`}
                                 </div>
                             </div>
+                        ) : (
+                            <span className="text-[10px] text-slate-300 font-medium">Inga anmälda</span>
                         )}
                     </div>
                 </div>

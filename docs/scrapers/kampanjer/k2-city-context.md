@@ -4,6 +4,8 @@ Status: PÅGÅR
 Startad: 2026-05-27
 Klart-kriterium: <10 % events i körning där `lat=0,lng=0` trots att en svensk stad finns i `extractedAddress`.
 
+Snapshot 2026-05-28: **347/1325 FB-events = 26% lat=0,lng=0** (lokalt DB). Firebase-ekvivalent: 72/277 = 26%.
+
 ## Problem
 
 72/277 (26 %) av nattens körning har `lat=0, lng=0`. Många har faktiskt stad i adressen:
@@ -26,6 +28,15 @@ SQL: `SELECT title, locationName FROM link_events WHERE lat=0 AND lng=0` (Firest
 2. Explicit retry-strategi: om första försöket returnerar tomt, retry på bara staden (städer kan vi extrahera från adressen lika gärna som från kön).
 3. Markera resultatet med en `locationPrecision`-flagga: `exact` | `city` | `none`. Då kan kartan visa stads-nivå-träffar annorlunda än exakta pin.
 
+## Implementering (2026-05-28)
+
+Implementerat i [`facebook/index.ts`](../../../apps/scraper/src/scrapers/facebook/index.ts):
+
+1. **Retry 1** — scannar `extractedAddress` efter inbäddad stad via `SWEDISH_GEO_CITIES` (exporterad från `venueCoordinates.ts`). Om stad hittas: retry med `"${addr}, ${stad}"`.
+2. **Retry 2** — stad-nivå fallback: om allt ovan misslyckas, geocoda enbart `"${stad}, Sverige"`. Ger ungefärlig position istället för lat=0.
+
+`SWEDISH_GEO_CITIES` är en lista med ~75 svenska städer exporterad från `venueCoordinates.ts`.
+
 ## Resultat
 
-(Fylls i efter nästa körning.)
+(Mäts i körning 2026-05-29.)

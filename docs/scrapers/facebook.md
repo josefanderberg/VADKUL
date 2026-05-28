@@ -6,15 +6,18 @@ Källa: 1073/1200 events (89%). Scraper: [src/scrapers/facebook/](../../apps/scr
 
 ## Nu-läget
 
-Snapshot: `events.db` 2026-05-27.
+Snapshot: `events.db` 2026-05-28.
 
 | Mått | Antal | % av FB |
 |---|---|---|
-| Totalt | 1073 | 100 |
-| `lat=0, lng=0` | 275 | 26 |
-| `locationName=''` | 63 | 6 |
-| `hostName='Facebook'` (fallback) | 509 | 47 |
-| Verifierad lokation | 798 | 74 |
+| Totalt | 1325 | 100 |
+| `lat=0, lng=0` | 347 | 26 |
+| `locationName` saknas | 76 | 6 |
+| `hostName` anonym | 636 | 48 |
+| `isLocationVerified=1` | 978 | 74 |
+| `isHostVerified=1` | 0 | 0 |
+| `category='other'` | 1325 | **100** |
+| Utländska koord | 4 | 0.3 |
 
 Tre observerade *fel-mönster*:
 

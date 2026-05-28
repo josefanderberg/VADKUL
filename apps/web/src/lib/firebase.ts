@@ -24,13 +24,13 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'europe-west1'); // Matchar serverns region
 
-// Kika om vi ska ansluta till lokala emulatorer
-const useEmulator = 
+// Kika om vi ska ansluta till lokala emulatorer.
+// Kräver explicit opt-in — ansluter ALDRIG automatiskt bara för att du är på localhost.
+const useEmulator =
   typeof window !== 'undefined' && (
     process.env.NEXT_PUBLIC_USE_EMULATOR === 'true' ||
     !!process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST ||
-    firebaseConfig.projectId?.startsWith('demo-') ||
-    (window.location.hostname === 'localhost' && process.env.NEXT_PUBLIC_USE_EMULATOR !== 'false')
+    firebaseConfig.projectId?.startsWith('demo-')
   );
 
 if (useEmulator) {
