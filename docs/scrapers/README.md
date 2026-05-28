@@ -1,8 +1,15 @@
 # Scraper-analys
 
-Mappen håller analyser per scrapingkälla. En fil per källa (eller en gemensam för små/liknande). Syftet: spåra vad vi vet, vad vi inte vet, och vad vi väljer att göra — utan att rusa till en slutsats.
+Mappen håller analyser per scrapingkälla samt löpande spårning av förbättringar. Syftet: spåra vad vi vet, vad vi inte vet, och vad vi väljer att göra — utan att rusa till en slutsats.
 
-## Filer
+## Var börjar jag?
+
+1. [STATUS.md](STATUS.md) — entry-point. Senaste körning, aktiva kampanjer, topp-3 problem. Läs först.
+2. [processen.md](processen.md) — vad händer i en körning, steg för steg. Läs om du är ny.
+3. [kampanjer/](kampanjer/) — vad vi jobbar med just nu. En kampanj = en sak.
+4. [runs/](runs/) — kort daganteckning per körning. Spårar framsteg över tid.
+
+## Per källa
 
 - [facebook.md](facebook.md) — egen, störst (1073/1200)
 - [tickster.md](tickster.md) — egen, näst störst (79)

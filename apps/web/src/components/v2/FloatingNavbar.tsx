@@ -9,9 +9,10 @@ interface FloatingNavbarProps {
     creationMode?: 'idle' | 'placing' | 'editing';
     onStartCreate?: () => void;
     onConfirmPlacement?: () => void;
+    highlightToday?: boolean;
 }
 
-export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode = 'idle', onStartCreate, onConfirmPlacement }: FloatingNavbarProps) {
+export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode = 'idle', onStartCreate, onConfirmPlacement, highlightToday = false }: FloatingNavbarProps) {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const plusBtnRef = useRef<HTMLButtonElement>(null);
@@ -100,9 +101,9 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
                 <div className="flex justify-between items-center w-full">
                     {/* Left side: Single Cycle Day Filter */}
                     <div className="flex items-center gap-3 pointer-events-auto">
-                        <button 
+                        <button
                             onClick={handleCycleDay}
-                            className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg hover:bg-white transition-all font-black text-sm uppercase tracking-widest flex items-center gap-3 text-slate-800"
+                            className={`bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg hover:bg-white transition-all font-black text-sm uppercase tracking-widest flex items-center gap-3 text-slate-800 ${highlightToday ? 'animate-today-pulse' : ''}`}
                         >
                             <Calendar size={18} className="text-primary" />
                             <span>{getDayLabel(dayOffset)}</span>

@@ -109,7 +109,7 @@ export default function HomeMap({
             <MapContainer center={userLocation} zoom={(() => {
                 // Initialize zoom from storage (inline since we only need it once)
                 const z = sessionStorage.getItem('vadkul_map_zoom');
-                return z ? parseInt(z, 10) : 13;
+                return z ? parseInt(z, 10) : 8;
             })()} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapStateTracker onMoveEnd={handleMapMove} />

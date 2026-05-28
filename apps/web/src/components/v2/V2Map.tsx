@@ -115,9 +115,9 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
 
     return (
         <div className="absolute inset-0 z-0 bg-slate-100">
-            <MapContainer 
-                center={initialCenter} 
-                zoom={13} 
+            <MapContainer
+                center={initialCenter}
+                zoom={8}
                 style={{ height: '100vh', width: '100vw' }}
                 zoomControl={false}
             >

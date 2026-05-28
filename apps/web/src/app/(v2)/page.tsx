@@ -58,6 +58,9 @@ export default function HomePage() {
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
+    const [showTodayHint, setShowTodayHint] = useState(false);
+    const [firstCloudDismissed, setFirstCloudDismissed] = useState(false);
+    const [idagPulseActive, setIdagPulseActive] = useState(false);
     const [isLive, setIsLive] = useState(false);
     const [newEventCount, setNewEventCount] = useState(0);
     const [prevEventCount, setPrevEventCount] = useState(0);
@@ -159,7 +162,23 @@ export default function HomePage() {
             <CloudPopup
                 message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
                 autoDismissMs={0}
+                onDismiss={() => {
+                    setShowTodayHint(true);
+                    setFirstCloudDismissed(true);
+                    setIdagPulseActive(true);
+                }}
             />
+            {showTodayHint && (
+                <CloudPopup
+                    key="today-hint"
+                    message="Detta är allt som händer idag. Klicka på knappen för att byta till imorgon."
+                    autoDismissMs={0}
+                    position="top-left"
+                    size="md"
+                    onDismissStart={() => setIdagPulseActive(false)}
+                    onDismiss={() => setShowTodayHint(false)}
+                />
+            )}
             {/* 1. Svävande transparent Navbar överst */}
             <FloatingNavbar
                 dayOffset={dayOffset}
@@ -171,6 +190,7 @@ export default function HomePage() {
                     setPickedLocation(mapCenter);
                     setCreationMode('editing');
                 }}
+                highlightToday={idagPulseActive}
             />
 
             {/* Live-indikator — visas när Firestore-lyssnar är aktiv */}
@@ -302,6 +322,7 @@ export default function HomePage() {
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
                 onCardExpandedChange={setCardExpanded}
+                highlightPosition={!firstCloudDismissed}
             />
         </main>
     );

@@ -6,10 +6,24 @@ interface CloudPopupProps {
   message: string;
   /** ms before the cloud auto-disappears (0 = never) */
   autoDismissMs?: number;
+  /** Fires synchronously when dismiss begins (click) — before the fade-out animation */
+  onDismissStart?: () => void;
+  /** Fires after the fade-out animation completes */
   onDismiss?: () => void;
+  /** Where the cloud appears on screen */
+  position?: 'center' | 'top-left';
+  /** Cloud size */
+  size?: 'lg' | 'md';
 }
 
-export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: CloudPopupProps) {
+export default function CloudPopup({
+  message,
+  autoDismissMs = 0,
+  onDismissStart,
+  onDismiss,
+  position = 'center',
+  size = 'lg',
+}: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -26,63 +40,74 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
     }
   }, [autoDismissMs]);
 
+  // Dismiss on any click anywhere on the page (not just on the cloud itself)
+  useEffect(() => {
+    if (!visible || leaving) return;
+    // Tiny delay so the click that *triggered* this cloud doesn't immediately dismiss it
+    let handler: ((e: MouseEvent) => void) | null = null;
+    const setupTimer = setTimeout(() => {
+      handler = () => dismiss();
+      document.addEventListener('click', handler);
+    }, 150);
+    return () => {
+      clearTimeout(setupTimer);
+      if (handler) document.removeEventListener('click', handler);
+    };
+  }, [visible, leaving]);
+
   const dismiss = () => {
+    onDismissStart?.();
     setLeaving(true);
     setTimeout(() => {
       setVisible(false);
       setLeaving(false);
       onDismiss?.();
-    }, 500);
+    }, 700);
   };
 
   if (!visible && !leaving) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-    >
-      {/* Overlay – very subtle, just dims behind the cloud */}
-      <div
-        role="button"
-        className={`absolute inset-0 bg-black/[0.02] cursor-pointer transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
-        onClick={dismiss}
-      />
+  const wrapperPositionClass =
+    position === 'top-left'
+      ? 'items-start justify-start pt-[68px] pl-2 sm:pl-4'
+      : 'items-center justify-center';
 
+  const sizeClass = size === 'md' ? 'w-[300px] sm:w-[340px]' : 'w-[370px] sm:w-[440px]';
+  const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
+
+  return (
+    <div className={`fixed inset-0 z-[9999] flex pointer-events-none ${wrapperPositionClass}`}>
       {/* The cloud itself */}
       <div
         role="button"
         onClick={dismiss}
-        className={`relative cursor-pointer select-none transition-all duration-500
-          ${leaving ? 'opacity-0 scale-75 -translate-y-10' : 'opacity-100 scale-100 translate-y-0'}
+        className={`relative cursor-pointer select-none transition-opacity duration-700 ease-out pointer-events-auto
+          ${leaving ? 'opacity-0' : 'opacity-100'}
           animate-cloud-float
         `}
-        style={{ willChange: 'transform, opacity' }}
+        style={{ willChange: 'opacity' }}
       >
         {/* Cloud SVG background */}
         <svg
-          viewBox="0 0 340 200"
-          className="w-[370px] sm:w-[440px] drop-shadow-2xl"
+          viewBox="0 0 340 240"
+          className={`${sizeClass} drop-shadow-2xl`}
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Shadow / depth layer */}
-          <ellipse cx="170" cy="195" rx="140" ry="10" fill="rgba(0,0,0,0.08)" />
+          {/* Main cloud body – overlapping puffs all around for a soft, irregular silhouette */}
+          <g filter="url(#cloud-blur)" fillOpacity="0.98">
+            {/* Bottom row of puffs */}
+            <circle cx="58" cy="160" r="38" fill="white" />
+            <circle cx="100" cy="172" r="44" fill="white" />
+            <circle cx="150" cy="176" r="48" fill="white" />
+            <circle cx="205" cy="172" r="46" fill="white" />
+            <circle cx="255" cy="164" r="42" fill="white" />
+            <circle cx="296" cy="154" r="34" fill="white" />
 
-          {/* Main cloud body with 85% opacity */}
-          <g filter="url(#cloud-blur)" fillOpacity="0.85">
-            {/* Large bottom dome */}
-            <ellipse cx="170" cy="165" rx="135" ry="48" fill="white" />
-            {/* Left bump */}
-            <circle cx="82" cy="138" r="52" fill="white" />
-            {/* Right bump */}
-            <circle cx="240" cy="132" r="58" fill="white" />
-            {/* Centre-left bump (tallest) */}
-            <circle cx="148" cy="112" r="64" fill="white" />
-            {/* Centre-right bump */}
-            <circle cx="210" cy="120" r="54" fill="white" />
-            {/* Small left-edge puff */}
-            <circle cx="50" cy="158" r="36" fill="white" />
-            {/* Small right-edge puff */}
-            <circle cx="292" cy="152" r="34" fill="white" />
+            {/* Top row of puffs */}
+            <circle cx="90" cy="118" r="48" fill="white" />
+            <circle cx="148" cy="98" r="60" fill="white" />
+            <circle cx="215" cy="108" r="56" fill="white" />
+            <circle cx="268" cy="126" r="44" fill="white" />
           </g>
 
           <defs>
@@ -94,7 +119,7 @@ export default function CloudPopup({ message, autoDismissMs = 0, onDismiss }: Cl
 
         {/* Text overlay – beautifully positioned inside the semi-transparent cloud */}
         <div className="absolute inset-0 flex items-center justify-center px-12 pt-8">
-          <p className="text-center text-slate-700 font-semibold text-base sm:text-[17px] leading-relaxed max-w-[240px]">
+          <p className={`text-center text-sky-800 font-semibold text-base sm:text-[17px] leading-relaxed max-w-[240px] ${textTranslateClass}`}>
             {message}
           </p>
         </div>

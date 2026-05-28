@@ -81,9 +81,10 @@ interface V2SwipeableCardProps {
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
     onCardExpandedChange?: (expanded: boolean) => void;
+    highlightPosition?: boolean;
 }
 
-export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange }: V2SwipeableCardProps) {
+export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, highlightPosition = false }: V2SwipeableCardProps) {
     const [dragX, setDragX] = useState(0);
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
@@ -264,7 +265,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setDragX(0);
     };
 
-    if (!selectedEvent) return null;
+    if (events.length === 0) return null;
 
     // Calculate dynamic rotation based on drag
     const rotation = (dragX / window.innerWidth) * 20; // Max 20 degrees rotation
@@ -272,26 +273,27 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     // Calculate opacity (slightly fades out at edges)
     const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
 
-    // Position-indikator: vilket event i vyn vi tittar på just nu
-    const currentIndex = events.findIndex(evt => evt.id === selectedEvent.id);
-    const positionLabel = currentIndex >= 0 ? `${currentIndex + 1}/${events.length}` : '';
+    // Position-indikator: visa "X/Y" när ett event är valt, annars "Y Unika Event"
+    const currentIndex = selectedEvent ? events.findIndex(evt => evt.id === selectedEvent.id) : -1;
+    const positionLabel = selectedEvent && currentIndex >= 0
+        ? `${currentIndex + 1}/${events.length}`
+        : `${events.length} Unika Event`;
 
     return (
         <>
-            {/* Position-knapp (51/72) ovanför LIVE-indikatorn i toppen — klick går till nästa nummer */}
-            {positionLabel && (
-                <button
-                    type="button"
-                    onClick={handleNextSequential}
-                    aria-label="Gå till nästa event i nummerordning"
-                    title="Gå till nästa nummer"
-                    className="fixed left-1/2 -translate-x-1/2 z-[1001] bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    style={{ top: 64 }}
-                >
-                    {positionLabel}
-                </button>
-            )}
-        <div className="fixed bottom-6 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
+            {/* Position-knapp under Idag-knappen i vänsterkanten — klick går till nästa nummer (eller väljer första) */}
+            <button
+                type="button"
+                onClick={selectedEvent ? handleNextSequential : () => onSelectEvent(events[0])}
+                aria-label={selectedEvent ? 'Gå till nästa event i nummerordning' : 'Välj första eventet'}
+                title={selectedEvent ? 'Gå till nästa nummer' : 'Välj första eventet'}
+                className={`fixed left-4 z-[1001] bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer ${highlightPosition ? 'animate-today-pulse' : ''}`}
+                style={{ top: 80 }}
+            >
+                {positionLabel}
+            </button>
+        {selectedEvent && (
+        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
             {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}
             <div className="w-full max-w-4xl flex justify-center items-center gap-3 mb-4">
                 {historyStack.length > 0 && (
@@ -335,7 +337,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                     </div>
                 )}
 
-                <div className={`w-full h-full shadow-[0_10px_40px_rgba(0,0,0,0.2)] rounded-lg ${isDragging.current ? 'pointer-events-none' : ''}`}>
+                <div className={`w-full h-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] rounded-t-2xl overflow-hidden ${isDragging.current ? 'pointer-events-none' : ''}`}>
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
@@ -345,6 +347,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 </div>
             </div>
         </div>
+        )}
         </>
     );
 }
