@@ -126,7 +126,7 @@ export async function scrapeFacebookEvents() {
 
     try {
         // === SÖKKONFIGURATION ===
-        // Svenska städer — så vi får "vad händer i stan"-täckning (110 städer totalt)
+        // Svenska städer — täcker 260+ orter för bred lokal spridning
         const SWEDISH_CITIES = [
             // Topp 30 städer
             'Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping',
@@ -156,7 +156,96 @@ export async function scrapeFacebookEvents() {
             'Olofström', 'Lessebo', 'Alvesta', 'Tingsryd', 'Älmhult',
             // Mellansverige orter
             'Finspång', 'Mjölby', 'Söderköping', 'Åtvidaberg', 'Trosa',
-            'Strängnäs', 'Flen', 'Nora', 'Lindesberg'
+            'Strängnäs', 'Flen', 'Nora', 'Lindesberg',
+
+            // === UTÖKNING: ~150 nya orter för lokal täckning ===
+
+            // Stockholmsregionen (förorter med stor befolkning)
+            'Södertälje', 'Nacka', 'Huddinge', 'Järfälla', 'Botkyrka',
+            'Haninge', 'Tyresö', 'Täby', 'Solna', 'Sundbyberg',
+            'Upplands-Väsby', 'Lidingö', 'Sollentuna', 'Vallentuna',
+            'Ekerö', 'Österåker', 'Salem', 'Sigtuna', 'Vaxholm', 'Nynäshamn',
+            'Knivsta', 'Håbo', 'Upplands-Bro', 'Nykvarn',
+
+            // Västra Götaland (kompletterande orter)
+            'Mölndal', 'Lerum', 'Kungälv', 'Stenungsund', 'Vänersborg',
+            'Ulricehamn', 'Falköping', 'Tidaholm', 'Kinna', 'Åmål',
+            'Lysekil', 'Kungshamn', 'Munkedal', 'Skara', 'Tibro',
+            'Hjo', 'Töreboda', 'Karlsborg', 'Tranemo', 'Bollebygd',
+            'Nödinge', 'Herrljunga', 'Svenljunga', 'Vara', 'Grästorp',
+
+            // Skåne (kompletterande orter)
+            'Tomelilla', 'Skurup', 'Svedala', 'Höör', 'Hörby',
+            'Örkelljunga', 'Osby', 'Perstorp', 'Klippan', 'Bjuv',
+            'Burlöv', 'Åstorp',
+
+            // Dalarna
+            'Avesta', 'Hedemora', 'Rättvik', 'Leksand', 'Malung',
+            'Säter', 'Orsa', 'Smedjebacken', 'Vansbro', 'Älvdalen',
+
+            // Gästrikland & Hälsingland
+            'Ockelbo', 'Hofors', 'Ljusdal', 'Ovanåker',
+
+            // Västernorrland tillägg
+            'Ånge', 'Timrå',
+
+            // Jämtland tillägg
+            'Strömsund', 'Krokom', 'Bräcke',
+
+            // Norrbotten tillägg
+            'Haparanda', 'Kalix', 'Arvidsjaur', 'Arjeplog', 'Jokkmokk',
+            'Pajala', 'Överkalix', 'Övertorneå',
+
+            // Västerbotten tillägg
+            'Vilhelmina', 'Storuman', 'Vindeln', 'Robertsfors', 'Nordmaling',
+
+            // Värmland tillägg
+            'Sunne', 'Torsby', 'Säffle', 'Hagfors', 'Filipstad',
+            'Hammarö', 'Kil', 'Munkfors',
+
+            // Örebro tillägg
+            'Askersund', 'Laxå', 'Degerfors',
+
+            // Halland tillägg
+            'Hyltebruk',
+
+            // Småland tillägg
+            'Vaggeryd', 'Gislaved', 'Gnosjö', 'Mullsjö', 'Aneby',
+            'Markaryd', 'Emmaboda', 'Borgholm', 'Mönsterås', 'Torsås',
+
+            // Östergötland tillägg
+            'Vadstena', 'Valdemarsvik', 'Boxholm',
+
+            // Södermanland tillägg
+            'Gnesta', 'Oxelösund', 'Vingåker',
+
+            // Uppland tillägg
+            'Tierp', 'Rimbo',
+
+            // Västra Götaland (kustorter & inland)
+            'Strömstad', 'Tanum', 'Bengtsfors', 'Färgelanda', 'Dals-Ed',
+            'Essunga', 'Götene', 'Mellerud',
+
+            // Skåne (kranskommun Malmö)
+            'Lomma',
+
+            // Östergötland
+            'Kinda', 'Ydre',
+
+            // Västmanland tillägg
+            'Norberg', 'Surahammar', 'Arboga',
+
+            // Värmland tillägg
+            'Storfors', 'Grums',
+
+            // Jämtland / Västernorrland tillägg
+            'Berg', 'Dorotea',
+
+            // Västerbotten tillägg
+            'Bjurholm', 'Malå',
+
+            // Norrbotten: ytterligare orter
+            'Älvsbyn',
         ];
 
         // Breda sökord – event-typer, aktiviteter, tider (40 sökord totalt)
