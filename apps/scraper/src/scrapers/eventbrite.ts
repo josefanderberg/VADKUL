@@ -1,173 +1,313 @@
-import * as cheerio from 'cheerio';
+/**
+ * Eventbrite scraper — Puppeteer-based (React-rendered cards)
+ *
+ * Strategi:
+ *   1. Ladda listningssida per stad
+ *   2. Extrahera `section[class*="discover-vertical-event-card"]` — h2=titel, p[0]=datum, p[1]=lokal
+ *   3. Tolka svenska datumsträngar → ISO
+ *   4. Geocoda lokal + stad via Nominatim
+ *   5. Spara events inom nästa 30 dagar
+ */
+import puppeteer, { Browser } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { classifyEvent } from '../utils/classify';
 
-// --- SCRAPE TARGETS ---
-// Alla större svenska städer
-const SWEDISH_CITIES = [
-    'stockholm', 'göteborg', 'malmö', 'uppsala', 'linköping',
-    'örebro', 'helsingborg', 'norrköping', 'jönköping', 'umeå',
-    'lund', 'västerås', 'sundsvall', 'karlstad', 'växjö', 'gävle',
-    'borås', 'eskilstuna', 'halmstad', 'östersund', 'kronoberg',
-];
-
-const EVENTBRITE_URLS = SWEDISH_CITIES.map(
-    city => `https://www.eventbrite.se/d/sweden--${encodeURIComponent(city)}/events/`
-);
-
-// --- DATE FILTER ---
+// --- DATE WINDOW ---
 const now = new Date();
 now.setHours(0, 0, 0, 0);
-const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
-const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const cutoff = new Date(now.getTime() + THIRTY_DAYS_MS);
 const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
-function isWithinOneWeek(date: Date): boolean {
-    return date >= now && date <= oneWeekFromNow;
+function isWithinWindow(date: Date): boolean {
+    return date >= now && date <= cutoff;
 }
-
 function isToday(date: Date): boolean {
     return date >= now && date <= todayEnd;
 }
 
-function guessCategoryFromTitle(title: string): string {
-    const t = title.toLowerCase();
-    if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party')) return 'party';
-    if (t.includes('musik') || t.includes('konsert') || t.includes('kör') || t.includes('orkester') || t.includes('tour')) return 'music';
-    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match') || t.includes('tävling')) return 'sport';
-    if (t.includes('quiz') || t.includes('spel') || t.includes('boardgame') || t.includes('bingo')) return 'game';
-    if (t.includes('teater') || t.includes('musikal') || t.includes('standup') || t.includes('humor') || t.includes('konst') || t.includes('utställning')) return 'culture';
-    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting') || t.includes('provning')) return 'food';
-    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa')) return 'market';
-    if (t.includes('utomhus') || t.includes('natur') || t.includes('vandring')) return 'outdoor';
-    if (t.includes('barn') || t.includes('familj') || t.includes('saga') || t.includes('junior')) return 'play';
-    if (t.includes('träning') || t.includes('yoga') || t.includes('gym') || t.includes('fitness')) return 'training';
-    if (t.includes('öppet hus') || t.includes('föreläsning') || t.includes('workshop') || t.includes('seminarium')) return 'study';
-    if (t.includes('campus') || t.includes('student') || t.includes('kår')) return 'campus';
-    return 'other';
+// --- SWEDISH DATE PARSER ---
+const MONTH_MAP: Record<string, number> = {
+    jan: 0, januari: 0,
+    feb: 1, februari: 1,
+    mar: 2, mars: 2,
+    apr: 3, april: 3,
+    maj: 4,
+    jun: 5, juni: 5,
+    jul: 6, juli: 6,
+    aug: 7, augusti: 7,
+    sep: 8, september: 8,
+    okt: 9, oktober: 9,
+    nov: 10, november: 10,
+    dec: 11, december: 11,
+};
+// Day-of-week → JS getDay() values
+const WEEKDAY_MAP: Record<string, number> = {
+    'måndag': 1, 'mån': 1,
+    'tisdag': 2, 'tis': 2,
+    'onsdag': 3, 'ons': 3,
+    'torsdag': 4, 'tors': 4,
+    'fredag': 5, 'fre': 5,
+    'lördag': 6, 'lör': 6,
+    'söndag': 0, 'sön': 0,
+};
+const MONTH_PATTERN = Object.keys(MONTH_MAP).sort((a, b) => b.length - a.length).join('|');
+const WEEKDAY_PATTERN = Object.keys(WEEKDAY_MAP).sort((a, b) => b.length - a.length).join('|');
+
+// Price/badge strings that appear in p[0] instead of a date
+const PRICE_BADGE_RE = /^(free|gratis|sales\s+end|going\s+fast|just\s+added|almost\s+full|check\s+ticket|from\s+[\d,.]+|[\d,.]+\s*(kr|€|sek))/i;
+// Price patterns that indicate a p is price, not venue
+const IS_PRICE_RE = /^(free|gratis|check\s+ticket|from\s+[\d,.]+|[\d,.]+\s*(kr|€|sek))/i;
+
+function parseSwedishDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    // Strip "+ X more" suffix and timezone labels (CEST, CET)
+    const s = dateStr.toLowerCase()
+        .replace(/\s*\+\s*\d+\s*more\s*$/i, '')
+        .replace(/\s+ces?t\s*$/i, '')
+        .trim();
+
+    // "idag kl. HH:MM" or "idag kl.HH:MM"
+    if (s.startsWith('idag')) {
+        const m = s.match(/(\d{1,2}):(\d{2})/);
+        const d = new Date(now);
+        if (m) d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+        return d;
+    }
+
+    // "imorgon kl. HH:MM"
+    if (s.startsWith('imorgon')) {
+        const m = s.match(/(\d{1,2}):(\d{2})/);
+        const d = new Date(now);
+        d.setDate(d.getDate() + 1);
+        if (m) d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+        return d;
+    }
+
+    // "DD (MONTH) YYYY · HH:MM" — try with year first (more specific)
+    const reYear = new RegExp(
+        `(\\d{1,2})\\s+(${MONTH_PATTERN})\\s+(\\d{4})\\s+(?:·\\s*)?(\\d{1,2}):(\\d{2})`,
+    );
+    const m2 = s.match(reYear);
+    if (m2) {
+        return new Date(
+            parseInt(m2[3], 10),
+            MONTH_MAP[m2[2]],
+            parseInt(m2[1], 10),
+            parseInt(m2[4], 10),
+            parseInt(m2[5], 10),
+            0, 0,
+        );
+    }
+
+    // "DD (MONTH) HH:MM" — optional day-abbrev prefix
+    // e.g. "tors 25 juni 20:00"  |  "25 juni 20:00"  |  "mån 1 jun · 19:00"
+    const re = new RegExp(
+        `(?:${WEEKDAY_PATTERN})?\\s*(\\d{1,2})\\s+(${MONTH_PATTERN})\\s+(?:·\\s*)?(\\d{1,2}):(\\d{2})`,
+    );
+    const m = s.match(re);
+    if (m) {
+        const day = parseInt(m[1], 10);
+        const month = MONTH_MAP[m[2]];
+        const hour = parseInt(m[3], 10);
+        const min = parseInt(m[4], 10);
+        const year = now.getFullYear();
+        const d = new Date(year, month, day, hour, min, 0, 0);
+        if (d < new Date(now.getTime() - 24 * 60 * 60 * 1000)) {
+            d.setFullYear(year + 1);
+        }
+        return d;
+    }
+
+    // "WEEKDAY kl. HH:MM" — day name only (no date number), e.g. "torsdag kl. 08:30"
+    const wdRe = new RegExp(`^(${WEEKDAY_PATTERN})\\s+(?:kl\\.?\\s*)?(\\d{1,2}):(\\d{2})`);
+    const wm = s.match(wdRe);
+    if (wm) {
+        const targetDay = WEEKDAY_MAP[wm[1]];
+        const hour = parseInt(wm[2], 10);
+        const min = parseInt(wm[3], 10);
+        const d = new Date(now);
+        d.setHours(hour, min, 0, 0);
+        // Advance to next occurrence of targetDay (could be today)
+        while (d.getDay() !== targetDay || d < new Date()) {
+            d.setDate(d.getDate() + 1);
+            d.setHours(hour, min, 0, 0);
+        }
+        return d;
+    }
+
+    return null;
+}
+
+/**
+ * Among the p-elements of a card, find which one is the date string and
+ * which one is the venue. Some cards have a "Sales end soon" / "Going fast"
+ * badge in p[0] before the date.
+ */
+function findDateAndVenue(ps: string[]): { dateStr: string; venueName: string } {
+    for (let i = 0; i < ps.length; i++) {
+        const p = ps[i];
+        // Skip badge/price strings
+        if (PRICE_BADGE_RE.test(p)) continue;
+        // Check if this p looks like a date
+        if (/^\d{1,2}:\d{2}$|^idag\b|^imorgon\b/.test(p.toLowerCase()) ||
+            new RegExp(`^(${WEEKDAY_PATTERN})`).test(p.toLowerCase()) ||
+            new RegExp(`\\d{1,2}\\s+(${MONTH_PATTERN})`).test(p.toLowerCase())) {
+            // Found date; next non-price p is the venue
+            const venueCandidates = ps.slice(i + 1).filter(v => !IS_PRICE_RE.test(v));
+            return { dateStr: p, venueName: venueCandidates[0] || '' };
+        }
+    }
+    // Fallback
+    return { dateStr: ps[0] || '', venueName: ps[1] || '' };
+}
+
+// --- CITY LIST ---
+// Eventbrite uses English (ASCII) city slugs in its URLs
+interface CityEntry { name: string; slug: string; }
+const EVENTBRITE_CITIES: CityEntry[] = [
+    { name: 'Stockholm',   slug: 'stockholm' },
+    { name: 'Göteborg',    slug: 'gothenburg' },
+    { name: 'Malmö',       slug: 'malmo' },
+    { name: 'Uppsala',     slug: 'uppsala' },
+    { name: 'Linköping',   slug: 'linkoping' },
+    { name: 'Örebro',      slug: 'orebro' },
+    { name: 'Helsingborg', slug: 'helsingborg' },
+    { name: 'Norrköping',  slug: 'norrkoping' },
+    { name: 'Jönköping',   slug: 'jonkoping' },
+    { name: 'Umeå',        slug: 'umea' },
+    { name: 'Västerås',    slug: 'vasteras' },
+    { name: 'Sundsvall',   slug: 'sundsvall' },
+    { name: 'Lund',        slug: 'lund' },
+    { name: 'Karlstad',    slug: 'karlstad' },
+];
+
+interface RawCard {
+    url: string;
+    title: string;
+    ps: string[];  // all p-element texts in order
+}
+
+async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[]> {
+    const page = await browser.newPage();
+    try {
+        await page.setViewport({ width: 1280, height: 900 });
+        await page.setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        );
+        // Block images / fonts to speed up
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+            if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
+            else req.continue();
+        });
+
+        await page.goto(cityUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2500));
+
+        const cards: RawCard[] = await page.evaluate(() => {
+            const sections = Array.from(
+                document.querySelectorAll('section[class*="discover-vertical-event-card"]'),
+            );
+            const seen = new Set<string>();
+            const results: { url: string; title: string; ps: string[] }[] = [];
+
+            for (const sec of sections) {
+                const link = sec.querySelector('a.event-card-link') as HTMLAnchorElement | null;
+                const url = link?.href?.split('?')[0] || '';
+                if (!url || seen.has(url)) continue;
+                seen.add(url);
+
+                // Eventbrite uses h3 for event card titles (not h2)
+                const title = (sec.querySelector('h3') || sec.querySelector('h2'))?.textContent?.trim() || '';
+                // Collect all p texts — some cards have a badge (e.g. "Sales end soon") before the date
+                const ps = Array.from(sec.querySelectorAll('p')).map(p => p.textContent?.trim() || '').filter(Boolean);
+
+                if (title) results.push({ url, title, ps });
+            }
+            return results;
+        });
+
+        return cards;
+    } finally {
+        await page.close();
+    }
 }
 
 export async function scrapeEventbrite() {
-    console.log('Starting Eventbrite scraper...');
+    console.log('[Eventbrite] Starting Puppeteer scraper…');
     let totalSaved = 0;
-    const summary: { url: string; status: number; bytes: number; links: number; jsonLd: number; saved: number }[] = [];
 
-    for (const url of EVENTBRITE_URLS) {
-        console.log(`  Fetching: ${url}`);
-        const savedBefore = totalSaved;
-        try {
-            const res = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml',
-                    'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
-                }
-            });
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    try {
+        for (const { name: cityName, slug } of EVENTBRITE_CITIES) {
+            const cityUrl = `https://www.eventbrite.se/d/sweden--${slug}/events/`;
+            console.log(`\n[Eventbrite] ${cityName} — ${cityUrl}`);
 
-            if (!res.ok) {
-                console.warn(`  Eventbrite returned ${res.status} for ${url}`);
-                summary.push({ url, status: res.status, bytes: 0, links: 0, jsonLd: 0, saved: 0 });
+            let cards: RawCard[] = [];
+            try {
+                cards = await extractCards(browser, cityUrl);
+            } catch (err) {
+                console.error(`[Eventbrite] Error loading ${cityUrl}:`, (err as Error).message);
                 continue;
             }
 
-            const html = await res.text();
-            const $ = cheerio.load(html);
+            console.log(`  ${cards.length} unika cards`);
 
-            // Eventbrite event cards
-            const eventLinks: string[] = [];
-            $('a[href*="/e/"]').each((_, el) => {
-                const href = $(el).attr('href') || '';
-                if (href.includes('/e/') && href.includes('eventbrite.se')) {
-                    const cleanHref = href.split('?')[0]; // strip query params
-                    if (!eventLinks.includes(cleanHref)) {
-                        eventLinks.push(cleanHref);
-                    }
-                }
-            });
-
-            // Also check JSON-LD for structured event data in the page
-            let jsonEvents: any[] = [];
-            $('script[type="application/ld+json"]').each((_, el) => {
+            for (const card of cards) {
                 try {
-                    const data = JSON.parse($(el).html() || '');
-                    if (Array.isArray(data)) jsonEvents = jsonEvents.concat(data.filter(d => d['@type'] === 'Event'));
-                    else if (data['@type'] === 'Event') jsonEvents.push(data);
-                    else if (data['@graph']) jsonEvents = jsonEvents.concat(data['@graph'].filter((d: any) => d['@type'] === 'Event'));
-                } catch {}
-            });
+                    // Skip placeholders / zero-length titles
+                    if (!card.title || card.title.length < 3) continue;
 
-            console.log(`  HTTP ${res.status} · ${html.length} bytes · ${eventLinks.length} länkar · ${jsonEvents.length} JSON-LD events`);
-            summary.push({ url, status: res.status, bytes: html.length, links: eventLinks.length, jsonLd: jsonEvents.length, saved: 0 });
+                    // Dedup
+                    if (await eventExistsInDb(card.url)) continue;
 
-            // Process JSON-LD events first (most reliable)
-            for (const evt of jsonEvents) {
-                try {
-                    const title = evt.name;
-                    if (!title) continue;
-
-                    const eventUrl = evt.url || '';
-                    const exists = await eventExistsInDb(eventUrl);
-                    if (exists) continue;
+                    // Extract date and venue from the ps array
+                    const { dateStr, venueName } = findDateAndVenue(card.ps);
 
                     // Parse date
-                    if (!evt.startDate) continue;
-                    const startDate = new Date(evt.startDate);
-                    if (!isWithinOneWeek(startDate)) {
-                        console.log(`  Skipping (outside 1 week): ${title} @ ${startDate.toLocaleDateString('sv-SE')}`);
+                    const startDate = parseSwedishDate(dateStr);
+                    if (!startDate) {
+                        console.log(`  [skip] Kunde inte tolka datum "${dateStr}" — ${card.title}`);
+                        continue;
+                    }
+                    if (!isWithinWindow(startDate)) {
+                        console.log(`  [skip] Utanför 30 dagar (${startDate.toLocaleDateString('sv-SE')}): ${card.title}`);
                         continue;
                     }
 
-                    const locationName = evt.location?.name || evt.location?.address?.streetAddress || 'Växjö';
-                    const lat = evt.location?.geo?.latitude || null;
-                    const lng = evt.location?.geo?.longitude || null;
-                    const price = evt.offers?.price !== undefined
-                        ? (evt.offers.price === 0 || evt.offers.price === '0' ? 'Gratis' : evt.offers.price)
-                        : '';
-                    const coverImage = typeof evt.image === 'string' ? evt.image : evt.image?.[0] || undefined;
-
-                    let resolvedLat = lat || 0;
-                    let resolvedLng = lng || 0;
-                    if (!lat || !lng) {
-                        const address = [
-                            evt.location?.address?.streetAddress,
-                            evt.location?.address?.addressLocality,
-                        ].filter(Boolean).join(', ');
-                        const coords = await geocodeVenueSweden(address || locationName);
-                        if (coords) { resolvedLat = coords[0]; resolvedLng = coords[1]; }
-                    }
+                    // Geocode: "venueName, CityName"
+                    const geoQuery = venueName ? `${venueName}, ${cityName}` : cityName;
+                    const coords = await geocodeVenueSweden(geoQuery);
 
                     await addEventToDb({
-                        title,
-                        url: eventUrl,
+                        title: card.title,
+                        url: card.url,
                         time: startDate,
-                        hasSpecificTime: evt.startDate.includes('T'),
-                        locationName,
-                        lat: resolvedLat,
-                        lng: resolvedLng,
-                        hostName: evt.organizer?.name || 'Eventbrite',
-                        category: guessCategoryFromTitle(title),
+                        hasSpecificTime: true,
+                        locationName: venueName || cityName,
+                        lat: coords ? coords[0] : 0,
+                        lng: coords ? coords[1] : 0,
+                        hostName: 'Eventbrite',
+                        category: classifyEvent(card.title, ''),
                         createdAt: new Date(),
-                        coverImage,
-                        price,
-                        isLocationVerified: resolvedLat !== 0,
+                        coverImage: null,
+                        price: '',
+                        description: '',
+                        isLocationVerified: coords !== null,
                     });
                     totalSaved++;
-                    console.log(`  ✅ ${isToday(startDate) ? '[IDAG] ' : ''}Saved: ${title} @ ${locationName}`);
-                } catch (e) {
-                    console.error('  Failed to save JSON-LD event:', e);
+                    console.log(`  ✅${isToday(startDate) ? ' [IDAG]' : ''} ${card.title} @ ${venueName}`);
+                } catch (err) {
+                    console.error(`  [Eventbrite] Fel på "${card.title}":`, (err as Error).message);
                 }
             }
-
-        } catch (err) {
-            console.error(`  Error fetching ${url}:`, err);
         }
-
-        if (summary.length > 0) summary[summary.length - 1].saved = totalSaved - savedBefore;
+    } finally {
+        await browser.close();
     }
 
-    console.log(`\n[Eventbrite] Sammanställning (${summary.length} URLs):`);
-    for (const r of summary) {
-        console.log(`  ${r.status} · ${r.bytes}B · links=${r.links} json=${r.jsonLd} saved=${r.saved}  ${r.url}`);
-    }
-    console.log(`Eventbrite scrape complete. Saved ${totalSaved} new events.`);
+    console.log(`\n[Eventbrite] Klar — ${totalSaved} nya events sparade.`);
+    return totalSaved;
 }

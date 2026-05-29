@@ -2,8 +2,9 @@ import { scrapeVaxjoCo } from './scrapers/vaxjoco';
 import { scrapeUpplevVaxjo } from './scrapers/upplev';
 import { scrapeTickster } from './scrapers/tickster';
 import { scrapeEventbrite } from './scrapers/eventbrite';
+import { scrapeEventim } from './scrapers/eventim';
 import { scrapeFacebookEvents } from './scrapers/facebook/index';
-import { scrapeBilletto } from './scrapers/billetto';
+// import { scrapeBilletto } from './scrapers/billetto'; // Billetto.se → 404 (dead domain 2026)
 import { scrapeMeetup } from './scrapers/meetup';
 import { scrapeTodaySweden } from './scrapers/today-sweden';
 
@@ -17,8 +18,9 @@ async function runAllScrapers() {
 
     // 2. Rikstäckande vecko-scrapers
     await scrapeTickster();      // Tickster: Sverige-brett, 7 dagar
-    await scrapeBilletto();      // Billetto: Sverige-brett, idag + 7 dagar
-    await scrapeEventbrite();    // Eventbrite: 21 svenska städer, 7 dagar
+    // scrapeBilletto — avstängd, billetto.se är dead (404)
+    await scrapeEventbrite();    // Eventbrite: 14 städer, 30 dagar (Puppeteer)
+    await scrapeEventim();       // Eventim: alla kategorier, 30 dagar (JSON-LD)
 
     // 3. Meetup: Sverige-brett, idag + 7 dagar (community events)
     await scrapeMeetup();

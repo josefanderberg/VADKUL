@@ -34,6 +34,7 @@ Entry-point. Läs först. Hålls under 60 rader.
 | [K4](kampanjer/k4-lokal-ai.md) | Lokal AI-granskning (Mac mini + Ollama) | AKTIV — gräns höjd 200→500 |
 | [K5](kampanjer/k5-lank-enrichment.md) | Länk-enrichment | PLAN |
 | [K6](kampanjer/k6-teams-rapport.md) | Teams-rapport som visar tratten ärligt | PLAN |
+| K7 | Eventbrite + Eventim scrapers (Puppeteer) | KLAR 2026-05-29c |
 
 ## Topp-3 öppna problem (per 2026-05-29b)
 
