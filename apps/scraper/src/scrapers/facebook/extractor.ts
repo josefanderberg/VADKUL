@@ -103,7 +103,12 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
         }
 
         // Clean up common Facebook UI artifacts from the description
-        description = description.replace(/Visa mindre$/i, '').replace(/See less$/i, '').trim();
+        description = description
+            .replace(/Visa f[äa]rre$/i, '')
+            .replace(/Visa mindre$/i, '')
+            .replace(/See less$/i, '')
+            .replace(/Show less$/i, '')
+            .trim();
         
         if (!description || description.length < 20) {
             const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content');

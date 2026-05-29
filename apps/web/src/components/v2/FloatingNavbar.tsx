@@ -48,9 +48,9 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
         // håller kvar slutläget (mitt på skärmen, roterad 45°) tills animationen avbryts.
         const animation = btn.animate(
             [
-                { transform: 'translate(0px, 0px) rotate(0deg)', easing: 'ease-in-out' },
-                { transform: `translate(0px, ${dy}px) rotate(0deg)`, offset: 0.5, easing: 'ease-in-out' },
-                { transform: `translate(${dx}px, ${dy}px) rotate(45deg)` },
+                { transform: 'translate(0px, 0px)', easing: 'ease-in-out' },
+                { transform: `translate(0px, ${dy}px)`, offset: 0.5, easing: 'ease-in-out' },
+                { transform: `translate(${dx}px, ${dy}px)` },
             ],
             {
                 duration: 800,

@@ -62,7 +62,7 @@ export default function CloudPopup({
       setVisible(false);
       setLeaving(false);
       onDismiss?.();
-    }, 700);
+    }, 400);
   };
 
   if (!visible && !leaving) return null;
@@ -77,51 +77,41 @@ export default function CloudPopup({
 
   return (
     <div className={`fixed inset-0 z-[9999] flex pointer-events-none ${wrapperPositionClass}`}>
-      {/* The cloud itself */}
       <div
         role="button"
         onClick={dismiss}
-        className={`relative cursor-pointer select-none transition-opacity duration-700 ease-out pointer-events-auto
-          ${leaving ? 'opacity-0' : 'opacity-100'}
-          animate-cloud-float
-        `}
-        style={{ willChange: 'opacity', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.18))' }}
+        className="relative cursor-pointer select-none pointer-events-auto"
+        style={{ filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.18))' }}
       >
-        {/* Cloud SVG background */}
-        <svg
-          viewBox="0 0 340 240"
-          className={sizeClass}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Main cloud body – overlapping puffs all around for a soft, irregular silhouette */}
-          <g filter="url(#cloud-blur)" fillOpacity="0.98">
-            {/* Bottom row of puffs */}
-            <circle cx="58" cy="160" r="38" fill="white" />
-            <circle cx="100" cy="172" r="44" fill="white" />
-            <circle cx="150" cy="176" r="48" fill="white" />
-            <circle cx="205" cy="172" r="46" fill="white" />
-            <circle cx="255" cy="164" r="42" fill="white" />
-            <circle cx="296" cy="154" r="34" fill="white" />
-
-            {/* Top row of puffs */}
-            <circle cx="90" cy="118" r="48" fill="white" />
-            <circle cx="148" cy="98" r="60" fill="white" />
-            <circle cx="215" cy="108" r="56" fill="white" />
-            <circle cx="268" cy="126" r="44" fill="white" />
-          </g>
-
-          <defs>
-            <filter id="cloud-blur" x="-10%" y="-20%" width="120%" height="140%">
-              <feGaussianBlur stdDeviation="2" />
-            </filter>
-          </defs>
-        </svg>
-
-        {/* Text overlay – beautifully positioned inside the semi-transparent cloud */}
-        <div className="absolute inset-0 flex items-center justify-center px-12 pt-8">
-          <p className={`text-center text-sky-800 font-semibold text-base sm:text-[17px] leading-relaxed max-w-[240px] ${textTranslateClass}`}>
-            {message}
-          </p>
+        <div className={leaving ? 'animate-cloud-pop-out' : 'animate-cloud-float'}>
+          <svg
+            viewBox="0 0 340 240"
+            className={sizeClass}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g filter="url(#cloud-blur)" fillOpacity="0.98">
+              <circle cx="58" cy="160" r="38" fill="white" />
+              <circle cx="100" cy="172" r="44" fill="white" />
+              <circle cx="150" cy="176" r="48" fill="white" />
+              <circle cx="205" cy="172" r="46" fill="white" />
+              <circle cx="255" cy="164" r="42" fill="white" />
+              <circle cx="296" cy="154" r="34" fill="white" />
+              <circle cx="90" cy="118" r="48" fill="white" />
+              <circle cx="148" cy="98" r="60" fill="white" />
+              <circle cx="215" cy="108" r="56" fill="white" />
+              <circle cx="268" cy="126" r="44" fill="white" />
+            </g>
+            <defs>
+              <filter id="cloud-blur" x="-10%" y="-20%" width="120%" height="140%">
+                <feGaussianBlur stdDeviation="2" />
+              </filter>
+            </defs>
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center px-12 pt-8">
+            <p className={`text-center text-sky-800 font-semibold text-base sm:text-[17px] leading-relaxed max-w-[240px] ${textTranslateClass}`}>
+              {message}
+            </p>
+          </div>
         </div>
       </div>
     </div>

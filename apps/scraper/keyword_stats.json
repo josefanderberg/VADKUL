@@ -1,26 +1,32 @@
 {
-  "runStartedAt": "2026-05-27T23:07:48.167Z",
-  "lastUpdatedAt": "2026-05-27T23:56:58.677Z",
-  "totalUniqueUrls": 1214,
-  "totalDuplicateHits": 179,
+  "runStartedAt": "2026-05-28T23:06:43.705Z",
+  "lastUpdatedAt": "2026-05-28T23:54:58.324Z",
+  "totalUniqueUrls": 1336,
+  "totalDuplicateHits": 220,
   "perKeywordTotals": [
     {
-      "keyword": "Sala",
+      "keyword": "fest",
       "found": 16,
       "unique": 16,
       "duplicates": 0
     },
     {
-      "keyword": "Karlskrona",
+      "keyword": "Halmstad",
       "found": 15,
       "unique": 15,
       "duplicates": 0
     },
     {
-      "keyword": "Nora",
+      "keyword": "Falun",
       "found": 15,
       "unique": 15,
       "duplicates": 0
+    },
+    {
+      "keyword": "Mora",
+      "found": 16,
+      "unique": 15,
+      "duplicates": 1
     },
     {
       "keyword": "festival",
@@ -29,103 +35,151 @@
       "duplicates": 0
     },
     {
-      "keyword": "kurs",
-      "found": 15,
-      "unique": 15,
-      "duplicates": 0
+      "keyword": "Göteborg",
+      "found": 16,
+      "unique": 14,
+      "duplicates": 2
     },
     {
-      "keyword": "Örebro",
+      "keyword": "Jönköping",
+      "found": 16,
+      "unique": 14,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Västerås",
+      "found": 16,
+      "unique": 14,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Sundsvall",
       "found": 14,
       "unique": 14,
       "duplicates": 0
     },
     {
-      "keyword": "Mora",
+      "keyword": "Borås",
+      "found": 16,
+      "unique": 14,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Sala",
       "found": 15,
       "unique": 14,
       "duplicates": 1
     },
     {
       "keyword": "Boden",
-      "found": 14,
-      "unique": 14,
-      "duplicates": 0
-    },
-    {
-      "keyword": "konsert",
       "found": 15,
       "unique": 14,
       "duplicates": 1
     },
     {
-      "keyword": "fest",
+      "keyword": "Åsa",
       "found": 14,
       "unique": 14,
       "duplicates": 0
+    },
+    {
+      "keyword": "quiz",
+      "found": 15,
+      "unique": 14,
+      "duplicates": 1
     },
     {
       "keyword": "vernissage",
-      "found": 14,
+      "found": 15,
       "unique": 14,
-      "duplicates": 0
+      "duplicates": 1
     },
     {
-      "keyword": "teater",
-      "found": 30,
-      "unique": 14,
-      "duplicates": 16
-    },
-    {
-      "keyword": "opera",
+      "keyword": "musik",
       "found": 14,
       "unique": 14,
       "duplicates": 0
     },
     {
       "keyword": "dans",
-      "found": 15,
+      "found": 14,
       "unique": 14,
-      "duplicates": 1
+      "duplicates": 0
+    },
+    {
+      "keyword": "kurs",
+      "found": 14,
+      "unique": 14,
+      "duplicates": 0
     },
     {
       "keyword": "workshop",
-      "found": 14,
-      "unique": 14,
-      "duplicates": 0
-    },
-    {
-      "keyword": "föreläsning",
-      "found": 14,
-      "unique": 14,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Göteborg",
       "found": 15,
-      "unique": 13,
-      "duplicates": 2
+      "unique": 14,
+      "duplicates": 1
     },
     {
-      "keyword": "Uppsala",
+      "keyword": "Stockholm",
       "found": 14,
       "unique": 13,
       "duplicates": 1
     },
     {
-      "keyword": "Helsingborg",
+      "keyword": "Malmö",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Örebro",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Norrköping",
+      "found": 16,
+      "unique": 13,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Växjö",
       "found": 15,
       "unique": 13,
       "duplicates": 2
     },
     {
-      "keyword": "Sundsvall",
-      "found": 13,
+      "keyword": "Skellefteå",
+      "found": 15,
       "unique": 13,
-      "duplicates": 0
+      "duplicates": 2
+    },
+    {
+      "keyword": "Kristianstad",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sandviken",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
     },
     {
       "keyword": "Åre",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Nora",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "konsert",
       "found": 14,
       "unique": 13,
       "duplicates": 1
@@ -137,22 +191,16 @@
       "duplicates": 1
     },
     {
-      "keyword": "afterwork",
-      "found": 16,
-      "unique": 13,
-      "duplicates": 3
-    },
-    {
-      "keyword": "musik",
+      "keyword": "teater",
       "found": 14,
       "unique": 13,
       "duplicates": 1
     },
     {
-      "keyword": "yoga",
-      "found": 15,
+      "keyword": "opera",
+      "found": 14,
       "unique": 13,
-      "duplicates": 2
+      "duplicates": 1
     },
     {
       "keyword": "konst",
@@ -161,13 +209,19 @@
       "duplicates": 1
     },
     {
-      "keyword": "Stockholm",
+      "keyword": "lördag",
+      "found": 14,
+      "unique": 13,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Uppsala",
       "found": 14,
       "unique": 12,
       "duplicates": 2
     },
     {
-      "keyword": "Linköping",
+      "keyword": "Helsingborg",
       "found": 14,
       "unique": 12,
       "duplicates": 2
@@ -179,7 +233,31 @@
       "duplicates": 2
     },
     {
-      "keyword": "quiz",
+      "keyword": "Eskilstuna",
+      "found": 14,
+      "unique": 12,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Luleå",
+      "found": 14,
+      "unique": 12,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Enköping",
+      "found": 12,
+      "unique": 12,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Uddevalla",
+      "found": 12,
+      "unique": 12,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Härnösand",
       "found": 14,
       "unique": 12,
       "duplicates": 2
@@ -191,88 +269,64 @@
       "duplicates": 3
     },
     {
+      "keyword": "föreläsning",
+      "found": 13,
+      "unique": 12,
+      "duplicates": 1
+    },
+    {
       "keyword": "bio",
       "found": 14,
       "unique": 12,
       "duplicates": 2
     },
     {
-      "keyword": "lördag",
-      "found": 14,
-      "unique": 12,
-      "duplicates": 2
-    },
-    {
-      "keyword": "fredag",
-      "found": 14,
-      "unique": 12,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Norrköping",
-      "found": 11,
-      "unique": 11,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Umeå",
+      "keyword": "Linköping",
       "found": 14,
       "unique": 11,
       "duplicates": 3
     },
     {
-      "keyword": "Västerås",
-      "found": 11,
-      "unique": 11,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eskilstuna",
-      "found": 14,
-      "unique": 11,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Halmstad",
-      "found": 11,
-      "unique": 11,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Östersund",
+      "keyword": "Gävle",
       "found": 12,
       "unique": 11,
       "duplicates": 1
     },
     {
-      "keyword": "Kalmar",
+      "keyword": "Östersund",
       "found": 14,
       "unique": 11,
       "duplicates": 3
     },
     {
-      "keyword": "Falun",
+      "keyword": "Karlskrona",
       "found": 13,
       "unique": 11,
       "duplicates": 2
     },
     {
-      "keyword": "Hudiksvall",
-      "found": 11,
+      "keyword": "Karlskoga",
+      "found": 14,
       "unique": 11,
-      "duplicates": 0
+      "duplicates": 3
     },
     {
-      "keyword": "Härnösand",
-      "found": 13,
+      "keyword": "Kungsbacka",
+      "found": 15,
       "unique": 11,
-      "duplicates": 2
+      "duplicates": 4
     },
     {
-      "keyword": "Åsa",
-      "found": 11,
+      "keyword": "Eslöv",
+      "found": 12,
       "unique": 11,
-      "duplicates": 0
+      "duplicates": 1
+    },
+    {
+      "keyword": "Simrishamn",
+      "found": 14,
+      "unique": 11,
+      "duplicates": 3
     },
     {
       "keyword": "klubb",
@@ -287,13 +341,7 @@
       "duplicates": 3
     },
     {
-      "keyword": "comedy",
-      "found": 15,
-      "unique": 11,
-      "duplicates": 4
-    },
-    {
-      "keyword": "torsdag",
+      "keyword": "fredag",
       "found": 14,
       "unique": 11,
       "duplicates": 3
@@ -305,28 +353,64 @@
       "duplicates": 3
     },
     {
-      "keyword": "Jönköping",
+      "keyword": "Kalmar",
+      "found": 14,
+      "unique": 10,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Visby",
+      "found": 11,
+      "unique": 10,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Västervik",
       "found": 12,
       "unique": 10,
       "duplicates": 2
     },
     {
-      "keyword": "Uddevalla",
-      "found": 12,
+      "keyword": "Värnamo",
+      "found": 11,
       "unique": 10,
-      "duplicates": 2
+      "duplicates": 1
     },
     {
-      "keyword": "Sandviken",
+      "keyword": "Landskrona",
+      "found": 11,
+      "unique": 10,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Bollnäs",
       "found": 10,
       "unique": 10,
       "duplicates": 0
     },
     {
-      "keyword": "sport",
-      "found": 15,
+      "keyword": "Strängnäs",
+      "found": 11,
       "unique": 10,
-      "duplicates": 5
+      "duplicates": 1
+    },
+    {
+      "keyword": "standup",
+      "found": 13,
+      "unique": 10,
+      "duplicates": 3
+    },
+    {
+      "keyword": "afterwork",
+      "found": 14,
+      "unique": 10,
+      "duplicates": 4
+    },
+    {
+      "keyword": "sport",
+      "found": 14,
+      "unique": 10,
+      "duplicates": 4
     },
     {
       "keyword": "utställning",
@@ -335,82 +419,76 @@
       "duplicates": 4
     },
     {
-      "keyword": "Växjö",
-      "found": 12,
+      "keyword": "Umeå",
+      "found": 14,
       "unique": 9,
-      "duplicates": 3
+      "duplicates": 5
     },
     {
-      "keyword": "Borås",
+      "keyword": "Karlstad",
       "found": 10,
       "unique": 9,
       "duplicates": 1
     },
     {
-      "keyword": "Luleå",
+      "keyword": "Borlänge",
       "found": 12,
       "unique": 9,
       "duplicates": 3
     },
     {
-      "keyword": "Skellefteå",
-      "found": 11,
-      "unique": 9,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kristianstad",
-      "found": 11,
-      "unique": 9,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Visby",
-      "found": 11,
-      "unique": 9,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Västervik",
+      "keyword": "Norrtälje",
       "found": 9,
       "unique": 9,
       "duplicates": 0
     },
     {
-      "keyword": "Enköping",
+      "keyword": "Hässleholm",
+      "found": 10,
+      "unique": 9,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Falkenberg",
       "found": 9,
       "unique": 9,
       "duplicates": 0
     },
     {
-      "keyword": "Bollnäs",
+      "keyword": "Vetlanda",
+      "found": 10,
+      "unique": 9,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Ljungby",
+      "found": 10,
+      "unique": 9,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Arvika",
+      "found": 10,
+      "unique": 9,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Kristinehamn",
       "found": 9,
       "unique": 9,
       "duplicates": 0
     },
     {
-      "keyword": "Sollefteå",
-      "found": 11,
+      "keyword": "Mariestad",
+      "found": 12,
       "unique": 9,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Gällivare",
-      "found": 11,
-      "unique": 9,
-      "duplicates": 2
+      "duplicates": 3
     },
     {
       "keyword": "Kävlinge",
-      "found": 10,
+      "found": 11,
       "unique": 9,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Simrishamn",
-      "found": 12,
-      "unique": 9,
-      "duplicates": 3
+      "duplicates": 2
     },
     {
       "keyword": "Söderköping",
@@ -419,22 +497,22 @@
       "duplicates": 0
     },
     {
-      "keyword": "Strängnäs",
+      "keyword": "comedy",
+      "found": 15,
+      "unique": 9,
+      "duplicates": 6
+    },
+    {
+      "keyword": "yoga",
+      "found": 14,
+      "unique": 9,
+      "duplicates": 5
+    },
+    {
+      "keyword": "kväll",
       "found": 10,
       "unique": 9,
       "duplicates": 1
-    },
-    {
-      "keyword": "standup",
-      "found": 10,
-      "unique": 9,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Malmö",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
     },
     {
       "keyword": "Trollhättan",
@@ -443,46 +521,70 @@
       "duplicates": 0
     },
     {
-      "keyword": "Motala",
-      "found": 12,
-      "unique": 8,
-      "duplicates": 4
-    },
-    {
-      "keyword": "Norrtälje",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kungsbacka",
-      "found": 10,
-      "unique": 8,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Bromölla",
+      "keyword": "Varberg",
       "found": 9,
       "unique": 8,
       "duplicates": 1
     },
     {
-      "keyword": "marknad",
-      "found": 8,
+      "keyword": "Karlshamn",
+      "found": 10,
       "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "musikal",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlstad",
-      "found": 9,
-      "unique": 7,
       "duplicates": 2
+    },
+    {
+      "keyword": "Oskarshamn",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Nässjö",
+      "found": 9,
+      "unique": 8,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Hudiksvall",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Staffanstorp",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sjöbo",
+      "found": 9,
+      "unique": 8,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Eksjö",
+      "found": 10,
+      "unique": 8,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Hultsfred",
+      "found": 9,
+      "unique": 8,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sölvesborg",
+      "found": 11,
+      "unique": 8,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Motala",
+      "found": 11,
+      "unique": 7,
+      "duplicates": 4
     },
     {
       "keyword": "Nyköping",
@@ -497,100 +599,76 @@
       "duplicates": 0
     },
     {
-      "keyword": "Varberg",
+      "keyword": "Katrineholm",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Piteå",
       "found": 8,
       "unique": 7,
       "duplicates": 1
     },
     {
-      "keyword": "Borlänge",
-      "found": 8,
+      "keyword": "Ängelholm",
+      "found": 7,
       "unique": 7,
-      "duplicates": 1
+      "duplicates": 0
     },
     {
-      "keyword": "Hässleholm",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Värnamo",
+      "keyword": "Kumla",
       "found": 9,
       "unique": 7,
       "duplicates": 2
     },
     {
-      "keyword": "Oskarshamn",
-      "found": 10,
-      "unique": 7,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Vetlanda",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Kristinehamn",
+      "keyword": "Ludvika",
       "found": 7,
       "unique": 7,
       "duplicates": 0
     },
     {
       "keyword": "Söderhamn",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eslöv",
       "found": 8,
       "unique": 7,
       "duplicates": 1
     },
     {
-      "keyword": "Staffanstorp",
-      "found": 7,
+      "keyword": "Sollefteå",
+      "found": 10,
       "unique": 7,
-      "duplicates": 0
+      "duplicates": 3
     },
     {
-      "keyword": "Hultsfred",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sölvesborg",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Älmhult",
-      "found": 9,
-      "unique": 7,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Lindesberg",
+      "keyword": "Gällivare",
       "found": 12,
       "unique": 7,
       "duplicates": 5
     },
     {
-      "keyword": "föreställning",
-      "found": 7,
+      "keyword": "Bromölla",
+      "found": 9,
       "unique": 7,
-      "duplicates": 0
+      "duplicates": 2
     },
     {
-      "keyword": "kväll",
+      "keyword": "Båstad",
+      "found": 10,
+      "unique": 7,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Nybro",
       "found": 8,
       "unique": 7,
       "duplicates": 1
+    },
+    {
+      "keyword": "Lindesberg",
+      "found": 10,
+      "unique": 7,
+      "duplicates": 3
     },
     {
       "keyword": "helg",
@@ -599,16 +677,16 @@
       "duplicates": 0
     },
     {
-      "keyword": "Gävle",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
+      "keyword": "torsdag",
+      "found": 16,
+      "unique": 7,
+      "duplicates": 9
     },
     {
       "keyword": "Skövde",
-      "found": 6,
+      "found": 7,
       "unique": 6,
-      "duplicates": 0
+      "duplicates": 1
     },
     {
       "keyword": "Lidköping",
@@ -618,9 +696,9 @@
     },
     {
       "keyword": "Alingsås",
-      "found": 7,
+      "found": 8,
       "unique": 6,
-      "duplicates": 1
+      "duplicates": 2
     },
     {
       "keyword": "Ystad",
@@ -629,40 +707,34 @@
       "duplicates": 2
     },
     {
-      "keyword": "Ängelholm",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Landskrona",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
       "keyword": "Ronneby",
       "found": 7,
       "unique": 6,
       "duplicates": 1
     },
     {
-      "keyword": "Nässjö",
+      "keyword": "Tranås",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Lycksele",
       "found": 6,
       "unique": 6,
       "duplicates": 0
     },
     {
-      "keyword": "Lycksele",
+      "keyword": "Vimmerby",
       "found": 7,
       "unique": 6,
       "duplicates": 1
     },
     {
-      "keyword": "Eksjö",
-      "found": 7,
+      "keyword": "Älmhult",
+      "found": 11,
       "unique": 6,
-      "duplicates": 1
+      "duplicates": 5
     },
     {
       "keyword": "Finspång",
@@ -671,94 +743,52 @@
       "duplicates": 0
     },
     {
-      "keyword": "Piteå",
-      "found": 7,
-      "unique": 5,
+      "keyword": "marknad",
+      "found": 8,
+      "unique": 6,
       "duplicates": 2
     },
     {
-      "keyword": "Karlskoga",
+      "keyword": "Köping",
       "found": 6,
       "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Tranås",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ljungby",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Arvika",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mariestad",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kramfors",
-      "found": 9,
-      "unique": 5,
-      "duplicates": 4
-    },
-    {
-      "keyword": "Kiruna",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sjöbo",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Nybro",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "hantverk",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Falkenberg",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kumla",
-      "found": 5,
-      "unique": 4,
       "duplicates": 1
     },
     {
       "keyword": "Fagersta",
       "found": 6,
-      "unique": 4,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Kramfors",
+      "found": 7,
+      "unique": 5,
       "duplicates": 2
     },
     {
-      "keyword": "Vimmerby",
+      "keyword": "Kiruna",
+      "found": 6,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Tingsryd",
+      "found": 9,
+      "unique": 5,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Trelleborg",
       "found": 4,
       "unique": 4,
       "duplicates": 0
+    },
+    {
+      "keyword": "Laholm",
+      "found": 5,
+      "unique": 4,
+      "duplicates": 1
     },
     {
       "keyword": "Alvesta",
@@ -767,39 +797,15 @@
       "duplicates": 1
     },
     {
-      "keyword": "Tingsryd",
-      "found": 6,
-      "unique": 4,
-      "duplicates": 2
-    },
-    {
       "keyword": "Flen",
       "found": 5,
       "unique": 4,
       "duplicates": 1
     },
     {
-      "keyword": "Trelleborg",
+      "keyword": "musikal",
       "found": 5,
-      "unique": 3,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Karlshamn",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Köping",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ludvika",
-      "found": 4,
-      "unique": 3,
+      "unique": 4,
       "duplicates": 1
     },
     {
@@ -809,9 +815,15 @@
       "duplicates": 2
     },
     {
-      "keyword": "Katrineholm",
-      "found": 2,
-      "unique": 2,
+      "keyword": "föreställning",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "hantverk",
+      "found": 3,
+      "unique": 3,
       "duplicates": 0
     },
     {
@@ -821,7 +833,7 @@
       "duplicates": 1
     },
     {
-      "keyword": "Båstad",
+      "keyword": "Skanör",
       "found": 2,
       "unique": 2,
       "duplicates": 0
@@ -845,13 +857,7 @@
       "duplicates": 0
     },
     {
-      "keyword": "Skanör",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Laholm",
+      "keyword": "Onsala",
       "found": 1,
       "unique": 1,
       "duplicates": 0
@@ -873,12 +879,6 @@
       "found": 1,
       "unique": 0,
       "duplicates": 1
-    },
-    {
-      "keyword": "Onsala",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
     },
     {
       "keyword": "Olofström",
@@ -929,14 +929,14 @@
       "keyword": "Stockholm",
       "filter": "den här veckan",
       "found": 7,
-      "unique": 5,
-      "duplicates": 2
+      "unique": 6,
+      "duplicates": 1
     },
     {
       "keyword": "Göteborg",
       "filter": "idag",
-      "found": 7,
-      "unique": 7,
+      "found": 8,
+      "unique": 8,
       "duplicates": 0
     },
     {
@@ -949,46 +949,46 @@
     {
       "keyword": "Malmö",
       "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Malmö",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Uppsala",
-      "filter": "idag",
       "found": 7,
       "unique": 7,
       "duplicates": 0
     },
     {
-      "keyword": "Uppsala",
+      "keyword": "Malmö",
       "filter": "den här veckan",
       "found": 7,
       "unique": 6,
       "duplicates": 1
     },
     {
-      "keyword": "Linköping",
+      "keyword": "Uppsala",
       "filter": "idag",
       "found": 7,
       "unique": 7,
       "duplicates": 0
     },
     {
-      "keyword": "Linköping",
+      "keyword": "Uppsala",
       "filter": "den här veckan",
       "found": 7,
       "unique": 5,
       "duplicates": 2
     },
     {
+      "keyword": "Linköping",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Linköping",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
       "keyword": "Örebro",
       "filter": "idag",
       "found": 7,
@@ -999,42 +999,42 @@
       "keyword": "Örebro",
       "filter": "den här veckan",
       "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Helsingborg",
+      "filter": "idag",
+      "found": 7,
       "unique": 7,
       "duplicates": 0
     },
     {
       "keyword": "Helsingborg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Norrköping",
       "filter": "idag",
       "found": 8,
       "unique": 8,
       "duplicates": 0
     },
     {
-      "keyword": "Helsingborg",
+      "keyword": "Norrköping",
       "filter": "den här veckan",
-      "found": 7,
+      "found": 8,
       "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Norrköping",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Norrköping",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
+      "duplicates": 3
     },
     {
       "keyword": "Jönköping",
       "filter": "idag",
-      "found": 4,
-      "unique": 4,
+      "found": 8,
+      "unique": 8,
       "duplicates": 0
     },
     {
@@ -1053,1669 +1053,1669 @@
     },
     {
       "keyword": "Umeå",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Lund",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lund",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Västerås",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Västerås",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sundsvall",
-      "filter": "idag",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sundsvall",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlstad",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlstad",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Växjö",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Växjö",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Gävle",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Gävle",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Borås",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Borås",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Eskilstuna",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eskilstuna",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Halmstad",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Halmstad",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Östersund",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Östersund",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Kalmar",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kalmar",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Trollhättan",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Trollhättan",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Luleå",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Luleå",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Skellefteå",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Skellefteå",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kristianstad",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kristianstad",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Falun",
-      "filter": "idag",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Falun",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Karlskrona",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlskrona",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Skövde",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Skövde",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Motala",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Motala",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 3,
-      "duplicates": 4
-    },
-    {
-      "keyword": "Nyköping",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Nyköping",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Örnsköldsvik",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Örnsköldsvik",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Varberg",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Varberg",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Visby",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Visby",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Lidköping",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lidköping",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Alingsås",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Alingsås",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Borlänge",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Borlänge",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Trelleborg",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Trelleborg",
-      "filter": "den här veckan",
-      "found": 3,
-      "unique": 1,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Ystad",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ystad",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 4,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Västervik",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Västervik",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Katrineholm",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Katrineholm",
-      "filter": "den här veckan",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Norrtälje",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Norrtälje",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Enköping",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Enköping",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hässleholm",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hässleholm",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Piteå",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Piteå",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 3,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Karlskoga",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlskoga",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 4,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Värnamo",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Värnamo",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Uddevalla",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Uddevalla",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 6,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kungsbacka",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kungsbacka",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Falkenberg",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Falkenberg",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ängelholm",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ängelholm",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Landskrona",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Landskrona",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Karlshamn",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Karlshamn",
-      "filter": "den här veckan",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ronneby",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ronneby",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Oskarshamn",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Oskarshamn",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Vetlanda",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Vetlanda",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Nässjö",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Nässjö",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Tranås",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Tranås",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ljungby",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ljungby",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 4,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Arvika",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Arvika",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kristinehamn",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kristinehamn",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mariestad",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mariestad",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 3,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kumla",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kumla",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 3,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Hallsberg",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hallsberg",
-      "filter": "den här veckan",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Köping",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Köping",
-      "filter": "den här veckan",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sala",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sala",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Fagersta",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Fagersta",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 2,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Ludvika",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Ludvika",
-      "filter": "den här veckan",
-      "found": 3,
-      "unique": 2,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Mora",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mora",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Sandviken",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sandviken",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Bollnäs",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Bollnäs",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Söderhamn",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Söderhamn",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hudiksvall",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hudiksvall",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Härnösand",
-      "filter": "idag",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Härnösand",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Sollefteå",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sollefteå",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Kramfors",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kramfors",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 2,
-      "duplicates": 4
-    },
-    {
-      "keyword": "Boden",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Boden",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kiruna",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kiruna",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Gällivare",
-      "filter": "idag",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Gällivare",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Lycksele",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lycksele",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Åre",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Åre",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Eslöv",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eslöv",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Staffanstorp",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Staffanstorp",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kävlinge",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Kävlinge",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Vellinge",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Vellinge",
-      "filter": "den här veckan",
-      "found": 2,
-      "unique": 1,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Höganäs",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Höganäs",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Bromölla",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Bromölla",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Skanör",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Skanör",
-      "filter": "den här veckan",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Falsterbo",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Falsterbo",
-      "filter": "den här veckan",
-      "found": 1,
-      "unique": 0,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Sjöbo",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sjöbo",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 4,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Simrishamn",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Simrishamn",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "Laholm",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Laholm",
-      "filter": "den här veckan",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Onsala",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Onsala",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Åsa",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Åsa",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Båstad",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Båstad",
-      "filter": "den här veckan",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eksjö",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Eksjö",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 5,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Vimmerby",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Vimmerby",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 4,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hultsfred",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Hultsfred",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Nybro",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Nybro",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sölvesborg",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Sölvesborg",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Olofström",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Olofström",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lessebo",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lessebo",
-      "filter": "den här veckan",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Alvesta",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Alvesta",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 3,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Tingsryd",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Tingsryd",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 2,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Älmhult",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Älmhult",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Finspång",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Finspång",
-      "filter": "den här veckan",
-      "found": 6,
-      "unique": 6,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mjölby",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Mjölby",
-      "filter": "den här veckan",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Söderköping",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Söderköping",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Åtvidaberg",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Åtvidaberg",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Trosa",
-      "filter": "idag",
-      "found": 2,
-      "unique": 2,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Trosa",
-      "filter": "den här veckan",
-      "found": 3,
-      "unique": 1,
-      "duplicates": 2
-    },
-    {
-      "keyword": "Strängnäs",
-      "filter": "idag",
-      "found": 3,
-      "unique": 3,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Strängnäs",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Flen",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Flen",
-      "filter": "den här veckan",
-      "found": 4,
-      "unique": 3,
-      "duplicates": 1
-    },
-    {
-      "keyword": "Nora",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Nora",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lindesberg",
-      "filter": "idag",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "Lindesberg",
       "filter": "den här veckan",
       "found": 7,
       "unique": 2,
       "duplicates": 5
     },
     {
-      "keyword": "konsert",
+      "keyword": "Lund",
       "filter": "idag",
-      "found": 8,
-      "unique": 7,
-      "duplicates": 1
-    },
-    {
-      "keyword": "konsert",
-      "filter": "den här veckan",
       "found": 7,
       "unique": 7,
       "duplicates": 0
     },
     {
-      "keyword": "live",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "live",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "klubb",
-      "filter": "idag",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "klubb",
+      "keyword": "Lund",
       "filter": "den här veckan",
       "found": 7,
       "unique": 5,
       "duplicates": 2
     },
     {
-      "keyword": "fest",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "fest",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "dj",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "dj",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
-    },
-    {
-      "keyword": "quiz",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "quiz",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "spelning",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "spelning",
-      "filter": "den här veckan",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "show",
+      "keyword": "Västerås",
       "filter": "idag",
       "found": 8,
       "unique": 8,
       "duplicates": 0
     },
     {
-      "keyword": "show",
+      "keyword": "Västerås",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Sundsvall",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sundsvall",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlstad",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlstad",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Växjö",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Växjö",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Gävle",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Gävle",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Borås",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Borås",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Eskilstuna",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Eskilstuna",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Halmstad",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Halmstad",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Östersund",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Östersund",
       "filter": "den här veckan",
       "found": 7,
       "unique": 4,
       "duplicates": 3
     },
     {
-      "keyword": "standup",
+      "keyword": "Kalmar",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kalmar",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 3,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Trollhättan",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Trollhättan",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Luleå",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Luleå",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Skellefteå",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Skellefteå",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Kristianstad",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kristianstad",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Falun",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Falun",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlskrona",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlskrona",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Skövde",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Skövde",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Motala",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Motala",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 3,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Nyköping",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Nyköping",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Örnsköldsvik",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Örnsköldsvik",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Varberg",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Varberg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Visby",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Visby",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Lidköping",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Lidköping",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Alingsås",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Alingsås",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 4,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Borlänge",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Borlänge",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Trelleborg",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Trelleborg",
+      "filter": "den här veckan",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ystad",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ystad",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 4,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Västervik",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Västervik",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Katrineholm",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Katrineholm",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Norrtälje",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Norrtälje",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Enköping",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Enköping",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Hässleholm",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Hässleholm",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Piteå",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Piteå",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Karlskoga",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlskoga",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Värnamo",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Värnamo",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Uddevalla",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Uddevalla",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kungsbacka",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Kungsbacka",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 5,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Falkenberg",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Falkenberg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ängelholm",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ängelholm",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Landskrona",
       "filter": "idag",
       "found": 3,
       "unique": 3,
       "duplicates": 0
     },
     {
-      "keyword": "standup",
+      "keyword": "Landskrona",
       "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "gig",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "gig",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "festival",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "festival",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "marknad",
-      "filter": "idag",
-      "found": 1,
-      "unique": 1,
-      "duplicates": 0
-    },
-    {
-      "keyword": "marknad",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "loppis",
-      "filter": "idag",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "loppis",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "pubrunda",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "pubrunda",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "afterwork",
-      "filter": "idag",
       "found": 8,
       "unique": 7,
       "duplicates": 1
     },
     {
-      "keyword": "afterwork",
+      "keyword": "Karlshamn",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Karlshamn",
       "filter": "den här veckan",
       "found": 8,
       "unique": 6,
       "duplicates": 2
     },
     {
-      "keyword": "vernissage",
+      "keyword": "Ronneby",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ronneby",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Oskarshamn",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Oskarshamn",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Vetlanda",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Vetlanda",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Nässjö",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Nässjö",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Tranås",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Tranås",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 4,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Ljungby",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ljungby",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Arvika",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Arvika",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Kristinehamn",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kristinehamn",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mariestad",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mariestad",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 5,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Kumla",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kumla",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Hallsberg",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Hallsberg",
+      "filter": "den här veckan",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Köping",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Köping",
+      "filter": "den här veckan",
+      "found": 5,
+      "unique": 4,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sala",
       "filter": "idag",
       "found": 7,
       "unique": 7,
       "duplicates": 0
+    },
+    {
+      "keyword": "Sala",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Fagersta",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Fagersta",
+      "filter": "den här veckan",
+      "found": 5,
+      "unique": 4,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Ludvika",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Ludvika",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mora",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mora",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sandviken",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sandviken",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Bollnäs",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Bollnäs",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Söderhamn",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Söderhamn",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Hudiksvall",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Hudiksvall",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Härnösand",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Härnösand",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Sollefteå",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sollefteå",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Kramfors",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kramfors",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 4,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Boden",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Boden",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Kiruna",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kiruna",
+      "filter": "den här veckan",
+      "found": 5,
+      "unique": 4,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Gällivare",
+      "filter": "idag",
+      "found": 5,
+      "unique": 4,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Gällivare",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 3,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Lycksele",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Lycksele",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 6,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åre",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åre",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Eslöv",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Eslöv",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Staffanstorp",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Staffanstorp",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kävlinge",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Kävlinge",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 6,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Vellinge",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Vellinge",
+      "filter": "den här veckan",
+      "found": 2,
+      "unique": 1,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Höganäs",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Höganäs",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Bromölla",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Bromölla",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Skanör",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Skanör",
+      "filter": "den här veckan",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Falsterbo",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Falsterbo",
+      "filter": "den här veckan",
+      "found": 1,
+      "unique": 0,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sjöbo",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sjöbo",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Simrishamn",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Simrishamn",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Laholm",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Laholm",
+      "filter": "den här veckan",
+      "found": 4,
+      "unique": 3,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Onsala",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Onsala",
+      "filter": "den här veckan",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åsa",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åsa",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Båstad",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Båstad",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Eksjö",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Eksjö",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Vimmerby",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Vimmerby",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 5,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Hultsfred",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Hultsfred",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Nybro",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Nybro",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Sölvesborg",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Sölvesborg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "Olofström",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Olofström",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Lessebo",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Lessebo",
+      "filter": "den här veckan",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Alvesta",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Alvesta",
+      "filter": "den här veckan",
+      "found": 4,
+      "unique": 3,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Tingsryd",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Tingsryd",
+      "filter": "den här veckan",
+      "found": 5,
+      "unique": 1,
+      "duplicates": 4
+    },
+    {
+      "keyword": "Älmhult",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Älmhult",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 2,
+      "duplicates": 5
+    },
+    {
+      "keyword": "Finspång",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Finspång",
+      "filter": "den här veckan",
+      "found": 6,
+      "unique": 6,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mjölby",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Mjölby",
+      "filter": "den här veckan",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Söderköping",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Söderköping",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åtvidaberg",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Åtvidaberg",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Trosa",
+      "filter": "idag",
+      "found": 2,
+      "unique": 2,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Trosa",
+      "filter": "den här veckan",
+      "found": 3,
+      "unique": 1,
+      "duplicates": 2
+    },
+    {
+      "keyword": "Strängnäs",
+      "filter": "idag",
+      "found": 4,
+      "unique": 4,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Strängnäs",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Flen",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Flen",
+      "filter": "den här veckan",
+      "found": 4,
+      "unique": 3,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Nora",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Nora",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "Lindesberg",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "Lindesberg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "konsert",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "konsert",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "live",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "live",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "klubb",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "klubb",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "fest",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "fest",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "dj",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "dj",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "quiz",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "quiz",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "spelning",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "spelning",
+      "filter": "den här veckan",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "show",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "show",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "standup",
+      "filter": "idag",
+      "found": 5,
+      "unique": 5,
+      "duplicates": 0
+    },
+    {
+      "keyword": "standup",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 5,
+      "duplicates": 3
+    },
+    {
+      "keyword": "gig",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "gig",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "festival",
+      "filter": "idag",
+      "found": 8,
+      "unique": 8,
+      "duplicates": 0
+    },
+    {
+      "keyword": "festival",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "marknad",
+      "filter": "idag",
+      "found": 1,
+      "unique": 1,
+      "duplicates": 0
+    },
+    {
+      "keyword": "marknad",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "loppis",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "loppis",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "pubrunda",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "pubrunda",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "afterwork",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "afterwork",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 3,
+      "duplicates": 4
+    },
+    {
+      "keyword": "vernissage",
+      "filter": "idag",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
     },
     {
       "keyword": "vernissage",
@@ -2727,8 +2727,8 @@
     {
       "keyword": "teater",
       "filter": "idag",
-      "found": 8,
-      "unique": 8,
+      "found": 7,
+      "unique": 7,
       "duplicates": 0
     },
     {
@@ -2748,8 +2748,8 @@
     {
       "keyword": "föreställning",
       "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
+      "found": 3,
+      "unique": 3,
       "duplicates": 0
     },
     {
@@ -2762,9 +2762,9 @@
     {
       "keyword": "musikal",
       "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
+      "found": 4,
+      "unique": 3,
+      "duplicates": 1
     },
     {
       "keyword": "opera",
@@ -2775,31 +2775,31 @@
     },
     {
       "keyword": "opera",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "musik",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "musik",
       "filter": "den här veckan",
       "found": 7,
       "unique": 6,
       "duplicates": 1
     },
     {
+      "keyword": "musik",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "musik",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
       "keyword": "dans",
       "filter": "idag",
-      "found": 8,
+      "found": 7,
       "unique": 7,
-      "duplicates": 1
+      "duplicates": 0
     },
     {
       "keyword": "dans",
@@ -2809,242 +2809,228 @@
       "duplicates": 0
     },
     {
-      "keyword": "teater",
+      "keyword": "comedy",
       "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "comedy",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 2,
+      "duplicates": 6
+    },
+    {
+      "keyword": "sport",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "sport",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 4,
+      "duplicates": 3
+    },
+    {
+      "keyword": "yoga",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "yoga",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 2,
+      "duplicates": 5
+    },
+    {
+      "keyword": "kurs",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "kurs",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "workshop",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "workshop",
+      "filter": "den här veckan",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "föreläsning",
+      "filter": "idag",
+      "found": 6,
+      "unique": 6,
+      "duplicates": 0
+    },
+    {
+      "keyword": "föreläsning",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "utställning",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "utställning",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 3,
+      "duplicates": 4
+    },
+    {
+      "keyword": "film",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "film",
+      "filter": "den här veckan",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "bio",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "bio",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "konst",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "konst",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "hantverk",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "hantverk",
+      "filter": "den här veckan",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "kväll",
+      "filter": "idag",
+      "found": 3,
+      "unique": 3,
+      "duplicates": 0
+    },
+    {
+      "keyword": "kväll",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "helg",
+      "filter": "idag",
+      "found": 0,
+      "unique": 0,
+      "duplicates": 0
+    },
+    {
+      "keyword": "helg",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "lördag",
+      "filter": "idag",
+      "found": 7,
+      "unique": 7,
+      "duplicates": 0
+    },
+    {
+      "keyword": "lördag",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "fredag",
+      "filter": "idag",
+      "found": 7,
+      "unique": 6,
+      "duplicates": 1
+    },
+    {
+      "keyword": "fredag",
+      "filter": "den här veckan",
+      "found": 7,
+      "unique": 5,
+      "duplicates": 2
+    },
+    {
+      "keyword": "torsdag",
+      "filter": "idag",
+      "found": 8,
+      "unique": 7,
+      "duplicates": 1
+    },
+    {
+      "keyword": "torsdag",
+      "filter": "den här veckan",
       "found": 8,
       "unique": 0,
       "duplicates": 8
-    },
-    {
-      "keyword": "teater",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 0,
-      "duplicates": 7
-    },
-    {
-      "keyword": "comedy",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "comedy",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 4,
-      "duplicates": 4
-    },
-    {
-      "keyword": "sport",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "sport",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 2,
-      "duplicates": 5
-    },
-    {
-      "keyword": "yoga",
-      "filter": "idag",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "yoga",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "kurs",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "kurs",
-      "filter": "den här veckan",
-      "found": 8,
-      "unique": 8,
-      "duplicates": 0
-    },
-    {
-      "keyword": "workshop",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "workshop",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "föreläsning",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "föreläsning",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "utställning",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "utställning",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 3,
-      "duplicates": 4
-    },
-    {
-      "keyword": "film",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "film",
-      "filter": "den här veckan",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "bio",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "bio",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "konst",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "konst",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 6,
-      "duplicates": 1
-    },
-    {
-      "keyword": "hantverk",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "hantverk",
-      "filter": "den här veckan",
-      "found": 5,
-      "unique": 5,
-      "duplicates": 0
-    },
-    {
-      "keyword": "kväll",
-      "filter": "idag",
-      "found": 1,
-      "unique": 0,
-      "duplicates": 1
-    },
-    {
-      "keyword": "kväll",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "helg",
-      "filter": "idag",
-      "found": 0,
-      "unique": 0,
-      "duplicates": 0
-    },
-    {
-      "keyword": "helg",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "lördag",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "lördag",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "fredag",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "fredag",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 5,
-      "duplicates": 2
-    },
-    {
-      "keyword": "torsdag",
-      "filter": "idag",
-      "found": 7,
-      "unique": 7,
-      "duplicates": 0
-    },
-    {
-      "keyword": "torsdag",
-      "filter": "den här veckan",
-      "found": 7,
-      "unique": 4,
-      "duplicates": 3
     },
     {
       "keyword": "söndag",

@@ -266,7 +266,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         )}
 
                         {revealStep === 2 && (
-                            <div className="mt-6 flex flex-col gap-4">
+                            <div className="mt-6 flex flex-col gap-4 pb-8">
                                 <button
                                     onClick={handleVisitSite}
                                     className="flex items-center justify-center gap-4 w-full py-4 bg-green-600 hover:bg-green-700 text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"

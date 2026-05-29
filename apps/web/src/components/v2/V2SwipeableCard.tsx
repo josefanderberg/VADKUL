@@ -293,7 +293,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         {selectedEvent && (
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
             {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}
-            <div className="w-full max-w-4xl flex justify-center items-center gap-3 mb-4">
+            <div className="w-full max-w-4xl flex justify-end items-center gap-2 mb-4">
                 {historyStack.length > 0 && (
                     <button
                         type="button"
@@ -313,14 +313,15 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 </button>
             </div>
 
-            <div 
-                className="relative w-full max-w-4xl h-auto pointer-events-auto"
+            {/* Transform wrapper — only handles swipe animation, no height constraints */}
+            <div
+                className="relative w-full max-w-4xl pointer-events-auto"
                 onPointerDown={onPointerDown}
                 style={{
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
                     opacity: exitX !== null ? 0 : opacity,
                     transition: isDragging.current ? 'none' : 'transform 200ms ease-out, opacity 200ms ease-out',
-                    touchAction: 'none' // Prevent scrolling
+                    touchAction: 'pan-y',
                 }}
             >
                 {/* Visual feedback overlays during drag */}
@@ -335,7 +336,11 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                     </div>
                 )}
 
-                <div className={`w-full h-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] rounded-t-2xl overflow-hidden ${isDragging.current ? 'pointer-events-none' : ''}`}>
+                {/* Scrollable card — max-height + overflow-y on same element */}
+                <div
+                    className={`w-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] rounded-t-2xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
+                    style={{ maxHeight: 'calc(100svh - 160px)' }}
+                >
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
