@@ -6,36 +6,40 @@ Entry-point. Läs först. Hålls under 60 rader.
 
 | | |
 |---|---|
-| Datum | 2026-05-28 |
-| Källa | launchd 01:00 lokal + Cloud Functions 04:00 UTC |
-| FB-queries | 306 (113 städer + 40 kw × 2 datumfilter) |
-| Unika FB-URLs | 1214 |
-| Nya sparade | 252 lokal / ~275 cloud |
-| Firebase | 277 aktiva event |
-| Duration | FB 120 min, total 128 min |
-| Detaljer | [runs/2026-05-28.md](runs/2026-05-28.md) |
+| Datum | 2026-05-29 |
+| Källa | launchd 01:00 lokal Mac |
+| FB-queries | 304 (113 städer + 39 kw × 2 datumfilter) |
+| Unika FB-URLs | 1336 |
+| Nya sparade | 332 (312 FB + 19 Tickster + 1 Meetup) |
+| Pre-save utländskt filter | 279 stoppade |
+| FB-events i DB | 1576 |
+| Detaljer | [runs/2026-05-29.md](runs/2026-05-29.md) · [post-session 29b](runs/2026-05-29b.md) |
+
+## Kvalitet (trend)
+
+| Mått | 2026-05-28 | 2026-05-29 | 29b (backfill) | Trend |
+|---|---|---|---|---|
+| lat=0 | 26.2% | 16.2% | 16.2% | ✅ −10pp |
+| isLocationVerified | 73.8% | 83.8% | 83.8% | ✅ +10pp |
+| category='other' | 100% | 71.4% | **26.3%** | ✅✅ −45.1pp |
+| locationName saknas | 5.7% | 4.0% | 4.0% | ✅ −1.7pp |
 
 ## Aktiva kampanjer
 
-**Nästa att ta:** [K3 — Rensa defaults](kampanjer/k3-defaults-rensning.md) + K2-geocoding-retry + regelbaserad kategori-classifier (alla inför ikväll).
+| ID | Titel | Status |
+|---|---|---|
+| [K1](kampanjer/k1-chrome-leak.md) | Chrome-läckage + utländska events | KLAR 2026-05-27 |
+| [K2](kampanjer/k2-city-context.md) | City-context + geocoding-retry | KLAR (de facto) |
+| [K3](kampanjer/k3-defaults-rensning.md) | Rensa defaults som maskar saknad data | KLAR (de facto) |
+| [K4](kampanjer/k4-lokal-ai.md) | Lokal AI-granskning (Mac mini + Ollama) | AKTIV — gräns höjd 200→500 |
+| [K5](kampanjer/k5-lank-enrichment.md) | Länk-enrichment | PLAN |
+| [K6](kampanjer/k6-teams-rapport.md) | Teams-rapport som visar tratten ärligt | PLAN |
 
-| Ordning | ID | Titel | Status |
-|---|---|---|---|
-| 1 | [K3](kampanjer/k3-defaults-rensning.md) | Rensa defaults som maskar saknad data | PLAN |
-| 2 | [K2](kampanjer/k2-city-context.md) | City-context + geocoding-retry | PÅGÅR (26% lat=0) |
-| 3 | [K6](kampanjer/k6-teams-rapport.md) | Teams-rapport som visar tratten ärligt | PLAN |
-| 4 | [K5 S1](kampanjer/k5-lank-enrichment.md) | Länk-enrichment, Strategi 1 (re-scrape) | PLAN |
-| 5 | [K4](kampanjer/k4-lokal-ai.md) | Lokal AI-granskning (Mac mini + Ollama) | PLAN |
-| 6 | [K5 S2](kampanjer/k5-lank-enrichment.md) | Länk-enrichment, Strategi 2 (LLM-extraktion) | PLAN |
-| — | [K1](kampanjer/k1-chrome-leak.md) | Chrome-läckage + utländska events | KLAR 2026-05-27 |
+## Topp-3 öppna problem (per 2026-05-29b)
 
-## Topp-3 öppna problem (per 2026-05-28)
-
-1. **category='other' = 100%** — ingen klassificeringslogik körs alls. Snabb fix: regelbaserad classifier (konsert→music, teater→performing-arts osv). Kollar också om K3-defaults maskar felet.
-2. **lat=0,lng=0 på 26%** — många har stad i adressen men Nominatim returnerar tomt. K2-retry-strategi löser estim. halva (K2).
-3. **String-defaults maskar saknad data** — `extractedAddress || 'Växjö'`, `category || 'other'` gör att saknad data ser ut som riktig data (K3).
-
-SQL-rensning att köra: `DELETE FROM link_events WHERE extractedAddress LIKE '%Universitetsplatsen%'` (61 gamla K1-läckor).
+1. **lat=0 = 16.2%** — 256 events saknar koordinater. K4-gräns höjd 200→500 inför nästa körning. Strukturella miss: lokala venues saknas i Nominatim.
+2. **category='other' = 26.3%** — ner från 71.4%. 415 kvar; kräver LLM eller manuell insats. K4 tar dessa natt för natt.
+3. **O'Learys-dedup** — samma event sparas på 5 datum-URLs. title+date-dedup saknas.
 
 ## Konventioner
 

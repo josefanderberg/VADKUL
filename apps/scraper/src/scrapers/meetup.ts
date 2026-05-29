@@ -20,16 +20,20 @@ function isToday(date: Date, now: Date, todayEnd: Date): boolean {
 
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
-    if (t.includes('konsert') || t.includes('musik') || t.includes('live') || t.includes('band') || t.includes('dj') || t.includes('kör')) return 'music';
-    if (t.includes('fest') || t.includes('party') || t.includes('natt') || t.includes('bar') || t.includes('pub') || t.includes('aw')) return 'party';
-    if (t.includes('yoga') || t.includes('dans') || t.includes('fitness') || t.includes('löpning') || t.includes('träning')) return 'training';
-    if (t.includes('mat') || t.includes('vin') || t.includes('öl') || t.includes('middag') || t.includes('brunch') || t.includes('provning')) return 'food';
-    if (t.includes('teater') || t.includes('konst') || t.includes('utställning') || t.includes('bio') || t.includes('standup')) return 'culture';
-    if (t.includes('workshop') || t.includes('kurs') || t.includes('föreläsning') || t.includes('networking') || t.includes('meetup')) return 'study';
-    if (t.includes('barn') || t.includes('familj') || t.includes('junior')) return 'play';
-    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa')) return 'market';
-    if (t.includes('sport') || t.includes('match') || t.includes('cup') || t.includes('fotboll') || t.includes('hockey')) return 'sport';
-    if (t.includes('utomhus') || t.includes('natur') || t.includes('vandring')) return 'outdoor';
+    if (/standup|stand.?up|komedi|humor|comedy/.test(t)) return 'comedy';
+    if (/teater|musikal|musical|balett|opera|cirkus|föreställning|kabaret|revy/.test(t)) return 'performing-arts';
+    if (/konsert|festival|sinfoni|kör\b|orkester|symfoni|musik(?!al)|\btour\b|\bband\b|gitarr|jazz\b|blues|live\s+music/.test(t)) return 'music';
+    if (/\b(sm i|cup|lopp|match|tävling|hockey|fotboll|handboll|basket|tennis|golf|cykel|simning|friidrott|sport)\b/.test(t)) return 'sport';
+    if (/quiz|spel(?!a)|boardgame|bingo|escape|game\s+night/.test(t)) return 'game';
+    if (/\b(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog|brunch)\b/.test(t)) return 'food-drink';
+    if (/marknad|loppis|mässa|expo/.test(t)) return 'market';
+    if (/utomhus|natur|vandring|friluft|hike|hiking/.test(t)) return 'outdoor';
+    if (/\b(barn|familj|junior)\b|sagotr/.test(t)) return 'family';
+    if (/träning|yoga|gym|fitness|breathwork|mindfulness|löpning|running/.test(t)) return 'training';
+    if (/networking|meetup|mingle|fika|network/.test(t)) return 'social';
+    if (/\b(fest|party|gala|bal|aw)\b|after.?work/.test(t)) return 'social';
+    if (/konst|utställning|vernissage|galleri/.test(t)) return 'art';
+    if (/workshop|kurs|föreläsning|seminarium|utbildning|study|learning|hack/.test(t)) return 'education';
     return 'other';
 }
 
@@ -90,6 +94,7 @@ async function extractMeetupEvent(page: Page, url: string) {
                         return {
                             title: (d.name || '').trim(),
                             startDate: d.startDate || '',
+                            description: d.description ? String(d.description).trim() : '',
                             locationName: d.location?.name || '',
                             address: [
                                 d.location?.address?.streetAddress,
@@ -109,7 +114,7 @@ async function extractMeetupEvent(page: Page, url: string) {
             // Fallback: grab title + og:image at minimum
             const title = (document.querySelector('h1')?.textContent || '').trim();
             const image = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
-            return { title, startDate: '', locationName: '', address: '', city: '', lat: null, lng: null, image, organizer: 'Meetup' };
+            return { title, startDate: '', description: '', locationName: '', address: '', city: '', lat: null, lng: null, image, organizer: 'Meetup' };
         });
     } catch {
         return null;
@@ -210,6 +215,7 @@ export async function scrapeMeetup() {
                     lng,
                     hostName: details.organizer || 'Meetup',
                     category: guessCategoryFromTitle(details.title),
+                    description: details.description || '',
                     coverImage: details.image || '',
                     createdAt: new Date(),
                     isLocationVerified: lat !== 0,

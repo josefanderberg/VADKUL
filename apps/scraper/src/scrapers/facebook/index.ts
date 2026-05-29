@@ -421,7 +421,15 @@ export async function scrapeFacebookEvents() {
 
                 // Hoppa över event med utländsk adress — de är inte relevanta för appen
                 if (extractedAddress && isForeignAddress(extractedAddress)) {
-                    console.log(`    ⏩ Skippar utländskt event: "${details.title}" (addr: "${extractedAddress}")`);
+                    console.log(`    ⏩ Skippar utländskt event (adress): "${details.title}" (addr: "${extractedAddress}")`);
+                    continue;
+                }
+
+                // Hoppa över event med danska ord i titeln (lørdag/søndag/åbent/onsdag etc.)
+                // — adressfältet kan vara tomt medan titeln avslöjar ursprunget
+                const DANISH_TITLE_WORDS = /\b(lørdag|søndag|mandag|tirsdag|onsdag|torsdag|fredag|åbent|åbner|lukket|hvad\s+sker)\b/i;
+                if (DANISH_TITLE_WORDS.test(details.title)) {
+                    console.log(`    ⏩ Skippar danskt event (titel): "${details.title}"`);
                     continue;
                 }
 

@@ -47,7 +47,7 @@ async function main() {
           AND url LIKE '%facebook%'
           AND (description IS NOT NULL AND description != '')
         ORDER BY createdAt DESC
-        LIMIT 200
+        LIMIT 500
     `).all() as { url: string; title: string; description: string; extractedAddress: string }[];
 
     console.log(`📊 ${missing.length} FB-events med lat=0 och beskrivning — skickar till Ollama...`);

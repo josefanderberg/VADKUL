@@ -48,17 +48,32 @@ function isWithinOneWeek(date: Date): boolean {
 
 function guessCategoryFromTitle(title: string): string {
     const t = title.toLowerCase();
-    if (t.includes('fest') || t.includes('aw') || t.includes('klubb') || t.includes('party') || t.includes('krog')) return 'party';
-    if (t.includes('musik') || t.includes('konsert') || t.includes('kör') || t.includes('orkester') || t.includes('tour') || t.includes('band')) return 'music';
-    if (t.includes('sm i') || t.includes('cup') || t.includes('lopp') || t.includes('sport') || t.includes('match') || t.includes('tävling') || t.includes('hockey') || t.includes('fotboll') || t.includes('handboll')) return 'sport';
-    if (t.includes('quiz') || t.includes('spel') || t.includes('boardgame') || t.includes('bingo')) return 'game';
-    if (t.includes('teater') || t.includes('musikal') || t.includes('standup') || t.includes('humor') || t.includes('konst') || t.includes('utställning') || t.includes('komedi') || t.includes('magic')) return 'culture';
-    if (t.includes('mat') || t.includes('öl') || t.includes('vin') || t.includes('dinner') || t.includes('tasting') || t.includes('provning') || t.includes('middag')) return 'food';
-    if (t.includes('marknad') || t.includes('loppis') || t.includes('mässa')) return 'market';
-    if (t.includes('utomhus') || t.includes('natur') || t.includes('vandring')) return 'outdoor';
-    if (t.includes('barn') || t.includes('familj') || t.includes('saga') || t.includes('junior')) return 'play';
-    if (t.includes('träning') || t.includes('yoga') || t.includes('gym') || t.includes('fitness')) return 'training';
-    if (t.includes('festival')) return 'music';
+    // Comedy first (before culture, to avoid standup → culture)
+    if (/standup|stand.?up|komedi|humor|comedy/.test(t)) return 'comedy';
+    // Performing arts (teater, musikal, balett, opera, cirkus)
+    if (/teater|musikal|musical|balett|opera|cirkus|föreställning|kabaret|revy|dansshow|danskonsert/.test(t)) return 'performing-arts';
+    // Music (word-boundary safe)
+    if (/konsert|festival|sinfoni|kör\b|orkester|symfoni|musik(?!al)|\btour\b|\bband\b|gitarr|jazz\b|blues|tribute/.test(t)) return 'music';
+    // Sport (avoid matching 'sport' in 'transport' etc)
+    if (/\b(sm i|cup|lopp|match|tävling|hockey|fotboll|handboll|basket|tennis|golf|löp|cykel|simning|friidrott|sport)\b/.test(t)) return 'sport';
+    // Game
+    if (/quiz|spel(?!a)|boardgame|bingo|escape/.test(t)) return 'game';
+    // Food (word boundaries to avoid 'musical' matching 'mat')
+    if (/\b(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog)\b/.test(t)) return 'food-drink';
+    // Market
+    if (/marknad|loppis|mässa|expo/.test(t)) return 'market';
+    // Outdoor
+    if (/utomhus|natur|vandring|friluft/.test(t)) return 'outdoor';
+    // Family / kids
+    if (/\b(barn|familj|junior)\b|sagotr|saga(?=träff|stund|kväll)|\bsago\b/.test(t)) return 'family';
+    // Training / wellness
+    if (/träning|yoga|gym|fitness|breathwork|mindfulness/.test(t)) return 'training';
+    // Social / party
+    if (/\b(fest|aw|party|gala|bal)\b|after.?work/.test(t)) return 'social';
+    // Art
+    if (/konst|utställning|vernissage|galleri/.test(t)) return 'art';
+    // Education
+    if (/föreläsning|kurs|workshop|seminarium|utbildning/.test(t)) return 'education';
     return 'other';
 }
 
@@ -128,7 +143,8 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
         for (const s of scripts) {
             try {
                 const d = JSON.parse(s.textContent || '');
-                if (d['@type'] === 'Event') {
+                const type = d['@type'];
+                if (type === 'Event' || (Array.isArray(type) && type.includes('Event'))) {
                     jsonTime = d.startDate || '';
                     if (d.description) jsonDescription = String(d.description);
                     if (d.location) {
@@ -149,6 +165,26 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                     }
                 }
             } catch (_) {}
+        }
+
+        // Description från sidans body — om JSON-LD saknar den.
+        // Tickster renderar beskrivningen som vanliga <p> utan klass vars parent också saknar klass.
+        // Datum-stycket (u-font--mono) och footer-adresser (o-grid-parent) filtreras bort.
+        if (!jsonDescription) {
+            const descParas = Array.from(document.querySelectorAll('p'))
+                .filter(p => {
+                    if (p.className) return false;                // skip classed paras (date, etc)
+                    if (p.parentElement?.className) return false; // skip grid/layout parents
+                    const txt = p.textContent?.trim() || '';
+                    if (txt.length < 30) return false;
+                    // Skip date lines ("Måndag den 1 juni …")
+                    if (/^(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)\s+den\s+\d/i.test(txt)) return false;
+                    // Skip ticket/door info lines
+                    if (/Entrén öppnar|Biljett|köpa biljett|Startar:|Dörröppning|Insläpp:/i.test(txt)) return false;
+                    return true;
+                })
+                .map(p => p.textContent?.trim() || '');
+            if (descParas.length > 0) jsonDescription = descParas.join('\n\n');
         }
 
         // Microdata — venue address från Schema.org markup (event-specifik, ej Tickster AB)
@@ -254,6 +290,13 @@ export async function scrapeTickster() {
         await page.setUserAgent(
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         );
+        // Förhandsacceptera cookie-väggen så att sidan renderar fullt
+        await page.setCookie({
+            name: 'CookieConsent',
+            value: '{stamp:%27-1%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:true%2Cmarketing:true%2Cver:1}',
+            domain: '.tickster.com',
+            path: '/',
+        });
 
         // Blockera tung media för snabbare laddning
         await page.setRequestInterception(true);
@@ -303,6 +346,12 @@ export async function scrapeTickster() {
 
                 if (!details || !details.title) {
                     console.log(`     ⚠️  Ingen titel, hoppar.`);
+                    continue;
+                }
+
+                // Hoppa bort generiska placeholder-titlar
+                if (details.title === 'Tickster Event' || details.title.toLowerCase() === 'event') {
+                    console.log(`     🗑️  Placeholder-titel "${details.title}", hoppar.`);
                     continue;
                 }
 
