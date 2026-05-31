@@ -16,8 +16,8 @@ import { classifyEvent } from '../utils/classify';
 // --- DATE WINDOW ---
 const now = new Date();
 now.setHours(0, 0, 0, 0);
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const cutoff = new Date(now.getTime() + THIRTY_DAYS_MS);
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const cutoff = new Date(now.getTime() + SEVEN_DAYS_MS);
 const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
 function isWithinWindow(date: Date): boolean {
@@ -260,6 +260,15 @@ export async function scrapeEventbrite() {
                     // Skip placeholders / zero-length titles
                     if (!card.title || card.title.length < 3) continue;
 
+                    // Skip non-Swedish Eventbrite events (.com, .ca, .fr etc.)
+                    try {
+                        const hostname = new URL(card.url).hostname;
+                        if (!hostname.endsWith('eventbrite.se')) {
+                            console.log(`  [skip] Utländskt event (${hostname}): ${card.title}`);
+                            continue;
+                        }
+                    } catch { continue; }
+
                     // Dedup
                     if (await eventExistsInDb(card.url)) continue;
 
@@ -273,7 +282,7 @@ export async function scrapeEventbrite() {
                         continue;
                     }
                     if (!isWithinWindow(startDate)) {
-                        console.log(`  [skip] Utanför 30 dagar (${startDate.toLocaleDateString('sv-SE')}): ${card.title}`);
+                        console.log(`  [skip] Utanför 7 dagar (${startDate.toLocaleDateString('sv-SE')}): ${card.title}`);
                         continue;
                     }
 

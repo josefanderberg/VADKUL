@@ -137,8 +137,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
             {/* 1. Header (Always visible) */}
-            <div 
-                className="p-4 md:p-6 pt-5 flex flex-col w-full relative cursor-pointer"
+            <div
+                className="p-4 md:p-6 pt-5 flex flex-col w-full relative cursor-pointer sticky top-0 bg-card z-10"
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
@@ -161,7 +161,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     {revealStep >= 1 && (
                         <button
                             onClick={handleVisitSite}
-                            className="shrink-0 bg-green-600 hover:bg-green-700 text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg animate-in fade-in zoom-in duration-300"
+                            className="shrink-0 bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg animate-in fade-in zoom-in duration-300"
                         >
                             ANMÄL
                         </button>
@@ -259,17 +259,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </p>
                         
                         {revealStep === 1 && (linkEvent as any).description && (
-                            <div className="mt-3 text-green-600 font-black flex items-center gap-1 text-[10px] uppercase tracking-widest">
+                            <div className="mt-3 text-[#006AA7] font-black flex items-center gap-1 text-[10px] uppercase tracking-widest">
                                 <span>Läs hela beskrivningen</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                             </div>
                         )}
 
                         {revealStep === 2 && (
-                            <div className="mt-6 flex flex-col gap-4 pb-8">
+                            <div className="mt-6 flex flex-col gap-4">
                                 <button
                                     onClick={handleVisitSite}
-                                    className="flex items-center justify-center gap-4 w-full py-4 bg-green-600 hover:bg-green-700 text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
+                                    className="flex items-center justify-center gap-4 w-full py-4 bg-[#006AA7] hover:bg-[#005590] text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
                                 >
                                     <span>ANMÄL DIG HÄR</span>
                                     <ExternalLink size={24} />

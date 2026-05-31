@@ -79,26 +79,40 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
         const cached = iconCache.current.get(cacheKey);
         if (cached) return cached;
 
-        const bgClass = isSaved ? 'bg-white border-white' : 'bg-slate-800 border-white';
-        const emoji = '🎟️';
-        const opacityClass = isDiscarded ? 'opacity-30 grayscale' : '';
+        const pinBg = isSaved ? '#ffffff' : '#1e293b';
+        const pinBorder = isSelected
+            ? '3px solid #006AA7'
+            : isSaved
+            ? '2px solid #5BA3CC'
+            : '2px solid rgba(255,255,255,0.25)';
+
+        const shadowFilter = isSelected
+            ? 'drop-shadow(0 6px 24px rgba(0,0,0,0.35)) drop-shadow(0 2px 6px rgba(0,0,0,0.2))'
+            : isSaved
+            ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.2))'
+            : 'drop-shadow(0 4px 12px rgba(0,0,0,0.18)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))';
+
+        const scaleStyle = isSelected ? 'transform: scale(1.25) translateY(-10px);' : '';
+        const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
+
+        const emoji = '🎫';
+
         const countBadge = count > 1
-            ? `<div class="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 bg-blue-600 text-white text-[11px] font-bold rounded-full border-2 border-white shadow-md flex items-center justify-center">${count > 99 ? '99+' : count}</div>`
-            : (isSaved ? '<div class="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-slate-200 shadow-md animate-pulse"></div>' : '');
+            ? `<div style="position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;background:#006AA7;color:#fff;font-size:10px;font-weight:700;border-radius:999px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;line-height:1;">${count > 99 ? '99+' : count}</div>`
+            : (isSaved ? '<div style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#5BA3CC;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></div>' : '');
 
         const icon = L.divIcon({
-            className: 'custom-marker-teardrop',
+            className: 'custom-marker-pin',
             html: `
-        <div class="relative group transition-all duration-300 ${isSelected ? 'scale-125 z-50 drop-shadow-2xl -translate-y-3' : 'hover:scale-110 z-10 hover:z-20 hover:-translate-y-1'} ${opacityClass}">
-            <div class="w-12 h-12 ${bgClass} border-[3px] shadow-md rounded-full rounded-br-none transform rotate-45 flex items-center justify-center overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-black/5 to-transparent"></div>
-                <div class="transform -rotate-45 text-2xl filter drop-shadow-sm">${emoji}</div>
+        <div style="position:relative;transition:transform 0.2s;${scaleStyle}${opacityStyle}filter:${shadowFilter};">
+            <div style="width:44px;height:44px;background:${pinBg};border:${pinBorder};border-radius:50% 50% 0 50%;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+                <div style="transform:rotate(-45deg);font-size:22px;line-height:1;position:relative;z-index:1;">${emoji}</div>
             </div>
             ${countBadge}
         </div>
       `,
-            iconSize: [48, 65],
-            iconAnchor: [24, 58],
+            iconSize: [44, 60],
+            iconAnchor: [22, 55],
         });
         iconCache.current.set(cacheKey, icon);
         return icon;

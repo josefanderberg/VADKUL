@@ -248,15 +248,24 @@ export async function scrapeFacebookEvents() {
             'Älvsbyn',
         ];
 
-        // Breda sökord – event-typer, aktiviteter, tider (40 sökord totalt)
+        // Breda sökord – event-typer, aktiviteter, tider
+        // Uppdaterade baserat på keyword-test (2026-05-31): tog bort döda (0 träffar),
+        // la till ord med bevisad räckvidd och god geografisk spridning.
         const BROAD_KEYWORDS = [
-            // Event-typer
-            'konsert', 'live', 'klubb', 'fest', 'dj', 'quiz', 'spelning', 'show',
-            'standup', 'gig', 'festival', 'marknad', 'loppis', 'pubrunda', 'afterwork',
+            // Musik & underhållning
+            'konsert', 'klubb', 'fest', 'dj', 'quiz', 'show',
+            'standup', 'festival', 'marknad', 'loppis', 'bakluckeloppis', 'afterwork',
             'vernissage', 'teater', 'föreställning', 'musikal', 'opera',
-            // Aktiviteter
+            'allsång', 'karaoke', 'disco', 'cirkus',
+            // Sport & friluftsliv
             'musik', 'dans', 'comedy', 'sport', 'yoga', 'kurs', 'workshop',
-            'föreläsning', 'utställning', 'film', 'bio', 'konst', 'hantverk',
+            'föreläsning', 'utställning', 'bio', 'konst',
+            'fotboll', 'hockey', 'orientering', 'vandring',
+            // Mat & socialt
+            'brunch', 'middag', 'vinprovning', 'mingel',
+            // Bred geografisk spridning
+            'gudstjänst', 'kyrka', 'gratis', 'midsommar',
+            'second hand', 'antik', 'fika', 'träff',
             // Tider / vardagsord
             'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag'
         ];
@@ -400,6 +409,13 @@ export async function scrapeFacebookEvents() {
 
         let saved = 0;
         let processed = 0;
+        // Extraction-fas räknare för slutstatistik
+        let extractAlreadyInDb = 0;
+        let extractSkippedForeign = 0;
+        let extractSkippedDate = 0;
+        let extractLoginWall = 0;
+        let extractFailed = 0;
+        let extractNewlySaved = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
             const { expectedDay, city } = itemData;
             processed++;
@@ -455,6 +471,7 @@ export async function scrapeFacebookEvents() {
                     } else {
                         console.log(`    ⏩ Existerande event skippat (utanför 1-veckas intervall): ${existingEvent.title} (${eventTime.toLocaleDateString()})`);
                     }
+                    extractAlreadyInDb++;
                     continue;
                 }
 
@@ -475,7 +492,7 @@ export async function scrapeFacebookEvents() {
                 await new Promise(r => setTimeout(r, 1000));
 
                 const details = await extractEventDetails(page);
-                if (details.title === 'Facebook Event' || details.title.includes('Logga in')) continue;
+                if (details.title === 'Facebook Event' || details.title.includes('Logga in')) { extractLoginWall++; continue; }
 
                 // --- INSTRUMENT: VÄRD (HOST) ---
                 const hostInfo = await HostInstrument.extractInfo(page);
@@ -511,6 +528,7 @@ export async function scrapeFacebookEvents() {
                 // Hoppa över event med utländsk adress — de är inte relevanta för appen
                 if (extractedAddress && isForeignAddress(extractedAddress)) {
                     console.log(`    ⏩ Skippar utländskt event (adress): "${details.title}" (addr: "${extractedAddress}")`);
+                    extractSkippedForeign++;
                     continue;
                 }
 
@@ -605,6 +623,7 @@ export async function scrapeFacebookEvents() {
 
                 if (eventTime > oneWeekFromNow || eventTime < todayStart) {
                     console.log(`    ⏩ Skippar event (utanför 1-veckas intervall): ${details.title} (${eventTime.toLocaleDateString()})`);
+                    extractSkippedDate++;
                     continue;
                 }
 
@@ -666,9 +685,11 @@ export async function scrapeFacebookEvents() {
                     isHostVerified
                 });
                 saved++;
+                extractNewlySaved++;
                 console.log(`  ✅ Sparade: ${details.title} (${details.going} deltagare) — totalt sparade nya: ${saved}, totalt i loggen: ${scrapedEventsLog.length}`);
             } catch (e) {
                 console.log(`    ❌ Fel vid ${url}`, e);
+                extractFailed++;
             }
         }
         console.log(`🎉 Klar! Sparade ${saved} nya.`);
@@ -710,6 +731,27 @@ export async function scrapeFacebookEvents() {
             console.log(`  📅 ${swedishDay.padEnd(25)}: ${count} event`);
         });
         console.log('==========================================\n');
+
+        // ── Skriv slutlig statistik + körningshistorik ───────────────────────
+        writeFinalScraperStats({
+            runStartedAt,
+            sourceStats,
+            perKeywordTotals,
+            totalUniqueUrls: allEventUrls.size,
+            totalDuplicateHits,
+            extraction: {
+                totalToProcess,
+                alreadyInDb:   extractAlreadyInDb,
+                newlySaved:    extractNewlySaved,
+                skippedForeign: extractSkippedForeign,
+                skippedDate:   extractSkippedDate,
+                loginWall:     extractLoginWall,
+                failed:        extractFailed,
+            },
+            eventsInLog:     scrapedEventsLog.length,
+            keywordStatsPath,
+        });
+
     } catch (err) {
         console.error('❌ Fel i skrapan:', err);
     } finally {
@@ -721,6 +763,190 @@ export async function scrapeFacebookEvents() {
         writeLogFile();
         console.log(`💾 Slutligen sparade ${scrapedEventsLog.length} skrapade objekt till: ${logPath}`);
         await browser.close();
+    }
+}
+
+// ─── INTERNA HJÄLPFUNKTIONER (utanför scrapeFacebookEvents) ──────────────────
+
+/**
+ * Skriver slutlig, komplett statistik för en körning till keyword_stats.json
+ * samt lägger till en rad i scraper_run_history.json för trend-analys.
+ */
+export function writeFinalScraperStats(opts: {
+    runStartedAt: string;
+    sourceStats: { keyword: string; filter: string; found: number; unique: number; duplicates: number }[];
+    perKeywordTotals: { [keyword: string]: { found: number; unique: number; duplicates: number } };
+    totalUniqueUrls: number;
+    totalDuplicateHits: number;
+    extraction: {
+        totalToProcess: number;
+        alreadyInDb: number;
+        newlySaved: number;
+        skippedForeign: number;
+        skippedDate: number;
+        loginWall: number;
+        failed: number;
+    };
+    eventsInLog: number;
+    keywordStatsPath: string;
+}) {
+    const {
+        runStartedAt, sourceStats, perKeywordTotals,
+        totalUniqueUrls, totalDuplicateHits, extraction,
+        eventsInLog, keywordStatsPath,
+    } = opts;
+
+    const now = new Date().toISOString();
+    const durationMs = new Date(now).getTime() - new Date(runStartedAt).getTime();
+    const durationMinutes = Math.round(durationMs / 60000);
+
+    // ── Discovery-fas ────────────────────────────────────────────────────────
+    const totalQueries = sourceStats.length;
+    const queriesWithHits = sourceStats.filter(s => s.found > 0).length;
+    const queriesAtCap    = sourceStats.filter(s => s.found >= 7).length;
+    const queriesZero     = sourceStats.filter(s => s.found === 0).length;
+    const totalFound      = sourceStats.reduce((acc, s) => acc + s.found, 0);
+
+    // Städer vs sökord (stad = börjar med versal)
+    const cityStats    = sourceStats.filter(s => /^[A-ZÅÄÖ]/.test(s.keyword));
+    const keywordStats = sourceStats.filter(s => !/^[A-ZÅÄÖ]/.test(s.keyword));
+    const citiesSearched   = new Set(cityStats.map(s => s.keyword)).size;
+    const citiesWithHits   = new Set(cityStats.filter(s => s.found > 0).map(s => s.keyword)).size;
+    const citiesAtCap      = new Set(cityStats.filter(s => s.found >= 7).map(s => s.keyword)).size;
+    const keywordsSearched = new Set(keywordStats.map(s => s.keyword)).size;
+    const keywordsWithHits = new Set(keywordStats.filter(s => s.found > 0).map(s => s.keyword)).size;
+
+    const hitRatePct  = totalQueries > 0 ? (queriesWithHits / totalQueries * 100) : 0;
+    const capRatePct  = totalQueries > 0 ? (queriesAtCap    / totalQueries * 100) : 0;
+    const zeroRatePct = totalQueries > 0 ? (queriesZero     / totalQueries * 100) : 0;
+    const avgFound    = totalQueries > 0 ? (totalFound / totalQueries) : 0;
+    const dedupPct    = totalFound   > 0 ? (totalDuplicateHits / totalFound * 100) : 0;
+    const cityCoveragePct = citiesSearched > 0 ? (citiesWithHits / citiesSearched * 100) : 0;
+
+    // ── Extraction-fas ───────────────────────────────────────────────────────
+    const { totalToProcess, alreadyInDb, newlySaved, skippedForeign, skippedDate, loginWall, failed } = extraction;
+    const newUrls = totalToProcess - alreadyInDb;
+    const extractionSuccessPct = newUrls > 0 ? (newlySaved / newUrls * 100) : 100;
+
+    // ── Health score (0–100) ─────────────────────────────────────────────────
+    // hitRate 30% + capRate 30% + extractionSuccess 40%
+    const healthScore = Math.round(hitRatePct * 0.30 + capRatePct * 0.30 + extractionSuccessPct * 0.40);
+
+    // ── perKeywordTotals (rankad + berikad) ──────────────────────────────────
+    const rankedKeywords = Object.entries(perKeywordTotals)
+        .map(([keyword, totals]) => {
+            const isCity = /^[A-ZÅÄÖ]/.test(keyword);
+            const kwQueries = sourceStats.filter(s => s.keyword === keyword);
+            const kwHitRate = kwQueries.length > 0
+                ? Math.round(kwQueries.filter(s => s.found > 0).length / kwQueries.length * 100)
+                : 0;
+            return {
+                keyword,
+                type: isCity ? 'city' : 'keyword',
+                found: totals.found,
+                unique: totals.unique,
+                duplicates: totals.duplicates,
+                hitRatePct: kwHitRate,
+                atCap: kwQueries.some(s => s.found >= 7),
+            };
+        })
+        .sort((a, b) => b.unique - a.unique);
+
+    // ── Bygg slutpayload ─────────────────────────────────────────────────────
+    const payload = {
+        runStartedAt,
+        lastUpdatedAt: now,
+        durationMinutes,
+
+        healthScore,   // 0–100, övergripande körningskvalitet
+
+        discovery: {
+            totalQueries,
+            totalUrlsFound: totalFound,
+            totalUniqueUrls,
+            totalDuplicateHits,
+            dedupRatePct:      Math.round(dedupPct * 10) / 10,
+            hitRatePct:        Math.round(hitRatePct * 10) / 10,
+            capRatePct:        Math.round(capRatePct * 10) / 10,
+            zeroRatePct:       Math.round(zeroRatePct * 10) / 10,
+            avgFoundPerQuery:  Math.round(avgFound * 100) / 100,
+            cities: {
+                searched:     citiesSearched,
+                withHits:     citiesWithHits,
+                atCap:        citiesAtCap,
+                coveragePct:  Math.round(cityCoveragePct * 10) / 10,
+            },
+            keywords: {
+                searched:     keywordsSearched,
+                withHits:     keywordsWithHits,
+                deadCount:    keywordsSearched - keywordsWithHits,
+            },
+        },
+
+        extraction: {
+            totalToProcess,
+            alreadyInDb,
+            newUrls,
+            newlySaved,
+            skippedForeign,
+            skippedDate,
+            loginWall,
+            failed,
+            successRatePct: Math.round(extractionSuccessPct * 10) / 10,
+            eventsInLog,
+        },
+
+        perKeywordTotals: rankedKeywords,
+        perQuery: sourceStats,
+    };
+
+    try {
+        fs.writeFileSync(keywordStatsPath, JSON.stringify(payload, null, 2), 'utf-8');
+        console.log('\n📊 Slutstatistik skriven till keyword_stats.json');
+        console.log(`   HealthScore: ${healthScore}/100`);
+        console.log(`   Discovery:   ${hitRatePct.toFixed(1)}% hit-rate, ${capRatePct.toFixed(1)}% cap-rate, ${citiesWithHits}/${citiesSearched} städer täckta`);
+        console.log(`   Extraction:  ${extractionSuccessPct.toFixed(1)}% success-rate, ${newlySaved} nya sparade`);
+    } catch (e) {
+        console.error('⚠️ Kunde inte skriva slutstatistik:', e);
+    }
+
+    // ── Lägg till i körningshistoriken ───────────────────────────────────────
+    const historyPath = path.resolve(path.dirname(keywordStatsPath), 'scraper_run_history.json');
+    const historyRow = {
+        runDate:          runStartedAt.slice(0, 10),
+        runStartedAt,
+        durationMinutes,
+        healthScore,
+        discovery: {
+            totalQueries,
+            totalUniqueUrls,
+            hitRatePct:    Math.round(hitRatePct * 10) / 10,
+            capRatePct:    Math.round(capRatePct * 10) / 10,
+            zeroRatePct:   Math.round(zeroRatePct * 10) / 10,
+            citiesCovPct:  Math.round(cityCoveragePct * 10) / 10,
+            citiesWithHits,
+            deadKeywords:  keywordsSearched - keywordsWithHits,
+        },
+        extraction: {
+            totalToProcess,
+            alreadyInDb,
+            newlySaved,
+            skippedForeign,
+            successRatePct: Math.round(extractionSuccessPct * 10) / 10,
+            eventsInLog,
+        },
+    };
+
+    try {
+        let history: typeof historyRow[] = [];
+        if (fs.existsSync(historyPath)) {
+            history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+        }
+        history.push(historyRow);
+        fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf-8');
+        console.log(`📈 Körningshistorik uppdaterad (${history.length} körningar totalt)`);
+    } catch (e) {
+        console.error('⚠️ Kunde inte skriva körningshistorik:', e);
     }
 }
 

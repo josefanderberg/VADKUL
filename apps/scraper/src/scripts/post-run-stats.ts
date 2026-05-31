@@ -94,22 +94,77 @@ async function main() {
         const kwPath = path.resolve(__dirname, '../../keyword_stats.json');
         if (fs.existsSync(kwPath)) {
             const kw = JSON.parse(fs.readFileSync(kwPath, 'utf-8'));
-            stats['STAT_FB_UNIQUE_URLS'] = String(kw.totalUniqueUrls ?? 0);
-            stats['STAT_FB_DUPLICATE_HITS'] = String(kw.totalDuplicateHits ?? 0);
 
-            // Top 5 mest givande sökord
-            const top5kw: string[] = (kw.perKeywordTotals || [])
+            // Grundläggande
+            stats['STAT_FB_UNIQUE_URLS']    = String(kw.totalUniqueUrls ?? kw.discovery?.totalUniqueUrls ?? 0);
+            stats['STAT_FB_DUPLICATE_HITS'] = String(kw.totalDuplicateHits ?? kw.discovery?.totalDuplicateHits ?? 0);
+            stats['STAT_FB_DURATION_MIN']   = String(kw.durationMinutes ?? 'n/a');
+
+            // Health score
+            stats['STAT_FB_HEALTH_SCORE'] = String(kw.healthScore ?? 'n/a');
+
+            // Discovery-fas
+            const disc = kw.discovery;
+            if (disc) {
+                stats['STAT_FB_QUERIES_TOTAL']     = String(disc.totalQueries ?? 0);
+                stats['STAT_FB_HIT_RATE_PCT']      = String(disc.hitRatePct ?? 'n/a');
+                stats['STAT_FB_CAP_RATE_PCT']      = String(disc.capRatePct ?? 'n/a');
+                stats['STAT_FB_ZERO_RATE_PCT']     = String(disc.zeroRatePct ?? 'n/a');
+                stats['STAT_FB_AVG_FOUND']         = String(disc.avgFoundPerQuery ?? 'n/a');
+                stats['STAT_FB_DEDUP_RATE_PCT']    = String(disc.dedupRatePct ?? 'n/a');
+                stats['STAT_FB_CITIES_COVERAGE']   = disc.cities
+                    ? `${disc.cities.withHits}/${disc.cities.searched} (${disc.cities.coveragePct}%)`
+                    : 'n/a';
+                stats['STAT_FB_CITIES_AT_CAP']     = String(disc.cities?.atCap ?? 'n/a');
+                stats['STAT_FB_DEAD_KEYWORDS']     = String(disc.keywords?.deadCount ?? 'n/a');
+            }
+
+            // Extraction-fas
+            const ext = kw.extraction;
+            if (ext) {
+                stats['STAT_FB_EXTRACT_TOTAL']     = String(ext.totalToProcess ?? 0);
+                stats['STAT_FB_EXTRACT_NEW']       = String(ext.newUrls ?? 0);
+                stats['STAT_FB_EXTRACT_SAVED']     = String(ext.newlySaved ?? 0);
+                stats['STAT_FB_EXTRACT_FOREIGN']   = String(ext.skippedForeign ?? 0);
+                stats['STAT_FB_EXTRACT_DATE_SKIP'] = String(ext.skippedDate ?? 0);
+                stats['STAT_FB_EXTRACT_FAILED']    = String(ext.failed ?? 0);
+                stats['STAT_FB_EXTRACT_SUCCESS_PCT'] = String(ext.successRatePct ?? 'n/a');
+                stats['STAT_FB_EVENTS_IN_LOG']     = String(ext.eventsInLog ?? 0);
+            }
+
+            // Top 5 mest givande sökord (exkl. städer)
+            const top5kw: string[] = ((kw.perKeywordTotals || []) as any[])
+                .filter((k: any) => k.type === 'keyword' || !/^[A-ZÅÄÖ]/.test(k.keyword))
                 .slice(0, 5)
                 .map((k: any) => `${k.keyword}(${k.unique})`);
             stats['STAT_FB_TOP_KEYWORDS'] = top5kw.join(', ') || 'n/a';
 
-            // Hur gammal är filen? (för att veta om FB kördes idag)
+            // Top 5 städer
+            const top5cities: string[] = ((kw.perKeywordTotals || []) as any[])
+                .filter((k: any) => k.type === 'city' || /^[A-ZÅÄÖ]/.test(k.keyword))
+                .slice(0, 5)
+                .map((k: any) => `${k.keyword}(${k.unique})`);
+            stats['STAT_FB_TOP_CITIES'] = top5cities.join(', ') || 'n/a';
+
+            // Körningshistorik — trend (senaste 3 körningar)
+            const histPath = path.resolve(__dirname, '../../scraper_run_history.json');
+            if (fs.existsSync(histPath)) {
+                const history: any[] = JSON.parse(fs.readFileSync(histPath, 'utf-8'));
+                const recent = history.slice(-3).reverse();
+                stats['STAT_FB_HISTORY_HEALTH'] = recent
+                    .map((r: any) => `${r.runDate}:${r.healthScore ?? '?'}`)
+                    .join(', ');
+                stats['STAT_FB_HISTORY_URLS'] = recent
+                    .map((r: any) => `${r.runDate}:${r.discovery?.totalUniqueUrls ?? '?'}`)
+                    .join(', ');
+            }
+
+            // Filålder
             const mtime = fs.statSync(kwPath).mtime;
             const ageHours = (Date.now() - mtime.getTime()) / 3600000;
             stats['STAT_FB_STATS_AGE_H'] = ageHours.toFixed(1);
         } else {
-            stats['STAT_FB_UNIQUE_URLS'] = 'n/a';
-            stats['STAT_FB_DUPLICATE_HITS'] = 'n/a';
+            stats['STAT_FB_UNIQUE_URLS']  = 'n/a';
             stats['STAT_FB_TOP_KEYWORDS'] = 'n/a';
         }
     } catch (err) {

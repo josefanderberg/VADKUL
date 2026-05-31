@@ -42,3 +42,11 @@ vadkul-*-firebase-adminsdk-*.json
 .env
 .env.*
 !.env.example
+
+# Generated / auto-updated data files
+apps/scraper/events.db
+apps/scraper/keyword_stats.json
+apps/scraper/keyword_test_results.json
+
+# TypeScript build cache
+*.tsbuildinfo

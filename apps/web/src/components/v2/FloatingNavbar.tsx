@@ -103,28 +103,28 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
                     <div className="flex items-center gap-3 pointer-events-auto">
                         <button
                             onClick={handleCycleDay}
-                            className={`bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg hover:bg-white transition-all font-black text-sm uppercase tracking-widest flex items-center gap-3 text-slate-800 ${highlightToday ? 'animate-today-pulse' : ''}`}
+                            className={`bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2.5 text-slate-700 ${highlightToday ? 'animate-today-pulse' : ''}`}
                         >
-                            <Calendar size={18} className="text-primary" />
+                            <Calendar size={16} className="text-primary shrink-0" />
                             <span>{getDayLabel(dayOffset)}</span>
-                            <ChevronRight size={18} className="text-slate-400" />
+                            <ChevronRight size={16} className="text-slate-400" />
                         </button>
 
                         {dayOffset !== 0 && (
-                            <button 
+                            <button
                                 onClick={handleResetToday}
-                                className="bg-slate-800/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-slate-700 transition-colors"
+                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors"
                                 title="Återställ till idag"
                             >
-                                <RotateCcw size={18} className="text-white" />
+                                <RotateCcw size={16} className="text-slate-700" />
                             </button>
                         )}
                     </div>
 
                     {/* Right side: Search, Plus, Profile */}
                     <div className="flex items-center gap-3 pointer-events-auto">
-                        <button className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors">
-                            <Search size={24} className="text-slate-800" />
+                        <button className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors">
+                            <Search size={20} className="text-slate-700" />
                         </button>
                         {creationMode !== 'editing' && (
                             <button
@@ -133,9 +133,9 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
                                 onClick={handlePlusClick}
                                 disabled={plusDropping}
                                 aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
-                                className="bg-green-500 w-12 h-12 rounded-full shadow-lg hover:bg-green-400 transition-colors flex items-center justify-center relative z-[1100]"
+                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100]"
                             >
-                                <Plus size={24} className="text-white" />
+                                <Plus size={22} className="text-white" />
                             </button>
                         )}
 
@@ -144,27 +144,27 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
                             <button
                                 type="button"
                                 onClick={() => setProfileMenuOpen(o => !o)}
-                                className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors"
+                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors"
                                 aria-label="Öppna profilmeny"
                                 aria-expanded={profileMenuOpen}
                             >
-                                <User size={24} className="text-slate-800" />
+                                <User size={20} className="text-slate-700" />
                             </button>
 
                             {profileMenuOpen && (
-                                <div className="absolute right-0 top-full mt-3 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                                <div className="absolute right-0 top-full mt-3 flex flex-col gap-2.5 animate-in fade-in slide-in-from-top-2">
                                     <button
-                                        className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative"
+                                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
                                         title="Meddelanden"
                                     >
-                                        <MessageSquare size={20} className="text-slate-800" />
+                                        <MessageSquare size={18} className="text-slate-700" />
                                         <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
                                     </button>
                                     <button
-                                        className="bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:bg-white transition-colors relative"
+                                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
                                         title="Notiser"
                                     >
-                                        <Bell size={20} className="text-slate-800" />
+                                        <Bell size={18} className="text-slate-700" />
                                     </button>
                                 </div>
                             )}

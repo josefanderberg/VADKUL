@@ -307,7 +307,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 )}
                 <button
                     onClick={handleNextOnly}
-                    className="bg-green-600 text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:bg-green-500 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-green-500/50 pointer-events-auto"
+                    className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 pointer-events-auto"
                 >
                     Nästa <ArrowRight size={18} />
                 </button>
@@ -326,19 +326,19 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
             >
                 {/* Visual feedback overlays during drag */}
                 {dragX > 20 && (
-                    <div className="absolute top-4 left-4 z-50 bg-green-500 text-white font-bold text-xl px-4 py-1 rounded-md border-2 border-green-600 transform -rotate-12 opacity-80 shadow-lg pointer-events-none">
+                    <div className="absolute top-5 left-5 z-50 bg-green-500 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-green-400/60 transform -rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, dragX / 120) }}>
                         SPARA
                     </div>
                 )}
                 {dragX < -20 && (
-                    <div className="absolute top-4 right-4 z-50 bg-red-500 text-white font-bold text-xl px-4 py-1 rounded-md border-2 border-red-600 transform rotate-12 opacity-80 shadow-lg pointer-events-none">
+                    <div className="absolute top-5 right-5 z-50 bg-slate-700 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-slate-600/60 transform rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, Math.abs(dragX) / 120) }}>
                         NÄSTA
                     </div>
                 )}
 
                 {/* Scrollable card — max-height + overflow-y on same element */}
                 <div
-                    className={`w-full shadow-[0_-10px_40px_rgba(0,0,0,0.15)] rounded-t-2xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
+                    className={`w-full shadow-[0_-8px_32px_rgba(0,0,0,0.18),0_-2px_8px_rgba(0,0,0,0.07)] rounded-t-3xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
                     style={{ maxHeight: 'calc(100svh - 160px)' }}
                 >
                     <LinkEventCard

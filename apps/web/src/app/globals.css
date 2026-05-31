@@ -19,10 +19,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 142.1 76.2% 36.3%;
-    /* green-600 */
-    --primary-foreground: 355.7 100% 97.3%;
-    /* white-ish */
+    --primary: 202 100% 33%;
+    /* Swedish flag blue #006AA7 */
+    --primary-foreground: 0 0% 100%;
+    /* white */
 
     --secondary: 210 40% 96.1%;
     /* slate-100 */
@@ -42,7 +42,7 @@
     --border: 214.3 31.8% 91.4%;
     /* slate-200 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 142.1 76.2% 36.3%;
+    --ring: 202 100% 33%;
     /* match primary */
 
     --radius: 0.5rem;
@@ -60,9 +60,9 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 142.1 70.6% 45.3%;
-    /* Keep Green primary for brand */
-    --primary-foreground: 144.9 80.4% 10%;
+    --primary: 202 100% 40%;
+    /* Swedish flag blue, lighter for dark mode */
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 240 3.7% 15.9%;
     /* Zinc-800ish */
@@ -79,7 +79,7 @@
 
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 142.4 71.8% 29.2%;
+    --ring: 202 100% 40%;
   }
 }
 
