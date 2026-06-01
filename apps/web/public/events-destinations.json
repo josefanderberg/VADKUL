@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-01T02:45:58.151Z",
+  "updatedAt": "2026-06-01T14:42:28.552Z",
   "events": [
     {
       "id": "https://www.facebook.com/events/1797890934431652/",
@@ -641,15 +641,6 @@
       "category": "other"
     },
     {
-      "id": "https://www.eventbrite.com/e/work-in-sweden-part1-your-cv-for-swedish-employers-tickets-644680816677",
-      "title": "Work in Sweden - Part1:  Your CV for Swedish employers.",
-      "time": "2026-06-01T15:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Regus - Malmo, Central",
-      "category": "other"
-    },
-    {
       "id": "https://www.facebook.com/events/1894483061176507/",
       "title": "VMA-Pub (Stockholm)",
       "time": "2026-06-01T15:00:00.000Z",
@@ -747,15 +738,6 @@
       "lng": 17.810295,
       "locationName": "Tjärnsjö 100, 87191 Härnösand, Sweden",
       "category": "training"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/part-2-job-search-company-matching-employer-contacts-apply-referrals-tickets-644696182637",
-      "title": "Part 2: Job search, Company matching, Employer contacts, Apply, Referrals",
-      "time": "2026-06-01T15:30:00.000Z",
-      "lat": 59.8576363,
-      "lng": 17.6294616,
-      "locationName": "Uppsala University",
-      "category": "other"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/g0bpbnwvy4grg4e/2026-06-01/tidsnyckeln",
@@ -986,19 +968,19 @@
       "id": "https://www.facebook.com/events/865719255846636/",
       "title": "Damkväll på Sollefteå jaktskyttebana",
       "time": "2026-06-01T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 63.383333,
+      "lng": 16.916667,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.facebook.com/events/1402086351682386/",
       "title": "Damkväll på Sollefteå jaktskyttebana",
       "time": "2026-06-01T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 63.383333,
+      "lng": 16.916667,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.facebook.com/events/1391595552778998/",
@@ -1382,8 +1364,8 @@
       "id": "https://www.facebook.com/events/4392309340915532/",
       "title": "IBF Norrköping provträning ",
       "time": "2026-06-01T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 58.5909124,
+      "lng": 16.1903511,
       "locationName": "",
       "category": "training"
     },
@@ -1427,10 +1409,10 @@
       "id": "https://www.facebook.com/events/1489238479250306/",
       "title": "sala secreta-",
       "time": "2026-06-01T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.3433982,
+      "lng": 18.0524054,
       "locationName": "",
-      "category": "other"
+      "category": "education"
     },
     {
       "id": "https://www.facebook.com/events/1610801689997065/",
@@ -1583,15 +1565,6 @@
       "lat": 0,
       "lng": 0,
       "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/billets-atelier-en-ligne-psycom-prise-en-main-du-cosmos-mental-1967530469599",
-      "title": "Atelier en ligne Psycom : prise en main du Cosmos Mental",
-      "time": "2026-06-02T07:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
       "category": "other"
     },
     {
@@ -1901,22 +1874,13 @@
       "category": "other"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-formation-sur-lintervention-relationnelle-1982436209067",
-      "title": "Formation sur l'Intervention-Relationnelle",
-      "time": "2026-06-02T13:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
       "id": "https://www.facebook.com/events/2178553119634533/",
       "title": "Sumarblóma sala frá Sólbakka",
       "time": "2026-06-02T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 60.3612429,
+      "lng": 5.2340475,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/ux87u1ylahlztmz/2026-06-02/den-ofrivillige-premiarministern",
@@ -2291,10 +2255,10 @@
       "id": "https://www.facebook.com/events/2423345924800120/",
       "title": "Makers Jönköping årsmöte",
       "time": "2026-06-02T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 57.7825634,
+      "lng": 14.165719,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.facebook.com/events/1367530794545380/",
@@ -2801,15 +2765,6 @@
       "category": "social"
     },
     {
-      "id": "https://www.eventbrite.co.uk/e/online-safety-for-families-with-police-scotland-in-partnership-with-connect-tickets-1984375948881",
-      "title": "Online Safety for Families with Police Scotland in partnership with Connect",
-      "time": "2026-06-02T19:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other"
-    },
-    {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2F-sweden-rock-festival-2026-4-days-vip-tickets%2F2056765891%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
       "title": " Sweden Rock Festival 2026 -  4-days VIP",
       "time": "2026-06-02T22:00:00.000Z",
@@ -2835,15 +2790,6 @@
       "lng": 18.2041748,
       "locationName": "Sofiebergsskolan",
       "category": "music"
-    },
-    {
-      "id": "https://www.eventbrite.com.au/e/exploring-the-future-of-learning-with-genai-symposium-online-tickets-1985559657385",
-      "title": "Exploring the Future of Learning with GenAI Symposium [Online]",
-      "time": "2026-06-03T00:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other"
     },
     {
       "id": "https://www.facebook.com/events/766604466391609/",
@@ -3251,15 +3197,6 @@
       "category": "social"
     },
     {
-      "id": "https://www.eventbrite.es/e/entradas-kcn-taller-gratuito-3-de-junio-1990094076956",
-      "title": "KCN Taller Gratuito - 3 de junio",
-      "time": "2026-06-03T14:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
       "id": "https://www.facebook.com/events/970105882107493/",
       "title": "Blodomloppet Stockholm",
       "time": "2026-06-03T14:00:00.000Z",
@@ -3410,15 +3347,6 @@
       "lat": 59.25,
       "lng": 17.666667,
       "locationName": "Pat's Pizza  Pennsville",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/entradas-virtual-open-day-june-3th-english-1988977480185",
-      "title": "VIRTUAL OPEN DAY – June 3th  (English)",
-      "time": "2026-06-03T15:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
       "category": "other"
     },
     {
@@ -3812,10 +3740,10 @@
       "id": "https://www.facebook.com/events/928357546856311/",
       "title": "Studiebesök på arboretum i Lindesberg. Föranmälan!w",
       "time": "2026-06-03T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.5930569,
+      "lng": 15.2264966,
       "locationName": "",
-      "category": "other"
+      "category": "education"
     },
     {
       "id": "https://www.facebook.com/events/1571740520975277/",
@@ -4466,15 +4394,6 @@
       "category": "sport"
     },
     {
-      "id": "https://www.eventbrite.fr/e/billets-webinar-estudios-de-caso-y-ensenanza-del-espanol-profesional-en-francia-1986206866204",
-      "title": "Webinar : Estudios de caso y enseñanza del español profesional en Francia",
-      "time": "2026-06-04T15:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
       "id": "https://www.facebook.com/events/2082106355917869/",
       "title": "KONST & KÄNSLA – En djupare konstupplevelse",
       "time": "2026-06-04T15:00:00.000Z",
@@ -4664,15 +4583,6 @@
       "category": "other"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-femmes-epargne-et-litteratie-financiere-au-dela-des-stereotypes-1987060487408",
-      "title": "Femmes, épargne et littératie financière : au-delà des stéréotypes",
-      "time": "2026-06-04T16:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
       "id": "https://www.facebook.com/events/1364786142050967/",
       "title": "Språkcafé",
       "time": "2026-06-04T16:00:00.000Z",
@@ -4689,15 +4599,6 @@
       "lng": 18.0710935,
       "locationName": "Karbin Klätterhall",
       "category": "music"
-    },
-    {
-      "id": "https://www.eventbrite.com.mx/e/masterclass-si-tengo-tiempo-tickets-1990018188973",
-      "title": "Masterclass SI TENGO TIEMPO",
-      "time": "2026-06-04T16:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
     },
     {
       "id": "https://www.facebook.com/events/2061661627571431/",
@@ -5174,16 +5075,7 @@
       "lat": 0,
       "lng": 0,
       "locationName": "",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/billets-soiree-de-mediumnite-voyance-collective-zoom-1988173155428",
-      "title": "Soirée de Médiumnité & Voyance Collective (ZOOM)",
-      "time": "2026-06-04T23:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
+      "category": "performing-arts"
     },
     {
       "id": "https://www.facebook.com/events/1539958293908041/",
@@ -5243,10 +5135,10 @@
       "id": "https://www.facebook.com/events/2063126451302499/",
       "title": "Klatring Sverige karlskrona",
       "time": "2026-06-05T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 56.1621073,
+      "lng": 15.5866422,
       "locationName": "",
-      "category": "other"
+      "category": "sport"
     },
     {
       "id": "https://www.facebook.com/events/1050800087626264/",
@@ -5432,10 +5324,10 @@
       "id": "https://www.facebook.com/events/2160281961449158/",
       "title": "Arvids student!",
       "time": "2026-06-05T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 58.7120734,
+      "lng": 15.7530633,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.facebook.com/events/2842196352839290/",
@@ -6053,8 +5945,8 @@
       "id": "https://www.facebook.com/events/1261392272872627/",
       "title": "Nattvandring Stuvsta/Huddinge",
       "time": "2026-06-05T18:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.3251172,
+      "lng": 18.0710935,
       "locationName": "",
       "category": "outdoor"
     },
@@ -6170,10 +6062,10 @@
       "id": "https://www.facebook.com/events/1637656087284390/",
       "title": "larian amal",
       "time": "2026-06-05T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 69.5702516,
+      "lng": 21.2904494,
       "locationName": "",
-      "category": "other"
+      "category": "sport"
     },
     {
       "id": "https://www.facebook.com/events/883320598115234/",
@@ -6344,7 +6236,7 @@
       "lat": 0,
       "lng": 0,
       "locationName": "",
-      "category": "other"
+      "category": "social"
     },
     {
       "id": "https://www.facebook.com/events/1457771455568746/",
@@ -6602,8 +6494,8 @@
       "id": "https://www.facebook.com/events/1642291383628509/",
       "title": "Livsuppgift  Dharma - Hässleholm 6-7 juni 2026",
       "time": "2026-06-06T08:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 56.157986,
+      "lng": 13.7653328,
       "locationName": "",
       "category": "education"
     },
@@ -6980,8 +6872,8 @@
       "id": "https://www.facebook.com/events/962798112924981/",
       "title": "Moveat Original - Skellefteå",
       "time": "2026-06-06T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 64.7520185,
+      "lng": 20.959339,
       "locationName": "",
       "category": "social"
     },
@@ -7016,8 +6908,8 @@
       "id": "https://www.facebook.com/events/2798676647157897/",
       "title": "Konstmix i Lottastugan, Varberg",
       "time": "2026-06-06T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 57.1057412,
+      "lng": 12.2502949,
       "locationName": "",
       "category": "art"
     },
@@ -7556,10 +7448,10 @@
       "id": "https://www.facebook.com/events/1152778400212472/",
       "title": "Allsång på skånska Nationaldagen Bromölla kommun",
       "time": "2026-06-06T11:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 56.076158,
+      "lng": 14.4681732,
       "locationName": "",
-      "category": "other"
+      "category": "music"
     },
     {
       "id": "https://www.facebook.com/events/877842741823923/",
@@ -8159,8 +8051,8 @@
       "id": "https://www.facebook.com/events/1221461190073569/",
       "title": "SWEDEN SPRING TOUR 2026 - Systrarnas Söderhamn (Brett Tyler, Kimberly Kelly & Stiko Per Larsson)",
       "time": "2026-06-06T18:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 61.2998501,
+      "lng": 17.0607599,
       "locationName": "",
       "category": "music"
     },
@@ -8357,8 +8249,8 @@
       "id": "https://www.facebook.com/events/1542560680606123/",
       "title": "Rundvisning i Rågdalens Skogsträdgård ",
       "time": "2026-06-07T07:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.2501787,
+      "lng": 18.0261221,
       "locationName": "",
       "category": "outdoor"
     },
@@ -8618,8 +8510,8 @@
       "id": "https://www.facebook.com/events/1312226637555820/",
       "title": "Helsingborg Taxparad 2026",
       "time": "2026-06-07T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 56.0442098,
+      "lng": 12.703706,
       "locationName": "",
       "category": "food-drink"
     },
@@ -8798,8 +8690,8 @@
       "id": "https://www.facebook.com/events/1013179861125396/",
       "title": "KVARTERSLOPPIS norra delen av Västra Gärdet, Falkenberg",
       "time": "2026-06-07T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 56.8979517,
+      "lng": 12.48212,
       "locationName": "",
       "category": "market"
     },
@@ -8924,8 +8816,8 @@
       "id": "https://www.facebook.com/events/1447410993722491/",
       "title": "Boden's Graduation Party",
       "time": "2026-06-07T11:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 60.9338251,
+      "lng": 13.360372,
       "locationName": "",
       "category": "party"
     },
@@ -8960,8 +8852,8 @@
       "id": "https://www.facebook.com/events/2163723497747757/",
       "title": "Norrtälje från istid till nutid - stadsvandring på cykel",
       "time": "2026-06-07T12:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.766667,
+      "lng": 18.7,
       "locationName": "",
       "category": "outdoor"
     },
@@ -9032,10 +8924,10 @@
       "id": "https://www.facebook.com/events/1146528281873993/",
       "title": "BARNDISCO| SANDHOLMEN MARIESTAD🎉",
       "time": "2026-06-07T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 58.7093225,
+      "lng": 13.8228754,
       "locationName": "",
-      "category": "other"
+      "category": "family"
     },
     {
       "id": "https://www.facebook.com/events/2468321686937848/",
@@ -9131,8 +9023,8 @@
       "id": "https://www.facebook.com/events/1373543057929436/",
       "title": "Klassisk sommerkonsert - Grieg og Chopin med klavervirtuosen Svein Amund Skara",
       "time": "2026-06-07T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
+      "lat": 59.7209638,
+      "lng": 10.2133627,
       "locationName": "",
       "category": "music"
     },
@@ -9191,15 +9083,6 @@
       "category": "music"
     },
     {
-      "id": "https://www.eventbrite.com/e/kurs-istqb-foundation-certifiering-goteborg-in-english-tickets-1990333755842",
-      "title": "Kurs ISTQB Foundation certifiering Göteborg (in English)",
-      "time": "2026-06-08T07:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Regus - Gothenburg, Central",
-      "category": "education"
-    },
-    {
       "id": "https://www.facebook.com/events/892223943169979/",
       "title": "Sagolek",
       "time": "2026-06-08T08:15:00.000Z",
@@ -9236,51 +9119,6 @@
       "category": "music"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-cafe-virtuel-mission-inclusion-venez-echanger-avec-richard-veenstra-dg-1989007054643",
-      "title": "Café virtuel Mission inclusion : Venez échanger avec Richard Veenstra, D.G",
-      "time": "2026-06-09T15:15:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.co.uk/e/functional-constipation-in-children-assessment-and-treatment-tickets-1989003526089",
-      "title": "Functional Constipation in Children: Assessment and Treatment",
-      "time": "2026-06-10T11:30:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/los-angeles-career-fair-tickets-203182663817",
-      "title": "Los Angeles Career Fair",
-      "time": "2026-06-11T07:30:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.fr/e/billets-live-decouverte-filiere-cybersecurite-110626-1990317259501",
-      "title": "Live découverte : filière Cybersécurité - 11/06/26",
-      "time": "2026-06-11T10:15:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Lund",
-      "category": "music"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/bacteriophages-in-the-arab-world-ii-phage-based-strategies-against-mdr-tickets-1985805175737",
-      "title": "Bacteriophages in the Arab World II: Phage-Based Strategies Against MDR",
-      "time": "2026-06-12T11:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
       "id": "https://www.eventbrite.dk/e/workshop-i-hundfotografi-tickets-1990565425773",
       "title": "Workshop i hundfotografi",
       "time": "2026-06-13T08:00:00.000Z",
@@ -9288,24 +9126,6 @@
       "lng": 17.6387436,
       "locationName": "Changdobels - Taby Hundcenter",
       "category": "education"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/programas-de-afiliados-para-mi-pyme-tickets-1989683445747",
-      "title": "Programas de Afiliados para mi Pyme",
-      "time": "2026-06-13T16:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.be/e/billets-espace-de-parole-parents-surmonter-les-tensions-dans-le-couplebabyclash-1987300653752",
-      "title": "Espace de ¨Parole Parents- Surmonter les tensions dans le couple/babyclash",
-      "time": "2026-06-15T18:00:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Lund",
-      "category": "other"
     },
     {
       "id": "https://www.eventbrite.se/e/liberalismen-efter-historiens-aterkomst-tickets-1989369188796",
@@ -9317,87 +9137,6 @@
       "category": "other"
     },
     {
-      "id": "https://www.eventbrite.ca/e/inscription-campements-urbains-pistes-dactions-fondees-sur-les-droits-humains-1988027765563",
-      "title": "Campements urbains : pistes d’actions fondées sur les droits humains",
-      "time": "2026-06-16T16:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.co.uk/e/prevent-in-education-early-years-foundation-stage-training-tickets-1535652510999",
-      "title": "Prevent in Education - Early Years Foundation Stage Training",
-      "time": "2026-06-16T17:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/virtual-written-testing-apcat-workshop-tickets-1985472775519",
-      "title": "Virtual Written Testing (APCAT) Workshop",
-      "time": "2026-06-16T17:30:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "education"
-    },
-    {
-      "id": "https://www.eventbrite.com.mx/e/masterclass-fuga-de-talento-como-disenar-una-estrategia-de-compensacion-tickets-1990108698690",
-      "title": "Masterclass - Fuga de talento: Cómo diseñar una estrategia de compensación",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-u-start-avanza-ciclo-iii-scrum-para-gestion-agil-de-proyectos-y-equipos-1989552064783",
-      "title": "U-Start Avanza | Ciclo III: Scrum para gestión ágil de proyectos y equipos",
-      "time": "2026-06-17T15:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-sessio-informativa-cfgs-en-comerc-internacional-i-transport-i-logistica-1989114162004",
-      "title": "Sessió informativa: CFGS en Comerç Internacional i Transport i Logística",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/human-resources-management-certificate-info-session-online-jun-18-2026-tickets-1962791973630",
-      "title": "Human Resources Management Certificate Info Session (Online) — Jun 18, 2026",
-      "time": "2026-06-18T19:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/billets-processus-dadmission-a-loiq-pour-les-professionnels-formes-a-letranger-1977628702686",
-      "title": "Processus d'admission à l'OIQ pour les professionnels formés à l'étranger",
-      "time": "2026-06-18T22:00:00.000Z",
-      "lat": 55.7029296,
-      "lng": 13.1929449,
-      "locationName": "Lund",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.com.au/e/connect-learn-all-about-adult-adhd-presented-by-dr-limor-theedar-tickets-1986359345273",
-      "title": "Connect & Learn: All About Adult ADHD, presented by Dr Limor Theedar",
-      "time": "2026-06-23T03:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other"
-    },
-    {
       "id": "https://vaxjoco.se/evenemang/scensommar/",
       "title": "Scensommar 2026",
       "time": "2026-06-24T21:59:00.000Z",
@@ -9405,33 +9144,6 @@
       "lng": 14.8089,
       "locationName": "Växjö",
       "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-masterclassdocument-controller-un-nuevo-perfil-para-la-empresa-del-futuro-1990011352525",
-      "title": "Masterclass:Document Controller: Un nuevo perfil para la empresa del futuro",
-      "time": "2026-06-25T16:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/krs-one-live-in-stockholm-biljetter-1976673844680",
-      "title": "KRS One  Live in Stockholm",
-      "time": "2026-06-25T18:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Fryshuset Klubben",
-      "category": "music"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/krs-one-live-in-malmo-biljetter-1981938505422",
-      "title": "KRS One  Live in Malmö",
-      "time": "2026-06-28T18:00:00.000Z",
-      "lat": 55.5937352,
-      "lng": 13.0136162,
-      "locationName": "Moriska Paviljongen",
-      "category": "music"
     },
     {
       "id": "https://vaxjoco.se/evenemang/karl-oskardagarna/",

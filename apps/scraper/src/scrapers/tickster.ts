@@ -123,10 +123,21 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
         const title = (document.querySelector('h1')?.textContent || '').replace(/\s+/g, ' ').trim();
         if (!title) return null;
 
-        // Bild
+        // Bild — försök i tur och ordning
         const ogImg = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
-        const firstImg = (document.querySelector('img[src*="cdn"], img[src*="cloudfront"], img[src*="tickster"]') as HTMLImageElement)?.src || '';
-        const coverImage = ogImg || firstImg || '';
+        // Bredare fallback: ta den första meningsfulla img på sidan (>400px bredd eller känd CDN)
+        const firstCdnImg = (document.querySelector('img[src*="cdn"], img[src*="cloudfront"], img[src*="tickster"]') as HTMLImageElement)?.src || '';
+        const firstLargeImg = (() => {
+            const imgs = Array.from(document.querySelectorAll('img')) as HTMLImageElement[];
+            for (const img of imgs) {
+                const src = img.src || img.getAttribute('data-src') || '';
+                if (!src || src.startsWith('data:')) continue;
+                if (img.naturalWidth >= 400 || img.width >= 400) return src;
+                if (src.includes('event') || src.includes('poster') || src.includes('banner')) return src;
+            }
+            return '';
+        })();
+        const coverImage = ogImg || firstCdnImg || firstLargeImg || '';
 
         // JSON-LD
         let jsonTime = '';

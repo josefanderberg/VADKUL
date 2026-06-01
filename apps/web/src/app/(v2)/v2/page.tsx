@@ -168,53 +168,6 @@ export default function V2Page() {
                 }}
             />
 
-            {/* Live-indikator — visas när Firestore-lyssnar är aktiv */}
-            {isLive && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '32px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: 'rgba(0,0,0,0.55)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '999px',
-                        padding: '4px 10px 4px 8px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: '#fff',
-                        letterSpacing: '0.05em',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                        userSelect: 'none',
-                    }}
-                >
-                    <span style={{
-                        width: 8, height: 8, borderRadius: '50%', background: '#22c55e',
-                        boxShadow: '0 0 0 0 #22c55e88',
-                        animation: 'livePulse 1.8s ease-out infinite',
-                        display: 'inline-block',
-                    }} />
-                    LIVE
-                    {newEventCount > 0 && (
-                        <span style={{
-                            background: '#22c55e',
-                            color: '#fff',
-                            borderRadius: '999px',
-                            padding: '1px 6px',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            marginLeft: 2,
-                            animation: 'fadeInUp 0.3s ease',
-                        }}>
-                            +{newEventCount}
-                        </span>
-                    )}
-                </div>
-            )}
 
             {/* CSS keyframes för Live-puls och badge */}
             <style>{`

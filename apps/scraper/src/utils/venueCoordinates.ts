@@ -174,11 +174,42 @@ export const SWEDISH_GEO_CITIES = [
 ];
 
 /**
+ * Nordisk bounding box — Sverige + Norge + Danmark + Finland.
+ * Används som skyddsnät mot event från t.ex. Moldavien, Bangladesh, USA m.m.
+ * Norge och Danmark tillåts passera igenom.
+ */
+export const NORDIC_BOUNDS = {
+    latMin: 54.5,   // Sydligaste Danmark (Gedser)
+    latMax: 71.5,   // Nordligaste Norge (Nordkapp)
+    lngMin:  4.5,   // Västligaste Norge (Stad)
+    lngMax: 31.5,   // Östligaste Finland (Nuorgam)
+} as const;
+
+export function isInNordic(lat: number, lng: number): boolean {
+    return (
+        lat >= NORDIC_BOUNDS.latMin && lat <= NORDIC_BOUNDS.latMax &&
+        lng >= NORDIC_BOUNDS.lngMin && lng <= NORDIC_BOUNDS.lngMax
+    );
+}
+
+/** Behålls för bakåtkompatibilitet — föredra isInNordic() för ny kod. */
+export function isInSweden(lat: number, lng: number): boolean {
+    return lat >= 55.0 && lat <= 69.5 && lng >= 10.5 && lng <= 24.5;
+}
+
+/**
  * Checks if the address contains foreign indicators (outside Sweden, Denmark, Norway, Finland)
  * to avoid false partial matches in Nominatim geocoding.
  */
 export function isForeignAddress(address: string): boolean {
     if (!address) return false;
+
+    // Snabb check: icke-latinska tecken → definitivt utlandet
+    // Kyrilliska (Moldavien, Ryssland...), bengali, arabiska, devanagari m.fl.
+    if (/[Ѐ-ӿ؀-ۿऀ-ॿঀ-৿฀-๿一-鿿]/.test(address)) {
+        return true;
+    }
+
     const lower = address.toLowerCase();
     const foreignIndicators = [
         // Engelsktalande länder
@@ -194,6 +225,10 @@ export function isForeignAddress(address: string): boolean {
         'kristiansand', 'fredrikstad',
         // Finska städer (ej del av nordiska bbox)
         'helsinki', 'helsingfors', 'tampere', 'turku', 'oulu',
+        // Moldavien/Östeuropa (Cyrillic filtreras ovan, men latin-varianter)
+        'moldova', 'chisinau',
+        // Bangladesh/Indien (latin-varianter)
+        'dhaka', 'nakhalpara', 'shaheen bagh',
     ];
     return foreignIndicators.some(indicator => {
         const regex = new RegExp(`\\b${indicator}\\b`, 'i');

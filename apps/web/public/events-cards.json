@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-01T02:45:58.151Z",
+  "updatedAt": "2026-06-01T14:42:28.552Z",
   "events": [
     {
       "id": "https://www.facebook.com/events/1797890934431652/",
@@ -925,19 +925,6 @@
       "url": "https://www.facebook.com/events/852193380919403/"
     },
     {
-      "id": "https://www.eventbrite.com/e/work-in-sweden-part1-your-cv-for-swedish-employers-tickets-644680816677",
-      "title": "Work in Sweden - Part1:  Your CV for Swedish employers.",
-      "time": "2026-06-01T15:00:00.000Z",
-      "locationName": "Regus - Malmo, Central",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/work-in-sweden-part1-your-cv-for-swedish-employers-tickets-644680816677"
-    },
-    {
       "id": "https://www.facebook.com/events/1894483061176507/",
       "title": "VMA-Pub (Stockholm)",
       "time": "2026-06-01T15:00:00.000Z",
@@ -1079,19 +1066,6 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/695056127024357/"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/part-2-job-search-company-matching-employer-contacts-apply-referrals-tickets-644696182637",
-      "title": "Part 2: Job search, Company matching, Employer contacts, Apply, Referrals",
-      "time": "2026-06-01T15:30:00.000Z",
-      "locationName": "Uppsala University",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/part-2-job-search-company-matching-employer-contacts-apply-referrals-tickets-644696182637"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/g0bpbnwvy4grg4e/2026-06-01/tidsnyckeln",
@@ -1423,11 +1397,11 @@
       "title": "Damkväll på Sollefteå jaktskyttebana",
       "time": "2026-06-01T16:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/701881840_973557798766996_5089585213559292529_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=75d36f&_nc_ohc=gG911WVz2cMQ7kNvwE9dETA&_nc_oc=Adrzhc7Tij6_G95it3w7e6BrUjUCz9TiyI4cvHTK8iW-5-ZdHLcpgjFiWiJXfBQA8-w&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=jIVHCL4jo3b-nwFhWLBFGw&_nc_ss=7f289&oh=00_Af-lPcUK1qbDqLfrQ4b9o42feIMygeCP2LdbTzrcNSdUIA&oe=6A22BC62",
       "hostName": "Facebook",
       "attendees": 11,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/865719255846636/"
     },
@@ -1436,11 +1410,11 @@
       "title": "Damkväll på Sollefteå jaktskyttebana",
       "time": "2026-06-01T16:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=1402086351682386",
       "hostName": "Facebook",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1402086351682386/"
     },
@@ -1999,7 +1973,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/706795024_27188213827464471_663401950868173269_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=75d36f&_nc_ohc=Wj2SwoTbNYcQ7kNvwG5NFut&_nc_oc=Adqx6R6Kuft_m9FOhnYzgQDYGw7ck8NaCE97klwaSu93HbvqCT80DbN4EZfy24Pw-W4&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=Il1Dv7gnFuIwZc4AUlBjOQ&_nc_ss=7f289&oh=00_Af8RT3c8QeWr0ni0LIH09henrE-XjtHB5gyiv16fr8QmOQ&oe=6A2290AB",
       "hostName": "Korpen Norrköpings spelarbank",
       "attendees": 3,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/4392309340915532/"
     },
@@ -2060,11 +2034,11 @@
       "title": "sala secreta-",
       "time": "2026-06-01T17:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "education",
       "coverImage": "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=1489238479250306",
       "hostName": "Livian Ferrêra",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1489238479250306/"
     },
@@ -2288,19 +2262,6 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1683882499286950/"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/billets-atelier-en-ligne-psycom-prise-en-main-du-cosmos-mental-1967530469599",
-      "title": "Atelier en ligne Psycom : prise en main du Cosmos Mental",
-      "time": "2026-06-02T07:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/billets-atelier-en-ligne-psycom-prise-en-main-du-cosmos-mental-1967530469599"
     },
     {
       "id": "https://www.facebook.com/events/1354761045628279/",
@@ -2745,28 +2706,15 @@
       "url": "https://www.facebook.com/events/947204041339467/"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-formation-sur-lintervention-relationnelle-1982436209067",
-      "title": "Formation sur l'Intervention-Relationnelle",
-      "time": "2026-06-02T13:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/billets-formation-sur-lintervention-relationnelle-1982436209067"
-    },
-    {
       "id": "https://www.facebook.com/events/2178553119634533/",
       "title": "Sumarblóma sala frá Sólbakka",
       "time": "2026-06-02T13:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/710739117_10164244601757911_1908040769963839238_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=107&ccb=1-7&_nc_sid=75d36f&_nc_ohc=tNtchIxUiykQ7kNvwEm_16J&_nc_oc=Adp8BvQgm4x4MY7mpNwgiR1GdHypWP_LkfSXwB_LoxidRsgJeccoff3ihP2H_x-OY-g&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=XB9ioRX6IzMiacIxWcOuGA&_nc_ss=7f289&oh=00_Af9o6UlAgpDb7XFZ28ZtR51KxZaDQynzhTqujkvSKV15uA&oe=6A22C5FE",
       "hostName": "Vopnafjörður",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2178553119634533/"
     },
@@ -3308,11 +3256,11 @@
       "title": "Makers Jönköping årsmöte",
       "time": "2026-06-02T16:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=2423345924800120",
       "hostName": "Makers Jönköping",
       "attendees": 6,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2423345924800120/"
     },
@@ -4045,19 +3993,6 @@
       "url": "https://www.facebook.com/events/882984334089787/"
     },
     {
-      "id": "https://www.eventbrite.co.uk/e/online-safety-for-families-with-police-scotland-in-partnership-with-connect-tickets-1984375948881",
-      "title": "Online Safety for Families with Police Scotland in partnership with Connect",
-      "time": "2026-06-02T19:00:00.000Z",
-      "locationName": "Malmö",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.co.uk/e/online-safety-for-families-with-police-scotland-in-partnership-with-connect-tickets-1984375948881"
-    },
-    {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2F-sweden-rock-festival-2026-4-days-vip-tickets%2F2056765891%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
       "title": " Sweden Rock Festival 2026 -  4-days VIP",
       "time": "2026-06-02T22:00:00.000Z",
@@ -4095,19 +4030,6 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/875421205223739/"
-    },
-    {
-      "id": "https://www.eventbrite.com.au/e/exploring-the-future-of-learning-with-genai-symposium-online-tickets-1985559657385",
-      "title": "Exploring the Future of Learning with GenAI Symposium [Online]",
-      "time": "2026-06-03T00:00:00.000Z",
-      "locationName": "Malmö",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com.au/e/exploring-the-future-of-learning-with-genai-symposium-online-tickets-1985559657385"
     },
     {
       "id": "https://www.facebook.com/events/766604466391609/",
@@ -4695,19 +4617,6 @@
       "url": "https://www.facebook.com/events/26815735604777553/"
     },
     {
-      "id": "https://www.eventbrite.es/e/entradas-kcn-taller-gratuito-3-de-junio-1990094076956",
-      "title": "KCN Taller Gratuito - 3 de junio",
-      "time": "2026-06-03T14:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.es/e/entradas-kcn-taller-gratuito-3-de-junio-1990094076956"
-    },
-    {
       "id": "https://www.facebook.com/events/970105882107493/",
       "title": "Blodomloppet Stockholm",
       "time": "2026-06-03T14:00:00.000Z",
@@ -4927,19 +4836,6 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/839236999204048/"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/entradas-virtual-open-day-june-3th-english-1988977480185",
-      "title": "VIRTUAL OPEN DAY – June 3th  (English)",
-      "time": "2026-06-03T15:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/entradas-virtual-open-day-june-3th-english-1988977480185"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/78x5dzakc18ljlw/2026-06-03/ratchet-dolls-us-dead-anarchy",
@@ -5505,11 +5401,11 @@
       "title": "Studiebesök på arboretum i Lindesberg. Föranmälan!w",
       "time": "2026-06-03T16:30:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "education",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/702962622_1439573121546835_2262197234616100533_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=Pgo7jL33KOUQ7kNvwHCFkm9&_nc_oc=Adq0COk-S96Q2znT38WWPZxAlwI8GPIFdrIU2gEPtsEpWGFLsG9b9Y6kBekaDzqGv24&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=CL4ozPlajbB5R_goSDTeww&_nc_ss=7f289&oh=00_Af_ruumM44ZErnAvIv3B_5bJXCw5wvGHifon_aE-DPOeqg&oe=6A22B33D",
       "hostName": "Facebook",
       "attendees": 12,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/928357546856311/"
     },
@@ -6450,19 +6346,6 @@
       "url": "https://www.facebook.com/events/1187440223336416/"
     },
     {
-      "id": "https://www.eventbrite.fr/e/billets-webinar-estudios-de-caso-y-ensenanza-del-espanol-profesional-en-francia-1986206866204",
-      "title": "Webinar : Estudios de caso y enseñanza del español profesional en Francia",
-      "time": "2026-06-04T15:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.fr/e/billets-webinar-estudios-de-caso-y-ensenanza-del-espanol-profesional-en-francia-1986206866204"
-    },
-    {
       "id": "https://www.facebook.com/events/2082106355917869/",
       "title": "KONST & KÄNSLA – En djupare konstupplevelse",
       "time": "2026-06-04T15:00:00.000Z",
@@ -6736,19 +6619,6 @@
       "url": "https://www.facebook.com/events/3251288565034512/"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-femmes-epargne-et-litteratie-financiere-au-dela-des-stereotypes-1987060487408",
-      "title": "Femmes, épargne et littératie financière : au-delà des stéréotypes",
-      "time": "2026-06-04T16:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/billets-femmes-epargne-et-litteratie-financiere-au-dela-des-stereotypes-1987060487408"
-    },
-    {
       "id": "https://www.facebook.com/events/1364786142050967/",
       "title": "Språkcafé",
       "time": "2026-06-04T16:00:00.000Z",
@@ -6773,19 +6643,6 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.eventbrite.se/e/klattermusen-stockholm-the-turntable-traverse-at-karbin-klatterhall-tickets-1990384282970"
-    },
-    {
-      "id": "https://www.eventbrite.com.mx/e/masterclass-si-tengo-tiempo-tickets-1990018188973",
-      "title": "Masterclass SI TENGO TIEMPO",
-      "time": "2026-06-04T16:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com.mx/e/masterclass-si-tengo-tiempo-tickets-1990018188973"
     },
     {
       "id": "https://www.facebook.com/events/2061661627571431/",
@@ -7468,26 +7325,13 @@
       "title": "Stockholm Performania",
       "time": "2026-06-04T22:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "performing-arts",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/706504696_10163584000787732_7336970704899410846_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=oUMnBcCAvtgQ7kNvwEAiVa-&_nc_oc=Adr0l_8-So0nQlUynEym8SyF5yyqtz9Me7UEUH-2wWYhxwkh7GS5BUQT_O1rxcsk9qU&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=kLGujtRjf9nZ8sMAT1OZrg&_nc_ss=7f289&oh=00_Af8ynzLqB_Vx30dyaTD7WLOslatjrQPtDRPFzyjLEinqOA&oe=6A22A533",
       "hostName": "Catrin Lundqvist",
       "attendees": 30,
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1330589232549384/"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/billets-soiree-de-mediumnite-voyance-collective-zoom-1988173155428",
-      "title": "Soirée de Médiumnité & Voyance Collective (ZOOM)",
-      "time": "2026-06-04T23:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/billets-soiree-de-mediumnite-voyance-collective-zoom-1988173155428"
     },
     {
       "id": "https://www.facebook.com/events/1539958293908041/",
@@ -7572,11 +7416,11 @@
       "title": "Klatring Sverige karlskrona",
       "time": "2026-06-05T09:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "sport",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/705228909_3246462882193327_6972226947580539542_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=8TGmfxmjOBMQ7kNvwFo3csK&_nc_oc=Adq8TP_ch01OvBZ3J_6oWBg2eU9XDT7cptL4xGBoyi7Xj949idIpf7cMG6kzdP7JVx4&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=Mxc1G8tyi3igzRo9BONDdw&_nc_ss=7f289&oh=00_Af8HR-BRm2uzjqNEBGoWranXCbY4Un5oXwiPfqj8k-eMQw&oe=6A22BE37",
       "hostName": "LGI Klatring",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2063126451302499/"
     },
@@ -7845,11 +7689,11 @@
       "title": "Arvids student!",
       "time": "2026-06-05T13:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/702306545_10163695465423025_5072798165019132790_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=106&ccb=1-7&_nc_sid=75d36f&_nc_ohc=jeWumq8D5ksQ7kNvwEKsWNo&_nc_oc=Adp38wrMzkvn3z1wYI8cpMHuSBquRJiA0dAPH9hf6mHoiZCuCdldZ1QpQhRB-X4Cm6Y&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=bvkVdt-daILrlSmLe_pG_w&_nc_ss=7f289&oh=00_Af-D2MvVn9WrueskwtdiSkvYgqvHyXVwIIM1QqFP8GJzcQ&oe=6A22A747",
       "hostName": "Facebook",
       "attendees": 21,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2160281961449158/"
     },
@@ -8746,7 +8590,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/661456609_4451995271723915_7816121610112190388_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=nT_cj5Isd88Q7kNvwEEmzCa&_nc_oc=AdrpP7M2F7avT9xLw7dXfKotkDmYPNNYtX44I0QYK44Kzz-GEZLO9cIdERddTdpNxuY&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=oIMmQMhU_d0aHKVuPGHz-g&_nc_ss=7f289&oh=00_Af-Ph3sdBhc86ZQ4IaJmYsufSw6mJHxdGU65YeyA54E-MA&oe=6A22CA9D",
       "hostName": "Nattvandring Stuvsta/Huddinge",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1261392272872627/"
     },
@@ -8911,11 +8755,11 @@
       "title": "larian amal",
       "time": "2026-06-05T22:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "sport",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/678237492_122108345690882261_7602937183914610534_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=L_TRCNNvG60Q7kNvwF45VuS&_nc_oc=Ado6YjjPJ4du_xQQUHdzj6_zroDsMWhOUatLR8yVkjXTmkGET9Yb1khjzMLMiS66WGc&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=9ZknbP58nt8S0vKTEXqXSw&_nc_ss=7f289&oh=00_Af-DMOypO0MFmxzGyZuyWUYFE8qg3mlEB-4r2aX1RZbBCw&oe=6A22BC2B",
       "hostName": "Komuniti Warga Kuantan",
       "attendees": 0,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1637656087284390/"
     },
@@ -9158,7 +9002,7 @@
       "title": "Rat Games Alingsås",
       "time": "2026-06-06T07:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "social",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/683302058_1508347574662430_7803166127088966148_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=75d36f&_nc_ohc=_1RhRBN8uwAQ7kNvwHKpQ-H&_nc_oc=AdoivvKi78oEwZ5HpDDDJHknN82Vv-wva50dSqpX10g00vEyVt2ssh0kfUj9W-n4Wlk&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=HWiENCn6YdJZUKGx0HT0nA&_nc_ss=7f289&oh=00_Af-wv-31ItHU0CaSU0nLK-luH_81GC_dYm17R5_qZXNtVg&oe=6A22AE38",
       "hostName": "Facebook",
       "attendees": 4,
@@ -9539,7 +9383,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/651175190_1545203010947659_4381716077525924191_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=75d36f&_nc_ohc=BPyXKwx0UF4Q7kNvwF1MdE7&_nc_oc=AdrVkVvMa_jfSGsII9RKh1i4tOvFL-8YrdaavoTQxCK469kzGDWfmALqmpeRwUFKMC8&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=Keai2bF8mWQp5h03fnX4Dw&_nc_ss=7f289&oh=00_Af-SevAd2aPBAXZTLe6njzskW8QvWZ11Cxb5Rf3Gu9OkaQ&oe=6A22B106",
       "hostName": "Facebook",
       "attendees": 6,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1642291383628509/"
     },
@@ -10085,7 +9929,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/657279147_1408459264655121_7762251509745889392_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=1Lyf9gHXHhYQ7kNvwF6rUXa&_nc_oc=AdrmXh1jTrbd8Fd4Juz--m9UzfaYRQCRXKS4LkDJyAc1SrBmCqPG5KYYwL5UingXJTA&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=igRfcBi_Sqc1MSocAV28xQ&_nc_ss=7f289&oh=00_Af_j2GtrqFro_GV6P5ZDp8U8CoYoLlType5vYxMpAjeCpQ&oe=6A22A773",
       "hostName": "Moveat",
       "attendees": 2,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/962798112924981/"
     },
@@ -10137,7 +9981,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/707775128_10230561442534455_6447424246414200994_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=75d36f&_nc_ohc=_GvkY2om-acQ7kNvwEi0dd4&_nc_oc=AdppwQDrGOkY_Wqlzs8pKzVFSy6jISY6hjXIMPv-ahOcXhYbmJ93sv7gLERonA1d0QM&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=cgM9K1XJ1fqfkXcYk2kqCg&_nc_ss=7f289&oh=00_Af8GyZp2VH0FI7XNXZAdFVhHla-mQ8XKNW3yPtOGfKc9Dg&oe=6A229B4C",
       "hostName": "Facebook",
       "attendees": 7,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2798676647157897/"
     },
@@ -10913,11 +10757,11 @@
       "title": "Allsång på skånska Nationaldagen Bromölla kommun",
       "time": "2026-06-06T11:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "music",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/655597232_923133953649907_4435613191390927196_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=106&ccb=1-7&_nc_sid=75d36f&_nc_ohc=8tLDVBtUhecQ7kNvwH0Q6bn&_nc_oc=Adq-PdalMxsSXffRxmTOXrwrgiySPzKXdWA6HAZkpnEX07c167oHGDvoLMWtHo2TnhY&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=2FYgYGF2Jcb1vKXyoNZC4A&_nc_ss=7f289&oh=00_Af8l9Xeg2v8A6O8D3zBc03ER0s1zN5opR-z2NsRAAIIPsA&oe=6A22C468",
       "hostName": "Facebook",
       "attendees": 2,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1152778400212472/"
     },
@@ -11788,7 +11632,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/650837664_1481046213386677_7818290710258062975_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=75d36f&_nc_ohc=prrwc0xHLBUQ7kNvwHQ9MUQ&_nc_oc=Adrt-qOoJMFNwMJmVy5UX-dfu5fbHuleMw4XzETqcokzgYlbSDUEO4zY9PYWhFciitU&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=GYX17TgKhWmRBH7DwDKOdA&_nc_ss=7f289&oh=00_Af-Zy9TcwLMbuzq748tHVkV4hMnOq58szI5RPKZJjDrjuQ&oe=6A22BFFC",
       "hostName": "Facebook",
       "attendees": 9,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1221461190073569/"
     },
@@ -12074,7 +11918,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/705382600_1435101128645483_7604018182051021700_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=75d36f&_nc_ohc=045KKJ9C0d8Q7kNvwFkFEHx&_nc_oc=AdoYdC2-rd2pWGrQMujnjXx6PAxwQ4fe8viYSEte8QYvdzzT4nDEkqIAQ41NBBYzSCI&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=zqagX1GNEXACZ3qUWk1Ukw&_nc_ss=7f289&oh=00_Af8ahoJmbdwaVhM9HfBpUs4sKI0A0hWM8zif2EvPvhmDQQ&oe=6A22D635",
       "hostName": "Facebook",
       "attendees": 12,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1542560680606123/"
     },
@@ -12451,7 +12295,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/702930513_10164815464613866_6838170315052675459_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=75d36f&_nc_ohc=fV-adc7-T74Q7kNvwF6CAP3&_nc_oc=AdripA5KwUzuKthM36xbfkxbaXTSNoFQk5AybLZCmp2upnxmISNXzFDaPmE_-rJEwJw&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=hFXGwJL7c7mnrEQGdI9fNA&_nc_ss=7f289&oh=00_Af8KjBlQay9hR09lwU5MiQWdQ78Q2W7yVG_Tqywt6Lb8qA&oe=6A22945D",
       "hostName": "TAXPARADEN Helsingborg",
       "attendees": 16,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1312226637555820/"
     },
@@ -12711,7 +12555,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/710781874_10239256340181139_4855302638345773594_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=75d36f&_nc_ohc=09T3rpdI_aYQ7kNvwEEF3jg&_nc_oc=AdqoSwS7Mo6--p-vNlTH1Fqm7ydA18b9NAfn2sBpvtbl1jCdNsYZT29yNIgZtFgIGOE&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=oUPQAKsmxrg59l20siP8VA&_nc_ss=7f289&oh=00_Af-69F1x61CDKirJYJkDa6cqW29t3dNiOnScz98DYvP7Pw&oe=6A22CA45",
       "hostName": "🔱🌼Köp Och Sälj i Hallands Län Med Omnejd🔱🌼",
       "attendees": 8,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1013179861125396/"
     },
@@ -12893,7 +12737,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/676714801_1417190333426958_4256379427823793161_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=75d36f&_nc_ohc=MpOuNFRFT-4Q7kNvwEurbhW&_nc_oc=AdrfQot_3ssSLIC8u4OfIMWdr22Z-MJJH62SkLBjAsyDPxNDNysZ6Ca4BVdCeDXDjKU&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=UqJFtql5TPD_0tnatWHKvw&_nc_ss=7f289&oh=00_Af_KwfFskoNN83cWO8TSi9haftrx3UYE2Lpv3ZPnM8KeOQ&oe=6A22BD98",
       "hostName": "Facebook",
       "attendees": 24,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1447410993722491/"
     },
@@ -12945,7 +12789,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/679416053_26517451944576236_4831856439473546201_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=75d36f&_nc_ohc=6ADS3u7NdEAQ7kNvwHpBa1K&_nc_oc=Ado9sYMlUSSw_RklZ8-ku6Wg9DLdEZZWz9ZYpajtEhcQq_UnnKBwWOf2Ve53Jr0aRSQ&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=YWe6dSCSJai2TjmeF_FtWg&_nc_ss=7f289&oh=00_Af_aI1Qh-1sO8AzHF4BvDEkmMo_evkiOguKF1YyDR4YM7Q&oe=6A22B249",
       "hostName": "Facebook",
       "attendees": 2,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2163723497747757/"
     },
@@ -13045,11 +12889,11 @@
       "title": "BARNDISCO| SANDHOLMEN MARIESTAD🎉",
       "time": "2026-06-07T13:00:00.000Z",
       "locationName": "",
-      "category": "other",
+      "category": "family",
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/699597106_122176087292800861_6796080015925729226_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=75d36f&_nc_ohc=rb-cUfflxQEQ7kNvwFRDwgg&_nc_oc=AdoHWM4g4DU69P7p_trnm3GnSY1s1-Uwk36By8D0SCiyq9_jSN71qcsl3qTFdA8LTyc&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=sKYJQ3QcNyhAGZyLL-XS-w&_nc_ss=7f289&oh=00_Af_qvVRWhubrZdMXi2_mhe7-paswVaHMRWANQX7ijArhPQ&oe=6A22A520",
       "hostName": "Cafesandholmen",
       "attendees": 6,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1146528281873993/"
     },
@@ -13192,7 +13036,7 @@
       "coverImage": "https://scontent.fmmx3-1.fna.fbcdn.net/v/t39.30808-6/707915044_10174350846200564_93895642118618713_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=75d36f&_nc_ohc=cLEXt9NZL1IQ7kNvwEyidCg&_nc_oc=AdrbyKI3yBczcrEeJVpHLQsPi-eMLNPwFPrYmQU4_0m67j-PmgT4CmrA9ehAko3iNrY&_nc_zt=23&_nc_ht=scontent.fmmx3-1.fna&_nc_gid=aT2s0VNKRQ7vxDLmCFelog&_nc_ss=7f289&oh=00_Af8z8gP_iFgD5vspTs9QNmNmNVjAbVLOdVzgYnGYWa5bEQ&oe=6A22AFEF",
       "hostName": "Kulturgården Stomperud Gård og Stabbursgalleriet i Sør- Odal",
       "attendees": 8,
-      "isLocationVerified": false,
+      "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1373543057929436/"
     },
@@ -13275,19 +13119,6 @@
       "url": "https://www.facebook.com/events/1508149800762597/"
     },
     {
-      "id": "https://www.eventbrite.com/e/kurs-istqb-foundation-certifiering-goteborg-in-english-tickets-1990333755842",
-      "title": "Kurs ISTQB Foundation certifiering Göteborg (in English)",
-      "time": "2026-06-08T07:00:00.000Z",
-      "locationName": "Regus - Gothenburg, Central",
-      "category": "education",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/kurs-istqb-foundation-certifiering-goteborg-in-english-tickets-1990333755842"
-    },
-    {
       "id": "https://www.facebook.com/events/892223943169979/",
       "title": "Sagolek",
       "time": "2026-06-08T08:15:00.000Z",
@@ -13340,71 +13171,6 @@
       "url": "https://www.facebook.com/events/1994291184684119/"
     },
     {
-      "id": "https://www.eventbrite.ca/e/billets-cafe-virtuel-mission-inclusion-venez-echanger-avec-richard-veenstra-dg-1989007054643",
-      "title": "Café virtuel Mission inclusion : Venez échanger avec Richard Veenstra, D.G",
-      "time": "2026-06-09T15:15:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/billets-cafe-virtuel-mission-inclusion-venez-echanger-avec-richard-veenstra-dg-1989007054643"
-    },
-    {
-      "id": "https://www.eventbrite.co.uk/e/functional-constipation-in-children-assessment-and-treatment-tickets-1989003526089",
-      "title": "Functional Constipation in Children: Assessment and Treatment",
-      "time": "2026-06-10T11:30:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.co.uk/e/functional-constipation-in-children-assessment-and-treatment-tickets-1989003526089"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/los-angeles-career-fair-tickets-203182663817",
-      "title": "Los Angeles Career Fair",
-      "time": "2026-06-11T07:30:00.000Z",
-      "locationName": "Uppsala",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/los-angeles-career-fair-tickets-203182663817"
-    },
-    {
-      "id": "https://www.eventbrite.fr/e/billets-live-decouverte-filiere-cybersecurite-110626-1990317259501",
-      "title": "Live découverte : filière Cybersécurité - 11/06/26",
-      "time": "2026-06-11T10:15:00.000Z",
-      "locationName": "Lund",
-      "category": "music",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.fr/e/billets-live-decouverte-filiere-cybersecurite-110626-1990317259501"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/bacteriophages-in-the-arab-world-ii-phage-based-strategies-against-mdr-tickets-1985805175737",
-      "title": "Bacteriophages in the Arab World II: Phage-Based Strategies Against MDR",
-      "time": "2026-06-12T11:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/bacteriophages-in-the-arab-world-ii-phage-based-strategies-against-mdr-tickets-1985805175737"
-    },
-    {
       "id": "https://www.eventbrite.dk/e/workshop-i-hundfotografi-tickets-1990565425773",
       "title": "Workshop i hundfotografi",
       "time": "2026-06-13T08:00:00.000Z",
@@ -13416,32 +13182,6 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.eventbrite.dk/e/workshop-i-hundfotografi-tickets-1990565425773"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/programas-de-afiliados-para-mi-pyme-tickets-1989683445747",
-      "title": "Programas de Afiliados para mi Pyme",
-      "time": "2026-06-13T16:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.es/e/programas-de-afiliados-para-mi-pyme-tickets-1989683445747"
-    },
-    {
-      "id": "https://www.eventbrite.be/e/billets-espace-de-parole-parents-surmonter-les-tensions-dans-le-couplebabyclash-1987300653752",
-      "title": "Espace de ¨Parole Parents- Surmonter les tensions dans le couple/babyclash",
-      "time": "2026-06-15T18:00:00.000Z",
-      "locationName": "Lund",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.be/e/billets-espace-de-parole-parents-surmonter-les-tensions-dans-le-couplebabyclash-1987300653752"
     },
     {
       "id": "https://www.eventbrite.se/e/liberalismen-efter-historiens-aterkomst-tickets-1989369188796",
@@ -13457,123 +13197,6 @@
       "url": "https://www.eventbrite.se/e/liberalismen-efter-historiens-aterkomst-tickets-1989369188796"
     },
     {
-      "id": "https://www.eventbrite.ca/e/inscription-campements-urbains-pistes-dactions-fondees-sur-les-droits-humains-1988027765563",
-      "title": "Campements urbains : pistes d’actions fondées sur les droits humains",
-      "time": "2026-06-16T16:00:00.000Z",
-      "locationName": "Göteborg",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/inscription-campements-urbains-pistes-dactions-fondees-sur-les-droits-humains-1988027765563"
-    },
-    {
-      "id": "https://www.eventbrite.co.uk/e/prevent-in-education-early-years-foundation-stage-training-tickets-1535652510999",
-      "title": "Prevent in Education - Early Years Foundation Stage Training",
-      "time": "2026-06-16T17:00:00.000Z",
-      "locationName": "Malmö",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.co.uk/e/prevent-in-education-early-years-foundation-stage-training-tickets-1535652510999"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/virtual-written-testing-apcat-workshop-tickets-1985472775519",
-      "title": "Virtual Written Testing (APCAT) Workshop",
-      "time": "2026-06-16T17:30:00.000Z",
-      "locationName": "Malmö",
-      "category": "education",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/virtual-written-testing-apcat-workshop-tickets-1985472775519"
-    },
-    {
-      "id": "https://www.eventbrite.com.mx/e/masterclass-fuga-de-talento-como-disenar-una-estrategia-de-compensacion-tickets-1990108698690",
-      "title": "Masterclass - Fuga de talento: Cómo diseñar una estrategia de compensación",
-      "time": "2026-06-16T22:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com.mx/e/masterclass-fuga-de-talento-como-disenar-una-estrategia-de-compensacion-tickets-1990108698690"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-u-start-avanza-ciclo-iii-scrum-para-gestion-agil-de-proyectos-y-equipos-1989552064783",
-      "title": "U-Start Avanza | Ciclo III: Scrum para gestión ágil de proyectos y equipos",
-      "time": "2026-06-17T15:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.es/e/entradas-u-start-avanza-ciclo-iii-scrum-para-gestion-agil-de-proyectos-y-equipos-1989552064783"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-sessio-informativa-cfgs-en-comerc-internacional-i-transport-i-logistica-1989114162004",
-      "title": "Sessió informativa: CFGS en Comerç Internacional i Transport i Logística",
-      "time": "2026-06-17T16:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.es/e/entradas-sessio-informativa-cfgs-en-comerc-internacional-i-transport-i-logistica-1989114162004"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/human-resources-management-certificate-info-session-online-jun-18-2026-tickets-1962791973630",
-      "title": "Human Resources Management Certificate Info Session (Online) — Jun 18, 2026",
-      "time": "2026-06-18T19:00:00.000Z",
-      "locationName": "Malmö",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/human-resources-management-certificate-info-session-online-jun-18-2026-tickets-1962791973630"
-    },
-    {
-      "id": "https://www.eventbrite.ca/e/billets-processus-dadmission-a-loiq-pour-les-professionnels-formes-a-letranger-1977628702686",
-      "title": "Processus d'admission à l'OIQ pour les professionnels formés à l'étranger",
-      "time": "2026-06-18T22:00:00.000Z",
-      "locationName": "Lund",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.ca/e/billets-processus-dadmission-a-loiq-pour-les-professionnels-formes-a-letranger-1977628702686"
-    },
-    {
-      "id": "https://www.eventbrite.com.au/e/connect-learn-all-about-adult-adhd-presented-by-dr-limor-theedar-tickets-1986359345273",
-      "title": "Connect & Learn: All About Adult ADHD, presented by Dr Limor Theedar",
-      "time": "2026-06-23T03:00:00.000Z",
-      "locationName": "Malmö",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com.au/e/connect-learn-all-about-adult-adhd-presented-by-dr-limor-theedar-tickets-1986359345273"
-    },
-    {
       "id": "https://vaxjoco.se/evenemang/scensommar/",
       "title": "Scensommar 2026",
       "time": "2026-06-24T21:59:00.000Z",
@@ -13585,45 +13208,6 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://vaxjoco.se/evenemang/scensommar/"
-    },
-    {
-      "id": "https://www.eventbrite.es/e/entradas-masterclassdocument-controller-un-nuevo-perfil-para-la-empresa-del-futuro-1990011352525",
-      "title": "Masterclass:Document Controller: Un nuevo perfil para la empresa del futuro",
-      "time": "2026-06-25T16:00:00.000Z",
-      "locationName": "Stockholm",
-      "category": "other",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.es/e/entradas-masterclassdocument-controller-un-nuevo-perfil-para-la-empresa-del-futuro-1990011352525"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/krs-one-live-in-stockholm-biljetter-1976673844680",
-      "title": "KRS One  Live in Stockholm",
-      "time": "2026-06-25T18:00:00.000Z",
-      "locationName": "Fryshuset Klubben",
-      "category": "music",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/krs-one-live-in-stockholm-biljetter-1976673844680"
-    },
-    {
-      "id": "https://www.eventbrite.com/e/krs-one-live-in-malmo-biljetter-1981938505422",
-      "title": "KRS One  Live in Malmö",
-      "time": "2026-06-28T18:00:00.000Z",
-      "locationName": "Moriska Paviljongen",
-      "category": "music",
-      "coverImage": "",
-      "hostName": "Eventbrite",
-      "attendees": 0,
-      "isLocationVerified": true,
-      "isHostVerified": false,
-      "url": "https://www.eventbrite.com/e/krs-one-live-in-malmo-biljetter-1981938505422"
     },
     {
       "id": "https://vaxjoco.se/evenemang/karl-oskardagarna/",

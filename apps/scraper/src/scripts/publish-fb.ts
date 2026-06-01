@@ -1,15 +1,18 @@
 /**
- * publish-fb.ts — Daglig Facebook-publicering
+ * publish-fb.ts — Daglig publicering på Facebook + Instagram
  *
  * Flöde:
  *   1. Hämta de 5 bästa kommande events ur SQLite (nästa 7 dagar)
  *   2. Generera ett engagerande inlägg på svenska via Ollama (qwen3:8b)
  *   3. Fallback till fast mall om Ollama ej tillgängligt
- *   4. Publicera på VADKUL Facebook-sidan via Graph API
- *   5. Markera publiceringsdatum → undviker dubbelpost vid omstart
+ *   4. Publicera på Facebook-sidan via Graph API
+ *   5. Publicera på Instagram (om IG_USER_ID finns + bild tillgänglig)
+ *   6. Markera publiceringsdatum → undviker dubbelpost vid omstart
  *
  * Körning: npx tsx apps/scraper/src/scripts/publish-fb.ts
- * Schemaläggning: launchd kl 09:00 (se.vadkul.fb-publish.plist)
+ * Schemaläggning: launchd kl 10:00 (se.vadkul.fb-publish.plist)
+ *
+ * Instagram-krav: token måste ha instagram_basic + instagram_content_publish
  */
 
 import Database from 'better-sqlite3';
@@ -32,6 +35,7 @@ dotenv.config();
 
 const FB_PAGE_ID    = process.env.FB_PAGE_ID    ?? '';
 const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN ?? '';
+const IG_USER_ID    = process.env.IG_USER_ID    ?? '';   // Instagram Business Account ID
 const OLLAMA_URL    = process.env.OLLAMA_URL    ?? 'http://localhost:11434';
 const OLLAMA_MODEL  = process.env.OLLAMA_MODEL  ?? 'qwen3:8b';
 
@@ -75,7 +79,8 @@ interface EventRow {
 
 interface ScoredEvent extends EventRow {
     score: number;
-    city: string;         // heuristik: sista "ord" i locationName
+    city: string;    // heuristik: sista "ord" i locationName
+    image: string;   // normaliserad bild-URL (tom sträng om ingen)
 }
 
 // ── Guard: redan publicerat idag? ────────────────────────────────────────────
@@ -118,7 +123,8 @@ function pickBestEvents(db: Database.Database): ScoredEvent[] {
         WHERE datetime(time) >= datetime(?)
           AND datetime(time) <= datetime(?)
           AND (hidden IS NULL OR hidden = 0)
-          AND lat != 0
+          AND lat BETWEEN 54.5 AND 71.5
+          AND lng BETWEEN 4.5 AND 24.5
         ORDER BY time ASC
         LIMIT 200
     `).all(now.toISOString(), cutoff.toISOString()) as EventRow[];
@@ -138,7 +144,8 @@ function pickBestEvents(db: Database.Database): ScoredEvent[] {
         // Extrahera city-hint ur locationName (sista token efter komma/stad)
         const cityHint = e.locationName?.split(',').pop()?.trim() ?? '';
 
-        return { ...e, score, city: cityHint };
+        const image = e.coverImage?.trim() || '';
+        return { ...e, score, city: cityHint, image };
     });
 
     // Sortera fallande
@@ -191,19 +198,24 @@ async function generatePostWithOllama(events: ScoredEvent[]): Promise<string | n
         return `- ${e.title} | ${e.locationName} | ${day} kl ${time} | kategori: ${e.category}`;
     }).join('\n');
 
-    const prompt = `Du är social media-manager för Vadkul (vadkul.se) — en app som listar spontana events i Sverige.
-Skriv ETT engagerande Facebook-inlägg på svenska (max 400 tecken inkl emojis) som:
-- Lyfter fram 3–5 av de listade eventen på ett inspirerande sätt
-- Anger korrekt stad OCH korrekt datum/tid för varje event du nämner (använd exakt info från listan nedan)
-- Blandar INTE ihop platser eller datum mellan events
-- Använder 3–5 relevanta emojis (inte en emoji per rad — blanda in naturligt)
-- Avslutar med "Hitta fler events → vadkul.se" och 3–4 svenska hashtags
-- Håller en varm, inbjudande ton — inte reklam-stiff
+    const prompt = `Du skriver för VADKUL — appen som får folk att faktiskt göra grejer.
+
+VADKULS TON (följ alltid):
+• Direkt och uppmanande — "Häng med!", "Ta chansen!", "Passa på!", "Missa inte!"
+• Energisk men jordnära — som ett tips från en vän, inte reklam
+• Alltid handlingsorienterad — läsaren ska vilja agera NU
+• Svenska, vardagligt, aldrig stelt eller formellt
+
+Skriv ETT Facebook-inlägg (max 380 tecken inkl emojis) som:
+- Börjar med en kort uppmanande mening (1 rad) som sätter igång läsaren
+- Lyfter 3–5 events med korrekt stad OCH korrekt datum/tid (använd exakt info nedan, blanda INTE ihop dem)
+- Blandar in 3–5 emojis naturligt (ej en per rad)
+- Avslutar med "Hitta fler events → vadkul.se" + 3–4 hashtags
 
 Idag är ${todayStr}. Kommande events:
 ${eventLines}
 
-Skriv BARA inläggstexten — ingen förklaring, inga citattecken runt texten.`;
+Skriv BARA inläggstexten — ingen förklaring, inga citattecken.`;
 
     try {
         const res = await fetch(`${OLLAMA_URL}/api/chat`, {
@@ -264,10 +276,9 @@ function categoryEmoji(cat: string): string {
 // ── Publicera till Facebook ───────────────────────────────────────────────────
 
 async function postToFacebook(message: string, imageUrl?: string): Promise<string> {
-    // Med bild: posta via /photos (publiceras som foto-inlägg med caption)
+    // Med bild: /photos med caption → syns som vanligt foto-inlägg i tidslinjen
     if (imageUrl) {
-        const url = `https://graph.facebook.com/v19.0/${FB_PAGE_ID}/photos`;
-        const res = await fetch(url, {
+        const res = await fetch(`https://graph.facebook.com/v19.0/${FB_PAGE_ID}/photos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ caption: message, url: imageUrl, access_token: FB_PAGE_TOKEN }),
@@ -281,8 +292,7 @@ async function postToFacebook(message: string, imageUrl?: string): Promise<strin
     }
 
     // Utan bild: vanligt textinlägg
-    const url = `https://graph.facebook.com/v19.0/${FB_PAGE_ID}/feed`;
-    const res = await fetch(url, {
+    const res = await fetch(`https://graph.facebook.com/v19.0/${FB_PAGE_ID}/feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, access_token: FB_PAGE_TOKEN }),
@@ -290,6 +300,31 @@ async function postToFacebook(message: string, imageUrl?: string): Promise<strin
     const data = await res.json() as any;
     if (data.error) throw new Error(`FB API ${data.error.code}: ${data.error.message}`);
     return data.id as string;
+}
+
+// ── Publicera till Instagram ──────────────────────────────────────────────────
+
+async function postToInstagram(caption: string, imageUrl: string): Promise<string> {
+    // Steg 1: Skapa media-container
+    const containerRes = await fetch(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl, caption, access_token: FB_PAGE_TOKEN }),
+    });
+    const containerData = await containerRes.json() as any;
+    if (containerData.error) throw new Error(`IG container: ${containerData.error.message}`);
+    const containerId = containerData.id as string;
+    console.log(`[IG] Container skapad: ${containerId}`);
+
+    // Steg 2: Publicera containern
+    const publishRes = await fetch(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creation_id: containerId, access_token: FB_PAGE_TOKEN }),
+    });
+    const publishData = await publishRes.json() as any;
+    if (publishData.error) throw new Error(`IG publish: ${publishData.error.message}`);
+    return publishData.id as string;
 }
 
 // ── Huvudfunktion ────────────────────────────────────────────────────────────
@@ -346,23 +381,39 @@ async function main() {
         message = generateFallbackPost(events);
     }
 
-    // 4. Välj bild — ta coverImage från det topprankade eventet som har en
-    const imageUrl = events.find(e => e.coverImage)?.coverImage ?? undefined;
+    // 4. Välj bästa bilden — första eventet med en icke-tom coverImage
+    const imageUrl = events.find(e => e.image)?.image;
     if (imageUrl) {
-        console.log(`[FB Publish] Bild: ${imageUrl}`);
+        console.log(`[FB Publish] Bild: ...${imageUrl.slice(-60)}`);
     } else {
-        console.log('[FB Publish] Inga bilder tillgängliga — publicerar utan bild.');
+        console.log('[FB Publish] Ingen bild tillgänglig — publicerar utan.');
     }
 
-    // 5. Publicera
-    console.log('[FB Publish] Publicerar…');
+    // 5. Publicera på Facebook
+    console.log('[FB] Publicerar…');
     try {
-        const postId = await postToFacebook(message, imageUrl ?? undefined);
-        console.log(`✅ Publicerat! Post-ID: ${postId}`);
+        const postId = await postToFacebook(message, imageUrl);
+        console.log(`✅ Facebook publicerat! Post-ID: ${postId}`);
         markPostedToday(postId);
     } catch (err) {
-        console.error('❌ Fel vid publicering:', (err as Error).message);
+        console.error('❌ Fel vid Facebook-publicering:', (err as Error).message);
         process.exit(1);
+    }
+
+    // 6. Publicera på Instagram (kräver IG_USER_ID + bild)
+    if (IG_USER_ID && imageUrl) {
+        console.log('[IG] Publicerar…');
+        try {
+            const igPostId = await postToInstagram(message, imageUrl);
+            console.log(`✅ Instagram publicerat! Post-ID: ${igPostId}`);
+        } catch (err) {
+            // Instagram-fel stoppar inte körningen — logga och fortsätt
+            console.error('⚠️  Instagram misslyckades (FB-post klar):', (err as Error).message);
+        }
+    } else if (!IG_USER_ID) {
+        console.log('[IG] Hoppar över — IG_USER_ID inte satt i ~/.vadkul-secrets/env');
+    } else {
+        console.log('[IG] Hoppar över — ingen bild tillgänglig (Instagram kräver bild)');
     }
 }
 

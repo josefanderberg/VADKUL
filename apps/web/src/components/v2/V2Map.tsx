@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LinkEvent } from '../../types';
+import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -74,8 +75,8 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
     // Key: "selected:saved:discarded:count" → stable object across renders.
     const iconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
-    const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1) => {
-        const cacheKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}`;
+    const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1, category?: EventCategoryType) => {
+        const cacheKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}:${category ?? 'other'}`;
         const cached = iconCache.current.get(cacheKey);
         if (cached) return cached;
 
@@ -95,7 +96,8 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
         const scaleStyle = isSelected ? 'transform: scale(1.25) translateY(-10px);' : '';
         const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
-        const emoji = '🎫';
+        const catKey = category && EVENT_CATEGORIES[category] ? category : 'other';
+        const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
 
         const countBadge = count > 1
             ? `<div style="position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;background:#006AA7;color:#fff;font-size:10px;font-weight:700;border-radius:999px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;line-height:1;">${count > 99 ? '99+' : count}</div>`
@@ -168,7 +170,7 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                         <Marker
                             key={rep.id}
                             position={[rep.lat!, rep.lng!]}
-                            icon={createCustomIcon(isSelected, isSaved, isDiscarded, count)}
+                            icon={createCustomIcon(isSelected, isSaved, isDiscarded, count, rep.category)}
                             zIndexOffset={isSelected ? 1000 : (isSaved ? 500 : (isDiscarded ? -100 : 0))}
                             eventHandlers={{
                                 click: (e) => {

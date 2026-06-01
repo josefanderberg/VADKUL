@@ -187,6 +187,7 @@ interface RawCard {
     url: string;
     title: string;
     ps: string[];  // all p-element texts in order
+    coverImage: string; // thumbnail src from card (may be empty)
 }
 
 async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[]> {
@@ -223,8 +224,11 @@ async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[
                 const title = (sec.querySelector('h3') || sec.querySelector('h2'))?.textContent?.trim() || '';
                 // Collect all p texts — some cards have a badge (e.g. "Sales end soon") before the date
                 const ps = Array.from(sec.querySelectorAll('p')).map(p => p.textContent?.trim() || '').filter(Boolean);
+                // Extract thumbnail — images are blocked from loading but src attribute is still in the DOM
+                const imgEl = sec.querySelector('img') as HTMLImageElement | null;
+                const coverImage = imgEl?.src || imgEl?.getAttribute('data-src') || imgEl?.getAttribute('srcset')?.split(' ')[0] || '';
 
-                if (title) results.push({ url, title, ps });
+                if (title) results.push({ url, title, ps, coverImage });
             }
             return results;
         });
@@ -301,7 +305,7 @@ export async function scrapeEventbrite() {
                         hostName: 'Eventbrite',
                         category: classifyEvent(card.title, ''),
                         createdAt: new Date(),
-                        coverImage: null,
+                        coverImage: card.coverImage || null,
                         price: '',
                         description: '',
                         isLocationVerified: coords !== null,

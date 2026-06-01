@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHelper';
-import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress } from '../../utils/venueCoordinates';
+import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { classifyEvent } from '../../utils/classify';
 import { searchGoogleImage } from '../../utils/imageSearch';
 import { applyDateFilters, discoverEventUrls } from './discovery';
@@ -580,6 +580,14 @@ export async function scrapeFacebookEvents() {
                         finalLng = coords[1];
                         isLocationVerified = true;
                     }
+                }
+
+                // Sista skyddsnät: om koordinaterna hamnar utanför Norden, hoppa över.
+                // Norge och Danmark tillåts — det är Moldavien, Bangladesh, USA osv. vi vill stänga ute.
+                if (finalLat !== 0 && finalLng !== 0 && !isInNordic(finalLat, finalLng)) {
+                    console.log(`    ⏩ Skippar event utanför Norden (koordinater): "${details.title}" [${finalLat.toFixed(4)}, ${finalLng.toFixed(4)}] (addr: "${extractedAddress}")`);
+                    extractSkippedForeign++;
+                    continue;
                 }
 
                 // Date and Time parsing
