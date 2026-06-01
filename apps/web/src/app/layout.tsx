@@ -36,7 +36,7 @@ export default function RootLayout({
                 <link rel="icon" type="image/png" href="/pwa-icon-v2.png" />
                 <link rel="apple-touch-icon" href="/pwa-icon-v2.png" />
                 <meta name="theme-color" content="#16a34a" />
-                <meta name="impact-site-verification" value="17f79b5d-182e-4a80-bff9-634b6d47ebc7" />
+                <meta name="impact-site-verification" content="17f79b5d-182e-4a80-bff9-634b6d47ebc7" />
             </head>
             <body>
                 <Providers>

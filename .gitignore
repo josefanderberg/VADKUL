@@ -45,8 +45,15 @@ vadkul-*-firebase-adminsdk-*.json
 
 # Generated / auto-updated data files
 apps/scraper/events.db
+apps/scraper/events.db-shm
+apps/scraper/events.db-wal
 apps/scraper/keyword_stats.json
 apps/scraper/keyword_test_results.json
+apps/scraper/scraper_run_history.json
+
+# Gamla / temporära ikonfigurationer
+apps/web/public/pwa-icon-v21.png
+apps/web/public/pwa-icon-v222.png
 
 # TypeScript build cache
 *.tsbuildinfo

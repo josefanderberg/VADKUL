@@ -1,259 +1,209 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/sqlite';
+/**
+ * /api/link-events — Firestore-backed API för skrapade events
+ *
+ * GET    → Hämtar framtida events (hidden=false), sorterat på tid
+ * PUT    → Uppdaterar ett event (hidden, category, title, locationName, lat, lng)
+ * DELETE → Tar bort ett event
+ * POST   → bulkCreate / bulkDelete (admin-operationer)
+ */
 
-// GET /api/link-events
-// Hämtar alla framtida skrapade link events (eller alla om ?all=true anges)
+import { NextResponse } from 'next/server';
+import { getAdminDb } from '@/lib/firestore-admin';
+import { Timestamp } from 'firebase-admin/firestore';
+
+// ── Hjälpfunktioner ──────────────────────────────────────────────────────────
+
+function toDate(value: any): Date {
+    if (!value) return new Date(0);
+    if (value instanceof Timestamp) return value.toDate();
+    if (value?.seconds !== undefined) return new Date(value.seconds * 1000);
+    return new Date(value);
+}
+
+function docToEvent(id: string, data: FirebaseFirestore.DocumentData) {
+    return {
+        id:                  data.url ?? id,
+        url:                 data.url ?? id,
+        title:               data.title               ?? '',
+        time:                toDate(data.time),
+        createdAt:           toDate(data.createdAt),
+        locationName:        data.locationName        ?? '',
+        extractedAddress:    data.extractedAddress    ?? '',
+        geocodedQuery:       data.geocodedQuery       ?? '',
+        lat:                 Number(data.lat)          || 0,
+        lng:                 Number(data.lng)          || 0,
+        hostName:            data.hostName            ?? '',
+        category:            data.category            ?? 'other',
+        coverImage:          data.coverImage          ?? '',
+        description:         data.description         ?? '',
+        price:               data.price               ?? '',
+        attendees:           Number(data.attendees)   || 0,
+        isLocationVerified:  !!data.isLocationVerified,
+        isHostVerified:      !!data.isHostVerified,
+        hidden:              !!data.hidden,
+        firestoreId:         id,
+    };
+}
+
+// ── GET ──────────────────────────────────────────────────────────────────────
+
 export async function GET(request: Request) {
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
     try {
         const { searchParams } = new URL(request.url);
         const all = searchParams.get('all') === 'true';
-        let rows = [];
 
-        if (all) {
-            const stmt = db.prepare('SELECT * FROM link_events ORDER BY time ASC');
-            rows = stmt.all() as any[];
-        } else {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0); // Start av idag
-            const nowIso = now.toISOString();
+        let query: FirebaseFirestore.Query = db.collection('linkEvents');
 
-            const stmt = db.prepare('SELECT * FROM link_events WHERE hidden = 0 AND time >= ? ORDER BY time ASC');
-            rows = stmt.all(nowIso) as any[];
+        if (!all) {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            query = query.where('time', '>=', Timestamp.fromDate(todayStart));
         }
 
-        // Konvertera SQLite rader till LinkEvent objekt (såsom att parses integer hidden till boolean, etc.)
-        const events = rows.map((row: any) => ({
-            id: row.url, // Vi mappar 'url' till 'id' eftersom frontend förväntar sig 'id'
-            url: row.url,
-            title: row.title,
-            time: new Date(row.time),
-            createdAt: new Date(row.createdAt || row.updatedAt || new Date()),
-            locationName: row.locationName || '',
-            extractedAddress: row.extractedAddress || '',
-            geocodedQuery: row.geocodedQuery || '',
-            lat: row.lat || 0,
-            lng: row.lng || 0,
-            hostName: row.hostName || '',
-            category: row.category || 'other',
-            coverImage: row.coverImage || '',
-            description: row.description || '',
-            attendees: Number(row.attendees) || 0,
-            isLocationVerified: row.isLocationVerified === 1,
-            isHostVerified: row.isHostVerified === 1,
-            hidden: row.hidden === 1,
-            firestoreId: row.firestoreId || null,
-        }));
+        query = query.orderBy('time', 'asc').limit(2000);
+
+        const snapshot = await query.get();
+
+        const events = snapshot.docs
+            .map(doc => docToEvent(doc.id, doc.data()))
+            .filter(e => !e.hidden);   // filtrera dolda i JS — undviker composite index
 
         return NextResponse.json(events);
     } catch (error: any) {
-        console.error('Error fetching link events from SQLite:', error);
+        console.error('[api/link-events] GET error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// POST /api/link-events
-// Hanterar bulk- operationer samt individuella insättningar
+// ── PUT ──────────────────────────────────────────────────────────────────────
+
+export async function PUT(request: Request) {
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');   // Kan vara url eller firestoreId
+        if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+        const body = await request.json();
+        const { hidden, category, title, locationName, lat, lng } = body;
+
+        // Hitta dokumentet — försök med url-fältet om id inte är ett Firestore-ID
+        let docRef: FirebaseFirestore.DocumentReference | null = null;
+
+        const byUrl = await db.collection('linkEvents').where('url', '==', id).limit(1).get();
+        if (!byUrl.empty) {
+            docRef = byUrl.docs[0].ref;
+        } else {
+            // Fallback: försök direkt med Firestore-ID
+            const direct = db.collection('linkEvents').doc(id);
+            const snap = await direct.get();
+            if (snap.exists) docRef = direct;
+        }
+
+        if (!docRef) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+
+        const update: Record<string, any> = { updatedAt: Timestamp.now() };
+        if (hidden    !== undefined) update.hidden       = hidden;
+        if (category  !== undefined) update.category     = category;
+        if (title     !== undefined) update.title        = title;
+        if (locationName !== undefined) update.locationName = locationName;
+        if (lat       !== undefined) update.lat          = Number(lat);
+        if (lng       !== undefined) update.lng          = Number(lng);
+
+        await docRef.update(update);
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('[api/link-events] PUT error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+// ── DELETE ───────────────────────────────────────────────────────────────────
+
+export async function DELETE(request: Request) {
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+        const byUrl = await db.collection('linkEvents').where('url', '==', id).limit(1).get();
+        if (!byUrl.empty) {
+            await byUrl.docs[0].ref.delete();
+        } else {
+            await db.collection('linkEvents').doc(id).delete();
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('[api/link-events] DELETE error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+// ── POST ─────────────────────────────────────────────────────────────────────
+
 export async function POST(request: Request) {
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
     try {
         const body = await request.json();
         const { action } = body;
 
-        // 1. BULK CREATE
+        // ── bulkCreate ──────────────────────────────────────────────────────
         if (action === 'bulkCreate') {
             const { events } = body;
             if (!Array.isArray(events)) {
                 return NextResponse.json({ error: 'Missing events array' }, { status: 400 });
             }
 
-            const stmt = db.prepare(`
-                INSERT INTO link_events (
-                    url, title, time, locationName, extractedAddress, geocodedQuery,
-                    lat, lng, hostName, category, coverImage, description,
-                    attendees, createdAt, isLocationVerified, isHostVerified, hidden,
-                    firestoreId, updatedAt
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?,
-                    ?, ?
-                )
-                ON CONFLICT(url) DO UPDATE SET
-                    title = excluded.title,
-                    time = excluded.time,
-                    locationName = excluded.locationName,
-                    lat = excluded.lat,
-                    lng = excluded.lng,
-                    hostName = excluded.hostName,
-                    category = excluded.category,
-                    coverImage = excluded.coverImage,
-                    description = excluded.description,
-                    updatedAt = excluded.updatedAt
-            `);
-
-            // Kör allt i en SQLite transaction för maximal hastighet
-            const transaction = db.transaction((evts: any[]) => {
-                for (const event of evts) {
-                    stmt.run(
-                        event.url,
-                        event.title,
-                        new Date(event.time).toISOString(),
-                        event.locationName || '',
-                        event.extractedAddress || '',
-                        event.geocodedQuery || '',
-                        event.lat || 0,
-                        event.lng || 0,
-                        event.hostName || '',
-                        event.category || 'other',
-                        event.coverImage || '',
-                        event.description || '',
-                        Number(event.attendees) || 0,
-                        new Date(event.createdAt || new Date()).toISOString(),
-                        event.isLocationVerified ? 1 : 0,
-                        event.isHostVerified ? 1 : 0,
-                        event.hidden ? 1 : 0,
-                        event.firestoreId || null,
-                        new Date().toISOString()
-                    );
-                }
-            });
-
-            transaction(events);
+            const batch = db.batch();
+            for (const event of events) {
+                // Använd url som Firestore-ID (urlencodat för att undvika slash)
+                const docId = Buffer.from(event.url ?? '').toString('base64url').slice(0, 100);
+                const ref = db.collection('linkEvents').doc(docId);
+                batch.set(ref, {
+                    ...event,
+                    time:      event.time      ? Timestamp.fromDate(new Date(event.time))      : null,
+                    createdAt: event.createdAt ? Timestamp.fromDate(new Date(event.createdAt)) : Timestamp.now(),
+                    updatedAt: Timestamp.now(),
+                }, { merge: true });
+            }
+            await batch.commit();
             return NextResponse.json({ success: true, count: events.length });
         }
 
-        // 2. BULK DELETE
+        // ── bulkDelete ──────────────────────────────────────────────────────
         if (action === 'bulkDelete') {
             const { ids } = body;
             if (!Array.isArray(ids)) {
                 return NextResponse.json({ error: 'Missing ids array' }, { status: 400 });
             }
 
-            const stmt = db.prepare('DELETE FROM link_events WHERE url = ?');
-            
-            const transaction = db.transaction((urls: string[]) => {
-                for (const url of urls) {
-                    stmt.run(url);
+            const batch = db.batch();
+            for (const id of ids) {
+                const byUrl = await db.collection('linkEvents').where('url', '==', id).limit(1).get();
+                if (!byUrl.empty) {
+                    batch.delete(byUrl.docs[0].ref);
+                } else {
+                    batch.delete(db.collection('linkEvents').doc(id));
                 }
-            });
-
-            transaction(ids);
+            }
+            await batch.commit();
             return NextResponse.json({ success: true, count: ids.length });
         }
 
-        // 3. SKAPA ENSTAKA LINK EVENT
-        const { title, url, time, locationName, lat, lng, hostName, category, coverImage, price } = body;
-        if (!title || !url || !time) {
-            return NextResponse.json({ error: 'Missing required fields (title, url, time)' }, { status: 400 });
-        }
-
-        const stmt = db.prepare(`
-            INSERT INTO link_events (
-                url, title, time, locationName, lat, lng, hostName, category, coverImage, hidden, createdAt, updatedAt
-            ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?
-            )
-            ON CONFLICT(url) DO UPDATE SET
-                title = excluded.title,
-                time = excluded.time,
-                locationName = excluded.locationName,
-                lat = excluded.lat,
-                lng = excluded.lng,
-                hostName = excluded.hostName,
-                category = excluded.category,
-                coverImage = excluded.coverImage,
-                updatedAt = excluded.updatedAt
-        `);
-
-        stmt.run(
-            url,
-            title,
-            new Date(time).toISOString(),
-            locationName || '',
-            lat || 0,
-            lng || 0,
-            hostName || '',
-            category || 'other',
-            coverImage || '',
-            new Date().toISOString(),
-            new Date().toISOString()
-        );
-
-        return NextResponse.json({ success: true, id: url });
+        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     } catch (error: any) {
-        console.error('Error handling link event POST in SQLite:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
-
-// DELETE /api/link-events
-// Tar bort ett skrapad link event (kräver ?id=...)
-export async function DELETE(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
-        }
-
-        const stmt = db.prepare('DELETE FROM link_events WHERE url = ?');
-        stmt.run(id);
-
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        console.error('Error deleting link event from SQLite:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
-
-// PUT /api/link-events
-// Uppdaterar/gömmer ett link event (kräver ?id=...)
-export async function PUT(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
-        }
-
-        const body = await request.json();
-        const { hidden, category, title, locationName, lat, lng } = body;
-
-        const checkStmt = db.prepare('SELECT 1 FROM link_events WHERE url = ?');
-        const exists = checkStmt.get(id);
-
-        if (!exists) {
-            return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-        }
-
-        // Uppdatera gömd-flagga och fält
-        const stmt = db.prepare(`
-            UPDATE link_events SET
-                hidden = COALESCE(?, hidden),
-                category = COALESCE(?, category),
-                title = COALESCE(?, title),
-                locationName = COALESCE(?, locationName),
-                lat = COALESCE(?, lat),
-                lng = COALESCE(?, lng),
-                updatedAt = ?
-            WHERE url = ?
-        `);
-
-        stmt.run(
-            hidden !== undefined ? (hidden ? 1 : 0) : null,
-            category || null,
-            title || null,
-            locationName || null,
-            lat !== undefined ? Number(lat) : null,
-            lng !== undefined ? Number(lng) : null,
-            new Date().toISOString(),
-            id
-        );
-
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        console.error('Error updating link event in SQLite:', error);
+        console.error('[api/link-events] POST error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

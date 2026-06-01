@@ -70,6 +70,7 @@ interface EventRow {
     lat: number;
     lng: number;
     isLocationVerified: number;
+    coverImage: string | null;
 }
 
 interface ScoredEvent extends EventRow {
@@ -79,19 +80,24 @@ interface ScoredEvent extends EventRow {
 
 // ── Guard: redan publicerat idag? ────────────────────────────────────────────
 
+function localDateString(): string {
+    // Använd lokal tid (inte UTC) så att körningar kring midnatt inte bryter guarden
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function alreadyPostedToday(): boolean {
     try {
         if (!fs.existsSync(LAST_POST_FILE)) return false;
         const data = JSON.parse(fs.readFileSync(LAST_POST_FILE, 'utf-8'));
-        const today = new Date().toISOString().slice(0, 10);
-        return data?.date === today;
+        return data?.date === localDateString();
     } catch {
         return false;
     }
 }
 
 function markPostedToday(postId: string) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     try {
         fs.mkdirSync(path.dirname(LAST_POST_FILE), { recursive: true });
         fs.writeFileSync(LAST_POST_FILE, JSON.stringify({ date: today, postId }));
@@ -107,7 +113,7 @@ function pickBestEvents(db: Database.Database): ScoredEvent[] {
     const cutoff = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const rows = db.prepare(`
-        SELECT url, title, time, locationName, category, hostName, lat, lng, isLocationVerified
+        SELECT url, title, time, locationName, category, hostName, lat, lng, isLocationVerified, coverImage
         FROM link_events
         WHERE datetime(time) >= datetime(?)
           AND datetime(time) <= datetime(?)
@@ -188,10 +194,11 @@ async function generatePostWithOllama(events: ScoredEvent[]): Promise<string | n
     const prompt = `Du är social media-manager för Vadkul (vadkul.se) — en app som listar spontana events i Sverige.
 Skriv ETT engagerande Facebook-inlägg på svenska (max 400 tecken inkl emojis) som:
 - Lyfter fram 3–5 av de listade eventen på ett inspirerande sätt
+- Anger korrekt stad OCH korrekt datum/tid för varje event du nämner (använd exakt info från listan nedan)
+- Blandar INTE ihop platser eller datum mellan events
 - Använder 3–5 relevanta emojis (inte en emoji per rad — blanda in naturligt)
 - Avslutar med "Hitta fler events → vadkul.se" och 3–4 svenska hashtags
 - Håller en varm, inbjudande ton — inte reklam-stiff
-- Anger stad/plats för varje event
 
 Idag är ${todayStr}. Kommande events:
 ${eventLines}
@@ -256,7 +263,24 @@ function categoryEmoji(cat: string): string {
 
 // ── Publicera till Facebook ───────────────────────────────────────────────────
 
-async function postToFacebook(message: string): Promise<string> {
+async function postToFacebook(message: string, imageUrl?: string): Promise<string> {
+    // Med bild: posta via /photos (publiceras som foto-inlägg med caption)
+    if (imageUrl) {
+        const url = `https://graph.facebook.com/v19.0/${FB_PAGE_ID}/photos`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caption: message, url: imageUrl, access_token: FB_PAGE_TOKEN }),
+        });
+        const data = await res.json() as any;
+        if (data.error) {
+            console.warn(`[FB] Bildpost misslyckades (${data.error.message}) — försöker utan bild`);
+            return postToFacebook(message);
+        }
+        return data.id as string;
+    }
+
+    // Utan bild: vanligt textinlägg
     const url = `https://graph.facebook.com/v19.0/${FB_PAGE_ID}/feed`;
     const res = await fetch(url, {
         method: 'POST',
@@ -322,10 +346,18 @@ async function main() {
         message = generateFallbackPost(events);
     }
 
-    // 4. Publicera
+    // 4. Välj bild — ta coverImage från det topprankade eventet som har en
+    const imageUrl = events.find(e => e.coverImage)?.coverImage ?? undefined;
+    if (imageUrl) {
+        console.log(`[FB Publish] Bild: ${imageUrl}`);
+    } else {
+        console.log('[FB Publish] Inga bilder tillgängliga — publicerar utan bild.');
+    }
+
+    // 5. Publicera
     console.log('[FB Publish] Publicerar…');
     try {
-        const postId = await postToFacebook(message);
+        const postId = await postToFacebook(message, imageUrl ?? undefined);
         console.log(`✅ Publicerat! Post-ID: ${postId}`);
         markPostedToday(postId);
     } catch (err) {
