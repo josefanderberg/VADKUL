@@ -2,7 +2,7 @@
 
 Auto-genererad. Re-skapa med `npx ts-node src/scripts/gen-source-playbooks.ts`.
 
-Totalt: **151** kommun-källor i registry.
+Totalt: **152** kommun-källor i registry.
 
 | Kommun | Engine | Discovery | Min events |
 |---|---|---|---|
@@ -14,6 +14,7 @@ Totalt: **151** kommun-källor i registry.
 | [Arvika Kommun](./arvika.md) | `sitemap` | 2026-06-04 | — |
 | [Bengtsfors Kommun](./bengtsfors.md) | `sitevision` | 2026-06-04 | — |
 | [Berg Kommun](./berg.md) | `sitemap` | 2026-06-04 | — |
+| [Bilda](./bilda.md) | `sitemap` | 2026-06-04 | — |
 | [Bjurholm Kommun](./bjurholm.md) | `sitemap` | 2026-06-04 | — |
 | [Bollnäs Kommun](./bollnas.md) | `sitemap` | 2026-06-04 | — |
 | [Borlänge Kommun](./borlange-stad.md) | `sitevision` | 2026-06-04 | — |

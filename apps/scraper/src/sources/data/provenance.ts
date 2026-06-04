@@ -14,7 +14,7 @@
  *     på Source i registry.ts. Sources/index.ts mergar med Source-värden
  *     som vinnare.
  *
- * Senast genererad: 2026-06-04T21:13:03.246Z
+ * Senast genererad: 2026-06-04T21:18:18.167Z
  */
 
 import type { SourceDiscovery, SourceFieldMap } from '../types';
@@ -1538,6 +1538,32 @@ export const PROVENANCE: Record<string, ProvenanceEntry> = {
             date: '2026-06-04',
             rediscoverCommand: 'npm run probe-sitemap -- --filter=national',
             notes: 'Probe 2026-06-04: 1545 kalenderhandelser-URLs. urlDateRegex pre-filtrerar veckan FÖRE fetch.',
+        },
+        fieldMap: {
+            title: 'detalj-sidans <h1> eller JSON-LD Event.name',
+            startDate: 'JSON-LD Event.startDate eller microdata itemprop="startDate"',
+            endDate: 'JSON-LD Event.endDate',
+            url: 'sitemap.xml <loc>',
+            description: 'JSON-LD Event.description eller <meta name="description">',
+            imageUrl: 'JSON-LD Event.image eller <meta property="og:image">',
+            venueName: 'JSON-LD Event.location.name eller fritext-parsing',
+            address: 'JSON-LD Event.location.address',
+            city: 'JSON-LD Event.location.address.addressLocality eller config.defaultCity',
+            coords: '[Event.location.geo.latitude, Event.location.geo.longitude]',
+            organizer: 'JSON-LD Event.organizer.name eller config.hostName',
+            other: {
+                engineHint: 'Generisk sitemap-driven scraper — funkar oavsett CMS.',
+                urlPatterns: 'config.urlPatterns = lista av regex som matchar event-URLs i sitemap',
+            },
+        },
+    },
+    bilda: {
+        discovery: {
+            method: 'probe-sitemap',
+            probeUrl: 'https://www.bilda.nu/arr-sitemap.xml',
+            date: '2026-06-04',
+            rediscoverCommand: 'npm run probe-sitemap -- --filter=national',
+            notes: 'Probe 2026-06-04: 494 arr-URLs. Text-parser ur HTML <dd>YYYY-MM-DD</dd>.',
         },
         fieldMap: {
             title: 'detalj-sidans <h1> eller JSON-LD Event.name',

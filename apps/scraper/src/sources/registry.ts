@@ -702,6 +702,24 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-04',
     },
 
+    // Bilda — studieförbund med kursdatabas på /arr/<id>/<slug>/. Detaljsidan
+    // har `<dt>Start</dt><dd>YYYY-MM-DD</dd>` som text-parser plockar via
+    // ISO-mönster. 494 arrangemang i sitemap, riktiga datum för framtida event.
+    {
+        id: 'bilda',
+        hostName: 'Bilda',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.bilda.nu/arr-sitemap.xml',
+            urlPatterns: [/\/arr\/\d+\/[^/]+\/?$/i],
+            maxUrls: 300,
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-04: 494 arr-URLs. Text-parser ur HTML <dd>YYYY-MM-DD</dd>.',
+        lastVerified: '2026-06-04',
+    },
+
     // ─── SITEMAP-KÄLLOR PROBE 2026-06-04 (med gzip-stöd) ──────────────────────
     // 38 nya kommun-sajter funna via probe-sitemap efter att vi lagt in
     // gzip-stöd för komprimerade sitemap1.xml.gz-filer. Sorterade på volym.
