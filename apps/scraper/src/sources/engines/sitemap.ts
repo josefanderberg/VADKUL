@@ -26,10 +26,14 @@
  */
 
 import * as cheerio from 'cheerio';
+import * as zlib from 'zlib';
+import { promisify } from 'util';
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
+
+const gunzip = promisify(zlib.gunzip);
 
 export interface SitemapConfig {
     sitemapUrl: string;
@@ -75,12 +79,21 @@ const DEFAULT_TIMEOUT = 15000;
 const DEFAULT_CONCURRENCY = 6;
 
 /**
- * Hämta text från URL med retry på transienta fel. Returnerar HTML-strängen
- * eller null om alla försök misslyckas. Loggar 4xx/5xx/timeouts för
- * felsökning — vi har sett kommunsajter ge 503/429 vid samtidiga requests.
+ * Hämta text från URL med retry på transienta fel + transparent gzip-stöd.
+ *
+ * Många stora svenska sajter (Yoast SEO default) komprimerar sitemap-XML som
+ * `.xml.gz`. Vi detekterar via:
+ *   1. URL slutar på `.gz`
+ *   2. Content-Encoding: gzip
+ *   3. Content-Type är gzip
+ * och dekomprimerar med zlib.gunzip. Utan detta missar vi events från
+ * Lund, Visit Lund, Växjö m.fl.
+ *
+ * Returnerar HTML/XML-strängen eller null om alla försök misslyckas.
  */
 async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal): Promise<string | null> {
     const maxAttempts = 3;
+    const isGzUrl = url.toLowerCase().endsWith('.gz');
     let lastErr = '';
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         await domainLimiter.wait(url);
@@ -90,14 +103,28 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
             const res = await fetch(url, {
                 headers: {
                     'User-Agent': cfg.userAgent ?? DEFAULT_UA,
-                    'Accept': 'text/html,application/xml,application/xhtml+xml',
+                    'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip',
                     'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
                 },
                 signal: signal ?? ac.signal,
                 redirect: 'follow',
             });
-            if (res.ok) return await res.text();
-            // 4xx (utom 429) är inte värd retry — bara 429/5xx + nät-fel
+            if (res.ok) {
+                const ct = (res.headers.get('content-type') || '').toLowerCase();
+                const ce = (res.headers.get('content-encoding') || '').toLowerCase();
+                const isGzResponse = isGzUrl || ce.includes('gzip') || ct.includes('gzip');
+                if (isGzResponse) {
+                    const buf = Buffer.from(await res.arrayBuffer());
+                    // fetch dekomprimerar automatiskt om Content-Encoding: gzip
+                    // var satt — i så fall är buf redan plain text
+                    if (buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+                        const out = await gunzip(buf);
+                        return out.toString('utf8');
+                    }
+                    return buf.toString('utf8');
+                }
+                return await res.text();
+            }
             if (res.status >= 400 && res.status < 500 && res.status !== 429) {
                 return null;
             }
@@ -108,14 +135,11 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
         } finally {
             clearTimeout(timeout);
         }
-        // Backoff: 1s, 3s, 7s (sista försöket loggar bara)
         if (attempt < maxAttempts) {
             const backoff = attempt === 1 ? 1000 : 3000;
             await new Promise(r => setTimeout(r, backoff));
         }
     }
-    // Vi når hit bara om alla försök misslyckats — vi kan inte logga via ctx
-    // här eftersom signaturen inte tar den. Engine-call-site loggar istället.
     return null;
 }
 

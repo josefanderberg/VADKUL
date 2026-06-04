@@ -28,7 +28,11 @@
  *   npm run probe-sitemap -- --threshold=10  # default 5
  */
 
+import * as zlib from 'zlib';
+import { promisify } from 'util';
 import { KOMMUNER, Kommun } from '../sources/data/kommuner';
+
+const gunzip = promisify(zlib.gunzip);
 
 interface ProbeResult {
     kommun: string;
@@ -85,13 +89,24 @@ function hostsFor(k: Kommun): string[] {
 async function fetchText(url: string): Promise<{ status: number; body: string | null; error?: string }> {
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
+    const isGzUrl = url.toLowerCase().endsWith('.gz');
     try {
         const res = await fetch(url, {
-            headers: { 'User-Agent': UA, 'Accept': 'application/xml,text/xml,*/*' },
+            headers: { 'User-Agent': UA, 'Accept': 'application/xml,text/xml,application/gzip,*/*' },
             signal: ac.signal,
             redirect: 'follow',
         });
         if (!res.ok) return { status: res.status, body: null };
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        const ce = (res.headers.get('content-encoding') || '').toLowerCase();
+        if (isGzUrl || ce.includes('gzip') || ct.includes('gzip')) {
+            const buf = Buffer.from(await res.arrayBuffer());
+            if (buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+                const decoded = await gunzip(buf);
+                return { status: res.status, body: decoded.toString('utf8') };
+            }
+            return { status: res.status, body: buf.toString('utf8') };
+        }
         const body = await res.text();
         return { status: res.status, body };
     } catch (e) {
