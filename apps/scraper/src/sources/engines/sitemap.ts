@@ -50,6 +50,55 @@ export interface SitemapConfig {
      * Sätt true på stora sajter där lastmod är pålitlig signal för event-datum.
      */
     aggressiveEarlyExit?: boolean;
+    /**
+     * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
+     * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
+     * som Studiefrämjandet (1500+ URLs) där bara veckans har relevans.
+     *
+     * Måste ha named groups: (?<year>\d{4}), (?<month>\d{1,2}|jan|feb|...)
+     * och optionalt (?<day>\d{1,2}). Månadsnamn kan vara svenska eller siffra.
+     *
+     * Exempel: /kalenderhandelser/2026/september/...
+     *   urlDateRegex: /\/(?<year>\d{4})\/(?<month>\w+)\//
+     */
+    urlDateRegex?: RegExp;
+}
+
+/**
+ * Map svensk månadsnamn → 1-indexerad månadssiffra.
+ */
+const SV_MONTHS: Record<string, number> = {
+    januari: 1, jan: 1,
+    februari: 2, feb: 2,
+    mars: 3, mar: 3,
+    april: 4, apr: 4,
+    maj: 5,
+    juni: 6, jun: 6,
+    juli: 7, jul: 7,
+    augusti: 8, aug: 8,
+    september: 9, sep: 9, sept: 9,
+    oktober: 10, okt: 10,
+    november: 11, nov: 11,
+    december: 12, dec: 12,
+};
+
+function extractDateFromUrl(url: string, re: RegExp): Date | null {
+    const m = url.match(re);
+    if (!m || !m.groups) return null;
+    const year = parseInt(m.groups.year, 10);
+    if (isNaN(year)) return null;
+    let month: number;
+    const monthRaw = (m.groups.month || '').toLowerCase();
+    if (/^\d+$/.test(monthRaw)) {
+        month = parseInt(monthRaw, 10);
+    } else {
+        month = SV_MONTHS[monthRaw] || 0;
+    }
+    if (!month || month < 1 || month > 12) return null;
+    const day = m.groups.day ? parseInt(m.groups.day, 10) : 1;
+    if (day < 1 || day > 31) return null;
+    const d = new Date(year, month - 1, day);
+    return isNaN(d.getTime()) ? null : d;
 }
 
 const DEFAULT_UA =
@@ -57,8 +106,9 @@ const DEFAULT_UA =
     '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 /**
- * Default URL-blacklist — exkluderar kommunala protokoll och nämnd-möten
- * som ofta ligger i samma kalender-mönster men inte är publika events.
+ * Default URL-blacklist — exkluderar kommunala protokoll, nämnd-möten,
+ * trafikinformation och annat som ofta ligger i samma kalender-mönster men
+ * inte är publika events.
  */
 const DEFAULT_URL_BLACKLIST: RegExp[] = [
     /protokoll/i,
@@ -71,11 +121,34 @@ const DEFAULT_URL_BLACKLIST: RegExp[] = [
     /arsmote/i,
     /bygglov/i,
     /overformyndar/i,
+    // Trafik/infrastruktur — inte event
+    /trafikstorning/i,
+    /parkering(?:en|ar)?-av/i,
+    /avstangd/i,
+    /vagarbete/i,
+    /omledning/i,
+];
+
+/**
+ * Default title-blacklist — sidor vars titel innehåller dessa är inte events
+ * (cookie-banners, site-index, generiska fallbacks).
+ */
+const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
+    /^startsida$/i,
+    /^hem$/i,
+    /^vi (använder|anvander) kakor/i,
+    /^cookie/i,
+    /^sok\s*resultat/i,
+    /^404\b/,
+    // Trafik/parkering i titel
+    /^\d+ parkeringar.*avst[äa]ngd/i,
+    /trafikst[öo]rning/i,
+    /v[äa]garbete/i,
 ];
 
 const DEFAULT_MAX_URLS = 300;
 const DEFAULT_MAX_SUB_SITEMAPS = 10;
-const DEFAULT_TIMEOUT = 15000;
+const DEFAULT_TIMEOUT = 30000;  // höjt från 15s — stora sitemap-XML (1.7MB+) tar tid
 const DEFAULT_CONCURRENCY = 6;
 
 /**
@@ -103,7 +176,8 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
             const res = await fetch(url, {
                 headers: {
                     'User-Agent': cfg.userAgent ?? DEFAULT_UA,
-                    'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip',
+                    // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
+                    'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip,*/*;q=0.1',
                     'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
                 },
                 signal: signal ?? ac.signal,
@@ -223,7 +297,21 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
 
     // Skippa blacklistade — alltid default-blacklist + ev. custom
     const allBlacklist = [...DEFAULT_URL_BLACKLIST, ...(cfg.urlBlacklist || [])];
-    const filtered = matching.filter(e => !allBlacklist.some(re => re.test(e.url)));
+    let filtered = matching.filter(e => !allBlacklist.some(re => re.test(e.url)));
+
+    // urlDateRegex: pre-filtrera URL:er som inte ligger i ctx-fönstret. Sparar
+    // massa fetch-tid på stora sajter (Studiefrämjandet 1500+ URLs).
+    if (cfg.urlDateRegex) {
+        const before = filtered.length;
+        filtered = filtered.filter(e => {
+            const d = extractDateFromUrl(e.url, cfg.urlDateRegex!);
+            if (!d) return true;  // håll URL om vi inte kan parsa datum
+            // Tolerera 1 månad bakåt (för flerdagars-events som börjat tidigt)
+            const cutoffPast = new Date(ctx.windowStart.getTime() - 31 * 24 * 3600 * 1000);
+            return d >= cutoffPast && d <= ctx.windowEnd;
+        });
+        ctx.log(`sitemap: urlDateRegex pre-filter ${before} → ${filtered.length}`);
+    }
 
     // Sortera på lastmod desc. URL:er UTAN lastmod antas vara nya/färska och
     // hamnar tidigt — annars riskerar sajter som inte sätter lastmod att
@@ -269,6 +357,9 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     }
     if (!title) title = titleFromUrl(url);
     if (!title) return null;
+
+    // Skippa sidor vars titel matchar blacklist (cookie-banners, trafikinfo etc)
+    if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(title))) return null;
 
     // 1) Strukturerade datumkällor (microdata + <time datetime>)
     let startDate: Date | null = null;

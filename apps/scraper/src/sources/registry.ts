@@ -681,9 +681,30 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-04',
     },
 
+    // ─── NATIONELLA KÄLLOR (täcker flera kommuner från en endpoint) ─────────
+    // Studiefrämjandet publicerar event från hela Sverige under
+    // /<län>/<förbund>/kalenderhandelser/<år>/<månad>/<slug>/. urlDateRegex
+    // pre-filtrerar till veckans fönster utan att fetcha tusentals historiska
+    // sidor. 1500+ event-URLs totalt → ~30-50 per vecka.
+    {
+        id: 'studieframjandet',
+        hostName: 'Studiefrämjandet',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.studieframjandet.se/sitemap.xml',
+            urlPatterns: [/\/kalenderhandelser\/\d{4}\/\w+\/[^/]+\/?$/i],
+            urlDateRegex: /\/(?<year>\d{4})\/(?<month>\w+)\//,
+            maxUrls: 300,
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-04: 1545 kalenderhandelser-URLs. urlDateRegex pre-filtrerar veckan FÖRE fetch.',
+        lastVerified: '2026-06-04',
+    },
+
     // ─── SITEMAP-KÄLLOR PROBE 2026-06-04 (med gzip-stöd) ──────────────────────
     // 38 nya kommun-sajter funna via probe-sitemap efter att vi lagt in
-    // gzip-stöd för komprimerade sitemap1.xml.gz-filer. Sortede på volym.
+    // gzip-stöd för komprimerade sitemap1.xml.gz-filer. Sorterade på volym.
     // URL-blacklist (default i engine) skippar kommunala möten/protokoll.
     {
         id: 'nykoping',
