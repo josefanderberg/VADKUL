@@ -2,15 +2,18 @@
 
 Auto-genererad. Re-skapa med `npx ts-node src/scripts/gen-source-playbooks.ts`.
 
-Totalt: **129** kommun-källor i registry.
+Totalt: **151** kommun-källor i registry.
 
 | Kommun | Engine | Discovery | Min events |
 |---|---|---|---|
 | [Ale Kommun](./ale.md) | `sitemap` | 2026-06-04 | — |
 | [Alingsås Kommun](./alingsas.md) | `wp-rest (wp-v2)` | 2026-06-01 | 54 |
+| [Alvesta Kommun](./alvesta.md) | `sitemap` | 2026-06-04 | — |
 | [Arjeplog Kommun](./arjeplog.md) | `sitemap` | 2026-06-03 | — |
 | [Arvidsjaur Kommun](./arvidsjaur.md) | `sitemap` | 2026-06-04 | — |
+| [Arvika Kommun](./arvika.md) | `sitemap` | 2026-06-04 | — |
 | [Bengtsfors Kommun](./bengtsfors.md) | `sitevision` | 2026-06-04 | — |
+| [Berg Kommun](./berg.md) | `sitemap` | 2026-06-04 | — |
 | [Bjurholm Kommun](./bjurholm.md) | `sitemap` | 2026-06-04 | — |
 | [Bollnäs Kommun](./bollnas.md) | `sitemap` | 2026-06-04 | — |
 | [Borlänge Kommun](./borlange-stad.md) | `sitevision` | 2026-06-04 | — |
@@ -53,11 +56,15 @@ Totalt: **129** kommun-källor i registry.
 | [Kalmar Kommun](./kalmar-stad.md) | `sitevision` | 2026-06-04 | — |
 | [Kalmar Kommun](./kalmar.md) | `sitemap` | 2026-06-04 | — |
 | [Karlsborg Kommun](./karlsborg.md) | `sitemap` | 2026-06-03 | — |
+| [Karlshamn Kommun](./karlshamn.md) | `sitemap` | 2026-06-04 | — |
 | [Karlskoga Kommun](./karlskoga.md) | `sitemap` | 2026-06-04 | — |
+| [Karlskrona Kommun](./karlskrona.md) | `sitemap` | 2026-06-04 | — |
 | [Karlstad Kommun](./karlstad.md) | `sitemap` | 2026-06-04 | — |
 | [Katrineholm Kommun](./katrineholm.md) | `sitemap` | 2026-06-04 | — |
 | [Kil Kommun](./kil.md) | `sitevision` | 2026-06-04 | — |
+| [Kiruna Kommun](./kiruna.md) | `sitemap` | 2026-06-04 | — |
 | [Klippan Kommun](./klippan.md) | `sitevision` | 2026-06-04 | — |
+| [Kramfors Kommun](./kramfors.md) | `sitemap` | 2026-06-04 | — |
 | [Kristianstad Kommun](./kristianstad.md) | `sitemap` | 2026-06-04 | — |
 | [Krokom Kommun](./krokom.md) | `sitemap` | 2026-06-04 | — |
 | [Landskrona Stad](./landskrona.md) | `sitemap` | 2026-06-03 | — |
@@ -78,17 +85,22 @@ Totalt: **129** kommun-källor i registry.
 | [Mönsterås Kommun](./monsteras.md) | `sitemap` | 2026-06-03 | — |
 | [Mörbylånga Kommun](./morbylanga.md) | `sitemap` | 2026-06-03 | — |
 | [Nacka Kommun](./nacka.md) | `sitemap` | 2026-06-04 | — |
+| [Norrtälje Kommun](./norrtalje.md) | `sitemap` | 2026-06-04 | — |
 | [Norsjö Kommun](./norsjo.md) | `wp-rest (tribe)` | 2026-06-01 | 23 |
 | [Nybro Kommun](./nybro.md) | `sitemap` | 2026-06-04 | — |
 | [Nykvarn Kommun](./nykvarn.md) | `sitevision` | 2026-06-04 | — |
 | [Nyköping Kommun](./nykoping.md) | `sitemap` | 2026-06-04 | — |
 | [Nynäshamn Kommun](./nynashamn.md) | `sitevision` | 2026-06-04 | — |
 | [Nässjö Kommun](./nassjo.md) | `sitemap` | 2026-06-04 | — |
+| [Olofström Kommun](./olofstrom.md) | `sitemap` | 2026-06-04 | — |
 | [Orsa Kommun](./orsa.md) | `sitemap` | 2026-06-04 | — |
 | [Osby Kommun](./osby.md) | `sitemap` | 2026-06-04 | — |
+| [Partille Kommun](./partille.md) | `sitemap` | 2026-06-04 | — |
 | [Piteå Kommun](./pitea.md) | `sitemap` | 2026-06-03 | — |
 | [Robertsfors Kommun](./robertsfors.md) | `sitemap` | 2026-06-04 | — |
+| [Ronneby Kommun](./ronneby.md) | `sitemap` | 2026-06-04 | — |
 | [Rättvik Kommun](./rattvik.md) | `sitemap` | 2026-06-04 | — |
+| [Salem Kommun](./salem.md) | `sitemap` | 2026-06-04 | — |
 | [Sandviken Kommun](./sandviken.md) | `sitevision` | 2026-06-04 | — |
 | [Sigtuna Kommun](./sigtuna.md) | `sitevision` | 2026-06-04 | — |
 | [Skara Kommun](./skara.md) | `sitemap` | 2026-06-04 | — |
@@ -99,6 +111,8 @@ Totalt: **129** kommun-källor i registry.
 | [Strömsund Kommun](./stromsund.md) | `sitevision` | 2026-06-04 | — |
 | [Studiefrämjandet](./studieframjandet.md) | `sitemap` | 2026-06-04 | — |
 | [Sundbyberg Kommun](./sundbyberg.md) | `sitevision` | 2026-06-04 | — |
+| [Sundsvall Kommun](./sundsvall.md) | `sitemap` | 2026-06-04 | — |
+| [Sunne Kommun](./sunne.md) | `sitemap` | 2026-06-04 | — |
 | [Svalöv Kommun](./svalov.md) | `sitemap` | 2026-06-04 | — |
 | [Svenljunga Kommun](./svenljunga.md) | `sitevision` | 2026-06-04 | — |
 | [Säffle Kommun](./saffle.md) | `sitemap` | 2026-06-04 | — |
@@ -108,8 +122,10 @@ Totalt: **129** kommun-källor i registry.
 | [Södertälje Kommun](./sodertalje.md) | `sitemap` | 2026-06-04 | — |
 | [Sölvesborg Kommun](./solvesborg.md) | `sitemap` | 2026-06-04 | — |
 | [Tanum Kommun](./tanum.md) | `sitemap` | 2026-06-04 | — |
+| [Tierp Kommun](./tierp.md) | `sitemap` | 2026-06-04 | — |
 | [Tingsryds Kommun](./tingsryd.md) | `wp-rest (wp-v2)` | 2026-06-01 | 7 |
 | [Tjörn Kommun](./tjorn.md) | `sitemap` | 2026-06-04 | — |
+| [Tomelilla Kommun](./tomelilla.md) | `sitemap` | 2026-06-04 | — |
 | [Tranemo Kommun](./tranemo.md) | `sitevision` | 2026-06-04 | — |
 | [Tranås Kommun](./tranas.md) | `wp-rest (wp-v2)` | 2026-06-01 | 26 |
 | [Trelleborgs Kommun](./trelleborg.md) | `wp-rest (wp-v2)` | 2026-06-01 | 16 |
@@ -119,6 +135,8 @@ Totalt: **129** kommun-källor i registry.
 | [Upplands Väsby Kommun](./upplands-vasby.md) | `sitemap` | 2026-06-04 | — |
 | [Upplands-Bro Kommun](./upplands-bro.md) | `sitemap` | 2026-06-04 | — |
 | [Uppvidinge Kommun](./uppvidinge.md) | `sitevision` | 2026-06-04 | — |
+| [Vara Kommun](./vara.md) | `sitemap` | 2026-06-04 | — |
+| [Vaxholm Kommun](./vaxholm.md) | `sitemap` | 2026-06-04 | — |
 | [Vetlanda Kommun](./vetlanda.md) | `sitevision` | 2026-06-04 | — |
 | [Vingåker Kommun](./vingaker.md) | `sitemap` | 2026-06-04 | — |
 | [Visit Linköping](./linkoping.md) | `sitemap` | 2026-06-03 | — |
@@ -126,6 +144,9 @@ Totalt: **129** kommun-källor i registry.
 | [Visit Örebro](./orebro.md) | `wp-rest (wp-v2)` | 2026-06-01 | — |
 | [Visit Östersund](./ostersund.md) | `wp-rest (wp-v2)` | 2026-06-01 | 113 |
 | [Vårgårda Kommun](./vargarda.md) | `sitevision` | 2026-06-04 | — |
+| [Vänersborg Kommun](./vanersborg.md) | `sitemap` | 2026-06-04 | — |
+| [Västerås Kommun](./vasteras.md) | `sitemap` | 2026-06-04 | — |
+| [Växjö Kommun](./vaxjo.md) | `sitemap` | 2026-06-04 | — |
 | [Ystad Kommun](./ystad.md) | `sitemap` | 2026-06-04 | — |
 | [Åmål Kommun](./amal.md) | `sitemap` | 2026-06-04 | — |
 | [Åsele Kommun](./asele.md) | `sitemap` | 2026-06-04 | — |
@@ -134,4 +155,5 @@ Totalt: **129** kommun-källor i registry.
 | [Älvkarleby Kommun](./alvkarleby.md) | `sitemap` | 2026-06-04 | — |
 | [Ängelholm Kommun](./angelholm.md) | `sitemap` | 2026-06-04 | — |
 | [Öckerö Kommun](./ockero.md) | `sitemap` | 2026-06-04 | — |
+| [Örkelljunga Kommun](./orkelljunga.md) | `sitemap` | 2026-06-04 | — |
 | [Östra Göinge Kommun](./ostra-goinge.md) | `sitevision` | 2026-06-04 | — |
