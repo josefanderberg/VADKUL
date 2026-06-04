@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw } from 'lucide-react';
 
 // Haversine-avstånd i km mellan två punkter
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -73,6 +73,14 @@ const findNearestEvent = (
     return nearest ?? nearestNoCoords;
 };
 
+const getDayLabel = (offset: number) => {
+    if (offset === 0) return 'Idag';
+    if (offset === 1) return 'Imorgon';
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return date.toLocaleDateString('sv-SE', { weekday: 'long' }).replace(/^\w/, (c) => c.toUpperCase());
+};
+
 interface V2SwipeableCardProps {
     events: LinkEvent[];
     selectedEvent: LinkEvent | null;
@@ -81,10 +89,11 @@ interface V2SwipeableCardProps {
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
     onCardExpandedChange?: (expanded: boolean) => void;
-    highlightPosition?: boolean;
+    dayOffset: number;
+    setDayOffset: (offset: number) => void;
 }
 
-export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, highlightPosition = false }: V2SwipeableCardProps) {
+export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset }: V2SwipeableCardProps) {
     const [dragX, setDragX] = useState(0);
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
@@ -226,32 +235,6 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setDragX(0);
     };
 
-    // 51/72-knappen: gå till nästa nummer (52/72). Skippar bortkastade event.
-    const handleNextSequential = () => {
-        if (!selectedEvent || events.length === 0) return;
-
-        const idx = events.findIndex(evt => evt.id === selectedEvent.id);
-        if (idx < 0) return;
-
-        let nextIdx = (idx + 1) % events.length;
-        let loopCounter = 0;
-
-        while (
-            (discardedEventIds.has(events[nextIdx].id) || events[nextIdx].id === selectedEvent.id)
-            && loopCounter < events.length
-        ) {
-            nextIdx = (nextIdx + 1) % events.length;
-            loopCounter++;
-        }
-
-        if (loopCounter < events.length) {
-            pushHistory(selectedEvent.id);
-            onSelectEvent(events[nextIdx]);
-        }
-
-        setExitX(null);
-        setDragX(0);
-    };
 
     const handleNextOnly = () => {
         if (!selectedEvent || events.length === 0) return;
@@ -273,47 +256,65 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     // Calculate opacity (slightly fades out at edges)
     const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
 
-    const currentIndex = selectedEvent ? events.findIndex(evt => evt.id === selectedEvent.id) : -1;
-
     return (
         <>
-            {/* Position-knapp under Idag-knappen — visas bara när ett event är valt */}
-            {selectedEvent && currentIndex >= 0 && (
-            <button
-                type="button"
-                onClick={handleNextSequential}
-                aria-label="Gå till nästa event i nummerordning"
-                title="Gå till nästa nummer"
-                className={`fixed left-4 z-[1001] bg-white/90 backdrop-blur-md text-slate-800 font-black text-sm py-2 px-4 rounded-full shadow-xl border border-white/50 tabular-nums hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer ${highlightPosition ? 'animate-today-pulse' : ''}`}
-                style={{ top: 80 }}
-            >
-                {`${currentIndex + 1}/${events.length}`}
-            </button>
-            )}
-        {selectedEvent && (
-        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none">
-            {/* NÄSTA BUTTON (Green) - Above the card, doesn't rotate */}
-            <div className="w-full max-w-4xl flex justify-end items-center gap-2 mb-4">
-                {historyStack.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={handleHistoryBack}
-                        aria-label="Gå tillbaka till föregående event"
-                        title="Gå tillbaka"
-                        className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 pointer-events-auto hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    >
-                        <ArrowLeft size={16} />
-                    </button>
+        {/* Nedre rad — ALLTID synlig (dagväljare + antal till vänster, Nästa till höger om kort finns) */}
+        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: selectedEvent ? undefined : '50vh' }}>
+            <div className="w-full max-w-4xl flex justify-between items-end gap-2 mb-4">
+
+                {/* Vänster: antal ovanför Idag-knappen */}
+                <div className="flex flex-col items-start gap-0.5 pointer-events-auto">
+                    <span className="text-[11px] font-black text-white tabular-nums pl-1 drop-shadow"
+                          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                        {events.length} event
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setDayOffset((dayOffset + 1) % 7)}
+                            className="bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700"
+                        >
+                            <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                            <span>{getDayLabel(dayOffset)}</span>
+                            <ChevronRight size={15} className="text-slate-400" />
+                        </button>
+                        {dayOffset !== 0 && (
+                            <button
+                                onClick={() => setDayOffset(0)}
+                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors"
+                                title="Återställ till idag"
+                            >
+                                <RotateCcw size={15} className="text-slate-700" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Höger: bakåt + Nästa (bara om kort valt) */}
+                {selectedEvent && (
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                        {historyStack.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleHistoryBack}
+                                aria-label="Gå tillbaka till föregående event"
+                                title="Gå tillbaka"
+                                className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                            >
+                                <ArrowLeft size={16} />
+                            </button>
+                        )}
+                        <button
+                            onClick={handleNextOnly}
+                            className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20"
+                        >
+                            Nästa <ArrowRight size={18} />
+                        </button>
+                    </div>
                 )}
-                <button
-                    onClick={handleNextOnly}
-                    className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 pointer-events-auto"
-                >
-                    Nästa <ArrowRight size={18} />
-                </button>
             </div>
 
-            {/* Transform wrapper — only handles swipe animation, no height constraints */}
+            {/* Transform wrapper — visas bara när ett event är valt */}
+            {selectedEvent && (
             <div
                 className="relative w-full max-w-4xl pointer-events-auto"
                 onPointerDown={onPointerDown}
@@ -349,8 +350,8 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                     />
                 </div>
             </div>
+            )}
         </div>
-        )}
         </>
     );
 }

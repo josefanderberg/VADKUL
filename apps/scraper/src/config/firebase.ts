@@ -68,6 +68,9 @@ if (target.emulatorHost) {
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
+const storage = admin.apps.length ? admin.storage() : null;
+const STORAGE_BUCKET = 'vadkul-f2cb2.firebasestorage.app';
+const bucket = storage ? storage.bucket(STORAGE_BUCKET) : null;
 
-export { admin, db };
+export { admin, db, storage, bucket, STORAGE_BUCKET };
 export const dbTarget = target;

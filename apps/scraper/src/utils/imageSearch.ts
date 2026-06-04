@@ -1,59 +1,38 @@
 import type { Page } from 'puppeteer';
 
 /**
- * Söker bilden för en given titel på Google Images via puppeteer.
+ * Söker bild för en given titel via DuckDuckGo Images.
  * Returnerar URL till första rimliga bilden eller null.
  *
  * Notera: Sidan navigerar bort från sin nuvarande URL. Anroparen bör göra
- * Google-sökningen efter att den är klar med all annan extrahering från
- * den ursprungliga sidan.
+ * sökningen efter att den är klar med all annan extrahering från ursprungssidan.
  */
 export async function searchGoogleImage(page: Page, query: string): Promise<string | null> {
     const trimmed = query?.trim();
     if (!trimmed) return null;
 
     try {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(trimmed)}&tbm=isch&hl=sv&safe=active`;
+        const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(trimmed + ' Sverige')}&ia=images&iax=images`;
         await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 15000 });
-
-        // Acceptera cookies om dialogen dyker upp
-        await page.evaluate(() => {
-            const candidates = Array.from(document.querySelectorAll('button, div[role="button"]'));
-            for (const btn of candidates) {
-                const txt = btn.textContent?.trim().toLowerCase() || '';
-                if (
-                    txt.includes('godkänn alla') ||
-                    txt.includes('accept all') ||
-                    txt.includes('jag godkänner') ||
-                    txt.includes('i agree') ||
-                    txt === 'godkänn'
-                ) {
-                    (btn as HTMLElement).click();
-                    return;
-                }
-            }
-        }).catch(() => {});
-
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 2000));
 
         const imageUrl = await page.evaluate(() => {
-            const imgs = Array.from(document.querySelectorAll('img')) as HTMLImageElement[];
+            const imgs = Array.from(document.querySelectorAll('img[src]')) as HTMLImageElement[];
             for (const img of imgs) {
-                const src = img.src || img.getAttribute('data-src') || '';
+                const src = img.getAttribute('src') || '';
                 if (!src) continue;
-                if (src.startsWith('data:')) continue;
-                if (src.includes('google.com/images/')) continue;
-                if (src.includes('gstatic.com/images')) continue;
-                if (src.includes('/branding/')) continue;
-                if (img.naturalWidth < 100 || img.naturalHeight < 100) continue;
-                return src;
+                // DuckDuckGo proxy images look like: //external-content.duckduckgo.com/iu/?u=...
+                // Skip favicon proxy (/ip3/) — only keep image proxy (/iu/)
+                if (!src.includes('duckduckgo.com/iu/')) continue;
+                // Add https: if protocol-relative
+                return src.startsWith('//') ? 'https:' + src : src;
             }
             return null;
         });
 
         return imageUrl || null;
     } catch (e) {
-        console.log(`    ⚠️ Google bildsökning misslyckades för "${trimmed}":`, (e as Error).message);
+        console.log(`    ⚠️ Bildsökning misslyckades för "${trimmed}":`, (e as Error).message);
         return null;
     }
 }

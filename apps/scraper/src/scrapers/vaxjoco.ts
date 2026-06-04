@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenue } from '../utils/venueCoordinates';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 const VAXJOCO_URL = 'https://vaxjoco.se/evenemangssida/kommande-evenemang/';
 
@@ -127,6 +128,7 @@ export async function scrapeVaxjoCo() {
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalImg = evt.img;
                 let finalLocation = 'Växjö';
+                let finalDescription = '';
                 let directLat: number | null = null;
                 let directLng: number | null = null;
 
@@ -144,6 +146,7 @@ export async function scrapeVaxjoCo() {
                         let jsonLdLng: number | null = null;
                         let jsonLdImg = '';
                         let jsonLdDate = '';
+                        let jsonLdDescription = '';
                         let bookingUrl = '';
 
                         const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
@@ -172,6 +175,8 @@ export async function scrapeVaxjoCo() {
                                         const img = Array.isArray(data.image) ? data.image[0] : data.image;
                                         jsonLdImg = typeof img === 'string' ? img : (img?.url || '');
                                     }
+                                    // Description
+                                    if (data.description) jsonLdDescription = String(data.description).trim();
                                     // Date
                                     if (data.startDate) jsonLdDate = data.startDate;
                                 }
@@ -243,7 +248,16 @@ export async function scrapeVaxjoCo() {
                             }
                         }
 
-                        return { jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, jsonLdDate, cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch };
+                        // Description fallback from page text
+                        if (!jsonLdDescription) {
+                            const mainEl = document.querySelector('.event-content, .tribe-events-single-section, article, main');
+                            const paras = Array.from((mainEl || document).querySelectorAll('p'))
+                                .map(p => p.textContent?.trim() || '')
+                                .filter(t => t.length > 40 && !t.match(/^(biljett|pris|plats|tid|datum|kl\.|copyright|alla rättigheter)/i));
+                            if (paras.length > 0) jsonLdDescription = paras.slice(0, 3).join('\n\n');
+                        }
+
+                        return { jsonLdPrice, jsonLdLocation, jsonLdLat, jsonLdLng, jsonLdImg, jsonLdDate, jsonLdDescription, cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch };
                     });
 
                     // Apply best available data
@@ -251,10 +265,12 @@ export async function scrapeVaxjoCo() {
                     if (deepData.jsonLdLocation) finalLocation = deepData.jsonLdLocation;
                     if (deepData.jsonLdLat) { directLat = deepData.jsonLdLat; directLng = deepData.jsonLdLng; }
                     if (deepData.jsonLdImg) finalImg = deepData.jsonLdImg;
+                    if (deepData.jsonLdDescription) finalDescription = deepData.jsonLdDescription;
 
                     if (finalPrice === undefined && deepData.cssPrice !== '') finalPrice = deepData.cssPrice;
                     if (finalLocation === 'Växjö' && deepData.cssLocation) finalLocation = deepData.cssLocation;
                     if (deepData.heroImg && !finalImg) finalImg = deepData.heroImg;
+                    if (!finalImg) finalImg = await searchGoogleImage(page, evt.title) || '';
 
                     // Follow booking link for price if still missing
                     if ((finalPrice === undefined || finalPrice === '') && deepData.bookingUrl) {
@@ -317,6 +333,7 @@ export async function scrapeVaxjoCo() {
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),
                     coverImage: finalImg || undefined,
+                    description: finalDescription,
                     price: finalPrice !== undefined ? finalPrice : ''
                 };
 

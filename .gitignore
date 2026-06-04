@@ -51,6 +51,9 @@ apps/scraper/keyword_stats.json
 apps/scraper/keyword_test_results.json
 apps/scraper/scraper_run_history.json
 
+# Probe snapshots — växer över tid, regenereras av `npm run probe-all`
+apps/scraper/src/sources/data/probe-snapshots/
+
 # Gamla / temporära ikonfigurationer
 apps/web/public/pwa-icon-v21.png
 apps/web/public/pwa-icon-v222.png

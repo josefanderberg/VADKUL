@@ -8,10 +8,11 @@
  *   4. Geocoda lokal + stad via Nominatim
  *   5. Spara events inom nästa 30 dagar
  */
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE WINDOW ---
 const now = new Date();
@@ -212,7 +213,7 @@ async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[
                 document.querySelectorAll('section[class*="discover-vertical-event-card"]'),
             );
             const seen = new Set<string>();
-            const results: { url: string; title: string; ps: string[] }[] = [];
+            const results: { url: string; title: string; ps: string[]; coverImage: string }[] = [];
 
             for (const sec of sections) {
                 const link = sec.querySelector('a.event-card-link') as HTMLAnchorElement | null;
@@ -239,11 +240,74 @@ async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[
     }
 }
 
+/**
+ * Besöker en enskild Eventbrite-eventsida och hämtar beskrivning + full cover-bild.
+ * Bilder blockeras (meta-taggar räcker), vilket håller nere laddningstiden.
+ */
+async function scrapeEventPage(browser: Browser, url: string): Promise<{ description: string; coverImage: string }> {
+    const page = await browser.newPage();
+    try {
+        await page.setViewport({ width: 1280, height: 900 });
+        await page.setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        );
+        // Block images/fonts — vi behöver bara HTML/text
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+            if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
+            else req.continue();
+        });
+
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await new Promise(r => setTimeout(r, 1000));
+
+        return await page.evaluate(() => {
+            // 1. og:image — bättre kvalitet än list-thumbnail
+            const ogImage = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
+
+            // 2. Beskrivning — försök i tur och ordning
+            // a) JSON-LD Event.description
+            let jsonDesc = '';
+            for (const script of Array.from(document.querySelectorAll('script[type="application/ld+json"]'))) {
+                try {
+                    const d = JSON.parse(script.textContent || '');
+                    const evt = Array.isArray(d['@graph'])
+                        ? d['@graph'].find((x: any) => x['@type'] === 'Event')
+                        : d['@type'] === 'Event' ? d : null;
+                    if (evt?.description) { jsonDesc = String(evt.description).trim(); break; }
+                } catch { /* ignore */ }
+            }
+
+            // b) og:description meta
+            const ogDesc = (document.querySelector('meta[property="og:description"]') as HTMLMetaElement)?.content
+                || (document.querySelector('meta[name="description"]') as HTMLMetaElement)?.content
+                || '';
+
+            // c) Eventbrites beskrivnings-div
+            const descEl = document.querySelector(
+                '[data-testid="event-description"], .eds-text--body-large, .structured-content-rich-text, .event-description'
+            );
+            const domDesc = descEl?.textContent?.trim() || '';
+
+            const description = jsonDesc || domDesc || ogDesc || '';
+
+            return { description, coverImage: ogImage };
+        });
+    } catch (err) {
+        // Tyst misslyckas — vi faller tillbaka på kortets thumbnail + DuckDuckGo
+        return { description: '', coverImage: '' };
+    } finally {
+        await page.close();
+    }
+}
+
 export async function scrapeEventbrite() {
     console.log('[Eventbrite] Starting Puppeteer scraper…');
     let totalSaved = 0;
 
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    // Dedicated page for Google image fallback searches (reused across events)
+    const googlePage: Page = await browser.newPage();
     try {
         for (const { name: cityName, slug } of EVENTBRITE_CITIES) {
             const cityUrl = `https://www.eventbrite.se/d/sweden--${slug}/events/`;
@@ -294,6 +358,16 @@ export async function scrapeEventbrite() {
                     const geoQuery = venueName ? `${venueName}, ${cityName}` : cityName;
                     const coords = await geocodeVenueSweden(geoQuery);
 
+                    // Besök eventsidan för beskrivning + bättre cover-bild
+                    const eventDetails = await scrapeEventPage(browser, card.url);
+
+                    // Cover-bild: 1) og:image från eventsida  2) thumbnail från lista  3) DuckDuckGo
+                    const coverImage =
+                        eventDetails.coverImage ||
+                        card.coverImage ||
+                        await searchGoogleImage(googlePage, card.title) ||
+                        null;
+
                     await addEventToDb({
                         title: card.title,
                         url: card.url,
@@ -305,9 +379,9 @@ export async function scrapeEventbrite() {
                         hostName: 'Eventbrite',
                         category: classifyEvent(card.title, ''),
                         createdAt: new Date(),
-                        coverImage: card.coverImage || null,
+                        coverImage,
                         price: '',
-                        description: '',
+                        description: eventDetails.description || '',
                         isLocationVerified: coords !== null,
                     });
                     totalSaved++;

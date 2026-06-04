@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 function getDateRange() {
     const now = new Date();
@@ -25,7 +26,8 @@ function guessCategoryFromTitle(title: string): string {
     if (/konsert|festival|sinfoni|kör\b|orkester|symfoni|musik(?!al)|\btour\b|\bband\b|gitarr|jazz\b|blues|live\s+music/.test(t)) return 'music';
     if (/\b(sm i|cup|lopp|match|tävling|hockey|fotboll|handboll|basket|tennis|golf|cykel|simning|friidrott|sport)\b/.test(t)) return 'sport';
     if (/quiz|spel(?!a)|boardgame|bingo|escape|game\s+night/.test(t)) return 'game';
-    if (/\b(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog|brunch)\b/.test(t)) return 'food-drink';
+    // OBS: \b funkar inte runt å/ä/ö — använder negativa lookarounds istället
+    if (/(?<![A-ZÅÄÖa-zåäö])(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog|brunch)(?![A-ZÅÄÖa-zåäö])/i.test(t)) return 'food-drink';
     if (/marknad|loppis|mässa|expo/.test(t)) return 'market';
     if (/utomhus|natur|vandring|friluft|hike|hiking/.test(t)) return 'outdoor';
     if (/\b(barn|familj|junior)\b|sagotr/.test(t)) return 'family';
@@ -216,7 +218,7 @@ export async function scrapeMeetup() {
                     hostName: details.organizer || 'Meetup',
                     category: guessCategoryFromTitle(details.title),
                     description: details.description || '',
-                    coverImage: details.image || '',
+                    coverImage: details.image || await searchGoogleImage(page, details.title) || '',
                     createdAt: new Date(),
                     isLocationVerified: lat !== 0,
                 });

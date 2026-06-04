@@ -1,26 +1,54 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MessageSquare, Bell, Plus, Search, Calendar, ChevronRight, RotateCcw } from 'lucide-react';
+import { User, Plus, Search, X, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 interface FloatingNavbarProps {
-    dayOffset: number;
-    setDayOffset: (offset: number) => void;
     creationMode?: 'idle' | 'placing' | 'editing';
     onStartCreate?: () => void;
     onConfirmPlacement?: () => void;
-    highlightToday?: boolean;
+    searchQuery: string;
+    setSearchQuery: (q: string) => void;
 }
 
-export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode = 'idle', onStartCreate, onConfirmPlacement, highlightToday = false }: FloatingNavbarProps) {
+export default function FloatingNavbar({
+    creationMode = 'idle',
+    onStartCreate,
+    onConfirmPlacement,
+    searchQuery,
+    setSearchQuery,
+}: FloatingNavbarProps) {
+    const router = useRouter();
+    const { user, logout } = useAuth();
+    const [searchOpen, setSearchOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const plusBtnRef = useRef<HTMLButtonElement>(null);
     const animationRef = useRef<Animation | null>(null);
     const [plusDropping, setPlusDropping] = useState(false);
 
-    // När create-flödet avbryts/avslutas (creationMode → 'idle'), avbryt WAAPI-animationen
-    // så att knappen snäpper tillbaka till sin ursprungliga position i navbaren.
+    // Fokusera sökfältet när det öppnas
+    useEffect(() => {
+        if (searchOpen) {
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+    }, [searchOpen]);
+
+    // Stäng profilmeny vid klick utanför
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setProfileMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Avbryt plus-animation när creationMode återgår till idle
     useEffect(() => {
         if (creationMode === 'idle' && animationRef.current) {
             animationRef.current.cancel();
@@ -30,7 +58,6 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
     }, [creationMode]);
 
     const handlePlusClick = () => {
-        // I 'placing'-läget: klicket bekräftar platsvalet → modal öppnas via parent.
         if (creationMode === 'placing') {
             onConfirmPlacement?.();
             return;
@@ -44,88 +71,75 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
 
         setPlusDropping(true);
 
-        // Web Animations API: kurvad bana med rotation från + till X. fill:forwards
-        // håller kvar slutläget (mitt på skärmen, roterad 45°) tills animationen avbryts.
         const animation = btn.animate(
             [
                 { transform: 'translate(0px, 0px)', easing: 'ease-in-out' },
                 { transform: `translate(0px, ${dy}px)`, offset: 0.5, easing: 'ease-in-out' },
                 { transform: `translate(${dx}px, ${dy}px)` },
             ],
-            {
-                duration: 800,
-                fill: 'forwards',
-            },
+            { duration: 800, fill: 'forwards' },
         );
         animationRef.current = animation;
-
         animation.onfinish = () => {
             onStartCreate?.();
             setPlusDropping(false);
         };
     };
 
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-                setProfileMenuOpen(false);
-            }
+    const handleProfileClick = () => {
+        if (user) {
+            setProfileMenuOpen(o => !o);
+        } else {
+            router.push('/login');
         }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const getDayLabel = (offset: number) => {
-        if (offset === 0) return 'Idag';
-        if (offset === 1) return 'Imorgon';
-        
-        const date = new Date();
-        date.setDate(date.getDate() + offset);
-        return date.toLocaleDateString('sv-SE', { weekday: 'long' }).replace(/^\w/, (c) => c.toUpperCase());
     };
 
-    const handleCycleDay = () => {
-        // Cycle from 0 (Today) up to 6 (7 days total), then back to 0
-        setDayOffset((dayOffset + 1) % 7);
-    };
-
-    const handleResetToday = () => {
-        setDayOffset(0);
+    const handleCloseSearch = () => {
+        setSearchOpen(false);
+        setSearchQuery('');
     };
 
     return (
         <div className="absolute top-6 left-0 right-0 z-[1000] px-4 pointer-events-none">
             <div className="flex flex-col gap-3 w-full max-w-[1400px] mx-auto">
-                
-                {/* Top Row */}
-                <div className="flex justify-between items-center w-full">
-                    {/* Left side: Single Cycle Day Filter */}
-                    <div className="flex items-center gap-3 pointer-events-auto">
-                        <button
-                            onClick={handleCycleDay}
-                            className={`bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2.5 text-slate-700 ${highlightToday ? 'animate-today-pulse' : ''}`}
-                        >
-                            <Calendar size={16} className="text-primary shrink-0" />
-                            <span>{getDayLabel(dayOffset)}</span>
-                            <ChevronRight size={16} className="text-slate-400" />
-                        </button>
 
-                        {dayOffset !== 0 && (
+                {/* Top Row */}
+                <div className="flex items-center gap-2 w-full">
+
+                    {/* Vänster: expanderbar sök */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 pointer-events-auto">
+
+                        {/* Sök */}
+                        {searchOpen ? (
+                            <div className="flex items-center flex-1 min-w-0 bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">
+                                <Search size={15} className="text-slate-400 shrink-0 mr-2" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Sök event..."
+                                    className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 min-w-0"
+                                />
+                                <button
+                                    onClick={handleCloseSearch}
+                                    className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                                >
+                                    <X size={15} />
+                                </button>
+                            </div>
+                        ) : (
                             <button
-                                onClick={handleResetToday}
+                                onClick={() => setSearchOpen(true)}
                                 className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors"
-                                title="Återställ till idag"
                             >
-                                <RotateCcw size={16} className="text-slate-700" />
+                                <Search size={18} className="text-slate-700" />
                             </button>
                         )}
                     </div>
 
-                    {/* Right side: Search, Plus, Profile */}
-                    <div className="flex items-center gap-3 pointer-events-auto">
-                        <button className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors">
-                            <Search size={20} className="text-slate-700" />
-                        </button>
+                    {/* Höger: plus + profil */}
+                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         {creationMode !== 'editing' && (
                             <button
                                 ref={plusBtnRef}
@@ -139,32 +153,32 @@ export default function FloatingNavbar({ dayOffset, setDayOffset, creationMode =
                             </button>
                         )}
 
-                        {/* Profile + kolumn-meny nedåt med Meddelanden och Notiser */}
+                        {/* Profil / inloggning */}
                         <div className="relative" ref={profileMenuRef}>
                             <button
                                 type="button"
-                                onClick={() => setProfileMenuOpen(o => !o)}
-                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors"
-                                aria-label="Öppna profilmeny"
-                                aria-expanded={profileMenuOpen}
+                                onClick={handleProfileClick}
+                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                                aria-label={user ? 'Profilmeny' : 'Logga in'}
                             >
                                 <User size={20} className="text-slate-700" />
+                                {user && (
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
+                                )}
                             </button>
 
-                            {profileMenuOpen && (
-                                <div className="absolute right-0 top-full mt-3 flex flex-col gap-2.5 animate-in fade-in slide-in-from-top-2">
+                            {profileMenuOpen && user && (
+                                <div className="absolute right-0 top-full mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 overflow-hidden min-w-[160px]">
+                                    <div className="px-4 py-3 border-b border-slate-100">
+                                        <p className="text-xs text-slate-500">Inloggad som</p>
+                                        <p className="text-sm font-semibold text-slate-800 truncate">{user.displayName || user.email}</p>
+                                    </div>
                                     <button
-                                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
-                                        title="Meddelanden"
+                                        onClick={async () => { await logout(); setProfileMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                                     >
-                                        <MessageSquare size={18} className="text-slate-700" />
-                                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-                                    </button>
-                                    <button
-                                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
-                                        title="Notiser"
-                                    >
-                                        <Bell size={18} className="text-slate-700" />
+                                        <LogOut size={15} />
+                                        Logga ut
                                     </button>
                                 </div>
                             )}

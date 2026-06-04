@@ -15,6 +15,7 @@ Mappen håller analyser per scrapingkälla samt löpande spårning av förbättr
 - [tickster.md](tickster.md) — egen, näst störst (79)
 - [övriga.md](övriga.md) — Meetup, VäxjöCo, Upplev (små men fungerar)
 - [inaktiva.md](inaktiva.md) — Eventbrite, Billetto, Nöjesguiden, today-sweden (0 events)
+- [kommuner/](kommuner/) — **auto-genererade playbooks** för alla 50 registry-källor. En `.md` per kommun med discovery + field-map + troubleshooting. Re-generera: `npm run provenance`.
 
 ## Skrivregler
 

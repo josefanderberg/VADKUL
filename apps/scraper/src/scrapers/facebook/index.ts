@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHelper';
+import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { classifyEvent } from '../../utils/classify';
 import { searchGoogleImage } from '../../utils/imageSearch';
@@ -423,7 +424,19 @@ export async function scrapeFacebookEvents() {
             try {
                 // Check if already in the database
                 const existingEvent = await getEventFromDb(url);
-                if (existingEvent) {
+                // FB CDN-URLs har `oe=HHHHHHHH` (hex unix-stamp) som expirar inom ~7 dagar.
+                // Om URL:n redan är passerad eller löper ut inom 24h → tvinga re-scrape för
+                // att hämta ny bild-URL. Annars renderas eventet med trasig bild i appen.
+                const isFbImageExpired = (img: string | undefined): boolean => {
+                    if (!img || !img.includes('fbcdn.net')) return false;
+                    const m = img.match(/[?&]oe=([0-9a-f]+)/i);
+                    if (!m) return false;
+                    const exp = parseInt(m[1], 16) * 1000;
+                    if (!exp) return false;
+                    return exp - Date.now() < 24 * 60 * 60 * 1000; // expirar inom 24h
+                };
+
+                if (existingEvent && !isFbImageExpired(existingEvent.coverImage)) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     console.log(`    👉 Redan sparad i databasen: "${existingEvent.title}"`);
                     
@@ -475,8 +488,11 @@ export async function scrapeFacebookEvents() {
                     continue;
                 }
 
-                // If not in database, scrape detailed page
-                console.log(`  📄 Detaljer för: ${url}`);
+                // Antingen ny URL eller existerande med expired FB-bild → scrape detalsidan
+                if (existingEvent) {
+                    console.log(`  📄 Detaljer för: ${url}`);
+                    console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
+                }
                 await page.goto(url, { waitUntil: 'networkidle2' });
                 await handleBannersAndModals(page);
                 await new Promise(r => setTimeout(r, 4000));
@@ -652,6 +668,19 @@ export async function scrapeFacebookEvents() {
                         console.log(`    ⚠️ Ingen Google-bild hittades.`);
                     }
                     await new Promise(r => setTimeout(r, 1000));
+                }
+
+                // Ladda upp bilden till vår Storage så vi får en permanent URL
+                // (FB CDN-URLs expirar inom ~7 dagar). Detta är kritiskt — utan det
+                // visas alla FB-bilder som trasiga efter en vecka.
+                if (finalImage && !isOurStorageUrl(finalImage)) {
+                    const hostedUrl = await uploadEventImage(finalImage, url);
+                    if (hostedUrl) {
+                        console.log(`    📦 Bild uppladdad till Storage`);
+                        finalImage = hostedUrl;
+                    } else {
+                        console.log(`    ⚠️ Storage-upload misslyckades — behåller remote-URL (kommer expira)`);
+                    }
                 }
 
                 const eventObj = {

@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenue } from '../utils/venueCoordinates';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
 
@@ -180,6 +181,7 @@ export async function scrapeUpplevVaxjo() {
                 let finalPrice: number | string | undefined = evt.price !== '' ? evt.price : undefined;
                 let finalLocation = evt.location || 'Växjö';
                 let finalImg = evt.img;
+                let finalDescription = '';
 
                 // ── Deep scrape event detail page ──────────────────────────────
                 if (evt.link && evt.link.includes('upplev.vaxjo.se')) {
@@ -194,6 +196,7 @@ export async function scrapeUpplevVaxjo() {
                             let jsonLdLocation = '';
                             let jsonLdImg = '';
                             let jsonLdDate = '';
+                            let jsonLdDescription = '';
                             let bookingUrl = '';
 
                             const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
@@ -222,6 +225,8 @@ export async function scrapeUpplevVaxjo() {
                                             const img = Array.isArray(data.image) ? data.image[0] : data.image;
                                             jsonLdImg = typeof img === 'string' ? img : (img?.url || '');
                                         }
+                                        // Description
+                                        if (data.description) jsonLdDescription = String(data.description).trim();
                                         // Date
                                         if (data.startDate) jsonLdDate = data.startDate;
                                     }
@@ -275,7 +280,7 @@ export async function scrapeUpplevVaxjo() {
 
                             return {
                                 jsonLdPrice, jsonLdLocation, jsonLdImg, jsonLdDate,
-                                cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch
+                                jsonLdDescription, cssPrice, cssLocation, bookingUrl, heroImg, cssTimeMatch
                             };
                         });
 
@@ -283,6 +288,7 @@ export async function scrapeUpplevVaxjo() {
                         if (deepData.jsonLdPrice !== undefined) finalPrice = deepData.jsonLdPrice;
                         if (deepData.jsonLdLocation) finalLocation = deepData.jsonLdLocation;
                         if (deepData.jsonLdImg) finalImg = deepData.jsonLdImg;
+                        if (deepData.jsonLdDescription) finalDescription = deepData.jsonLdDescription;
 
                         // Apply CSS fallback if JSON-LD didn't provide it
                         if (finalPrice === undefined && deepData.cssPrice !== '') finalPrice = deepData.cssPrice;
@@ -290,6 +296,7 @@ export async function scrapeUpplevVaxjo() {
                             if (deepData.cssLocation) finalLocation = deepData.cssLocation;
                         }
                         if (deepData.heroImg && !finalImg) finalImg = deepData.heroImg;
+                        if (!finalImg) finalImg = await searchGoogleImage(eventPage, evt.title) || '';
 
                         // Try to extract specific time
                         if (!hasSpecificTime) {
@@ -344,6 +351,7 @@ export async function scrapeUpplevVaxjo() {
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),
                     coverImage: finalImg || undefined,
+                    description: finalDescription,
                     price: finalPrice !== undefined ? finalPrice : ''
                 };
 

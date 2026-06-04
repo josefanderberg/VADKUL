@@ -184,42 +184,49 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
-                <div className="border-t border-border pt-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest shrink-0">Värd:</span>
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center border border-border overflow-hidden shrink-0">
-                            {faviconUrl ? (
-                                <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
-                            ) : (
-                                <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
-                            )}
+                <div className="border-t border-border pt-2 flex items-end justify-between gap-4">
+                    {/* Värd */}
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Värd</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center border border-border overflow-hidden shrink-0">
+                                {faviconUrl ? (
+                                    <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
+                                ) : (
+                                    <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
+                                )}
+                            </div>
+                            <span className="text-xs font-black text-black dark:text-white truncate">{linkEvent.hostName || 'Okänd'}</span>
                         </div>
-                        <span className="text-xs font-black text-black dark:text-white truncate">{linkEvent.hostName || 'Okänd'}</span>
                     </div>
 
-                    <div className="flex items-center shrink-0 h-9">
-                        {attendeeCount > 0 ? (
-                            <div className="flex -space-x-2 overflow-hidden py-1">
-                                {dummyAvatars.map((src, i) => (
-                                    <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-card bg-slate-100 overflow-hidden border border-border/10">
-                                        <img src={src} alt="" className="h-full w-full object-cover" />
+                    {/* Kommer — fast höjd så raden inte hoppar mellan events med/utan anmälda */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Kommer</span>
+                        <div className="h-8 flex items-center">
+                            {attendeeCount > 0 ? (
+                                <div className="flex -space-x-2 overflow-hidden">
+                                    {dummyAvatars.map((src, i) => (
+                                        <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-card bg-slate-100 overflow-hidden border border-border/10">
+                                            <img src={src} alt="" className="h-full w-full object-cover" />
+                                        </div>
+                                    ))}
+                                    <div className="flex h-7 px-1.5 min-w-[28px] items-center justify-center rounded-full bg-slate-800 ring-2 ring-card text-[9px] font-black text-white shadow-lg">
+                                        {attendeeCount > 2 ? `+${attendeeCount - 2}` : `+${attendeeCount}`}
                                     </div>
-                                ))}
-                                <div className="flex h-7 px-1.5 min-w-[28px] items-center justify-center rounded-full bg-slate-800 ring-2 ring-card text-[9px] font-black text-white shadow-lg">
-                                    {attendeeCount > 2 ? `+${attendeeCount - 2}` : `+${attendeeCount}`}
                                 </div>
-                            </div>
-                        ) : (
-                            <span className="text-[10px] text-slate-300 font-medium">Inga anmälda</span>
-                        )}
+                            ) : (
+                                <span className="text-[10px] text-slate-300 font-medium">Inga anmälda</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Step 0 Peek: Small slice of the image at the bottom when collapsed */}
             {revealStep === 0 && (
-                <div 
-                    className="w-full h-12 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-16 transition-all duration-500"
+                <div
+                    className="w-full h-14 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-18 transition-all duration-500"
                     onClick={handleHeaderClick}
                 >
                     <Image unoptimized
@@ -229,6 +236,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         className="object-cover opacity-60 group-hover:opacity-100 transition-opacity"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                    <div className="absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <span>Se mer</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
                 </div>
             )}
 

@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE FILTER: Kommande 7 dagar ---
 const now = new Date();
@@ -59,7 +60,8 @@ function guessCategoryFromTitle(title: string): string {
     // Game
     if (/quiz|spel(?!a)|boardgame|bingo|escape/.test(t)) return 'game';
     // Food (word boundaries to avoid 'musical' matching 'mat')
-    if (/\b(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog)\b/.test(t)) return 'food-drink';
+    // OBS: \b funkar inte runt å/ä/ö — använder negativa lookarounds istället
+    if (/(?<![A-ZÅÄÖa-zåäö])(mat|öl|vin|beer|dinner|tasting|provning|middag|måltid|krog)(?![A-ZÅÄÖa-zåäö])/i.test(t)) return 'food-drink';
     // Market
     if (/marknad|loppis|mässa|expo/.test(t)) return 'market';
     // Outdoor
@@ -224,7 +226,13 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
             .filter(t => t.length > 3 && t.length < 120);
 
         const streetPattern = /^[A-ZÅÄÖ][a-zåäöA-ZÅÄÖ]+(gatan|vägen|allén|plan|torg|platsen|gränd|backe|väg|gat)\s+\d+/i;
-        const cityPattern = /\b(Stockholm|Göteborg|Malmö|Uppsala|Västerås|Örebro|Linköping|Helsingborg|Jönköping|Norrköping|Lund|Umeå|Gävle|Borås|Eskilstuna|Södertälje|Karlstad|Täby|Sundsvall|Luleå|Östersund|Växjö|Kalmar|Halmstad|Falun|Skellefteå|Kristianstad|Växjö)\b/i;
+        // Alla större svenska kommuner — inkluderar små städer som Ljungby
+        // för att undvika att arrangörens stad blir fallback.
+        // Alla större svenska kommuner. OBS: JS `\b` fungerar inte runt å/ä/ö
+        // ("Växjö", "Lund" som hela strängar matchar inte med \b). Använder
+        // lookbehind/lookahead för icke-bokstavsgränser istället.
+        const cityList = 'Stockholm|Göteborg|Malmö|Uppsala|Västerås|Örebro|Linköping|Helsingborg|Jönköping|Norrköping|Lund|Umeå|Gävle|Borås|Eskilstuna|Södertälje|Karlstad|Täby|Sundsvall|Luleå|Östersund|Växjö|Kalmar|Halmstad|Falun|Skellefteå|Kristianstad|Trollhättan|Botkyrka|Solna|Lidingö|Sundbyberg|Sigtuna|Nynäshamn|Värmdö|Nacka|Huddinge|Sollentuna|Mölndal|Kungsbacka|Varberg|Falkenberg|Ängelholm|Trelleborg|Ystad|Landskrona|Hässleholm|Eslöv|Höör|Hörby|Klippan|Båstad|Simrishamn|Sjöbo|Skurup|Staffanstorp|Svalöv|Svedala|Tomelilla|Vellinge|Åstorp|Burlöv|Lomma|Höganäs|Bjuv|Perstorp|Osby|Bromölla|Ljungby|Alvesta|Lessebo|Markaryd|Tingsryd|Uppvidinge|Älmhult|Vetlanda|Värnamo|Nässjö|Tranås|Eksjö|Sävsjö|Vimmerby|Västervik|Nybro|Oskarshamn|Mönsterås|Borgholm|Mörbylånga|Hultsfred|Karlshamn|Karlskrona|Ronneby|Olofström|Sölvesborg|Visby|Mariestad|Skövde|Lidköping|Vänersborg|Uddevalla|Strömstad|Tanum|Munkedal|Lysekil|Sotenäs|Orust|Tjörn|Stenungsund|Kungälv|Öckerö|Ale|Lerum|Härryda|Partille|Alingsås|Vårgårda|Herrljunga|Bollebygd|Mark|Svenljunga|Tranemo|Ulricehamn|Falköping|Tidaholm|Hjo|Tibro|Karlsborg|Töreboda|Götene|Bengtsfors|Dals-Ed|Färgelanda|Mellerud|Åmål|Vara|Grästorp|Essunga|Skara|Gullspång|Hallsberg|Hallstahammar|Heby|Härnösand|Hudiksvall|Sandviken|Söderhamn|Bollnäs|Ljusdal|Mora|Leksand|Rättvik|Orsa|Vansbro|Malung-Sälen|Älvdalen|Borlänge|Ludvika|Smedjebacken|Avesta|Hedemora|Säter|Gagnef|Köping|Arboga|Surahammar|Sala|Kungsör|Norberg|Fagersta|Skinnskatteberg|Karlskoga|Degerfors|Kumla|Askersund|Laxå|Nora|Lindesberg|Hällefors|Ljusnarsberg|Lekeberg|Arvika|Eda|Filipstad|Forshaga|Grums|Hagfors|Hammarö|Kil|Kristinehamn|Munkfors|Storfors|Sunne|Säffle|Torsby|Årjäng|Timrå|Sollefteå|Ånge|Kramfors|Örnsköldsvik|Berg|Bräcke|Härjedalen|Krokom|Ragunda|Strömsund|Åre|Bjurholm|Dorotea|Lycksele|Malå|Nordmaling|Norsjö|Robertsfors|Sorsele|Storuman|Vilhelmina|Vindeln|Vännäs|Åsele|Arjeplog|Arvidsjaur|Boden|Gällivare|Haparanda|Jokkmokk|Kalix|Kiruna|Pajala|Piteå|Älvsbyn|Överkalix|Övertorneå|Upplands Väsby|Upplands-Bro|Vaxholm|Österåker|Vallentuna|Salem|Ekerö|Haninge|Tyresö|Nykvarn|Norrtälje|Knivsta|Tierp|Östhammar|Älvkarleby|Enköping|Håbo|Flen|Gnesta|Katrineholm|Nyköping|Oxelösund|Strängnäs|Trosa|Vingåker|Boxholm|Finspång|Kinda|Mjölby|Motala|Söderköping|Vadstena|Valdemarsvik|Ydre|Åtvidaberg|Ödeshög|Aneby|Gislaved|Gnosjö|Habo|Mullsjö|Vaggeryd|Hylte|Laholm|Gotland|Östra Göinge';
+        const cityPattern = new RegExp(`(?<![A-ZÅÄÖa-zåäö-])(${cityList})(?![A-ZÅÄÖa-zåäö-])`, 'i');
 
         for (const t of allText) {
             if (!textStreet && streetPattern.test(t)) textStreet = t;
@@ -238,8 +246,30 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
         // Konsolidera adress
         const venue = jsonVenue || microdataVenue || '';
         const street = jsonStreet || microdataStreet || textStreet || '';
-        const city = jsonCity || microdataCity || textCity || '';
+        let city = jsonCity || microdataCity || textCity || '';
         const postal = jsonPostal || microdataPostal || '';
+
+        // Stad i venue-namnet OVERRIDAR JSON-LD-stad om de skiljer
+        // (typ: JSON-LD säger "Växjö" men venue säger "Bio i Ljungby" → Ljungby vinner)
+        if (venue) {
+            const venueCityMatch = venue.match(cityPattern);
+            if (venueCityMatch && venueCityMatch[1].toLowerCase() !== city.toLowerCase()) {
+                console.log(`  ℹ️  Venue-stad overridar JSON-LD: "${venueCityMatch[1]}" (var "${city}")`);
+                city = venueCityMatch[1];
+            }
+        }
+
+        // Sök även i body-text efter "Bio i X", "Konsert i X", "i X" där X är kommun
+        if (!city || (venue && !venue.match(cityPattern))) {
+            for (const t of allText) {
+                // OBS: \b funkar inte runt å/ä/ö (Föreställning, samt ord som slutar på å/ä/ö)
+                const m = t.match(/(?<![A-ZÅÄÖa-zåäö-])(?:Bio|Konsert|Föreställning|Show|i)\s+i?\s*(?:i\s+)?([A-ZÅÄÖ][a-zåäöA-ZÅÄÖ-]+)(?![A-ZÅÄÖa-zåäö-])/);
+                if (m && cityPattern.test(m[1])) {
+                    city = m[1];
+                    break;
+                }
+            }
+        }
 
         // Bygg geocodnings-sträng
         const addressParts = [street, postal, city].filter(Boolean);
@@ -437,7 +467,7 @@ export async function scrapeTickster() {
                     hostName: 'Tickster',
                     category: guessCategoryFromTitle(details.title),
                     createdAt: new Date(),
-                    coverImage: details.coverImage || '',
+                    coverImage: details.coverImage || await searchGoogleImage(page, details.title) || '',
                     description: details.jsonDescription || '',
                     isLocationVerified: !!(details.jsonLat && details.jsonLng),
                     isHostVerified: false,

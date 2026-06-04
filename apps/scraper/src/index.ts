@@ -9,6 +9,10 @@ import { scrapeFacebookEvents } from './scrapers/facebook/index';
 import { scrapeMeetup } from './scrapers/meetup';
 import { scrapeTodaySweden } from './scrapers/today-sweden';
 
+// Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
+import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
+import { SOURCES } from './sources/registry';
+
 async function runAllScrapers() {
     console.log('--- VADKUL SCRAPER BOT STARTING ---');
     console.log(`Time: ${new Date().toISOString()}`);
@@ -34,7 +38,23 @@ async function runAllScrapers() {
     await scrapeVaxjoCo();       // Växjö & Co (officiell evenemangsida)
     await scrapeUpplevVaxjo();   // Upplev Växjö (kommunens guide)
 
-    // 5. Aggregera all data till progressiva lager
+    // 5. Nya skalbara Sources — respekterar updateFrequency så vi sprider ut
+    //    körningar över veckan (kommunsajter behöver inte hamras dagligen).
+    try {
+        console.log('\n--- SOURCES (nytt skalbart system) ---');
+        console.log(summarizeSchedule(SOURCES.filter((s) => !s.disabled)));
+        const dueToday = scheduledForToday(SOURCES);
+        if (dueToday.length > 0) {
+            const results = await runSources(dueToday, ENGINES, { concurrency: 3 });
+            summarize(results);
+        } else {
+            console.log('Inga sources schemalagda för idag.');
+        }
+    } catch (srcErr) {
+        console.error('⚠️ Sources-systemet crashade:', srcErr);
+    }
+
+    // 6. Aggregera all data till progressiva lager
     try {
         const { runAggregation } = require('./scripts/aggregate-events');
         await runAggregation();

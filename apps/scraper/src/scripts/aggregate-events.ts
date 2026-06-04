@@ -106,22 +106,98 @@ export async function runAggregation() {
         return;
     }
 
+    console.log('   📤 Uploading aggregated layers to Firestore collection "aggregatedEvents"...');
+
+    // Varje upload försöker separat — en stor doc ska inte stoppa de andra.
     try {
-        console.log('   📤 Uploading aggregated layers to Firestore collection "aggregatedEvents"...');
-        
         await db.collection('aggregatedEvents').doc('destinations').set(destinationsPayload);
         console.log('      ✅ Uploaded "destinations" document');
-
-        await db.collection('aggregatedEvents').doc('cards').set(cardsPayload);
-        console.log('      ✅ Uploaded "cards" document');
-
-        await db.collection('aggregatedEvents').doc('descriptions').set(descriptionsPayload);
-        console.log('      ✅ Uploaded "descriptions" document');
-
-        console.log('   🎉 Event aggregation completed successfully.');
-    } catch (dbErr) {
-        console.error('   ❌ Failed to upload aggregated documents to Firestore:', dbErr);
+    } catch (e) {
+        console.error('      ❌ "destinations" upload failed:', (e as Error).message);
     }
+
+    // Cards: shardas om för stort. Firestore-limit: 1 MB per dokument.
+    try {
+        const cardsBytes = Buffer.byteLength(JSON.stringify(cardsPayload), 'utf-8');
+        if (cardsBytes < 900_000) {
+            // Får plats i ett dokument
+            await db.collection('aggregatedEvents').doc('cards').set(cardsPayload);
+            // Rensa ev. tidigare shards
+            await deleteCardsShards(db);
+            console.log(`      ✅ Uploaded "cards" document (${(cardsBytes / 1024).toFixed(0)} KB)`);
+        } else {
+            // Sharda. Index-doc har shardCount, varje shard har events-array.
+            const SHARD_SIZE = 700;
+            const shards: any[][] = [];
+            for (let i = 0; i < cards.length; i += SHARD_SIZE) {
+                shards.push(cards.slice(i, i + SHARD_SIZE));
+            }
+            console.log(`      ℹ️  Cards är ${(cardsBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
+            await db.collection('aggregatedEvents').doc('cards').set({
+                updatedAt, shardCount: shards.length, totalEvents: cards.length,
+            });
+            for (let i = 0; i < shards.length; i++) {
+                await db.collection('aggregatedEvents').doc(`cards_${i}`).set({
+                    updatedAt, shardIndex: i, events: shards[i],
+                });
+            }
+            await deleteShards(db, 'cards_', shards.length);
+            console.log(`      ✅ Uploaded "cards" + ${shards.length} shards`);
+        }
+    } catch (e) {
+        console.error('      ❌ "cards" upload failed:', (e as Error).message);
+    }
+
+    // Descriptions: shardas likt cards om för stort
+    try {
+        const descBytes = Buffer.byteLength(JSON.stringify(descriptionsPayload), 'utf-8');
+        if (descBytes < 900_000) {
+            await db.collection('aggregatedEvents').doc('descriptions').set(descriptionsPayload);
+            await deleteShards(db, 'descriptions_');
+            console.log(`      ✅ Uploaded "descriptions" document (${(descBytes / 1024).toFixed(0)} KB)`);
+        } else {
+            const entries = Object.entries(descriptions);
+            const SHARD_SIZE = Math.max(50, Math.floor(entries.length / Math.ceil(descBytes / 800_000)));
+            const shards: Record<string, string>[] = [];
+            for (let i = 0; i < entries.length; i += SHARD_SIZE) {
+                shards.push(Object.fromEntries(entries.slice(i, i + SHARD_SIZE)));
+            }
+            console.log(`      ℹ️  Descriptions är ${(descBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
+            await db.collection('aggregatedEvents').doc('descriptions').set({
+                updatedAt, shardCount: shards.length, totalEntries: entries.length,
+            });
+            for (let i = 0; i < shards.length; i++) {
+                await db.collection('aggregatedEvents').doc(`descriptions_${i}`).set({
+                    updatedAt, shardIndex: i, data: shards[i],
+                });
+            }
+            await deleteShards(db, 'descriptions_', shards.length);
+            console.log(`      ✅ Uploaded "descriptions" + ${shards.length} shards`);
+        }
+    } catch (e) {
+        console.error('      ❌ "descriptions" upload failed:', (e as Error).message);
+    }
+
+    console.log('   🎉 Event aggregation completed successfully.');
+}
+
+/** Radera cards_<N> shards som inte längre används. */
+async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: number = 0): Promise<void> {
+    return deleteShards(db, 'cards_', keepBelow);
+}
+
+/** Generisk shard-radering. Tar prefix typ "cards_" eller "descriptions_". */
+async function deleteShards(db: FirebaseFirestore.Firestore, prefix: string, keepBelow: number = 0): Promise<void> {
+    try {
+        const snap = await db.collection('aggregatedEvents').get();
+        const re = new RegExp(`^${prefix}(\\d+)$`);
+        for (const doc of snap.docs) {
+            const m = doc.id.match(re);
+            if (m && parseInt(m[1], 10) >= keepBelow) {
+                await doc.ref.delete();
+            }
+        }
+    } catch { /* ignore */ }
 }
 
 // Executed directly

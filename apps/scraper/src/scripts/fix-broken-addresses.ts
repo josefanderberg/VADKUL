@@ -153,7 +153,8 @@ function scoreCandidate(addr: string): number {
     const cityAlt = SWEDISH_CITIES.join('|');
     const hasPostal = /\d{3}\s?\d{2}\b/.test(addr);
     const hasStreet = STREET_NUMBER_RE.test(addr);
-    const hasCity = new RegExp(`\\b(${cityAlt})\\b`, 'i').test(addr);
+    // OBS: \b funkar inte runt å/ä/ö (Malmö, Växjö m.fl.)
+    const hasCity = new RegExp(`(?<![A-ZÅÄÖa-zåäö-])(${cityAlt})(?![A-ZÅÄÖa-zåäö-])`, 'i').test(addr);
 
     if (hasStreet && hasPostal && hasCity) return 100;
     if (hasPostal && hasCity) return 80;
@@ -248,7 +249,7 @@ function extractAddressFromTitle(title: string): string | null {
     const cityAlt = SWEDISH_CITIES.join('|');
     const streetMatch = cleaned.match(
         new RegExp(
-            `([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|v|allén|allé|plan|torget|torg|gränd|backen|stigen)\\.?\\s*\\d+[A-Za-z]?(?:\\s*,\\s*[A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+)?\\s*,?\\s*(?:${cityAlt})\\b)`,
+            `([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|v|allén|allé|plan|torget|torg|gränd|backen|stigen)\\.?\\s*\\d+[A-Za-z]?(?:\\s*,\\s*[A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+)?\\s*,?\\s*(?:${cityAlt}))(?![A-ZÅÄÖa-zåäö-])`,
             'i'
         )
     );
@@ -256,11 +257,12 @@ function extractAddressFromTitle(title: string): string | null {
 
     // Venue, City (t.ex. "Arbis, Norrköping")
     for (const city of SWEDISH_CITIES) {
-        const cityRe = new RegExp(`\\b${city}\\b`, 'i');
+        // OBS: \b funkar inte runt å/ä/ö (Malmö, Växjö, Umeå m.fl.)
+        const cityRe = new RegExp(`(?<![A-ZÅÄÖa-zåäö-])${city}(?![A-ZÅÄÖa-zåäö-])`, 'i');
         if (!cityRe.test(cleaned)) continue;
 
         const venueCity = cleaned.match(
-            new RegExp(`([A-ZÅÄÖ][A-Za-zÅÄÖåäö .'&-]{2,40})[,\\-–|]\\s*${city}\\b`, 'i')
+            new RegExp(`([A-ZÅÄÖ][A-Za-zÅÄÖåäö .'&-]{2,40})[,\\-–|]\\s*${city}(?![A-ZÅÄÖa-zåäö-])`, 'i')
         );
         if (venueCity) {
             const venue = venueCity[1].trim();
@@ -305,7 +307,7 @@ async function findAddressesOnPage(page: Page): Promise<string[]> {
         // Mönster C: Gata + nr + stad utan postnr
         const cityAlt = cities.join('|');
         const reStreetCity = new RegExp(
-            `([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|v|allén|allé|plan|torget|torg|gränd|backen|stigen)\\.?\\s*\\d+[A-Za-z]?(?:\\s*,\\s*[A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+)?\\s*,\\s*(?:${cityAlt})\\b)`,
+            `([A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+(?:gatan|vägen|v|allén|allé|plan|torget|torg|gränd|backen|stigen)\\.?\\s*\\d+[A-Za-z]?(?:\\s*,\\s*[A-ZÅÄÖ][A-Za-zÅÄÖåäö.\\-]+)?\\s*,\\s*(?:${cityAlt}))(?![A-ZÅÄÖa-zåäö-])`,
             'gi'
         );
         while ((m = reStreetCity.exec(text)) !== null) {

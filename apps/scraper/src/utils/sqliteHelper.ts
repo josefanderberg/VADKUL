@@ -48,7 +48,59 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_link_events_time     ON link_events(time);
     CREATE INDEX IF NOT EXISTS idx_link_events_hidden   ON link_events(hidden);
     CREATE INDEX IF NOT EXISTS idx_link_events_verified ON link_events(isLocationVerified);
+
+    -- Run-history: en rad per scraper-körning så vi kan se trender och regressioner.
+    CREATE TABLE IF NOT EXISTS scrape_runs (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_id                TEXT    NOT NULL,
+        host_name                TEXT    NOT NULL,
+        started_at               TEXT    NOT NULL,            -- ISO timestamp
+        duration_ms              INTEGER,
+        found                    INTEGER DEFAULT 0,
+        saved                    INTEGER DEFAULT 0,
+        skipped_duplicate        INTEGER DEFAULT 0,
+        skipped_outside_window   INTEGER DEFAULT 0,
+        skipped_invalid          INTEGER DEFAULT 0,
+        error_count              INTEGER DEFAULT 0,
+        first_error              TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_scrape_runs_source     ON scrape_runs(source_id, started_at);
+    CREATE INDEX IF NOT EXISTS idx_scrape_runs_started_at ON scrape_runs(started_at);
 `);
+
+const insertRunStmt = sqlite.prepare(`
+    INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
+        found, saved, skipped_duplicate, skipped_outside_window, skipped_invalid,
+        error_count, first_error)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+export interface ScrapeRunRow {
+    sourceId: string;
+    hostName: string;
+    startedAt: Date;
+    durationMs: number;
+    found: number;
+    saved: number;
+    skippedDuplicate: number;
+    skippedOutsideWindow: number;
+    skippedInvalid: number;
+    errorCount: number;
+    firstError?: string;
+}
+
+export function recordScrapeRun(run: ScrapeRunRow): void {
+    try {
+        insertRunStmt.run(
+            run.sourceId, run.hostName, run.startedAt.toISOString(),
+            run.durationMs, run.found, run.saved,
+            run.skippedDuplicate, run.skippedOutsideWindow, run.skippedInvalid,
+            run.errorCount, run.firstError ?? null,
+        );
+    } catch (err) {
+        console.error('Failed to record scrape run:', err);
+    }
+}
 
 const upsertStmt = sqlite.prepare(`
     INSERT INTO link_events (

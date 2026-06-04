@@ -9,8 +9,15 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
             const docRef = doc(db, 'aggregatedEvents', layerName);
             const snapshot = await getDoc(docRef);
             if (snapshot.exists()) {
-                const data = snapshot.data();
-                if (data) return data;
+                const data: any = snapshot.data();
+                if (data) {
+                    // Shardad: index-doc har shardCount men ingen events/data.
+                    // Slå ihop alla shards.
+                    if (typeof data.shardCount === 'number' && data.shardCount > 0) {
+                        return await fetchShards(layerName, data.shardCount, data.updatedAt);
+                    }
+                    return data;
+                }
             }
         }
     } catch (e) {
@@ -28,6 +35,28 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
     }
 
     return null;
+}
+
+/** Hämta och slå ihop shards parallellt (cards_0…cards_N eller descriptions_0…) */
+async function fetchShards(layerName: string, shardCount: number, updatedAt: any): Promise<any> {
+    if (!db) return null;
+    const refs = Array.from({ length: shardCount }, (_, i) => doc(db, 'aggregatedEvents', `${layerName}_${i}`));
+    const snaps = await Promise.all(refs.map((r) => getDoc(r)));
+
+    if (layerName === 'descriptions') {
+        // Slå ihop data-objekt
+        const data: Record<string, string> = {};
+        for (const s of snaps) {
+            if (s.exists()) Object.assign(data, (s.data() as any).data || {});
+        }
+        return { updatedAt, data };
+    }
+    // cards / destinations: slå ihop events-array
+    const events: any[] = [];
+    for (const s of snaps) {
+        if (s.exists()) events.push(...((s.data() as any).events || []));
+    }
+    return { updatedAt, events };
 }
 
 function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {

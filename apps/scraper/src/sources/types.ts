@@ -1,0 +1,177 @@
+/**
+ * Sources-arkitekturen — kontrakt
+ *
+ * En **Source** är en deklarativ beskrivning av en eventkälla (en sajt, ett API).
+ * En **Engine** är en återanvändbar funktion som extraherar `RawEvent[]` ur en sådan källa.
+ *
+ * Tanken: Istället för en handskriven scraper per sajt (~300 rader styck) beskriver
+ * vi källan i ~10 rader config och lämnar tunga lyftet (HTML/JSON-parsing) till motorn.
+ */
+
+/**
+ * Minimum-formatet som varje engine måste producera. Runnern tar hand om
+ * geocoding, kategorisering, bild-fallback och DB-skrivning.
+ */
+export interface RawEvent {
+    /** Stabil ID från källan, om finns (för dedup mellan körningar) */
+    externalId?: string;
+    title: string;
+    /** ISO-string ok — runnern konverterar */
+    startDate: Date;
+    endDate?: Date;
+    /** Publika eventsidan/biljettsidan */
+    url: string;
+
+    venueName?: string;
+    city?: string;
+    address?: string;
+    /** Om källan levererar färdiga koordinater (t.ex. JSON-LD med geo) */
+    coords?: [number, number];
+
+    description?: string;
+    imageUrl?: string;
+    organizer?: string;
+    /** Kategori om källan vet (annars klassificerar runnern via title+desc) */
+    category?: string;
+    price?: string;
+}
+
+/**
+ * Hur källan upptäcktes — för felsökning och re-discovery när sajten ändras.
+ *
+ * VIKTIGT: Vi sparar detta för att framtida-vi (eller framtida-Claude) snabbt
+ * ska kunna upprepa det probe-anrop som ursprungligen hittade endpointen,
+ * och därigenom kunna jämföra "vad ändrades" om scrapern slutar fungera.
+ */
+export interface SourceDiscovery {
+    /**
+     * Vilket probe-script eller manuell process hittade källan.
+     *   - 'probe-wp'         — automatisk WordPress REST-probe
+     *   - 'probe-sitevision' — automatisk SiteVision-probe
+     *   - 'probe-ical'       — automatisk iCal-feed-probe
+     *   - 'probe-jsonld'     — automatisk JSON-LD-probe
+     *   - 'probe-xhr'        — automatisk Next.js/Nuxt XHR-discovery
+     *   - 'manual'           — handgrävt av människa
+     *   - 'hint'             — tipsad av annan källa (länkad från annan kommun etc)
+     */
+    method: 'probe-wp' | 'probe-sitevision' | 'probe-ical' | 'probe-jsonld' | 'probe-xhr' | 'probe-sitemap' | 'probe-drupal' | 'manual' | 'hint';
+    /** Exakt URL som probaren träffade och som returnerade hit-svaret */
+    probeUrl: string;
+    /** ISO-datum (YYYY-MM-DD) när källan upptäcktes */
+    date: string;
+    /** Antal events som probet rapporterade vid upptäckt */
+    rawEventCount?: number;
+    /** Kommando för att köra om probet manuellt (för debug) */
+    rediscoverCommand?: string;
+    /** Fri anteckning om upptäckten — vad gjorde att probet hittade det här? */
+    notes?: string;
+}
+
+/**
+ * Mappning från källans råa fält → vårt RawEvent-format. Dokumenterar
+ * "var hittar jag titel/datum/plats i den här källan". Används vid felsökning
+ * när ett fält slutar fyllas i (har källan döpt om sina nycklar?).
+ *
+ * Värdena är JSON-path-liknande strängar, ex: `"d.startDate"`, `"acf.event_start"`.
+ * De är BARA dokumentation — runtime-mappningen sker i engines.
+ */
+export interface SourceFieldMap {
+    title?: string;
+    startDate?: string;
+    endDate?: string;
+    url?: string;
+    venueName?: string;
+    address?: string;
+    city?: string;
+    description?: string;
+    imageUrl?: string;
+    organizer?: string;
+    coords?: string;
+    /** Övriga fält som är värda att dokumentera */
+    other?: Record<string, string>;
+}
+
+/**
+ * Deklarativ beskrivning av en eventkälla.
+ */
+export interface Source {
+    /** Stabil identifierare: 'visit-stockholm', 'vaxjo-kommun' */
+    id: string;
+    /** Visas i UI som "Värd": 'Visit Stockholm', 'Växjö Kommun' */
+    hostName: string;
+    /** Geografisk region (kommunkod, län, eller 'national') — för täcknings-analys */
+    region?: string;
+    /** Vilken engine som driver källan */
+    engine: EngineName;
+    /** Engine-specifik konfig */
+    config: Record<string, any>;
+    /** Hur många dagar framåt vi hämtar (default: SCRAPE_WINDOW_DAYS env / 30) */
+    windowDays?: number;
+    /**
+     * Hur ofta källan behöver scrapas. Används av schemaläggaren för att
+     * sprida ut körningar — small kommun-sajter behöver inte köras dagligen.
+     *   - 'hourly'      — högfrekventa (Facebook, Tickster)
+     *   - 'daily'       — default, för stora ticketing-platforms
+     *   - 'every-3d'    — kommunsajter, måttligt uppdaterade
+     *   - 'weekly'      — sällan uppdaterade, små kommuner / turism
+     */
+    updateFrequency?: 'hourly' | 'daily' | 'every-3d' | 'weekly';
+    /** Engångskoll-flagga: hoppa över denna källa */
+    disabled?: boolean;
+    /** Fri anteckning till oss själva */
+    notes?: string;
+    /**
+     * ─── PROVENANCE ──────────────────────────────────────────────────────
+     * Allt här under är dokumentation för att kunna felsöka och återupptäcka
+     * källan när sajten ändras. Inget av det används vid runtime.
+     */
+    /** Hur källan upptäcktes och hur man kör om probet */
+    discovery?: SourceDiscovery;
+    /** Var i källans struktur respektive RawEvent-fält kommer ifrån */
+    fieldMap?: SourceFieldMap;
+    /** En känd-bra event-URL för regressions-test */
+    sampleEventUrl?: string;
+    /** Tröskel för larm — sjunker antalet under detta kan något vara trasigt */
+    expectedMinEvents?: number;
+    /** ISO-datum (YYYY-MM-DD) när källan senast bevisat fungerade i prod */
+    lastVerified?: string;
+    /** Kända fallgropar — pagination, login, rate limits, malformed JSON etc. */
+    troubleshooting?: string[];
+}
+
+export type EngineName = 'json-ld' | 'wp-rest' | 'ical' | 'api' | 'sitevision' | 'xhr-discovery' | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap';
+
+/**
+ * Skickas in i engine vid körning — tid, loggning, fetch.
+ */
+export interface EngineContext {
+    /** Inklusive dagens datum, kl 00:00 lokalt */
+    windowStart: Date;
+    /** Exklusive — windowDays dagar framåt */
+    windowEnd: Date;
+    log: (msg: string) => void;
+    /** Avbryt om den här tickar — för timeouts */
+    signal?: AbortSignal;
+}
+
+/**
+ * Signaturen för en engine. Den får sin egen config + kontext och
+ * returnerar ofiltrerade RawEvents — datumfilter, dedup etc gör runnern.
+ */
+export type Engine = (config: any, ctx: EngineContext) => Promise<RawEvent[]>;
+
+/**
+ * Resultat efter att runnern processat en källa — för observability.
+ */
+export interface SourceRunResult {
+    sourceId: string;
+    durationMs: number;
+    found: number;          // hur många RawEvents engine returnerade
+    saved: number;          // hur många som faktiskt skrevs till DB
+    skipped: {
+        duplicate: number;
+        outsideWindow: number;
+        invalid: number;
+    };
+    errors: string[];
+}

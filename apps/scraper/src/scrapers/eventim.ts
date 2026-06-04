@@ -11,10 +11,11 @@
  * Obs: Individuella event-sidor och artist-sidor blockeras av Akamai WAF.
  *      Kategori-sidorna är fritt tillgängliga och innehåller all nödvändig data.
  */
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
+import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE WINDOW: 30 dagar ---
 const now = new Date();
@@ -67,6 +68,8 @@ interface EventimItem {
     locationName: string;
     locationCity: string;
     eventUrl: string;
+    image?: string;
+    description?: string;
 }
 
 async function extractCategoryItems(browser: Browser, catUrl: string): Promise<EventimItem[]> {
@@ -89,6 +92,7 @@ async function extractCategoryItems(browser: Browser, catUrl: string): Promise<E
             const results: {
                 name: string; startDate: string; endDate?: string;
                 locationName: string; locationCity: string; eventUrl: string;
+                image?: string; description?: string;
             }[] = [];
 
             document.querySelectorAll('script[type="application/ld+json"]').forEach(scriptEl => {
@@ -110,6 +114,8 @@ async function extractCategoryItems(browser: Browser, catUrl: string): Promise<E
 
                         results.push({
                             name: item.name,
+                            image: item.image ? (typeof item.image === 'string' ? item.image : (Array.isArray(item.image) ? item.image[0] : item.image?.url || '')) : '',
+                            description: item.description ? String(item.description).trim() : '',
                             startDate: item.startDate || '',
                             endDate: item.endDate || undefined,
                             locationName: item.location?.name || '',
@@ -134,6 +140,7 @@ export async function scrapeEventim() {
     const seenUrls = new Set<string>(); // cross-category dedup
 
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    const googlePage: Page = await browser.newPage();
     try {
         for (const [catUrl, categoryHint] of CATEGORY_PAGES) {
             console.log(`\n[Eventim] ${catUrl}`);
@@ -199,9 +206,9 @@ export async function scrapeEventim() {
                         hostName: 'Eventim',
                         category,
                         createdAt: new Date(),
-                        coverImage: null,
+                        coverImage: item.image || await searchGoogleImage(googlePage, item.name) || null,
                         price: '',
-                        description: '',
+                        description: item.description || '',
                         isLocationVerified: coords !== null,
                     });
                     totalSaved++;
