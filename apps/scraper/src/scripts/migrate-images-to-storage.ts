@@ -12,6 +12,11 @@
  *   npx ts-node src/scripts/migrate-images-to-storage.ts --apply
  *   npx ts-node src/scripts/migrate-images-to-storage.ts --apply --host=Facebook
  *   npx ts-node src/scripts/migrate-images-to-storage.ts --apply --limit=100
+ *   npx ts-node src/scripts/migrate-images-to-storage.ts --apply --max-age=7
+ *
+ * --max-age=N filtrerar på createdAt — bara bilder scrapade senaste N dagar.
+ * Användbart för att fokusera på fbcdn-URL:er som fortfarande är levande
+ * (FB-bilder dör efter ~7d).
  */
 
 import path from 'path';
@@ -39,16 +44,23 @@ async function main() {
 
     const limit = args.limit ? parseInt(args.limit, 10) : 999999;
     const hostFilter = args.host;
+    const maxAgeDays = args['max-age'] ? parseInt(args['max-age'], 10) : null;
     const params: any[] = [];
     let where = `hidden = 0 AND coverImage IS NOT NULL AND coverImage != ''
                  AND coverImage NOT LIKE 'https://storage.googleapis.com/vadkul-f2cb2%'
                  AND firestoreId IS NOT NULL`;
     if (hostFilter) { where += ' AND hostName = ?'; params.push(hostFilter); }
+    if (maxAgeDays !== null) {
+        const cutoff = new Date(Date.now() - maxAgeDays * 24 * 3600 * 1000).toISOString();
+        where += ' AND createdAt >= ?';
+        params.push(cutoff);
+        console.log(`📅 Max-age: ${maxAgeDays} dagar (createdAt >= ${cutoff})`);
+    }
 
     const rows: Row[] = sqliteDb.prepare(`
         SELECT url, title, firestoreId, coverImage, hostName FROM link_events
         WHERE ${where}
-        ORDER BY time DESC
+        ORDER BY createdAt DESC
         LIMIT ?
     `).all(...params, limit) as Row[];
 

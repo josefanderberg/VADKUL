@@ -79,6 +79,18 @@ fi
 END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
+# ─── Migrate FB-bilder till Storage (innan fbcdn-URL:er expirar efter 7d) ───
+# Räddar bilder scrapade senaste 7 dagar — äldre är troligen redan trasiga.
+# Filtrerar på createdAt, så bara nyligen scrapade har en chans att räddas.
+echo "" >> "$LOG_FILE"
+echo "── MIGRATE IMAGES → STORAGE ──" >> "$LOG_FILE"
+if npm run migrate-images -- --apply --max-age=7 >> "$LOG_FILE" 2>&1; then
+    MIGRATED_COUNT="$(grep -oE 'TOTAL: [0-9]+/' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+' | head -1)"
+    echo "Migration OK (migrerade=${MIGRATED_COUNT:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Image migration misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── K4: LLM-enrichment (Ollama) ────────────────────────────────────────────
 echo "" >> "$LOG_FILE"
 echo "── K4: LLM-ENRICHMENT ──" >> "$LOG_FILE"
