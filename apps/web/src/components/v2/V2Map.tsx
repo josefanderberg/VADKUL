@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -69,56 +69,94 @@ interface V2MapProps {
     onCenterChange?: (lat: number, lng: number) => void;
 }
 
-export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false, onCenterChange }: V2MapProps) {
+// ─── Needle icon (används bara under zoom-övergången) ───────────────────────
+const needleCache = new Map<string, L.DivIcon>();
 
-    // Cache icon objects — Leaflet re-creates DOM for every new icon reference.
-    // Key: "selected:saved:discarded:count" → stable object across renders.
-    const iconCache = useRef<Map<string, L.DivIcon>>(new Map());
+function createNeedleIcon(isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1): L.DivIcon {
+    const key = `${isSelected}:${isSaved}:${isDiscarded}:${count}`;
+    const cached = needleCache.get(key);
+    if (cached) return cached;
 
-    const createCustomIcon = (isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1, category?: EventCategoryType) => {
-        const cacheKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}:${category ?? 'other'}`;
-        const cached = iconCache.current.get(cacheKey);
-        if (cached) return cached;
+    const dotColor = isSelected ? '#006AA7' : isSaved ? '#5BA3CC' : '#1e293b';
+    const lineColor = isSelected ? '#006AA7' : isSaved ? '#5BA3CC' : '#475569';
+    const dotSize = isSelected ? 10 : isSaved ? 8 : 7;
+    const lineH = isSelected ? 28 : 22;
+    const opacity = isDiscarded ? '0.3' : '1';
 
-        const pinBg = isSaved ? '#ffffff' : '#1e293b';
-        const pinBorder = isSelected
-            ? '3px solid #006AA7'
-            : isSaved
-            ? '2px solid #5BA3CC'
-            : '2px solid rgba(255,255,255,0.25)';
+    const badgeHtml = count > 1
+        ? `<div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);min-width:14px;height:14px;padding:0 2px;background:#006AA7;color:#fff;font-size:8px;font-weight:700;border-radius:999px;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;line-height:1;box-sizing:border-box;">${count > 99 ? '99+' : count}</div>`
+        : '';
 
-        const shadowFilter = isSelected
-            ? 'drop-shadow(0 6px 24px rgba(0,0,0,0.35)) drop-shadow(0 2px 6px rgba(0,0,0,0.2))'
-            : isSaved
-            ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.2))'
-            : 'drop-shadow(0 4px 12px rgba(0,0,0,0.18)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))';
+    const icon = L.divIcon({
+        className: 'custom-marker-needle',
+        html: `
+        <div style="display:flex;flex-direction:column;align-items:center;opacity:${opacity};">
+            <div style="position:relative;">
+                <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotColor};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+                ${badgeHtml}
+            </div>
+            <div style="width:2px;height:${lineH}px;background:${lineColor};border-radius:1px;opacity:0.8;"></div>
+        </div>`,
+        iconSize: [dotSize, dotSize + lineH],
+        iconAnchor: [Math.ceil(dotSize / 2), dotSize + lineH],
+    });
 
-        const scaleStyle = isSelected ? 'transform: scale(1.25) translateY(-10px);' : '';
-        const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
+    needleCache.set(key, icon);
+    return icon;
+}
 
-        const catKey = category && EVENT_CATEGORIES[category] ? category : 'other';
-        const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
+// ─── Full pin-ikon (standard-utseende med emoji) ─────────────────────────────
+const pinCache = new Map<string, L.DivIcon>();
 
-        const countBadge = count > 1
-            ? `<div style="position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;background:#006AA7;color:#fff;font-size:10px;font-weight:700;border-radius:999px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;line-height:1;">${count > 99 ? '99+' : count}</div>`
-            : (isSaved ? '<div style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#5BA3CC;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></div>' : '');
+function createPinIcon(isSelected: boolean, isSaved: boolean, isDiscarded: boolean, count: number = 1, category?: EventCategoryType): L.DivIcon {
+    const cacheKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}:${category ?? 'other'}`;
+    const cached = pinCache.get(cacheKey);
+    if (cached) return cached;
 
-        const icon = L.divIcon({
-            className: 'custom-marker-pin',
-            html: `
+    const pinBg = isSaved ? '#ffffff' : '#1e293b';
+    const pinBorder = isSelected
+        ? '3px solid #006AA7'
+        : isSaved
+        ? '2px solid #5BA3CC'
+        : '2px solid rgba(255,255,255,0.25)';
+
+    const shadowFilter = isSelected
+        ? 'drop-shadow(0 6px 24px rgba(0,0,0,0.35)) drop-shadow(0 2px 6px rgba(0,0,0,0.2))'
+        : isSaved
+        ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.2))'
+        : 'drop-shadow(0 4px 12px rgba(0,0,0,0.18)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))';
+
+    const scaleStyle = isSelected ? 'transform: scale(1.25) translateY(-10px);' : '';
+    const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
+
+    const catKey = category && EVENT_CATEGORIES[category] ? category : 'other';
+    const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
+
+    const countBadge = count > 1
+        ? `<div style="position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;background:#006AA7;color:#fff;font-size:10px;font-weight:700;border-radius:999px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;line-height:1;">${count > 99 ? '99+' : count}</div>`
+        : (isSaved ? '<div style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#5BA3CC;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></div>' : '');
+
+    const icon = L.divIcon({
+        className: 'custom-marker-pin',
+        html: `
         <div style="position:relative;transition:transform 0.2s;${scaleStyle}${opacityStyle}filter:${shadowFilter};">
             <div style="width:44px;height:44px;background:${pinBg};border:${pinBorder};border-radius:50% 50% 0 50%;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
                 <div style="transform:rotate(-45deg);font-size:22px;line-height:1;position:relative;z-index:1;">${emoji}</div>
             </div>
             ${countBadge}
-        </div>
-      `,
-            iconSize: [44, 60],
-            iconAnchor: [22, 55],
-        });
-        iconCache.current.set(cacheKey, icon);
-        return icon;
-    };
+        </div>`,
+        iconSize: [44, 60],
+        iconAnchor: [22, 55],
+    });
+
+    pinCache.set(cacheKey, icon);
+    return icon;
+}
+
+export default function V2Map({ events, selectedEvent, onSelectEvent, savedEventIds = new Set(), discardedEventIds = new Set(), cardExpanded = false, onCenterChange }: V2MapProps) {
+
+    // isZooming byts under zoom-övergången → nål-ikoner används istället för de tunga pin-ikonerna.
+    const [isZooming, setIsZooming] = useState(false);
 
     // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
     const groups = useMemo(() => {
@@ -131,6 +169,9 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
         }
         return map;
     }, [events]);
+
+    const onZoomStart = useCallback(() => setIsZooming(true), []);
+    const onZoomEnd = useCallback(() => setIsZooming(false), []);
 
     // Default to Växjö
     const initialCenter: [number, number] = [56.8777, 14.8091];
@@ -150,7 +191,12 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                 
                 <MapController selectedEvent={selectedEvent} cardExpanded={cardExpanded} />
 
-                <MapEvents onMapClick={() => onSelectEvent(null)} onCenterChange={onCenterChange} />
+                <MapEvents
+                    onMapClick={() => onSelectEvent(null)}
+                    onCenterChange={onCenterChange}
+                    onZoomStart={onZoomStart}
+                    onZoomEnd={onZoomEnd}
+                />
 
                 {Array.from(groups.values()).map(group => {
                     const count = group.length;
@@ -166,11 +212,15 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
                     const isSaved = group.some(e => savedEventIds.has(e.id));
                     const isDiscarded = group.every(e => discardedEventIds.has(e.id));
 
+                    const icon = isZooming
+                        ? createNeedleIcon(isSelected, isSaved, isDiscarded, count)
+                        : createPinIcon(isSelected, isSaved, isDiscarded, count, rep.category);
+
                     return (
                         <Marker
                             key={rep.id}
                             position={[rep.lat!, rep.lng!]}
-                            icon={createCustomIcon(isSelected, isSaved, isDiscarded, count, rep.category)}
+                            icon={icon}
                             zIndexOffset={isSelected ? 1000 : (isSaved ? 500 : (isDiscarded ? -100 : 0))}
                             eventHandlers={{
                                 click: (e) => {
@@ -186,7 +236,17 @@ export default function V2Map({ events, selectedEvent, onSelectEvent, savedEvent
     );
 }
 
-function MapEvents({ onMapClick, onCenterChange }: { onMapClick: () => void; onCenterChange?: (lat: number, lng: number) => void }) {
+function MapEvents({
+    onMapClick,
+    onCenterChange,
+    onZoomStart,
+    onZoomEnd,
+}: {
+    onMapClick: () => void;
+    onCenterChange?: (lat: number, lng: number) => void;
+    onZoomStart: () => void;
+    onZoomEnd: () => void;
+}) {
     const map = useMapEvents({
         click: () => onMapClick(),
         // moveend fires once when panning stops — not 60×/sec like 'move'.
@@ -196,6 +256,8 @@ function MapEvents({ onMapClick, onCenterChange }: { onMapClick: () => void; onC
             const c = map.getCenter();
             onCenterChange(c.lat, c.lng);
         },
+        zoomstart: () => onZoomStart(),
+        zoomend: () => onZoomEnd(),
     });
     // Rapportera initialt center direkt så parent har en lat/lng även innan första rörelsen.
     useEffect(() => {

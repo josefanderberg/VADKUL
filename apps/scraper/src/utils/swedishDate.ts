@@ -173,6 +173,27 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
         if (d) candidates.push(d);
     }
 
+    // 2b. "MONTH DD, YYYY [HH:MM:SS [fm/em]]" — amerikansk ordning, ofta hos
+    // sajter som använder Tribe Events Calendar eller liknande engelska teman
+    // även med svenska månadsnamn. Ex: "juni 6, 2026 10:00:00 fm CEST".
+    const usOrderRe = new RegExp(
+        `(${MONTH_PATTERN})\\s+(\\d{1,2}),?\\s*(\\d{4})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2})(?::(\\d{2}))?\\s*(fm|em)?)?`,
+        'g',
+    );
+    let u: RegExpExecArray | null;
+    while ((u = usOrderRe.exec(clean)) !== null) {
+        let hour = u[4] ? parseInt(u[4], 10) : 0;
+        const minute = u[5] ? parseInt(u[5], 10) : 0;
+        const ampm = u[7];
+        if (ampm === 'em' && hour < 12) hour += 12;
+        if (ampm === 'fm' && hour === 12) hour = 0;
+        const d = buildDate(
+            parseInt(u[2], 10), MONTH_MAP[u[1]], parseInt(u[3], 10),
+            hour, minute,
+        );
+        if (d) candidates.push(d);
+    }
+
     // 3. "DD MONTH [HH:MM]" utan år — gissa år framåt
     const noYearRe = new RegExp(
         `(\\d{1,2})\\s+(${MONTH_PATTERN})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2}))?`,

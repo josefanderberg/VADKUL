@@ -56,7 +56,15 @@ export async function closeSitemapBrowser(): Promise<void> {
 }
 
 export interface SitemapConfig {
+    /**
+     * URL till sitemap.xml ELLER en HTML-katalog-sida.
+     * När `isHtmlCatalog: true`, behandlas sitemapUrl som HTML och vi extraherar
+     * <a href>-länkar som matchar urlPatterns. Användbart för sajter som inte
+     * exponerar individuella event-URLs i sin XML-sitemap (Visit Lund m.fl.).
+     */
     sitemapUrl: string;
+    /** Om true: behandla sitemapUrl som HTML-katalog, inte XML-sitemap. */
+    isHtmlCatalog?: boolean;
     urlPatterns: RegExp[];
     urlBlacklist?: RegExp[];
     defaultCity?: string;
@@ -326,6 +334,29 @@ function isSitemapIndex(xml: string): boolean {
  * `lastmod` desc — så att nyligen modifierade events hämtas först. När 90%
  * av URL:erna är historiska sparar det enorm tid.
  */
+/**
+ * Plocka ut <a href>-länkar ur en HTML-katalog-sida som ofta listar event-
+ * detaljsidor som länkar (utan att exponera dem i sitemap.xml).
+ */
+function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
+    const out: SitemapEntry[] = [];
+    const re = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
+    let m: RegExpExecArray | null;
+    const seen = new Set<string>();
+    while ((m = re.exec(html)) !== null) {
+        let href = m[1].trim();
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) continue;
+        // Resolva mot baseUrl
+        try {
+            href = new URL(href, baseUrl).toString();
+        } catch { continue; }
+        if (seen.has(href)) continue;
+        seen.add(href);
+        out.push({ url: href });
+    }
+    return out;
+}
+
 async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<SitemapEntry[]> {
     const root = await fetchText(cfg.sitemapUrl, cfg, ctx.signal);
     if (!root) {
@@ -335,7 +366,10 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
 
     let candidates: SitemapEntry[] = [];
 
-    if (isSitemapIndex(root)) {
+    if (cfg.isHtmlCatalog) {
+        candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
+        ctx.log(`html-katalog: ${candidates.length} länkar hittade`);
+    } else if (isSitemapIndex(root)) {
         const subs = extractEntries(root);
         // Prioritera sub-sitemaps som troligen innehåller events
         subs.sort((a, b) => {
