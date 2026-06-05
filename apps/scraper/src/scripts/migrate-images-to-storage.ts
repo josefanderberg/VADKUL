@@ -27,9 +27,13 @@ import { uploadEventImage, isOurStorageUrl, uploadStats, resetUploadStats } from
 const args = (() => {
     const out: any = {};
     for (const a of process.argv.slice(2)) {
-        if (a === '--apply') out.apply = true;
         const m = a.match(/^--([^=]+)=(.+)$/);
-        if (m) out[m[1]] = m[2];
+        if (m) {
+            out[m[1]] = m[2];
+            continue;
+        }
+        // Boolean flags utan =value
+        if (a.startsWith('--')) out[a.slice(2)] = true;
     }
     return out;
 })();
