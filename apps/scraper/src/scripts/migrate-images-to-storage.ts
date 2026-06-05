@@ -22,7 +22,7 @@
 import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
-import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
+import { uploadEventImage, isOurStorageUrl, uploadStats, resetUploadStats } from '../utils/storageHelper';
 
 const args = (() => {
     const out: any = {};
@@ -72,6 +72,7 @@ async function main() {
     `).all(...params, limit) as Row[];
 
     console.log(`Kandidater: ${rows.length}\n`);
+    resetUploadStats();
 
     const stats: Record<string, { tried: number; ok: number; failed: number }> = {};
     let totalOk = 0, totalFailed = 0;
@@ -121,6 +122,10 @@ async function main() {
         console.log(`  ${h.padEnd(28)} tried=${String(s.tried).padStart(4)}  ok=${String(s.ok).padStart(4)}  failed=${s.failed}`);
     }
     console.log(`\nTOTAL: ${totalOk}/${rows.length} migrerade, ${totalFailed} misslyckade  ${args.apply ? '' : '(dry-run)'}`);
+    console.log('\n=== Upload-stats (var dog försöken) ===');
+    for (const [k, v] of Object.entries(uploadStats)) {
+        if (v > 0) console.log(`  ${k.padEnd(20)} ${v}`);
+    }
     process.exit(0);
 }
 

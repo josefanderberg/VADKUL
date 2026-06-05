@@ -46,12 +46,29 @@ function publicUrlFor(path: string): string {
  * Returnerar URL till bilden i vår storage. Om den redan finns används den.
  * Om upload misslyckas: returnerar null så caller kan falla tillbaka på remote-URL.
  */
+/** Global stat-räknare för debugging. Resetas mellan körningar via resetUploadStats(). */
+export const uploadStats = {
+    noBucket: 0,
+    badUrl: 0,
+    alreadyExists: 0,
+    fetchFailed: 0,        // status !ok
+    fetchAborted: 0,       // timeout/abort
+    fetchError: 0,         // andra exceptions
+    tooLarge: 0,           // >MAX_BYTES
+    tooSmall: 0,           // <1KB
+    storageError: 0,
+    ok: 0,
+};
+export function resetUploadStats() {
+    Object.keys(uploadStats).forEach(k => { (uploadStats as any)[k] = 0; });
+}
+
 export async function uploadEventImage(
     remoteUrl: string,
     eventUrl: string,
 ): Promise<string | null> {
-    if (!bucket) return null;
-    if (!remoteUrl || !remoteUrl.startsWith('http')) return null;
+    if (!bucket) { uploadStats.noBucket++; return null; }
+    if (!remoteUrl || !remoteUrl.startsWith('http')) { uploadStats.badUrl++; return null; }
 
     const hash = hashUrl(eventUrl);
 
@@ -60,7 +77,7 @@ export async function uploadEventImage(
         const path = `${STORAGE_FOLDER}/${hash}.${ext}`;
         try {
             const [exists] = await bucket.file(path).exists();
-            if (exists) return publicUrlFor(path);
+            if (exists) { uploadStats.alreadyExists++; return publicUrlFor(path); }
         } catch { /* ignore */ }
     }
 
@@ -75,13 +92,15 @@ export async function uploadEventImage(
             redirect: 'follow',
             signal: ac.signal,
         });
-        if (!res.ok) return null;
+        if (!res.ok) { uploadStats.fetchFailed++; return null; }
         contentType = res.headers.get('content-type') ?? undefined;
         const ab = await res.arrayBuffer();
-        if (ab.byteLength > MAX_BYTES) return null;
-        if (ab.byteLength < 1000) return null; // <1KB är förmodligen en placeholder/error
+        if (ab.byteLength > MAX_BYTES) { uploadStats.tooLarge++; return null; }
+        if (ab.byteLength < 1000) { uploadStats.tooSmall++; return null; }
         buf = Buffer.from(ab);
-    } catch {
+    } catch (e) {
+        if ((e as Error).name === 'AbortError') uploadStats.fetchAborted++;
+        else uploadStats.fetchError++;
         return null;
     } finally {
         clearTimeout(t);
@@ -105,8 +124,10 @@ export async function uploadEventImage(
             resumable: false,
         });
         await file.makePublic();
+        uploadStats.ok++;
         return publicUrlFor(path);
     } catch (e) {
+        uploadStats.storageError++;
         console.error(`[Storage] upload failed for ${eventUrl.slice(0, 60)}: ${(e as Error).message}`);
         return null;
     }
