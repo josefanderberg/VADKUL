@@ -1,9 +1,35 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin } from 'lucide-react';
+
+// Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
+const DEFAULT_EVENT_MS = 60 * 60 * 1000;
+// Hur långt fram i tiden "Snart" gäller.
+const SOON_WINDOW_MS = 60 * 60 * 1000;
+const NEARBY_PAGE_SIZE = 10;
+
+type EventStatus = 'past' | 'ongoing' | 'soon' | 'later';
+
+const getEventStatus = (time: Date, now: number): EventStatus => {
+    const start = time.getTime();
+    const end = start + DEFAULT_EVENT_MS;
+    if (now >= end) return 'past';
+    if (now >= start) return 'ongoing';
+    if (start - now <= SOON_WINDOW_MS) return 'soon';
+    return 'later';
+};
+
+const formatDistanceKm = (km: number): string => {
+    if (km < 1) {
+        const m = Math.max(10, Math.round((km * 1000) / 10) * 10);
+        return `${m} m`;
+    }
+    if (km < 10) return `${km.toFixed(1)} km`;
+    return `${Math.round(km)} km`;
+};
 
 // Haversine-avstånd i km mellan två punkter
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -81,6 +107,82 @@ const getDayLabel = (offset: number) => {
     return date.toLocaleDateString('sv-SE', { weekday: 'long' }).replace(/^\w/, (c) => c.toUpperCase());
 };
 
+interface NearbyEventsListProps {
+    items: { evt: LinkEvent; distanceKm: number | null }[];
+    totalCount: number;
+    now: number;
+    onSelect: (evt: LinkEvent) => void;
+    onLoadMore: () => void;
+}
+
+function StatusBadge({ status }: { status: EventStatus }) {
+    if (status === 'later') return null;
+    const cfg = {
+        ongoing: { label: 'Pågår', cls: 'bg-emerald-500 text-white' },
+        soon: { label: 'Snart', cls: 'bg-amber-500 text-white' },
+        past: { label: 'Har varit', cls: 'bg-slate-300 text-slate-700' },
+    }[status];
+    return (
+        <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${cfg.cls}`}>
+            {cfg.label}
+        </span>
+    );
+}
+
+function NearbyEventsList({ items, totalCount, now, onSelect, onLoadMore }: NearbyEventsListProps) {
+    return (
+        <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
+            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Fler event i närheten · {totalCount}
+                </span>
+            </div>
+            <ul className="divide-y divide-border">
+                {items.map(({ evt, distanceKm }) => {
+                    const status = getEventStatus(evt.time, now);
+                    return (
+                        <li key={evt.id}>
+                            <button
+                                type="button"
+                                onClick={() => onSelect(evt)}
+                                className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-black text-sm text-black dark:text-white truncate">
+                                            {evt.title}
+                                        </h4>
+                                        <StatusBadge status={status} />
+                                    </div>
+                                    <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        <span className="inline-flex items-center gap-1 shrink-0">
+                                            <MapPin size={11} className="text-primary" />
+                                            {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
+                                        </span>
+                                        <span className="truncate">{evt.locationName}</span>
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-slate-400 shrink-0" />
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+            {items.length < totalCount && (
+                <div className="px-4 md:px-6 py-3 flex justify-center border-t border-border">
+                    <button
+                        type="button"
+                        onClick={onLoadMore}
+                        className="text-[11px] font-black uppercase tracking-widest text-[#006AA7] hover:text-[#005590] px-4 py-2"
+                    >
+                        Visa fler
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface V2SwipeableCardProps {
     events: LinkEvent[];
     selectedEvent: LinkEvent | null;
@@ -98,6 +200,9 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
     const [visitedEventIds, setVisitedEventIds] = useState<Set<string>>(new Set());
+    const [nearbyVisibleCount, setNearbyVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    const [now, setNow] = useState(() => Date.now());
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     // Browse-historik: event-id:n vi tittade på innan vi gick vidare. Pushas vid Nästa/swipe/sekventiell-knapp.
     const [historyStack, setHistoryStack] = useState<string[]>([]);
     const isDragging = useRef(false);
@@ -119,6 +224,40 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setAnchorId(selectedEvent.id);
         setVisitedEventIds(new Set());
     }, [selectedEvent]);
+
+    // Reset pagination + scrolla tillbaka till toppen när vi byter event.
+    useEffect(() => {
+        setNearbyVisibleCount(NEARBY_PAGE_SIZE);
+        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+    }, [selectedEvent?.id]);
+
+    // Uppdatera "nu" var 30:e sekund så statusbadgar håller sig fräscha.
+    useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 30_000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Sortera övriga event efter avstånd från valt event (närmst först).
+    const nearbyEvents = useMemo(() => {
+        if (!selectedEvent) return [] as { evt: LinkEvent; distanceKm: number | null }[];
+        const anchorHasCoords = hasValidCoords(selectedEvent);
+        const list = events
+            .filter(e => e.id !== selectedEvent.id && !discardedEventIds.has(e.id))
+            .map(evt => {
+                const distanceKm = anchorHasCoords && hasValidCoords(evt)
+                    ? haversineKm(selectedEvent.lat, selectedEvent.lng, evt.lat, evt.lng)
+                    : null;
+                return { evt, distanceKm };
+            });
+        list.sort((a, b) => {
+            // Saknar koords → längst bak. Annars stigande avstånd.
+            if (a.distanceKm === null && b.distanceKm === null) return 0;
+            if (a.distanceKm === null) return 1;
+            if (b.distanceKm === null) return -1;
+            return a.distanceKm - b.distanceKm;
+        });
+        return list;
+    }, [events, selectedEvent, discardedEventIds]);
 
     /**
      * Plocka nästa event utifrån ankaret (spiral utåt i avstånd).
@@ -259,14 +398,13 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     return (
         <>
         {/* Nedre rad — ALLTID synlig (dagväljare + antal till vänster, Nästa till höger om kort finns) */}
-        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: selectedEvent ? undefined : '50vh' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '50vh' }}>
             <div className="w-full max-w-4xl flex justify-between items-end gap-2 mb-4">
 
                 {/* Vänster: antal ovanför Idag-knappen */}
-                <div className="flex flex-col items-start gap-0.5 pointer-events-auto">
-                    <span className="text-[11px] font-black text-white tabular-nums pl-1 drop-shadow"
-                          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-                        {events.length} event
+                <div className="flex flex-col items-start gap-1 pointer-events-auto">
+                    <span className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full shadow-lg border border-white/50">
+                        {events.length}
                     </span>
                     <div className="flex items-center gap-2">
                         <button
@@ -339,6 +477,7 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
 
                 {/* Scrollable card — max-height + overflow-y on same element */}
                 <div
+                    ref={scrollContainerRef}
                     className={`w-full shadow-[0_-8px_32px_rgba(0,0,0,0.18),0_-2px_8px_rgba(0,0,0,0.07)] rounded-t-3xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
                     style={{ maxHeight: 'calc(100svh - 160px)' }}
                 >
@@ -348,6 +487,15 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                         showFullAddress
                         onRevealStepChange={step => onCardExpandedChange?.(step > 0)}
                     />
+                    {nearbyEvents.length > 0 && (
+                        <NearbyEventsList
+                            items={nearbyEvents.slice(0, nearbyVisibleCount)}
+                            totalCount={nearbyEvents.length}
+                            now={now}
+                            onSelect={evt => onSelectEvent(evt)}
+                            onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
+                        />
+                    )}
                 </div>
             </div>
             )}
