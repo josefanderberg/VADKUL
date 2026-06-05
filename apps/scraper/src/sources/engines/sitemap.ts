@@ -175,6 +175,14 @@ const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     /^\d+ parkeringar.*avst[äa]ngd/i,
     /trafikst[öo]rning/i,
     /v[äa]garbete/i,
+    // Kommun-sajt site-namn fångas ofta som JSON-LD WebPage-titel
+    /\bkommuns?\s+webbplats\b/i,
+    /\bofficiella?\s+webbplats\b/i,
+    // Trafikinformation i titel (specifika mönster — bredare "avstängd" är
+    // för risky då legitima event kan nämna det)
+    /^trafikstart/i,
+    /^\d+\s+(parkering|p-plats|p-rute)/i,
+    /\bv[äa]g(en|s|arna)?\s+avst[äa]ngd/i,
 ];
 
 const DEFAULT_MAX_URLS = 300;
@@ -486,6 +494,9 @@ function extractFromHtml(html: string, url: string, defaultCity?: string): RawEv
     for (const node of nodes) {
         const ev = jsonLdToRawEvent(node, url);
         if (ev) {
+            // Title-blacklist gäller oavsett källa — JSON-LD-events kan också
+            // ha junk-titlar ("Startsida", "Nyköpings kommuns webbplats" m.fl.)
+            if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(ev.title))) return null;
             if (!ev.city && defaultCity) ev.city = defaultCity;
             return ev;
         }
