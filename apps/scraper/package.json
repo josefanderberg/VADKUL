@@ -29,6 +29,7 @@
     "migrate-images": "ts-node src/scripts/migrate-images-to-storage.ts",
     "sync-storage-urls": "ts-node src/scripts/sync-storage-urls.ts",
     "hide-foreign": "ts-node src/scripts/hide-foreign-misclassified.ts",
+    "audit-events": "ts-node src/scripts/audit-events.ts",
     "cleanup-images": "ts-node src/scripts/cleanup-storage-images.ts",
     "setup-telegram": "ts-node src/scripts/setup-telegram.ts",
     "health": "ts-node src/scripts/health.ts",

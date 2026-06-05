@@ -125,6 +125,18 @@ else
     echo "⚠️ K4 misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── K8: AI-audit av events (qwen3:8b granskar nya events) ─────────────────
+# Auto-hide junk-events med hög confidence ELLER markerade som ej-Sverige.
+# Bara nya events (--only-new) för att inte slösa GPU. Limit för säkerhet.
+echo "" >> "$LOG_FILE"
+echo "── K8: AI-AUDIT ──" >> "$LOG_FILE"
+if npm run audit-events -- --apply --only-new --auto-hide-junk --limit=500 >> "$LOG_FILE" 2>&1; then
+    AUDIT_HIDDEN="$(grep -oE 'hidden:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "AI-audit OK (auto-gömda=${AUDIT_HIDDEN:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ AI-audit misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
 SAVED_COUNT="$(grep -cE '✅ Saved:|✅ Sparat:|✅.*Sparade' "$LOG_FILE" || echo 0)"
 SKIPPED_COUNT="$(grep -cE 'already exists:|Event already exists:' "$LOG_FILE" || echo 0)"
