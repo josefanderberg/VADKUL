@@ -17,6 +17,7 @@ import { runSources, summarize, ENGINES, scheduledForToday, summarizeSchedule } 
 import { SOURCES, filterSources } from '../sources/registry';
 import { closeJsonLdBrowser } from '../sources/engines/json-ld';
 import { closeXhrDiscoveryBrowser } from '../sources/engines/xhr-discovery';
+import { closeSitemapBrowser } from '../sources/engines/sitemap';
 
 function parseArgs(): { id?: string; region?: string; engine?: string; concurrency?: number; dryRun?: boolean; respectSchedule?: boolean } {
     const out: any = {};
@@ -68,6 +69,7 @@ async function main() {
     console.log(`Done. Saved ${totalSaved} new events.\n`);
     await closeJsonLdBrowser();
     await closeXhrDiscoveryBrowser();
+    await closeSitemapBrowser();
     process.exit(0);
 }
 

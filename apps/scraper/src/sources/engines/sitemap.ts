@@ -28,12 +28,32 @@
 import * as cheerio from 'cheerio';
 import * as zlib from 'zlib';
 import { promisify } from 'util';
+import type { Browser } from 'puppeteer';
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
 
 const gunzip = promisify(zlib.gunzip);
+
+/**
+ * Lazy-loaded Puppeteer-browser för SPA-sajter. Delas av alla sitemap-källor
+ * med useBrowser=true i denna process. Sparar startup-tid + minne.
+ */
+let _sitemapBrowser: Browser | null = null;
+async function getSitemapBrowser(): Promise<Browser> {
+    if (_sitemapBrowser) return _sitemapBrowser;
+    const puppeteer = await import('puppeteer');
+    _sitemapBrowser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    });
+    return _sitemapBrowser;
+}
+
+export async function closeSitemapBrowser(): Promise<void> {
+    if (_sitemapBrowser) { await _sitemapBrowser.close(); _sitemapBrowser = null; }
+}
 
 export interface SitemapConfig {
     sitemapUrl: string;
@@ -62,6 +82,17 @@ export interface SitemapConfig {
      *   urlDateRegex: /\/(?<year>\d{4})\/(?<month>\w+)\//
      */
     urlDateRegex?: RegExp;
+    /**
+     * Använd Puppeteer för att hämta detalj-sidor. Krävs för SPAer där
+     * event-datum/titel renderas av JavaScript (Visit Dalarna, Falkenberg,
+     * Hedemora m.fl. — sidor som returnerar "skal" via curl).
+     *
+     * VARNING: ~10-20x långsammare per sida. Sätt bara där det behövs.
+     * Sitemap-fetching använder fortfarande vanlig fetch (sitemaps är XML).
+     */
+    useBrowser?: boolean;
+    /** Vänta så här länge efter networkidle2 innan vi läser DOM (default 2000ms) */
+    browserSettleMs?: number;
 }
 
 /**
@@ -150,6 +181,32 @@ const DEFAULT_MAX_URLS = 300;
 const DEFAULT_MAX_SUB_SITEMAPS = 10;
 const DEFAULT_TIMEOUT = 30000;  // höjt från 15s — stora sitemap-XML (1.7MB+) tar tid
 const DEFAULT_CONCURRENCY = 6;
+
+/**
+ * Hämta sida via Puppeteer — för SPAer där JS-rendering är nödvändig.
+ */
+async function fetchRenderedHtml(url: string, cfg: SitemapConfig): Promise<string | null> {
+    await domainLimiter.wait(url);
+    const browser = await getSitemapBrowser();
+    const page = await browser.newPage();
+    try {
+        await page.setViewport({ width: 1280, height: 900 });
+        await page.setUserAgent(cfg.userAgent ?? DEFAULT_UA);
+        // Blockera bilder/fonter/media för snabbhet — vi vill bara HTML
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
+            else req.continue();
+        });
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: cfg.timeoutMs ?? 30000 });
+        await new Promise((r) => setTimeout(r, cfg.browserSettleMs ?? 2000));
+        return await page.content();
+    } catch {
+        return null;
+    } finally {
+        await page.close();
+    }
+}
 
 /**
  * Hämta text från URL med retry på transienta fel + transparent gzip-stöd.
@@ -480,11 +537,16 @@ export const sitemapEngine = async (
     const events: (RawEvent | null)[] = [];
     const queue = entries.slice();
 
+    // Puppeteer för SPAer — singleton browser, mindre concurrency för stabilitet
+    const detailFetch = config.useBrowser
+        ? (url: string) => fetchRenderedHtml(url, config)
+        : (url: string) => fetchText(url, config, ctx.signal);
+
     async function worker() {
         while (queue.length > 0 && !aborted) {
             const entry = queue.shift();
             if (!entry) break;
-            const html = await fetchText(entry.url, config, ctx.signal);
+            const html = await detailFetch(entry.url);
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
             const ev = extractFromHtml(html, entry.url, config.defaultCity);
