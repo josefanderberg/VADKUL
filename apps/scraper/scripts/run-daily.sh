@@ -79,6 +79,18 @@ fi
 END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
+# ─── Dölj events i fel land (locationName matchar utländsk markör) ─────────
+# Konservativt — bara geografi-fält, inte title/description.
+# Hittar ~10/dygn typiskt. Idempotent (skipper redan hidden).
+echo "" >> "$LOG_FILE"
+echo "── HIDE FOREIGN MISCLASSIFIED ──" >> "$LOG_FILE"
+if npm run hide-foreign -- --apply >> "$LOG_FILE" 2>&1; then
+    HIDDEN_FOREIGN="$(grep -oE 'Hidden [0-9]+ utländska' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Hide-foreign OK (gömda=${HIDDEN_FOREIGN:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Hide-foreign misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
