@@ -44,12 +44,19 @@ async function main() {
 
     const limit = args.limit ? parseInt(args.limit, 10) : 999999;
     const hostFilter = args.host;
+    const fbOnly = args['fb-only'] === true || args['fb-only'] === 'true';
     const maxAgeDays = args['max-age'] ? parseInt(args['max-age'], 10) : null;
     const params: any[] = [];
     let where = `hidden = 0 AND coverImage IS NOT NULL AND coverImage != ''
                  AND coverImage NOT LIKE 'https://storage.googleapis.com/vadkul-f2cb2%'
                  AND firestoreId IS NOT NULL`;
     if (hostFilter) { where += ' AND hostName = ?'; params.push(hostFilter); }
+    if (fbOnly) {
+        // FB-events känns igen på URL eller fbcdn-coverImage. Filter med båda
+        // för att fånga alla varianter.
+        where += " AND (url LIKE '%facebook.com%' OR coverImage LIKE '%fbcdn%')";
+        console.log('🎯 FB-only: filtrerar på facebook.com-URL eller fbcdn-bild');
+    }
     if (maxAgeDays !== null) {
         const cutoff = new Date(Date.now() - maxAgeDays * 24 * 3600 * 1000).toISOString();
         where += ' AND createdAt >= ?';

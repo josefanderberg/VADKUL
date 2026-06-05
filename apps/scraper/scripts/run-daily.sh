@@ -80,11 +80,12 @@ END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
 # ─── Migrate FB-bilder till Storage (innan fbcdn-URL:er expirar efter 7d) ───
-# Räddar bilder scrapade senaste 7 dagar — äldre är troligen redan trasiga.
-# Filtrerar på createdAt, så bara nyligen scrapade har en chans att räddas.
+# Räddar BARA FB-bilder — kommun/extern bilder är stabila (expirar inte) och
+# blir bara onödiga fetch-fel. Filter på createdAt så vi slipper de redan-döda.
+# Tidigare körning utan --host gav 47/1094 framgång eftersom mest kommun.
 echo "" >> "$LOG_FILE"
-echo "── MIGRATE IMAGES → STORAGE ──" >> "$LOG_FILE"
-if npm run migrate-images -- --apply --max-age=7 >> "$LOG_FILE" 2>&1; then
+echo "── MIGRATE FB-IMAGES → STORAGE ──" >> "$LOG_FILE"
+if npm run migrate-images -- --apply --max-age=7 --fb-only >> "$LOG_FILE" 2>&1; then
     MIGRATED_COUNT="$(grep -oE 'TOTAL: [0-9]+/' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+' | head -1)"
     echo "Migration OK (migrerade=${MIGRATED_COUNT:-0})" >> "$LOG_FILE"
 else
