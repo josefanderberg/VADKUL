@@ -479,12 +479,13 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 <div
                     ref={scrollContainerRef}
                     className={`w-full shadow-[0_-8px_32px_rgba(0,0,0,0.18),0_-2px_8px_rgba(0,0,0,0.07)] rounded-t-3xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
-                    style={{ maxHeight: 'calc(100svh - 160px)' }}
+                    style={{ maxHeight: 'calc(100svh - 280px)' }}
                 >
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         showFullAddress
+                        alwaysExpanded
                         onRevealStepChange={step => onCardExpandedChange?.(step > 0)}
                     />
                     {nearbyEvents.length > 0 && (

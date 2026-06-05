@@ -52,11 +52,15 @@ interface LinkEventCardProps {
     isPanelMode?: boolean;
     showFullAddress?: boolean;
     onRevealStepChange?: (step: number) => void;
+    // När true: kortet är alltid fullt utvecklat. Klick på header/innehåll gör inget,
+    // och peek-bilden + "Stäng detaljer"-knappen visas inte.
+    alwaysExpanded?: boolean;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
-    const [revealStep, setRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+    const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+    const revealStep = alwaysExpanded ? 2 : internalRevealStep;
 
     // Notifiera förälder när expansionsnivån ändras (för t.ex. karta-offset)
     useEffect(() => {
@@ -97,12 +101,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
 
     const handleHeaderClick = () => {
-        setRevealStep(prev => prev === 0 ? 1 : 0);
+        if (alwaysExpanded) return;
+        setInternalRevealStep(prev => prev === 0 ? 1 : 0);
     };
 
     const handleContentClick = (e: React.MouseEvent) => {
+        if (alwaysExpanded) return;
         e.stopPropagation();
-        setRevealStep(prev => prev === 1 ? 2 : 1);
+        setInternalRevealStep(prev => prev === 1 ? 2 : 1);
     };
 
     const getHash = (str: string) => {
@@ -138,7 +144,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         <div className="w-full bg-card border-b border-border flex flex-col group">
             {/* 1. Header (Always visible) */}
             <div
-                className="p-4 md:p-6 pt-5 flex flex-col w-full relative cursor-pointer sticky top-0 bg-card z-10"
+                className={`p-4 md:p-6 pt-5 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
@@ -224,7 +230,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             </div>
 
             {/* Step 0 Peek: Small slice of the image at the bottom when collapsed */}
-            {revealStep === 0 && (
+            {!alwaysExpanded && revealStep === 0 && (
                 <div
                     className="w-full h-14 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-18 transition-all duration-500"
                     onClick={handleHeaderClick}
@@ -247,8 +253,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             {revealStep >= 1 && (
                 <div className="flex flex-col w-full animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* Image */}
-                    <div 
-                        className="relative w-full h-48 md:h-64 bg-muted/30 border-t border-border cursor-pointer overflow-hidden"
+                    <div
+                        className={`relative w-full h-48 md:h-64 bg-muted/30 border-t border-border overflow-hidden ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
                         <Image unoptimized
@@ -261,8 +267,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
 
                     {/* Description Section */}
-                    <div 
-                        className="p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border cursor-pointer"
+                    <div
+                        className={`p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
                         <p className={`text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium ${revealStep === 1 ? 'line-clamp-3' : ''}`}>
@@ -285,12 +291,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     <span>ANMÄL DIG HÄR</span>
                                     <ExternalLink size={24} />
                                 </button>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setRevealStep(0); }}
-                                    className="text-[10px] text-slate-400 hover:text-slate-600 font-bold py-2 uppercase tracking-widest text-center"
-                                >
-                                    Stäng detaljer
-                                </button>
+                                {!alwaysExpanded && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setInternalRevealStep(0); }}
+                                        className="text-[10px] text-slate-400 hover:text-slate-600 font-bold py-2 uppercase tracking-widest text-center"
+                                    >
+                                        Stäng detaljer
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
