@@ -13,9 +13,7 @@ import { getAdminDb } from '@/lib/firestore-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { CITIES, getCity, eventMatchesCity, type City } from '@/lib/cityUtils';
 
-const CACHE_REVALIDATE_SECONDS = 600; // 10 min — events ändras ofta
-
-export const revalidate = CACHE_REVALIDATE_SECONDS;
+export const revalidate = 600; // 10 min — events ändras ofta
 
 interface PageProps {
     params: Promise<{ stad: string }>;

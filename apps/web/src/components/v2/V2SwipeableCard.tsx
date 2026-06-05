@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin, GripHorizontal } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -196,7 +196,20 @@ interface V2SwipeableCardProps {
 }
 
 export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset }: V2SwipeableCardProps) {
+    const [heightVh, setHeightVh] = useState(35);
+    const heightVhRef = useRef(35);
+    const updateHeightVh = (vh: number) => {
+        heightVhRef.current = vh;
+        setHeightVh(vh);
+    };
+
     const [dragX, setDragX] = useState(0);
+    const dragXRef = useRef(0);
+    const updateDragX = (x: number) => {
+        dragXRef.current = x;
+        setDragX(x);
+    };
+
     const [exitX, setExitX] = useState<number | null>(null); // For animation off-screen
     const [anchorId, setAnchorId] = useState<string | null>(null);
     const [visitedEventIds, setVisitedEventIds] = useState<Set<string>>(new Set());
@@ -205,12 +218,23 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     // Browse-historik: event-id:n vi tittade på innan vi gick vidare. Pushas vid Nästa/swipe/sekventiell-knapp.
     const [historyStack, setHistoryStack] = useState<string[]>([]);
+    
+    const [isAnimating, setIsAnimating] = useState(true);
     const isDragging = useRef(false);
+    const dragDirection = useRef<'none' | 'horizontal' | 'vertical'>('none');
     const startX = useRef(0);
+    const startY = useRef(0);
+    const startHeightVh = useRef(35);
     const startDragX = useRef(0);
+    
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
     // "användaren klickade på kartan" från "vi tryckte Nästa".
     const expectedNextIdRef = useRef<string | null>(null);
+
+    // Notify parent about card expansion state for map center offsets
+    useEffect(() => {
+        onCardExpandedChange?.(heightVh > 50);
+    }, [heightVh, onCardExpandedChange]);
 
     // Detektera om selectedEvent ändrats utifrån (kartklick) → då är det en ny ankare.
     useEffect(() => {
@@ -225,10 +249,13 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setVisitedEventIds(new Set());
     }, [selectedEvent]);
 
-    // Reset pagination + scrolla tillbaka till toppen när vi byter event.
+    // Reset pagination, height and scroll position when the active event changes.
     useEffect(() => {
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+        updateHeightVh(35); // Reset to Peek height
+        updateDragX(0);
+        setIsAnimating(true);
     }, [selectedEvent?.id]);
 
     // Uppdatera "nu" var 30:e sekund så statusbadgar håller sig fräscha.
@@ -284,48 +311,87 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
 
     const THRESHOLD = 100; // Pixels to trigger a swipe action
 
-    // Global drag handlers to prevent "losing" the drag when moving fast
-    useEffect(() => {
-        const handlePointerMove = (e: PointerEvent) => {
-            if (!isDragging.current) return;
-            const deltaX = e.clientX - startX.current;
-            setDragX(startDragX.current + deltaX);
-        };
+    const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (e.button !== 0) return;
 
-        const handlePointerUp = () => {
-            if (!isDragging.current) return;
-            isDragging.current = false;
-            
-            // Check if passed threshold
-            if (dragX > THRESHOLD) {
-                // Swiped Right -> Save and Next
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('a') || target.closest('input')) {
+            return;
+        }
+
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDragging.current = true;
+        dragDirection.current = 'none';
+        startX.current = e.clientX;
+        startY.current = e.clientY;
+        startHeightVh.current = heightVhRef.current;
+        startDragX.current = dragXRef.current;
+        setExitX(null); // Reset any exit animation
+        setIsAnimating(false);
+    };
+
+    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDragging.current) return;
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+
+        const deltaX = e.clientX - startX.current;
+        const deltaY = startY.current - e.clientY; // drag up is positive deltaY
+
+        if (dragDirection.current === 'none') {
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
+            if (absX > 5 || absY > 5) {
+                if (absY > absX) {
+                    dragDirection.current = 'vertical';
+                } else {
+                    dragDirection.current = 'horizontal';
+                }
+            }
+        }
+
+        if (dragDirection.current === 'vertical') {
+            const deltaVh = (deltaY / window.innerHeight) * 100;
+            const newHeight = Math.max(15, Math.min(95, startHeightVh.current + deltaVh));
+            updateHeightVh(newHeight);
+        } else if (dragDirection.current === 'horizontal') {
+            updateDragX(startDragX.current + deltaX);
+        }
+    };
+
+    const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+        
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+
+        setIsAnimating(true);
+
+        if (dragDirection.current === 'vertical') {
+            const currentHeight = heightVhRef.current;
+            const PEEK_VH = 35;
+            const FULL_VH = 85;
+
+            if (currentHeight < 22) {
+                onSelectEvent(null);
+            } else if (currentHeight < (PEEK_VH + FULL_VH) / 2) {
+                updateHeightVh(PEEK_VH);
+            } else {
+                updateHeightVh(FULL_VH);
+            }
+        } else if (dragDirection.current === 'horizontal') {
+            const currentDragX = dragXRef.current;
+            if (currentDragX > THRESHOLD) {
                 handleSwipeOut('right');
-            } else if (dragX < -THRESHOLD) {
-                // Swiped Left -> Discard and Next
+            } else if (currentDragX < -THRESHOLD) {
                 handleSwipeOut('left');
             } else {
-                // Snap back to center
-                setDragX(0);
+                updateDragX(0);
             }
-        };
+        }
 
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        window.addEventListener('pointercancel', handlePointerUp);
-
-        return () => {
-            window.removeEventListener('pointermove', handlePointerMove);
-            window.removeEventListener('pointerup', handlePointerUp);
-            window.removeEventListener('pointercancel', handlePointerUp);
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragX, selectedEvent, events]);
-
-    const onPointerDown = (e: React.PointerEvent) => {
-        isDragging.current = true;
-        startX.current = e.clientX;
-        startDragX.current = dragX;
-        setExitX(null); // Reset any exit animation
+        dragDirection.current = 'none';
     };
 
     const pushHistory = (id: string) => {
@@ -358,7 +424,8 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
 
             // Reset position immediately for the new card
             setExitX(null);
-            setDragX(0);
+            updateDragX(0);
+            updateHeightVh(35); // Reset height to Peek
         }, 200); // 200ms matches the CSS transition
     };
 
@@ -371,9 +438,9 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         setHistoryStack(prev => prev.slice(0, -1));
         if (prevEvent) onSelectEvent(prevEvent);
         setExitX(null);
-        setDragX(0);
+        updateDragX(0);
+        updateHeightVh(35); // Reset to Peek
     };
-
 
     const handleNextOnly = () => {
         if (!selectedEvent || events.length === 0) return;
@@ -384,7 +451,8 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
         onSelectEvent(next);
 
         setExitX(null);
-        setDragX(0);
+        updateDragX(0);
+        updateHeightVh(35); // Reset to Peek
     };
 
     if (events.length === 0) return null;
@@ -398,36 +466,34 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
     return (
         <>
         {/* Nedre rad — ALLTID synlig (dagväljare + antal till vänster, Nästa till höger om kort finns) */}
-        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '50vh' }}>
-            <div className="w-full max-w-4xl flex justify-between items-end gap-2 mb-4">
+        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
+            <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
-                {/* Vänster: antal ovanför Idag-knappen */}
-                <div className="flex flex-col items-start gap-1 pointer-events-auto">
-                    <span className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full shadow-lg border border-white/50">
+                {/* Vänster: Antal + Idag-knapp (samma höjd, längst till vänster) */}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    <span className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold tabular-nums px-3 rounded-full shadow-lg border border-white/50 h-[38px] flex items-center justify-center min-w-[38px] box-border">
                         {events.length}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setDayOffset((dayOffset + 1) % 7)}
+                        className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
+                    >
+                        <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                        <span>{getDayLabel(dayOffset)}</span>
+                        <ChevronRight size={15} className="text-slate-400" />
+                    </button>
+                    {dayOffset !== 0 && (
                         <button
-                            onClick={() => setDayOffset((dayOffset + 1) % 7)}
-                            className="bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700"
+                            onClick={() => setDayOffset(0)}
+                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
+                            title="Återställ till idag"
                         >
-                            <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                            <span>{getDayLabel(dayOffset)}</span>
-                            <ChevronRight size={15} className="text-slate-400" />
+                            <RotateCcw size={15} className="text-slate-700" />
                         </button>
-                        {dayOffset !== 0 && (
-                            <button
-                                onClick={() => setDayOffset(0)}
-                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors"
-                                title="Återställ till idag"
-                            >
-                                <RotateCcw size={15} className="text-slate-700" />
-                            </button>
-                        )}
-                    </div>
+                    )}
                 </div>
 
-                {/* Höger: bakåt + Nästa (bara om kort valt) */}
+                {/* Höger: bakåt + Nästa (samma höjd, längst till höger) */}
                 {selectedEvent && (
                     <div className="flex items-center gap-2 pointer-events-auto">
                         {historyStack.length > 0 && (
@@ -436,14 +502,14 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                                 onClick={handleHistoryBack}
                                 aria-label="Gå tillbaka till föregående event"
                                 title="Gå tillbaka"
-                                className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
                             >
                                 <ArrowLeft size={16} />
                             </button>
                         )}
                         <button
                             onClick={handleNextOnly}
-                            className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold py-2.5 px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20"
+                            className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
                         >
                             Nästa <ArrowRight size={18} />
                         </button>
@@ -451,42 +517,58 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                 )}
             </div>
 
-            {/* Transform wrapper — visas bara när ett event är valt */}
-            {selectedEvent && (
+            {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
+            {selectedEvent ? (
             <div
-                className="relative w-full max-w-4xl pointer-events-auto"
+                className="relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10"
                 onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
                 style={{
+                    height: `${heightVh}vh`,
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
                     opacity: exitX !== null ? 0 : opacity,
-                    transition: isDragging.current ? 'none' : 'transform 200ms ease-out, opacity 200ms ease-out',
-                    touchAction: 'pan-y',
+                    transition: isAnimating ? 'transform 200ms ease-out, opacity 200ms ease-out, height 350ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
                 }}
             >
-                {/* Visual feedback overlays during drag */}
+                {/* Drag Handle at top of the sheet */}
+                <div
+                    className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-1 py-3.5 cursor-grab active:cursor-grabbing select-none bg-card border-b border-border/5"
+                    style={{ touchAction: 'none' }}
+                >
+                    <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
+                    <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 mt-0.5">
+                        <GripHorizontal size={14} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Dra</span>
+                    </div>
+                </div>
+
+                {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
                 {dragX > 20 && (
-                    <div className="absolute top-5 left-5 z-50 bg-green-500 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-green-400/60 transform -rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, dragX / 120) }}>
+                    <div className="absolute top-16 left-6 z-50 bg-green-500 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-green-400/60 transform -rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, dragX / 120) }}>
                         SPARA
                     </div>
                 )}
                 {dragX < -20 && (
-                    <div className="absolute top-5 right-5 z-50 bg-slate-700 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-slate-600/60 transform rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, Math.abs(dragX) / 120) }}>
+                    <div className="absolute top-16 right-6 z-50 bg-slate-700 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-slate-600/60 transform rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, Math.abs(dragX) / 120) }}>
                         NÄSTA
                     </div>
                 )}
 
-                {/* Scrollable card — max-height + overflow-y on same element */}
+                {/* Scrollable content container */}
                 <div
                     ref={scrollContainerRef}
-                    className={`w-full shadow-[0_-8px_32px_rgba(0,0,0,0.18),0_-2px_8px_rgba(0,0,0,0.07)] rounded-t-3xl overflow-y-auto ${isDragging.current ? 'pointer-events-none' : ''}`}
-                    style={{ maxHeight: 'calc(100svh - 280px)' }}
+                    className="flex-1 w-full overflow-y-auto overscroll-contain bg-card custom-scrollbar"
+                    style={{
+                        touchAction: heightVh < 50 ? 'none' : 'pan-y'
+                    }}
                 >
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         showFullAddress
                         alwaysExpanded
-                        onRevealStepChange={step => onCardExpandedChange?.(step > 0)}
                     />
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
@@ -499,6 +581,9 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                     )}
                 </div>
             </div>
+            ) : (
+                /* Håll reglaget på 30% höjd från botten när inget kort visas */
+                <div style={{ height: '30vh' }} className="w-full flex-shrink-0" />
             )}
         </div>
         </>
