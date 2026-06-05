@@ -79,10 +79,22 @@ fi
 END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
+# ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
+# Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
+# Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
+# Smoke-test gav 84% framgång (84/100 hittade bild i Storage).
+echo "" >> "$LOG_FILE"
+echo "── SYNC STORAGE-URLS (FB) ──" >> "$LOG_FILE"
+if npm run sync-storage-urls -- --apply --fb-only >> "$LOG_FILE" 2>&1; then
+    SYNCED_COUNT="$(grep -oE 'Synkade Firestore:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Sync OK (synkade=${SYNCED_COUNT:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Storage-sync misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Migrate FB-bilder till Storage (innan fbcdn-URL:er expirar efter 7d) ───
 # Räddar BARA FB-bilder — kommun/extern bilder är stabila (expirar inte) och
 # blir bara onödiga fetch-fel. Filter på createdAt så vi slipper de redan-döda.
-# Tidigare körning utan --host gav 47/1094 framgång eftersom mest kommun.
 echo "" >> "$LOG_FILE"
 echo "── MIGRATE FB-IMAGES → STORAGE ──" >> "$LOG_FILE"
 if npm run migrate-images -- --apply --max-age=7 --fb-only >> "$LOG_FILE" 2>&1; then
