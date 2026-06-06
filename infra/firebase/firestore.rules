@@ -152,5 +152,22 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 11. PRESENCE (Realtids-GPS för inloggade användare)
+    // Varje user skriver bara sin egen rad; alla inloggade kan läsa.
+    match /presence/{userId} {
+      allow read:   if isAuthenticated();
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['lat', 'lng', 'displayName', 'photoURL', 'updatedAt', 'isVisible'])
+        && request.resource.data.lat  is number
+        && request.resource.data.lng  is number
+        && request.resource.data.isVisible is bool;
+      allow update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['lat', 'lng', 'displayName', 'photoURL', 'updatedAt', 'isVisible'])
+        && request.resource.data.lat  is number
+        && request.resource.data.lng  is number
+        && request.resource.data.isVisible is bool;
+      allow delete: if isOwner(userId);
+    }
   }
 }
