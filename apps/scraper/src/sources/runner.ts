@@ -199,6 +199,9 @@ export async function runSource(
                 price: e.price || '',
                 createdAt: new Date(),
                 isLocationVerified: lat !== 0 || lng !== 0,
+                // 'raw' när audit är på så eventet väntar på granskning;
+                // 'published' direkt annars — annars syns det inte i webben.
+                status: process.env.AUDIT_ENABLED === 'true' ? 'raw' : 'published',
             });
             result.saved++;
 
