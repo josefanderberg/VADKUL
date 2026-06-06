@@ -197,8 +197,12 @@ interface EventCardProps {
 }
 
 export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick }: EventCardProps) {
-    const [heightVh, setHeightVh] = useState(35);
-    const heightVhRef = useRef(35);
+    // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
+    // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
+    // den höjd användaren själv dragit till.
+    const PEEK_HEIGHT_VH = 28;
+    const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
+    const heightVhRef = useRef(PEEK_HEIGHT_VH);
     const updateHeightVh = (vh: number) => {
         heightVhRef.current = vh;
         setHeightVh(vh);
@@ -225,7 +229,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     const dragDirection = useRef<'none' | 'horizontal' | 'vertical'>('none');
     const startX = useRef(0);
     const startY = useRef(0);
-    const startHeightVh = useRef(35);
+    const startHeightVh = useRef(PEEK_HEIGHT_VH);
     const startDragX = useRef(0);
     
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
@@ -241,20 +245,26 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     useEffect(() => {
         if (!selectedEvent) return;
         if (expectedNextIdRef.current === selectedEvent.id) {
-            // Det var pickNext som drev fram detta event — anchorId behålls.
+            // Det var pickNext som drev fram detta event — anchorId behålls
+            // OCH höjden bevaras, så användaren får navigera utan att kortet
+            // hoppar tillbaka till peek-läget.
             expectedNextIdRef.current = null;
             return;
         }
         // Användaren valde ett nytt event (kartklick / första valet) → ny ankare.
+        // Detta är också vägen för "stäng → öppna igen", så här ska höjden
+        // återställas till default peek.
         setAnchorId(selectedEvent.id);
         setVisitedEventIds(new Set());
+        updateHeightVh(PEEK_HEIGHT_VH);
     }, [selectedEvent]);
 
-    // Reset pagination, height and scroll position when the active event changes.
+    // Reset pagination and scroll position when the active event changes.
+    // Höjden hanteras separat i ankar-effekten ovan så Nästa/Föregående bevarar
+    // det användaren själv dragit till.
     useEffect(() => {
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-        updateHeightVh(35); // Reset to Peek height
         updateDragX(0);
         setIsAnimating(true);
     }, [selectedEvent?.id]);
@@ -420,10 +430,10 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
             if (next) pushHistory(previousId);
             onSelectEvent(next);
 
-            // Reset position immediately for the new card
+            // Reset position immediately for the new card (height bevaras —
+            // det här är en Nästa-navigering, inte en ny ankare).
             setExitX(null);
             updateDragX(0);
-            updateHeightVh(35); // Reset height to Peek
         }, 200); // 200ms matches the CSS transition
     };
 
@@ -437,7 +447,6 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         if (prevEvent) onSelectEvent(prevEvent);
         setExitX(null);
         updateDragX(0);
-        updateHeightVh(35); // Reset to Peek
     };
 
     const handleNextOnly = () => {
@@ -450,7 +459,6 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
 
         setExitX(null);
         updateDragX(0);
-        updateHeightVh(35); // Reset to Peek
     };
 
     if (events.length === 0) return null;

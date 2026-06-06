@@ -5,7 +5,6 @@ import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import EventCard from '@/components/v2/EventCard';
-import CloudPopup from '@/components/ui/CloudPopup';
 
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
@@ -75,7 +74,10 @@ export default function HomePage() {
     const [sunFlashKey, setSunFlashKey] = useState(0);
     const [sunCloudKey, setSunCloudKey] = useState(0);
     const handleSunClick = useCallback(() => {
+        // Flash and cloud both fire simultaneously — cloud appears at the same
+        // instant the screen pops white, then the light fades over the cloud.
         setSunFlashKey(k => k + 1);
+        setSunCloudKey(k => k + 1);
     }, []);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
@@ -191,6 +193,7 @@ export default function HomePage() {
                 discardedEventIds={discardedEventIds}
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
+                sunCloudTrigger={sunCloudKey}
             />
 
             {/* Modal för att skapa event */}
@@ -256,21 +259,12 @@ export default function HomePage() {
             />
 
             {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.
-                När animationen slutar spawnas ett nytt moln i mitten. */}
+                När animationen slutar trigger:as ett nytt moln i V2Map som
+                ankras till nuvarande kartcenter. */}
             {sunFlashKey > 0 && (
                 <div
                     key={sunFlashKey}
                     className="fixed inset-0 pointer-events-none z-[600] sun-flash-overlay"
-                    onAnimationEnd={() => setSunCloudKey(k => k + 1)}
-                />
-            )}
-
-            {sunCloudKey > 0 && (
-                <CloudPopup
-                    key={sunCloudKey}
-                    message="Solen fick fram nytt event-vatten!"
-                    position="center"
-                    onDismiss={() => { /* lämna kvar tills användaren swipe:ar bort */ }}
                 />
             )}
         </main>

@@ -18,6 +18,20 @@ interface CloudPopupProps {
   anchorPos?: { x: number; y: number };
   /** Called when pointer drag ends with the final drag offsets */
   onDragEnd?: (ox: number, oy: number) => void;
+  /** Multiplier for the face features (eyes + mouth) when clicked. 1 = default. */
+  faceScale?: number;
+  /** Ms delay before the cloud pops in. Default 600 (lets the page settle).
+   *  Pass 0 for immediate appearance (e.g. on a user-triggered spawn). */
+  showDelayMs?: number;
+  /** Uniform scale of the whole cloud. 1 = default. Used to let a map-anchored
+   *  cloud grow/shrink with the map zoom. */
+  scale?: number;
+  /** True when the camera is locked to / following this cloud. Drives a
+   *  focused face expression. */
+  following?: boolean;
+  /** Fired on a tap (pointer down+up without dragging) — used to toggle the
+   *  camera-follow mode for this cloud. */
+  onToggleFollow?: () => void;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -98,7 +112,12 @@ export default function CloudPopup({
   position = 'center',
   size = 'lg',
   anchorPos,
-  onDragEnd
+  onDragEnd,
+  faceScale = 1,
+  showDelayMs = 600,
+  scale = 1,
+  following = false,
+  onToggleFollow
 }: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -126,7 +145,11 @@ export default function CloudPopup({
   // Drag states
   const [isDragging, setIsDragging] = useState(false);
   const [isGliding, setIsGliding] = useState(false);
-  const [frozenRotation, setFrozenRotation] = useState<number | null>(null);
+  // Resting rotation = the rotation the cloud has when its position has been
+  // stable for a short moment. It only updates after any kind of motion
+  // (cloud drag, glide, OR map pan moving anchorPos) has settled. While
+  // anything is in motion, this value stays put — the face stays where it was.
+  const [restingRotation, setRestingRotation] = useState(0);
   const [dragSpinAngle, setDragSpinAngle] = useState(0);
 const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [throwDirection, setThrowDirection] = useState<{ x: number; y: number } | null>(null);
@@ -160,10 +183,18 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   const velocitySamples = useRef<{ x: number; y: number; t: number }[]>([]);
   const glideRaf = useRef<number | null>(null);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Tap detection: raw pointer-down coords + whether it moved past a small
+  // threshold. A pointer-up with no movement is treated as a tap (toggle follow).
+  const downClient = useRef({ x: 0, y: 0 });
+  const dragMoved = useRef(false);
 
   // Small delay so it "pops in" after the page settles
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 600);
+    if (showDelayMs <= 0) {
+      setVisible(true);
+      return;
+    }
+    const t = setTimeout(() => setVisible(true), showDelayMs);
     return () => clearTimeout(t);
   }, []);
 
@@ -200,10 +231,8 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     }
 
     setIsGliding(false);
-    // Freeze the cloud's current orientation at the moment of grab so the
-    // face doesn't keep tracking the screen center during drag. It resumes
-    // tracking only after the cloud has come to rest.
-    setFrozenRotation(faceRotDeg);
+    // restingRotation handles the freeze automatically — any position change
+    // during drag restarts its debounce so it stays put.
     setDragSpinAngle(0);
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -217,6 +246,8 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
 
     setIsDragging(true);
     startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    downClient.current = { x: e.clientX, y: e.clientY };
+    dragMoved.current = false;
     velocitySamples.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
   };
 
@@ -251,17 +282,19 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     const newX = currentX - startPos.current.x;
     const newY = currentY - startPos.current.y;
 
+    // Once the pointer has travelled past ~6px it's a drag, not a tap.
+    if (!dragMoved.current) {
+      const dxDown = currentX - downClient.current.x;
+      const dyDown = currentY - downClient.current.y;
+      if (dxDown * dxDown + dyDown * dyDown > 36) dragMoved.current = true;
+    }
+
     const { minX, maxX, minY, maxY } = getOffsetLimits();
     const clampedX = Math.min(Math.max(newX, minX), maxX);
     const clampedY = Math.min(Math.max(newY, minY), maxY);
 
-    const dx = clampedX - offset.x;
-    const dy = clampedY - offset.y;
-    const gx = grabOffset.current.x;
-    const gy = grabOffset.current.y;
-    const torque = (gx * dy - gy * dx) * 0.7;
-    setDragSpinAngle(prev => prev + torque);
-
+    // No rotation during drag — the cloud is perfectly stiff while held.
+    // Spin is computed on release from grabOffset × release-velocity.
     setOffset({ x: clampedX, y: clampedY });
 
     // Keep the most recent samples (~last 80ms) for release-velocity estimation.
@@ -281,6 +314,15 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     e.currentTarget.releasePointerCapture(e.pointerId);
     pointerId.current = null;
     setIsDragging(false);
+
+    // Tap (no meaningful movement) → toggle camera-follow, no glide.
+    if (!dragMoved.current) {
+      setClicked(true);
+      onToggleFollow?.();
+      velocitySamples.current = [];
+      setOffset({ x: 0, y: 0 });
+      return;
+    }
 
     // Estimate release velocity from the last sample window (px/ms).
     const samples = velocitySamples.current;
@@ -318,7 +360,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       const clampedX = Math.min(Math.max(offset.x, minX), maxX);
       const clampedY = Math.min(Math.max(offset.y, minY), maxY);
 
-      setFrozenRotation(null);
       setDragSpinAngle(0);
       commit(clampedX, clampedY);
       return;
@@ -328,7 +369,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     // wherever momentum runs out. No walls and no auto-dismiss — the cloud
     // commits to the physics-predicted resting position.
     setIsGliding(true);
-    setFrozenRotation(faceRotDeg);
     const gx = grabOffset.current.x;
     const gy = grabOffset.current.y;
     let vSpin = -(gx * vy - gy * vx) * 0.7; // angular velocity in deg/ms (inverted)
@@ -362,9 +402,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       if (remaining < stopThreshold) {
         glideRaf.current = null;
         setIsGliding(false);
-        // Cloud has stopped — release the frozen rotation so the face turns
-        // toward screen center via the cloudBodyRotTransition CSS transition.
-        setFrozenRotation(null);
+        // Cloud has stopped — bake the accumulated spin into the persistent
+        // restingRotation so the new orientation sticks for next interaction.
+        setRestingRotation(prev => prev + curSpinAngle);
         setDragSpinAngle(0);
         commit(curX, curY);
         return;
@@ -438,6 +478,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   const rawAngleDeg = Math.atan2(faceVec.y, faceVec.x) * (180 / Math.PI) + 90;
   const faceRotDeg = faceBlend * rawAngleDeg;
 
+  // restingRotation is no longer auto-driven toward screen center. The cloud's
+  // orientation is determined solely by the spin accumulated from throws —
+  // glide ticks add to dragSpinAngle, and that value is folded into
+  // restingRotation when the cloud comes to rest.
+
   const transitionStyle = (isDragging || isGliding || skipTransition)
     ? 'none'
     : 'transform 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease-out';
@@ -476,8 +521,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // The cloud body rotates as a single unit toward screen center — shadows,
   // puffs and face all share this rotation so they read as one rigid head.
   // (Disabled during the leaving throw so the dismiss-rotation isn't doubled.)
-  const currentBaseRot = ((isDragging || isGliding) && frozenRotation !== null) ? frozenRotation : faceRotDeg;
-  const currentRotation = currentBaseRot + dragSpinAngle;
+  // Always use the resting rotation as the base; live faceRotDeg is never used
+  // for the visible rotation. Spin from a fling is added on top.
+  const currentRotation = restingRotation + dragSpinAngle;
   const cloudBodyRotation = leaving ? '' : `rotate(${currentRotation}deg)`;
   const cloudBodyRotTransition = (isDragging || isGliding || skipTransition)
     ? 'none'
@@ -619,22 +665,40 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
             <g
               style={{
                 opacity: clicked ? 1 : 0,
-                transform: clicked ? 'scale(1)' : 'scale(0.3)',
+                transform: clicked ? `scale(${faceScale})` : `scale(${0.3 * faceScale})`,
                 transformOrigin: '150px 135px',
                 transition: 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
-              {/* Eyes */}
-              <circle cx={leftEye.x} cy={leftEye.y} r="7" fill="#bae6fd" />
-              <circle cx={rightEye.x} cy={rightEye.y} r="7" fill="#bae6fd" />
-              {/* Mouth: always a smile U-shape in local face space */}
-              <path
-                d={`M ${mouthLeft.x} ${mouthLeft.y} Q ${mouthCtrl.x} ${mouthCtrl.y} ${mouthRight.x} ${mouthRight.y}`}
-                stroke="#bae6fd"
-                strokeWidth="7"
-                strokeLinecap="round"
-                fill="none"
-              />
+              {following ? (
+                <>
+                  {/* Focused "flight mode": happy squinted eyes (^ ^) + open
+                      excited mouth — signals the camera is locked on. */}
+                  <path
+                    d={`M ${leftEye.x - 7} ${leftEye.y + 3} Q ${leftEye.x} ${leftEye.y - 6} ${leftEye.x + 7} ${leftEye.y + 3}`}
+                    stroke="#bae6fd" strokeWidth="5" strokeLinecap="round" fill="none"
+                  />
+                  <path
+                    d={`M ${rightEye.x - 7} ${rightEye.y + 3} Q ${rightEye.x} ${rightEye.y - 6} ${rightEye.x + 7} ${rightEye.y + 3}`}
+                    stroke="#bae6fd" strokeWidth="5" strokeLinecap="round" fill="none"
+                  />
+                  <ellipse cx={150} cy={135 + 18} rx="9" ry="11" fill="#bae6fd" />
+                </>
+              ) : (
+                <>
+                  {/* Eyes */}
+                  <circle cx={leftEye.x} cy={leftEye.y} r="7" fill="#bae6fd" />
+                  <circle cx={rightEye.x} cy={rightEye.y} r="7" fill="#bae6fd" />
+                  {/* Mouth: always a smile U-shape in local face space */}
+                  <path
+                    d={`M ${mouthLeft.x} ${mouthLeft.y} Q ${mouthCtrl.x} ${mouthCtrl.y} ${mouthRight.x} ${mouthRight.y}`}
+                    stroke="#bae6fd"
+                    strokeWidth="7"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </>
+              )}
             </g>
 
             <defs>
@@ -674,6 +738,15 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
         className="relative select-none pointer-events-none"
         style={draggableStyle}
       >
+        {/* Zoom-scale wrapper — kept separate from the float div so its inline
+            transform isn't overridden by the float animation's transform. */}
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: '50% 56.25%',
+            transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.2s ease-out'
+          }}
+        >
         <div className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}>
 
           {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
@@ -696,6 +769,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               borderRadius: '50%'
             }}
           />
+        </div>
         </div>
       </div>
     </div>

@@ -16,6 +16,9 @@ interface V2MapProps {
     cardExpanded?: boolean;
     onCenterChange?: (lat: number, lng: number) => void;
     onMapDrag?: () => void;
+    /** Bumps every time the sun button is pressed and the flash ends — V2Map
+     *  spawns a new map-anchored cloud at the current view center. */
+    sunCloudTrigger?: number;
 }
 
 export default function V2Map({
@@ -26,11 +29,16 @@ export default function V2Map({
     discardedEventIds = new Set(),
     cardExpanded = false,
     onCenterChange,
-    onMapDrag
+    onMapDrag,
+    sunCloudTrigger = 0
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
+    // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
+    // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
+    // ett event man navigerat förbi inte faller tillbaka till nål.
+    const revealedKeysRef = useRef<Set<string>>(new Set());
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
 
@@ -55,6 +63,32 @@ export default function V2Map({
 
     const cloudAnchorPosRef = useRef(cloudAnchorPos);
     cloudAnchorPosRef.current = cloudAnchorPos;
+
+    // Sun-cloud state — a second cloud that spawns at the current map center
+    // whenever the sun-flash animation finishes. Behaves identically to the
+    // main cloud: anchored to geo coordinates, follows map pan/zoom, persists
+    // off-screen until the user dismisses it.
+    const [sunCloudAnchor, setSunCloudAnchor] = useState<{ lat: number; lng: number } | null>(null);
+    const [sunCloudAnchorPos, setSunCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
+    const [sunCloudId, setSunCloudId] = useState(0);
+    // Skalan som sun-molnet visas i. Det är förankrat i kartan: när man zoomar
+    // in växer det (2x per zoom-nivå), zoomar man ut krymper det — likt ett
+    // objekt på kartan. Vid skapande sätts skalan utifrån nuvarande zoom.
+    const [sunCloudScale, setSunCloudScale] = useState(1);
+    const sunCloudCreationZoomRef = useRef<number>(8);
+    const SUN_CLOUD_BASE_SCALE = 0.7; // lite mindre än huvudmolnet vid skapande
+
+    const sunCloudAnchorRef = useRef(sunCloudAnchor);
+    sunCloudAnchorRef.current = sunCloudAnchor;
+    const sunCloudAnchorPosRef = useRef(sunCloudAnchorPos);
+    sunCloudAnchorPosRef.current = sunCloudAnchorPos;
+
+    // Camera-follow: tapping a cloud locks the map onto it. While following,
+    // free panning is disabled — you move by flinging the cloud (and the camera
+    // flies to where it lands).
+    const [followingCloud, setFollowingCloud] = useState<'main' | 'sun' | null>(null);
+    const followingCloudRef = useRef(followingCloud);
+    followingCloudRef.current = followingCloud;
 
     const baseZoomRef = useRef<number>(8);
 
@@ -138,12 +172,23 @@ export default function V2Map({
             }
         });
 
-        // Real-time projection updater for the anchored cloud popup
+        // Real-time projection updater for the anchored cloud popups (main +
+        // any sun-clouds that are currently alive).
         const updateCloudPosition = () => {
             const currentAnchor = cloudAnchorRef.current;
             if (currentAnchor) {
                 const pos = map.project([currentAnchor.lng, currentAnchor.lat]);
                 setCloudAnchorPos({ x: pos.x, y: pos.y });
+            }
+            const currentSunAnchor = sunCloudAnchorRef.current;
+            if (currentSunAnchor) {
+                const pos = map.project([currentSunAnchor.lng, currentSunAnchor.lat]);
+                setSunCloudAnchorPos({ x: pos.x, y: pos.y });
+                // Skala med zoom: 2x per zoom-nivå relativt skapande-zoomen.
+                // Klampad så molnet aldrig blir absurt stort/litet.
+                const zoomDelta = map.getZoom() - sunCloudCreationZoomRef.current;
+                const scaled = SUN_CLOUD_BASE_SCALE * Math.pow(2, zoomDelta);
+                setSunCloudScale(Math.min(Math.max(scaled, 0.25), 4));
             }
         };
 
@@ -223,6 +268,58 @@ export default function V2Map({
         }
     }, [cloudAnchor]);
 
+    // Spawn a new sun-cloud at the current map center whenever the parent
+    // bumps sunCloudTrigger (which it does after the white-flash animation
+    // completes). Each spawn replaces the previous sun-cloud — keeps it simple
+    // while still feeling responsive on rapid clicks.
+    useEffect(() => {
+        if (sunCloudTrigger <= 0) return;
+        const map = mapRef.current;
+        if (!map) return;
+        const center = map.getCenter();
+        setSunCloudAnchor({ lat: center.lat, lng: center.lng });
+        const screen = map.project([center.lng, center.lat]);
+        setSunCloudAnchorPos({ x: screen.x, y: screen.y });
+        // Nollställ skalan till basstorlek vid nuvarande zoom — molnet "anpassar
+        // sig efter den zoom det skapas på".
+        sunCloudCreationZoomRef.current = map.getZoom();
+        setSunCloudScale(SUN_CLOUD_BASE_SCALE);
+        setSunCloudId(id => id + 1);
+    }, [sunCloudTrigger]);
+
+    // Lås/lås upp kart-panorering beroende på follow-läge. När man följer ett
+    // moln rör man sig bara genom att kasta molnet.
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        if (followingCloud) {
+            map.dragPan.disable();
+            // Centrera direkt på det moln vi börjar följa.
+            const anchor = followingCloud === 'sun' ? sunCloudAnchorRef.current : cloudAnchorRef.current;
+            if (anchor) {
+                map.easeTo({ center: [anchor.lng, anchor.lat], duration: 500 });
+            }
+        } else {
+            map.dragPan.enable();
+        }
+    }, [followingCloud]);
+
+    const handleSunCloudDragEnd = (ox: number, oy: number) => {
+        const map = mapRef.current;
+        const currentPos = sunCloudAnchorPosRef.current;
+        if (map && currentPos) {
+            const newScreenX = currentPos.x + ox;
+            const newScreenY = currentPos.y + oy;
+            const lngLat = map.unproject([newScreenX, newScreenY]);
+            setSunCloudAnchorPos({ x: newScreenX, y: newScreenY });
+            setSunCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
+            // Om vi följer detta moln: flyg med kameran till landningsplatsen.
+            if (followingCloudRef.current === 'sun') {
+                map.easeTo({ center: [lngLat.lng, lngLat.lat], duration: 600 });
+            }
+        }
+    };
+
     // Update coordinates when dropped
     const handleCloudDragEnd = (ox: number, oy: number) => {
         const map = mapRef.current;
@@ -233,6 +330,10 @@ export default function V2Map({
             const lngLat = map.unproject([newScreenX, newScreenY]);
             setCloudAnchorPos({ x: newScreenX, y: newScreenY });
             setCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
+            // Om vi följer detta moln: flyg med kameran till landningsplatsen.
+            if (followingCloudRef.current === 'main') {
+                map.easeTo({ center: [lngLat.lng, lngLat.lat], duration: 600 });
+            }
         }
     };
 
@@ -261,12 +362,18 @@ export default function V2Map({
             const isSaved = group.some(e => savedEventIds.has(e.id));
             const isDiscarded = group.every(e => discardedEventIds.has(e.id));
 
+            // Markera gruppen som "avslöjad" så fort den varit vald. Avslöjade
+            // grupper visar brickan direkt även när de inte längre är valda.
+            if (isSelected) revealedKeysRef.current.add(key);
+            const isRevealed = revealedKeysRef.current.has(key);
+
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
-            // Notera: vi inkluderar INTE cycleRep här eftersom vi annars skulle
-            // riva ner och bygga upp brickans HTML varje sekund (vilket re-startar
-            // pop-in-animationen). Slideshow-bytet sker istället med en mindre
-            // ingripande emoji-uppdatering längre ner.
-            const stateKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}:${rep.category ?? 'other'}`;
+            // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
+            // att stateKey inte ändras varje slideshow-tick (annars rivs brickan
+            // ner och byggs upp igen + pop-in-animationen återstartas). Själva
+            // emoji-bytet sker kirurgiskt längre ner.
+            const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -341,8 +448,10 @@ export default function V2Map({
                 // Fördela uppdykandet så att alla markörer poppar in under totalt 4 sekunder (4000ms), men visa det valda direkt (0ms delay)
                 const N = visibleGroups.length;
                 const animDelay = isSelected ? 0 : (N > 1 ? (index / (N - 1)) * 4000 : 0);
-                const wrapperStyle = isSelected ? 'opacity: 1 !important;' : '';
-                const pinAnimationStyle = isSelected
+                // Valt OCH redan avslöjat event visar brickan direkt utan kö-delay.
+                const showImmediately = isSelected || isRevealed;
+                const wrapperStyle = showImmediately ? 'opacity: 1 !important;' : '';
+                const pinAnimationStyle = showImmediately
                     ? 'animation: none !important; opacity: 1 !important; transform: ' + scaleStyle + ' !important;'
                     : `transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
@@ -555,7 +664,23 @@ export default function V2Map({
                     message={`Det finns ${events.length} unika event idag. Det fylls på med nya hela tiden.`}
                     anchorPos={cloudAnchorPos}
                     onDragEnd={handleCloudDragEnd}
-                    onDismiss={() => setShowCloud(false)}
+                    onDismiss={() => { setShowCloud(false); setFollowingCloud(f => f === 'main' ? null : f); }}
+                    following={followingCloud === 'main'}
+                    onToggleFollow={() => setFollowingCloud(f => f === 'main' ? null : 'main')}
+                />
+            )}
+            {sunCloudAnchor && sunCloudAnchorPos && (
+                <CloudPopup
+                    key={sunCloudId}
+                    message=""
+                    anchorPos={sunCloudAnchorPos}
+                    onDragEnd={handleSunCloudDragEnd}
+                    onDismiss={() => { setSunCloudAnchor(null); setFollowingCloud(f => f === 'sun' ? null : f); }}
+                    faceScale={0.6}
+                    showDelayMs={0}
+                    scale={sunCloudScale}
+                    following={followingCloud === 'sun'}
+                    onToggleFollow={() => setFollowingCloud(f => f === 'sun' ? null : 'sun')}
                 />
             )}
         </div>
