@@ -130,7 +130,7 @@ fi
 # Bara nya events (--only-new) för att inte slösa GPU. Limit för säkerhet.
 echo "" >> "$LOG_FILE"
 echo "── K8: AI-AUDIT ──" >> "$LOG_FILE"
-if npm run audit-events -- --apply --only-new --auto-hide-junk --limit=500 >> "$LOG_FILE" 2>&1; then
+if npm run audit-events -- --apply --only-new --auto-hide-junk --check-gps --auto-hide-wrong-gps --limit=500 >> "$LOG_FILE" 2>&1; then
     AUDIT_HIDDEN="$(grep -oE 'hidden:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
     echo "AI-audit OK (auto-gömda=${AUDIT_HIDDEN:-0})" >> "$LOG_FILE"
 else

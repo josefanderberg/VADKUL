@@ -440,3 +440,39 @@ export async function geocodeVenueSweden(rawQuery: string): Promise<[number, num
     console.log(`[Geocoding/SE] No results for "${cleaned}".`);
     return null;
 }
+
+export interface ReverseGeocodeResult {
+    /** Hela display-strängen från Nominatim (t.ex. "Vida Arena, Lyckhems väg, Växjö, ...") */
+    displayName: string;
+    /** city / town / village (best-effort, kan vara null när Nominatim bara har municipality) */
+    city: string | null;
+    countryCode: string | null;
+}
+
+/**
+ * Reverse-geokoda en koordinat via Nominatim. Respekterar 1 req/sec.
+ * Returnerar null vid HTTP-fel eller tomt svar — kallaren får anta "okänt".
+ */
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
+    if (!lat && !lng) return null;
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&addressdetails=1`;
+    try {
+        const res = await fetch(url, {
+            headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' },
+        });
+        if (!res.ok) return null;
+        const data: any = await res.json();
+        if (!data || !data.display_name) return null;
+        const a = data.address || {};
+        const city = a.city || a.town || a.village || a.municipality || a.county || null;
+        const countryCode = (a.country_code || '').toLowerCase() || null;
+        return {
+            displayName: data.display_name,
+            city,
+            countryCode,
+        };
+    } catch {
+        return null;
+    }
+}

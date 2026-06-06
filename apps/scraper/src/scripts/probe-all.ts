@@ -60,12 +60,15 @@ interface ProbeHit {
 
 function parseProbeOutput(output: string, engineLabel: string): ProbeHit[] {
     const hits: ProbeHit[] = [];
-    // Probe-WP-rader: "✅ [N/M] KommunNamn   wp-v2/tribe   N events  https://..."
-    // Probe-SiteVision-rader: "✅ [N/M] KommunNamn   N events  https://..."
+    // Probe-WP-rader:        "✅ [N/M] KommunNamn   wp-v2/tribe   N events  https://..."
+    // Probe-SiteVision-rader:"✅ [N/M] KommunNamn   N events  https://..."
+    // Probe-sitemap-rader:   "✅ [N/M] KommunNamn   pattern   N URLs   https://..."
+    // Probe-iCal-rader:      "✅ [N/M] KommunNamn   N events  https://..."
     const lines = output.split('\n');
     for (const line of lines) {
         if (!line.startsWith('✅')) continue;
-        // Försök matcha båda formaten
+
+        // WP: två varianter (wp-v2 / tribe)
         const wpMatch = line.match(/✅\s*\[[^\]]+\]\s+(.+?)\s+(wp-v2|tribe)\s+(\d+)\s+events\s+(\S+)/);
         if (wpMatch) {
             hits.push({
@@ -76,13 +79,27 @@ function parseProbeOutput(output: string, engineLabel: string): ProbeHit[] {
             });
             continue;
         }
+
+        // Sitemap: N URLs istället för N events
+        const smMatch = line.match(/✅\s*\[[^\]]+\]\s+(.+?)\s+(\S+)\s+(\d+)\s+URLs\s+(\S+)/);
+        if (smMatch) {
+            hits.push({
+                kommun: smMatch[1].trim(),
+                engine: 'sitemap',
+                events: parseInt(smMatch[3], 10),
+                url: smMatch[4],
+            });
+            continue;
+        }
+
+        // SiteVision / iCal — generiskt "N events URL" som sista fallback
         const svMatch = line.match(/✅\s*\[[^\]]+\]\s+(.+?)\s+(\d+)\s+events\s+(\S+)/);
         if (svMatch) {
             hits.push({
                 kommun: svMatch[1].trim(),
                 engine: engineLabel,
-                events: parseInt(svMatch[3], 10),
-                url: svMatch[4],
+                events: parseInt(svMatch[2], 10),
+                url: svMatch[3],
             });
         }
     }
@@ -97,10 +114,11 @@ function slugify(s: string): string {
 async function main() {
     console.log('🔎 Kör alla probes (kan ta ~10 min)…\n');
 
-    const [wpOut, svOut, icalOut] = await Promise.all([
+    const [wpOut, svOut, icalOut, smOut] = await Promise.all([
         runScript('probe-wordpress').then(o => { console.log('  ✓ probe-wp klart'); return o; }),
         runScript('probe-sitevision').then(o => { console.log('  ✓ probe-sitevision klart'); return o; }),
         runScript('probe-ical').then(o => { console.log('  ✓ probe-ical klart'); return o; }),
+        runScript('probe-sitemap').then(o => { console.log('  ✓ probe-sitemap klart'); return o; }),
     ]);
 
     // Snapshot rå output per probe-typ för senare diff vid förändringar.
@@ -108,12 +126,14 @@ async function main() {
     saveSnapshot(today, 'probe-wp', wpOut);
     saveSnapshot(today, 'probe-sitevision', svOut);
     saveSnapshot(today, 'probe-ical', icalOut);
+    saveSnapshot(today, 'probe-sitemap', smOut);
     console.log(`  📸 Snapshots sparade i src/sources/data/probe-snapshots/${today}/`);
 
     const wpHits = parseProbeOutput(wpOut, 'wp-rest');
     const svHits = parseProbeOutput(svOut, 'sitevision');
     const icalHits = parseProbeOutput(icalOut, 'ical');
-    const allHits = [...wpHits, ...svHits, ...icalHits];
+    const smHits = parseProbeOutput(smOut, 'sitemap');
+    const allHits = [...wpHits, ...svHits, ...icalHits, ...smHits];
 
     // Vilka kommuner är redan i vårt registry?
     const registeredSlugs = new Set(SOURCES.map(s => slugify(s.region || s.hostName)));
@@ -154,6 +174,14 @@ async function main() {
                     console.log(`            defaultCity: '${h.kommun}',`);
                 } else if (h.engine === 'ical') {
                     console.log(`            urls: ['${h.url}'],`);
+                } else if (h.engine === 'sitemap') {
+                    // Sitemap-träffar bär sitemap-URL i h.url. URL-mönstret måste
+                    // hämtas från probe-sitemap-rapporten (pattern-kolumnen) — för
+                    // emit kör vi en vanlig "kalender|evenemang|aktivitet"-fångst
+                    // och låter mänskan justera om det blir för brett.
+                    console.log(`            sitemapUrl: '${h.url}',`);
+                    console.log(`            urlPatterns: [/\\/(?:sv\\/)?(evenemang|aktivitet(?:er)?|kalender|event)\\/[^/]+\\/?$/i],`);
+                    console.log(`            defaultCity: '${h.kommun}',`);
                 }
                 console.log(`        },`);
                 console.log(`        updateFrequency: 'every-3d',`);

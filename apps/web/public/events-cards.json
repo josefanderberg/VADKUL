@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-05T23:00:06.340Z",
+  "updatedAt": "2026-06-06T03:05:41.170Z",
   "events": [
     {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fsweden-rock-festival-2026-1-day-ticket-saturday-vip-tickets%2F1861497532%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
@@ -1315,6 +1315,45 @@
       "url": "https://sundsvall.se/upplev/evenemang/nationaldagen"
     },
     {
+      "id": "https://www.facebook.com/events/1523527899120994/",
+      "title": "Stockholm Marathon ",
+      "time": "2026-06-05T22:00:00.000Z",
+      "locationName": "",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c14e5c78e247551bbb41170eaa659aa6f7b29687.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1523527899120994/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1461165812721581/",
+      "title": "STOR LOPPIS / BARNLOPPIS PÅ KLOSTERGÅRDSVÄGEN I LUND ",
+      "time": "2026-06-05T22:00:00.000Z",
+      "locationName": "Klostergården, Lund",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f3b8a03eb20c130cf048c57f23dc822145d95f81.jpg",
+      "hostName": "Emelie",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1461165812721581/"
+    },
+    {
+      "id": "https://www.facebook.com/events/966335132786432/",
+      "title": "disco vintage ",
+      "time": "2026-06-05T22:00:00.000Z",
+      "locationName": "quintana 273",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/0d7e4d73c29f092d19323c39c6cc8d2f83a9bc69.jpg",
+      "hostName": "Santa Rosa, La Pampa",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/966335132786432/"
+    },
+    {
       "id": "https://www.facebook.com/events/1227828056209222/",
       "title": "Live at Custom Bike Show Norrtälje",
       "time": "2026-06-05T22:02:00.000Z",
@@ -1352,6 +1391,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.horby.se/event/trimorientering-i-horby/"
+    },
+    {
+      "id": "https://www.facebook.com/events/986545157304813/",
+      "title": "Digital business ",
+      "time": "2026-06-05T23:00:00.000Z",
+      "locationName": "Lassaretsgatan, Gällivare, Sweden",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8826c417ce620aa661772fd27365e4c199bc092a.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/986545157304813/"
+    },
+    {
+      "id": "https://www.facebook.com/events/27103574799296346/",
+      "title": "IPO Stockholm",
+      "time": "2026-06-05T23:15:00.000Z",
+      "locationName": "",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b6ba097c26e9c1de60b7eb0ad4325f215249b6a5.jpg",
+      "hostName": "The Underwhelmed",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/27103574799296346/"
     },
     {
       "id": "https://www.visitstockholm.com/events/hornstulls-marknad/next/",
@@ -2056,6 +2121,201 @@
       "url": "https://www.visitstockholm.com/events/national-day-of-sweden/next/"
     },
     {
+      "id": "https://www.visitstockholm.com/events/peter-joback/next/",
+      "title": "Peter Jöback – Vitabergsparken",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Skånegatan/Malmgårdsvägen",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/decb44d0de2fa029dd84a1e03df8d5ebd1c7122a.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/peter-joback/next/"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/duschpalatset-at-debaser-nova/next/",
+      "title": "Duschpalatset at Debaser Nova",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Hornstulls strand 4",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/74dbe60797fa56ddd8cea1d87453faee8e34aa8a.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/duschpalatset-at-debaser-nova/next/"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/national-day-concert-by-baggensfjarden/next/",
+      "title": "National Day Concert by Baggensfjärden",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Artipelagstigen 1",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/3810e55742c217840ac8b40f4e7bf4a7dadced78.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/national-day-concert-by-baggensfjarden/next/"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/don-west/next/",
+      "title": "Don West",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Hornstulls strand 4",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1a69edd1664553830e685d0b2aa4d6a614e3df91.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/don-west/next/"
+    },
+    {
+      "id": "https://skaneskonst.se/performance-les-voyages-et-aventures-extraordinaires-du-frere-angelo-by-ville-laurinkoski/",
+      "title": "Performance av Ville Laurinkoski",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a5db8153cbdfcdffdff3732964b3b0c06650f49d.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://skaneskonst.se/performance-les-voyages-et-aventures-extraordinaires-du-frere-angelo-by-ville-laurinkoski/"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/street-theatre-about-stockholm-bloodbath/next/",
+      "title": "Street theater about Stockholm bloodbath",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Köpmantorget",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ed8822d374aa1cf3419366956545ab20563828bb.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/street-theatre-about-stockholm-bloodbath/next/"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.5dd12b0619c51d1d050dce1",
+      "title": "Olympiadagen",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/81d235be5b35838ac84a3c02587fe3cdf9b14960.png",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.5dd12b0619c51d1d050dce1"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/a-day-att-slussen/next/",
+      "title": "A day att Slussen",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Södermalmstorg 4",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/5cf5bbb2161a7ff7c8e0cacd0b1584b0836a2575.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/a-day-att-slussen/next/"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.7f765e1719e2074a3d61c3c",
+      "title": "Bouchra Khalili – How to Call a Ghost",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/4b8fc2af6afcc882ac58d3c6d5e08a089f72d17f.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.7f765e1719e2074a3d61c3c"
+    },
+    {
+      "id": "https://www.visitstockholm.com/events/celebrate-national-day-with-the-medieval-museum-2/next/",
+      "title": "Celebrate National Day with the Medieval Museum",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Storkyrkans gård, Trångsund 3, Gamla stan",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f4575e2f3b1f066268d1f475bbfba5bf2f03ca8d.jpg",
+      "hostName": "Visit Stockholm",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.visitstockholm.com/events/celebrate-national-day-with-the-medieval-museum-2/next/"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.e8e1c8e19e20790e13c7ab",
+      "title": "Invigning av sommartorg på Kirseberg",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "social",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cabb277250d880b78d55dd029a7a7e2474e1e15a.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.e8e1c8e19e20790e13c7ab"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.25b72d94196ed940c1110fb3",
+      "title": "Flora och fauna i Slottsparken",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/13d0459b5b2ab7efa1f4e871ef02c261c4c5f438.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.25b72d94196ed940c1110fb3"
+    },
+    {
+      "id": "https://www.modernamuseet.se/malmo/sv/aktiviteter/besok-torsten-anderssons-konsthall-med-oss/",
+      "title": "Besök Torsten Anderssons konsthall med oss!",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e1064cb2f6a6750de354fa88f06fadd999509763.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.modernamuseet.se/malmo/sv/aktiviteter/besok-torsten-anderssons-konsthall-med-oss/"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.7f765e1719e2074a3d613e2",
+      "title": "Legenden om det förtrollade korallrevet 3D",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/806c9826cfed0dfc057d9797d0239e172207f57d.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.7f765e1719e2074a3d613e2"
+    },
+    {
+      "id": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.e8e1c8e19e20790e13e2f4",
+      "title": "LOVE Malmö 2026",
+      "time": "2026-06-06T00:00:00.000Z",
+      "locationName": "Malmö",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f059ec4ace68d2b30a4800fc8ec912649c5c2e69.jpg",
+      "hostName": "Malmö Stad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://malmo.se/Uppleva-och-gora/Evenemang/Evenemang-i-Malmo/Evenemangssida.html?id=5.e8e1c8e19e20790e13e2f4"
+    },
+    {
       "id": "https://www.facebook.com/events/849442154601160/",
       "title": "FLATLINERZ ARE BACK!!!",
       "time": "2026-06-06T01:00:00.000Z",
@@ -2301,6 +2561,45 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1572702883927951/"
+    },
+    {
+      "id": "https://www.facebook.com/events/960071279971311/",
+      "title": "Nationaldagsfikat finns hos oss ",
+      "time": "2026-06-06T06:00:00.000Z",
+      "locationName": "Klostergatan  63, Jönköping",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7e0f40471d9444c79d3e4a2c4d6d979aaec82cb0.jpg",
+      "hostName": "Facebook",
+      "attendees": 9,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/960071279971311/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2479246739185800/",
+      "title": "Show & Shine 2026",
+      "time": "2026-06-06T06:00:00.000Z",
+      "locationName": "Yarrow United Mennonite Church",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cd6a2b3a631d6a2ea79d701a3b88bcaf23b22b0d.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2479246739185800/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1307356121502071/",
+      "title": "Kurs Prowadzącego Strzelanie",
+      "time": "2026-06-06T06:00:00.000Z",
+      "locationName": "ulica Nałęczowska 25, 20-701 Lublin, Polska",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/6390b58d38b9a43dea532070322ef4c299b64706.jpg",
+      "hostName": "Facebook",
+      "attendees": 46,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1307356121502071/"
     },
     {
       "id": "https://www.facebook.com/events/2236274203504475/",
@@ -2875,6 +3174,32 @@
       "url": "https://www.facebook.com/events/1591858561971932/"
     },
     {
+      "id": "https://www.facebook.com/events/1608128750457959/",
+      "title": "Morgonloppis",
+      "time": "2026-06-06T07:00:00.000Z",
+      "locationName": "Koppargatan 20, 602 23 Norrköping, Sweden",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/70403e75fc92d2d364189fc8982c67af81fcd71d.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1608128750457959/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1584832112629534/",
+      "title": "Spirituel Workshop",
+      "time": "2026-06-06T07:00:00.000Z",
+      "locationName": "holbæk",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f2ba2e0d1500a48928bd1ce1d17a76eb3e9b69f0.jpg",
+      "hostName": "Facebook",
+      "attendees": 45,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1584832112629534/"
+    },
+    {
       "id": "https://www.facebook.com/events/836162655678457/",
       "title": "Broparken parkrun - Umeå",
       "time": "2026-06-06T07:30:00.000Z",
@@ -2990,6 +3315,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1738783967571844/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1380593147151093/",
+      "title": "Norrlands Tulpan Festival 2026",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Backsjön 221, 88192 Sollefteå, Sweden",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d9319768203d5445215accaaaff221e8f27c809b.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1380593147151093/"
     },
     {
       "id": "https://www.facebook.com/events/981096684406753/",
@@ -4227,6 +4565,110 @@
       "url": "https://www.meetup.com/hiking-around-goteborg/events/315084394/"
     },
     {
+      "id": "https://www.facebook.com/events/1134674215512811/",
+      "title": "Usui Klassisk Reiki steg 1",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Barnarpsgatan, Jönköping, Sverige",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e9d840819ea4480a2569c2f866aaabde4a3cfc36.jpg",
+      "hostName": "Hälsospridarna - Hälsa, Ekonomi och Personlig utveckling",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1134674215512811/"
+    },
+    {
+      "id": "https://www.facebook.com/events/803841292558957/",
+      "title": "Usui Klassisk Reiki steg 1",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Barnarpsgatan, Jönköping, Sverige",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d3522c3f48f4ede40098ec876244b95892cf8287.jpg",
+      "hostName": "Reklam Andlighet Alternativ Hälsa",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/803841292558957/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1317958799759203/",
+      "title": "Epa Träff Mellanholmen Härnösand",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Härnösand",
+      "category": "social",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b2a41b95b656378b1ad14ca71b5bd8b02bee43b4.jpg",
+      "hostName": "Härnösand",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1317958799759203/"
+    },
+    {
+      "id": "https://www.facebook.com/events/4219414098312865/",
+      "title": "Châtellerault Tattoo Show 2026",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Chatellerault - Parc des expositions",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a9fb31d8674299821bfc4aa39692badbd3d1b571.jpg",
+      "hostName": "Chatellerault - Parc des expositions",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4219414098312865/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2060728994539652/",
+      "title": "Loppis",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "stationsvägen 15, Tranås",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b9fd967d842d518d9312a96708665059e7b4fa8e.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2060728994539652/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1455770365855681/",
+      "title": "Potujoči cirkus nerodne Avguštine",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Gregorčičeva ulica, 1000 Ljubljana, Slovenija",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/20e89d2c51a38ee2a8b3cd945260a1e66a476e57.jpg",
+      "hostName": "Facebook",
+      "attendees": 97,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1455770365855681/"
+    },
+    {
+      "id": "https://www.facebook.com/events/919509381134265/",
+      "title": "Kurs för Katie🌸",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Dk Icelandichorses",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e902db65dc46ce6f565f85319e15fccf86bc87d9.jpg",
+      "hostName": "Facebook",
+      "attendees": 7,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/919509381134265/"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/canal-street-market/",
+      "title": "Canal Street Market",
+      "time": "2026-06-06T08:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7ad7a9baa5b9d0086b89d62ef8854cf8769adb8d.png",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/canal-street-market/"
+    },
+    {
       "id": "https://www.facebook.com/events/1930456984273957/",
       "title": "Vandring langs Ilsengstiene",
       "time": "2026-06-06T08:15:00.000Z",
@@ -4251,6 +4693,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/kgn9gjfa41ph7uc/2026-06-06/tidig-musik-for-barn-det-klingande-guldet-lor"
+    },
+    {
+      "id": "https://www.facebook.com/events/778439428484755/",
+      "title": "Sail Rally Göteborg",
+      "time": "2026-06-06T08:30:00.000Z",
+      "locationName": "Göteborgs Södra Skärgård",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a2644695bfc166f562f8ffe8b8b7ffbdc90bfe3f.jpg",
+      "hostName": "Göteborgs Södra Skärgård",
+      "attendees": 177,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/778439428484755/"
     },
     {
       "id": "https://www.facebook.com/events/874633382346808/",
@@ -4342,6 +4797,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://falkenberg.se/evenemang/nationaldagsfirande-i-gamla-stan/"
+    },
+    {
+      "id": "https://www.facebook.com/events/980944424721822/",
+      "title": "Motorhistoriska dagen 6 juni Gävle",
+      "time": "2026-06-06T08:30:00.000Z",
+      "locationName": "Södermalmstorg",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/720a5090d16a5c1e094b06bf508f709f6b357e61.jpg",
+      "hostName": "Södermalmstorg",
+      "attendees": 10,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/980944424721822/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1186085623467177/",
+      "title": "Beweegproeverij: Sport- en Speldag",
+      "time": "2026-06-06T08:30:00.000Z",
+      "locationName": "Adelante Zorggroep",
+      "category": "sport",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7fe45f0446bda165d45e1f9205ad9ee9ccf0184e.jpg",
+      "hostName": "Facebook",
+      "attendees": 214,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1186085623467177/"
     },
     {
       "id": "https://www.facebook.com/events/1683758225961897/",
@@ -5826,6 +6307,84 @@
       "url": "https://www.facebook.com/events/1201825188723907/"
     },
     {
+      "id": "https://www.facebook.com/events/954511070731858/",
+      "title": "Nationaldagsfirande vid Rösåsen",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "Rösåsens Utsiktstorn",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c98ba1b99d4438ca56720f1483902c5430d930b5.jpg",
+      "hostName": "Rösåsens utsiktstorn / tornförening",
+      "attendees": 39,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/954511070731858/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1337890148432411/",
+      "title": "LOPPIS",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "boaltsvägen 2 Glimåkra",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1fea6778c4be70478d91c4e2422084e123aa4fbd.jpg",
+      "hostName": "Östra göinge loppis runda",
+      "attendees": 5,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1337890148432411/"
+    },
+    {
+      "id": "https://www.facebook.com/events/986602893899103/",
+      "title": "Bakluckeloppis ",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "Tavlan 450 DALS-HÖGEN 66893 ED , 1km från riksgränsen vid Kornsjø området på svenska sidan , 20 minuter från ED längst väg 166 mot Halden, Ed, Dals-Eds kommun",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1cc26e791a9318b7cc24ec1053f917f3ef1470bf.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/986602893899103/"
+    },
+    {
+      "id": "https://www.facebook.com/events/3885781408392813/",
+      "title": "Kurs i hinderlæring",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "Haraldstadveien 23, Grålum /Sarpsborg, Norway",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/6b9a26a427812ffcdf9dd8281eee7bd202f11238.jpg",
+      "hostName": "Facebook",
+      "attendees": 7,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/3885781408392813/"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/art-walk-in-langedrag-2026/",
+      "title": "Art walk in Långedrag 2026",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/900cdeddbd1de04c004b3b4e3e125ddc94f6b778.jpg",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/art-walk-in-langedrag-2026/"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/hamseda/",
+      "title": "Hamseda",
+      "time": "2026-06-06T09:00:00.000Z",
+      "locationName": "Röda Sten Art Centre",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d2a56624d31e0c803499a8e485697b805d30ecc7.jpg",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/hamseda/"
+    },
+    {
       "id": "https://www.facebook.com/events/2897954910566743/",
       "title": "🇸🇪 Nationaldag i Stadsparken",
       "time": "2026-06-06T09:15:00.000Z",
@@ -6084,6 +6643,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1431300372008817/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2774824799542239/",
+      "title": "ÅKE ARNERDAL • OCH RESAN GÅR VIDARE ",
+      "time": "2026-06-06T10:00:00.000Z",
+      "locationName": "Ahlbergshallen",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/3014af334927b7fa4a578d79ec93b7b64555fe06.jpg",
+      "hostName": "Ahlbergshallen",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2774824799542239/"
     },
     {
       "id": "https://www.facebook.com/events/951243921137624/",
@@ -6710,6 +7282,45 @@
       "url": "https://www.boras.se/kalender/evenemang/nationaldagen6junifamiljefirandeistadsparken.5.37014ff19dd248e44a765e3.html"
     },
     {
+      "id": "https://www.facebook.com/events/1236573855049324/",
+      "title": "Matpromenad i Linköping",
+      "time": "2026-06-06T10:00:00.000Z",
+      "locationName": "Linköping",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/76cdb455ec668b26e97aa9b7bcd911fbb3dd6640.jpg",
+      "hostName": "Facebook",
+      "attendees": 249,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1236573855049324/"
+    },
+    {
+      "id": "https://www.facebook.com/events/4093759910877941/",
+      "title": "Orgelmatiné - Made in Sweden ",
+      "time": "2026-06-06T10:00:00.000Z",
+      "locationName": "Kalmar Domkyrkan",
+      "category": "community",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cc7f743a09928b3ab59dfd4c704b871b1a5f9921.jpg",
+      "hostName": "Kalmar Domkyrkan",
+      "attendees": 30,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4093759910877941/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1748768086104648/",
+      "title": "Vestavind Teater Presenterer Teaterforestillingen \"DØREN\"",
+      "time": "2026-06-06T10:00:00.000Z",
+      "locationName": "Kulturpassasjen 15, 1540 Vestby, Norway",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/27f77d56350b335d73a33637ba2a07470fe5c34d.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1748768086104648/"
+    },
+    {
       "id": "https://www.facebook.com/events/2173347223519042/",
       "title": "Nationaldagsfirande i Rådhusparken",
       "time": "2026-06-06T10:30:00.000Z",
@@ -6747,6 +7358,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/767565r315ned1x/2026-06-06/folk-och-rovare-i-kamomilla-stad"
+    },
+    {
+      "id": "https://www.facebook.com/events/2520853355020392/",
+      "title": "Ratha Yatra Lund 2026 ",
+      "time": "2026-06-06T10:30:00.000Z",
+      "locationName": "Lund",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/03c42c51aa97c0dc7dd88c73f7d1190e47682173.jpg",
+      "hostName": "Facebook",
+      "attendees": 67,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2520853355020392/"
     },
     {
       "id": "https://www.facebook.com/events/1390406542588679/",
@@ -7360,6 +7984,45 @@
       "url": "https://www.alvkarleby.se/uppleva-och-gora/evenemang/evenemang/2026-06-04-nationaldagsfirande.html"
     },
     {
+      "id": "https://www.facebook.com/events/2226344348184891/",
+      "title": "Konstutställning med Maja Höglund",
+      "time": "2026-06-06T11:00:00.000Z",
+      "locationName": "ABF Bergslagsgården, Norrköping",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ba903f3a9c71688dc8a15e9244dde4ef7b8002b7.jpg",
+      "hostName": "ABF Östergötland",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2226344348184891/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1289227946166739/",
+      "title": "Cirkus Gaston och Caligari",
+      "time": "2026-06-06T11:00:00.000Z",
+      "locationName": "Gustafsberg Uddevalla",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/823b3286536055d8f74ed325d38ff414a53436b9.jpg",
+      "hostName": "Facebook",
+      "attendees": 16,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1289227946166739/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2522128818238778/",
+      "title": "Nationaldagen i Ronneby Brunnspark ",
+      "time": "2026-06-06T11:00:00.000Z",
+      "locationName": "Ronneby",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/855b95d8ad39d3f6c777f10e01d82ff2ee252a0f.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2522128818238778/"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/ay42wwu955cmldy/2026-06-06/mad-heat-festival-2026-malmo",
       "title": "MAD HEAT FESTIVAL 2026 - MALMÖ",
       "time": "2026-06-06T11:30:00.000Z",
@@ -7893,6 +8556,32 @@
       "url": "https://www.goteborg.com/evenemang/bryggerivisning-poppels-citybryggeri"
     },
     {
+      "id": "https://www.facebook.com/events/1326501859109077/",
+      "title": "Kurs: OLEJNE MALARSTWO",
+      "time": "2026-06-06T12:00:00.000Z",
+      "locationName": "Łąkowa 16, 80-746 Gdansk, Poland",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b04c0762f44859ded687d08a5c6d10adb685d830.jpg",
+      "hostName": "Dzivne",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1326501859109077/"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/national-day-concert/",
+      "title": "National Day Concert 2026",
+      "time": "2026-06-06T12:00:00.000Z",
+      "locationName": "Slottsskogen city park",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/2d3bc9c901c165bc11bc6f22caf6e0d6f6993e1a.jpg",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/national-day-concert/"
+    },
+    {
       "id": "https://www.facebook.com/events/1991482078121088/",
       "title": "Vin og vandring",
       "time": "2026-06-06T12:06:00.000Z",
@@ -8244,6 +8933,32 @@
       "url": "https://www.nacka.se/valfard-samhallsservice/nacka-musikskola/evenemang/sveriges-nationaldag-med-nacka-musikskola/"
     },
     {
+      "id": "https://www.facebook.com/events/1337762468255279/",
+      "title": "Nem tudom az életemet",
+      "time": "2026-06-06T13:00:00.000Z",
+      "locationName": "József Attila Művelődési Ház",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d8fc1cc8155b620b1dc5d70eb2a9748355204970.jpg",
+      "hostName": "Szilvia Székely",
+      "attendees": 15,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1337762468255279/"
+    },
+    {
+      "id": "https://www.facebook.com/events/937449005829737/",
+      "title": "Cirkus Arena - Varde (2026)",
+      "time": "2026-06-06T13:00:00.000Z",
+      "locationName": "Varde Kommune",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c540ac0bcd187e7bda898f77a039da31fdfd0db1.jpg",
+      "hostName": "Facebook",
+      "attendees": 13,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/937449005829737/"
+    },
+    {
       "id": "https://www.facebook.com/events/1506351977542930/",
       "title": "MRC Karlskrona Run #61",
       "time": "2026-06-06T13:15:00.000Z",
@@ -8294,6 +9009,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/2261059707633940/"
+    },
+    {
+      "id": "https://www.facebook.com/events/851682651322200/",
+      "title": "Allsång på Aqua Blå ",
+      "time": "2026-06-06T13:30:00.000Z",
+      "locationName": "Fisketorget, Backstage Rockbar",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/febcfe9917c020e4f6a4bf05b5d3e2d4d5c78fa2.jpg",
+      "hostName": "Voice of Vocals",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/851682651322200/"
     },
     {
       "id": "https://www.facebook.com/events/1793527865672435/",
@@ -8502,6 +9230,71 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1627613688537150/"
+    },
+    {
+      "id": "https://www.facebook.com/events/860737493441167/",
+      "title": "Romanskonsert",
+      "time": "2026-06-06T14:00:00.000Z",
+      "locationName": "Kalmar domkyrka",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f98b0dbcdbb9a69f0544e457a16713a9c814d800.jpg",
+      "hostName": "Kalmar domkyrka",
+      "attendees": 61,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/860737493441167/"
+    },
+    {
+      "id": "https://www.facebook.com/events/4616218031993806/",
+      "title": "Sala si fa Strada - Artisti di Strada ",
+      "time": "2026-06-06T14:00:00.000Z",
+      "locationName": "Sala di Cesenatico",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c15d59ec528257389eb19c595061a86579efbfe2.jpg",
+      "hostName": "Facebook",
+      "attendees": 7,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4616218031993806/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2010058692914575/",
+      "title": "Cirkus HUMBERTO 2026: Hradec Králové",
+      "time": "2026-06-06T14:00:00.000Z",
+      "locationName": "ulice Malšovická (u Lízátek)",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7083c5e53ab4219e763c41866a3f240df0d5ca48.jpg",
+      "hostName": "Cirkus Humberto",
+      "attendees": 8,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2010058692914575/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1269912308304038/",
+      "title": "Nuit du Sport 2026",
+      "time": "2026-06-06T14:00:00.000Z",
+      "locationName": "Centre Sportif Bim Diederich, Pétange",
+      "category": "sport",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/273ca8b460596ba7dc8b917879dc8e20fe9ab008.jpg",
+      "hostName": "Facebook",
+      "attendees": 146,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1269912308304038/"
+    },
+    {
+      "id": "https://www.facebook.com/events/756976840595724/",
+      "title": "kurs \"w Chrystusie\"",
+      "time": "2026-06-06T14:00:00.000Z",
+      "locationName": "ul. Perla 5, 41-300 Dabrowa Gornicza, Poland",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/07c347a10f6c03494cf7b6fbf9c953bf7746feaa.jpg",
+      "hostName": "Facebook",
+      "attendees": 15,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/756976840595724/"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/rd19x7ntfmlhl7v/2026-06-06/nils-holgerssons-musikaliska-resa-genom-sverige",
@@ -8723,6 +9516,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/d5vv2egjyuntenw/2026-06-06/fira-national-teatern-dagen-2026-pa-medley"
+    },
+    {
+      "id": "https://www.facebook.com/events/1246666783867403/",
+      "title": "ANDRA LÅNGDAGEN KARAOKE ",
+      "time": "2026-06-06T15:00:00.000Z",
+      "locationName": "Värmlandsgatan 15, 41327 Gothenburg, Sweden",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f80f3123570a68fef3ae6674a447169776c0f678.jpg",
+      "hostName": "Facebook",
+      "attendees": 380,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1246666783867403/"
     },
     {
       "id": "https://www.facebook.com/events/1339112978032060/",
@@ -9154,6 +9960,58 @@
       "url": "https://www.tickster.com/se/sv/events/tdpztg0dbzgewg6/2026-06-06/workshop-jacob-dahlgren"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/aypwyxd68eny5tf/2026-06-06/the-refreshments-sounds-of-solums-kvarn",
+      "title": "The Refreshments – Sounds of Solums Kvarn",
+      "time": "2026-06-06T16:00:00.000Z",
+      "locationName": "Solums Kvarn, Kovland",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/94/d8852982ec1cea9dd1330dab6742a0e19ff97e",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/aypwyxd68eny5tf/2026-06-06/the-refreshments-sounds-of-solums-kvarn"
+    },
+    {
+      "id": "https://www.facebook.com/events/1450649126521725/",
+      "title": "Standup Showcase - Somerville",
+      "time": "2026-06-06T16:00:00.000Z",
+      "locationName": "Duck Lake Country Club",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8870e8eaaff0036118e28d316f3e26531ffb4b71.jpg",
+      "hostName": "Layton Levine",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1450649126521725/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1449495846944910/",
+      "title": "Vernissage",
+      "time": "2026-06-06T16:00:00.000Z",
+      "locationName": "Ratingen, Tyskland",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/bec9645586f357df76073dc2e077bda2be058d23.jpg",
+      "hostName": "Ratingen Aktuell",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1449495846944910/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1944934896155840/",
+      "title": "Nuit du Sport",
+      "time": "2026-06-06T16:00:00.000Z",
+      "locationName": "1, Place de l'Indépendance, 8252 Mamer, Luxembourg",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c5d4213c5cb2559af3c07553e88d3b5bb9263c37.jpg",
+      "hostName": "Gemeng Mamer",
+      "attendees": 100,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1944934896155840/"
+    },
+    {
       "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-03-nationaldagsfirande-i-bottnaryd",
       "title": "Nationaldagsfirande i Bottnaryd",
       "time": "2026-06-06T16:15:00.000Z",
@@ -9165,6 +10023,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-03-nationaldagsfirande-i-bottnaryd"
+    },
+    {
+      "id": "https://www.facebook.com/events/4305381113125265/",
+      "title": "Vernissage ",
+      "time": "2026-06-06T16:18:00.000Z",
+      "locationName": "Rue Léon-Blum",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/5d17b745f74bec7c9b97b3f6e567fec842c825a8.jpg",
+      "hostName": "SISU Lindoushka",
+      "attendees": 7,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4305381113125265/"
     },
     {
       "id": "https://www.facebook.com/events/1682159249870895/",
@@ -9518,6 +10389,45 @@
       "url": "https://www.goteborg.com/evenemang/los-van-van"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/t0k6jjtxpzxz14n/2026-06-06/guitar-wolf-and-hard-ons-featuring-jerry-a",
+      "title": "Guitar Wolf & Hard-Ons (featuring Jerry A)",
+      "time": "2026-06-06T17:00:00.000Z",
+      "locationName": "Mejeriet, Lund",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/30/4c77d0d3d1fb1637d78deb99b1db09c1135e1c",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/t0k6jjtxpzxz14n/2026-06-06/guitar-wolf-and-hard-ons-featuring-jerry-a"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/gharfx69p9je74e/2026-06-06/viva-summer-sounds-2026",
+      "title": "VIVA SUMMER SOUNDS 2026",
+      "time": "2026-06-06T17:00:00.000Z",
+      "locationName": "Musikens Hus, Magasinsgatan 8, Göteborg",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/f2/29c575850da93cd368c6f7677bae9cac7b530b",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/gharfx69p9je74e/2026-06-06/viva-summer-sounds-2026"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/viva-summer-sounds-2026/",
+      "title": "Viva Summer Sounds 2026",
+      "time": "2026-06-06T17:00:00.000Z",
+      "locationName": "Musikens Hus & Hängmattan Kök & Bar",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7bbdb7f8862d70c39637105ff3e2b91981704c2c.png",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/viva-summer-sounds-2026/"
+    },
+    {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fmamma-mia-the-party-tickets%2F257704149%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
       "title": "MAMMA MIA! THE PARTY",
       "time": "2026-06-06T17:30:00.000Z",
@@ -9594,6 +10504,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1497169701813432/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/cpkze1vhmax0fhg/2026-06-06/this-will-destroy-you-juana-aguirre-stockholm",
+      "title": "This Will Destroy You + Juana Aguirre | Stockholm",
+      "time": "2026-06-06T17:30:00.000Z",
+      "locationName": "Kollektivet Livet, Stockholm",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/79/d13ae23ebdb3e17e2098f18470f5acf4d835d4",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/cpkze1vhmax0fhg/2026-06-06/this-will-destroy-you-juana-aguirre-stockholm"
+    },
+    {
+      "id": "https://www.facebook.com/events/3849911671984301/",
+      "title": "Urenui - Comedy Night",
+      "time": "2026-06-06T17:30:00.000Z",
+      "locationName": "Urenui, Taranaki, Nya Zeeland",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/71c78289b031011361c4e3ddf7e808591fccbe75.jpg",
+      "hostName": "Urenui, Taranaki, Nya Zeeland",
+      "attendees": 135,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/3849911671984301/"
     },
     {
       "id": "https://www.facebook.com/events/979612398151728/",
@@ -9934,6 +10870,45 @@
       "url": "https://www.facebook.com/events/1550991429828679/"
     },
     {
+      "id": "https://www.facebook.com/events/1414616264046459/",
+      "title": "PUNKROCK deluxe på 34:an i Katrineholm",
+      "time": "2026-06-06T18:00:00.000Z",
+      "locationName": "",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/2f179000d3620f71a7b1b7cfe6b0796896dd7089.jpg",
+      "hostName": "Helvetesmaskinen",
+      "attendees": 2,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1414616264046459/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1613623846598900/",
+      "title": "Sommarkvällskonsert",
+      "time": "2026-06-06T18:00:00.000Z",
+      "locationName": "Kungsbacka Kyrka",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e2e33ef55841c7f709a29f0ab68096d2bf164355.jpg",
+      "hostName": "Facebook",
+      "attendees": 36,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1613623846598900/"
+    },
+    {
+      "id": "https://www.facebook.com/events/972637635145280/",
+      "title": "Standup med bygdepub ",
+      "time": "2026-06-06T18:00:00.000Z",
+      "locationName": "Laupstadveien 302, 8316 Vågan, Norge",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b4be9b361e87543e78829b22235263a1eb2d8937.jpg",
+      "hostName": "Stand up Vågan",
+      "attendees": 26,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/972637635145280/"
+    },
+    {
       "id": "https://www.facebook.com/events/957095003443778/",
       "title": "L’ÉTANCHE ANGE",
       "time": "2026-06-06T18:20:00.000Z",
@@ -9971,6 +10946,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/968455282766810/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1060246226087546/",
+      "title": "KARAOKE DISCO",
+      "time": "2026-06-06T18:30:00.000Z",
+      "locationName": "Market Hall Tavern",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c02c7ad3ba98d54593458897945b372a67e40415.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1060246226087546/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1281938133786854/",
+      "title": "Disco Inferno: Trash Disco",
+      "time": "2026-06-06T18:30:00.000Z",
+      "locationName": "Tumbleroot Brewery and Distillery",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7e66649e4e46c4febe127ed5be7ebce0c4e2bfeb.jpg",
+      "hostName": "Facebook",
+      "attendees": 221,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1281938133786854/"
     },
     {
       "id": "https://www.facebook.com/events/867653305929638/",
@@ -10127,6 +11128,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1109194028947448/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/x9thgw0whrrehlp/2026-06-06/026-66-fest-2026",
+      "title": "026(66) FEST 2026",
+      "time": "2026-06-06T19:00:00.000Z",
+      "locationName": "Musikhuset Scenen Uppe, Gävle",
+      "category": "social",
+      "coverImage": "https://maps.tickster.com/maps/api/staticmap?center=60.6754,17.1507&zoom=13&format=png&maptype=roadmap&markers=color:0x1ccfc9|60.6754,17.1507&style=feature:landscape.man_made%7Ccolor:0xfaf5ed%7Clightness:0%7Cgamma:1&style=feature:poi.park%7Celement:geometry.fill%7Ccolor:0xbae5a6&style=feature:road%7Csaturation:0%7Cgamma:1.8%7Cweight:1.00&style=feature:road%7Celement:geometry.fill%7Chue:0xffb200&style=feature:road.arterial%7Celement:geometry.fill%7Clightness:0%7Cgamma:1&style=feature:transit.station.airport%7Chue:0xb000ff%7Csaturation:23%7Clightness:-4%7Cgamma:0.80&style=feature:water%7Ccolor:0xa0daf2&size=640x300&scale=2",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/x9thgw0whrrehlp/2026-06-06/026-66-fest-2026"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/320ew4ux70kx7h6/2026-06-06/masters-of-the-universe",
@@ -10296,6 +11310,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1330089282429260/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2045507692703266/",
+      "title": "Disco Inferno",
+      "time": "2026-06-06T20:00:00.000Z",
+      "locationName": "L'Archipel Strasbourg",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b9aeda145c831f8e6df35c25135896f8a11360b3.jpg",
+      "hostName": "Facebook",
+      "attendees": 96,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2045507692703266/"
     },
     {
       "id": "https://www.facebook.com/events/962427953168689/",
@@ -10881,6 +11908,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.bilda.nu/arr/1297889/sprakkafe-med-allsang-och-dagens-tema-511854/"
+    },
+    {
+      "id": "https://www.facebook.com/events/977833458177300/",
+      "title": "Kalayaan Sport Fest",
+      "time": "2026-06-06T22:00:00.000Z",
+      "locationName": "Al Nasser Sports Club",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/85b6e76120006366ee4f8d336bcf2fd2e1f774c1.jpg",
+      "hostName": "Al Nasser Sports Club",
+      "attendees": 42,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/977833458177300/"
     },
     {
       "id": "https://www.facebook.com/events/1462761442318593/",
@@ -12131,6 +13171,58 @@
       "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-05-26-dackekattens-kattutstallning-2026-norrahammar"
     },
     {
+      "id": "https://www.facebook.com/events/1709636606703125/",
+      "title": "Gårdsloppis",
+      "time": "2026-06-07T08:00:00.000Z",
+      "locationName": "Hövdingavägen",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/75dd330d7958041adbe3f59b888f642985445e43.jpg",
+      "hostName": "Hövdingavägen 40-62 i Gävle",
+      "attendees": 27,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1709636606703125/"
+    },
+    {
+      "id": "https://www.facebook.com/events/830722673167073/",
+      "title": "Loppis på Puttes Loge Värnamo",
+      "time": "2026-06-07T08:00:00.000Z",
+      "locationName": "Puttes loge",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/61e5457171ccfe985e2babc51f4c416b33caf153.jpg",
+      "hostName": "Facebook",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/830722673167073/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1521497446016282/",
+      "title": "loppis ",
+      "time": "2026-06-07T08:00:00.000Z",
+      "locationName": "Fabriksgatan 1",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/6ccd6240a60d5706078a785c46b123c8999d7293.jpg",
+      "hostName": "Mikael Pihl",
+      "attendees": 47,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1521497446016282/"
+    },
+    {
+      "id": "https://www.goteborg.com/en/events/bblooming-axalea-bonzai-exhibition/",
+      "title": "Blooming Azalea Bonsai &#8211; Exhibition",
+      "time": "2026-06-07T08:00:00.000Z",
+      "locationName": "Gothenburg botanical garden",
+      "category": "other",
+      "coverImage": "https://cms.goteborg.com/uploads/2025/02/Blommande-bonsai.-Maja-fotograf.png",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/bblooming-axalea-bonzai-exhibition/"
+    },
+    {
       "id": "https://www.facebook.com/events/2745629935818219/",
       "title": "Klockspelet i Tyska kyrkans torn spelar Live",
       "time": "2026-06-07T08:25:00.000Z",
@@ -13002,6 +14094,149 @@
       "url": "https://ale.se/evenemang/evenemang/2026-01-15-sondagsoppet-pa-repslagarmuseet.html"
     },
     {
+      "id": "https://www.facebook.com/events/2858633617822234/",
+      "title": "Prova på skidskytte",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Nordanå, Skellefteå",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8187278498289e9cdbd9f3cf597ddacb0f335c50.jpg",
+      "hostName": "Nordanå, Skellefteå",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2858633617822234/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1925120721521249/",
+      "title": "Bakluckeloppis Nyköping Hamn ",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Östra längdgatan, Nyköping",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/393b07a4e28c2574a8d2a43b6b61c5d8b8f38d24.jpg",
+      "hostName": "Facebook",
+      "attendees": 23,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1925120721521249/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1436754194803435/",
+      "title": "Nytt bostadsområde i Mariestad ",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Lekevi",
+      "category": "sport",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c6636216b38184f8223c49917cfb84e2eedf1b5f.jpg",
+      "hostName": "Mariestadare",
+      "attendees": 6,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1436754194803435/"
+    },
+    {
+      "id": "https://www.facebook.com/events/4290221731251679/",
+      "title": "Gårdsloppis i Svartbjörnsbyn/Boden",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Norrbottens län",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/9d96f8d06dd4ca742a70947fd6bd9b4d6804f865.jpg",
+      "hostName": "Victoria Poehls",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4290221731251679/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1598844154635722/",
+      "title": "BORINQUEN HERITAGE FEST",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Snug Harbor Cultural Center and Botanical Garden",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f12dfb1aaf3c164ed86c7a546241b40279c6e60a.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1598844154635722/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1024451083381792/",
+      "title": "LOPPIS🤗",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Torparegatan 94 Lanbohov Linköping",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a70eda25eba2eefd9e8a3269666c96dad8521b12.jpg",
+      "hostName": "Julia Camacho",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1024451083381792/"
+    },
+    {
+      "id": "https://www.facebook.com/events/27019909964316907/",
+      "title": "Ramsdalens Loppis 2026",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cab6f86abea4ffd89ed1166706d05c2841203b93.jpg",
+      "hostName": "Ramsdalen",
+      "attendees": 15,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/27019909964316907/"
+    },
+    {
+      "id": "https://www.goteborg.com/evenemang/asplund-och-radhuset-pa-rohsska-museet",
+      "title": "Asplund och rådhuset på Röhsska museet",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "creative",
+      "coverImage": "",
+      "hostName": "Göteborg Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/evenemang/asplund-och-radhuset-pa-rohsska-museet"
+    },
+    {
+      "id": "https://www.goteborg.com/evenemang/hanna-vihriala",
+      "title": "Hanna Vihriälä. Same Moment of Pleasure",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "creative",
+      "coverImage": "",
+      "hostName": "Göteborg Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/evenemang/hanna-vihriala"
+    },
+    {
+      "id": "https://www.goteborg.com/evenemang/kropp-ideal-blick-frihet",
+      "title": "Kropp. Ideal, blick, frihet",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "creative",
+      "coverImage": "",
+      "hostName": "Göteborg Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/evenemang/kropp-ideal-blick-frihet"
+    },
+    {
+      "id": "https://www.goteborg.com/evenemang/kvinnor-bakom-kameran-1848-1968",
+      "title": "Kvinnor bakom kameran 1848-1968",
+      "time": "2026-06-07T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "creative",
+      "coverImage": "",
+      "hostName": "Göteborg Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/evenemang/kvinnor-bakom-kameran-1848-1968"
+    },
+    {
       "id": "https://www.facebook.com/events/1469723398265556/",
       "title": "LOPPIS på STUBBEGATAN i ROBERTSHOLM norr om HOFORS",
       "time": "2026-06-07T09:25:00.000Z",
@@ -13325,6 +14560,71 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/949506331408683/"
+    },
+    {
+      "id": "https://www.facebook.com/events/831900546365557/",
+      "title": "KvartersLoppis - norra delen av Västra Gärdet, Falkenberg",
+      "time": "2026-06-07T10:00:00.000Z",
+      "locationName": "",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f6b38439c70437dc66fd9c9a7d151c1c4e43e9c7.jpg",
+      "hostName": "🔱🌼Köp Och Sälj i Hallands Län Med Omnejd🔱🌼",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/831900546365557/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2072669269961156/",
+      "title": "Pinocchio - by Qfeel Sala Luceafărul",
+      "time": "2026-06-07T10:00:00.000Z",
+      "locationName": "Sala Luceafarul",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ccf4e05186ccf53b1e7fb81a85775f8b93deac13.jpg",
+      "hostName": "Facebook",
+      "attendees": 7,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2072669269961156/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1390541596438925/",
+      "title": "🌻Extraöppet Fröken Larsson Hammarbacken🌻",
+      "time": "2026-06-07T10:00:00.000Z",
+      "locationName": "Grangärdevägen 1, Ludvika",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7cfd70d0a311cb65b47869e3e34d69c9bd782559.jpg",
+      "hostName": "Facebook",
+      "attendees": 9,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1390541596438925/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1308694184115297/",
+      "title": "Bakluckeloppis av växter",
+      "time": "2026-06-07T10:00:00.000Z",
+      "locationName": "Härnösand",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c5db1d3f7bf326ef16fd1f079eb79a17547ab8fa.jpg",
+      "hostName": "Facebook",
+      "attendees": 10,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1308694184115297/"
+    },
+    {
+      "id": "https://www.facebook.com/events/27699215429665859/",
+      "title": "KURS STAWIANIA BANIEK",
+      "time": "2026-06-07T10:00:00.000Z",
+      "locationName": "Kościuszki 31, Garwolin",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ac65688ceb841937b6f481a65ad7dd9d390a03c6.jpg",
+      "hostName": "Facebook",
+      "attendees": 15,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/27699215429665859/"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/m33k1n5wed0n2t1/2026-06-07/edge-explorers",
@@ -13689,6 +14989,32 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/9thtu0w39n6p85m/2026-06-07/the-matrix-1999"
+    },
+    {
+      "id": "https://www.facebook.com/events/2145369529617676/",
+      "title": "Flickscoutvandring i Stockholm",
+      "time": "2026-06-07T11:00:00.000Z",
+      "locationName": "Tegnérlunden",
+      "category": "sport",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b6c72047362e69077ee11315a712a5a8cd7bcb09.jpg",
+      "hostName": "Stockholm",
+      "attendees": 46,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2145369529617676/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1627939905171247/",
+      "title": "vernissage , Livets speglingar ",
+      "time": "2026-06-07T11:00:00.000Z",
+      "locationName": "Roma kungsgård",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e518c52df35ab83314550ab46fede220037225a2.jpg",
+      "hostName": "Evenemang på Gotland",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1627939905171247/"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/z4315tc5y8gaf4h/2026-06-07/5rhythms-outdoor-dancing-in-nature",
@@ -14120,6 +15446,45 @@
       "url": "https://hedemora.se/evenemang/polhemsvandring-pa-bruket/"
     },
     {
+      "id": "https://www.facebook.com/events/1529428438692921/",
+      "title": "Tillsammanscafé",
+      "time": "2026-06-07T12:00:00.000Z",
+      "locationName": "Kvarngatan 18, Kumla",
+      "category": "party",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8e1ae05c5e61307297e9c67f2b8b6cab2a036c05.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1529428438692921/"
+    },
+    {
+      "id": "https://www.facebook.com/events/2652279875166523/",
+      "title": "Alfhild på torget",
+      "time": "2026-06-07T12:00:00.000Z",
+      "locationName": "Stora torget, SE-871 30 Härnösand, Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f5b434f921132c68b0c8c19d8dd2aa30e832be3c.jpg",
+      "hostName": "Bäverteatern",
+      "attendees": 23,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2652279875166523/"
+    },
+    {
+      "id": "https://www.facebook.com/events/4394816490734101/",
+      "title": "Vernissage d’Ariann Bouchard",
+      "time": "2026-06-07T12:00:00.000Z",
+      "locationName": "Bistro L'Autre Oeil",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ee981234fb05e1887f06422e5a95ef70bac514dc.jpg",
+      "hostName": "Bistro L'Autre Oeil",
+      "attendees": 19,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/4394816490734101/"
+    },
+    {
       "id": "https://www.landskrona.se/evenemang/tychotalk-henrik-wachtmeister/",
       "title": "TYCHOTALK: Henrik Wachtmeister",
       "time": "2026-06-07T12:15:00.000Z",
@@ -14131,6 +15496,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.landskrona.se/evenemang/tychotalk-henrik-wachtmeister/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1792946225012499/",
+      "title": "Opera Zomer Concert",
+      "time": "2026-06-07T12:30:00.000Z",
+      "locationName": "Amstelkerk. Amstelveld 10 Amsterdam",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/0fac018e91e0bfddb10eb00876646ca83f8b0dc5.jpg",
+      "hostName": "Facebook",
+      "attendees": 19,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1792946225012499/"
     },
     {
       "id": "https://www.facebook.com/events/2095566544569261/",
@@ -14328,6 +15706,45 @@
       "url": "https://www.tickster.com/se/sv/events/kf40pzuzvk6kpfr/2026-06-07/ismo-perseverance-tour-matine"
     },
     {
+      "id": "https://www.facebook.com/events/1598771337890248/",
+      "title": "Fri dans och rörelse i medveten närvaro ",
+      "time": "2026-06-07T13:00:00.000Z",
+      "locationName": "Hembygdsgården Vretas",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/3475e6d06858f90b799b94ccadc3bd51ebf82943.jpg",
+      "hostName": "Hembygdsgården Vretas",
+      "attendees": 30,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1598771337890248/"
+    },
+    {
+      "id": "https://www.facebook.com/events/965012262813980/",
+      "title": "Meira Omar - Uppladdningsfesten inför SM-veckan 2027!",
+      "time": "2026-06-07T13:00:00.000Z",
+      "locationName": "Skövde Kulturhus",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cb8cc2a20da670cea2493996704d7e69acccb7ac.jpg",
+      "hostName": "Facebook",
+      "attendees": 45,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/965012262813980/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1502443247947889/",
+      "title": "Cirkus Arena - Vejen (2026)",
+      "time": "2026-06-07T13:00:00.000Z",
+      "locationName": "Vejen Kommune",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c55508e17ffe98c2656ad592cd3c745409bd5d4e.jpg",
+      "hostName": "Facebook",
+      "attendees": 18,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1502443247947889/"
+    },
+    {
       "id": "https://www.facebook.com/events/4440514326231180/",
       "title": "Tango - workshop och praktika en solig söndag i Uddevalla",
       "time": "2026-06-07T13:30:00.000Z",
@@ -14352,6 +15769,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/903175788981065/"
+    },
+    {
+      "id": "https://www.facebook.com/events/884383534237273/",
+      "title": "Opera in Concert",
+      "time": "2026-06-07T13:30:00.000Z",
+      "locationName": "Faith Lutheran Church, Murphys",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cd803a67107701b8e61b6fa9fec9df59b22d2f14.jpg",
+      "hostName": "Facebook",
+      "attendees": 84,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/884383534237273/"
     },
     {
       "id": "https://www.facebook.com/events/919693177535879/",
@@ -14495,6 +15925,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/a0gvefd8epfcbxr/2026-06-07/lars-edsvik-matinespelning"
+    },
+    {
+      "id": "https://www.facebook.com/events/983486180732355/",
+      "title": "Sommarkonsert med Kulturskolan Lunds körer",
+      "time": "2026-06-07T14:00:00.000Z",
+      "locationName": "Folkparken, Lund",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1a963da28921ab01e0e75adce2cf62f0164bb383.jpg",
+      "hostName": "Folkparken, Lund",
+      "attendees": 28,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/983486180732355/"
     },
     {
       "id": "https://www.facebook.com/events/1487418433075976/",
@@ -14718,6 +16161,32 @@
       "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-en-kvall-i-juni-vid-jarstorps-hembygdsgard"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/6lr5ftnaej2wgfx/2026-06-07/brandsta-city-slackers",
+      "title": "Brandsta City Släckers",
+      "time": "2026-06-07T15:00:00.000Z",
+      "locationName": "Parksnäckan, Uppsala",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/fa/86a0245cac55b8b19305bb2919108b0607b5d2",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/6lr5ftnaej2wgfx/2026-06-07/brandsta-city-slackers"
+    },
+    {
+      "id": "https://www.facebook.com/events/826575453283940/",
+      "title": "Free Falun Dafa Online Class (Webinar) ~ Stretching Exercises, Meditation",
+      "time": "2026-06-07T15:00:00.000Z",
+      "locationName": "",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b8f85bc012228d01993233429c75306ba8ba3f41.jpg",
+      "hostName": "Facebook",
+      "attendees": 190,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/826575453283940/"
+    },
+    {
       "id": "https://www.facebook.com/events/1555586925594320/",
       "title": "Stick till Bishops",
       "time": "2026-06-07T15:30:00.000Z",
@@ -14885,6 +16354,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.goteborg.com/evenemang/gothia-concentus"
+    },
+    {
+      "id": "https://www.facebook.com/events/992114303537686/",
+      "title": "We are Punks",
+      "time": "2026-06-07T16:30:00.000Z",
+      "locationName": "Modena Cortile Del Leccio,",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/5e88765d377a7cad6f1dbc6eb5f384cc7d2d7976.jpg",
+      "hostName": "WE ARE PUNKS",
+      "attendees": 62,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/992114303537686/"
     },
     {
       "id": "https://www.facebook.com/events/4451021398476402/",
@@ -15093,6 +16575,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1724366215238237/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1586916745739735/",
+      "title": "SALA A TUTTA BIRRA “LA DOMENICA” ",
+      "time": "2026-06-07T18:00:00.000Z",
+      "locationName": "Sala di Campagna, Veneto",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b3fc50122e2b31e5cb6684735a5adfd1c01c0478.jpg",
+      "hostName": "Facebook",
+      "attendees": 108,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1586916745739735/"
     },
     {
       "id": "https://www.facebook.com/events/1561517754973334/",
@@ -15706,6 +17201,19 @@
       "url": "https://www.eventbrite.se/e/game-startup-dojo-session-5-at-media-evolution-biljetter-1990999947439"
     },
     {
+      "id": "https://www.facebook.com/events/2062443748016194/",
+      "title": "Sommaryoga",
+      "time": "2026-06-08T07:30:00.000Z",
+      "locationName": "Majstångsbacken 12, Mora",
+      "category": "training",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c8dd2c31dc9cd18c5e217b1731cc5708cb7a57a2.jpg",
+      "hostName": "Mora Yogastudio",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/2062443748016194/"
+    },
+    {
       "id": "https://www.horby.se/event/rorelsemandag-pa-aktivitetshuset-2/",
       "title": "Rörelsemåndag på Aktivitetshuset",
       "time": "2026-06-08T08:00:00.000Z",
@@ -16044,6 +17552,32 @@
       "url": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/prova-pa-schack/"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/7pfac9x0zmze0ev/2026-06-08/den-ofrivillige-premiarministern",
+      "title": "Den ofrivillige premiärministern",
+      "time": "2026-06-08T14:05:00.000Z",
+      "locationName": "Kino 3, Lund",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/7pfac9x0zmze0ev/2026-06-08/den-ofrivillige-premiarministern"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/k46fjgledhhxbyj/2026-06-08/andre-is-an-idiot",
+      "title": "André is an Idiot",
+      "time": "2026-06-08T14:05:00.000Z",
+      "locationName": "Kino 4, Lund",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/k46fjgledhhxbyj/2026-06-08/andre-is-an-idiot"
+    },
+    {
       "id": "https://www.facebook.com/events/1260390572602291/",
       "title": "Makerspace Lomma",
       "time": "2026-06-08T14:30:00.000Z",
@@ -16107,6 +17641,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1896616734290063/"
+    },
+    {
+      "id": "https://www.facebook.com/events/695056127024357/",
+      "title": "Gokart-träning Mittsverigebanan",
+      "time": "2026-06-08T15:30:00.000Z",
+      "locationName": "Tjärnsjö 100, 87191 Härnösand, Sweden",
+      "category": "training",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/30e56911ef375daa46121ec0ffdd16df8ab28ab7.jpg",
+      "hostName": "Mittsverigebanan",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/695056127024357/"
     },
     {
       "id": "https://helsingborg.se/event/samtalscirkel-om-kognitiv-sjukdom/",
@@ -16432,6 +17979,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/34740686882213901/"
+    },
+    {
+      "id": "https://www.facebook.com/events/855856220136609/",
+      "title": "Cackle Shack Comedy",
+      "time": "2026-06-08T18:30:00.000Z",
+      "locationName": "Lustre Pearl East",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1bbaac5b2aeac8bd3db32cf2472417d247d5206d.jpg",
+      "hostName": "Cackle Shack",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/855856220136609/"
     },
     {
       "id": "https://www.facebook.com/events/2424805347977409/",
@@ -17877,6 +19437,19 @@
       "url": "https://www.facebook.com/events/1966133874283458/"
     },
     {
+      "id": "https://www.facebook.com/events/947204041339467/",
+      "title": "Dans med Global Kidz",
+      "time": "2026-06-09T13:00:00.000Z",
+      "locationName": "Hillerødgade 23b, 2200 KBH N Copenhagen, Denmark",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ab43461a74a99c73ea09f9571ee893e439b2017c.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/947204041339467/"
+    },
+    {
       "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-01-invigning-av-valla-lekpark.html",
       "title": "Invigning av Valla lekpark",
       "time": "2026-06-09T13:00:00.000Z",
@@ -17929,6 +19502,32 @@
       "url": "https://www.sodertalje.se/kultur-och-fritid/futurum/aktiviteter/bokslukarna6/"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/e6d4zxml83v63vp/2026-06-09/djavulen-bar-prada-2",
+      "title": "Djävulen bär Prada 2",
+      "time": "2026-06-09T13:35:00.000Z",
+      "locationName": "Kino 1, Lund",
+      "category": "other",
+      "coverImage": "https://maps.tickster.com/maps/api/staticmap?center=55.7034,13.1924&zoom=13&format=png&maptype=roadmap&markers=color:0x1ccfc9|55.7034,13.1924&style=feature:landscape.man_made%7Ccolor:0xfaf5ed%7Clightness:0%7Cgamma:1&style=feature:poi.park%7Celement:geometry.fill%7Ccolor:0xbae5a6&style=feature:road%7Csaturation:0%7Cgamma:1.8%7Cweight:1.00&style=feature:road%7Celement:geometry.fill%7Chue:0xffb200&style=feature:road.arterial%7Celement:geometry.fill%7Clightness:0%7Cgamma:1&style=feature:transit.station.airport%7Chue:0xb000ff%7Csaturation:23%7Clightness:-4%7Cgamma:0.80&style=feature:water%7Ccolor:0xa0daf2&size=640x300&scale=2",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/e6d4zxml83v63vp/2026-06-09/djavulen-bar-prada-2"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/unw0mmdn3wtblbg/2026-06-09/saltstigen",
+      "title": "Saltstigen",
+      "time": "2026-06-09T13:50:00.000Z",
+      "locationName": "Kino 2, Lund",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/unw0mmdn3wtblbg/2026-06-09/saltstigen"
+    },
+    {
       "id": "https://www.facebook.com/events/941279875224778/",
       "title": "AW-favoriten i Gävle🥩O’Learys Mixed Grill och andra favoriter från 129 kr & grymma priser i baren!",
       "time": "2026-06-09T14:00:00.000Z",
@@ -17953,6 +19552,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alingsas.se/event/sommarlovsaktivitet-delta-i-alingsas-forsta-pridetag-i-lera/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/zew8cu36lwtjuvk/2026-06-09/nyarsfesten",
+      "title": "Nyårsfesten",
+      "time": "2026-06-09T14:20:00.000Z",
+      "locationName": "Kino 3, Lund",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/zew8cu36lwtjuvk/2026-06-09/nyarsfesten"
     },
     {
       "id": "https://www.eventbrite.se/e/nion-dj-cafe-gothenburg-accelerating-ai-adoption-without-losing-control-biljetter-1988986452020",
@@ -18007,6 +19619,19 @@
       "url": "https://www.facebook.com/events/917132734472755/"
     },
     {
+      "id": "https://www.facebook.com/events/1344446327498064/",
+      "title": "Romantasy på 30 minuter",
+      "time": "2026-06-09T15:00:00.000Z",
+      "locationName": "Stadshustorget 10, 98185 Kiruna, Sweden",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/df58c323424ce5d48a074189852e760bca12ba0e.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1344446327498064/"
+    },
+    {
       "id": "https://www.eventbrite.ca/e/caplas-international-day-of-recognition-june-9-tickets-1985529106005",
       "title": "CAPLA's International Day of Recognition: June 9",
       "time": "2026-06-09T15:00:00.000Z",
@@ -18044,6 +19669,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1919874825393886/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1007856598404063/",
+      "title": "Silent Disco Groove dans",
+      "time": "2026-06-09T15:00:00.000Z",
+      "locationName": "Fårebyvejen 22, 3720 Aakirkeby",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ba02fe80509aed8f581c9cff514287fe860dcf41.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1007856598404063/"
     },
     {
       "id": "https://www.facebook.com/events/1650796752922941/",
@@ -18475,6 +20113,19 @@
       "url": "https://www.stromsund.se/16595.html"
     },
     {
+      "id": "https://www.facebook.com/events/1393043875460472/",
+      "title": "Experimental Comedy Club",
+      "time": "2026-06-09T17:00:00.000Z",
+      "locationName": "Johnny Fox's",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/eb2ef14057a500ebdbf70aece757b2c796eca219.jpg",
+      "hostName": "Facebook",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1393043875460472/"
+    },
+    {
       "id": "https://www.facebook.com/events/1895332924743638/",
       "title": "Bibeln från början till slut - en läsecirkel med Svenska kyrkan i Örebro",
       "time": "2026-06-09T17:00:00.000Z",
@@ -18683,6 +20334,19 @@
       "url": "https://www.facebook.com/events/900389595881000/"
     },
     {
+      "id": "https://www.facebook.com/events/1403805821373336/",
+      "title": "Quiz | Ostende | Duisburg",
+      "time": "2026-06-09T17:30:00.000Z",
+      "locationName": "Ostende",
+      "category": "boardgame",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f96375768b19bb9a14f67e2a47e1c6aec5723b5d.jpg",
+      "hostName": "FragenFactory",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1403805821373336/"
+    },
+    {
       "id": "https://www.facebook.com/events/1427762862335865/",
       "title": "PubQuiz w Nora Pub (Warszawa) 🧠 Drużynowy quiz z nagrodami 💰",
       "time": "2026-06-09T18:00:00.000Z",
@@ -18759,6 +20423,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.facebook.com/events/1503699950869805/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/5w1ldc35v4fe6lc/2026-06-09/last-dance-white-party-studentfest-9-6",
+      "title": "Last dance/White party studentfest 9/6",
+      "time": "2026-06-09T19:00:00.000Z",
+      "locationName": "Allstar Umeå, Umeå",
+      "category": "social",
+      "coverImage": "https://maps.tickster.com/maps/api/staticmap?center=63.8268,20.2665&zoom=13&format=png&maptype=roadmap&markers=color:0x1ccfc9|63.8268,20.2665&style=feature:landscape.man_made%7Ccolor:0xfaf5ed%7Clightness:0%7Cgamma:1&style=feature:poi.park%7Celement:geometry.fill%7Ccolor:0xbae5a6&style=feature:road%7Csaturation:0%7Cgamma:1.8%7Cweight:1.00&style=feature:road%7Celement:geometry.fill%7Chue:0xffb200&style=feature:road.arterial%7Celement:geometry.fill%7Clightness:0%7Cgamma:1&style=feature:transit.station.airport%7Chue:0xb000ff%7Csaturation:23%7Clightness:-4%7Cgamma:0.80&style=feature:water%7Ccolor:0xa0daf2&size=640x300&scale=2",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/5w1ldc35v4fe6lc/2026-06-09/last-dance-white-party-studentfest-9-6"
     },
     {
       "id": "https://helsingborg.se/event/sofieros-levande-arv-en-brollopsgava-guidning-2/",
@@ -19331,6 +21008,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.landskrona.se/evenemang/odling-pa-ewerlofs-holme/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1601866520948066/",
+      "title": "Dans dagen i gang i Absalon",
+      "time": "2026-06-10T05:45:00.000Z",
+      "locationName": "Absalon",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/b015bb8d4f664bc093e950e9ddd62f41287061c6.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1601866520948066/"
+    },
+    {
+      "id": "https://www.facebook.com/events/766604466391609/",
+      "title": "Morgonmässa",
+      "time": "2026-06-10T06:00:00.000Z",
+      "locationName": "Härnösands domkyrka - Svenska kyrkan Härnösand",
+      "category": "community",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c308f2a82e73c42c0e572662a923163ce71fa7fc.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/766604466391609/"
     },
     {
       "id": "https://www.landskrona.se/evenemang/sommarsagor-2/",
@@ -20698,6 +22401,19 @@
       "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/julitagemenskapochsamtalfordigsomaraldre.5.3dedd31c19b7f60072075aa8.html"
     },
     {
+      "id": "https://www.facebook.com/events/1440022253977467/",
+      "title": "Bells are ringing 🎉",
+      "time": "2026-06-11T13:00:00.000Z",
+      "locationName": "Unzad",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/199a26766c6995dd47d9be2a5f0da25d4e053283.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1440022253977467/"
+    },
+    {
       "id": "https://www.sodertalje.se/kultur-och-fritid/futurum/aktiviteter/sagoyoga222/",
       "title": "Sagoyoga",
       "time": "2026-06-11T13:30:00.000Z",
@@ -20776,6 +22492,19 @@
       "url": "https://www.goteborg.com/evenemang/arvid-nero-maria-jane-smith-och-simon-superti"
     },
     {
+      "id": "https://www.facebook.com/events/882094474913459/",
+      "title": "Grillkvällar i Ansgarskyrkan",
+      "time": "2026-06-11T15:00:00.000Z",
+      "locationName": "Ansgarskyrkan, Eskilstuna",
+      "category": "community",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/11a27b239b14dd039720ee993e3b277369b6d84a.jpg",
+      "hostName": "Ansgarskyrkan, Eskilstuna",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/882094474913459/"
+    },
+    {
       "id": "https://eslov.se/event/junikvall-pelle-kalles-bluesinferno/",
       "title": "Junikväll PELLE och KALLES BLUESINFERNO",
       "time": "2026-06-11T15:30:00.000Z",
@@ -20787,6 +22516,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://eslov.se/event/junikvall-pelle-kalles-bluesinferno/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1298943952378509/",
+      "title": "Opera Komedi Samadi",
+      "time": "2026-06-11T15:30:00.000Z",
+      "locationName": "",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/c43e896d3b9375f172cc35e46a6cbfafc364bf07.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1298943952378509/"
     },
     {
       "id": "https://www.facebook.com/events/871063092340000/",
@@ -20932,6 +22674,19 @@
       "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-05-15-utomhusvisning"
     },
     {
+      "id": "https://www.facebook.com/events/1720289965327487/",
+      "title": "Comedy Open Mic ",
+      "time": "2026-06-11T17:00:00.000Z",
+      "locationName": "Angelos Pizza",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/3a377187df73c05d7ed60d4d8cf22cc3a8f42abe.jpg",
+      "hostName": "NEW JERSEY EVENTS (WHATS HAPPENING)",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1720289965327487/"
+    },
+    {
       "id": "https://www.alingsas.se/event/musik-i-sommarkvall/",
       "title": "Musik i Sommarkväll",
       "time": "2026-06-11T18:00:00.000Z",
@@ -20956,6 +22711,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alingsas.se/event/musik-i-sommarkvall-ett-sandkorn-och-ett-stilla-regn/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1461408878481820/",
+      "title": "Garage Comedy",
+      "time": "2026-06-11T18:30:00.000Z",
+      "locationName": "Fallout Theater",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/911fb987fb20358ee8935045a0b1197dd41877a5.jpg",
+      "hostName": "Garage",
+      "attendees": 4,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1461408878481820/"
+    },
+    {
+      "id": "https://www.facebook.com/events/662244760317001/",
+      "title": "quiz night",
+      "time": "2026-06-11T18:30:00.000Z",
+      "locationName": "Ingram Road, Skelmersdale",
+      "category": "boardgame",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cebab92fdf79b6e56501fa1e581be92462ead91e.jpg",
+      "hostName": "Miners Peg",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/662244760317001/"
     },
     {
       "id": "https://visitostersund.se/evenemang/graveltur-med-ostersunds-cykelklubb/",
@@ -21322,6 +23103,32 @@
       "url": "https://ic-calendar.svenljunga.se/events/familjecentralens-oppna-forskola-blivande-foraldrar-och-for-MTgxNTExLDIwMjYtMDYtMTIgMDc6MDA="
     },
     {
+      "id": "https://www.eventbrite.se/e/community-horizons-changes-signals-and-futures-tickets-1988558838015",
+      "title": "Community Horizons – Changes, Signals and Futures",
+      "time": "2026-06-12T07:00:00.000Z",
+      "locationName": "Media Evolution",
+      "category": "other",
+      "coverImage": "/e/_next/image?url=https%3A%2F%2Fimg.evbuc.com%2Fhttps%253A%252F%252Fcdn.evbuc.com%252Fimages%252F1183430611%252F91493205435%252F1%252Foriginal.20260430-135552%3Fcrop%3Dfocalpoint%26fit%3Dcrop%26w%3D940%26auto%3Dformat%252Ccompress%26q%3D75%26sharp%3D10%26fp-x%3D0.497%26fp-y%3D0.775%26s%3Db0119fec76ae0bd4e6bc771c8be6351c&w=1880&q=75",
+      "hostName": "Eventbrite",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.eventbrite.se/e/community-horizons-changes-signals-and-futures-tickets-1988558838015"
+    },
+    {
+      "id": "https://www.facebook.com/events/895976946707075/",
+      "title": "Yoga för alla",
+      "time": "2026-06-12T07:30:00.000Z",
+      "locationName": "Mötesplats Mariatorget",
+      "category": "training",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e32d61d907ccac0fdbc8e43f9d1781c43fbd5ae7.jpg",
+      "hostName": "Alexia Af Kleen",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/895976946707075/"
+    },
+    {
       "id": "https://www.alingsas.se/event/sommarlovsaktivitet-potatispromenad/",
       "title": "Sommarlovsaktivitet: Potatispromenad",
       "time": "2026-06-12T08:00:00.000Z",
@@ -21426,6 +23233,19 @@
       "url": "https://falkenberg.se/evenemang/paratennis-sm/"
     },
     {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-sommarlovs-kick-off",
+      "title": "Sommarlovs Kick-off",
+      "time": "2026-06-12T11:00:00.000Z",
+      "locationName": "Öxnehaga bibliotek",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d7459019ed1107176577f6f24d277bd8e7ad1f44.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-sommarlovs-kick-off"
+    },
+    {
       "id": "https://www.eventbrite.co.uk/e/mingling-anxiety-how-networking-becomes-your-superpower-tickets-1989202482172",
       "title": "Mingling Anxiety?  How networking  becomes your superpower!",
       "time": "2026-06-12T11:30:00.000Z",
@@ -21504,6 +23324,19 @@
       "url": "https://www.tickster.com/se/sv/events/wmhv1vzvzhawupu/2026-06-12/buckle-up-countryfest-2026"
     },
     {
+      "id": "https://www.facebook.com/events/1978707386108940/",
+      "title": "Fridays For Future Skolstrejk för Klimatet",
+      "time": "2026-06-12T14:00:00.000Z",
+      "locationName": "Storgatan 21, Kalmar",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8f88c53b25ea0ffa768b23bd4816137aa8656e0e.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1978707386108940/"
+    },
+    {
       "id": "https://www.goteborg.com/en/events/west-pride-pride-park/",
       "title": "West Pride &#8211; Pride Park",
       "time": "2026-06-12T14:00:00.000Z",
@@ -21543,6 +23376,19 @@
       "url": "https://www.alingsas.se/event/efterbilder-guidade-visningar/"
     },
     {
+      "id": "https://www.facebook.com/events/863889736245827/",
+      "title": "Dans weekenden i gang i Absalon",
+      "time": "2026-06-12T14:45:00.000Z",
+      "locationName": "Folkehuset Absalon",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e0adc2c64d523da92cde5c2bb1bfe6d582390786.jpg",
+      "hostName": "Facebook",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/863889736245827/"
+    },
+    {
       "id": "https://www.eventbrite.dk/e/women-in-games-denmark-opening-event-tickets-1987697035340",
       "title": "Women in Games Denmark - Opening Event",
       "time": "2026-06-12T15:00:00.000Z",
@@ -21569,6 +23415,19 @@
       "url": "https://www.goteborg.com/evenemang/fortress-of-metal-festival"
     },
     {
+      "id": "https://www.facebook.com/events/1321795883205561/",
+      "title": "Takvandring",
+      "time": "2026-06-12T15:00:00.000Z",
+      "locationName": "Sundsvall, Västernorrlands län",
+      "category": "social",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/e04c62dbd90fedb9220b9ff92c3d0b21a3a332c8.jpg",
+      "hostName": "Sundsvall, Västernorrlands län",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1321795883205561/"
+    },
+    {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Ffoo-fighters-take-cover-tour-2026-tickets%2F1734561612%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
       "title": "Foo Fighters: TAKE COVER TOUR 2026",
       "time": "2026-06-12T15:30:00.000Z",
@@ -21580,6 +23439,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Ffoo-fighters-take-cover-tour-2026-tickets%2F1734561612%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1"
+    },
+    {
+      "id": "https://www.facebook.com/events/619757520809129/",
+      "title": "Wheelie Roller Disco",
+      "time": "2026-06-12T15:30:00.000Z",
+      "locationName": "The Herts & Essex Sports Centre",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7c0d64f5cde6c029c28293606d4b3dab0496d96a.jpg",
+      "hostName": "Facebook",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/619757520809129/"
+    },
+    {
+      "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Ffoo-fighters-i-strawberry-arena-premium-experience-seat-in-suite-tickets%2F1882700028%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
+      "title": "Foo Fighters I Strawberry Arena Premium Experience - Seat in Suite",
+      "time": "2026-06-12T15:31:00.000Z",
+      "locationName": "Strawberry Arena, Stockholm",
+      "category": "other",
+      "coverImage": "https://s1.ticketm.net/dam/e/fbd/f8e4e86d-e0ea-469f-9641-9a37fbf7afbd_TABLET_LANDSCAPE_LARGE_16_9.jpg",
+      "hostName": "TicketMaster",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Ffoo-fighters-i-strawberry-arena-premium-experience-seat-in-suite-tickets%2F1882700028%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/jkhu7m4f3p2hklm/2026-06-12/kirsty-armstrong-isak-jansson-m-fl",
@@ -21606,6 +23491,45 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/azpetzkn8wktllr/2026-06-12/kramfors-stadsfest-2026"
+    },
+    {
+      "id": "https://www.meetup.com/offline-cafe-events/events/314647828/",
+      "title": "World History Quiz Night",
+      "time": "2026-06-12T16:00:00.000Z",
+      "locationName": "Offline Café",
+      "category": "game",
+      "coverImage": "https://secure-content.meetupstatic.com/images/classic-events/534084148/676x676.jpg",
+      "hostName": "Board Game Events @ Offline Café",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.meetup.com/offline-cafe-events/events/314647828/"
+    },
+    {
+      "id": "https://www.meetup.com/international-board-gamers-gbg/events/314314737/",
+      "title": "🎲 Playing board games at Maritiman ⛵",
+      "time": "2026-06-12T16:00:00.000Z",
+      "locationName": "Maritiman",
+      "category": "other",
+      "coverImage": "https://secure-content.meetupstatic.com/images/classic-events/483848001/676x676.jpg",
+      "hostName": "International Board Gamers - Gothenburg",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.meetup.com/international-board-gamers-gbg/events/314314737/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1250608353910612/",
+      "title": "Aw Motala",
+      "time": "2026-06-12T16:30:00.000Z",
+      "locationName": "Motala Centrum",
+      "category": "social",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/45c1784bf37fc8489a23db11f7e5f58f9f52b9aa.jpg",
+      "hostName": "Promenad och AW Motala",
+      "attendees": 8,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1250608353910612/"
     },
     {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fmamma-mia-the-party-tickets%2F665227255%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
@@ -21699,6 +23623,19 @@
       "url": "https://www.stromsund.se/17925.html"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/6tzyj30mfb79lu3/2026-06-12/safety-dance",
+      "title": "Safety Dance",
+      "time": "2026-06-12T18:00:00.000Z",
+      "locationName": "Musikens Hus / Hängmattan Scen, Magasinsgatan 8, Göteborg",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/b0/f0232172464ba175aebe59b420a69d930e53e0",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/6tzyj30mfb79lu3/2026-06-12/safety-dance"
+    },
+    {
       "id": "https://www.eventbrite.se/e/the-afterparty-tickets-1989974276630",
       "title": "The Afterparty",
       "time": "2026-06-12T19:00:00.000Z",
@@ -21723,6 +23660,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.tickster.com/se/sv/events/ppbd6j50rd8dtmp/2026-06-12/not-your-habibi-swana-queer-festival"
+    },
+    {
+      "id": "https://www.facebook.com/events/1495545608722947/",
+      "title": "Sommar Karaoke 🌼",
+      "time": "2026-06-12T20:00:00.000Z",
+      "locationName": "Stortorget 6, Örebro",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/f794fc6560e6942be92d1be337c22f82160eda62.jpg",
+      "hostName": "Taco Bar",
+      "attendees": 3,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1495545608722947/"
     },
     {
       "id": "https://visitostersund.se/evenemang/ostersund-mejeri-70-ar/",
@@ -22570,6 +24520,19 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2022-06-01-sommarsimskola.html"
     },
     {
+      "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fwhat-a-view-%257C-12-13-juni-tickets%2F1413117363%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
+      "title": "What a view | 12-13 JUNI",
+      "time": "2026-06-12T22:00:00.000Z",
+      "locationName": "Stockholm",
+      "category": "other",
+      "coverImage": "https://s1.ticketm.net/dam/a/1c7/343bd77d-7c27-4e63-9021-e8f0cfe951c7_SOURCE",
+      "hostName": "TicketMaster",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fwhat-a-view-%257C-12-13-juni-tickets%2F1413117363%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1"
+    },
+    {
       "id": "https://www.visitstockholm.com/events/dinner-theatre-and-dinner-in-stockholm/next/",
       "title": "Dinner theatre and Dinner in Stockholm",
       "time": "2026-06-13T00:00:00.000Z",
@@ -22791,6 +24754,32 @@
       "url": "https://visitlinkoping.se/evenemang/visning-av-linkopings-slottstradgard-2026/"
     },
     {
+      "id": "https://www.facebook.com/events/675601698632614/",
+      "title": "Kamloops' BEST Dad Bod 2026",
+      "time": "2026-06-13T00:00:00.000Z",
+      "locationName": "Match Eatery & Public House - Kamloops",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8695173319dc70b39a4740a28ffcf06ddc0891e4.jpg",
+      "hostName": "Facebook",
+      "attendees": 4,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/675601698632614/"
+    },
+    {
+      "id": "https://www.facebook.com/events/1307896261225002/",
+      "title": "Frukostklubben Göteborg",
+      "time": "2026-06-13T04:00:00.000Z",
+      "locationName": "Götaplatsen, Göteborg, Sverige",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d224462b1b1571936e1606207980fb7aad8f7351.jpg",
+      "hostName": "Frukostklubben Göteborg",
+      "attendees": 31,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1307896261225002/"
+    },
+    {
       "id": "https://www.goteborg.com/en/events/elfsborgsmarschen/",
       "title": "Elfsborgsmarschen",
       "time": "2026-06-13T04:30:00.000Z",
@@ -22843,6 +24832,19 @@
       "url": "https://norsjo.se/event/do-it-culture-days/"
     },
     {
+      "id": "https://www.facebook.com/events/1721011961882664/",
+      "title": "Free Yoga Class",
+      "time": "2026-06-13T07:00:00.000Z",
+      "locationName": "South Alive Invercargill",
+      "category": "training",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/16fc4e8ed7f0cf496d31fddae885ec7da9e618fe.jpg",
+      "hostName": "Koha Yoga",
+      "attendees": 3,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1721011961882664/"
+    },
+    {
       "id": "https://www.goteborg.com/en/events/swedish-beach-tour-gothenburg/",
       "title": "Swedish Beach Tour Gothenburg",
       "time": "2026-06-13T07:00:00.000Z",
@@ -22867,6 +24869,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.stromsund.se/17665.html"
+    },
+    {
+      "id": "https://www.facebook.com/events/1506414077120701/",
+      "title": "MidSweden Trackdays 2026",
+      "time": "2026-06-13T07:00:00.000Z",
+      "locationName": "Tjärnsjö 100, 87191 Härnösand, Sweden",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/52bec19df8965ab524592aafb1c16f6021b7c80b.jpg",
+      "hostName": "Mittsverigebanan",
+      "attendees": 31,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1506414077120701/"
     },
     {
       "id": "https://www.eventbrite.dk/e/workshop-i-hundfotografi-tickets-1990565425773",
@@ -22958,6 +24973,19 @@
       "isLocationVerified": false,
       "isHostVerified": false,
       "url": "https://www.stromsund.se/17694.html"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/drtrezekeptdxbu/2026-06-13/northern-race-festival",
+      "title": "Northern Race Festival",
+      "time": "2026-06-13T08:00:00.000Z",
+      "locationName": "Northern Race Festival, Piteå",
+      "category": "music",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/39/645968aa5af41b741efa228171847dbab32128",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/drtrezekeptdxbu/2026-06-13/northern-race-festival"
     },
     {
       "id": "https://www.stromsund.se/17766.html",
@@ -23116,6 +25144,32 @@
       "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-04-09-vaxtmarknad-vid-djulo-13-juni..html"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/glx0ex7pcl985xr/2026-06-13/katarina-jagellonica-barnvisning",
+      "title": "Katarina Jagellonica Barnvisning",
+      "time": "2026-06-13T09:00:00.000Z",
+      "locationName": "Vasaborgen Uppsala slott, Uppsala",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/6e/0d239a02dec9b0b4867c00d9c64ee3bc9d6163",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/glx0ex7pcl985xr/2026-06-13/katarina-jagellonica-barnvisning"
+    },
+    {
+      "id": "https://www.facebook.com/events/962329359551342/",
+      "title": "Pilgrim i staden",
+      "time": "2026-06-13T09:00:00.000Z",
+      "locationName": "Vårfrukyrkan, Enköping",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/bc10d9f7575363a9b060f54aab2b7c812293577f.jpg",
+      "hostName": "Facebook",
+      "attendees": 2,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/962329359551342/"
+    },
+    {
       "id": "https://www.hoor.se/event/workshop-vi-gor-klimatcollage/",
       "title": "Workshop – vi gör klimatcollage",
       "time": "2026-06-13T10:00:00.000Z",
@@ -23140,6 +25194,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://eslov.se/event/varldsstickardagen/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/6hh2xglfu5pa3uj/2026-06-13/invigning-av-utstallningen-har-kommer-maja",
+      "title": "Invigning av utställningen \"Här kommer Maja!\"",
+      "time": "2026-06-13T10:00:00.000Z",
+      "locationName": "Lövstabruk, Barnens Bruk, Lövstabruk",
+      "category": "art",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/45/b997dc1689737952db4eb907948fb28e863b33",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/6hh2xglfu5pa3uj/2026-06-13/invigning-av-utstallningen-har-kommer-maja"
     },
     {
       "id": "https://www.alingsas.se/event/sommarlovsaktivitet-potatistryck/",
@@ -23194,6 +25261,19 @@
       "url": "https://falkenberg.se/evenemang/vernissage-galleri-kramersgard/"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/z8b5njv1bt84ck5/2026-06-13/ville-och-valle-och-viktor",
+      "title": "Ville och Valle och Viktor",
+      "time": "2026-06-13T11:40:00.000Z",
+      "locationName": "Medleforsparken, Skellefteå",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/fb/33b3d324244d2cb72c0f6cbc0bc595c60d74f0",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/z8b5njv1bt84ck5/2026-06-13/ville-och-valle-och-viktor"
+    },
+    {
       "id": "https://www.hoor.se/event/konsert-med-kulturskolans-sommarensemble/",
       "title": "Konsert med Kulturskolans sommarensemble",
       "time": "2026-06-13T12:00:00.000Z",
@@ -23246,6 +25326,45 @@
       "url": "https://www.landskrona.se/evenemang/vernissage-pa-vens-kulturhus/"
     },
     {
+      "id": "https://www.facebook.com/events/1478876303575721/",
+      "title": "Bedragare, barnamördare och arsenik – en historisk true crime-vandring i de norra kvarteren",
+      "time": "2026-06-13T12:00:00.000Z",
+      "locationName": "Spången, Norrköping, Sverige",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/4807ca151715dfdb4004c74a6d708c85cbc091b9.jpg",
+      "hostName": "Facebook",
+      "attendees": 31,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/1478876303575721/"
+    },
+    {
+      "id": "https://www.tickster.com/se/sv/events/mgxuae5h2mkvxcw/2026-06-13/japansk-taiko-for-barn-lek-rorelse-och-rytm",
+      "title": "Japansk Taiko för barn - lek, rörelse och rytm",
+      "time": "2026-06-13T12:30:00.000Z",
+      "locationName": "Etnografiska museet, Stockholm",
+      "category": "family",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/f8/eacbde41d30c1b893a59f2fefdad234c17e186",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/mgxuae5h2mkvxcw/2026-06-13/japansk-taiko-for-barn-lek-rorelse-och-rytm"
+    },
+    {
+      "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Flinkopings-storbandsfestival-tickets%2F813434662%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
+      "title": "LINKÖPINGS STORBANDSFESTIVAL",
+      "time": "2026-06-13T13:30:00.000Z",
+      "locationName": "Linköping",
+      "category": "culture",
+      "coverImage": "https://s1.ticketm.net/dam/e/862/2a0f38f2-9395-47c1-9950-a3c263272862_SOURCE",
+      "hostName": "TicketMaster",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Flinkopings-storbandsfestival-tickets%2F813434662%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1"
+    },
+    {
       "id": "https://destinationuppsala.se/event/ekon-och-forsta-toner/",
       "title": "Ekon och första toner",
       "time": "2026-06-13T14:00:00.000Z",
@@ -23285,6 +25404,32 @@
       "url": "https://destinationuppsala.se/event/tidlosa-sanger-for-var-tid/"
     },
     {
+      "id": "https://www.tickster.com/se/sv/events/kux905x962v7a91/2026-06-13/hela-huset-punkar-lange-leve-punken",
+      "title": "Hela Huset Punkar, Länge leve punken!",
+      "time": "2026-06-13T17:00:00.000Z",
+      "locationName": "Musikhuset Sjömanskyrkan, Gävle",
+      "category": "other",
+      "coverImage": "https://static.tickster.com/cdn-cgi/image/format=auto,width=960,height=540,fit=scale-down/9f/80ee6e363e4b7884e03ecb41a91b0973bfa1f9",
+      "hostName": "Tickster",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.tickster.com/se/sv/events/kux905x962v7a91/2026-06-13/hela-huset-punkar-lange-leve-punken"
+    },
+    {
+      "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fmamma-mia-the-party-tickets%2F2040332557%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
+      "title": "MAMMA MIA! THE PARTY",
+      "time": "2026-06-13T17:30:00.000Z",
+      "locationName": "Tyrol, Stockholm",
+      "category": "party",
+      "coverImage": "https://s1.ticketm.net/dam/a/08d/3e62af05-2974-4fea-836f-c0c75ed0008d_SOURCE",
+      "hostName": "TicketMaster",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Fmamma-mia-the-party-tickets%2F2040332557%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1"
+    },
+    {
       "id": "https://www.eventbrite.com.br/e/grupo-trilhar-jun-26-vivencias-e-vinculos-o-papel-da-familia-adotiva-tickets-1980754654492",
       "title": "Grupo Trilhar - Jun 26: Vivências e vínculos: o papel da família adotiva",
       "time": "2026-06-13T18:00:00.000Z",
@@ -23296,6 +25441,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.eventbrite.com.br/e/grupo-trilhar-jun-26-vivencias-e-vinculos-o-papel-da-familia-adotiva-tickets-1980754654492"
+    },
+    {
+      "id": "https://www.facebook.com/events/584176951280207/",
+      "title": "KARAOKE -CRAZY- NIGHT",
+      "time": "2026-06-13T19:30:00.000Z",
+      "locationName": "La Clef De Verre",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/733989f29e087cf4fd15363c3ddc693867e98d89.jpg",
+      "hostName": "La Clef de Verre",
+      "attendees": 15,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.facebook.com/events/584176951280207/"
     },
     {
       "id": "https://visitostersund.se/evenemang/utstallning-ake-arnerdal/",
@@ -23608,6 +25766,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2021-06-10-sommarboken-pa-sarna-och-idre-bibliotek.html"
+    },
+    {
+      "id": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/de-vilda-blommornas-dag-vid-glanninge-sjo/",
+      "title": "De vilda blommornas dag vid Glänninge Sjö",
+      "time": "2026-06-13T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/eb2445c0a24c804ba23b71d8bc34abe398a9ca3a.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/de-vilda-blommornas-dag-vid-glanninge-sjo/"
+    },
+    {
+      "id": "https://krokom.se/se-och-gora/evenemang/evenemang/2026-06-03-mini-olav-pa-rodon.html",
+      "title": "Mini Olav på Rödön",
+      "time": "2026-06-13T22:00:00.000Z",
+      "locationName": "Krokom",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/bd12a56ea5453e9b7568bab6523600da7828bf66.jpg",
+      "hostName": "Krokom Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://krokom.se/se-och-gora/evenemang/evenemang/2026-06-03-mini-olav-pa-rodon.html"
     },
     {
       "id": "https://www.kil.se/arkiv/evenemang/evenemang/2026-06-14-rog-touren-tennis",
@@ -24193,6 +26377,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2021-06-10-sommarboken-pa-alvdalens-bibliotek.html"
+    },
+    {
+      "id": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/atliga-vaxter-da-och-nu-i-mollegards-naturreservat/",
+      "title": "Ätliga växter då och nu i Möllegårds naturreservat",
+      "time": "2026-06-14T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/225ccd7dbfcc5b1fa732b0c1d21dc0c032463ce6.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/atliga-vaxter-da-och-nu-i-mollegards-naturreservat/"
     },
     {
       "id": "https://www.taby.se/arkiv/evenemang/arkiv/2026-06-01-esplanad-latskrivarworkshop",
@@ -25144,6 +27341,19 @@
       "url": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/kortspel-bergvik22/"
     },
     {
+      "id": "https://www.goteborg.com/en/events/strandverket-marstrand-four-artists-and-four-unique-expressions-an-exhibition-with-the-sea-as-a-backdrop/",
+      "title": "Strandverket Marstrand &#8211; Four artists and Four unique expressions &#8211; an exhibition with the sea as a backdrop",
+      "time": "2026-06-16T09:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/45f220406e4a8cad969031ede15f51eb336a5942.jpg",
+      "hostName": "Göteborg & Co",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/en/events/strandverket-marstrand-four-artists-and-four-unique-expressions-an-exhibition-with-the-sea-as-a-backdrop/"
+    },
+    {
       "id": "https://ic-calendar.svenljunga.se/events/sillunch-MjA1MzM4LDIwMjYtMDYtMTYgMDk6MzA=",
       "title": "Sillunch",
       "time": "2026-06-16T09:30:00.000Z",
@@ -25259,6 +27469,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/finsk-samtalsgrupp2/"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383c5.html",
+      "title": "Sommarlovspyssel",
+      "time": "2026-06-16T11:00:00.000Z",
+      "locationName": "Öxnehaga bibliotek",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/cc31f48e1e7259243f9fad739e854c3ecf782f6e.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383c5.html"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-sommarlovspyssel",
+      "title": "Sommarlovspyssel",
+      "time": "2026-06-16T11:00:00.000Z",
+      "locationName": "Öxnehaga bibliotek",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7b498b1b6b289818f0b1658e8beb2a00e8fca916.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-sommarlovspyssel"
     },
     {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/mobil-motesplats-i-holo-torsdag-formiddagar810222/",
@@ -25623,6 +27859,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://visitlinkoping.se/evenemang/klassisk-innerstadsvandring-med-linkoping-guidekklubb/"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/xflowssummercamp.5.7079ce8d19e7385a196445b2.html",
+      "title": "xFlows SummerCamp!!!",
+      "time": "2026-06-17T06:00:00.000Z",
+      "locationName": "Jönköping",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/eadf6bae6f75e44b0f60f5df17d65df4cbf15e2d.png",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/xflowssummercamp.5.7079ce8d19e7385a196445b2.html"
     },
     {
       "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/provapatennisisommar.5.6f53a36e19e4add9b722a85a.html",
@@ -29096,6 +31345,19 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/oppnaforskolan.5.746e9c1a18093a9285387424.html"
     },
     {
+      "id": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/hur-hanger-fred-miljo-och-klimatrattvisa-samman-hur-tar-sverige-ansvar/",
+      "title": "Hur hänger fred, miljö och klimaträttvisa samman? Hur tar Sverige ansvar?",
+      "time": "2026-06-22T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/de4abc4c15e6e74038c4b599d7dd0bef6edd2312.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/hur-hanger-fred-miljo-och-klimatrattvisa-samman-hur-tar-sverige-ansvar/"
+    },
+    {
       "id": "https://www.visitstockholm.com/events/pitbull-im-back-tour/next/",
       "title": "Pitbull: I'm Back!",
       "time": "2026-06-23T00:00:00.000Z",
@@ -29250,6 +31512,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://falkenberg.se/evenemang/komtek-on-the-road-4/"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383d3.html",
+      "title": "Sommarlovspyssel",
+      "time": "2026-06-23T11:00:00.000Z",
+      "locationName": "Öxnehaga bibliotek",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1f8c5e66e97056ca57678cd48f9e2b5d202eb1a3.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383d3.html"
     },
     {
       "id": "https://www.alingsas.se/event/sommarlovsaktivitet-las-for-djuren-i-nolhaga/",
@@ -29525,6 +31800,32 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2019-06-24-oppet-hus-pa-alvdalens-bibliotek.html"
     },
     {
+      "id": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/sveriges-vapenhandel-hur-tar-sverige-ansvar-for-vapenhandel-med-lander-som-bryter-mot-folkratt/",
+      "title": "Sveriges vapenhandel: Hur tar Sverige ansvar för vapenhandel med länder som bryter mot folkrätt?",
+      "time": "2026-06-23T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/1cbd39f713fc612e89840a9b4beb1447014a5ff7.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/sveriges-vapenhandel-hur-tar-sverige-ansvar-for-vapenhandel-med-lander-som-bryter-mot-folkratt/"
+    },
+    {
+      "id": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/kan-konst-och-kultur-bidra-till-en-fredligare-varld/",
+      "title": "Kan konst och kultur bidra till en fredligare värld?",
+      "time": "2026-06-23T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "creative",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/038634de1a7a2177ed54987b33eec9cacddce566.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/gotlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/kan-konst-och-kultur-bidra-till-en-fredligare-varld/"
+    },
+    {
       "id": "https://visitlinkoping.se/evenemang/skvaller-snusk-och-skandaler-drama-med-linkopings-guideklubb/",
       "title": "Skvaller, snusk och skandaler (drama) med Linköpings Guideklubb",
       "time": "2026-06-24T00:00:00.000Z",
@@ -29614,6 +31915,32 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/komochbyggskrotskulptur.5.6f1e98c919e024cd605507a3.html"
+    },
+    {
+      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/komtekpasommarlovet.5.6697cdb419e6346a4048c3c9.html",
+      "title": "KomTek på Sommarlovet",
+      "time": "2026-06-24T08:00:00.000Z",
+      "locationName": "Katrineholm",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Katrineholm Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/komtekpasommarlovet.5.6697cdb419e6346a4048c3c9.html"
+    },
+    {
+      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-komtek-pa-sommarlovet.html",
+      "title": "KomTek på Sommarlovet",
+      "time": "2026-06-24T08:00:00.000Z",
+      "locationName": "Katrineholm",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Katrineholm Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-komtek-pa-sommarlovet.html"
     },
     {
       "id": "https://www.stromsund.se/17633.html",
@@ -30110,6 +32437,19 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/barmarkstraningmedalvdalensif.5.1db7ec1018120c9f48c19a71.html"
     },
     {
+      "id": "https://www.bilda.nu/arr/1294324/irlandsk-folkmusik-med-fredrik-eklind-931582/",
+      "title": "Irländsk folkmusik med Fredrik Eklind",
+      "time": "2026-06-24T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/50451cfc9f8b66c66af8f49c7cf5ec5c81bd1fe1.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1294324/irlandsk-folkmusik-med-fredrik-eklind-931582/"
+    },
+    {
       "id": "https://www.haparanda.se/evenemang/event/2026-04-10-vid-samma-hav---saman-meren-aarella",
       "title": "Vid samma hav – Saman meren äärellä",
       "time": "2026-06-25T00:00:00.000Z",
@@ -30251,6 +32591,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://saffle.se/arkiv/evenemang/evenemang/2026-06-25-floden---wang--soderstrom.html"
+    },
+    {
+      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-parlor--pepp-med-tjejjouren-miranda.html",
+      "title": "Pärlor & Pepp med Tjejjouren Miranda",
+      "time": "2026-06-25T11:00:00.000Z",
+      "locationName": "Katrineholm",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Katrineholm Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-parlor--pepp-med-tjejjouren-miranda.html"
     },
     {
       "id": "https://www.forshaga.se/upplevaochgora/turismattbesokaforshaga/evenemang/produkt.4.4e7cf7af17c87f52c4e596a2.html?id=117758",
@@ -31163,6 +33516,19 @@
       "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-04-13-odlingstraff"
     },
     {
+      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-tuppens-minut.html",
+      "title": "Tuppens minut",
+      "time": "2026-06-26T12:00:00.000Z",
+      "locationName": "Katrineholm",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Katrineholm Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-tuppens-minut.html"
+    },
+    {
       "id": "https://www.goteborg.com/en/events/butterfly-festival/",
       "title": "Butterfly Festival",
       "time": "2026-06-26T13:00:00.000Z",
@@ -31746,6 +34112,45 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2022-06-07-ribbholmens-triathlon.html"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1294065/gospeldag-628051/",
+      "title": "Gospeldag",
+      "time": "2026-06-26T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/7395e79983188fa7c4776535a0a7ee8ba90ecc20.jpg",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1294065/gospeldag-628051/"
+    },
+    {
+      "id": "https://www.goteborg.com/evenemang/craft-beer-circus",
+      "title": "Craft Beer Circus",
+      "time": "2026-06-26T22:00:00.000Z",
+      "locationName": "Göteborg",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Göteborg Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.goteborg.com/evenemang/craft-beer-circus"
+    },
+    {
+      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-22-riksteatern-avig",
+      "title": "Riksteatern: Avig",
+      "time": "2026-06-26T22:00:00.000Z",
+      "locationName": "Smedby",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/3ad57f9a4337d8619729d64446fc573108e0dbb5.jpg",
+      "hostName": "Upplands Väsby Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-22-riksteatern-avig"
     },
     {
       "id": "https://www.ljusnarsberg.se/arkiv/evenemang/2025/2026-06-27-sommarmarknad-fran-ljusnarsbergs-slojd---hantverkare",
@@ -33516,6 +35921,19 @@
       "url": "https://ic-calendar.svenljunga.se/events/familjecentralens-oppna-forskola-blivande-foraldrar-och-forskoleklasstart-MTgxNTE0LDIwMjYtMDYtMzAgMTE6MDA="
     },
     {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383e1.html",
+      "title": "Sommarlovspyssel",
+      "time": "2026-06-30T11:00:00.000Z",
+      "locationName": "Öxnehaga bibliotek",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/215f54dc2cac46098a1a670d7893c4b06adec761.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/sommarlovspyssel.5.6acbca8d19e738b4530383e1.html"
+    },
+    {
       "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc8010c.html",
       "title": "Teatervandring",
       "time": "2026-06-30T12:00:00.000Z",
@@ -34034,6 +36452,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2020-06-29-mala-med-konstnar-karin-sten-for-barn-mellan-6-15-ar..html"
+    },
+    {
+      "id": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/drommen-om-en-vatmark-/",
+      "title": "Drömmen om en våtmark",
+      "time": "2026-06-30T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/4b88f03f903111d359e6a45f33099a9013eb80ae.jpg",
+      "hostName": "Studiefrämjandet",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/drommen-om-en-vatmark-/"
     },
     {
       "id": "https://www.vargarda.se/nyheter-evenemang-drift-arkiv/evenemang/2026/2026-07-01-tipspromenad-i-skogsbygden.html",
@@ -34569,6 +37000,19 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/barmarkstraningmedalvdalensif.5.1db7ec1018120c9f48c19d16.html"
     },
     {
+      "id": "https://www.bilda.nu/arr/1294331/god-of-the-hills-and-valleys-med-good-news-931583/",
+      "title": "\"God of the Hills and Valleys\" med Good News",
+      "time": "2026-07-01T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ca93201a1dc32361b4a226d8e32ec9b610ea85f8.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1294331/god-of-the-hills-and-valleys-med-good-news-931583/"
+    },
+    {
       "id": "https://visitlinkoping.se/evenemang/innergarden-live-emil-mattisson-3/",
       "title": "Innergården Live – Emil Mattisson",
       "time": "2026-07-02T00:00:00.000Z",
@@ -35037,6 +37481,19 @@
       "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/dragkampstraning.5.746e9c1a18093a92853871fc.html"
     },
     {
+      "id": "https://www.bilda.nu/arr/1294315/vaffelkvall-pa-varhaga-visor-och-folkton-931575/",
+      "title": "Våffelkväll på Vårhaga: \"Visor och folkton\"",
+      "time": "2026-07-02T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d885f1cd27c0042ba666660792183bf76b5cc2d9.jpg",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1294315/vaffelkvall-pa-varhaga-visor-och-folkton-931575/"
+    },
+    {
       "id": "https://www.ljusnarsberg.se/arkiv/evenemang/2025/2026-07-03-operapub",
       "title": "Operapub",
       "time": "2026-07-03T00:00:00.000Z",
@@ -35269,6 +37726,19 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://www.landskrona.se/evenemang/sunnan/"
+    },
+    {
+      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-resan-till-arkadien---banbrytande-barock.html",
+      "title": "Resan till Arkadien – banbrytande barock!",
+      "time": "2026-07-03T15:00:00.000Z",
+      "locationName": "Katrineholm",
+      "category": "other",
+      "coverImage": "",
+      "hostName": "Katrineholm Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-resan-till-arkadien---banbrytande-barock.html"
     },
     {
       "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-07-03-kilaveckan-2026---kubb--och-grillkvall.html",
@@ -35789,6 +38259,188 @@
       "isLocationVerified": true,
       "isHostVerified": false,
       "url": "https://falkenberg.se/evenemang/westcoast-backbeat-orchestra/"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1297177/musikcafe-pa-furulid-838622/",
+      "title": "Musikcafé på Furulid",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/98414b386966dca4abe4ec1bae89605baa488fe3.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1297177/musikcafe-pa-furulid-838622/"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1295591/bystugedans-under-stammoveckan-rattviks-spelmanslag-spelar-i-rojerasen-628324/",
+      "title": "Bystugedans under Stämmoveckan: Rättviks spelmanslag spelar i Röjeråsen",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d0c424a7032a5d9932b4f2b736193a9efb499671.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1295591/bystugedans-under-stammoveckan-rattviks-spelmanslag-spelar-i-rojerasen-628324/"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1295328/alfvengarden-spelmanscafe-628249/",
+      "title": "Alfvéngården - Spelmanscafé",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "other",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/4ea75ea50a234c96df13c2661dc74636264f5f60.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1295328/alfvengarden-spelmanscafe-628249/"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1295065/den-kaldeiska-antonianska-hormizd-orden-837978/",
+      "title": "Den kaldéiska Antonianska Hormizd-orden",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "workshop",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/11f752ae8240651f08cd41c8954c5cfa5ec6a64b.png",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1295065/den-kaldeiska-antonianska-hormizd-orden-837978/"
+    },
+    {
+      "id": "https://www.bilda.nu/arr/1294364/sommarkonsert-i-nya-slottet-bjarka-saby-837789/",
+      "title": "Sommarkonsert i Nya Slottet Bjärka-Säby",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Sverige",
+      "category": "culture",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/d4254b318d4c60c74bdc1b0bb1bf215ffe24f6ad.jpg",
+      "hostName": "Bilda",
+      "attendees": 0,
+      "isLocationVerified": false,
+      "isHostVerified": false,
+      "url": "https://www.bilda.nu/arr/1294364/sommarkonsert-i-nya-slottet-bjarka-saby-837789/"
+    },
+    {
+      "id": "https://krokom.se/se-och-gora/evenemang/evenemang/2026-05-20-veteranfordons--marknad.html",
+      "title": "Veteranfordons- marknad",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Krokom",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/43e1362f0317ab22374817be2be86d9ef975fa4d.jpg",
+      "hostName": "Krokom Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://krokom.se/se-och-gora/evenemang/evenemang/2026-05-20-veteranfordons--marknad.html"
+    },
+    {
+      "id": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2022-06-01-sommarboken.html",
+      "title": "Sommarboken",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Älvdalen",
+      "category": "other",
+      "coverImage": "https://www.alvdalen.se/images/18.53d676db170f3926dd347c5e/1586245725231/Ung%20flicka%20v%C3%A4ljer%20bok%20ur%20stor%20bokhylla.jpg",
+      "hostName": "Älvdalen Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2022-06-01-sommarboken.html"
+    },
+    {
+      "id": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2020-07-01-dragkampstraning.html",
+      "title": "Dragkampsträning",
+      "time": "2026-07-04T22:00:00.000Z",
+      "locationName": "Älvdalen",
+      "category": "training",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a6284c1db1ab5b9031652add5bd00b69860458fc.jpg",
+      "hostName": "Älvdalen Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2020-07-01-dragkampstraning.html"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/loppmarknadpaesplanaden.5.1bf2c0a319e737ddf7f37b31.html",
+      "title": "Loppmarknad på Esplanaden",
+      "time": "2026-07-05T08:00:00.000Z",
+      "locationName": "Esplanaden",
+      "category": "market",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/bfea3857f02571163f1388af67b0ba1389a8369c.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/loppmarknadpaesplanaden.5.1bf2c0a319e737ddf7f37b31.html"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80157.html",
+      "title": "Teatervandring",
+      "time": "2026-07-05T09:00:00.000Z",
+      "locationName": "Rosenlunds Herrgård och Rosarium ",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/8aa382e4fe4f080f1402d291a5487c00faad49d7.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80157.html"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80166.html",
+      "title": "Teatervandring",
+      "time": "2026-07-05T12:00:00.000Z",
+      "locationName": "Rosenlunds Herrgård och Rosarium ",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/ad0a2f0866ea69cb2e6c8982d8855f0b4e38fb7a.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80166.html"
+    },
+    {
+      "id": "https://bastad.com/event/taube-i-forvandling/",
+      "title": "Taube i förvandling",
+      "time": "2026-07-05T13:00:00.000Z",
+      "locationName": "RAVINEN Kulturhus",
+      "category": "musik och konserter",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/03674953c584a308450e1c79a9a8364ac39348b4.png",
+      "hostName": "Båstad",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://bastad.com/event/taube-i-forvandling/"
+    },
+    {
+      "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-07-05-kilaveckan-2026---friluftsgudstjanst-vid-mor-annas-stuga.html",
+      "title": "Kilaveckan 2026 - Friluftsgudstjänst vid Mor Annas stuga",
+      "time": "2026-07-05T13:00:00.000Z",
+      "locationName": "Säffle",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/2f1fed5372bb610a99012715ddfbd29627941123.jpg",
+      "hostName": "Säffle Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://saffle.se/arkiv/evenemang/evenemang/2026-07-05-kilaveckan-2026---friluftsgudstjanst-vid-mor-annas-stuga.html"
+    },
+    {
+      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/rosarievandring.5.521230f819e6333cc80b15.html",
+      "title": "Rosarievandring",
+      "time": "2026-07-05T14:00:00.000Z",
+      "locationName": "Rosenlunds Herrgård och Rosarium",
+      "category": "outdoor",
+      "coverImage": "https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/a17efa185b3cd17074e55d2f67e8739c230fa266.jpg",
+      "hostName": "Jönköping Kommun",
+      "attendees": 0,
+      "isLocationVerified": true,
+      "isHostVerified": false,
+      "url": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/rosarievandring.5.521230f819e6333cc80b15.html"
     },
     {
       "id": "https://www.alingsas.se/event/macken-tv-serien-som-utstallning/",
