@@ -118,3 +118,143 @@ export async function auditEvent(e: AuditInput): Promise<AuditResult> {
         raw,
     };
 }
+
+// ─── GPS-AUDIT ──────────────────────────────────────────────────────────────
+// Granskar om event.lat/lng faktiskt matchar event.locationName/extractedAddress.
+// Strategi:
+//   1. Trivial checks: 0,0 → 'no-coords'. Utanför Nordic bbox → 'wrong'.
+//   2. Reverse-geokoda lat/lng via Nominatim → får stad + display_name.
+//   3. Om stad nämns i locationName/extractedAddress (case-insensitive substring)
+//      → 'ok' utan att fråga LLM. (Vanligaste fallet, sparar GPU.)
+//   4. Annars: fråga LLM "matchar reverse-geo med venue-namnet semantiskt?".
+//      Det är där LLM tillför värde — den vet att "Vida Arena, Växjö" och
+//      "Lyckhems väg 12, Växjö" är samma område men olika ordval.
+//
+// Returnerar minimal JSON som kan skrivas till aiAudit.gpsCheck.
+
+import { reverseGeocode } from './venueCoordinates';
+import { NORDIC_BOUNDS, isInNordic } from './venueCoordinates';
+
+export type GpsVerdict = 'ok' | 'suspect' | 'wrong' | 'no-coords' | 'unknown';
+
+export interface GpsAuditInput {
+    title: string;
+    locationName?: string;
+    extractedAddress?: string;
+    hostName?: string;
+    lat: number;
+    lng: number;
+}
+
+export interface GpsAuditResult {
+    verdict: GpsVerdict;
+    reason: string;
+    reverseCity: string | null;
+    reverseDisplay: string | null;
+    /** Om LLM faktiskt anropades (för cost-tracking) */
+    usedLlm: boolean;
+}
+
+function norm(s: string | undefined): string {
+    return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+const GPS_PROMPT = (i: GpsAuditInput, reverse: { displayName: string; city: string | null }) => `Du verifierar GPS-koordinater för svenska event.
+
+Eventet säger sig vara på:
+- Plats: "${i.locationName || '(saknas)'}"
+- Adress: "${i.extractedAddress || '(saknas)'}"
+- Arrangör: "${i.hostName || '(saknas)'}"
+
+GPS-koordinaten ${i.lat}, ${i.lng} ligger enligt OpenStreetMap här:
+- Stad: "${reverse.city || '(okänd)'}"
+- Full adress: "${reverse.displayName}"
+
+Fråga: Matchar GPS:en eventets uppgivna plats?
+- "ok": samma stad/område, sannolikt rätt punkt.
+- "suspect": kan vara rätt men oklart (t.ex. event säger "Stockholm" och GPS pekar på en förort).
+- "wrong": fel stad eller fel del av Sverige.
+
+Svara BARA med JSON: {"verdict":"ok|suspect|wrong","reason":"kort förklaring max 12 ord"}`;
+
+export async function auditGps(input: GpsAuditInput): Promise<GpsAuditResult> {
+    const { lat, lng } = input;
+
+    // 1. Inga koordinater
+    if (!lat && !lng) {
+        return { verdict: 'no-coords', reason: 'lat/lng=0', reverseCity: null, reverseDisplay: null, usedLlm: false };
+    }
+
+    // 2. Utanför Nordic bbox = uppenbart fel (svenskt event på lat=0,0 eller i USA)
+    if (!isInNordic(lat, lng)) {
+        return {
+            verdict: 'wrong',
+            reason: `utanför nordisk bbox (${NORDIC_BOUNDS.latMin}-${NORDIC_BOUNDS.latMax}, ${NORDIC_BOUNDS.lngMin}-${NORDIC_BOUNDS.lngMax})`,
+            reverseCity: null,
+            reverseDisplay: null,
+            usedLlm: false,
+        };
+    }
+
+    // 3. Reverse-geokoda
+    const reverse = await reverseGeocode(lat, lng);
+    if (!reverse) {
+        return { verdict: 'unknown', reason: 'reverse-geocode misslyckades', reverseCity: null, reverseDisplay: null, usedLlm: false };
+    }
+
+    // Utanför SE/DK/NO/FI enligt countryCode? Då är det inte Sverige.
+    if (reverse.countryCode && !['se', 'no', 'dk', 'fi'].includes(reverse.countryCode)) {
+        return {
+            verdict: 'wrong',
+            reason: `GPS landar i ${reverse.countryCode.toUpperCase()}, ej Sverige`,
+            reverseCity: reverse.city,
+            reverseDisplay: reverse.displayName,
+            usedLlm: false,
+        };
+    }
+
+    // 4. Snabb-match: nämns reverse.city i locationName/extractedAddress?
+    const locStr = `${norm(input.locationName)} ${norm(input.extractedAddress)} ${norm(input.hostName)} ${norm(input.title)}`;
+    const reverseCity = norm(reverse.city || '');
+    if (reverseCity && reverseCity.length >= 3 && locStr.includes(reverseCity)) {
+        return {
+            verdict: 'ok',
+            reason: `reverse-stad "${reverse.city}" matchar plats-text`,
+            reverseCity: reverse.city,
+            reverseDisplay: reverse.displayName,
+            usedLlm: false,
+        };
+    }
+
+    // 5. Om vi inte ens har en plats-text att jämföra mot — bara konstatera bbox.
+    if (!input.locationName && !input.extractedAddress) {
+        return {
+            verdict: 'suspect',
+            reason: `ingen plats-text att jämföra med reverse "${reverse.city || reverse.displayName.slice(0, 40)}"`,
+            reverseCity: reverse.city,
+            reverseDisplay: reverse.displayName,
+            usedLlm: false,
+        };
+    }
+
+    // 6. LLM-adjudikering på fuzzy match
+    const raw = await callOllama(GPS_PROMPT(input, { displayName: reverse.displayName, city: reverse.city }));
+    if (!raw) {
+        return {
+            verdict: 'unknown',
+            reason: 'LLM-anrop misslyckades',
+            reverseCity: reverse.city,
+            reverseDisplay: reverse.displayName,
+            usedLlm: true,
+        };
+    }
+    const parsed = parseJson(raw) as { verdict?: string; reason?: string } | null;
+    const v = parsed?.verdict;
+    return {
+        verdict: (['ok', 'suspect', 'wrong'].includes(v as string) ? v : 'suspect') as GpsVerdict,
+        reason: (parsed?.reason || '').toString().slice(0, 150) || 'LLM gav inget reason',
+        reverseCity: reverse.city,
+        reverseDisplay: reverse.displayName,
+        usedLlm: true,
+    };
+}
