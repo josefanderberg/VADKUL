@@ -68,11 +68,24 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_started_at ON scrape_runs(started_at);
 `);
 
+// Additive migrations — safe on existing DBs; ignored if column already exists.
+function addColumnIfMissing(table: string, column: string, definition: string): void {
+    const cols = (sqlite.pragma(`table_info(${table})`) as Array<{ name: string }>).map(r => r.name);
+    if (!cols.includes(column)) {
+        sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+}
+
+addColumnIfMissing('link_events', 'aiVerdict',      'TEXT');
+addColumnIfMissing('link_events', 'aiConfidence',   'TEXT');
+addColumnIfMissing('scrape_runs', 'audited_count',  'INTEGER DEFAULT 0');
+addColumnIfMissing('scrape_runs', 'auto_hidden_count', 'INTEGER DEFAULT 0');
+
 const insertRunStmt = sqlite.prepare(`
     INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
         found, saved, skipped_duplicate, skipped_outside_window, skipped_invalid,
-        error_count, first_error)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        error_count, first_error, audited_count, auto_hidden_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 export interface ScrapeRunRow {
@@ -87,6 +100,8 @@ export interface ScrapeRunRow {
     skippedInvalid: number;
     errorCount: number;
     firstError?: string;
+    auditedCount?: number;
+    autoHiddenCount?: number;
 }
 
 export function recordScrapeRun(run: ScrapeRunRow): void {
@@ -96,9 +111,23 @@ export function recordScrapeRun(run: ScrapeRunRow): void {
             run.durationMs, run.found, run.saved,
             run.skippedDuplicate, run.skippedOutsideWindow, run.skippedInvalid,
             run.errorCount, run.firstError ?? null,
+            run.auditedCount ?? 0,
+            run.autoHiddenCount ?? 0,
         );
     } catch (err) {
         console.error('Failed to record scrape run:', err);
+    }
+}
+
+const setAuditStmt = sqlite.prepare(
+    'UPDATE link_events SET aiVerdict = ?, aiConfidence = ?, updatedAt = ? WHERE url = ?',
+);
+
+export function setEventAudit(url: string, verdict: string, confidence: string): void {
+    try {
+        setAuditStmt.run(verdict, confidence, new Date().toISOString(), url);
+    } catch (err) {
+        console.error('Failed to set event audit:', err);
     }
 }
 
