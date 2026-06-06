@@ -21,7 +21,7 @@ interface V2MapProps {
     sunCloudTrigger?: number;
     /** Räknare som visas i molnet. Skickas in från sidan så molnet ser hela
      *  datasetet, inte bara det dag-/sökfiltrerade. */
-    cloudStats?: { today: number; week: number; withinHour: number };
+    cloudStats?: { today: number; week: number; withinHour: number; withinHours: number };
     /** Räknare som triggar att respektive moln snäpper tillbaka in på skärmen
      *  (används av återkallnings-knapparna jämte solen). Varje ökning = ett anrop. */
     recallMainTrigger?: number;
@@ -590,11 +590,13 @@ export default function V2Map({
             const isSaved = group.some(e => savedEventIds.has(e.id));
             const isDiscarded = group.every(e => discardedEventIds.has(e.id));
 
-            // Något event i gruppen börjar inom 1 timme → nålhuvudet blir orange.
-            // Kräver hasSpecificTime så vi inte färgar in heldagsevent med t=00:00.
+            // Något event i gruppen börjar inom 1 timme → nålhuvudet + pin-ramen
+            // blir orange, så man enkelt ser vilka som är på gång nu.
+            // (hasSpecificTime finns inte i webbdatan, så det villkoret nollade
+            //  alltid detta — därför borttaget.)
             const nowMs = Date.now();
             const startsWithinHour = group.some(e =>
-                e.hasSpecificTime && e.time
+                e.time
                 && e.time.getTime() > nowMs
                 && e.time.getTime() - nowMs <= 60 * 60 * 1000
             );
@@ -666,6 +668,8 @@ export default function V2Map({
                     ? '3px solid #006AA7'
                     : isSaved
                     ? '2px solid #5BA3CC'
+                    : startsWithinHour
+                    ? '2px solid #f97316'
                     : '2px solid rgba(255,255,255,0.25)';
 
                 // Använd högpresterande CSS box-shadow
@@ -907,9 +911,9 @@ export default function V2Map({
                 <CloudPopup
                     message={cloudStats ? (
                         <>
-                            <span className="block">{cloudStats.today} unika event idag</span>
+                            <span className="block">{cloudStats.today} unika event i Sverige idag</span>
                             <span className="block text-sky-500 font-black text-[18px] sm:text-[20px] leading-snug my-1">
-                                {cloudStats.withinHour} börjar inom 1 timme
+                                {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}
                             </span>
                             <span className="block text-slate-500 dark:text-slate-600 text-[12px]">
                                 {cloudStats.week} i veckan

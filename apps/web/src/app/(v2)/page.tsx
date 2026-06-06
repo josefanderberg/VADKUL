@@ -177,16 +177,27 @@ export default function HomePage() {
         const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
         const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
         const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const hourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-        let today = 0, week = 0, withinHour = 0;
+        const HOUR = 60 * 60 * 1000;
+        let today = 0, week = 0;
+        const futureMs: number[] = [];
         for (const evt of events) {
             if (!evt.time) continue;
             const t = evt.time.getTime();
             if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
             if (t >= startOfToday.getTime() && t < endOfWeek.getTime()) week++;
-            if (evt.hasSpecificTime && t > now.getTime() && t <= hourFromNow.getTime()) withinHour++;
+            if (t > now.getTime()) futureMs.push(t - now.getTime());
         }
-        return { today, week, withinHour };
+        // Adaptivt tidsfönster: börja på 1 timme och vidga (i hela timmar) tills
+        // minst 1 event ryms — annars hade det ofta stått "0 börjar inom 1 timme".
+        let withinHours = 1;
+        let withinHour = futureMs.filter(ms => ms <= HOUR).length;
+        if (withinHour === 0 && futureMs.length > 0) {
+            const nearestMs = futureMs.reduce((m, v) => Math.min(m, v), Infinity);
+            withinHours = Math.max(1, Math.ceil(nearestMs / HOUR));
+            const limit = withinHours * HOUR;
+            withinHour = futureMs.filter(ms => ms <= limit).length;
+        }
+        return { today, week, withinHour, withinHours };
     }, [events, nowTick]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)

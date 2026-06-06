@@ -63,16 +63,18 @@ const highlightCircles = [
 // Avlång "klassisk moln"-form — bredare än hög, lummig topp, flackare botten.
 // Detta är vilo-formen (innan man klickat). Index 1:1 mot baseCircles så formen
 // kan morpha mjukt (cx/cy/r-transition) till det runda "default"-molnet vid klick.
+// cy-värdena är förskjutna uppåt så att moln-kroppens mitt hamnar runt rutans
+// vertikala mitt — då sitter texten (som centreras i rutan) mitt i molnet.
 const elongatedCircles = [
-  { cx: 150, cy: 150, r: 42 }, // core
-  { cx: 212, cy: 160, r: 30 }, // right (bred)
-  { cx: 188, cy: 172, r: 28 }, // bottom-right
-  { cx: 150, cy: 176, r: 30 }, // bottom
-  { cx: 112, cy: 172, r: 28 }, // bottom-left
-  { cx: 88,  cy: 160, r: 30 }, // left (bred)
-  { cx: 112, cy: 128, r: 30 }, // top-left
-  { cx: 150, cy: 116, r: 34 }, // top
-  { cx: 188, cy: 128, r: 30 }  // top-right
+  { cx: 150, cy: 130, r: 42 }, // core
+  { cx: 212, cy: 140, r: 30 }, // right (bred)
+  { cx: 188, cy: 152, r: 28 }, // bottom-right
+  { cx: 150, cy: 156, r: 30 }, // bottom
+  { cx: 112, cy: 152, r: 28 }, // bottom-left
+  { cx: 88,  cy: 140, r: 30 }, // left (bred)
+  { cx: 112, cy: 108, r: 30 }, // top-left
+  { cx: 150, cy: 96,  r: 34 }, // top
+  { cx: 188, cy: 108, r: 30 }  // top-right
 ];
 
 // Spin-fysik vid kast. Vinkelhastigheten = greppets avstånd från centrum
@@ -521,7 +523,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       ? 'items-start justify-start pt-[68px] pl-2 sm:pl-4'
       : 'items-center justify-center';
 
-  const sizeClass = size === 'md' ? 'w-[340px] sm:w-[390px]' : 'w-[440px] sm:w-[520px]';
+  const sizeClass = size === 'md' ? 'w-[300px] sm:w-[340px]' : 'w-[370px] sm:w-[440px]';
+  // Storleksskillnaden start↔default görs via en inline scale-transform nedan
+  // (pålitligt) i stället för nya Tailwind-bredder som kanske inte hinner genereras.
+  const stateScale = clicked ? 1.0 : 1.7; // avlångt startmoln stort, runt default-moln mindre
   const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
 
   // Screen center & cloud-to-center vector (used for face rotation + shadow offset).
@@ -561,7 +566,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     transformStyle = `translate3d(${tx}px, ${ty}px, 0) rotate(${throwRot}deg) scale(0.75)`;
     opacityStyle = 0;
   } else if (isAnchored) {
-    transformStyle = `translate3d(calc(-50% + ${offset.x}px), calc(-56.25% + 60px + ${offset.y}px), 0)`;
+    transformStyle = `translate3d(calc(-50% + ${offset.x}px), calc(-56.25% + 20px + ${offset.y}px), 0)`;
   } else {
     transformStyle = `translate3d(${offset.x}px, ${offset.y}px, 0)`;
   }
@@ -804,12 +809,14 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
         style={draggableStyle}
       >
         {/* Zoom-scale wrapper — kept separate from the float div so its inline
-            transform isn't overridden by the float animation's transform. */}
+            transform isn't overridden by the float animation's transform.
+            Det avlånga start-molnet visas i full storlek; när man klickat och det
+            morphar till det runda default-molnet krymper det också (× 0.8). */}
         <div
           style={{
-            transform: `scale(${scale})`,
+            transform: `scale(${scale * stateScale})`,
             transformOrigin: '50% 56.25%',
-            transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.2s ease-out'
+            transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
         <div className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}>
