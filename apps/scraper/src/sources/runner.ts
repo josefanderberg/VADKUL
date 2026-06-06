@@ -183,6 +183,8 @@ export async function runSource(
         skippedInvalid: result.skipped.invalid,
         errorCount: result.errors.length,
         firstError: result.errors[0]?.slice(0, 300),
+        hiddenCount: 0,  // populated when LLM-audit is integrated into pipeline
+        errors: result.errors.map(e => e.slice(0, 300)),
     });
 
     return result;

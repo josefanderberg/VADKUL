@@ -68,11 +68,24 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_started_at ON scrape_runs(started_at);
 `);
 
+// Additive migrations — safe to run on existing DBs (ignored if column exists).
+function addColumnIfMissing(table: string, column: string, definition: string): void {
+    const cols = (sqlite.pragma(`table_info(${table})`) as Array<{ name: string }>).map(r => r.name);
+    if (!cols.includes(column)) {
+        sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+}
+
+addColumnIfMissing('link_events', 'aiVerdict',    'TEXT');
+addColumnIfMissing('link_events', 'aiConfidence', 'TEXT');
+addColumnIfMissing('scrape_runs', 'hidden_count', 'INTEGER DEFAULT 0');
+addColumnIfMissing('scrape_runs', 'errors_json',  'TEXT');
+
 const insertRunStmt = sqlite.prepare(`
     INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
         found, saved, skipped_duplicate, skipped_outside_window, skipped_invalid,
-        error_count, first_error)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        error_count, first_error, hidden_count, errors_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 export interface ScrapeRunRow {
@@ -87,6 +100,8 @@ export interface ScrapeRunRow {
     skippedInvalid: number;
     errorCount: number;
     firstError?: string;
+    hiddenCount?: number;
+    errors?: string[];
 }
 
 export function recordScrapeRun(run: ScrapeRunRow): void {
@@ -96,10 +111,64 @@ export function recordScrapeRun(run: ScrapeRunRow): void {
             run.durationMs, run.found, run.saved,
             run.skippedDuplicate, run.skippedOutsideWindow, run.skippedInvalid,
             run.errorCount, run.firstError ?? null,
+            run.hiddenCount ?? 0,
+            run.errors && run.errors.length > 0 ? JSON.stringify(run.errors) : null,
         );
     } catch (err) {
         console.error('Failed to record scrape run:', err);
     }
+}
+
+// ─── Query helpers for show-runs CLI ────────────────────────────────────────
+
+export interface ScrapeRunRecord {
+    id: number;
+    source_id: string;
+    host_name: string;
+    started_at: string;
+    duration_ms: number;
+    found: number;
+    saved: number;
+    skipped_duplicate: number;
+    skipped_outside_window: number;
+    skipped_invalid: number;
+    error_count: number;
+    first_error: string | null;
+    hidden_count: number;
+    errors_json: string | null;
+}
+
+const recentRunsStmt = sqlite.prepare<[number], ScrapeRunRecord>(`
+    SELECT * FROM scrape_runs ORDER BY started_at DESC LIMIT ?
+`);
+
+const runsBySourceStmt = sqlite.prepare<[string, number], ScrapeRunRecord>(`
+    SELECT * FROM scrape_runs WHERE source_id = ? ORDER BY started_at DESC LIMIT ?
+`);
+
+const sourceStatsStmt = sqlite.prepare<[], { source_id: string; host_name: string; runs: number; last_run: string; total_saved: number; total_errors: number }>(`
+    SELECT
+        source_id,
+        host_name,
+        COUNT(*)        AS runs,
+        MAX(started_at) AS last_run,
+        SUM(saved)      AS total_saved,
+        SUM(error_count) AS total_errors
+    FROM scrape_runs
+    GROUP BY source_id
+    ORDER BY last_run DESC
+`);
+
+export function getRecentRuns(limit = 50): ScrapeRunRecord[] {
+    return recentRunsStmt.all(limit);
+}
+
+export function getRunsBySource(sourceId: string, limit = 20): ScrapeRunRecord[] {
+    return runsBySourceStmt.all(sourceId, limit);
+}
+
+export function getSourceStats(): Array<{ source_id: string; host_name: string; runs: number; last_run: string; total_saved: number; total_errors: number }> {
+    return sourceStatsStmt.all();
 }
 
 const upsertStmt = sqlite.prepare(`
