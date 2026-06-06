@@ -15,7 +15,10 @@ import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
-import { recordScrapeRun } from '../utils/sqliteHelper';
+import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
+import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
+
+const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
 
 const DEFAULT_WINDOW_DAYS = parseInt(process.env.SCRAPE_WINDOW_DAYS || '30', 10);
 
@@ -46,7 +49,19 @@ export async function runSource(
         saved: 0,
         skipped: { duplicate: 0, outsideWindow: 0, invalid: 0 },
         errors: [],
+        audited: 0,
+        autoHidden: 0,
     };
+
+    // Kontrollera Ollama-tillgänglighet en gång per source-körning (inte per event).
+    // Om nere: stäng av audit för hela denna körning och logga en warning.
+    let auditAvailable = false;
+    if (AUDIT_ENABLED && !opts.dryRun) {
+        auditAvailable = await ollamaIsAvailable();
+        if (!auditAvailable) {
+            console.warn(`  [${source.id}] ⚠️  AUDIT_ENABLED men Ollama svarar inte — audit hoppas över`);
+        }
+    }
 
     if (source.disabled) {
         result.errors.push('source is disabled');
@@ -108,6 +123,34 @@ export async function runSource(
 
             const category = e.category || classifyEvent(e.title, e.description || '');
 
+            // ── LLM-audit (opt-in, kräver AUDIT_ENABLED=true + Ollama uppe) ──
+            let auditVerdict: string | undefined;
+            let auditConfidence: string | undefined;
+            if (auditAvailable) {
+                try {
+                    const auditResult = await auditEvent({
+                        title: e.title,
+                        locationName: e.venueName || e.city,
+                        extractedAddress: e.address,
+                        description: e.description,
+                        hostName: source.hostName,
+                        url: e.url,
+                    });
+                    result.audited++;
+                    auditVerdict    = auditResult.verdict;
+                    auditConfidence = auditResult.confidence;
+
+                    if (auditResult.verdict === 'junk' && auditResult.confidence === 'high') {
+                        result.autoHidden++;
+                        ctx.log(`  🗑️  auto-hide (junk/high): ${e.title.slice(0, 60)}`);
+                        continue;
+                    }
+                } catch (auditErr) {
+                    // Audit-fel bryter aldrig pipeline — logga och gå vidare.
+                    ctx.log(`  ⚠️  audit-fel på "${e.title.slice(0, 40)}": ${(auditErr as Error).message}`);
+                }
+            }
+
             if (opts.dryRun) {
                 const fieldHealth = {
                     title: !!e.title,
@@ -158,16 +201,23 @@ export async function runSource(
                 isLocationVerified: lat !== 0 || lng !== 0,
             });
             result.saved++;
+
+            if (auditVerdict && auditConfidence) {
+                setEventAudit(e.url, auditVerdict, auditConfidence);
+            }
         } catch (err) {
             result.errors.push(`event "${e.title}": ${(err as Error).message}`);
         }
     }
 
     result.durationMs = Date.now() - startedAt;
+    const auditSuffix = result.audited > 0
+        ? `, audited ${result.audited}, auto-hidden ${result.autoHidden}`
+        : '';
     ctx.log(
         `done in ${result.durationMs}ms — saved ${result.saved}, ` +
         `dup ${result.skipped.duplicate}, outside ${result.skipped.outsideWindow}, ` +
-        `invalid ${result.skipped.invalid}, errors ${result.errors.length}`,
+        `invalid ${result.skipped.invalid}, errors ${result.errors.length}${auditSuffix}`,
     );
 
     // Persist run-history för observability
@@ -183,6 +233,8 @@ export async function runSource(
         skippedInvalid: result.skipped.invalid,
         errorCount: result.errors.length,
         firstError: result.errors[0]?.slice(0, 300),
+        auditedCount: result.audited,
+        autoHiddenCount: result.autoHidden,
     });
 
     return result;
