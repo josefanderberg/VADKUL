@@ -66,6 +66,19 @@ sqlite.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_source     ON scrape_runs(source_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_started_at ON scrape_runs(started_at);
+
+    -- Known venues: manuell koordinattabell för Växjö + övriga orter.
+    -- Ersätter det hårdkodade VAXJO_VENUES-objektet. Administreras via manage-venues.ts.
+    CREATE TABLE IF NOT EXISTS known_venues (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT    NOT NULL UNIQUE,
+        lat        REAL    NOT NULL,
+        lng        REAL    NOT NULL,
+        city       TEXT    DEFAULT 'Växjö',
+        notes      TEXT,
+        created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_known_venues_name ON known_venues(name);
 `);
 
 const insertRunStmt = sqlite.prepare(`
@@ -212,6 +225,62 @@ export function countSqliteEvents(): number {
 
 export function getSqlitePath(): string {
     return dbPath;
+}
+
+// ─── Known Venues ──────────────────────────────────────────────────────────────
+
+export interface KnownVenueRow {
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+    city: string | null;
+    notes: string | null;
+    created_at: string;
+}
+
+const venueUpsertStmt = sqlite.prepare(`
+    INSERT INTO known_venues (name, lat, lng, city, notes)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET
+        lat   = excluded.lat,
+        lng   = excluded.lng,
+        city  = excluded.city,
+        notes = COALESCE(excluded.notes, known_venues.notes)
+`);
+
+const venueDeleteStmt   = sqlite.prepare('DELETE FROM known_venues WHERE name = ?');
+const venueExactStmt    = sqlite.prepare('SELECT lat, lng FROM known_venues WHERE name = ? LIMIT 1');
+const venueAllStmt      = sqlite.prepare('SELECT id, name, lat, lng, city, notes, created_at FROM known_venues ORDER BY name ASC');
+const venueByCityStmt   = sqlite.prepare('SELECT id, name, lat, lng, city, notes, created_at FROM known_venues WHERE city = ? ORDER BY name ASC');
+const venueCountStmt    = sqlite.prepare('SELECT COUNT(*) AS n FROM known_venues');
+
+export function upsertKnownVenue(name: string, lat: number, lng: number, city?: string, notes?: string): void {
+    venueUpsertStmt.run(name, lat, lng, city ?? 'Växjö', notes ?? null);
+}
+
+export function deleteKnownVenue(name: string): boolean {
+    const info = venueDeleteStmt.run(name);
+    return info.changes > 0;
+}
+
+export function lookupVenueExact(name: string): [number, number] | null {
+    const row = venueExactStmt.get(name) as { lat: number; lng: number } | undefined;
+    return row ? [row.lat, row.lng] : null;
+}
+
+export function getAllKnownVenues(): KnownVenueRow[] {
+    return venueAllStmt.all() as KnownVenueRow[];
+}
+
+export function listKnownVenues(city?: string): KnownVenueRow[] {
+    return city
+        ? (venueByCityStmt.all(city) as KnownVenueRow[])
+        : (venueAllStmt.all() as KnownVenueRow[]);
+}
+
+export function countKnownVenues(): number {
+    return (venueCountStmt.get() as { n: number }).n;
 }
 
 export { sqlite };
