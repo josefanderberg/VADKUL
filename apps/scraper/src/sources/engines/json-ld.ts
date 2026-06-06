@@ -157,6 +157,42 @@ function pickImage(img: any): string | undefined {
     return undefined;
 }
 
+/**
+ * Plockar pris ur schema.org offers. Hanterar:
+ *   - enstaka Offer: { price }
+ *   - AggregateOffer: { lowPrice, highPrice }
+ *   - flera Offers (array): tar min–max → intervall
+ * Returnerar en sträng: "Gratis", "150", eller "150–300" (utan valuta — webben
+ * lägger på "kr"). undefined om inget pris hittas.
+ */
+function pickPrice(offers: any): string | undefined {
+    if (!offers) return undefined;
+
+    const nums: number[] = [];
+    const collect = (o: any) => {
+        if (!o || typeof o !== 'object') return;
+        // AggregateOffer
+        for (const key of ['lowPrice', 'highPrice', 'price']) {
+            const v = o[key];
+            if (v !== undefined && v !== null && v !== '') {
+                const n = parseFloat(String(v).replace(',', '.'));
+                if (!isNaN(n)) nums.push(n);
+            }
+        }
+    };
+
+    if (Array.isArray(offers)) offers.forEach(collect);
+    else collect(offers);
+
+    if (nums.length === 0) return undefined;
+
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    if (min === 0 && max === 0) return 'Gratis';
+    if (min === max) return String(min);
+    return `${min}–${max}`;
+}
+
 function pickGeo(loc: any): [number, number] | undefined {
     const geo = loc?.geo;
     if (!geo) return undefined;
@@ -202,7 +238,7 @@ export function jsonLdToRawEvent(node: any, baseUrl: string): RawEvent | null {
         description: node.description ? String(node.description).trim() : undefined,
         imageUrl: pickImage(node.image),
         organizer: node.organizer?.name,
-        price: node.offers?.price ? String(node.offers.price) : undefined,
+        price: pickPrice(node.offers),
     };
 }
 

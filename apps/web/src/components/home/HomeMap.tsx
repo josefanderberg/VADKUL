@@ -105,9 +105,9 @@ function CloudPopupOverlay({ eventCount }: { eventCount: number }) {
 
     return (
         <CloudPopup
-            message={eventCount > 0 
-                ? `Det finns ${eventCount} unika event idag. Det fylls på med nya hela tiden.`
-                : "Kolla in vad som händer idag. Det fylls på med nya event hela tiden."}
+            message={eventCount > 0
+                ? "Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund."
+                : "Kolla in vad som händer idag. Ett nytt event kan dyka upp nästa sekund."}
             anchorPos={cloudAnchorPos}
             onDragEnd={handleCloudDragEnd}
             onDismiss={() => setShowCloud(false)}

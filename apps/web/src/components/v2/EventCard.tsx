@@ -3,13 +3,16 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin, Sun } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
 // Hur långt fram i tiden "Snart" gäller.
 const SOON_WINDOW_MS = 60 * 60 * 1000;
-const NEARBY_PAGE_SIZE = 10;
+const NEARBY_PAGE_SIZE = 20;
+// Börjar eventet inom 1 timme (Pågår/Snart) hinner man inte längre än så här —
+// då döljer vi event som ligger längre bort (7 mil = 70 km).
+const MAX_IMMINENT_DISTANCE_KM = 70;
 
 type EventStatus = 'past' | 'ongoing' | 'soon' | 'later';
 
@@ -108,8 +111,11 @@ const getDayLabel = (offset: number) => {
 };
 
 interface NearbyEventsListProps {
-    items: { evt: LinkEvent; distanceKm: number | null }[];
-    totalCount: number;
+    /** Kommande (ej passerade) event, redan sliced till synligt antal. */
+    upcomingItems: { evt: LinkEvent; distanceKm: number | null }[];
+    upcomingTotal: number;
+    /** Alla event som redan varit — visas under en hopfällbar flik. */
+    pastItems: { evt: LinkEvent; distanceKm: number | null }[];
     now: number;
     onSelect: (evt: LinkEvent) => void;
     onLoadMore: () => void;
@@ -129,46 +135,58 @@ function StatusBadge({ status }: { status: EventStatus }) {
     );
 }
 
-function NearbyEventsList({ items, totalCount, now, onSelect, onLoadMore }: NearbyEventsListProps) {
+function NearbyRow({ evt, distanceKm, now, onSelect }: {
+    evt: LinkEvent;
+    distanceKm: number | null;
+    now: number;
+    onSelect: (evt: LinkEvent) => void;
+}) {
+    const status = getEventStatus(evt.time, now);
+    return (
+        <li>
+            <button
+                type="button"
+                onClick={() => onSelect(evt)}
+                className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+            >
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-black text-sm text-black dark:text-white truncate">
+                            {evt.title}
+                        </h4>
+                        <StatusBadge status={status} />
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1 shrink-0">
+                            <MapPin size={11} className="text-primary" />
+                            {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
+                        </span>
+                        <span className="truncate">{evt.locationName}</span>
+                    </div>
+                </div>
+                <ChevronRight size={16} className="text-slate-400 shrink-0" />
+            </button>
+        </li>
+    );
+}
+
+function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore }: NearbyEventsListProps) {
+    const [showPast, setShowPast] = useState(false);
     return (
         <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
             <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Fler event i närheten · {totalCount}
+                    Fler event i närheten · {upcomingTotal}
                 </span>
             </div>
+
             <ul className="divide-y divide-border">
-                {items.map(({ evt, distanceKm }) => {
-                    const status = getEventStatus(evt.time, now);
-                    return (
-                        <li key={evt.id}>
-                            <button
-                                type="button"
-                                onClick={() => onSelect(evt)}
-                                className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
-                            >
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-black text-sm text-black dark:text-white truncate">
-                                            {evt.title}
-                                        </h4>
-                                        <StatusBadge status={status} />
-                                    </div>
-                                    <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                        <span className="inline-flex items-center gap-1 shrink-0">
-                                            <MapPin size={11} className="text-primary" />
-                                            {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
-                                        </span>
-                                        <span className="truncate">{evt.locationName}</span>
-                                    </div>
-                                </div>
-                                <ChevronRight size={16} className="text-slate-400 shrink-0" />
-                            </button>
-                        </li>
-                    );
-                })}
+                {upcomingItems.map(({ evt, distanceKm }) => (
+                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                ))}
             </ul>
-            {items.length < totalCount && (
+
+            {upcomingItems.length < upcomingTotal && (
                 <div className="px-4 md:px-6 py-3 flex justify-center border-t border-border">
                     <button
                         type="button"
@@ -177,6 +195,33 @@ function NearbyEventsList({ items, totalCount, now, onSelect, onLoadMore }: Near
                     >
                         Visa fler
                     </button>
+                </div>
+            )}
+
+            {/* Hopfällbar flik — event som redan varit, dolda som standard */}
+            {pastItems.length > 0 && (
+                <div className="border-t border-border">
+                    <button
+                        type="button"
+                        onClick={() => setShowPast(s => !s)}
+                        className="w-full px-4 md:px-6 py-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                        aria-expanded={showPast}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Har varit · {pastItems.length}
+                        </span>
+                        <ChevronDown
+                            size={16}
+                            className={`text-slate-400 transition-transform duration-200 ${showPast ? 'rotate-180' : ''}`}
+                        />
+                    </button>
+                    {showPast && (
+                        <ul className="divide-y divide-border opacity-70">
+                            {pastItems.map(({ evt, distanceKm }) => (
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                            ))}
+                        </ul>
+                    )}
                 </div>
             )}
         </div>
@@ -194,9 +239,18 @@ interface EventCardProps {
     dayOffset: number;
     setDayOffset: (offset: number) => void;
     onSunClick?: () => void;
+    /** Sant när huvudmolnet/solmolnet ligger utanför skärmen — då visas en
+     *  återkallnings-knapp jämte solknappen. */
+    mainCloudOffScreen?: boolean;
+    sunCloudOffScreen?: boolean;
+    onRecallMainCloud?: () => void;
+    onRecallSunCloud?: () => void;
+    /** Flyg kartan tillbaka till det valda eventet (vi går dit — eventet
+     *  teleporteras inte till vyn). Triggas av recenter-knappen på kortet. */
+    onRecenter?: () => void;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -296,6 +350,84 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         });
         return list;
     }, [events, selectedEvent, discardedEventIds]);
+
+    // Dela upp närliggande event: kommande (ej passerade) visas direkt, medan de
+    // som redan varit läggs under en hopfällbar flik. now gör att gränsen flyttar
+    // sig i takt med klockan (uppdateras var 30:e sekund).
+    const upcomingNearby = useMemo(() => {
+        const kept = nearbyEvents.filter(n => {
+            const status = getEventStatus(n.evt.time, now);
+            if (status === 'past') return false;
+            // Imminent (Pågår/Snart, <1h): dölj det man inte hinner till (>7 mil).
+            // Okänt avstånd (null) får vara kvar — vi kan inte avgöra.
+            if (status === 'ongoing' || status === 'soon') {
+                if (n.distanceKm !== null && n.distanceKm > MAX_IMMINENT_DISTANCE_KM) return false;
+            }
+            return true;
+        });
+        // Imminenta (Pågår/Snart) först, sedan Senare — vardera närmast först.
+        const isImminent = (n: { evt: LinkEvent }) => {
+            const s = getEventStatus(n.evt.time, now);
+            return s === 'ongoing' || s === 'soon';
+        };
+        return [...kept].sort((a, b) => {
+            const rank = (isImminent(a) ? 0 : 1) - (isImminent(b) ? 0 : 1);
+            if (rank !== 0) return rank;
+            return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+        });
+    }, [nearbyEvents, now]);
+    const pastNearby = useMemo(
+        () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now) === 'past'),
+        [nearbyEvents, now]
+    );
+
+    // ── Förladda kommande event-bilder ──────────────────────────────────────
+    // "Nästa" landar nästan alltid på det geografiskt närmaste icke-besökta
+    // eventet. Vi simulerar de kommande hoppen (utan att röra state) och värmer
+    // upp deras cover-bilder + favicon i webbläsarens cache redan medan du tittar
+    // på nuvarande kort. När du sedan klickar Nästa är bilden redan nedladdad och
+    // kortet visas direkt — istället för att hämta bilden on-demand.
+    useEffect(() => {
+        if (!selectedEvent || typeof window === 'undefined') return;
+
+        const PRELOAD_COUNT = 4;
+        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        const simVisited = new Set(visitedEventIds);
+        let current: LinkEvent = selectedEvent;
+        const upcoming: LinkEvent[] = [];
+
+        for (let i = 0; i < PRELOAD_COUNT; i++) {
+            simVisited.add(current.id);
+            let next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+            if (!next) {
+                // Allt besökt — börja om från ankaret (matchar pickNext-logiken).
+                simVisited.clear();
+                simVisited.add(anchor.id);
+                next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+            }
+            if (!next || upcoming.some(e => e.id === next!.id)) break;
+            upcoming.push(next);
+            current = next;
+        }
+
+        // Värm också upp de närmaste i listan (för swipe / "nära dig"-klick).
+        const candidates = [...upcoming, ...nearbyEvents.slice(0, 3).map(n => n.evt)];
+
+        const seen = new Set<string>();
+        for (const evt of candidates) {
+            if (seen.has(evt.id)) continue;
+            seen.add(evt.id);
+            if (evt.coverImage) {
+                const img = new window.Image();
+                img.src = evt.coverImage;
+            }
+            try {
+                const host = new URL(evt.url).hostname;
+                const fav = new window.Image();
+                fav.src = `https://icons.duckduckgo.com/ip3/${host}.ico`;
+            } catch { /* ogiltig URL — hoppa över favicon */ }
+        }
+    }, [selectedEvent?.id, anchorId, events, discardedEventIds, visitedEventIds, nearbyEvents]);
 
     /**
      * Plocka nästa event utifrån ankaret (spiral utåt i avstånd).
@@ -506,6 +638,31 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                             <Sun size={16} className="text-amber-500" />
                         </button>
                     )}
+                    {onRecenter && (
+                        <button
+                            type="button"
+                            onClick={onRecenter}
+                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
+                            title="Visa molnet på kartan"
+                            aria-label="Visa molnet på kartan"
+                        >
+                            <LocateFixed size={16} className="text-[#006AA7]" />
+                        </button>
+                    )}
+                    {mainCloudOffScreen && onRecallMainCloud && (
+                        <button
+                            onClick={onRecallMainCloud}
+                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border animate-in fade-in zoom-in duration-200"
+                            title="Hämta tillbaka molnet"
+                            aria-label="Hämta tillbaka molnet"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" className="text-sky-500" fill="currentColor">
+                                <path d="M19.36 10.04a7 7 0 0 0-13.36 1.4A4.5 4.5 0 0 0 6.5 20h12a4 4 0 0 0 .86-7.96Z" />
+                            </svg>
+                        </button>
+                    )}
+                    {/* Sol-molnet har ingen egen recall-knapp — sol-knappen hämtar
+                        tillbaka det. Bara EN moln-knapp (för info-molnet). */}
                 </div>
 
                 {/* Höger: bakåt + Nästa (samma höjd, längst till höger) */}
@@ -553,6 +710,13 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                     style={{ touchAction: 'none' }}
                 />
 
+                {/* Absolut drag-indikator. Ligger ovanpå kortet (absolute) så den
+                    inte adderar någon höjd/padding. pointer-events-none → drag går
+                    rakt igenom till kortet. */}
+                <div className="absolute top-1.5 left-0 right-0 z-40 flex items-center justify-center pointer-events-none">
+                    <div className="h-1.5 w-10 rounded-full bg-slate-300/90 dark:bg-slate-600/80" />
+                </div>
+
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
                 {dragX > 20 && (
                     <div className="absolute top-16 left-6 z-50 bg-green-500 text-white font-bold text-lg px-4 py-1.5 rounded-xl border border-green-400/60 transform -rotate-12 shadow-lg pointer-events-none" style={{ opacity: Math.min(0.9, dragX / 120) }}>
@@ -581,8 +745,9 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                     />
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
-                            items={nearbyEvents.slice(0, nearbyVisibleCount)}
-                            totalCount={nearbyEvents.length}
+                            upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
+                            upcomingTotal={upcomingNearby.length}
+                            pastItems={pastNearby}
                             now={now}
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}

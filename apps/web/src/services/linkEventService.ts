@@ -90,6 +90,7 @@ function mergeCardsWithDestinations(destEvents: LinkEvent[], cards: any[]): Link
             coverImage: card.coverImage,
             hostName: card.hostName,
             attendees: card.attendees,
+            price: card.price ?? '',
             isLocationVerified: card.isLocationVerified,
             isHostVerified: card.isHostVerified,
             url: card.url || evt.url

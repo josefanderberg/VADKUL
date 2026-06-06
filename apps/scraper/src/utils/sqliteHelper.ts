@@ -94,6 +94,7 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
 
 addColumnIfMissing('link_events', 'aiVerdict',            'TEXT');
 addColumnIfMissing('link_events', 'aiConfidence',         'TEXT');
+addColumnIfMissing('link_events', 'price',                'TEXT');
 addColumnIfMissing('scrape_runs', 'hidden_count',         'INTEGER DEFAULT 0');
 addColumnIfMissing('scrape_runs', 'errors_json',          'TEXT');
 addColumnIfMissing('scrape_runs', 'audited_count',        'INTEGER DEFAULT 0');
@@ -222,12 +223,12 @@ const upsertStmt = sqlite.prepare(`
     INSERT INTO link_events (
         url, title, time, locationName, extractedAddress, geocodedQuery,
         lat, lng, hostName, category, coverImage, description,
-        attendees, createdAt, isLocationVerified, isHostVerified, hidden,
+        attendees, price, createdAt, isLocationVerified, isHostVerified, hidden,
         firestoreId, updatedAt, status
     ) VALUES (
         @url, @title, @time, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @hostName, @category, @coverImage, @description,
-        @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
+        @attendees, @price, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
         @firestoreId, @updatedAt, @status
     )
     ON CONFLICT(url) DO UPDATE SET
@@ -243,6 +244,7 @@ const upsertStmt = sqlite.prepare(`
         coverImage         = excluded.coverImage,
         description        = excluded.description,
         attendees          = excluded.attendees,
+        price              = COALESCE(NULLIF(excluded.price, ''), link_events.price),
         isLocationVerified = excluded.isLocationVerified,
         isHostVerified     = excluded.isHostVerified,
         firestoreId        = COALESCE(excluded.firestoreId, link_events.firestoreId),
@@ -281,6 +283,8 @@ export interface SqliteEvent {
     coverImage?: string;
     description?: string;
     attendees?: number;
+    /** Pris som text: "150", "Gratis", eller intervall "150–300 kr". */
+    price?: string;
     createdAt?: Date | string;
     isLocationVerified?: boolean;
     isHostVerified?: boolean;
@@ -310,6 +314,7 @@ export function upsertEvent(event: SqliteEvent): void {
         coverImage:         event.coverImage ?? '',
         description:        event.description ?? '',
         attendees:          event.attendees ?? 0,
+        price:              event.price != null ? String(event.price) : '',
         createdAt:          toIso(event.createdAt) ?? new Date().toISOString(),
         isLocationVerified: event.isLocationVerified ? 1 : 0,
         isHostVerified:     event.isHostVerified ? 1 : 0,

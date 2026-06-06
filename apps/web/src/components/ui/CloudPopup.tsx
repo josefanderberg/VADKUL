@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface CloudPopupProps {
-  message: string;
+  message: React.ReactNode;
   /** ms before the cloud auto-disappears (0 = never) */
   autoDismissMs?: number;
   /** Fires synchronously when dismiss begins — before the animation completes */
@@ -32,6 +32,10 @@ interface CloudPopupProps {
   /** Fired on a tap (pointer down+up without dragging) — used to toggle the
    *  camera-follow mode for this cloud. */
   onToggleFollow?: () => void;
+  /** While following: release velocity (px/ms) + the screen point the cloud
+   *  was let go at, so the parent can pin the cloud there and fling the camera
+   *  with matching momentum/friction. */
+  onFollowFling?: (vx: number, vy: number, holdX: number, holdY: number) => void;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -55,6 +59,27 @@ const highlightCircles = [
   { cx: 175, cy: 140, r: 16 },
   { cx: 125, cy: 140, r: 16 }
 ];
+
+// Avlång "klassisk moln"-form — bredare än hög, lummig topp, flackare botten.
+// Detta är vilo-formen (innan man klickat). Index 1:1 mot baseCircles så formen
+// kan morpha mjukt (cx/cy/r-transition) till det runda "default"-molnet vid klick.
+const elongatedCircles = [
+  { cx: 150, cy: 150, r: 42 }, // core
+  { cx: 212, cy: 160, r: 30 }, // right (bred)
+  { cx: 188, cy: 172, r: 28 }, // bottom-right
+  { cx: 150, cy: 176, r: 30 }, // bottom
+  { cx: 112, cy: 172, r: 28 }, // bottom-left
+  { cx: 88,  cy: 160, r: 30 }, // left (bred)
+  { cx: 112, cy: 128, r: 30 }, // top-left
+  { cx: 150, cy: 116, r: 34 }, // top
+  { cx: 188, cy: 128, r: 30 }  // top-right
+];
+
+// Spin-fysik vid kast. Vinkelhastigheten = greppets avstånd från centrum
+// (kryssprodukt med kasthastigheten), så ett kast greppat ute vid kanten
+// snurrar molnet — ett kast greppat i mitten gör det inte.
+const SPIN_STRENGTH = 1.6;   // deg/ms per (grepp × hastighet). Högre = mer snurr.
+const GLIDE_FRICTION = 2.2;  // hastighetsavtagande per sekund under glidet.
 
 // Sub-component to render a full cloud layer of puffs
 interface CloudLayerProps {
@@ -117,7 +142,8 @@ export default function CloudPopup({
   showDelayMs = 600,
   scale = 1,
   following = false,
-  onToggleFollow
+  onToggleFollow,
+  onFollowFling
 }: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -289,6 +315,21 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       if (dxDown * dxDown + dyDown * dyDown > 36) dragMoved.current = true;
     }
 
+    // Keep the most recent samples (~last 80ms) for release-velocity estimation.
+    const now = performance.now();
+    velocitySamples.current.push({ x: e.clientX, y: e.clientY, t: now });
+    while (velocitySamples.current.length > 1 && now - velocitySamples.current[0].t > 80) {
+      velocitySamples.current.shift();
+    }
+
+    // In follow mode the cloud still tracks the finger during the drag (so it
+    // never feels stuck), but isn't clamped to the viewport — you can pull it
+    // anywhere before flinging. Camera follow happens on release.
+    if (following) {
+      setOffset({ x: newX, y: newY });
+      return;
+    }
+
     const { minX, maxX, minY, maxY } = getOffsetLimits();
     const clampedX = Math.min(Math.max(newX, minX), maxX);
     const clampedY = Math.min(Math.max(newY, minY), maxY);
@@ -296,13 +337,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     // No rotation during drag — the cloud is perfectly stiff while held.
     // Spin is computed on release from grabOffset × release-velocity.
     setOffset({ x: clampedX, y: clampedY });
-
-    // Keep the most recent samples (~last 80ms) for release-velocity estimation.
-    const now = performance.now();
-    velocitySamples.current.push({ x: e.clientX, y: e.clientY, t: now });
-    while (velocitySamples.current.length > 1 && now - velocitySamples.current[0].t > 80) {
-      velocitySamples.current.shift();
-    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -339,6 +373,26 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     }
     velocitySamples.current = [];
 
+    // Follow mode: the cloud holds wherever you released it (its current screen
+    // point), and the camera flies with the release momentum — so the cloud
+    // tracks the camera the whole way. Spin is baked in for feel.
+    if (following && onFollowFling) {
+      const holdX = (anchorPos?.x ?? 0) + offset.x;
+      const holdY = (anchorPos?.y ?? 0) + offset.y;
+      const gx = grabOffset.current.x;
+      const gy = grabOffset.current.y;
+      const vSpin = -(gx * vy - gy * vx) * 0.7;
+      // Total spin = integral of vSpin·e^(-k t) = vSpin / k, k = friction/1000.
+      setRestingRotation(prev => prev + vSpin / (2.2 / 1000));
+      setDragSpinAngle(0);
+      // Hold point updates to the release position in the same commit, so
+      // resetting offset to 0 doesn't visibly snap the cloud.
+      setSkipTransition(true);
+      onFollowFling(vx, vy, holdX, holdY);
+      setOffset({ x: 0, y: 0 });
+      return;
+    }
+
     const commit = (cx: number, cy: number) => {
       if (onDragEnd) {
         // Anchor parent absorbs (cx, cy) while we reset offset to 0 in the
@@ -354,12 +408,18 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     const { minX, maxX, minY, maxY } = getOffsetLimits();
     const speed = Math.sqrt(vx * vx + vy * vy);
 
-    // Below this release speed there's no perceivable glide — just commit and
-    // immediately unfreeze rotation so the face turns toward screen center.
-    if (speed < 0.15) {
+    // Below this release speed there's no perceivable glide — but a flick at the
+    // rim should still spin the cloud. Bake the edge-throw spin straight into the
+    // resting rotation (same model as follow-mode) and commit in place.
+    if (speed < 0.1) {
       const clampedX = Math.min(Math.max(offset.x, minX), maxX);
       const clampedY = Math.min(Math.max(offset.y, minY), maxY);
 
+      const gx = grabOffset.current.x;
+      const gy = grabOffset.current.y;
+      const vSpin = -(gx * vy - gy * vx) * SPIN_STRENGTH;
+      // Total spin = integral of vSpin·e^(-k t) = vSpin / k, k = friction/1000.
+      setRestingRotation(prev => prev + vSpin / (GLIDE_FRICTION / 1000));
       setDragSpinAngle(0);
       commit(clampedX, clampedY);
       return;
@@ -371,14 +431,14 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     setIsGliding(true);
     const gx = grabOffset.current.x;
     const gy = grabOffset.current.y;
-    let vSpin = -(gx * vy - gy * vx) * 0.7; // angular velocity in deg/ms (inverted)
+    let vSpin = -(gx * vy - gy * vx) * SPIN_STRENGTH; // angular velocity in deg/ms (inverted)
     let curSpinAngle = dragSpinAngle;
 
     let curX = offset.x;
     let curY = offset.y;
     let curVx = vx; // px/ms
     let curVy = vy;
-    const friction = 2.2; // velocity halves roughly every ~315ms
+    const friction = GLIDE_FRICTION; // velocity halves roughly every ~315ms
     const stopThreshold = 0.04; // px/ms
     let lastT = performance.now();
 
@@ -461,7 +521,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       ? 'items-start justify-start pt-[68px] pl-2 sm:pl-4'
       : 'items-center justify-center';
 
-  const sizeClass = size === 'md' ? 'w-[300px] sm:w-[340px]' : 'w-[370px] sm:w-[440px]';
+  const sizeClass = size === 'md' ? 'w-[340px] sm:w-[390px]' : 'w-[440px] sm:w-[520px]';
   const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
 
   // Screen center & cloud-to-center vector (used for face rotation + shadow offset).
@@ -563,6 +623,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // cloud's distance from center. Cloud shape is never deformed — only offset.
   // faceVec is in screen pixels; intensity is in svg-units-per-pixel-ish.
   // Capped so the shadow never drifts absurdly far from the cloud.
+  // Vilo-formen är avlång (klassiskt moln); vid klick morphar den till det runda
+  // "default"-molnet. Samma uppsättning används av skuggor + förgrund så hela
+  // molnet morphar som en enhet (cx/cy/r-transition).
+  const activeCircles = clicked ? baseCircles : elongatedCircles;
+
   const getShadowCircles = (intensity: number, maxShift: number) => {
     const rawDx = faceVec.x * intensity;
     const rawDy = faceVec.y * intensity;
@@ -570,7 +635,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     const scale = mag > maxShift ? maxShift / mag : 1;
     const dx = rawDx * scale;
     const dy = rawDy * scale;
-    return baseCircles.map((c) => ({
+    return activeCircles.map((c) => ({
       cx: c.cx + dx,
       cy: c.cy + dy,
       r: c.r
@@ -579,7 +644,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   const dynamicCirclesLayer1 = getShadowCircles(0.055, 28); // deepest shadow — strongest outward shift
   const dynamicCirclesLayer2 = getShadowCircles(0.028, 16); // mid shadow — subtler shift
-  const dynamicCirclesLayer3 = baseCircles;                  // foreground — never moves/deforms
+  const dynamicCirclesLayer3 = activeCircles;                // foreground — morphar avlång↔rund
   const dynamicHighlightCircles = highlightCircles;          // highlights — never moves/deforms
 
   if (!visible && !leaving) return null;
@@ -717,7 +782,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
                 transition: 'opacity 0.4s ease-out, transform 0.4s ease-out'
               }}
             >
-              <p className={`text-center text-slate-800 dark:text-slate-900 font-extrabold text-[15px] sm:text-base leading-relaxed max-w-[230px] ${textTranslateClass}`}>
+              <p className={`text-center text-slate-800 dark:text-slate-900 font-extrabold text-[14px] sm:text-[15px] leading-relaxed max-w-[250px] whitespace-pre-line ${textTranslateClass}`}>
                 {message}
               </p>
             </div>

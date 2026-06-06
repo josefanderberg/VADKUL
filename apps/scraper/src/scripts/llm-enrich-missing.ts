@@ -32,6 +32,13 @@ const updateCategoryStmt = sqlite.prepare(`
     WHERE url = @url AND (category IS NULL OR category = 'other')
 `);
 
+// Skriv bara AI-priset om eventet saknar pris (skriv inte över scraperns).
+const updatePriceStmt = sqlite.prepare(`
+    UPDATE link_events
+    SET price = @price, updatedAt = @updatedAt
+    WHERE url = @url AND (price IS NULL OR price = '')
+`);
+
 async function main() {
     const available = await ollamaIsAvailable();
     if (!available) {
@@ -92,6 +99,15 @@ async function main() {
                 url: event.url,
             });
             categoryFixed++;
+        }
+
+        // Skriv pris om Ollama hittade ett och eventet saknar det.
+        if (result.price) {
+            updatePriceStmt.run({
+                price: result.price,
+                updatedAt: new Date().toISOString(),
+                url: event.url,
+            });
         }
 
         // Geocoda plats-kandidaten om vi fick en och den är troligen svensk

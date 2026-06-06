@@ -1,9 +1,9 @@
-import { ExternalLink, Trash2, Clock, MapPin } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { linkEventService } from '../../services/linkEventService';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
@@ -128,17 +128,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
     const faviconUrl = getFaviconUrl(linkEvent.url);
 
-    // DETERMINISTISKA fejk-avatarer (2 st + 1 bubbla med resten)
-    const dummyAvatars = useMemo(() => {
-        const seed = getHash(linkEvent.id || linkEvent.title || 'default');
-        const initials = ['JS', 'ML', 'KB', 'AD', 'EN', 'PT', 'SR', 'HL'];
-        return [0, 1].map(n => {
-            const initial = initials[(seed + n) % initials.length];
-            return `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff&size=64&font-size=0.45&bold=true`;
-        });
-    }, [linkEvent.id, linkEvent.title]);
-
-    const attendeeCount = linkEvent.attendees !== undefined ? linkEvent.attendees : 0;
+    // Formatera pris för visning. Rena siffror/intervall får "kr" påsatt;
+    // "Gratis" och redan formaterade strängar visas som de är. null = dölj chip.
+    const priceLabel = (() => {
+        const p = linkEvent.price;
+        if (p === undefined || p === null || p === '') return null;
+        const s = String(p).trim();
+        if (!s) return null;
+        if (s === '0' || /^gratis$/i.test(s)) return 'Gratis';
+        if (/^\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?$/.test(s)) return `${s} kr`;
+        return s;
+    })();
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
@@ -206,26 +206,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </div>
                     </div>
 
-                    {/* Kommer — fast höjd så raden inte hoppar mellan events med/utan anmälda */}
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Kommer</span>
-                        <div className="h-8 flex items-center">
-                            {attendeeCount > 0 ? (
-                                <div className="flex -space-x-2 overflow-hidden">
-                                    {dummyAvatars.map((src, i) => (
-                                        <div key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-card bg-slate-100 overflow-hidden border border-border/10">
-                                            <img src={src} alt="" className="h-full w-full object-cover" />
-                                        </div>
-                                    ))}
-                                    <div className="flex h-7 px-1.5 min-w-[28px] items-center justify-center rounded-full bg-slate-800 ring-2 ring-card text-[9px] font-black text-white shadow-lg">
-                                        {attendeeCount > 2 ? `+${attendeeCount - 2}` : `+${attendeeCount}`}
-                                    </div>
-                                </div>
-                            ) : (
-                                <span className="text-[10px] text-slate-300 font-medium">Inga anmälda</span>
-                            )}
+                    {/* Pris — ersätter "Kommer" (vi har sällan riktig anmälningsdata,
+                        t.ex. från Tickster). Visas bara när vi faktiskt har ett pris. */}
+                    {priceLabel && (
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Pris</span>
+                            <span className="inline-flex items-center gap-1 text-sm font-black text-black dark:text-white whitespace-nowrap">
+                                <Ticket size={14} className="text-primary" />
+                                {priceLabel}
+                            </span>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 

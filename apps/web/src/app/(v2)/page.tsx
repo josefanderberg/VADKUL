@@ -80,6 +80,20 @@ export default function HomePage() {
         setSunCloudKey(k => k + 1);
     }, []);
 
+    // Återkallningssystem för molnen: V2Map rapporterar off-screen, sidan
+    // visar en knapp jämte solen som triggar en räknare → V2Map snäpper
+    // molnet tillbaka in i bild.
+    const [cloudOffScreen, setCloudOffScreen] = useState<{ main: boolean; sun: boolean }>({ main: false, sun: false });
+    const [recallMainTrigger, setRecallMainTrigger] = useState(0);
+    const [recallSunTrigger, setRecallSunTrigger] = useState(0);
+    const handleRecallMain = useCallback(() => setRecallMainTrigger(t => t + 1), []);
+    const handleRecallSun = useCallback(() => setRecallSunTrigger(t => t + 1), []);
+
+    // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
+    // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
+    const [recenterTrigger, setRecenterTrigger] = useState(0);
+    const handleRecenter = useCallback(() => setRecenterTrigger(t => t + 1), []);
+
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
         const unsubscribe = linkEventService.subscribeToAll(true, (fetched) => {
@@ -135,15 +149,45 @@ export default function HomePage() {
         });
     };
 
-    // Sökfiltrering — appliceras ovanpå dag-filtreringen
+    // Sökfiltrering — appliceras ovanpå dag-filtreringen. Matchar titel, plats,
+    // arrangör (hostName) samt eventets URL/källa, så att en sökning på t.ex.
+    // "tickster" får fram alla event från den plattformen (domänen ligger i url).
     const searchFilteredEvents = useMemo(() => {
         if (!searchQuery.trim()) return filteredEvents;
         const q = searchQuery.toLowerCase();
         return filteredEvents.filter(evt =>
             evt.title.toLowerCase().includes(q) ||
-            (evt.locationName?.toLowerCase().includes(q) ?? false)
+            (evt.locationName?.toLowerCase().includes(q) ?? false) ||
+            (evt.hostName?.toLowerCase().includes(q) ?? false) ||
+            (evt.url?.toLowerCase().includes(q) ?? false)
         );
     }, [filteredEvents, searchQuery]);
+
+    // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
+    // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
+    // och söktermen. nowTick uppdateras varje minut så "börjar inom 1 timme" rör
+    // sig i takt med klockan.
+    const [nowTick, setNowTick] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => setNowTick(t => t + 1), 60_000);
+        return () => clearInterval(id);
+    }, []);
+    const cloudStats = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
+        const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const hourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+        let today = 0, week = 0, withinHour = 0;
+        for (const evt of events) {
+            if (!evt.time) continue;
+            const t = evt.time.getTime();
+            if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
+            if (t >= startOfToday.getTime() && t < endOfWeek.getTime()) week++;
+            if (evt.hasSpecificTime && t > now.getTime() && t <= hourFromNow.getTime()) withinHour++;
+        }
+        return { today, week, withinHour };
+    }, [events, nowTick]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
@@ -194,6 +238,11 @@ export default function HomePage() {
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
                 sunCloudTrigger={sunCloudKey}
+                cloudStats={cloudStats}
+                recallMainTrigger={recallMainTrigger}
+                recallSunTrigger={recallSunTrigger}
+                recenterTrigger={recenterTrigger}
+                onCloudVisibilityChange={setCloudOffScreen}
             />
 
             {/* Modal för att skapa event */}
@@ -256,6 +305,11 @@ export default function HomePage() {
                 dayOffset={dayOffset}
                 setDayOffset={setDayOffset}
                 onSunClick={handleSunClick}
+                mainCloudOffScreen={cloudOffScreen.main}
+                sunCloudOffScreen={cloudOffScreen.sun}
+                onRecallMainCloud={handleRecallMain}
+                onRecallSunCloud={handleRecallSun}
+                onRecenter={handleRecenter}
             />
 
             {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.

@@ -16,6 +16,8 @@ export interface LlmEnrichResult {
     category: string;
     isJunk: boolean;
     confidence: 'high' | 'medium' | 'low' | 'none';
+    /** Pris ur texten: "Gratis", "150", eller intervall "150–300". null = okänt. */
+    price: string | null;
     raw?: string;
 }
 
@@ -71,6 +73,27 @@ function normalizeConfidence(v: unknown): LlmEnrichResult['confidence'] {
     return 'none';
 }
 
+/**
+ * Normaliserar pris från LLM:en till en kort sträng utan valuta.
+ *   - 0 / "gratis" / "free" / "fri entré"  → "Gratis"
+ *   - flera siffror (t.ex. "150 / 200 / 300") → intervall "150–300"
+ *   - en siffra → "150"
+ *   - inget/okänt → null
+ */
+function normalizePrice(v: unknown): string | null {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'number') return v === 0 ? 'Gratis' : String(v);
+    const s = String(v).trim();
+    if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'okänt') return null;
+    if (/gratis|free|fri\s*entré|kostnadsfri/i.test(s)) return 'Gratis';
+    const nums = (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map(n => parseFloat(n.replace(',', '.'))).filter(n => !isNaN(n));
+    if (nums.length === 0) return s.slice(0, 40); // behåll t.ex. "Donation" som det är
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    if (min === 0 && max === 0) return 'Gratis';
+    return min === max ? String(min) : `${min}–${max}`;
+}
+
 function normalizeCategory(v: unknown): string {
     if (typeof v !== 'string') return 'other';
     const lower = v.toLowerCase();
@@ -95,14 +118,14 @@ export async function llmEnrichEvent(
 ): Promise<LlmEnrichResult> {
     const fallback: LlmEnrichResult = {
         locationCandidate: null, city: null, category: 'other',
-        isJunk: false, confidence: 'none'
+        isJunk: false, confidence: 'none', price: null
     };
 
     if (!title && !description) return fallback;
 
     const desc = (description || '').slice(0, 600);
     const prompt = `Svara BARA med JSON. Event: "${title}". Adress: "${extractedAddress || ''}". Beskrivning: "${desc}".
-Ge JSON: {"location": <plats/adress ur texten eller null>, "city": <stad eller null>, "category": <EN av: music/performing-arts/comedy/market/sport/education/art/social/food-drink/family/other>, "isJunk": <true/false>, "confidence": <high/medium/low/none>}`;
+Ge JSON: {"location": <plats/adress ur texten eller null>, "city": <stad eller null>, "category": <EN av: music/performing-arts/comedy/market/sport/education/art/social/food-drink/family/other>, "isJunk": <true/false>, "confidence": <high/medium/low/none>, "price": <biljettpris i kronor ur texten — "Gratis" om fri entré, ange intervall som "150-300" om flera priser nämns, null om inget pris framgår>}`;
 
     const raw = await callOllama(prompt);
     if (!raw) return fallback;
@@ -116,6 +139,7 @@ Ge JSON: {"location": <plats/adress ur texten eller null>, "city": <stad eller n
         category: normalizeCategory(parsed.category),
         isJunk: parsed.isJunk === true,
         confidence: normalizeConfidence(parsed.confidence),
+        price: normalizePrice(parsed.price),
         raw,
     };
 }

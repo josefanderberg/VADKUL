@@ -22,6 +22,7 @@ interface CardLayer {
     coverImage: string;
     hostName: string;
     attendees: number;
+    price: string;
     isLocationVerified: boolean;
     isHostVerified: boolean;
     url: string;
@@ -78,6 +79,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             coverImage: row.coverImage || '',
             hostName: row.hostName || '',
             attendees: Number(row.attendees) || 0,
+            price: row.price || '',
             isLocationVerified: row.isLocationVerified === 1,
             isHostVerified: row.isHostVerified === 1,
             url: row.url
