@@ -60,3 +60,6 @@ apps/web/public/pwa-icon-v222.png
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Claude Code local state
+.claude/
