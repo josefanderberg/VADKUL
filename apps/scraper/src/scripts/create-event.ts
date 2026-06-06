@@ -8,7 +8,8 @@
 
 import * as readline from 'readline';
 import { db } from '../config/firebase';
-import { geocodeVenue, getVenueCoordinates, VAXJO_VENUES } from '../utils/venueCoordinates';
+import { geocodeVenue, getVenueCoordinates } from '../utils/venueCoordinates';
+import { getAllKnownVenues } from '../utils/sqliteHelper';
 import { geohashForLocation } from 'geofire-common';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -129,7 +130,7 @@ async function main() {
 
         // --- PLATS ---
         console.log('\n   Kända platser (tryck Enter för att se alla):');
-        const knownVenues = Object.keys(VAXJO_VENUES).filter(k => k !== 'DEFAULT').slice(0, 15);
+        const knownVenues = getAllKnownVenues().map(v => v.name).slice(0, 15);
         console.log('   ' + knownVenues.join(', ') + '...\n');
         const locationName = await askWithDefault('📍 Plats/lokal', 'Växjö');
 

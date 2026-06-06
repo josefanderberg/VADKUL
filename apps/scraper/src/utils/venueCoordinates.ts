@@ -1,4 +1,7 @@
-// Växjö venue coordinates lookup table
+import { upsertKnownVenue, lookupVenueExact, getAllKnownVenues, countKnownVenues } from './sqliteHelper';
+
+// Växjö venue coordinates lookup table — källa för initial DB-seedning.
+// Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
 export const VAXJO_VENUES: Record<string, [number, number]> = {
     // ─── Sports & Entertainment ────────────────────────────────────────────────
     'Vida Arena': [56.8797, 14.7736],
@@ -130,26 +133,45 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
 };
 
 /**
+ * Seed the known_venues SQLite table from VAXJO_VENUES on first run.
+ * De-duplicates by JS toLowerCase() before inserting so only one row
+ * per case-insensitive name is written.
+ */
+function seedKnownVenues(): void {
+    const seen = new Set<string>();
+    for (const [name, [lat, lng]] of Object.entries(VAXJO_VENUES)) {
+        if (name === 'DEFAULT') continue;
+        const lower = name.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        upsertKnownVenue(name, lat, lng, 'Växjö');
+    }
+}
+
+// Seed once on first import if the table is empty.
+if (countKnownVenues() === 0) {
+    seedKnownVenues();
+}
+
+/**
  * Get coordinates for a venue name.
- * Returns coordinates if found in lookup table, otherwise null.
+ * Queries the known_venues SQLite table (exact, then case-insensitive substring).
  */
 export function getVenueCoordinates(venueName: string): [number, number] | null {
     if (!venueName) return null;
+    const trimmed = venueName.trim();
 
-    // Exact match
-    if (VAXJO_VENUES[venueName]) return VAXJO_VENUES[venueName];
+    // 1. Exact match (fastest path — relies on UNIQUE index)
+    const exact = lookupVenueExact(trimmed);
+    if (exact) return exact;
 
-    // Case-insensitive match
-    const lowerVenue = venueName.toLowerCase().trim();
-    for (const [key, coords] of Object.entries(VAXJO_VENUES)) {
-        if (key.toLowerCase() === lowerVenue) return coords;
-    }
-
-    // Partial match – venue name contains a known key (e.g. "Scenen på Vida Arena" → "Vida Arena")
-    for (const [key, coords] of Object.entries(VAXJO_VENUES)) {
-        if (key === 'DEFAULT') continue;
-        if (lowerVenue.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerVenue)) {
-            return coords;
+    // 2. Case-insensitive + partial match in JS (table is small, ~70 rows)
+    const lower = trimmed.toLowerCase();
+    for (const row of getAllKnownVenues()) {
+        const rowLower = row.name.toLowerCase();
+        if (rowLower === lower) return [row.lat, row.lng];
+        if (lower.includes(rowLower) || rowLower.includes(lower)) {
+            return [row.lat, row.lng];
         }
     }
 
