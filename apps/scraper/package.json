@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "runs": "ts-node src/scripts/show-runs.ts",
     "sources": "ts-node src/scripts/run-sources.ts",
     "probe-wp": "ts-node src/scripts/probe-wordpress.ts",
     "probe-ical": "ts-node src/scripts/probe-ical.ts",
@@ -30,6 +31,7 @@
     "sync-storage-urls": "ts-node src/scripts/sync-storage-urls.ts",
     "hide-foreign": "ts-node src/scripts/hide-foreign-misclassified.ts",
     "audit-events": "ts-node src/scripts/audit-events.ts",
+    "smoke": "ts-node src/scripts/smoke.ts",
     "cleanup-images": "ts-node src/scripts/cleanup-storage-images.ts",
     "setup-telegram": "ts-node src/scripts/setup-telegram.ts",
     "health": "ts-node src/scripts/health.ts",
