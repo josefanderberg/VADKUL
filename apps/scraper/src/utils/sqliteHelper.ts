@@ -48,7 +48,6 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_link_events_time     ON link_events(time);
     CREATE INDEX IF NOT EXISTS idx_link_events_hidden   ON link_events(hidden);
     CREATE INDEX IF NOT EXISTS idx_link_events_verified ON link_events(isLocationVerified);
-    CREATE INDEX IF NOT EXISTS idx_link_events_status   ON link_events(status);
 
     -- Run-history: en rad per scraper-körning så vi kan se trender och regressioner.
     CREATE TABLE IF NOT EXISTS scrape_runs (
@@ -108,6 +107,8 @@ if (statusAdded) {
     sqlite.exec("UPDATE link_events SET status = 'published' WHERE status = 'raw'");
     console.log('  ℹ️  link_events.status: kolumn tillagd, befintliga rader backfillades till "published"');
 }
+// Index on status must come after column migration (column may not exist at CREATE TABLE time).
+sqlite.exec("CREATE INDEX IF NOT EXISTS idx_link_events_status ON link_events(status)");
 
 const insertRunStmt = sqlite.prepare(`
     INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
