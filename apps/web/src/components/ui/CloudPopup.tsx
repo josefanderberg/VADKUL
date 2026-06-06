@@ -125,12 +125,41 @@ export default function CloudPopup({
   
   // Drag states
   const [isDragging, setIsDragging] = useState(false);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isGliding, setIsGliding] = useState(false);
+  const [frozenRotation, setFrozenRotation] = useState<number | null>(null);
+  const [dragSpinAngle, setDragSpinAngle] = useState(0);
+const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [throwDirection, setThrowDirection] = useState<{ x: number; y: number } | null>(null);
+  // When releasing in anchored mode the parent updates anchorPos to compensate
+  // for the new (0, 0) offset in the same commit — but a CSS transform transition
+  // would still animate from the pre-release translate, overshooting past the
+  // release point. We skip the transition for one frame so the swap is invisible.
+  const [skipTransition, setSkipTransition] = useState(false);
+  // One-shot pop-in: plays once when the cloud first appears, never re-fires.
+  const [hasPoppedIn, setHasPoppedIn] = useState(false);
+
+  useEffect(() => {
+    if (!skipTransition) return;
+    const id = requestAnimationFrame(() => setSkipTransition(false));
+    return () => cancelAnimationFrame(id);
+  }, [skipTransition]);
+
+  useEffect(() => {
+    if (!visible || hasPoppedIn) return;
+    const t = setTimeout(() => setHasPoppedIn(true), 600);
+    return () => clearTimeout(t);
+  }, [visible, hasPoppedIn]);
 
   // Refs for tracking pointer
   const pointerId = useRef<number | null>(null);
   const startPos = useRef({ x: 0, y: 0 });
+  const grabOffset = useRef({ x: 0, y: 0 });
+  // Pointer velocity sampling for the post-release glide ("airhockey" feel).
+  // We keep last two samples so a stale velocity from a long pause before
+  // release doesn't get inherited.
+  const velocitySamples = useRef<{ x: number; y: number; t: number }[]>([]);
+  const glideRaf = useRef<number | null>(null);
+  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Small delay so it "pops in" after the page settles
   useEffect(() => {
@@ -159,12 +188,55 @@ export default function CloudPopup({
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    // Cancel any in-flight glide or fade timeout
+    if (glideRaf.current !== null) {
+      cancelAnimationFrame(glideRaf.current);
+      glideRaf.current = null;
+    }
+    if (fadeTimeoutRef.current !== null) {
+      clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+
+    setIsGliding(false);
+    // Freeze the cloud's current orientation at the moment of grab so the
+    // face doesn't keep tracking the screen center during drag. It resumes
+    // tracking only after the cloud has come to rest.
+    setFrozenRotation(faceRotDeg);
+    setDragSpinAngle(0);
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const grabX = e.clientX - (rect.left + rect.width / 2);
+    const grabY = e.clientY - (rect.top + rect.height / 2);
+    const radius = Math.max(rect.width / 2, 1);
+    grabOffset.current = { x: grabX / radius, y: grabY / radius };
+
     pointerId.current = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
 
     setIsDragging(true);
     startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    velocitySamples.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+  };
+
+  // Compute clamp range for the drag offset. When anchored we limit so the cloud
+  // can reach all screen edges (minus a small margin) regardless of which side
+  // it's currently parked on. When unanchored we fall back to symmetric limits
+  // around the natural center position.
+  const getOffsetLimits = () => {
+    const margin = 40;
+    if (anchorPos) {
+      return {
+        minX: margin - anchorPos.x,
+        maxX: window.innerWidth - margin - anchorPos.x,
+        minY: margin - anchorPos.y,
+        maxY: window.innerHeight - margin - anchorPos.y
+      };
+    }
+    const halfW = window.innerWidth / 2 - margin;
+    const halfH = window.innerHeight / 2 - margin;
+    return { minX: -halfW, maxX: halfW, minY: -halfH, maxY: halfH };
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -178,12 +250,26 @@ export default function CloudPopup({
 
     const newX = currentX - startPos.current.x;
     const newY = currentY - startPos.current.y;
-    
-    const limitX = window.innerWidth / 2 - 40;
-    const limitY = window.innerHeight / 2 - 40;
-    const clampedX = Math.min(Math.max(newX, -limitX), limitX);
-    const clampedY = Math.min(Math.max(newY, -limitY), limitY);
+
+    const { minX, maxX, minY, maxY } = getOffsetLimits();
+    const clampedX = Math.min(Math.max(newX, minX), maxX);
+    const clampedY = Math.min(Math.max(newY, minY), maxY);
+
+    const dx = clampedX - offset.x;
+    const dy = clampedY - offset.y;
+    const gx = grabOffset.current.x;
+    const gy = grabOffset.current.y;
+    const torque = (gx * dy - gy * dx) * 0.7;
+    setDragSpinAngle(prev => prev + torque);
+
     setOffset({ x: clampedX, y: clampedY });
+
+    // Keep the most recent samples (~last 80ms) for release-velocity estimation.
+    const now = performance.now();
+    velocitySamples.current.push({ x: e.clientX, y: e.clientY, t: now });
+    while (velocitySamples.current.length > 1 && now - velocitySamples.current[0].t > 80) {
+      velocitySamples.current.shift();
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -196,20 +282,96 @@ export default function CloudPopup({
     pointerId.current = null;
     setIsDragging(false);
 
-    const dx = offset.x;
-    const dy = offset.y;
-    
-    const limitX = window.innerWidth / 2 - 40;
-    const limitY = window.innerHeight / 2 - 40;
-    const clampedX = Math.min(Math.max(dx, -limitX), limitX);
-    const clampedY = Math.min(Math.max(dy, -limitY), limitY);
-    
-    if (onDragEnd) {
-      onDragEnd(clampedX, clampedY);
-      setOffset({ x: 0, y: 0 });
-    } else {
-      setOffset({ x: clampedX, y: clampedY });
+    // Estimate release velocity from the last sample window (px/ms).
+    const samples = velocitySamples.current;
+    let vx = 0;
+    let vy = 0;
+    if (samples.length >= 2) {
+      const first = samples[0];
+      const last = samples[samples.length - 1];
+      const dt = last.t - first.t;
+      if (dt > 0) {
+        vx = (last.x - first.x) / dt;
+        vy = (last.y - first.y) / dt;
+      }
     }
+    velocitySamples.current = [];
+
+    const commit = (cx: number, cy: number) => {
+      if (onDragEnd) {
+        // Anchor parent absorbs (cx, cy) while we reset offset to 0 in the
+        // same commit — skip the transition so the swap is invisible.
+        setSkipTransition(true);
+        onDragEnd(cx, cy);
+        setOffset({ x: 0, y: 0 });
+      } else {
+        setOffset({ x: cx, y: cy });
+      }
+    };
+
+    const { minX, maxX, minY, maxY } = getOffsetLimits();
+    const speed = Math.sqrt(vx * vx + vy * vy);
+
+    // Below this release speed there's no perceivable glide — just commit and
+    // immediately unfreeze rotation so the face turns toward screen center.
+    if (speed < 0.15) {
+      const clampedX = Math.min(Math.max(offset.x, minX), maxX);
+      const clampedY = Math.min(Math.max(offset.y, minY), maxY);
+
+      setFrozenRotation(null);
+      setDragSpinAngle(0);
+      commit(clampedX, clampedY);
+      return;
+    }
+
+    // Airhockey glide: integrate velocity with per-second friction and land
+    // wherever momentum runs out. No walls and no auto-dismiss — the cloud
+    // commits to the physics-predicted resting position.
+    setIsGliding(true);
+    setFrozenRotation(faceRotDeg);
+    const gx = grabOffset.current.x;
+    const gy = grabOffset.current.y;
+    let vSpin = -(gx * vy - gy * vx) * 0.7; // angular velocity in deg/ms (inverted)
+    let curSpinAngle = dragSpinAngle;
+
+    let curX = offset.x;
+    let curY = offset.y;
+    let curVx = vx; // px/ms
+    let curVy = vy;
+    const friction = 2.2; // velocity halves roughly every ~315ms
+    const stopThreshold = 0.04; // px/ms
+    let lastT = performance.now();
+
+    const tick = (t: number) => {
+      const dt = Math.min(t - lastT, 32); // cap to avoid huge jumps after tab blur
+      lastT = t;
+
+      curX += curVx * dt;
+      curY += curVy * dt;
+      curSpinAngle += vSpin * dt;
+
+      setOffset({ x: curX, y: curY });
+      setDragSpinAngle(curSpinAngle);
+
+      const decay = Math.exp(-friction * dt / 1000);
+      curVx *= decay;
+      curVy *= decay;
+      vSpin *= decay;
+
+      const remaining = Math.sqrt(curVx * curVx + curVy * curVy);
+      if (remaining < stopThreshold) {
+        glideRaf.current = null;
+        setIsGliding(false);
+        // Cloud has stopped — release the frozen rotation so the face turns
+        // toward screen center via the cloudBodyRotTransition CSS transition.
+        setFrozenRotation(null);
+        setDragSpinAngle(0);
+        commit(curX, curY);
+        return;
+      }
+      glideRaf.current = requestAnimationFrame(tick);
+    };
+    glideRaf.current = requestAnimationFrame(tick);
   };
 
   const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -219,6 +381,38 @@ export default function CloudPopup({
       // Keep it exactly where it was dragged when pointer left viewport, no snapping back
     }
   };
+
+  // Forward wheel events to whatever sits beneath the cloud (typically the map).
+  // The hit area has pointer-events:auto so it would otherwise swallow scroll/zoom.
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const prev = target.style.pointerEvents;
+    target.style.pointerEvents = 'none';
+    const below = document.elementFromPoint(e.clientX, e.clientY);
+    target.style.pointerEvents = prev;
+    if (!below || below === target) return;
+    below.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true,
+      cancelable: true,
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      deltaZ: e.deltaZ,
+      deltaMode: e.deltaMode,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey,
+      metaKey: e.metaKey
+    }));
+  };
+
+  useEffect(() => {
+    return () => {
+      if (glideRaf.current !== null) cancelAnimationFrame(glideRaf.current);
+      if (fadeTimeoutRef.current !== null) clearTimeout(fadeTimeoutRef.current);
+    };
+  }, []);
 
   const isAnchored = !!anchorPos;
 
@@ -230,55 +424,43 @@ export default function CloudPopup({
   const sizeClass = size === 'md' ? 'w-[300px] sm:w-[340px]' : 'w-[370px] sm:w-[440px]';
   const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
 
-  const dragDistance = Math.sqrt(offset.x * offset.x + offset.y * offset.y);
-  const tilt = Math.min(Math.max(offset.x * 0.12, -28), 28);
-  const skewX = Math.min(Math.max(offset.x * 0.05, -12), 12);
-  const skewY = Math.min(Math.max(offset.y * 0.03, -8), 8);
-  const scaleX = 1 + Math.min(dragDistance * 0.0006, 0.15);
-  const scaleY = 1 - Math.min(dragDistance * 0.0004, 0.1);
+  // Screen center & cloud-to-center vector (used for face rotation + shadow offset).
+  // Calculated up front so shadow shifts can use it.
+  const screenCenterX = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
+  const screenCenterY = typeof window !== 'undefined' ? window.innerHeight / 2 : 500;
 
-  const transitionStyle = isDragging
+  const faceVec = {
+    x: (anchorPos?.x ?? screenCenterX) + offset.x - screenCenterX,
+    y: (anchorPos?.y ?? screenCenterY) + offset.y - screenCenterY
+  };
+  const faceDist = Math.sqrt(faceVec.x * faceVec.x + faceVec.y * faceVec.y);
+  const faceBlend = Math.min(faceDist / 50, 1);
+  const rawAngleDeg = Math.atan2(faceVec.y, faceVec.x) * (180 / Math.PI) + 90;
+  const faceRotDeg = faceBlend * rawAngleDeg;
+
+  const transitionStyle = (isDragging || isGliding || skipTransition)
     ? 'none'
     : 'transform 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease-out';
 
   let transformStyle = '';
   let opacityStyle = 1;
-  
+
+  // Pure-translate during interaction — no tilt/skew/scale on drag, so the cloud
+  // looks identical whether held or released. The dismiss "throw" still rotates
+  // for personality, but it derives rotation from throw direction, not drag.
   if (leaving && throwDirection) {
     const throwDistance = Math.max(window.innerWidth, window.innerHeight) * 1.3;
     const tx = throwDirection.x * throwDistance;
     const ty = throwDirection.y * throwDistance;
-    const rot = tilt * 3.5;
-    transformStyle = `translate3d(${tx}px, ${ty}px, 0) rotate(${rot}deg) scale(0.75) skewX(${skewX * 2.5}deg)`;
+    const throwRot = Math.atan2(throwDirection.y, throwDirection.x) * (180 / Math.PI) + 45;
+    transformStyle = `translate3d(${tx}px, ${ty}px, 0) rotate(${throwRot}deg) scale(0.75)`;
     opacityStyle = 0;
+  } else if (isAnchored) {
+    transformStyle = `translate3d(calc(-50% + ${offset.x}px), calc(-56.25% + 60px + ${offset.y}px), 0)`;
   } else {
-    if (isAnchored) {
-      transformStyle = `translate3d(calc(-50% + ${offset.x}px), calc(-56.25% + ${offset.y}px), 0) rotate(${tilt}deg) scale(${scaleX}, ${scaleY}) skew(${skewX}deg, ${skewY}deg)`;
-    } else {
-      transformStyle = `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${tilt}deg) scale(${scaleX}, ${scaleY}) skew(${skewX}deg, ${skewY}deg)`;
-    }
+    transformStyle = `translate3d(${offset.x}px, ${offset.y}px, 0)`;
   }
 
-  // --- HÄR ÄR FIXEN ---
-  // Beräkna fönstrets mittpunkt (med fallback för SSR)
-  const screenCenterX = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
-  const screenCenterY = typeof window !== 'undefined' ? window.innerHeight / 2 : 500;
-
-  // faceVec är molnets position i förhållande till skärmens mitt
-  const faceVec = {
-    x: (anchorPos?.x ?? screenCenterX) + offset.x - screenCenterX,
-    y: (anchorPos?.y ?? screenCenterY) + offset.y - screenCenterY
-  };
-  // ---------------------
-
-  const faceDist = Math.sqrt(faceVec.x * faceVec.x + faceVec.y * faceVec.y);
-  const faceBlend = Math.min(faceDist / 50, 1); // blend in fully after 50px from center
-  
-  // ÄNDRA DEN HÄR RADEN:
-  const rawAngleDeg = Math.atan2(faceVec.y, faceVec.x) * (180 / Math.PI) + 90; 
-  
-  const faceRotDeg = faceBlend * rawAngleDeg;
-  
   // Static local face coordinates - the whole group rotates, parts stay fixed.
   const leftEye =  { x: 150 - 20, y: 135 - 18 };
   const rightEye = { x: 150 + 20, y: 135 - 18 };
@@ -291,9 +473,22 @@ export default function CloudPopup({
     transition: 'cx 0.35s cubic-bezier(0.215, 0.61, 0.355, 1), cy 0.35s cubic-bezier(0.215, 0.61, 0.355, 1), r 0.35s cubic-bezier(0.215, 0.61, 0.355, 1)'
   };
 
+  // The cloud body rotates as a single unit toward screen center — shadows,
+  // puffs and face all share this rotation so they read as one rigid head.
+  // (Disabled during the leaving throw so the dismiss-rotation isn't doubled.)
+  const currentBaseRot = ((isDragging || isGliding) && frozenRotation !== null) ? frozenRotation : faceRotDeg;
+  const currentRotation = currentBaseRot + dragSpinAngle;
+  const cloudBodyRotation = leaving ? '' : `rotate(${currentRotation}deg)`;
+  const cloudBodyRotTransition = (isDragging || isGliding || skipTransition)
+    ? 'none'
+    : 'transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+  // Shadow layers don't tilt/scale from drag anymore — only sit slightly larger
+  // behind the foreground. Their outward "elongation" comes from offsetting the
+  // shadow circles in the direction away from screen center (see getShadowCircles).
   const backTransformStyle = leaving && throwDirection
-    ? transformStyle 
-    : `rotate(${tilt * 0.75}deg) scale(${scaleX * 1.05}, ${scaleY * 1.05})`;
+    ? transformStyle
+    : `${cloudBodyRotation} scale(1.05)`;
 
   const outerClassName = isAnchored
     ? "fixed inset-0 z-[9999] pointer-events-none"
@@ -318,80 +513,155 @@ export default function CloudPopup({
         opacity: opacityStyle
       };
 
-  // Deform base circles elastically (squash & stretch based on drag angle)
-  const getDeformedCircles = (parallax: number) => {
-    // Parallax translation relative to the parent container (which is already moving at 100%)
-    const dx = offset.x * (parallax - 1.0);
-    const dy = offset.y * (parallax - 1.0);
-
-    // Deformation calculations use the main parent drag distance and angle
-    const dragAngle = Math.atan2(offset.y, offset.x);
-    const cosA = Math.cos(dragAngle);
-    const sinA = Math.sin(dragAngle);
-
-    const stretch = 1 + Math.min(dragDistance * 0.0012, 0.22);
-    const squeeze = 1 - Math.min(dragDistance * 0.0008, 0.14);
-
-    return baseCircles.map((c) => {
-      const distX = c.cx - 150;
-      const distY = c.cy - 135;
-
-      const projDrag = distX * cosA + distY * sinA;
-      const projOrth = -distX * sinA + distY * cosA;
-
-      const newProjDrag = projDrag * stretch;
-      const newProjOrth = projOrth * squeeze;
-
-      const newDistX = newProjDrag * cosA - newProjOrth * sinA;
-      const newDistY = newProjDrag * sinA + newProjOrth * cosA;
-
-      const cx = 150 + newDistX + dx;
-      const cy = 135 + newDistY + dy;
-      const r = c.r * (1 + Math.min(dragDistance * 0.0003, 0.08));
-
-      return { cx, cy, r };
-    });
+  // Shadow layers shift outward (away from screen center) proportional to the
+  // cloud's distance from center. Cloud shape is never deformed — only offset.
+  // faceVec is in screen pixels; intensity is in svg-units-per-pixel-ish.
+  // Capped so the shadow never drifts absurdly far from the cloud.
+  const getShadowCircles = (intensity: number, maxShift: number) => {
+    const rawDx = faceVec.x * intensity;
+    const rawDy = faceVec.y * intensity;
+    const mag = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+    const scale = mag > maxShift ? maxShift / mag : 1;
+    const dx = rawDx * scale;
+    const dy = rawDy * scale;
+    return baseCircles.map((c) => ({
+      cx: c.cx + dx,
+      cy: c.cy + dy,
+      r: c.r
+    }));
   };
 
-  // Deform highlight circles elastically (faster layer)
-  const getDeformedHighlights = () => {
-    // Parallax translation relative to parent
-    const dx = offset.x * (0.88 - 1.0);
-    const dy = offset.y * (0.88 - 1.0);
-
-    const dragAngle = Math.atan2(offset.y, offset.x);
-    const cosA = Math.cos(dragAngle);
-    const sinA = Math.sin(dragAngle);
-
-    const stretch = 1 + Math.min(dragDistance * 0.0012, 0.22);
-    const squeeze = 1 - Math.min(dragDistance * 0.0008, 0.14);
-
-    return highlightCircles.map((c) => {
-      const distX = c.cx - 150;
-      const distY = c.cy - 135;
-
-      const projDrag = distX * cosA + distY * sinA;
-      const projOrth = -distX * sinA + distY * cosA;
-
-      const newProjDrag = projDrag * stretch;
-      const newProjOrth = projOrth * squeeze;
-
-      const newDistX = newProjDrag * cosA - newProjOrth * sinA;
-      const newDistY = newProjDrag * sinA + newProjOrth * cosA;
-
-      const cx = 150 + newDistX + dx;
-      const cy = 135 + newDistY + dy;
-
-      return { cx, cy, r: c.r };
-    });
-  };
-
-  const dynamicCirclesLayer1 = getDeformedCircles(1.30);
-  const dynamicCirclesLayer2 = getDeformedCircles(1.15);
-  const dynamicCirclesLayer3 = getDeformedCircles(1.0);
-  const dynamicHighlightCircles = getDeformedHighlights();
+  const dynamicCirclesLayer1 = getShadowCircles(0.055, 28); // deepest shadow — strongest outward shift
+  const dynamicCirclesLayer2 = getShadowCircles(0.028, 16); // mid shadow — subtler shift
+  const dynamicCirclesLayer3 = baseCircles;                  // foreground — never moves/deforms
+  const dynamicHighlightCircles = highlightCircles;          // highlights — never moves/deforms
 
   if (!visible && !leaving) return null;
+
+  const renderCloudBody = (rotation: string, transitionStr: string) => {
+    const shadowRotation = leaving && throwDirection ? transformStyle : `${rotation} scale(1.05)`;
+    return (
+      <>
+        {/* LAYER 1: Deep Background Shadow (moves slowest, sky-300, blurred) */}
+        <CloudLayer
+          circles={dynamicCirclesLayer1}
+          className={`${sizeClass} absolute inset-0 pointer-events-none fill-sky-300 dark:fill-sky-950`}
+          style={{
+            willChange: 'transform',
+            transition: transitionStyle,
+            transform: shadowRotation,
+            transformOrigin: '50% 56.25%',
+            opacity: 0.35
+          }}
+          circleTransitionStyle={circleTransitionStyle}
+          blurFilterId="cloud-blur-bg1"
+          stdDeviation={6}
+        />
+
+        {/* LAYER 2: Midground Cloud (moves medium, sky-100, slightly blurred) */}
+        <CloudLayer
+          circles={dynamicCirclesLayer2}
+          className={`${sizeClass} absolute inset-0 pointer-events-none fill-sky-100/70 dark:fill-sky-900/40`}
+          style={{
+            willChange: 'transform',
+            transition: transitionStyle,
+            transform: shadowRotation,
+            transformOrigin: '50% 56.25%',
+            opacity: 0.60
+          }}
+          circleTransitionStyle={circleTransitionStyle}
+          blurFilterId="cloud-blur-bg2"
+          stdDeviation={3}
+        />
+
+        {/* LAYER 3 & 4: Foreground & Highlights (Base layer) */}
+        <div className="relative">
+          <svg
+            viewBox="0 0 300 240"
+            className={sizeClass}
+            style={{
+              overflow: 'visible',
+              transform: rotation,
+              transformOrigin: '50% 56.25%',
+              transition: transitionStr,
+              willChange: 'transform'
+            }}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Main white puff base */}
+            <g filter="url(#cloud-blur)" fillOpacity="0.99" className="fill-white dark:fill-slate-50">
+              {dynamicCirclesLayer3.map((c, idx) => (
+                <circle 
+                  key={`fg-${idx}`} 
+                  cx={c.cx} 
+                  cy={c.cy} 
+                  r={c.r} 
+                  style={circleTransitionStyle}
+                />
+              ))}
+            </g>
+
+            {/* LAYER 4: Highlight Puffs (moves fastest, overlapping, creating 3D volume shifts) */}
+            <g fillOpacity="0.95" className="fill-slate-50/80 dark:fill-white/20">
+              {dynamicHighlightCircles.map((c, idx) => (
+                <circle
+                  key={`hl-${idx}`}
+                  cx={c.cx}
+                  cy={c.cy}
+                  r={c.r}
+                  style={circleTransitionStyle}
+                />
+              ))}
+            </g>
+
+            {/* Face: rotation is on the SVG parent now — this group only
+                handles the click pop-in scale. */}
+            <g
+              style={{
+                opacity: clicked ? 1 : 0,
+                transform: clicked ? 'scale(1)' : 'scale(0.3)',
+                transformOrigin: '150px 135px',
+                transition: 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}
+            >
+              {/* Eyes */}
+              <circle cx={leftEye.x} cy={leftEye.y} r="7" fill="#bae6fd" />
+              <circle cx={rightEye.x} cy={rightEye.y} r="7" fill="#bae6fd" />
+              {/* Mouth: always a smile U-shape in local face space */}
+              <path
+                d={`M ${mouthLeft.x} ${mouthLeft.y} Q ${mouthCtrl.x} ${mouthCtrl.y} ${mouthRight.x} ${mouthRight.y}`}
+                stroke="#bae6fd"
+                strokeWidth="7"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </g>
+
+            <defs>
+              <filter id="cloud-blur" filterUnits="userSpaceOnUse" x="-100" y="-100" width="540" height="440">
+                <feGaussianBlur stdDeviation="1.5" />
+              </filter>
+            </defs>
+          </svg>
+          
+          {/* Content container */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-12 pt-6 pointer-events-none">
+            <div
+              style={{
+                opacity: clicked ? 0 : 1,
+                transform: clicked ? 'scale(0.8) translateY(-10px)' : 'scale(1) translateY(0)',
+                transition: 'opacity 0.4s ease-out, transform 0.4s ease-out'
+              }}
+            >
+              <p className={`text-center text-slate-800 dark:text-slate-900 font-extrabold text-[15px] sm:text-base leading-relaxed max-w-[230px] ${textTranslateClass}`}>
+                {message}
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className={outerClassName}>
@@ -404,120 +674,9 @@ export default function CloudPopup({
         className="relative select-none pointer-events-none"
         style={draggableStyle}
       >
-        <div className={isDragging || leaving ? '' : 'animate-cloud-float'}>
-          
-          {/* LAYER 1: Deep Background Shadow (moves slowest, sky-300, blurred) */}
-          <CloudLayer
-            circles={dynamicCirclesLayer1}
-            className={`${sizeClass} absolute inset-0 pointer-events-none fill-sky-300 dark:fill-sky-950`}
-            style={{
-              willChange: 'transform',
-              transition: transitionStyle,
-              transform: backTransformStyle,
-              opacity: 0.35
-            }}
-            circleTransitionStyle={circleTransitionStyle}
-            blurFilterId="cloud-blur-bg1"
-            stdDeviation={6}
-          />
+        <div className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}>
 
-          {/* LAYER 2: Midground Cloud (moves medium, sky-100, slightly blurred) */}
-          <CloudLayer
-            circles={dynamicCirclesLayer2}
-            className={`${sizeClass} absolute inset-0 pointer-events-none fill-sky-100/70 dark:fill-sky-900/40`}
-            style={{
-              willChange: 'transform',
-              transition: transitionStyle,
-              transform: backTransformStyle,
-              opacity: 0.60
-            }}
-            circleTransitionStyle={circleTransitionStyle}
-            blurFilterId="cloud-blur-bg2"
-            stdDeviation={3}
-          />
-
-          {/* LAYER 3 & 4: Foreground & Highlights (Base layer) */}
-          <div className="relative">
-            <svg
-              viewBox="0 0 300 240"
-              className={sizeClass}
-              style={{ overflow: 'visible' }}
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Main white puff base */}
-              <g filter="url(#cloud-blur)" fillOpacity="0.99" className="fill-white dark:fill-slate-50">
-                {dynamicCirclesLayer3.map((c, idx) => (
-                  <circle 
-                    key={`fg-${idx}`} 
-                    cx={c.cx} 
-                    cy={c.cy} 
-                    r={c.r} 
-                    style={circleTransitionStyle}
-                  />
-                ))}
-              </g>
-
-              {/* LAYER 4: Highlight Puffs (moves fastest, overlapping, creating 3D volume shifts) */}
-              <g fillOpacity="0.95" className="fill-slate-50/80 dark:fill-white/20">
-                {dynamicHighlightCircles.map((c, idx) => (
-                  <circle
-                    key={`hl-${idx}`}
-                    cx={c.cx}
-                    cy={c.cy}
-                    r={c.r}
-                    style={circleTransitionStyle}
-                  />
-                ))}
-              </g>
-
-              {/* Face: entire group rotates as a compass toward screen center */}
-              <g
-                style={{
-                  opacity: clicked ? 1 : 0,
-                  transform: clicked
-                    ? `rotate(${faceRotDeg}deg) scale(1)`
-                    : `rotate(${faceRotDeg}deg) scale(0.3)`,
-                  transformOrigin: '150px 135px',
-                  transition: clicked
-                    ? 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                    : 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }}
-              >
-                {/* Eyes */}
-                <circle cx={leftEye.x} cy={leftEye.y} r="7" fill="#bae6fd" />
-                <circle cx={rightEye.x} cy={rightEye.y} r="7" fill="#bae6fd" />
-                {/* Mouth: always a smile U-shape in local face space */}
-                <path
-                  d={`M ${mouthLeft.x} ${mouthLeft.y} Q ${mouthCtrl.x} ${mouthCtrl.y} ${mouthRight.x} ${mouthRight.y}`}
-                  stroke="#bae6fd"
-                  strokeWidth="7"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              </g>
-
-              <defs>
-                <filter id="cloud-blur" filterUnits="userSpaceOnUse" x="-100" y="-100" width="540" height="440">
-                  <feGaussianBlur stdDeviation="1.5" />
-                </filter>
-              </defs>
-            </svg>
-            
-            {/* Content container */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-12 pt-6 pointer-events-none">
-              <div
-                style={{
-                  opacity: clicked ? 0 : 1,
-                  transform: clicked ? 'scale(0.8) translateY(-10px)' : 'scale(1) translateY(0)',
-                  transition: 'opacity 0.4s ease-out, transform 0.4s ease-out'
-                }}
-              >
-                <p className={`text-center text-slate-800 dark:text-slate-900 font-extrabold text-[15px] sm:text-base leading-relaxed max-w-[230px] ${textTranslateClass}`}>
-                  {message}
-                </p>
-              </div>
-            </div>
-          </div>
+          {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
 
           {/* Pointer hit area — sized to match the visible cloud puff, not the SVG bounding box */}
           <div
@@ -527,6 +686,7 @@ export default function CloudPopup({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
+            onWheel={handleWheel}
             className="absolute cursor-grab active:cursor-grabbing select-none pointer-events-auto touch-none"
             style={{
               left: '26%',

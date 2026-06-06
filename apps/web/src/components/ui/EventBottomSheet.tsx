@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import type { AppEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { calculateDistance, loadLocationFromLocalStorage } from '../../utils/mapUtils';
-import { ArrowRight, Clock, MapPin, X, CheckCircle2, GripHorizontal } from 'lucide-react';
+import { ArrowRight, Clock, MapPin, X, CheckCircle2 } from 'lucide-react';
 import { EVENT_CATEGORIES, type EventCategoryType } from '../../utils/categories';
 
 const PEEK_VH = 45;
@@ -123,22 +123,15 @@ export function EventBottomSheet({ event, onClose }: EventBottomSheetProps) {
                     overflow: 'hidden',
                 }}
             >
-                {/* ── Drag zone: tall, obvious, full-width ── */}
+                {/* ── Drag zone: thin invisible strip, still grabbable ── */}
                 <div
-                    className="flex-shrink-0 flex flex-col items-center justify-center gap-1 py-4 cursor-grab active:cursor-grabbing select-none bg-background"
+                    className="flex-shrink-0 h-3 cursor-grab active:cursor-grabbing select-none bg-background"
                     style={{ touchAction: 'none', userSelect: 'none' }}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerUp}
-                >
-                    {/* Visible grip indicator */}
-                    <div className="w-14 h-1.5 bg-foreground/25 rounded-full" />
-                    <div className="flex items-center gap-1 text-foreground/30 mt-0.5">
-                        <GripHorizontal size={16} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Dra</span>
-                    </div>
-                </div>
+                />
 
                 {/* ── Scrollable content ── */}
                 <div

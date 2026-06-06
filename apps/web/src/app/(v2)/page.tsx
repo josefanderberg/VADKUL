@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
-import V2SwipeableCard from '@/components/v2/V2SwipeableCard';
+import EventCard from '@/components/v2/EventCard';
+import CloudPopup from '@/components/ui/CloudPopup';
 
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
@@ -67,6 +68,15 @@ export default function HomePage() {
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
+
+    // Sun-button effect: brightness flash on the map, followed by a fresh cloud
+    // popping up in the middle of the screen. Each click bumps a key so the
+    // flash overlay (and the resulting cloud) remount cleanly.
+    const [sunFlashKey, setSunFlashKey] = useState(0);
+    const [sunCloudKey, setSunCloudKey] = useState(0);
+    const handleSunClick = useCallback(() => {
+        setSunFlashKey(k => k + 1);
+    }, []);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
@@ -232,7 +242,7 @@ export default function HomePage() {
             )}
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
-            <V2SwipeableCard
+            <EventCard
                 events={searchFilteredEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
@@ -242,7 +252,27 @@ export default function HomePage() {
                 onCardExpandedChange={setCardExpanded}
                 dayOffset={dayOffset}
                 setDayOffset={setDayOffset}
+                onSunClick={handleSunClick}
             />
+
+            {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.
+                När animationen slutar spawnas ett nytt moln i mitten. */}
+            {sunFlashKey > 0 && (
+                <div
+                    key={sunFlashKey}
+                    className="fixed inset-0 pointer-events-none z-[600] sun-flash-overlay"
+                    onAnimationEnd={() => setSunCloudKey(k => k + 1)}
+                />
+            )}
+
+            {sunCloudKey > 0 && (
+                <CloudPopup
+                    key={sunCloudKey}
+                    message="Solen fick fram nytt event-vatten!"
+                    position="center"
+                    onDismiss={() => { /* lämna kvar tills användaren swipe:ar bort */ }}
+                />
+            )}
         </main>
     );
 }

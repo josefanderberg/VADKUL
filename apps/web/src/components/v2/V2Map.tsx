@@ -58,6 +58,15 @@ export default function V2Map({
 
     const baseZoomRef = useRef<number>(8);
 
+    // Ticking counter used to cycle through events at the same coordinate.
+    // Increments once per second; markers with count > 1 swap their displayed
+    // event (emoji + click target) each tick like a slideshow.
+    const [slideshowTick, setSlideshowTick] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => setSlideshowTick(t => t + 1), 1000);
+        return () => clearInterval(id);
+    }, []);
+
     // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
     const groups = useMemo(() => {
         const map = new Map<string, LinkEvent[]>();
@@ -187,17 +196,19 @@ export default function V2Map({
             ? Math.min(baseZoomRef.current + 1, maxZoom)
             : baseZoomRef.current;
 
+        const nextZoom = Math.max(currentZoom, targetZoom);
+
         if (!cardExpanded) {
             baseZoomRef.current = 8;
         }
 
-        const targetYRatio = cardExpanded ? 0.20 : 0.22;
+        const targetYRatio = cardExpanded ? 0.32 : 0.40;
         // Negative offset relative to center moves it towards the top of the viewport
         const yOffset = map.getContainer().clientHeight * (targetYRatio - 0.5);
 
         map.easeTo({
             center: [selectedEvent.lng, selectedEvent.lat],
-            zoom: targetZoom,
+            zoom: nextZoom,
             offset: [0, yOffset],
             duration: 500
         });
@@ -238,14 +249,23 @@ export default function V2Map({
 
             const count = group.length;
             const inGroupSelected = group.find(e => e.id === selectedEvent?.id);
-            const firstNonDiscarded = group.find(e => !discardedEventIds.has(e.id));
-            const rep = inGroupSelected || firstNonDiscarded || group[0];
+            const nonDiscarded = group.filter(e => !discardedEventIds.has(e.id));
+            // For multi-event groups, cycle the displayed event each tick like
+            // a slideshow. Selected event always wins over the cycle.
+            const cycleRep = count > 1 && !inGroupSelected && nonDiscarded.length > 0
+                ? nonDiscarded[slideshowTick % nonDiscarded.length]
+                : null;
+            const rep = inGroupSelected || cycleRep || nonDiscarded[0] || group[0];
 
             const isSelected = !!inGroupSelected;
             const isSaved = group.some(e => savedEventIds.has(e.id));
             const isDiscarded = group.every(e => discardedEventIds.has(e.id));
 
-            // Skapa en stateKey för att undvika att bygga om DOM i onödan
+            // Skapa en stateKey för att undvika att bygga om DOM i onödan.
+            // Notera: vi inkluderar INTE cycleRep här eftersom vi annars skulle
+            // riva ner och bygga upp brickans HTML varje sekund (vilket re-startar
+            // pop-in-animationen). Slideshow-bytet sker istället med en mindre
+            // ingripande emoji-uppdatering längre ner.
             const stateKey = `${isSelected}:${isSaved}:${isDiscarded}:${count}:${rep.category ?? 'other'}`;
 
             let markerData = markersRef.current.get(key);
@@ -269,8 +289,13 @@ export default function V2Map({
             if (markerData.lastStateKey !== stateKey) {
                 markerData.lastStateKey = stateKey;
 
-                // Uppdatera z-index på elementet
-                const zIndex = isSelected ? 1000 : (isSaved ? 500 : (isDiscarded ? -100 : 0));
+                // Uppdatera z-index på elementet. Multi-event-grupper (count > 1)
+                // ligger ovanpå enskilda nålhuvuden så att siffer-badgen aldrig
+                // skyms av en tom nål.
+                const zIndex = isSelected ? 1000
+                    : isSaved ? 500
+                    : count > 1 ? 200
+                    : isDiscarded ? -100 : 0;
                 markerData.element.style.zIndex = String(zIndex);
 
                 // Sätt eventlyssnare på klick
@@ -342,6 +367,22 @@ export default function V2Map({
                     </div>
                 `;
             }
+
+            // Slideshow-uppdatering för multi-event-grupper: byt enbart emoji +
+            // klickmål utan att riva ner brickans DOM (så pop-in inte återstartas).
+            if (cycleRep) {
+                const cycleCatKey = cycleRep.category && EVENT_CATEGORIES[cycleRep.category]
+                    ? cycleRep.category : 'other';
+                const cycleEmoji = EVENT_CATEGORIES[cycleCatKey as EventCategoryType]?.emoji ?? '🎫';
+                const emojiEl = markerData.element.querySelector('.pin-emoji');
+                if (emojiEl && emojiEl.textContent !== cycleEmoji) {
+                    emojiEl.textContent = cycleEmoji;
+                }
+                markerData.element.onclick = (e) => {
+                    e.stopPropagation();
+                    onSelectEventRef.current(cycleRep);
+                };
+            }
         });
 
         // Ta bort gamla markörer som lämnat skärmen
@@ -354,7 +395,7 @@ export default function V2Map({
                 }
             }
         });
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds]);
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, slideshowTick]);
 
     return (
         <div className="absolute inset-0 z-0 bg-slate-100" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0 }}>
@@ -372,6 +413,9 @@ export default function V2Map({
                     0% {
                         opacity: 0;
                         transform: scale(0.2) translateY(15px);
+                    }
+                    40% {
+                        opacity: 1;
                     }
                     100% {
                         opacity: 1;
@@ -495,9 +539,10 @@ export default function V2Map({
                     display: none;
                 }
 
-                /* 2. Brick-läge (Standard när kartan är stilla) */
+                /* 2. Brick-läge (Standard när kartan är stilla) — nålen visas
+                   alltid, brickan poppar upp ovanpå när kartan står still. */
                 .map-state-full .v2-custom-marker .needle-element {
-                    display: none;
+                    display: flex;
                 }
                 .map-state-full .v2-custom-marker .pin-element {
                     display: block;

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin, GripHorizontal } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, RotateCcw, MapPin, Sun } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -183,7 +183,7 @@ function NearbyEventsList({ items, totalCount, now, onSelect, onLoadMore }: Near
     );
 }
 
-interface V2SwipeableCardProps {
+interface EventCardProps {
     events: LinkEvent[];
     selectedEvent: LinkEvent | null;
     onSelectEvent: (evt: LinkEvent | null) => void;
@@ -193,9 +193,10 @@ interface V2SwipeableCardProps {
     onCardExpandedChange?: (expanded: boolean) => void;
     dayOffset: number;
     setDayOffset: (offset: number) => void;
+    onSunClick?: () => void;
 }
 
-export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset }: V2SwipeableCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick }: EventCardProps) {
     const [heightVh, setHeightVh] = useState(35);
     const heightVhRef = useRef(35);
     const updateHeightVh = (vh: number) => {
@@ -488,6 +489,15 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                             <RotateCcw size={15} className="text-slate-700" />
                         </button>
                     )}
+                    {onSunClick && (
+                        <button
+                            onClick={onSunClick}
+                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
+                            title="Lys upp kartan"
+                        >
+                            <Sun size={16} className="text-amber-500" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Höger: bakåt + Nästa (samma höjd, längst till höger) */}
@@ -529,17 +539,11 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
                     transition: isAnimating ? 'transform 200ms ease-out, opacity 200ms ease-out, height 350ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
                 }}
             >
-                {/* Drag Handle at top of the sheet */}
+                {/* Thin invisible drag strip — still grabbable, no visual handle */}
                 <div
-                    className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-1 py-3.5 cursor-grab active:cursor-grabbing select-none bg-card border-b border-border/5"
+                    className="w-full flex-shrink-0 h-3 cursor-grab active:cursor-grabbing select-none bg-card"
                     style={{ touchAction: 'none' }}
-                >
-                    <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
-                    <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 mt-0.5">
-                        <GripHorizontal size={14} />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Dra</span>
-                    </div>
-                </div>
+                />
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
                 {dragX > 20 && (
