@@ -48,6 +48,7 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_link_events_time     ON link_events(time);
     CREATE INDEX IF NOT EXISTS idx_link_events_hidden   ON link_events(hidden);
     CREATE INDEX IF NOT EXISTS idx_link_events_verified ON link_events(isLocationVerified);
+    CREATE INDEX IF NOT EXISTS idx_link_events_status   ON link_events(status);
 
     -- Run-history: en rad per scraper-körning så vi kan se trender och regressioner.
     CREATE TABLE IF NOT EXISTS scrape_runs (
@@ -67,6 +68,30 @@ sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_source     ON scrape_runs(source_id, started_at);
     CREATE INDEX IF NOT EXISTS idx_scrape_runs_started_at ON scrape_runs(started_at);
 `);
+
+// ─── Additive migrations ────────────────────────────────────────────────────
+
+/**
+ * Lägg till en kolumn om den inte redan finns. Returnerar true om den lades till
+ * (dvs. kolumnen var ny), false om den redan existerade.
+ */
+function addColumnIfMissing(table: string, column: string, definition: string): boolean {
+    const cols = (sqlite.pragma(`table_info(${table})`) as Array<{ name: string }>).map(r => r.name);
+    if (!cols.includes(column)) {
+        sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+        return true;
+    }
+    return false;
+}
+
+// status-kolumn: 'raw' | 'audited' | 'published'
+// Backfillas direkt till 'published' för alla befintliga rader — de var redan
+// synliga i webben och ska förbli det utan manuellt steg.
+const statusAdded = addColumnIfMissing('link_events', 'status', "TEXT NOT NULL DEFAULT 'raw'");
+if (statusAdded) {
+    sqlite.exec("UPDATE link_events SET status = 'published' WHERE status = 'raw'");
+    console.log('  ℹ️  link_events.status: kolumn tillagd, befintliga rader backfillades till "published"');
+}
 
 const insertRunStmt = sqlite.prepare(`
     INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
@@ -107,12 +132,12 @@ const upsertStmt = sqlite.prepare(`
         url, title, time, locationName, extractedAddress, geocodedQuery,
         lat, lng, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
-        firestoreId, updatedAt
+        firestoreId, updatedAt, status
     ) VALUES (
         @url, @title, @time, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
-        @firestoreId, @updatedAt
+        @firestoreId, @updatedAt, @status
     )
     ON CONFLICT(url) DO UPDATE SET
         title              = excluded.title,
@@ -131,6 +156,7 @@ const upsertStmt = sqlite.prepare(`
         isHostVerified     = excluded.isHostVerified,
         firestoreId        = COALESCE(excluded.firestoreId, link_events.firestoreId),
         updatedAt          = excluded.updatedAt
+        -- status bevaras avsiktligt vid re-scrape; ändras bara via setEventStatus()
 `);
 
 const existsStmt    = sqlite.prepare('SELECT 1 FROM link_events WHERE url = ?');
@@ -147,6 +173,8 @@ function toIso(value: unknown): string | null {
     }
     return String(value);
 }
+
+export type EventStatus = 'raw' | 'audited' | 'published';
 
 export interface SqliteEvent {
     url: string;
@@ -167,6 +195,13 @@ export interface SqliteEvent {
     isHostVerified?: boolean;
     hidden?: boolean;
     firestoreId?: string;
+    /**
+     * Pipeline-status. Default 'published' för bakåtkompatibilitet —
+     * alla gamla anropare som inte sätter status får published direkt.
+     * Sätt 'raw' explicit när AUDIT_ENABLED=true för att markera att
+     * eventet väntar på granskning.
+     */
+    status?: EventStatus;
 }
 
 export function upsertEvent(event: SqliteEvent): void {
@@ -190,6 +225,7 @@ export function upsertEvent(event: SqliteEvent): void {
         hidden:             event.hidden ? 1 : 0,
         firestoreId:        event.firestoreId ?? null,
         updatedAt:          new Date().toISOString(),
+        status:             event.status ?? 'published',
     });
 }
 
@@ -203,6 +239,18 @@ export function getSqliteEvent(url: string): any | null {
 
 export function setHidden(url: string, hidden: boolean): void {
     setHiddenStmt.run(hidden ? 1 : 0, new Date().toISOString(), url);
+}
+
+const setStatusStmt = sqlite.prepare(
+    'UPDATE link_events SET status = ?, updatedAt = ? WHERE url = ?',
+);
+
+export function setEventStatus(url: string, status: EventStatus): void {
+    try {
+        setStatusStmt.run(status, new Date().toISOString(), url);
+    } catch (err) {
+        console.error('Failed to set event status:', err);
+    }
 }
 
 export function countSqliteEvents(): number {
