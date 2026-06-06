@@ -24,6 +24,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -58,46 +59,33 @@ function endpointFor(cfg: WpRestConfig): string {
 
 async function fetchJson(url: string, cfg: WpRestConfig, signal?: AbortSignal): Promise<any | null> {
     await domainLimiter.wait(url);
-    const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': cfg.userAgent ?? DEFAULT_UA,
-                'Accept': 'application/json',
-            },
-            signal: signal ?? ac.signal,
-        });
+        const res = await fetchWithRetry(url, {
+            headers: { 'User-Agent': cfg.userAgent ?? DEFAULT_UA, 'Accept': 'application/json' },
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? 20_000, label: url });
         if (!res.ok) return null;
         return await res.json();
     } catch {
         return null;
-    } finally {
-        clearTimeout(timeout);
     }
 }
 
 /** Hämta event-detaljsidan som HTML — för att extrahera datum/venue när API:n saknar dem. */
 async function fetchDetailHtml(url: string, cfg: WpRestConfig, signal?: AbortSignal): Promise<string | null> {
     await domainLimiter.wait(url);
-    const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 15000);
     try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
             headers: {
                 'User-Agent': cfg.userAgent ?? DEFAULT_UA,
                 'Accept': 'text/html,application/xhtml+xml',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
             },
             redirect: 'follow',
-            signal: signal ?? ac.signal,
-        });
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? 15_000, label: url });
         if (!res.ok) return null;
         return await res.text();
     } catch {
         return null;
-    } finally {
-        clearTimeout(timeout);
     }
 }
 

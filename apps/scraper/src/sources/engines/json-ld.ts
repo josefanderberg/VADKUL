@@ -20,6 +20,7 @@
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import type { Browser } from 'puppeteer';
 
 // Lazy import — puppeteer laddas bara om någon källa har useBrowser=true.
@@ -67,23 +68,18 @@ export interface JsonLdConfig {
 async function fetchPage(url: string, cfg: JsonLdConfig, signal?: AbortSignal): Promise<string | null> {
     if (cfg.useBrowser) return fetchRendered(url, cfg);
     await domainLimiter.wait(url);
-    const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
             headers: {
                 'User-Agent': cfg.userAgent ?? DEFAULT_UA,
                 'Accept': 'text/html,application/xhtml+xml',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
             },
-            signal: signal ?? ac.signal,
-        });
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? 20_000, label: url });
         if (!res.ok) return null;
         return await res.text();
     } catch {
         return null;
-    } finally {
-        clearTimeout(timeout);
     }
 }
 

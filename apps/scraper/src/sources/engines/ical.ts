@@ -16,6 +16,7 @@
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -30,22 +31,14 @@ export interface IcalConfig {
 
 async function fetchIcs(url: string, cfg: IcalConfig, signal?: AbortSignal): Promise<string | null> {
     await domainLimiter.wait(url);
-    const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': cfg.userAgent ?? DEFAULT_UA,
-                'Accept': 'text/calendar,text/plain',
-            },
-            signal: signal ?? ac.signal,
-        });
+        const res = await fetchWithRetry(url, {
+            headers: { 'User-Agent': cfg.userAgent ?? DEFAULT_UA, 'Accept': 'text/calendar,text/plain' },
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? 20_000, label: url });
         if (!res.ok) return null;
         return await res.text();
     } catch {
         return null;
-    } finally {
-        clearTimeout(timeout);
     }
 }
 
