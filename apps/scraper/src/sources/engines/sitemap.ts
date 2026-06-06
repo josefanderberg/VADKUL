@@ -31,6 +31,7 @@ import { promisify } from 'util';
 import type { Browser } from 'puppeteer';
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
 
@@ -225,7 +226,7 @@ async function fetchRenderedHtml(url: string, cfg: SitemapConfig): Promise<strin
 }
 
 /**
- * Hämta text från URL med retry på transienta fel + transparent gzip-stöd.
+ * Hämta text från URL med retry (via fetchWithRetry) + transparent gzip-stöd.
  *
  * Många stora svenska sajter (Yoast SEO default) komprimerar sitemap-XML som
  * `.xml.gz`. Vi detekterar via:
@@ -238,56 +239,38 @@ async function fetchRenderedHtml(url: string, cfg: SitemapConfig): Promise<strin
  * Returnerar HTML/XML-strängen eller null om alla försök misslyckas.
  */
 async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal): Promise<string | null> {
-    const maxAttempts = 3;
     const isGzUrl = url.toLowerCase().endsWith('.gz');
-    let lastErr = '';
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        await domainLimiter.wait(url);
-        const ac = new AbortController();
-        const timeout = setTimeout(() => ac.abort(), cfg.timeoutMs ?? DEFAULT_TIMEOUT);
-        try {
-            const res = await fetch(url, {
-                headers: {
-                    'User-Agent': cfg.userAgent ?? DEFAULT_UA,
-                    // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
-                    'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip,*/*;q=0.1',
-                    'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
-                },
-                signal: signal ?? ac.signal,
-                redirect: 'follow',
-            });
-            if (res.ok) {
-                const ct = (res.headers.get('content-type') || '').toLowerCase();
-                const ce = (res.headers.get('content-encoding') || '').toLowerCase();
-                const isGzResponse = isGzUrl || ce.includes('gzip') || ct.includes('gzip');
-                if (isGzResponse) {
-                    const buf = Buffer.from(await res.arrayBuffer());
-                    // fetch dekomprimerar automatiskt om Content-Encoding: gzip
-                    // var satt — i så fall är buf redan plain text
-                    if (buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
-                        const out = await gunzip(buf);
-                        return out.toString('utf8');
-                    }
-                    return buf.toString('utf8');
-                }
-                return await res.text();
+    await domainLimiter.wait(url);
+    try {
+        const res = await fetchWithRetry(url, {
+            headers: {
+                'User-Agent': cfg.userAgent ?? DEFAULT_UA,
+                // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
+                'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip,*/*;q=0.1',
+                'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+            },
+            redirect: 'follow',
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT, label: url });
+
+        if (!res.ok) return null;
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        const ce = (res.headers.get('content-encoding') || '').toLowerCase();
+        const isGzResponse = isGzUrl || ce.includes('gzip') || ct.includes('gzip');
+        if (isGzResponse) {
+            const buf = Buffer.from(await res.arrayBuffer());
+            // fetch dekomprimerar automatiskt om Content-Encoding: gzip
+            // var satt — i så fall är buf redan plain text
+            if (buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+                const out = await gunzip(buf);
+                return out.toString('utf8');
             }
-            if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-                return null;
-            }
-            lastErr = `HTTP ${res.status}`;
-        } catch (e) {
-            const err = e as Error;
-            lastErr = err.name === 'AbortError' ? 'timeout' : err.message;
-        } finally {
-            clearTimeout(timeout);
+            return buf.toString('utf8');
         }
-        if (attempt < maxAttempts) {
-            const backoff = attempt === 1 ? 1000 : 3000;
-            await new Promise(r => setTimeout(r, backoff));
-        }
+        return await res.text();
+    } catch {
+        return null;
     }
-    return null;
 }
 
 interface SitemapEntry {
