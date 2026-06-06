@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -9,6 +9,7 @@ import { AppEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import EventCard from '../ui/EventCard';
 import LinkEventCard from '../ui/LinkEventCard';
+import CloudPopup from '../ui/CloudPopup';
 
 // Leaflet icon fixar
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -44,19 +45,74 @@ function MapController({ center, onClick }: { center: [number, number], onClick:
 }
 
 // Helper to track map state and trigger fetch
-function MapStateTracker({ onMoveEnd, onMapDrag }: { onMoveEnd: (center: L.LatLng, zoom: number) => void; onMapDrag?: () => void }) {
+function MapStateTracker({ onMoveEnd }: { onMoveEnd: (center: L.LatLng, zoom: number) => void }) {
     const map = useMapEvents({
         moveend: () => {
             const center = map.getCenter();
             onMoveEnd(center, map.getZoom());
             sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
             sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
-        },
-        drag: () => {
-            onMapDrag?.();
         }
     });
     return null;
+}
+
+// Leaflet projection overlay for geographic cloud anchoring
+// Solves request: anchor cloud to a map coordinate in Leaflet, moves with map
+function CloudPopupOverlay({ eventCount }: { eventCount: number }) {
+    const map = useMap();
+    const [cloudAnchor, setCloudAnchor] = useState<{ lat: number; lng: number }>({ lat: 56.8777, lng: 14.8091 });
+    const [cloudAnchorPos, setCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
+    const [showCloud, setShowCloud] = useState(true);
+
+    const updateCloudPosition = () => {
+        try {
+            const pos = map.latLngToContainerPoint([cloudAnchor.lat, cloudAnchor.lng]);
+            setCloudAnchorPos({ x: pos.x, y: pos.y });
+        } catch (e) {
+            // Leaflet map not fully initialized
+        }
+    };
+
+    useEffect(() => {
+        updateCloudPosition();
+        map.on('move', updateCloudPosition);
+        map.on('zoom', updateCloudPosition);
+        map.on('resize', updateCloudPosition);
+
+        return () => {
+            map.off('move', updateCloudPosition);
+            map.off('zoom', updateCloudPosition);
+            map.off('resize', updateCloudPosition);
+        };
+    }, [cloudAnchor]);
+
+    const handleCloudDragEnd = (ox: number, oy: number) => {
+        if (cloudAnchorPos) {
+            const newScreenX = cloudAnchorPos.x + ox;
+            const newScreenY = cloudAnchorPos.y + oy;
+            try {
+                const latLng = map.containerPointToLatLng([newScreenX, newScreenY]);
+                setCloudAnchorPos({ x: newScreenX, y: newScreenY });
+                setCloudAnchor({ lat: latLng.lat, lng: latLng.lng });
+            } catch (e) {
+                // Ignore coordinate bounds errors
+            }
+        }
+    };
+
+    if (!showCloud || !cloudAnchorPos) return null;
+
+    return (
+        <CloudPopup
+            message={eventCount > 0 
+                ? `Det finns ${eventCount} unika event idag. Det fylls på med nya hela tiden.`
+                : "Kolla in vad som händer idag. Det fylls på med nya event hela tiden."}
+            anchorPos={cloudAnchorPos}
+            onDragEnd={handleCloudDragEnd}
+            onDismiss={() => setShowCloud(false)}
+        />
+    );
 }
 
 interface HomeMapProps {
@@ -69,7 +125,6 @@ interface HomeMapProps {
     cycleNextEvent: (e?: React.MouseEvent) => void;
     cyclePrevEvent: (e?: React.MouseEvent) => void;
     isAdmin?: boolean;
-    onMapDrag?: () => void;
 }
 
 export default function HomeMap({
@@ -82,7 +137,6 @@ export default function HomeMap({
     cycleNextEvent,
     cyclePrevEvent,
     isAdmin = false,
-    onMapDrag
 }: HomeMapProps) {
 
     const createCustomIcon = (type: string, isSelected: boolean, isExternal?: boolean) => {
@@ -113,8 +167,9 @@ export default function HomeMap({
                 return z ? parseInt(z, 10) : 8;
             })()} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <MapStateTracker onMoveEnd={handleMapMove} onMapDrag={onMapDrag} />
+                <MapStateTracker onMoveEnd={handleMapMove} />
                 <MapController center={userLocation} onClick={handleMapClick} />
+                <CloudPopupOverlay eventCount={events.length} />
                 {events.map(evt => {
                     const isSelected = selectedEvent?.id === evt.id;
                     return (

@@ -10,7 +10,7 @@ import EventCard from '../ui/EventCard';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventFilters from './EventFilters';
 import WelcomeModal from '../ui/WelcomeModal';
-import CloudPopup from '../ui/CloudPopup';
+
 
 import { eventService } from '../../services/eventService';
 import { linkEventService } from '../../services/linkEventService';
@@ -50,7 +50,6 @@ export default function HomeContent() {
 
     const [fetchRadius, setFetchRadius] = useState(50000);
     const [mapState, setMapState] = useState<{ center: [number, number], zoom: number } | null>(null);
-    const [showCloud, setShowCloud] = useState(true);
 
     // Initial Geolocation fetch (only on mount if no saved pos)
     useEffect(() => {
@@ -414,13 +413,6 @@ export default function HomeContent() {
     return (
         <Layout>
             <WelcomeModal onClose={() => setView('map')} />
-            {showCloud && (
-                <CloudPopup
-                    message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
-                    autoDismissMs={0}
-                    onDismiss={() => setShowCloud(false)}
-                />
-            )}
             {/* SCROLL FIXEN:
           List-vy: Overflow-y-auto på container.
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.
@@ -633,7 +625,6 @@ export default function HomeContent() {
                             cycleNextEvent={cycleNextEvent}
                             cyclePrevEvent={cyclePrevEvent}
                             isAdmin={isAdmin}
-                            onMapDrag={() => setShowCloud(false)}
                         />
                     )}
                 </div>

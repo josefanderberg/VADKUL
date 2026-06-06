@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
+import CloudPopup from '../ui/CloudPopup';
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -42,6 +43,18 @@ export default function V2Map({
 
     const onMapDragRef = useRef(onMapDrag);
     onMapDragRef.current = onMapDrag;
+
+    // Cloud popup geographic map anchor state and projection variables
+    // Solves request: anchor cloud to a position on map, move with map
+    const [cloudAnchor, setCloudAnchor] = useState<{ lat: number; lng: number }>({ lat: 56.8777, lng: 14.8091 });
+    const [cloudAnchorPos, setCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
+    const [showCloud, setShowCloud] = useState(true);
+
+    const cloudAnchorRef = useRef(cloudAnchor);
+    cloudAnchorRef.current = cloudAnchor;
+
+    const cloudAnchorPosRef = useRef(cloudAnchorPos);
+    cloudAnchorPosRef.current = cloudAnchorPos;
 
     const baseZoomRef = useRef<number>(8);
 
@@ -87,8 +100,7 @@ export default function V2Map({
             container: mapContainerRef.current,
             style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
             center: [14.8091, 56.8777], // Lng, Lat (Växjö)
-            zoom: 8,
-            attributionControl: true
+            zoom: 8
         });
 
         mapRef.current = map;
@@ -117,6 +129,18 @@ export default function V2Map({
             }
         });
 
+        // Real-time projection updater for the anchored cloud popup
+        const updateCloudPosition = () => {
+            const currentAnchor = cloudAnchorRef.current;
+            if (currentAnchor) {
+                const pos = map.project([currentAnchor.lng, currentAnchor.lat]);
+                setCloudAnchorPos({ x: pos.x, y: pos.y });
+            }
+        };
+
+        map.on('move', updateCloudPosition);
+        map.on('zoom', updateCloudPosition);
+
         // Uppdatera synliga bounds och anropa callback när rörelsen stannat
         const handleMoveEnd = () => {
             setMapBounds(map.getBounds());
@@ -131,6 +155,7 @@ export default function V2Map({
         // Rapportera initialt läge
         map.once('load', () => {
             setMapBounds(map.getBounds());
+            updateCloudPosition();
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
@@ -167,7 +192,8 @@ export default function V2Map({
         }
 
         const targetYRatio = cardExpanded ? 0.20 : 0.22;
-        const yOffset = map.getContainer().clientHeight * (0.5 - targetYRatio);
+        // Negative offset relative to center moves it towards the top of the viewport
+        const yOffset = map.getContainer().clientHeight * (targetYRatio - 0.5);
 
         map.easeTo({
             center: [selectedEvent.lng, selectedEvent.lat],
@@ -176,6 +202,28 @@ export default function V2Map({
             duration: 500
         });
     }, [selectedEvent, cardExpanded]);
+
+    // Force recalculate projection whenever the geographic coordinate updates
+    useEffect(() => {
+        const map = mapRef.current;
+        if (map && cloudAnchor) {
+            const pos = map.project([cloudAnchor.lng, cloudAnchor.lat]);
+            setCloudAnchorPos({ x: pos.x, y: pos.y });
+        }
+    }, [cloudAnchor]);
+
+    // Update coordinates when dropped
+    const handleCloudDragEnd = (ox: number, oy: number) => {
+        const map = mapRef.current;
+        const currentPos = cloudAnchorPosRef.current;
+        if (map && currentPos) {
+            const newScreenX = currentPos.x + ox;
+            const newScreenY = currentPos.y + oy;
+            const lngLat = map.unproject([newScreenX, newScreenY]);
+            setCloudAnchorPos({ x: newScreenX, y: newScreenY });
+            setCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
+        }
+    };
 
     // 3. Uppdatera markörer i DOM:en när data eller synliga gränser förändras
     useEffect(() => {
@@ -457,6 +505,14 @@ export default function V2Map({
                 }
             `}</style>
             <div ref={mapContainerRef} className="absolute inset-0 map-state-full" style={{ width: '100%', height: '100%' }} />
+            {showCloud && cloudAnchorPos && (
+                <CloudPopup
+                    message={`Det finns ${events.length} unika event idag. Det fylls på med nya hela tiden.`}
+                    anchorPos={cloudAnchorPos}
+                    onDragEnd={handleCloudDragEnd}
+                    onDismiss={() => setShowCloud(false)}
+                />
+            )}
         </div>
     );
 }

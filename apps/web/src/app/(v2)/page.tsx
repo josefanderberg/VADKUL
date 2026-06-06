@@ -5,7 +5,7 @@ import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import V2SwipeableCard from '@/components/v2/V2SwipeableCard';
-import CloudPopup from '@/components/ui/CloudPopup';
+
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
 
@@ -60,7 +60,6 @@ export default function HomePage() {
     const [dayOffset, setDayOffset] = useState(0);
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCloud, setShowCloud] = useState(true);
     const prevDayOffset = useRef(dayOffset);
     // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
     // 'editing' = modal öppen med formulär. (Drop-animationen körs internt i FloatingNavbar.)
@@ -160,13 +159,6 @@ export default function HomePage() {
 
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
-            {showCloud && (
-                <CloudPopup
-                    message={`Det finns ${filteredEvents.length} unika event idag. Det fylls på med nya hela tiden.`}
-                    autoDismissMs={0}
-                    onDismiss={() => setShowCloud(false)}
-                />
-            )}
             {/* 1. Svävande transparent Navbar överst */}
             <FloatingNavbar
                 creationMode={creationMode}
@@ -189,7 +181,6 @@ export default function HomePage() {
                 discardedEventIds={discardedEventIds}
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
-                onMapDrag={() => setShowCloud(false)}
             />
 
             {/* Modal för att skapa event */}
