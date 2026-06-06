@@ -21,6 +21,7 @@
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -46,26 +47,21 @@ export interface NextjsDataConfig {
     discoverOnly?: boolean;
 }
 
-async function fetchHtml(url: string, cfg: NextjsDataConfig): Promise<string | null> {
+async function fetchHtml(url: string, cfg: NextjsDataConfig, signal?: AbortSignal): Promise<string | null> {
     await domainLimiter.wait(url);
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
-        const res = await fetch(url, {
+        const res = await fetchWithRetry(url, {
             headers: {
                 'User-Agent': cfg.userAgent ?? DEFAULT_UA,
                 'Accept': 'text/html,application/xhtml+xml',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
             },
             redirect: 'follow',
-            signal: ac.signal,
-        });
+        }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? 20_000, label: url });
         if (!res.ok) return null;
         return await res.text();
     } catch {
         return null;
-    } finally {
-        clearTimeout(t);
     }
 }
 
@@ -192,7 +188,7 @@ export const nextjsDataEngine = async (
 
     for (const url of config.urls) {
         ctx.log(`fetching ${url}`);
-        const html = await fetchHtml(url, config);
+        const html = await fetchHtml(url, config, ctx.signal);
         if (!html) { ctx.log(`  fetch failed`); continue; }
 
         const data = extractNextData(html);
