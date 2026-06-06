@@ -196,7 +196,9 @@ export async function runSource(
                 category,
                 description: e.description || '',
                 coverImage: finalImageUrl,
-                price: e.price || '',
+                // undefined (ej '') när pris saknas → upsert COALESCE:ar och
+                // bevarar ev. LLM-extraherat pris vid re-scrape.
+                price: e.price || undefined,
                 createdAt: new Date(),
                 isLocationVerified: lat !== 0 || lng !== 0,
                 // 'raw' när audit är på så eventet väntar på granskning;

@@ -1,23 +1,44 @@
 /**
- * LLM-baserad audit av events: använder Ollama (qwen3:8b) för att bedöma
- * om eventet ser legitimt ut.
+ * LLM-baserad audit av events: använder Ollama (gemma4:latest) för att bedöma
+ * om eventet ser legitimt ut, klassificera kategori, välja en passande emoji
+ * och plocka ut entrépris.
  *
  * Granskar:
  *   - Är platsen i Sverige?
  *   - Verkar titel/beskrivning hänga ihop?
  *   - Junk (cookie-banner, kommunsida, trafikinfo, formulär osv)?
- *   - Verkar locationName vara en riktig plats eller bara generiskt ord?
+ *   - Vilken av 11 kategorier passar (för filter + markörfärg)?
+ *   - Vilken enskild emoji representerar just detta event bäst (för kartpinnen)?
+ *   - Nämns ett entré-/deltagarpris i texten?
  *
- * Returnerar verdict + reason så vi kan visa det i admin-UI.
- *
- * Modell: qwen3:8b (text-only). För bildgranskning behövs llama3.2-vision.
+ * Modell: gemma4:latest (text-only). För bildgranskning behövs llama3.2-vision.
  */
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'qwen3:8b';
+const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 const TIMEOUT_MS = 30_000;
 
 export type AuditVerdict = 'ok' | 'suspect' | 'junk';
+
+/**
+ * 11 kategorier (för filter + markörfärg på kartan). Den fria `emoji`-fältet
+ * är det som faktiskt visas på pinnen — kategorin styr bara färg/legend/filter.
+ */
+export const CATEGORY_EMOJI: Record<string, string> = {
+    music:   '🎵',  // konsert, spelning, festival, DJ, klubbmusik
+    stage:   '🎭',  // teater, standup/komedi, dans, opera, film
+    art:     '🎨',  // utställning, vernissage, galleri
+    sport:   '⚽',  // match, turnering, yoga, gym, löpning
+    food:    '🍽️',  // matfestival, provning, middag, brunch
+    market:  '🛍️',  // loppis, marknad, mässa
+    party:   '🎉',  // fest, party, afterwork, klubb
+    social:  '🤝',  // mingel, nätverk, quiz, brädspel, träffar
+    course:  '📚',  // workshop, kurs, seminarium, föredrag
+    family:  '👨‍👩‍👧', // barnteater, familjeevent, sagostund
+    other:   '✨',  // resten
+};
+
+export const VALID_AUDIT_CATEGORIES = new Set(Object.keys(CATEGORY_EMOJI));
 
 export interface AuditInput {
     title: string;
@@ -33,6 +54,13 @@ export interface AuditResult {
     confidence: 'high' | 'medium' | 'low';
     reason: string;
     inSweden: boolean;
+    /** En av de 11 kategorierna — för filter + markörfärg. */
+    category: string;
+    categoryConfidence: 'high' | 'medium' | 'low';
+    /** Fritt vald emoji som bäst representerar eventet — visas på kartpinnen. */
+    emoji: string;
+    /** Entré-/deltagarpris om det nämns, annars null. T.ex. "150 kr", "Fri entré". */
+    price: string | null;
     raw?: string;
 }
 
@@ -48,7 +76,7 @@ async function callOllama(prompt: string): Promise<string | null> {
                 model: OLLAMA_MODEL,
                 stream: false,
                 think: false,
-                options: { temperature: 0.1, num_predict: 300 },
+                options: { temperature: 0.1, num_predict: 400 },
                 messages: [{ role: 'user', content: prompt }],
             }),
         });
@@ -86,8 +114,23 @@ Bedöm:
 2. confidence — "high" om du är säker. "medium"/"low" annars.
 3. inSweden — true/false. Är platsen i Sverige? Var noggrann med platsindikatorer i adress/beskrivning. Om text säger "Berlin", "Copenhagen", "Polska", "Manchester" etc → false.
 4. reason — kort förklaring (max 15 ord, svenska).
+5. category — EN av dessa 11 (för filter/färg, välj den som passar bäst):
+   - music: konsert, spelning, festival, DJ, klubbmusik
+   - stage: teater, standup/komedi, dans, opera, film, bio
+   - art: utställning, vernissage, galleri, konst
+   - sport: match, turnering, yoga, gym, löpning, friluftsliv
+   - food: matfestival, provning, middag, brunch, ölprovning
+   - market: loppis, marknad, mässa, basar
+   - party: fest, party, afterwork, klubb, uteliv
+   - social: mingel, nätverk, quiz, brädspel, träffar, fika
+   - course: workshop, kurs, seminarium, föredrag, föreläsning
+   - family: barnteater, familjeevent, sagostund, barnaktivitet
+   - other: passar inte i någon ovan
+6. categoryConfidence — "high" om kategorin är uppenbar, annars "medium"/"low".
+7. emoji — EN enda emoji som bäst representerar just detta specifika event (fritt val, inte bunden till kategorin). Ex: schackturnering → ♟️, kräftskiva → 🦞, jazzkonsert → 🎷, maratonlopp → 🏃, julmarknad → 🎄. Välj det mest träffsäkra.
+8. price — entré-/deltagarpris OM det tydligt nämns i texten, som sträng (t.ex. "150 kr", "Fri entré", "50-200 kr"). Annars null. VIKTIGT: bara faktiskt pris för att delta — INTE vinstpotter ("1:a pris 1000 kr"), bordsavgifter eller medlemsavgifter.
 
-Svara BARA med JSON, inga extra tecken: {"verdict":"ok|suspect|junk","confidence":"high|medium|low","inSweden":true|false,"reason":"..."}`;
+Svara BARA med JSON, inga extra tecken: {"verdict":"ok|suspect|junk","confidence":"high|medium|low","inSweden":true|false,"reason":"...","category":"music|stage|art|sport|food|market|party|social|course|family|other","categoryConfidence":"high|medium|low","emoji":"<en emoji>","price":"<pris eller null>"}`;
 
 function parseJson(raw: string): Partial<AuditResult> | null {
     // Plocka första {...}-blocket
@@ -100,23 +143,63 @@ function parseJson(raw: string): Partial<AuditResult> | null {
     }
 }
 
+const FALLBACK_RESULT: AuditResult = {
+    verdict: 'suspect', confidence: 'low', reason: 'LLM-anrop misslyckades',
+    inSweden: true, category: 'other', categoryConfidence: 'low', emoji: '✨', price: null,
+};
+
+/** Validera/sanera en fritt vald emoji. Tillåt 1–3 codepoints (täcker ZWJ-emoji). */
+function sanitizeEmoji(value: unknown, fallback: string): string {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    // Räkna grapheme-ish: använd Array.from (codepoints). En emoji som 👨‍👩‍👧 = 5 cp.
+    const cps = Array.from(trimmed);
+    if (cps.length === 0 || cps.length > 8) return fallback;
+    // Avvisa rena ASCII-svar (modellen skrev ord istället för emoji)
+    if (/^[\x00-\x7F]+$/.test(trimmed)) return fallback;
+    return trimmed;
+}
+
+function sanitizePrice(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const t = value.trim();
+    if (!t || t.toLowerCase() === 'null' || t === '-') return null;
+    return t.slice(0, 60);
+}
+
 export async function auditEvent(e: AuditInput): Promise<AuditResult> {
     const prompt = PROMPT_TEMPLATE(e);
-    const raw = await callOllama(prompt);
-    if (!raw) {
-        return { verdict: 'suspect', confidence: 'low', reason: 'LLM-anrop misslyckades', inSweden: true };
+    // Upp till 2 försök — gemma kan ibland returnera text före JSON.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        const raw = await callOllama(prompt);
+        if (!raw) return FALLBACK_RESULT;
+
+        const parsed = parseJson(raw);
+        if (!parsed || !parsed.verdict) {
+            if (attempt < 2) continue;
+            return { ...FALLBACK_RESULT, reason: 'Kunde inte parsa LLM-svar', raw };
+        }
+
+        const rawCategory = (parsed.category as string | undefined) ?? '';
+        const category = VALID_AUDIT_CATEGORIES.has(rawCategory) ? rawCategory : 'other';
+
+        return {
+            verdict: (['ok', 'suspect', 'junk'].includes(parsed.verdict as string)
+                ? parsed.verdict : 'suspect') as AuditVerdict,
+            confidence: (['high', 'medium', 'low'].includes(parsed.confidence as string)
+                ? parsed.confidence : 'low') as AuditResult['confidence'],
+            reason: (parsed.reason || '').toString().slice(0, 150),
+            inSweden: parsed.inSweden !== false,
+            category,
+            categoryConfidence: (['high', 'medium', 'low'].includes((parsed as Record<string, unknown>).categoryConfidence as string)
+                ? (parsed as Record<string, unknown>).categoryConfidence : 'low') as AuditResult['categoryConfidence'],
+            emoji: sanitizeEmoji((parsed as Record<string, unknown>).emoji, CATEGORY_EMOJI[category] ?? '✨'),
+            price: sanitizePrice((parsed as Record<string, unknown>).price),
+            raw,
+        };
     }
-    const parsed = parseJson(raw);
-    if (!parsed || !parsed.verdict) {
-        return { verdict: 'suspect', confidence: 'low', reason: 'Kunde inte parsa LLM-svar', inSweden: true, raw };
-    }
-    return {
-        verdict: (['ok', 'suspect', 'junk'].includes(parsed.verdict as string) ? parsed.verdict : 'suspect') as AuditVerdict,
-        confidence: (['high', 'medium', 'low'].includes(parsed.confidence as string) ? parsed.confidence : 'low') as AuditResult['confidence'],
-        reason: (parsed.reason || '').toString().slice(0, 150),
-        inSweden: parsed.inSweden !== false,
-        raw,
-    };
+    return FALLBACK_RESULT;
 }
 
 // ─── GPS-AUDIT ──────────────────────────────────────────────────────────────

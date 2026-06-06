@@ -94,6 +94,9 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
 
 addColumnIfMissing('link_events', 'aiVerdict',            'TEXT');
 addColumnIfMissing('link_events', 'aiConfidence',         'TEXT');
+addColumnIfMissing('link_events', 'category_confidence',  'TEXT');
+addColumnIfMissing('link_events', 'emoji',                'TEXT');
+addColumnIfMissing('link_events', 'price',                'TEXT');
 addColumnIfMissing('scrape_runs', 'hidden_count',         'INTEGER DEFAULT 0');
 addColumnIfMissing('scrape_runs', 'errors_json',          'TEXT');
 addColumnIfMissing('scrape_runs', 'audited_count',        'INTEGER DEFAULT 0');
@@ -218,17 +221,45 @@ export function setEventAudit(url: string, verdict: string, confidence: string):
     }
 }
 
+const setAuditFullStmt = sqlite.prepare(
+    `UPDATE link_events
+     SET aiVerdict = ?, aiConfidence = ?, category = ?, category_confidence = ?,
+         emoji = ?, price = ?, updatedAt = ?
+     WHERE url = ?`,
+);
+
+export interface EventAuditWrite {
+    verdict: string;
+    confidence: string;
+    category: string;
+    categoryConfidence: string;
+    emoji: string;
+    price: string | null;
+}
+
+/** Skriver hela LLM-auditresultatet (verdict + kategori + emoji + pris) atomiskt. */
+export function setEventAuditWithCategory(url: string, a: EventAuditWrite): void {
+    try {
+        setAuditFullStmt.run(
+            a.verdict, a.confidence, a.category, a.categoryConfidence,
+            a.emoji, a.price ?? null, new Date().toISOString(), url,
+        );
+    } catch (err) {
+        console.error('Failed to set event audit with category:', err);
+    }
+}
+
 const upsertStmt = sqlite.prepare(`
     INSERT INTO link_events (
         url, title, time, locationName, extractedAddress, geocodedQuery,
         lat, lng, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
-        firestoreId, updatedAt, status
+        firestoreId, updatedAt, status, price
     ) VALUES (
         @url, @title, @time, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
-        @firestoreId, @updatedAt, @status
+        @firestoreId, @updatedAt, @status, @price
     )
     ON CONFLICT(url) DO UPDATE SET
         title              = excluded.title,
@@ -246,7 +277,9 @@ const upsertStmt = sqlite.prepare(`
         isLocationVerified = excluded.isLocationVerified,
         isHostVerified     = excluded.isHostVerified,
         firestoreId        = COALESCE(excluded.firestoreId, link_events.firestoreId),
-        updatedAt          = excluded.updatedAt
+        updatedAt          = excluded.updatedAt,
+        -- price: bevara LLM-extraherat pris om scrapern inte ger ett (COALESCE)
+        price              = COALESCE(excluded.price, link_events.price)
         -- status bevaras avsiktligt vid re-scrape; ändras bara via setEventStatus()
 `);
 
@@ -286,6 +319,8 @@ export interface SqliteEvent {
     isHostVerified?: boolean;
     hidden?: boolean;
     firestoreId?: string;
+    /** Entrépris från strukturerad källa (t.ex. json-ld offers.price). */
+    price?: string;
     /**
      * Pipeline-status. Default 'published' för bakåtkompatibilitet —
      * alla gamla anropare som inte sätter status får published direkt.
@@ -317,6 +352,7 @@ export function upsertEvent(event: SqliteEvent): void {
         firestoreId:        event.firestoreId ?? null,
         updatedAt:          new Date().toISOString(),
         status:             event.status ?? 'published',
+        price:              event.price ?? null,
     });
 }
 
