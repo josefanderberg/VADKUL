@@ -370,15 +370,12 @@ export default function V2SwipeableCard({ events, selectedEvent, onSelectEvent, 
 
         if (dragDirection.current === 'vertical') {
             const currentHeight = heightVhRef.current;
-            const PEEK_VH = 35;
-            const FULL_VH = 85;
 
-            if (currentHeight < 22) {
+            if (currentHeight < 20) {
                 onSelectEvent(null);
-            } else if (currentHeight < (PEEK_VH + FULL_VH) / 2) {
-                updateHeightVh(PEEK_VH);
             } else {
-                updateHeightVh(FULL_VH);
+                // Let the card stay at the exact height the user dragged it to, no snapping
+                updateHeightVh(currentHeight);
             }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;

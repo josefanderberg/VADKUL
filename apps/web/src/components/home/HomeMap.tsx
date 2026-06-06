@@ -44,7 +44,7 @@ function MapController({ center, onClick }: { center: [number, number], onClick:
 }
 
 // Helper to track map state and trigger fetch
-function MapStateTracker({ onMoveEnd }: { onMoveEnd: (center: L.LatLng, zoom: number) => void }) {
+function MapStateTracker({ onMoveEnd, onMapDrag }: { onMoveEnd: (center: L.LatLng, zoom: number) => void; onMapDrag?: () => void }) {
     const map = useMapEvents({
         moveend: () => {
             const center = map.getCenter();
@@ -52,9 +52,8 @@ function MapStateTracker({ onMoveEnd }: { onMoveEnd: (center: L.LatLng, zoom: nu
             sessionStorage.setItem('vadkul_map_center', JSON.stringify([center.lat, center.lng]));
             sessionStorage.setItem('vadkul_map_zoom', map.getZoom().toString());
         },
-        zoomend: () => {
-            // zoomend also triggers moveend usually, but good to be safe if Logic changes
-            // onMoveEnd handled by moveend
+        drag: () => {
+            onMapDrag?.();
         }
     });
     return null;
@@ -70,6 +69,7 @@ interface HomeMapProps {
     cycleNextEvent: (e?: React.MouseEvent) => void;
     cyclePrevEvent: (e?: React.MouseEvent) => void;
     isAdmin?: boolean;
+    onMapDrag?: () => void;
 }
 
 export default function HomeMap({
@@ -81,7 +81,8 @@ export default function HomeMap({
     handleMapClick,
     cycleNextEvent,
     cyclePrevEvent,
-    isAdmin = false
+    isAdmin = false,
+    onMapDrag
 }: HomeMapProps) {
 
     const createCustomIcon = (type: string, isSelected: boolean, isExternal?: boolean) => {
@@ -112,7 +113,7 @@ export default function HomeMap({
                 return z ? parseInt(z, 10) : 8;
             })()} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <MapStateTracker onMoveEnd={handleMapMove} />
+                <MapStateTracker onMoveEnd={handleMapMove} onMapDrag={onMapDrag} />
                 <MapController center={userLocation} onClick={handleMapClick} />
                 {events.map(evt => {
                     const isSelected = selectedEvent?.id === evt.id;

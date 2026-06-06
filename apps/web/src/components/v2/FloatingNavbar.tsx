@@ -109,6 +109,7 @@ export default function FloatingNavbar({
                     {/* Vänster: expanderbar sök */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 pointer-events-auto">
 
+
                         {/* Sök */}
                         {searchOpen ? (
                             <div className="flex items-center flex-1 min-w-0 bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">

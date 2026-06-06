@@ -48,9 +48,9 @@ export default function HomeContent() {
         }
     }, []);
 
-    // 2. State för "Sökfönster" för Query
     const [fetchRadius, setFetchRadius] = useState(50000);
     const [mapState, setMapState] = useState<{ center: [number, number], zoom: number } | null>(null);
+    const [showCloud, setShowCloud] = useState(true);
 
     // Initial Geolocation fetch (only on mount if no saved pos)
     useEffect(() => {
@@ -414,10 +414,13 @@ export default function HomeContent() {
     return (
         <Layout>
             <WelcomeModal onClose={() => setView('map')} />
-            <CloudPopup
-                message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
-                autoDismissMs={0}
-            />
+            {showCloud && (
+                <CloudPopup
+                    message="Kolla in vad som händer idag. Det fylls på med nya event hela tiden."
+                    autoDismissMs={0}
+                    onDismiss={() => setShowCloud(false)}
+                />
+            )}
             {/* SCROLL FIXEN:
           List-vy: Overflow-y-auto på container.
           Map-vy: Flex-box layout som fyller höjden exakt utan scroll.
@@ -630,6 +633,7 @@ export default function HomeContent() {
                             cycleNextEvent={cycleNextEvent}
                             cyclePrevEvent={cyclePrevEvent}
                             isAdmin={isAdmin}
+                            onMapDrag={() => setShowCloud(false)}
                         />
                     )}
                 </div>

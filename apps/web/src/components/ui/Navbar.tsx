@@ -161,7 +161,7 @@ export default function Navbar() {
           onClick={handleLogoClick}
           className="flex items-center gap-2 group"
         >
-          <img src="/pwa-icon-v2.png" alt="VADKUL" className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+          <img src="/favicon.svg" alt="VADKUL" className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
           <span className="text-2xl md:text-3xl font-extrabold italic text-primary tracking-tight">VADKUL</span>
         </Link>
 

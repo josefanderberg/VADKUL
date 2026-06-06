@@ -14,6 +14,7 @@ interface V2MapProps {
     discardedEventIds?: Set<string>;
     cardExpanded?: boolean;
     onCenterChange?: (lat: number, lng: number) => void;
+    onMapDrag?: () => void;
 }
 
 export default function V2Map({
@@ -23,7 +24,8 @@ export default function V2Map({
     savedEventIds = new Set(),
     discardedEventIds = new Set(),
     cardExpanded = false,
-    onCenterChange
+    onCenterChange,
+    onMapDrag
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -37,6 +39,9 @@ export default function V2Map({
 
     const onCenterChangeRef = useRef(onCenterChange);
     onCenterChangeRef.current = onCenterChange;
+
+    const onMapDragRef = useRef(onMapDrag);
+    onMapDragRef.current = onMapDrag;
 
     const baseZoomRef = useRef<number>(8);
 
@@ -106,6 +111,12 @@ export default function V2Map({
             onSelectEventRef.current(null);
         });
 
+        map.on('drag', () => {
+            if (onMapDragRef.current) {
+                onMapDragRef.current();
+            }
+        });
+
         // Uppdatera synliga bounds och anropa callback när rörelsen stannat
         const handleMoveEnd = () => {
             setMapBounds(map.getBounds());
@@ -155,7 +166,7 @@ export default function V2Map({
             baseZoomRef.current = 8;
         }
 
-        const targetYRatio = cardExpanded ? 0.25 : 0.45;
+        const targetYRatio = cardExpanded ? 0.20 : 0.22;
         const yOffset = map.getContainer().clientHeight * (0.5 - targetYRatio);
 
         map.easeTo({

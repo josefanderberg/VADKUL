@@ -1,0 +1,34 @@
+<svg viewBox="0 0 340 240" xmlns="http://www.w3.org/2000/svg">
+  <!-- Double-layered cloud with a smile -->
+  <g opacity="0.65" filter="blur(3px)">
+    <circle cx="58" cy="160" r="42" fill="#bae6fd" />
+    <circle cx="100" cy="172" r="48" fill="#bae6fd" />
+    <circle cx="150" cy="176" r="52" fill="#bae6fd" />
+    <circle cx="205" cy="172" r="50" fill="#bae6fd" />
+    <circle cx="255" cy="164" r="46" fill="#bae6fd" />
+    <circle cx="296" cy="154" r="38" fill="#bae6fd" />
+    <circle cx="90" cy="118" r="52" fill="#bae6fd" />
+    <circle cx="148" cy="98" r="64" fill="#bae6fd" />
+    <circle cx="215" cy="108" r="60" fill="#bae6fd" />
+    <circle cx="268" cy="126" r="48" fill="#bae6fd" />
+  </g>
+  <g fill="#ffffff" stroke="#bae6fd" stroke-width="2">
+    <circle cx="58" cy="160" r="38" />
+    <circle cx="100" cy="172" r="44" />
+    <circle cx="150" cy="176" r="48" />
+    <circle cx="205" cy="172" r="46" />
+    <circle cx="255" cy="164" r="42" />
+    <circle cx="296" cy="154" r="34" />
+    <circle cx="90" cy="118" r="48" />
+    <circle cx="148" cy="98" r="60" />
+    <circle cx="215" cy="108" r="56" />
+    <circle cx="268" cy="126" r="44" />
+  </g>
+  <!-- Smile Face -->
+  <!-- Left Eye -->
+  <circle cx="125" cy="125" r="7" fill="#0284c7" />
+  <!-- Right Eye -->
+  <circle cx="175" cy="125" r="7" fill="#0284c7" />
+  <!-- Mouth / Smile -->
+  <path d="M 133 145 Q 150 168 167 145" stroke="#0284c7" stroke-width="7" stroke-linecap="round" fill="none" />
+</svg>
