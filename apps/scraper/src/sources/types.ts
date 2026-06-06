@@ -174,4 +174,8 @@ export interface SourceRunResult {
         invalid: number;
     };
     errors: string[];
+    /** Antal events som skickades till LLM-audit (0 om AUDIT_ENABLED=false) */
+    audited: number;
+    /** Antal events som auto-doldes pga verdict=junk + confidence=high */
+    autoHidden: number;
 }

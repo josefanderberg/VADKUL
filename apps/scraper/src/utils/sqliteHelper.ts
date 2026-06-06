@@ -76,16 +76,18 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
     }
 }
 
-addColumnIfMissing('link_events', 'aiVerdict',    'TEXT');
-addColumnIfMissing('link_events', 'aiConfidence', 'TEXT');
-addColumnIfMissing('scrape_runs', 'hidden_count', 'INTEGER DEFAULT 0');
-addColumnIfMissing('scrape_runs', 'errors_json',  'TEXT');
+addColumnIfMissing('link_events', 'aiVerdict',            'TEXT');
+addColumnIfMissing('link_events', 'aiConfidence',         'TEXT');
+addColumnIfMissing('scrape_runs', 'hidden_count',         'INTEGER DEFAULT 0');
+addColumnIfMissing('scrape_runs', 'errors_json',          'TEXT');
+addColumnIfMissing('scrape_runs', 'audited_count',        'INTEGER DEFAULT 0');
+addColumnIfMissing('scrape_runs', 'auto_hidden_count',    'INTEGER DEFAULT 0');
 
 const insertRunStmt = sqlite.prepare(`
     INSERT INTO scrape_runs (source_id, host_name, started_at, duration_ms,
         found, saved, skipped_duplicate, skipped_outside_window, skipped_invalid,
-        error_count, first_error, hidden_count, errors_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        error_count, first_error, hidden_count, errors_json, audited_count, auto_hidden_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 export interface ScrapeRunRow {
@@ -102,6 +104,8 @@ export interface ScrapeRunRow {
     firstError?: string;
     hiddenCount?: number;
     errors?: string[];
+    auditedCount?: number;
+    autoHiddenCount?: number;
 }
 
 export function recordScrapeRun(run: ScrapeRunRow): void {
@@ -113,6 +117,8 @@ export function recordScrapeRun(run: ScrapeRunRow): void {
             run.errorCount, run.firstError ?? null,
             run.hiddenCount ?? 0,
             run.errors && run.errors.length > 0 ? JSON.stringify(run.errors) : null,
+            run.auditedCount ?? 0,
+            run.autoHiddenCount ?? 0,
         );
     } catch (err) {
         console.error('Failed to record scrape run:', err);
@@ -169,6 +175,20 @@ export function getRunsBySource(sourceId: string, limit = 20): ScrapeRunRecord[]
 
 export function getSourceStats(): Array<{ source_id: string; host_name: string; runs: number; last_run: string; total_saved: number; total_errors: number }> {
     return sourceStatsStmt.all();
+}
+
+// ─── Audit helpers ───────────────────────────────────────────────────────────
+
+const setAuditStmt = sqlite.prepare(
+    'UPDATE link_events SET aiVerdict = ?, aiConfidence = ?, updatedAt = ? WHERE url = ?',
+);
+
+export function setEventAudit(url: string, verdict: string, confidence: string): void {
+    try {
+        setAuditStmt.run(verdict, confidence, new Date().toISOString(), url);
+    } catch (err) {
+        console.error('Failed to set event audit:', err);
+    }
 }
 
 const upsertStmt = sqlite.prepare(`
