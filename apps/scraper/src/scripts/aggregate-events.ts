@@ -27,16 +27,23 @@ interface CardLayer {
     url: string;
 }
 
-export async function runAggregation() {
+export async function runAggregation(opts: { includeUnpublished?: boolean } = {}) {
     console.log('\n📊 Starting VADKUL Event Aggregator...');
     const now = new Date();
     now.setHours(0, 0, 0, 0); // Start of today
     const nowIso = now.toISOString();
 
+    const statusFilter = opts.includeUnpublished
+        ? ''
+        : "AND status = 'published'";
+    if (opts.includeUnpublished) {
+        console.log('   ⚠️  --include-unpublished: raw/audited events ingår i exporten');
+    }
+
     // 1. Fetch active events from SQLite
     const rows = sqlite.prepare(`
-        SELECT * FROM link_events 
-        WHERE hidden = 0 AND time >= ? 
+        SELECT * FROM link_events
+        WHERE hidden = 0 ${statusFilter} AND time >= ?
         ORDER BY time ASC
     `).all(nowIso) as any[];
 
@@ -202,5 +209,6 @@ async function deleteShards(db: FirebaseFirestore.Firestore, prefix: string, kee
 
 // Executed directly
 if (require.main === module) {
-    runAggregation().catch(console.error);
+    const includeUnpublished = process.argv.includes('--include-unpublished');
+    runAggregation({ includeUnpublished }).catch(console.error);
 }

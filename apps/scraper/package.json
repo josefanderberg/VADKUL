@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "sources": "ts-node src/scripts/run-sources.ts",
     "probe-wp": "ts-node src/scripts/probe-wordpress.ts",
     "probe-ical": "ts-node src/scripts/probe-ical.ts",
