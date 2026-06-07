@@ -77,6 +77,30 @@ function verdictStats(db: Database.Database): KvRow[] {
     `).all();
 }
 
+/** Senaste 24h: top emoji + unika emoji-count (LLM:n får hitta egen per event). */
+function emojiStats(db: Database.Database): { unique: number; withEmoji: number; top: KvRow[] } {
+    const top = db.prepare<[], KvRow>(`
+        SELECT TRIM(emoji) AS k, COUNT(*) AS n
+        FROM link_events
+        WHERE createdAt >= datetime('now', '-1 day')
+          AND hidden = 0
+          AND emoji IS NOT NULL AND TRIM(emoji) NOT IN ('', 'null')
+        GROUP BY k
+        ORDER BY n DESC
+        LIMIT 12
+    `).all();
+    const agg = db.prepare<[], { uniq: number; withEmoji: number }>(`
+        SELECT
+            COUNT(DISTINCT TRIM(emoji)) AS uniq,
+            COUNT(*)                    AS withEmoji
+        FROM link_events
+        WHERE createdAt >= datetime('now', '-1 day')
+          AND hidden = 0
+          AND emoji IS NOT NULL AND TRIM(emoji) NOT IN ('', 'null')
+    `).get();
+    return { unique: agg?.uniq ?? 0, withEmoji: agg?.withEmoji ?? 0, top };
+}
+
 /** Senaste 7 dygn: antal nya events per dygn. Fyller i nollor för saknade dagar. */
 function trend7d(db: Database.Database): DayRow[] {
     const rows = db.prepare<[], DayRow>(`
@@ -132,7 +156,13 @@ function asciiBars(rows: DayRow[]): string {
 //  Adaptive Card
 // ───────────────────────────────────────────────────────────────────────────
 
-function buildCard(price: { total: number; withPrice: number }, cats: KvRow[], verdicts: KvRow[], trend: DayRow[]) {
+function buildCard(
+    price:    { total: number; withPrice: number },
+    cats:     KvRow[],
+    verdicts: KvRow[],
+    emojis:   { unique: number; withEmoji: number; top: KvRow[] },
+    trend:    DayRow[],
+) {
     const totalLast24h = price.total;
     const trendTotal = trend.reduce((s, r) => s + r.n, 0);
     const trendAvg   = Math.round(trendTotal / 7);
@@ -192,6 +222,14 @@ function buildCard(price: { total: number; withPrice: number }, cats: KvRow[], v
                       weight: 'Bolder', spacing: 'Medium' },
                     { type: 'FactSet', facts: verdictFacts },
 
+                    { type: 'TextBlock',
+                      text: `🎨 Emoji-fördelning — ${emojis.unique} unika på ${emojis.withEmoji} events (${pct(emojis.withEmoji, totalLast24h)})`,
+                      weight: 'Bolder', spacing: 'Medium' },
+                    { type: 'FactSet',
+                      facts: emojis.top.length === 0
+                          ? [{ title: '—', value: 'Ingen LLM-emoji satt i nya events än' }]
+                          : emojis.top.map(e => ({ title: e.k, value: `${e.n} (${pct(e.n, emojis.withEmoji)})` })) },
+
                     { type: 'TextBlock', text: `${arrow} 7-dagars tillväxt — totalt ${trendTotal}, snitt ${trendAvg}/dygn`,
                       weight: 'Bolder', spacing: 'Medium' },
                     { type: 'TextBlock', text: asciiBars(trend),
@@ -214,7 +252,13 @@ async function main() {
 
     const db = new Database(DB_PATH, { readonly: true });
     try {
-        const card = buildCard(priceStats(db), categoryStats(db), verdictStats(db), trend7d(db));
+        const card = buildCard(
+            priceStats(db),
+            categoryStats(db),
+            verdictStats(db),
+            emojiStats(db),
+            trend7d(db),
+        );
 
         const res = await fetch(WEBHOOK, {
             method: 'POST',
