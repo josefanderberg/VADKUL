@@ -432,49 +432,6 @@ export default function CloudPopup({
     }
     prevIsDraggingRef.current = isDragging;
   }, [isDragging]);
-
-  // Dubbelklicks-effekt: när man dubbelklickar växlar kamera-följningen
-  // (`following`). Centrerar man IN på molnet (following → true) gör det ett extra
-  // högt skutt uppåt; går man tillbaka till mood-läget (following → false) landar
-  // det med en studs. Skuttet körs via Web Animations API på en egen wrapper så
-  // det stackas ovanpå float-animationen utan att slåss om transform-egenskapen,
-  // och en "skvätt"-burst (puff-streck nedåt/åt sidorna) ritas samtidigt.
-  const jumpWrapperRef = useRef<HTMLDivElement>(null);
-  const prevFollowingRef = useRef(following);
-  const [splashKey, setSplashKey] = useState(0);
-  const [splashDir, setSplashDir] = useState<'up' | 'down'>('up');
-  useEffect(() => {
-    if (following === prevFollowingRef.current) return;
-    const goingUp = following;
-    prevFollowingRef.current = following;
-    setSplashDir(goingUp ? 'up' : 'down');
-    setSplashKey(k => k + 1);
-    const el = jumpWrapperRef.current;
-    if (!el || typeof el.animate !== 'function') return;
-    if (goingUp) {
-      // Centrering: kraftigt skutt uppåt med liten stretch, sedan tillbaka.
-      el.animate(
-        [
-          { transform: 'translateY(0) scaleX(1) scaleY(1)' },
-          { transform: 'translateY(-80px) scaleX(0.92) scaleY(1.12)', offset: 0.4 },
-          { transform: 'translateY(-64px) scaleX(1.02) scaleY(0.98)', offset: 0.62 },
-          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
-        ],
-        { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
-      );
-    } else {
-      // Tillbaka till mood-läget: landar uppifrån med en squash-studs.
-      el.animate(
-        [
-          { transform: 'translateY(-48px) scaleX(0.96) scaleY(1.05)' },
-          { transform: 'translateY(12px) scaleX(1.16) scaleY(0.82)', offset: 0.55 },
-          { transform: 'translateY(-6px) scaleX(0.98) scaleY(1.03)', offset: 0.78 },
-          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
-        ],
-        { duration: 660, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
-      );
-    }
-  }, [following]);
   // Resting rotation = the rotation the cloud has when its position has been
   // stable for a short moment. It only updates after any kind of motion
   // (cloud drag, glide, OR map pan moving anchorPos) has settled. While
@@ -492,6 +449,68 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
     onLiveOffsetChangeRef.current?.(offset.x, offset.y);
   }, [offset.x, offset.y]);
+
+  // Fartvind-svans: när man drar/slänger molnet (det är "taggat flyta") ritas
+  // motion-streck BAKOM det i motsatt riktning mot rörelsen. `trail.sp` = farten
+  // (px/~16ms) som styr längd + opacitet, (ux, uy) = rörelsens enhetsriktning.
+  // En egen rAF-loop mäter molnets faktiska skärmposition per frame (ankare +
+  // offset) så svansen tonar ut av sig själv när man håller stilla, och inga
+  // "teleport"-hopp (offset→0 vid commit som ankaret kompenserar) ger falska streck.
+  const [trail, setTrail] = useState<{ ux: number; uy: number; sp: number }>({ ux: 0, uy: 0, sp: 0 });
+  const offsetRef = useRef(offset);
+  offsetRef.current = offset;
+  const anchorPosRef = useRef(anchorPos);
+  anchorPosRef.current = anchorPos;
+  const trailVecRef = useRef({ x: 0, y: 0 });
+  const trailPrevPosRef = useRef<{ x: number; y: number } | null>(null);
+  const trailRafRef = useRef<number | null>(null);
+  useEffect(() => {
+    const screenPos = () => {
+      const a = anchorPosRef.current;
+      const o = offsetRef.current;
+      const cx = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
+      const cy = typeof window !== 'undefined' ? window.innerHeight / 2 : 500;
+      return { x: (a?.x ?? cx) + o.x, y: (a?.y ?? cy) + o.y };
+    };
+    const hasTail = Math.hypot(trailVecRef.current.x, trailVecRef.current.y) > 0.01;
+    if (!isDragging && !isGliding && !hasTail) return;
+    trailPrevPosRef.current = screenPos();
+    let lastT = performance.now();
+    const loop = (t: number) => {
+      const dt = Math.min(Math.max(t - lastT, 1), 32);
+      lastT = t;
+      const cur = screenPos();
+      const prev = trailPrevPosRef.current!;
+      let ix = cur.x - prev.x;
+      let iy = cur.y - prev.y;
+      trailPrevPosRef.current = cur;
+      // Ignorera teleport-hopp (commit nollar offset medan ankaret kompenserar).
+      if (Math.hypot(ix, iy) > 200) { ix = 0; iy = 0; }
+      const nx = ix * (16 / dt);
+      const ny = iy * (16 / dt);
+      const k = 0.4; // utjämning mot momentan rörelse
+      trailVecRef.current = {
+        x: trailVecRef.current.x + (nx - trailVecRef.current.x) * k,
+        y: trailVecRef.current.y + (ny - trailVecRef.current.y) * k
+      };
+      const sp = Math.hypot(trailVecRef.current.x, trailVecRef.current.y);
+      if (sp > 0.4) {
+        setTrail({ ux: trailVecRef.current.x / sp, uy: trailVecRef.current.y / sp, sp });
+      } else {
+        setTrail(prevT => (prevT.sp === 0 ? prevT : { ux: 0, uy: 0, sp: 0 }));
+      }
+      if (isDragging || isGliding || sp > 0.4) {
+        trailRafRef.current = requestAnimationFrame(loop);
+      } else {
+        trailVecRef.current = { x: 0, y: 0 };
+        trailRafRef.current = null;
+      }
+    };
+    trailRafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (trailRafRef.current) { cancelAnimationFrame(trailRafRef.current); trailRafRef.current = null; }
+    };
+  }, [isDragging, isGliding]);
   const [throwDirection, setThrowDirection] = useState<{ x: number; y: number } | null>(null);
   // When releasing in anchored mode the parent updates anchorPos to compensate
   // for the new (0, 0) offset in the same commit — but a CSS transform transition
@@ -1131,6 +1150,46 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           stdDeviation={3}
         />
 
+        {/* LAYER 2.5: Fartvind-svans — motion-streck BAKOM molnkroppen i motsatt
+            riktning mot rörelsen (molnet är "taggat flyta"). Skärm-orienterad
+            (ingen body-rotation) så strecken pekar längs den faktiska rörelsen.
+            Ligger ovanför de suddiga skugglagren men UNDER de vita puffarna, så
+            de inre ändarna göms av molnet och svansarna sticker ut bakåt. Längd +
+            opacitet skalar med farten och tonar ut när man stannar. */}
+        {trail.sp > 0.6 && (() => {
+          const bx = -trail.ux, by = -trail.uy;   // bakåt (motsatt rörelse)
+          const px = -by, py = bx;                 // vinkelrätt mot rörelsen
+          // Strecken måste sträcka sig långt FÖRBI molnkroppen (radie ~95) för att
+          // synas — annars göms de helt av puffarna. Därför rejäl längd.
+          const baseLen = Math.min(Math.max(trail.sp * 14, 70), 270);
+          const baseOp = Math.min(0.25 + trail.sp * 0.06, 0.8);
+          const streaks = [-50, -32, -15, -2, 16, 34, 50];
+          return (
+            <svg
+              viewBox="0 0 300 240"
+              className={`${sizeClass} absolute inset-0 pointer-events-none`}
+              style={{ overflow: 'visible', opacity: baseOp }}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g stroke="#ffffff" strokeLinecap="round" fill="none">
+                {streaks.map((o, i) => {
+                  const edgeFade = 1 - 0.5 * Math.min(Math.abs(o) / 52, 1);
+                  const len = baseLen * edgeFade;
+                  const startR = 26;
+                  const sx = 150 + px * o + bx * startR;
+                  const sy = 135 + py * o + by * startR;
+                  const ex = sx + bx * len;
+                  const ey = sy + by * len;
+                  const sw = (5.5 - Math.abs(o) / 16) * edgeFade + 1.2;
+                  return (
+                    <line key={i} x1={sx} y1={sy} x2={ex} y2={ey} strokeWidth={sw} opacity={0.5 + 0.5 * edgeFade} />
+                  );
+                })}
+              </g>
+            </svg>
+          );
+        })()}
+
         {/* LAYER 3 & 4: Foreground & Highlights (Base layer) */}
         <div className="relative">
           <svg
@@ -1210,34 +1269,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               </g>
             )}
 
-            {/* Hopp-"skvätt": puff-streck som blixtrar nedåt/åt sidorna i samma
-                stund molnet skuttar (centrering) eller landar (tillbaka till
-                mood-läget). key=splashKey remountar gruppen så CSS-animationen
-                startar om vid varje dubbelklick. */}
-            {splashKey > 0 && (
-              <g key={`jump-splash-${splashKey}`} className="animate-cloud-jump-splash" style={{ pointerEvents: 'none' }}>
-                {Array.from({ length: 9 }).map((_, i) => {
-                  // Nedre halvan, fläktat från höger (~22°) till vänster (~158°).
-                  const angle = Math.PI * 0.12 + (i / 8) * (Math.PI * 0.76);
-                  const rInner = splashDir === 'down' ? 70 : 76;
-                  const rOuter = splashDir === 'down' ? 124 : 104;
-                  const x1 = 150 + Math.cos(angle) * rInner;
-                  const y1 = 135 + Math.sin(angle) * rInner;
-                  const x2 = 150 + Math.cos(angle) * rOuter;
-                  const y2 = 135 + Math.sin(angle) * rOuter;
-                  return (
-                    <line
-                      key={i}
-                      x1={x1} y1={y1} x2={x2} y2={y2}
-                      stroke="#7dd3fc"
-                      strokeWidth={splashDir === 'down' ? 6 : 5}
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-              </g>
-            )}
-
             <defs>
               <filter id="cloud-blur" filterUnits="userSpaceOnUse" x="-100" y="-100" width="540" height="440">
                 <feGaussianBlur stdDeviation="1.5" />
@@ -1294,9 +1325,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}
           style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
         >
-        {/* Hopp-wrapper: dubbelklicks-skuttet (Web Animations API) körs här så det
-            stackas ovanpå float utan att slåss om transform-egenskapen. */}
-        <div ref={jumpWrapperRef} style={{ transformOrigin: '50% 56.25%', willChange: 'transform' }}>
 
           {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
 
@@ -1320,7 +1348,6 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               borderRadius: '50%'
             }}
           />
-        </div>
         </div>
         </div>
         </div>

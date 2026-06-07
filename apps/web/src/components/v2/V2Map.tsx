@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
@@ -127,6 +127,10 @@ interface V2MapProps {
     onSunCloudTap?: () => void;
     /** Togglar lutningen via tilt-knappen under satellit-knappen. */
     onToggleTilt?: () => void;
+    /** Skickar shop-flaggor uppåt så page.tsx kan gömma/visa knappar som inte
+     *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard). Fyrar varje
+     *  gång användaren togglar något i shoppen. */
+    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean }) => void;
 }
 
 export default function V2Map({
@@ -154,7 +158,8 @@ export default function V2Map({
     guessLine = null,
     tilted = false,
     onSunCloudTap,
-    onToggleTilt
+    onToggleTilt,
+    onFeatureFlagsChange
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -166,6 +171,78 @@ export default function V2Map({
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
+
+    // Funktioner-shop: centrerad modal med ett grid av kort över befintliga
+    // (och framtida) funktioner. Öppnas via +-knappen i höger-stacken. För
+    // tillfället är "köp" mockat — klicket aktiverar funktionen direkt.
+    const [shopOpen, setShopOpen] = useState(false);
+
+    // Shop-flaggor: vilka funktioner som är "påslagna". Vissa funktioner har
+    // egen state i V2Map (tilt/globe/terräng) — de hanteras separat nedan i
+    // toggleFeature, för att shoppen ska ha en enda gemensam UI-modell. Övriga
+    // (sol-knapp, fokus-knapp, kasta, slangbella, individuella ansikten,
+    // inspelning) lever här. Sol/fokus skickas upp till page.tsx som styr
+    // knapparnas synlighet i EventCard via onFeatureFlagsChange.
+    type ShopFlags = {
+        sun: boolean;
+        focus: boolean;
+        throw: boolean;
+        slingshot: boolean;
+        faces: boolean;
+        bigCloud: boolean;
+        fastThrow: boolean;
+        sparkle: boolean;
+        snowball: boolean;
+        record: boolean;
+    };
+    const [shopFlags, setShopFlags] = useState<ShopFlags>({
+        sun: true,
+        focus: true,
+        throw: true,
+        slingshot: true,
+        faces: true,
+        bigCloud: false,
+        fastThrow: false,
+        sparkle: false,
+        snowball: false,
+        record: false // låst tills "köpt"
+    });
+
+    const onFeatureFlagsChangeRef = useRef(onFeatureFlagsChange);
+    onFeatureFlagsChangeRef.current = onFeatureFlagsChange;
+    useEffect(() => {
+        onFeatureFlagsChangeRef.current?.({ sun: shopFlags.sun, focus: shopFlags.focus });
+    }, [shopFlags.sun, shopFlags.focus]);
+
+    // Inkluderar tilt/globe/terräng i samma "is this feature active?"-modell
+    // som de övriga shop-flaggorna, så master-toggle och kort-rendering kan
+    // hanteras likadant.
+    const isFeatureActive = (key: string): boolean => {
+        if (key === 'tilt') return tilted;
+        if (key === 'globe') return isGlobe;
+        if (key === 'terrain') return is3DTerrain;
+        return (shopFlags as Record<string, boolean>)[key] ?? false;
+    };
+    const setFeatureActive = (key: string, value: boolean) => {
+        if (key === 'tilt') { if (tilted !== value) onToggleTilt?.(); return; }
+        if (key === 'globe') { setIsGlobe(value); return; }
+        if (key === 'terrain') { setIs3DTerrain(value); return; }
+        if (key === 'record') return; // låst — kräver "köp"
+        setShopFlags(prev => ({ ...prev, [key]: value }));
+    };
+    const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
+    const setAllFeatures = (value: boolean) => {
+        if (tilted !== value) onToggleTilt?.();
+        setIsGlobe(value);
+        setIs3DTerrain(value);
+        setShopFlags(prev => {
+            const next = { ...prev };
+            (Object.keys(next) as Array<keyof ShopFlags>).forEach(k => {
+                if (k !== 'record') next[k] = value;
+            });
+            return next;
+        });
+    };
 
     // Två oberoende 3D-lägen som kan skiftas var för sig (och kombineras):
     //   isGlobe      — projicera kartan på ett klot (mercator ↔ globe). ~0 minne.
@@ -1673,51 +1750,58 @@ export default function V2Map({
             >
                 <Layers size={18} />
             </button>
-            {/* Tilt-toggle: sitter under satellit-knappen. Växlar snabbt mellan att
-                kolla rakt ner på kartan (platt) och med vinkel (3D-sidovy). */}
+            {/* Funktioner-shop: plus-knappen sitter direkt under satellit-knappen
+                och öppnar en luftballongskorg-stylad ruta där alla övriga kart-
+                funktioner (lutning, klot, terräng + framtida köpbara) bor. */}
             <button
                 type="button"
-                onClick={() => onToggleTilt?.()}
-                aria-label={tilted ? 'Platta ut kartan' : 'Luta kartan'}
-                title={tilted ? 'Platta ut kartan' : 'Luta kartan'}
-                className={`absolute top-[140px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
-                    tilted
-                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
-                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
-                }`}
+                onClick={() => setShopOpen(true)}
+                aria-label="Öppna funktioner"
+                title="Funktioner"
+                className="absolute top-[140px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border bg-white/90 border-white/50 text-slate-700 hover:bg-white flex items-center justify-center transition-colors backdrop-blur-md"
             >
-                <Box size={18} />
+                <Plus size={20} strokeWidth={2.5} />
             </button>
-            {/* Globe-toggle: skiftar mellan platt karta (mercator) och jorden som
-                ett 3D-klot. Fristående från terräng-knappen — kan kombineras. */}
-            <button
-                type="button"
-                onClick={() => setIsGlobe(g => !g)}
-                aria-label={isGlobe ? 'Platta ut kartan (mercator)' : 'Visa som klot (globe)'}
-                title={isGlobe ? 'Platt karta' : 'Visa som klot'}
-                className={`absolute top-[184px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
-                    isGlobe
-                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
-                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
-                }`}
-            >
-                <Globe size={18} />
-            </button>
-            {/* 3D-terräng-toggle: reser upp höjder/berg ur kartan. Fristående —
-                DEM-källan laddas bara medan läget är på (minnessnålt). */}
-            <button
-                type="button"
-                onClick={() => setIs3DTerrain(t => !t)}
-                aria-label={is3DTerrain ? 'Stäng av 3D-terräng' : 'Slå på 3D-terräng'}
-                title={is3DTerrain ? 'Stäng av 3D-terräng' : '3D-terräng'}
-                className={`absolute top-[228px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
-                    is3DTerrain
-                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
-                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
-                }`}
-            >
-                <Mountain size={18} />
-            </button>
+            {/* Aktiva-funktioner-chips: små runda ikoner till vänster om +-knappen,
+                en per shop-funktion som är på just nu. Klick togglar av direkt så
+                du slipper öppna shoppen för att stänga av något. */}
+            {(tilted || isGlobe || is3DTerrain) && (
+                <div className="absolute top-[140px] right-[60px] z-[900] flex items-center gap-1.5 h-10">
+                    {tilted && (
+                        <button
+                            type="button"
+                            onClick={() => onToggleTilt?.()}
+                            aria-label="Stäng av lutning"
+                            title="Lutning aktiv — klicka för att stänga av"
+                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
+                        >
+                            <Box size={14} />
+                        </button>
+                    )}
+                    {isGlobe && (
+                        <button
+                            type="button"
+                            onClick={() => setIsGlobe(false)}
+                            aria-label="Stäng av klot"
+                            title="Klot aktivt — klicka för att stänga av"
+                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
+                        >
+                            <Globe size={14} />
+                        </button>
+                    )}
+                    {is3DTerrain && (
+                        <button
+                            type="button"
+                            onClick={() => setIs3DTerrain(false)}
+                            aria-label="Stäng av terräng"
+                            title="Terräng aktiv — klicka för att stänga av"
+                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
+                        >
+                            <Mountain size={14} />
+                        </button>
+                    )}
+                </div>
+            )}
             {/* Slangbella-gummiband: ritas mellan huvudmolnet och solmolnet.
                 Använder live drag-offsetterna så banden stretchar med molnet i
                 realtid när användaren drar. När slangbellan är "engaged" (armad
@@ -1862,6 +1946,198 @@ export default function V2Map({
                     tilted={tilted}
                     zIndex={sunCloudZ}
                 />
+            )}
+            {/* Funktioner-shop: stylad som en luftballongskorg ovanifrån.
+                Yttre lager = flätad rotting (diagonal weave); inre = varmt
+                cream-golv där funktions-kort ligger som föremål. Klick på
+                backdrop eller X stänger. */}
+            {shopOpen && (
+                <div
+                    className="absolute inset-0 z-[10500] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4"
+                    onClick={() => setShopOpen(false)}
+                >
+                    {/* Yttre korg-rim: tätare rotting-fläta med tre tonade band
+                        (mörk skugga / mellan / ljus topp) som ger en mer
+                        professionell vävnad. Tvärs och längs gradient = warp/weft. */}
+                    <div
+                        className="rounded-[26px] p-[12px]"
+                        style={{
+                            background:
+                                'repeating-linear-gradient(45deg, #5a3a1f 0 2px, #8a5a30 2px 5px, #b58050 5px 9px, #8a5a30 9px 12px), repeating-linear-gradient(-45deg, transparent 0 4px, rgba(60,30,10,0.35) 4px 5px, transparent 5px 12px)',
+                            boxShadow:
+                                '0 30px 60px rgba(0,0,0,0.45), 0 8px 18px rgba(0,0,0,0.25), inset 0 0 0 1.5px rgba(40,20,5,0.65), inset 0 0 0 3px rgba(200,150,90,0.30), inset 0 2px 6px rgba(255,220,170,0.20)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Inre korggolv: mjukt cream med varm radial-glow i mitten,
+                            som om man tittade ner i en korg där en lampa lyser uppifrån.
+                            Tunn mörk inner-ring markerar gränsen mellan rim och interior. */}
+                        <div
+                            className="rounded-[18px] p-4 w-[min(88vw,440px)] max-h-[78vh] overflow-y-auto"
+                            style={{
+                                background:
+                                    'radial-gradient(ellipse 80% 60% at center 35%, #fdf6e3 0%, #f6e6c2 55%, #e7cb95 100%)',
+                                boxShadow: 'inset 0 0 0 1px rgba(90,55,25,0.45), inset 0 8px 16px rgba(120,75,30,0.22), inset 0 -4px 10px rgba(120,75,30,0.12)'
+                            }}
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-[11px] font-bold text-[#7a4f2a] tracking-[0.18em] uppercase">Funktioner</h2>
+                                <button
+                                    type="button"
+                                    onClick={() => setShopOpen(false)}
+                                    aria-label="Stäng"
+                                    className="h-7 w-7 rounded-full hover:bg-amber-100 flex items-center justify-center text-[#7a4f2a] transition-colors"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            {/* Master-toggle: ett klick aktiverar / avaktiverar
+                                allt på en gång (utom låsta saker som behöver "köpas"). */}
+                            <div className="flex gap-1.5 mb-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setAllFeatures(true)}
+                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] transition-colors"
+                                    style={{ boxShadow: '0 2px 6px rgba(0,106,167,0.4)' }}
+                                >
+                                    Aktivera alla
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAllFeatures(false)}
+                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-white/80 border border-[#7a4f2a]/30 text-[#7a4f2a] hover:bg-white transition-colors"
+                                    style={{ boxShadow: '0 2px 4px rgba(120,75,30,0.12)' }}
+                                >
+                                    Avaktivera alla
+                                </button>
+                            </div>
+                            {/* Kategorier — runda badges scatterade i flex-wrap.
+                                Varje badge har en liten translateY + rotate-jitter
+                                baserat på index, så de ser ut som föremål som vilar
+                                naturligt i korgen i stället för stelt rad-justerade. */}
+                            {(() => {
+                                type ShopCard = { key: string; label: string; icon?: React.ReactNode; isFaceBadge?: boolean; locked?: boolean };
+                                const categories: Array<{ title: string; items: ShopCard[] }> = [
+                                    { title: 'Karta', items: [
+                                        { key: 'tilt', label: 'Lutning', icon: <Box size={18} /> },
+                                        { key: 'globe', label: 'Klot', icon: <Globe size={18} /> },
+                                        { key: 'terrain', label: 'Terräng', icon: <Mountain size={18} /> }
+                                    ]},
+                                    { title: 'Moln', items: [
+                                        { key: 'sun', label: 'Sol', icon: <Sun size={18} /> },
+                                        { key: 'focus', label: 'Fokus', icon: <Target size={18} /> },
+                                        { key: 'throw', label: 'Kasta', icon: <Send size={18} /> },
+                                        { key: 'slingshot', label: 'Slangbella', icon: <Crosshair size={18} /> },
+                                        { key: 'faces', label: 'Ansikten', isFaceBadge: true }
+                                    ]},
+                                    { title: 'Moln-hyllan', items: [
+                                        { key: 'bigCloud', label: 'Större moln', icon: <Maximize2 size={18} /> },
+                                        { key: 'fastThrow', label: 'Snabbare kast', icon: <Zap size={18} /> },
+                                        { key: 'sparkle', label: 'Glitter', icon: <Sparkles size={18} /> },
+                                        { key: 'snowball', label: 'Snöboll', icon: <Snowflake size={18} /> }
+                                    ]},
+                                    { title: 'Inspelning', items: [
+                                        { key: 'record', label: 'Spela in', icon: <Video size={18} />, locked: true }
+                                    ]}
+                                ];
+                                // Scattered-mönster: små offsets per index. Bryts i
+                                // sektion så varje grupp har sin egen "korg-bädd".
+                                const STAGGER_Y = [0, 5, -3, 4, -2, 6, -4, 3];
+                                const ROTATE_DEG = [-3, 2, -1, 3, 0, -2, 1, -3];
+                                return categories.map(cat => (
+                                    <div key={cat.title} className="mb-4 last:mb-0">
+                                        <div className="text-[9px] font-bold text-[#7a4f2a] tracking-[0.20em] uppercase mb-2 text-center">
+                                            {cat.title}
+                                        </div>
+                                        <div className="flex flex-wrap justify-center gap-2.5 px-2">
+                                            {cat.items.map((item, i) => {
+                                                const active = isFeatureActive(item.key);
+                                                const locked = !!item.locked;
+                                                const state: 'active' | 'inactive' | 'locked' = locked ? 'locked' : (active ? 'active' : 'inactive');
+                                                const offY = STAGGER_Y[i % STAGGER_Y.length];
+                                                const rot = ROTATE_DEG[i % ROTATE_DEG.length];
+                                                // Mini cloud-face: matchar molnens egna ansikten
+                                                // (samma sky-200/vit som CloudPopup), så badgen
+                                                // ser ut som ett miniatyrmoln med ansikte.
+                                                const faceColor = state === 'active' ? '#ffffff' : '#7dd3fc';
+                                                return (
+                                                    <button
+                                                        key={item.key}
+                                                        type="button"
+                                                        onClick={locked ? undefined : () => toggleFeature(item.key)}
+                                                        title={`${item.label}${state === 'locked' ? ' — Köp' : state === 'active' ? ' — Aktiv (klicka för att stänga av)' : ' — Klicka för att aktivera'}`}
+                                                        aria-label={item.label}
+                                                        className={`relative rounded-full flex items-center justify-center transition-all duration-200 ${
+                                                            state === 'active'
+                                                                ? 'text-white hover:scale-110'
+                                                                : state === 'locked'
+                                                                ? 'text-amber-700/50 cursor-pointer hover:scale-105'
+                                                                : 'text-[#7a4f2a] hover:scale-110 active:scale-95'
+                                                        }`}
+                                                        style={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            transform: `translateY(${offY}px) rotate(${rot}deg)`,
+                                                            background: state === 'active'
+                                                                ? 'radial-gradient(circle at 35% 30%, #1d8ec9 0%, #006AA7 65%, #004f80 100%)'
+                                                                : state === 'locked'
+                                                                ? 'radial-gradient(circle at 35% 30%, #fff8e8 0%, #f5e3bf 100%)'
+                                                                : 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fbf3df 100%)',
+                                                            border: state === 'locked'
+                                                                ? '1px solid rgba(180,130,60,0.55)'
+                                                                : state === 'active'
+                                                                ? '1px solid rgba(0,60,100,0.4)'
+                                                                : '1px solid rgba(180,130,60,0.40)',
+                                                            boxShadow: state === 'active'
+                                                                ? '0 6px 14px rgba(0,80,130,0.45), 0 2px 4px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.35)'
+                                                                : '0 4px 10px rgba(120,75,30,0.20), 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6)'
+                                                        }}
+                                                    >
+                                                        {item.isFaceBadge ? (
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <circle cx="9" cy="10" r="1.7" fill={faceColor} />
+                                                                <circle cx="15" cy="10" r="1.7" fill={faceColor} />
+                                                                <path
+                                                                    d="M 8 14.5 Q 12 17.5 16 14.5"
+                                                                    stroke={faceColor}
+                                                                    strokeWidth="1.7"
+                                                                    strokeLinecap="round"
+                                                                    fill="none"
+                                                                />
+                                                            </svg>
+                                                        ) : (
+                                                            item.icon
+                                                        )}
+                                                        {state === 'locked' && (
+                                                            <div
+                                                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                                                                style={{
+                                                                    background: '#d97706',
+                                                                    border: '1.5px solid #fff7ed',
+                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                                                                }}
+                                                            >
+                                                                <Lock size={8} className="text-white" strokeWidth={3} />
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ));
+                            })()}
+                            <div className="mt-3 pt-3 border-t border-[#c19a6b]/40 text-center">
+                                <button
+                                    type="button"
+                                    className="text-[11px] font-semibold text-[#7a4f2a] hover:underline tracking-wide"
+                                >
+                                    Uppgradera konto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
