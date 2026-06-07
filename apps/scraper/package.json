@@ -33,6 +33,7 @@
     "hide-junk": "ts-node src/scripts/hide-junk-keywords.ts",
     "audit-events": "ts-node src/scripts/audit-events.ts",
     "audit-pending": "ts-node src/scripts/audit-all-pending.ts",
+    "audit-daemon": "ts-node src/scripts/audit-pending-daemon.ts",
     "smoke": "ts-node src/scripts/smoke.ts",
     "cleanup-images": "ts-node src/scripts/cleanup-storage-images.ts",
     "setup-telegram": "ts-node src/scripts/setup-telegram.ts",
