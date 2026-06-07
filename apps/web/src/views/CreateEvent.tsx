@@ -228,7 +228,7 @@ export default function CreateEvent() {
     // Vi rensar BARA vid lyckad publicering.
 
     const handlePromoSuccess = (_code: string, customName: string) => {
-        setFormData({ ...formData, type: 'campus', customCategory: customName });
+        setFormData({ ...formData, type: 'other', customCategory: customName });
         toast.success(`Kategori inställd: ${customName} `);
     };
 

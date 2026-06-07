@@ -18,6 +18,9 @@
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
+import { setEventAuditWithCategory } from '../utils/sqliteHelper';
+
+const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 
 const args = (() => {
     const out: any = {};
@@ -101,7 +104,8 @@ async function main() {
             : '✅';
         const swMark = result.inSweden ? '' : ' [🌍 EJ SVERIGE]';
         const progress = `[${i + 1}/${rows.length}]`;
-        console.log(`  ${progress} ${prefix} ${result.verdict}/${result.confidence}${swMark} | ${(r.title || '').slice(0, 50)} → ${result.reason}`);
+        const catTag = `${result.category}/${result.categoryConfidence}`;
+        console.log(`  ${progress} ${prefix} ${result.verdict}/${result.confidence} 🏷️ ${catTag}${swMark} | ${(r.title || '').slice(0, 50)} → ${result.reason}`);
 
         // GPS-check körs sekventiellt efter event-audit (Nominatim 1 req/s).
         // Hoppa om vi redan vet att eventet är junk — det ska bort ändå.
@@ -132,10 +136,19 @@ async function main() {
                 confidence: result.confidence,
                 reason: result.reason,
                 inSweden: result.inSweden,
+                category: result.category,
+                categoryConfidence: result.categoryConfidence,
                 at: new Date(),
-                model: process.env.OLLAMA_AUDIT_MODEL ?? 'qwen3:8b',
+                model: AUDIT_MODEL,
             },
         };
+
+        // Top-level category skrivs över när audit ger high-confidence —
+        // scraperns gissning är ofta 'other' så LLM-klassningen är bättre signal.
+        // Vid medium/low behåller vi befintlig category för att inte degradera bra rader.
+        if (result.categoryConfidence === 'high') {
+            updates.category = result.category;
+        }
 
         if (gpsResult) {
             updates.aiAudit.gpsCheck = {
@@ -162,6 +175,14 @@ async function main() {
 
         try {
             await db.collection('linkEvents').doc(r.firestoreId).update(updates);
+            setEventAuditWithCategory(r.url, {
+                verdict: result.verdict,
+                confidence: result.confidence,
+                category: result.category,
+                categoryConfidence: result.categoryConfidence,
+                emoji: result.emoji,
+                price: result.price,
+            });
         } catch (e) {
             stats.error++;
             console.error(`     ❌ DB write fail: ${(e as Error).message}`);
