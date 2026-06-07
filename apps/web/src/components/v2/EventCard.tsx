@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import LinkEventCard from '../ui/LinkEventCard';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -14,15 +14,18 @@ const NEARBY_PAGE_SIZE = 20;
 // då döljer vi event som ligger längre bort (7 mil = 70 km).
 const MAX_IMMINENT_DISTANCE_KM = 70;
 
-type EventStatus = 'past' | 'ongoing' | 'soon' | 'later';
+type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later';
 
 const getEventStatus = (time: Date, now: number): EventStatus => {
     const start = time.getTime();
     const end = start + DEFAULT_EVENT_MS;
     if (now >= end) return 'past';
     if (now >= start) return 'ongoing';
-    if (start - now <= SOON_WINDOW_MS) return 'soon';
-    return 'later';
+    const untilStart = start - now;
+    if (untilStart <= SOON_WINDOW_MS) return 'soon';        // < 1h
+    if (untilStart <= 3 * SOON_WINDOW_MS) return 'within3'; // 1–3h
+    if (untilStart <= 5 * SOON_WINDOW_MS) return 'within5'; // 3–5h
+    return 'later';                                         // > 5h
 };
 
 const formatDistanceKm = (km: number): string => {
@@ -32,6 +35,30 @@ const formatDistanceKm = (km: number): string => {
     }
     if (km < 10) return `${km.toFixed(1)} km`;
     return `${Math.round(km)} km`;
+};
+
+// "Inom 3h" / "Inom 5h" om eventet ligger nära i tid — annars klocktid eller
+// veckodag+tid om det är en annan dag. Returnerar tom sträng för Pågår/Snart;
+// då säger statusbadgen redan vad som behöver sägas.
+const formatTimeHint = (time: Date, now: number): string => {
+    // Visa ALLTID klockslaget — även för "Snart"/pågående event. Tidigare gav
+    // <1h en tom sträng, så just de eventen saknade tid (det användaren såg).
+    const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
+    const hhmm = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return `kl ${hhmm}`;
+    const weekday = time.toLocaleDateString('sv-SE', { weekday: 'short' });
+    return `${weekday} ${hhmm}`;
+};
+
+// Samma logik som i LinkEventCard: ren siffra → "X kr", "0"/"gratis" → "Gratis",
+// allt annat visas som det är. null = inget pris angivet.
+const formatPriceLabel = (p: number | string | undefined): string | null => {
+    if (p === undefined || p === null || p === '') return null;
+    const s = String(p).trim();
+    if (!s) return null;
+    if (s === '0' || /^gratis$/i.test(s)) return 'Gratis';
+    if (/^\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?$/.test(s)) return `${s} kr`;
+    return s;
 };
 
 // Haversine-avstånd i km mellan två punkter
@@ -126,6 +153,8 @@ function StatusBadge({ status }: { status: EventStatus }) {
     const cfg = {
         ongoing: { label: 'Pågår', cls: 'bg-emerald-500 text-white' },
         soon: { label: 'Snart', cls: 'bg-amber-500 text-white' },
+        within3: { label: 'Inom 3h', cls: 'bg-amber-300 text-amber-900' },
+        within5: { label: 'Inom 5h', cls: 'bg-sky-300 text-sky-900' },
         past: { label: 'Har varit', cls: 'bg-slate-300 text-slate-700' },
     }[status];
     return (
@@ -142,6 +171,9 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
     onSelect: (evt: LinkEvent) => void;
 }) {
     const status = getEventStatus(evt.time, now);
+    const timeHint = formatTimeHint(evt.time, now);
+    const priceLabel = formatPriceLabel(evt.price);
+    const attendees = evt.attendees ?? 0;
     return (
         <li>
             <button
@@ -163,6 +195,28 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                         </span>
                         <span className="truncate">{evt.locationName}</span>
                     </div>
+                    {(timeHint || priceLabel || attendees > 0) && (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                            {timeHint && (
+                                <span className="inline-flex items-center gap-1 shrink-0">
+                                    <Clock size={11} className="text-primary" />
+                                    {timeHint}
+                                </span>
+                            )}
+                            {priceLabel && (
+                                <span className="inline-flex items-center gap-1 shrink-0">
+                                    <Ticket size={11} className="text-primary" />
+                                    {priceLabel}
+                                </span>
+                            )}
+                            {attendees > 0 && (
+                                <span className="inline-flex items-center gap-1 shrink-0">
+                                    <Users size={11} className="text-primary" />
+                                    {attendees} kommer
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <ChevronRight size={16} className="text-slate-400 shrink-0" />
             </button>

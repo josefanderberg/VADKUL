@@ -4,6 +4,27 @@ export async function registerServiceWorker() {
         return;
     }
 
+    // I UTVECKLING: registrera INTE service workern. Den cachar gamla JS-chunkar
+    // och serverar dem efter en rebuild → webpack-runtime blir osynkad och allt
+    // kraschar med "Cannot read properties of undefined (reading 'call')".
+    // Avregistrera dessutom ev. redan installerad SW + töm cacher (självläker).
+    if (process.env.NODE_ENV !== 'production') {
+        try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map((r) => r.unregister()));
+            if (typeof caches !== 'undefined') {
+                const keys = await caches.keys();
+                await Promise.all(keys.map((k) => caches.delete(k)));
+            }
+            if (regs.length > 0) {
+                console.log('🧹 Service Worker avregistrerad i dev — ladda om en gång till.');
+            }
+        } catch (e) {
+            console.debug('SW dev-cleanup failed:', e);
+        }
+        return;
+    }
+
     try {
         const swUrl = `/sw.js?firebaseApiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`;
         const registration = await navigator.serviceWorker.register(swUrl, {

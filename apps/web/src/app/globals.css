@@ -171,9 +171,10 @@
 /* === Cloud Popup Animations === */
 @keyframes cloud-float {
   0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
-  25%      { transform: translate(10px, -3px) rotate(0.4deg); }
-  50%      { transform: translate(4px, -6px) rotate(-0.3deg); }
-  75%      { transform: translate(-8px, -2px) rotate(0.2deg); }
+  20%      { transform: translate(22px, -8px) rotate(1.1deg); }
+  40%      { transform: translate(8px, -16px) rotate(-0.8deg); }
+  60%      { transform: translate(-18px, -6px) rotate(0.9deg); }
+  80%      { transform: translate(-10px, -12px) rotate(-1.0deg); }
 }
 
 @keyframes cloud-pop-in {

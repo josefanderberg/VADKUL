@@ -36,6 +36,11 @@ interface CloudPopupProps {
    *  was let go at, so the parent can pin the cloud there and fling the camera
    *  with matching momentum/friction. */
   onFollowFling?: (vx: number, vy: number, holdX: number, holdY: number) => void;
+  /** Live snapshot of the cloud's screen position + velocity while it is
+   *  gliding from a fling. Null whenever the cloud is at rest. Lets the parent
+   *  latch the camera onto a mid-flight throw (focus button) and chase its
+   *  predicted landing point. */
+  glideStateRef?: React.MutableRefObject<{ sp: { x: number; y: number }; vx: number; vy: number } | null>;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -145,7 +150,8 @@ export default function CloudPopup({
   scale = 1,
   following = false,
   onToggleFollow,
-  onFollowFling
+  onFollowFling,
+  glideStateRef
 }: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -253,6 +259,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       cancelAnimationFrame(glideRaf.current);
       glideRaf.current = null;
     }
+    if (glideStateRef) glideStateRef.current = null;
     if (fadeTimeoutRef.current !== null) {
       clearTimeout(fadeTimeoutRef.current);
       fadeTimeoutRef.current = null;
@@ -444,6 +451,16 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     const stopThreshold = 0.04; // px/ms
     let lastT = performance.now();
 
+    const baseX = anchorPos?.x ?? 0;
+    const baseY = anchorPos?.y ?? 0;
+    if (glideStateRef) {
+      glideStateRef.current = {
+        sp: { x: baseX + curX, y: baseY + curY },
+        vx: curVx,
+        vy: curVy
+      };
+    }
+
     const tick = (t: number) => {
       const dt = Math.min(t - lastT, 32); // cap to avoid huge jumps after tab blur
       lastT = t;
@@ -460,10 +477,19 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       curVy *= decay;
       vSpin *= decay;
 
+      if (glideStateRef) {
+        glideStateRef.current = {
+          sp: { x: baseX + curX, y: baseY + curY },
+          vx: curVx,
+          vy: curVy
+        };
+      }
+
       const remaining = Math.sqrt(curVx * curVx + curVy * curVy);
       if (remaining < stopThreshold) {
         glideRaf.current = null;
         setIsGliding(false);
+        if (glideStateRef) glideStateRef.current = null;
         // Cloud has stopped — bake the accumulated spin into the persistent
         // restingRotation so the new orientation sticks for next interaction.
         setRestingRotation(prev => prev + curSpinAngle);

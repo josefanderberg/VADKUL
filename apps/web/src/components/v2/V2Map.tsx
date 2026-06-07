@@ -21,7 +21,7 @@ interface V2MapProps {
     sunCloudTrigger?: number;
     /** Räknare som visas i molnet. Skickas in från sidan så molnet ser hela
      *  datasetet, inte bara det dag-/sökfiltrerade. */
-    cloudStats?: { today: number; week: number; withinHour: number; withinHours: number };
+    cloudStats?: { today: number; tomorrow: number; week: number; withinHour: number; withinHours: number };
     /** Räknare som triggar att respektive moln snäpper tillbaka in på skärmen
      *  (används av återkallnings-knapparna jämte solen). Varje ökning = ett anrop. */
     recallMainTrigger?: number;
@@ -130,6 +130,14 @@ export default function V2Map({
     sunOffScreenRef.current = sunOffScreen;
 
     const baseZoomRef = useRef<number>(8);
+
+    // Live glide-snapshot från respektive moln. CloudPopup skriver hit varje
+    // glid-frame och nollar när molnet stannat. Används av fokus-knappen för
+    // att kunna "jaga" ett moln som fortfarande är i rörelse — utan detta
+    // läser vi det gamla ankaret (där molnet kastades ifrån) eftersom det inte
+    // commitas förrän glidet är slut.
+    const mainGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
+    const sunGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
 
     // Ticking counter used to cycle through events at the same coordinate.
     // Increments once per second; markers with count > 1 swap their displayed
@@ -293,6 +301,47 @@ export default function V2Map({
         };
     }, []);
 
+    // Mjuk idle-drift: när användaren inte rört kartan på en stund driver vi
+    // den långsamt i sinus-bana så bilden lever. Pausas direkt vid interaktion.
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        let raf = 0;
+        let interactingUntil = 0;
+        let startedAt = performance.now();
+        let last = { x: 0, y: 0 };
+        const pause = () => { interactingUntil = performance.now() + 2500; };
+        map.on('dragstart', pause);
+        map.on('zoomstart', pause);
+        map.on('rotatestart', pause);
+        map.on('pitchstart', pause);
+        const tick = (now: number) => {
+            if (now >= interactingUntil && !document.hidden) {
+                const t = (now - startedAt) / 1000;
+                const targetX = Math.sin(t * 0.18) * 18;
+                const targetY = Math.cos(t * 0.13) * 10;
+                const dx = targetX - last.x;
+                const dy = targetY - last.y;
+                if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+                    map.panBy([dx, dy], { duration: 0, animate: false });
+                }
+                last = { x: targetX, y: targetY };
+            } else {
+                startedAt = now;
+                last = { x: 0, y: 0 };
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => {
+            cancelAnimationFrame(raf);
+            map.off('dragstart', pause);
+            map.off('zoomstart', pause);
+            map.off('rotatestart', pause);
+            map.off('pitchstart', pause);
+        };
+    }, []);
+
     // Flyg kameran så det valda eventet hamnar i vy (vi går TILL eventet —
     // eventet flyttas aldrig till oss). Återanvänds av både val-effekten nedan
     // och recenter-knappen på eventkortet.
@@ -343,6 +392,54 @@ export default function V2Map({
     // andra för varje klick (minns vilket vi gick till sist). Finns bara ett
     // moln → alltid det. Inget moln → inget händer.
     const lastRecenterRef = useRef<'main' | 'sun'>('sun');
+
+    // Jaga ett moln som fortfarande är i luften: räkna ut var det kommer landa
+    // utifrån nuvarande hastighet och friktion, sikta kameran dit, och låt den
+    // flyga lika länge som molnet glider. Med matchande easing slutar de på
+    // samma punkt — molnet hamnar mitt i bild när det stannar.
+    const latchOntoGlidingCloud = (
+        kind: 'main' | 'sun',
+        state: { sp: { x: number; y: number }; vx: number; vy: number }
+    ) => {
+        const map = mapRef.current; if (!map) return;
+        // Under själva jakten äger V2Map:s easeTo kameran ostört.
+        setMainFollowing(false);
+        setSunFollowing(false);
+        lastRecenterRef.current = kind;
+
+        // När kameran kommit ifatt molnet: slå på follow så vi FORTSÄTTER följa
+        // dess bana (molnet pinnas på skärmen, kartan glider under). Avslutas
+        // genom att trycka på molnet igen (onToggleFollow).
+        const startFollow = () => {
+            if (kind === 'main') { setSunFollowing(false); setMainFollowing(true); }
+            else { setMainFollowing(false); setSunFollowing(true); }
+        };
+
+        const k = 2.2 / 1000;       // matchar CloudPopups GLIDE_FRICTION
+        const stopThreshold = 0.04; // matchar CloudPopup
+        const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
+
+        if (speed < stopThreshold) {
+            // Knappt rörelse kvar — fall tillbaka till en enkel centrering.
+            const ll = map.unproject([state.sp.x, state.sp.y]);
+            map.easeTo({ center: [ll.lng, ll.lat], duration: 500 });
+            map.once('moveend', startFollow);
+            return;
+        }
+
+        // Var molnet landar (i nuvarande kamera-frame) om vi inte rör kameran:
+        // SP + v/k är formeln för en exponentiellt avtagande hastighet.
+        const landSP = { x: state.sp.x + state.vx / k, y: state.sp.y + state.vy / k };
+        const targetLL = map.unproject([landSP.x, landSP.y]);
+        const duration = Math.min(Math.max(Math.log(speed / stopThreshold) / k, 300), 2600);
+        map.easeTo({
+            center: [targetLL.lng, targetLL.lat],
+            duration,
+            easing: (t) => 1 - Math.pow(1 - t, 3)
+        });
+        map.once('moveend', startFollow);
+    };
+
     const recenterOnClouds = () => {
         const map = mapRef.current;
         if (!map) return;
@@ -350,6 +447,21 @@ export default function V2Map({
         const hasMain = showCloudRef.current && !!cloudAnchorRef.current;
         const hasSun = !!sunCloudAnchorRef.current;
         if (!hasMain && !hasSun) return;
+
+        // Ett moln som fortfarande är mitt i ett kast har ett inaktuellt geo-ankare
+        // (det commitas inte förrän glidet är slut). Läs istället det live-state
+        // CloudPopup skriver till varje frame och sikta kameran på den förutspådda
+        // landningsplatsen — så jagar vi molnet ner i mitten istället för att
+        // hoppa till "platsen där det kastades ifrån".
+        const mainGlide = hasMain ? mainGlideStateRef.current : null;
+        const sunGlide = hasSun ? sunGlideStateRef.current : null;
+        if (mainGlide || sunGlide) {
+            let go: 'main' | 'sun';
+            if (mainGlide && sunGlide) go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
+            else go = mainGlide ? 'main' : 'sun';
+            latchOntoGlidingCloud(go, (go === 'main' ? mainGlide : sunGlide)!);
+            return;
+        }
 
         // Ett moln som slängts iväg (ligger utanför bild) prioriteras: dit flyttas
         // kameran först. Sen växlar knappen mellan molnens position som vanligt.
@@ -911,12 +1023,17 @@ export default function V2Map({
                 <CloudPopup
                     message={cloudStats ? (
                         <>
-                            <span className="block">{cloudStats.today} unika event i Sverige idag</span>
-                            <span className="block text-sky-500 font-black text-[18px] sm:text-[20px] leading-snug my-1">
+                            <span className="block text-sky-500 font-black text-[26px] sm:text-[30px] leading-tight">
+                                {cloudStats.today} unika event
+                            </span>
+                            <span
+                                className="block font-black text-[16px] sm:text-[18px] leading-snug my-1"
+                                style={{ color: '#FFCD00', textShadow: '0 1px 0 rgba(0,0,0,0.25), 0 0 2px rgba(0,0,0,0.35)' }}
+                            >
                                 {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}
                             </span>
-                            <span className="block text-slate-500 dark:text-slate-600 text-[12px]">
-                                {cloudStats.week} i veckan
+                            <span className="block text-sky-500 font-black text-[18px] sm:text-[20px] leading-snug">
+                                i Sverige idag
                             </span>
                         </>
                     ) : `Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund.`}
@@ -926,6 +1043,7 @@ export default function V2Map({
                     following={mainFollowing}
                     onToggleFollow={() => setMainFollowing(f => !f)}
                     onFollowFling={handleMainFling}
+                    glideStateRef={mainGlideStateRef}
                 />
             )}
             {sunCloudAnchor && sunCloudAnchorPos && (
@@ -941,6 +1059,7 @@ export default function V2Map({
                     following={sunFollowing}
                     onToggleFollow={() => setSunFollowing(f => !f)}
                     onFollowFling={handleSunFling}
+                    glideStateRef={sunGlideStateRef}
                 />
             )}
         </div>

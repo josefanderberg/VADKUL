@@ -7,13 +7,18 @@
     "packages/*"
   ],
   "scripts": {
-    "dev":          "npm run dev -w web",
-    "build":        "npm run build -w web",
-    "start":        "npm run start -w web",
-    "lint":         "npm run lint -w web",
-    "dashboard":    "npm run dashboard -w vadkul-scraper",
+    "dev": "npm run dev -w web",
+    "dev:reset": "bash scripts/dev-reset.sh",
+    "dev:check": "bash scripts/dev-reset.sh --check",
+    "build": "npm run build -w web",
+    "start": "npm run start -w web",
+    "lint": "npm run lint -w web",
+    "dashboard": "npm run dashboard -w vadkul-scraper",
     "create-event": "npm run create -w vadkul-scraper",
-    "today":        "npm run today -w vadkul-scraper",
-    "scrape":       "npm run start -w vadkul-scraper"
+    "today": "npm run today -w vadkul-scraper",
+    "scrape": "npm run start -w vadkul-scraper"
+  },
+  "dependencies": {
+    "next": "^16.2.7"
   }
 }

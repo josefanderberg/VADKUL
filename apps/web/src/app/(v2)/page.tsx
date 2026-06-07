@@ -176,14 +176,17 @@ export default function HomePage() {
         const now = new Date();
         const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
         const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
+        const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+        const endOfTomorrow = new Date(endOfToday.getTime() + 24 * 60 * 60 * 1000);
         const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
         const HOUR = 60 * 60 * 1000;
-        let today = 0, week = 0;
+        let today = 0, week = 0, tomorrow = 0;
         const futureMs: number[] = [];
         for (const evt of events) {
             if (!evt.time) continue;
             const t = evt.time.getTime();
             if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
+            if (t >= startOfTomorrow.getTime() && t <= endOfTomorrow.getTime()) tomorrow++;
             if (t >= startOfToday.getTime() && t < endOfWeek.getTime()) week++;
             if (t > now.getTime()) futureMs.push(t - now.getTime());
         }
@@ -197,7 +200,7 @@ export default function HomePage() {
             const limit = withinHours * HOUR;
             withinHour = futureMs.filter(ms => ms <= limit).length;
         }
-        return { today, week, withinHour, withinHours };
+        return { today, tomorrow, week, withinHour, withinHours };
     }, [events, nowTick]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
