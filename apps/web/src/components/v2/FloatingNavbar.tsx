@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, LogOut } from 'lucide-react';
+import { User, Plus, Search, X, LogOut, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
@@ -174,6 +174,13 @@ export default function FloatingNavbar({
                                         <p className="text-xs text-slate-500">Inloggad som</p>
                                         <p className="text-sm font-semibold text-slate-800 truncate">{user.displayName || user.email}</p>
                                     </div>
+                                    <button
+                                        onClick={() => { router.push('/shop'); setProfileMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100"
+                                    >
+                                        <Store size={15} />
+                                        Funktioner & Shop
+                                    </button>
                                     <button
                                         onClick={async () => { await logout(); setProfileMenuOpen(false); }}
                                         className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
