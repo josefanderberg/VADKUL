@@ -351,6 +351,18 @@ fi
 
 rm -f "$PAYLOAD_FILE" /tmp/vadkul-teams-resp
 
+# ─── Andra Teams-kort: kvalitet + 7-dagars trend (60s efter huvudkortet) ────
+# Detacheras så vi inte blockerar exit. Sover en minut för att inte krocka
+# visuellt med huvudkortet i samma Teams-tråd.
+echo "" >> "$LOG_FILE"
+echo "── QUALITY-STATS (postas om 60s) ──" >> "$LOG_FILE"
+(
+    sleep 60
+    cd "$SCRAPER_DIR" && npm run quality-stats >> "$LOG_FILE" 2>&1
+) &
+QUALITY_PID=$!
+echo "Quality-stats schemalagd (PID $QUALITY_PID, postas ~$(date -v+1M '+%H:%M' 2>/dev/null || date -d '+1 minute' '+%H:%M'))" >> "$LOG_FILE"
+
 echo "" >> "$LOG_FILE"
 echo "Klart: $(date '+%Y-%m-%d %H:%M:%S') (exit=$EXIT_CODE, duration=${DURATION}s)" >> "$LOG_FILE"
 
