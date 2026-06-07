@@ -7,7 +7,7 @@ import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import EventCard from '@/components/v2/EventCard';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 
-// We must dynamically import V2Map because leaflet requires window object
+// V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
 
 const V2MapDynamic = dynamic(() => import('@/components/v2/V2Map'), {
@@ -108,6 +108,16 @@ export default function HomePage() {
     // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
     // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
     const [recenterTrigger, setRecenterTrigger] = useState(0);
+
+    // Shop-flaggor från V2Map. När användaren avaktiverar "Sol" eller "Fokus" i
+    // funktioner-shoppen försvinner respektive knapp ur EventCard (vi skickar
+    // helt enkelt inte ner callbacken — kortet renderar inte knappen utan den).
+    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean }>({ sun: true, focus: true });
+    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean }) => {
+        setShopFlags(prev =>
+            prev.sun === flags.sun && prev.focus === flags.focus ? prev : flags
+        );
+    }, []);
 
     // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
     // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
@@ -392,6 +402,7 @@ export default function HomePage() {
                 tilted={mapTilted}
                 onSunCloudTap={handleSunCloudTap}
                 onToggleTilt={handleToggleTilt}
+                onFeatureFlagsChange={handleFeatureFlagsChange}
             />
 
             {/* Modal för att skapa event */}
@@ -453,12 +464,12 @@ export default function HomePage() {
                 onCardExpandedChange={setCardExpanded}
                 dayOffset={dayOffset}
                 setDayOffset={setDayOffset}
-                onSunClick={handleSunClick}
+                onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}
                 onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
-                onRecenter={handleRecenter}
+                onRecenter={shopFlags.focus ? handleRecenter : undefined}
                 slingshotReady={slingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
