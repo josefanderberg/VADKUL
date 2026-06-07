@@ -122,19 +122,31 @@ async function main() {
         process.exit(0);
     }
 
-    let hidden = 0;
-    for (let i = 0; i < matches.length; i += 400) {
-        const batch = db.batch();
-        const slice = matches.slice(i, i + 400);
-        for (const m of slice) batch.update(db.collection('linkEvents').doc(m.id), { hidden: true });
-        await batch.commit();
-        // Spegla till SQLite — den publika feeden aggregeras därifrån, inte från Firestore.
-        for (const m of slice) setHidden(m.url, true);
-        hidden += slice.length;
-        console.log(`  ...hidden ${hidden}/${matches.length}`);
+    // Per-doc update (inte batch) så ett enda redan-raderat doc inte tar med
+    // hela jobbet. gRPC code 5 (NOT_FOUND) räknas som 'gone' — cleanup-old
+    // kan ha raderat doc tidigare i samma run-daily-pipeline.
+    // SQLite speglas oavsett (även för 'gone'-docs) — den publika feeden
+    // aggregeras från SQLite, inte från Firestore.
+    let hidden = 0, gone = 0, errors = 0;
+    for (const m of matches) {
+        try {
+            await db.collection('linkEvents').doc(m.id).update({ hidden: true });
+            hidden++;
+            setHidden(m.url, true);
+            if (hidden % 50 === 0) console.log(`  ...hidden ${hidden}/${matches.length}`);
+        } catch (e) {
+            const err = e as Error & { code?: number };
+            if (err.code === 5) {
+                gone++;
+                setHidden(m.url, true);
+            } else {
+                errors++;
+                console.error(`  ❌ Firestore-write fail ${m.id}: ${err.message}`);
+            }
+        }
     }
     sqliteDb.close();
-    console.log(`\n✅ Hidden ${hidden} utländska events i prod.`);
+    console.log(`\n✅ Hidden ${hidden} utländska events i prod (gone=${gone}, fel=${errors}).`);
     process.exit(0);
 }
 

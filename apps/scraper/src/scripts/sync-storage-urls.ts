@@ -83,6 +83,7 @@ async function main() {
     let synced = 0;
     let notInStorage = 0;
     let failed = 0;
+    let gone = 0;
 
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
@@ -105,8 +106,15 @@ async function main() {
                 console.log(`  [${i + 1}/${rows.length}] ✅ Synced: ${r.title.slice(0, 50)}`);
             }
         } catch (e) {
-            failed++;
-            console.error(`  [${i + 1}/${rows.length}] ❌ DB write fail: ${(e as Error).message}`);
+            const err = e as Error & { code?: number };
+            // Firestore NOT_FOUND (gRPC code 5): doc raderat av cleanup-old.
+            // Tyst skip — det är förväntat, inte ett fel.
+            if (err.code === 5) {
+                gone++;
+            } else {
+                failed++;
+                console.error(`  [${i + 1}/${rows.length}] ❌ DB write fail: ${err.message}`);
+            }
         }
     }
 
@@ -117,6 +125,7 @@ async function main() {
     console.log(`  Inte i Storage:    ${notInStorage}`);
     if (args.apply) {
         console.log(`  Synkade Firestore: ${synced}`);
+        console.log(`  Gone:              ${gone}  (Firestore-doc raderat av cleanup-old — skippat)`);
         console.log(`  Failed:            ${failed}`);
     } else {
         console.log(`\nKör med --apply för att uppdatera Firestore.`);

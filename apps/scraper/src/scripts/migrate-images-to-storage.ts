@@ -79,7 +79,7 @@ async function main() {
     resetUploadStats();
 
     const stats: Record<string, { tried: number; ok: number; failed: number }> = {};
-    let totalOk = 0, totalFailed = 0;
+    let totalOk = 0, totalFailed = 0, totalGone = 0;
     let prevHost = '';
 
     for (let i = 0; i < rows.length; i++) {
@@ -114,9 +114,16 @@ async function main() {
             totalOk++;
             console.log(`  ${progress} ✅ ${r.title.slice(0, 60)}`);
         } catch (e) {
+            const err = e as Error & { code?: number };
+            // Firestore NOT_FOUND (gRPC code 5): doc raderat av cleanup-old.
+            // Tyst skip — laddade nyligen upp en bild som ändå inte hade någon doc.
+            if (err.code === 5) {
+                totalGone++;
+                continue;
+            }
             stats[r.hostName].failed++;
             totalFailed++;
-            console.error(`  ${progress} ❌ DB write fail: ${(e as Error).message}`);
+            console.error(`  ${progress} ❌ DB write fail: ${err.message}`);
         }
     }
 
@@ -125,7 +132,7 @@ async function main() {
     for (const [h, s] of Object.entries(stats)) {
         console.log(`  ${h.padEnd(28)} tried=${String(s.tried).padStart(4)}  ok=${String(s.ok).padStart(4)}  failed=${s.failed}`);
     }
-    console.log(`\nTOTAL: ${totalOk}/${rows.length} migrerade, ${totalFailed} misslyckade  ${args.apply ? '' : '(dry-run)'}`);
+    console.log(`\nTOTAL: ${totalOk}/${rows.length} migrerade, ${totalGone} gone (doc raderat), ${totalFailed} misslyckade  ${args.apply ? '' : '(dry-run)'}`);
     console.log('\n=== Upload-stats (var dog försöken) ===');
     for (const [k, v] of Object.entries(uploadStats)) {
         if (v > 0) console.log(`  ${k.padEnd(20)} ${v}`);
