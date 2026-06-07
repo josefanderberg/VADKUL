@@ -6,6 +6,15 @@
  * och @type som array eller subtyp (MusicEvent, TheaterEvent, …).
  */
 
+/**
+ * Trimmar meningslösa noll-decimaler i alla tal i en sträng.
+ *   "605.0" → "605", "605.00" → "605", "100.0–250.0 kr" → "100–250 kr"
+ *   "605.50" → "605.50" (bevaras), "605.05" → "605.05" (bevaras)
+ */
+export function trimZeroDecimals(s: string): string {
+    return s.replace(/(\d)\.0+(?!\d)/g, '$1');
+}
+
 /** Normalisera pris ur ett schema.org `offers`-fält (objekt eller array). */
 export function extractOffersPrice(offers: unknown): string {
     if (!offers) return '';
@@ -16,7 +25,7 @@ export function extractOffersPrice(offers: unknown): string {
 
         // priceRange ("100–250 kr") vinner om den finns som färdig sträng
         if (typeof off.priceRange === 'string' && off.priceRange.trim()) {
-            return off.priceRange.trim();
+            return trimZeroDecimals(off.priceRange.trim());
         }
 
         const spec = off.priceSpecification as Record<string, unknown> | undefined;
@@ -26,8 +35,8 @@ export function extractOffersPrice(offers: unknown): string {
             (spec ? spec.price : undefined);
 
         if (cand !== undefined && cand !== null && String(cand).trim() !== '') {
-            const val = String(cand).trim();
-            if (val === '0' || val === '0.0' || val === '0.00') return 'Gratis';
+            const val = trimZeroDecimals(String(cand).trim());
+            if (val === '0') return 'Gratis';
             // Redan formaterat med valuta? Lämna som det är.
             if (/kr|sek|\$|€|gratis|fri/i.test(val)) return val;
             const cur = (off.priceCurrency as string) || (spec?.priceCurrency as string) || 'SEK';
