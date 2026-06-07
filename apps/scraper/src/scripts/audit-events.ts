@@ -18,6 +18,7 @@
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
+import { setHidden } from '../utils/sqliteHelper';
 
 const args = (() => {
     const out: any = {};
@@ -162,6 +163,10 @@ async function main() {
 
         try {
             await db.collection('linkEvents').doc(r.firestoreId).update(updates);
+            // Spegla hidden till SQLite — den publika feeden aggregeras från SQLite
+            // (aggregate-events.ts), inte Firestore. Utan detta når auto-hide aldrig
+            // användarna och junk återpubliceras vid varje körning.
+            if (updates.hidden === true) setHidden(r.url, true);
         } catch (e) {
             stats.error++;
             console.error(`     ❌ DB write fail: ${(e as Error).message}`);

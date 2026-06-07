@@ -51,6 +51,9 @@ function buildDate(day: number, month: number, year: number, hour = 0, minute = 
     if (day < 1 || day > 31 || month < 0 || month > 11) return null;
     const d = new Date(year, month, day, hour, minute, 0, 0);
     if (isNaN(d.getTime())) return null;
+    // Round-trip-validering: JS rullar över omöjliga datum (t.ex. 30 feb → 2 mars,
+    // 31 nov → 1 dec) tyst. Avvisa dem hellre än att publicera fel dag.
+    if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
     return d;
 }
 

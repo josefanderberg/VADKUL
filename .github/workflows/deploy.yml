@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: package-lock.json
 
       # Firebase Hosting with Next.js Frameworks support builds the app itself
       # during deploy — no separate build step needed.

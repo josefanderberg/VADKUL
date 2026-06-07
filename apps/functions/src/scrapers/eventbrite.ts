@@ -109,11 +109,18 @@ export async function scrapeEventbrite() {
                         : '';
                     const coverImage = typeof evt.image === 'string' ? evt.image : evt.image?.[0] || undefined;
 
-                    let resolvedLat = lat || 56.8796;
-                    let resolvedLng = lng || 14.8094;
+                    let resolvedLat = lat;
+                    let resolvedLng = lng;
                     if (!lat || !lng) {
                         const coords = await geocodeVenue(locationName);
-                        if (coords) { resolvedLat = coords[0]; resolvedLng = coords[1]; }
+                        if (!coords) {
+                            // Geokodning misslyckades — hoppa över hellre än att stämpla
+                            // eventet på Stortorget (falska pins på centrum).
+                            console.warn(`  ⏭️ Hoppar över "${title}" — kunde inte geokoda "${locationName}"`);
+                            continue;
+                        }
+                        resolvedLat = coords[0];
+                        resolvedLng = coords[1];
                     }
 
                     await addEventToDb({

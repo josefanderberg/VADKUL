@@ -434,7 +434,7 @@ export default function CreateEvent() {
 
             // Om vi har en ny fil, ladda upp den och uppdatera URL
             if (coverImageFile) {
-                const path = `event - images / ${user.uid}/${Date.now()}_${coverImageFile.name}`;
+                const path = `event-images/${user.uid}/${Date.now()}_${coverImageFile.name}`;
                 const url = await storageService.uploadFile(path, coverImageFile);
                 commonData.coverImage = url;
             }

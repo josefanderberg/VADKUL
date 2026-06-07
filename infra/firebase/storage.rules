@@ -1,8 +1,46 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+    // Rimlig bilduppladdning från ägaren: <10MB och image/*.
+    function isOwnerImage(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
+
+    // Profilbilder — publikt läsbara (visas för alla, även utloggade). Ägaren skriver.
+    match /users/{userId}/profile_pic {
+      allow read: if true;
+      allow write: if isOwnerImage(userId);
+    }
+
+    // Verifieringsbilder — känsligare: bara inloggade kan läsa. Ägaren skriver.
+    match /users/{userId}/verification_image {
+      allow read: if request.auth != null;
+      allow write: if isOwnerImage(userId);
+    }
+
+    // Övriga användarfiler — bara ägaren läser/skriver.
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if isOwnerImage(userId);
+    }
+
+    // Event-cover-bilder uppladdade av användare (event-images/<uid>/...). Publik read.
+    match /event-images/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwnerImage(userId);
+    }
+
+    // Skrapade event-bilder skrivs av scrapern via Admin SDK (kringgår dessa regler).
+    // Klienter får bara läsa.
+    match /scraped-events/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Inget catch-all: paths som inte matchar ovan nekas som standard.
   }
 }

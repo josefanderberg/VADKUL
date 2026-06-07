@@ -9,6 +9,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface AiAudit {
     verdict: 'ok' | 'suspect' | 'junk';
@@ -60,7 +61,7 @@ export default function ReviewPage() {
         try {
             const params = new URLSearchParams({ verdict: filter });
             if (filter === 'hidden') params.set('showHidden', 'true');
-            const res = await fetch(`/api/admin/review?${params}`);
+            const res = await fetch(`/api/admin/review?${params}`, { headers: { ...(await getAuthHeaders()) } });
             const data = await res.json();
             setEvents(data.events || []);
             setCounts(data.counts);
@@ -78,7 +79,7 @@ export default function ReviewPage() {
         try {
             const res = await fetch(`/api/link-events?id=${encodeURIComponent(e.url || e.firestoreId)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
                 body: JSON.stringify({ hidden }),
             });
             if (!res.ok) throw new Error(await res.text());

@@ -137,6 +137,18 @@ else
     echo "⚠️ AI-audit misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Re-aggregera EFTER alla quality-svep ───────────────────────────────────
+# Den publika feeden byggs från SQLite. Aggregeringen inuti scrapern (index.ts)
+# körs FÖRE svepen ovan (hide-foreign, llm-enrich, audit), så vi måste aggregera
+# om här för att dolda/berikade events ska nå användarna samma natt.
+echo "" >> "$LOG_FILE"
+echo "── RE-AGGREGATE (efter quality-svep) ──" >> "$LOG_FILE"
+if npm run aggregate >> "$LOG_FILE" 2>&1; then
+    echo "Re-aggregate OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Re-aggregate misslyckades — feeden kan vara en körning gammal." >> "$LOG_FILE"
+fi
+
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
 SAVED_COUNT="$(grep -cE '✅ Saved:|✅ Sparat:|✅.*Sparade' "$LOG_FILE" || echo 0)"
 SKIPPED_COUNT="$(grep -cE 'already exists:|Event already exists:' "$LOG_FILE" || echo 0)"

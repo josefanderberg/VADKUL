@@ -19,6 +19,7 @@
 
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
+import { setHidden } from '../utils/sqliteHelper';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -127,6 +128,8 @@ async function main() {
         const slice = matches.slice(i, i + 400);
         for (const m of slice) batch.update(db.collection('linkEvents').doc(m.id), { hidden: true });
         await batch.commit();
+        // Spegla till SQLite — den publika feeden aggregeras därifrån, inte från Firestore.
+        for (const m of slice) setHidden(m.url, true);
         hidden += slice.length;
         console.log(`  ...hidden ${hidden}/${matches.length}`);
     }
