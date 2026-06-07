@@ -62,6 +62,16 @@ if [ "$WITH_CLEANUP" = "--with-cleanup" ]; then
     else
         echo "⚠️ Cleanup misslyckades — fortsätter ändå med scrapern." >> "$LOG_FILE"
     fi
+
+    # SQLite-housekeeping: rensa passerade events ur lokala events.db (default 30d).
+    # Firestore rensas av cleanup-old ovan; detta håller den lokala spegeln slank.
+    echo "── PRUNE SQLITE (gamla events) ──" >> "$LOG_FILE"
+    if npm run prune-old >> "$LOG_FILE" 2>&1; then
+        PRUNED_COUNT="$(grep -oE '"deleted":[[:space:]]*[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+        echo "Prune OK (raderade=${PRUNED_COUNT:-0})" >> "$LOG_FILE"
+    else
+        echo "⚠️ Prune misslyckades — fortsätter ändå." >> "$LOG_FILE"
+    fi
 fi
 
 # ─── Scraper ────────────────────────────────────────────────────────────────

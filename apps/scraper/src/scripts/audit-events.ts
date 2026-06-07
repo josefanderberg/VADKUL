@@ -80,7 +80,7 @@ async function main() {
         console.log(`Hoppar över ${alreadyAudited.size} redan auditerade.\n`);
     }
 
-    let stats = { ok: 0, suspect: 0, junk: 0, error: 0, hidden: 0 };
+    let stats = { ok: 0, suspect: 0, junk: 0, error: 0, hidden: 0, gone: 0 };
     const gpsStats = { ok: 0, suspect: 0, wrong: 0, 'no-coords': 0, unknown: 0, hidden: 0, llmCalls: 0 };
     const startedAt = Date.now();
 
@@ -184,8 +184,15 @@ async function main() {
                 price: result.price,
             });
         } catch (e) {
-            stats.error++;
-            console.error(`     ❌ DB write fail: ${(e as Error).message}`);
+            const err = e as Error & { code?: number };
+            // Firestore NOT_FOUND (gRPC code 5): doc har raderats av cleanup-old
+            // tidigare i samma run. Ingen att uppdatera — tyst skip, inte fel.
+            if (err.code === 5) {
+                stats.gone++;
+            } else {
+                stats.error++;
+                console.error(`     ❌ DB write fail: ${err.message}`);
+            }
         }
     }
 
@@ -197,6 +204,7 @@ async function main() {
     console.log(`  ❓ suspect:    ${stats.suspect}`);
     console.log(`  🗑️ junk:       ${stats.junk}`);
     console.log(`  🌍 hidden:     ${stats.hidden}  (auto-hide om aktiverat)`);
+    console.log(`  👻 gone:       ${stats.gone}  (Firestore-doc raderat av cleanup-old — skippat)`);
     console.log(`  ❌ errors:     ${stats.error}`);
     if (CHECK_GPS) {
         console.log('\n=== GPS-check ===');
