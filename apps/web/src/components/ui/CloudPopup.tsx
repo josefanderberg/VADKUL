@@ -58,6 +58,15 @@ interface CloudPopupProps {
   /** True när kartan är lutad. Då stabiliseras molnet rakt upp (ingen spin-
    *  rotation) så ansiktet står rakt — ögon upp, mun ner. */
   tilted?: boolean;
+  /** Föräldern svarar med molnets perspektiv-djup vid en given skärmpunkt
+   *  (1 = normalt djup, < 1 = långt bort i lutad vy). Anropas varje glide-frame
+   *  med molnets nuvarande punkt så att friktionen ökar progressivt när molnet
+   *  glider in i horisonten — då bromsas det in och flyger inte ut över kanten.
+   *  Returnera 1 (eller utelämna proppen) för platt vy / ingen dämpning. */
+  getDepthAtPoint?: (screenX: number, screenY: number) => number;
+  /** Stacking-ordning för molnets overlay. Föräldern sätter det så att det
+   *  MINSTA molnet alltid ligger överst (det stora hamnar bakom). Default 9999. */
+  zIndex?: number;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -346,8 +355,13 @@ export default function CloudPopup({
   incomingMood,
   incomingMoodNonce,
   onTap,
-  tilted = false
+  tilted = false,
+  getDepthAtPoint,
+  zIndex = 9999
 }: CloudPopupProps) {
+  // Ref-cache så glide-tick alltid läser senaste callbacken utan att bindas om.
+  const getDepthAtPointRef = useRef(getDepthAtPoint);
+  getDepthAtPointRef.current = getDepthAtPoint;
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [clicked, setClicked] = useState(false);
@@ -418,6 +432,49 @@ export default function CloudPopup({
     }
     prevIsDraggingRef.current = isDragging;
   }, [isDragging]);
+
+  // Dubbelklicks-effekt: när man dubbelklickar växlar kamera-följningen
+  // (`following`). Centrerar man IN på molnet (following → true) gör det ett extra
+  // högt skutt uppåt; går man tillbaka till mood-läget (following → false) landar
+  // det med en studs. Skuttet körs via Web Animations API på en egen wrapper så
+  // det stackas ovanpå float-animationen utan att slåss om transform-egenskapen,
+  // och en "skvätt"-burst (puff-streck nedåt/åt sidorna) ritas samtidigt.
+  const jumpWrapperRef = useRef<HTMLDivElement>(null);
+  const prevFollowingRef = useRef(following);
+  const [splashKey, setSplashKey] = useState(0);
+  const [splashDir, setSplashDir] = useState<'up' | 'down'>('up');
+  useEffect(() => {
+    if (following === prevFollowingRef.current) return;
+    const goingUp = following;
+    prevFollowingRef.current = following;
+    setSplashDir(goingUp ? 'up' : 'down');
+    setSplashKey(k => k + 1);
+    const el = jumpWrapperRef.current;
+    if (!el || typeof el.animate !== 'function') return;
+    if (goingUp) {
+      // Centrering: kraftigt skutt uppåt med liten stretch, sedan tillbaka.
+      el.animate(
+        [
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' },
+          { transform: 'translateY(-80px) scaleX(0.92) scaleY(1.12)', offset: 0.4 },
+          { transform: 'translateY(-64px) scaleX(1.02) scaleY(0.98)', offset: 0.62 },
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
+        ],
+        { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      );
+    } else {
+      // Tillbaka till mood-läget: landar uppifrån med en squash-studs.
+      el.animate(
+        [
+          { transform: 'translateY(-48px) scaleX(0.96) scaleY(1.05)' },
+          { transform: 'translateY(12px) scaleX(1.16) scaleY(0.82)', offset: 0.55 },
+          { transform: 'translateY(-6px) scaleX(0.98) scaleY(1.03)', offset: 0.78 },
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
+        ],
+        { duration: 660, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+      );
+    }
+  }, [following]);
   // Resting rotation = the rotation the cloud has when its position has been
   // stable for a short moment. It only updates after any kind of motion
   // (cloud drag, glide, OR map pan moving anchorPos) has settled. While
@@ -745,7 +802,17 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       setOffset({ x: curX, y: curY });
       setDragSpinAngle(curSpinAngle);
 
-      const decay = Math.exp(-friction * dt / 1000);
+      // Djup-skalad friktion: i lutad vy returnerar föräldern < 1 för molnets
+      // nuvarande skärmpunkt när det ligger långt bort. Vi delar friktionen
+      // med djupet → ju mindre djup desto snabbare avtagande hastighet, så
+      // ett moln som kastas in i horisonten bromsas in och stannar innan det
+      // glider ut över skärmkanten. Platt vy / ingen callback → depth = 1.
+      const depthCb = getDepthAtPointRef.current;
+      const depth = depthCb
+        ? Math.max(depthCb(baseX + curX, baseY + curY), 0.25)
+        : 1;
+      const effectiveFriction = friction / depth;
+      const decay = Math.exp(-effectiveFriction * dt / 1000);
       curVx *= decay;
       curVy *= decay;
       vSpin *= decay;
@@ -970,9 +1037,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     ? transformStyle
     : `${cloudBodyRotation} scale(1.05)`;
 
+  // z-index sätts via inline-stil (zIndex-propen) så föräldern kan ordna molnen
+  // sinsemellan — minsta överst. Behåller annars samma lager som tidigare (9999).
   const outerClassName = isAnchored
-    ? "fixed inset-0 z-[9999] pointer-events-none"
-    : `fixed inset-0 z-[9999] flex pointer-events-none ${wrapperPositionClass}`;
+    ? "fixed inset-0 pointer-events-none"
+    : `fixed inset-0 flex pointer-events-none ${wrapperPositionClass}`;
 
   const draggableStyle: React.CSSProperties = isAnchored
     ? {
@@ -1000,7 +1069,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // Vilo-formen är avlång (klassiskt moln); vid klick morphar den till det runda
   // "default"-molnet. Samma uppsättning används av skuggor + förgrund så hela
   // molnet morphar som en enhet (cx/cy/r-transition).
-  const activeCircles = clicked ? baseCircles : elongatedCircles;
+  // När kartan är lutad återgår molnet till den breda formen (som i start-läget)
+  // — då ser det bättre ut i 3D-vyn. `clicked` styr fortfarande ansikte/text,
+  // så ansiktet och all funktionalitet behålls; `tilted` styr bara silhuetten.
+  const activeCircles = (clicked && !tilted) ? baseCircles : elongatedCircles;
 
   const getShadowCircles = (intensity: number, maxShift: number) => {
     const rawDx = faceVec.x * intensity;
@@ -1138,6 +1210,34 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               </g>
             )}
 
+            {/* Hopp-"skvätt": puff-streck som blixtrar nedåt/åt sidorna i samma
+                stund molnet skuttar (centrering) eller landar (tillbaka till
+                mood-läget). key=splashKey remountar gruppen så CSS-animationen
+                startar om vid varje dubbelklick. */}
+            {splashKey > 0 && (
+              <g key={`jump-splash-${splashKey}`} className="animate-cloud-jump-splash" style={{ pointerEvents: 'none' }}>
+                {Array.from({ length: 9 }).map((_, i) => {
+                  // Nedre halvan, fläktat från höger (~22°) till vänster (~158°).
+                  const angle = Math.PI * 0.12 + (i / 8) * (Math.PI * 0.76);
+                  const rInner = splashDir === 'down' ? 70 : 76;
+                  const rOuter = splashDir === 'down' ? 124 : 104;
+                  const x1 = 150 + Math.cos(angle) * rInner;
+                  const y1 = 135 + Math.sin(angle) * rInner;
+                  const x2 = 150 + Math.cos(angle) * rOuter;
+                  const y2 = 135 + Math.sin(angle) * rOuter;
+                  return (
+                    <line
+                      key={i}
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="#7dd3fc"
+                      strokeWidth={splashDir === 'down' ? 6 : 5}
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+              </g>
+            )}
+
             <defs>
               <filter id="cloud-blur" filterUnits="userSpaceOnUse" x="-100" y="-100" width="540" height="440">
                 <feGaussianBlur stdDeviation="1.5" />
@@ -1165,8 +1265,8 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   };
 
   return (
-    <div className={outerClassName}>
-      <div 
+    <div className={outerClassName} style={{ zIndex }}>
+      <div
         className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${leaving ? 'opacity-0' : 'opacity-100'}`}
         style={{ transition: isDragging ? 'none' : 'opacity 0.5s ease' }}
       />
@@ -1194,6 +1294,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}
           style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
         >
+        {/* Hopp-wrapper: dubbelklicks-skuttet (Web Animations API) körs här så det
+            stackas ovanpå float utan att slåss om transform-egenskapen. */}
+        <div ref={jumpWrapperRef} style={{ transformOrigin: '50% 56.25%', willChange: 'transform' }}>
 
           {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
 
@@ -1217,6 +1320,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               borderRadius: '50%'
             }}
           />
+        </div>
         </div>
         </div>
         </div>

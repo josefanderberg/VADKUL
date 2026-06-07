@@ -391,6 +391,7 @@ export default function HomePage() {
                 guessLine={guessLine}
                 tilted={mapTilted}
                 onSunCloudTap={handleSunCloudTap}
+                onToggleTilt={handleToggleTilt}
             />
 
             {/* Modal för att skapa event */}
@@ -533,7 +534,7 @@ export default function HomePage() {
                         <button
                             type="button"
                             onClick={startRound}
-                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors ${
+                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors whitespace-nowrap ${
                                 gameResult === 'correct'
                                     ? 'bg-white text-emerald-600 hover:bg-emerald-50'
                                     : 'bg-[#006AA7] text-white hover:bg-[#005590]'
