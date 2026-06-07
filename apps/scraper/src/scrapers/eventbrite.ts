@@ -13,6 +13,7 @@ import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { searchGoogleImage } from '../utils/imageSearch';
+import { extractEventFromHtml } from '../utils/jsonLdExtract';
 
 // --- DATE WINDOW ---
 const now = new Date();
@@ -244,7 +245,7 @@ async function extractCards(browser: Browser, cityUrl: string): Promise<RawCard[
  * Besöker en enskild Eventbrite-eventsida och hämtar beskrivning + full cover-bild.
  * Bilder blockeras (meta-taggar räcker), vilket håller nere laddningstiden.
  */
-async function scrapeEventPage(browser: Browser, url: string): Promise<{ description: string; coverImage: string }> {
+async function scrapeEventPage(browser: Browser, url: string): Promise<{ description: string; coverImage: string; price: string }> {
     const page = await browser.newPage();
     try {
         await page.setViewport({ width: 1280, height: 900 });
@@ -261,41 +262,28 @@ async function scrapeEventPage(browser: Browser, url: string): Promise<{ descrip
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
         await new Promise(r => setTimeout(r, 1000));
 
-        return await page.evaluate(() => {
-            // 1. og:image — bättre kvalitet än list-thumbnail
+        // 1. JSON-LD: description + price (robust mot top-level array / subtyper).
+        const html = await page.content();
+        const jsonLd = extractEventFromHtml(html);
+
+        // 2. DOM-fallbacks (og:image alltid, description om JSON-LD tom).
+        const dom = await page.evaluate(() => {
             const ogImage = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
-
-            // 2. Beskrivning — försök i tur och ordning
-            // a) JSON-LD Event.description
-            let jsonDesc = '';
-            for (const script of Array.from(document.querySelectorAll('script[type="application/ld+json"]'))) {
-                try {
-                    const d = JSON.parse(script.textContent || '');
-                    const evt = Array.isArray(d['@graph'])
-                        ? d['@graph'].find((x: any) => x['@type'] === 'Event')
-                        : d['@type'] === 'Event' ? d : null;
-                    if (evt?.description) { jsonDesc = String(evt.description).trim(); break; }
-                } catch { /* ignore */ }
-            }
-
-            // b) og:description meta
             const ogDesc = (document.querySelector('meta[property="og:description"]') as HTMLMetaElement)?.content
                 || (document.querySelector('meta[name="description"]') as HTMLMetaElement)?.content
                 || '';
-
-            // c) Eventbrites beskrivnings-div
             const descEl = document.querySelector(
                 '[data-testid="event-description"], .eds-text--body-large, .structured-content-rich-text, .event-description'
             );
             const domDesc = descEl?.textContent?.trim() || '';
-
-            const description = jsonDesc || domDesc || ogDesc || '';
-
-            return { description, coverImage: ogImage };
+            return { ogImage, ogDesc, domDesc };
         });
+
+        const description = jsonLd.description || dom.domDesc || dom.ogDesc || '';
+        return { description, coverImage: dom.ogImage, price: jsonLd.price };
     } catch (err) {
         // Tyst misslyckas — vi faller tillbaka på kortets thumbnail + DuckDuckGo
-        return { description: '', coverImage: '' };
+        return { description: '', coverImage: '', price: '' };
     } finally {
         await page.close();
     }
@@ -380,7 +368,7 @@ export async function scrapeEventbrite() {
                         category: classifyEvent(card.title, ''),
                         createdAt: new Date(),
                         coverImage,
-                        price: '',
+                        price: eventDetails.price || '',
                         description: eventDetails.description || '',
                         isLocationVerified: coords !== null,
                     });

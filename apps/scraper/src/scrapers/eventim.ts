@@ -16,6 +16,7 @@ import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { searchGoogleImage } from '../utils/imageSearch';
+import { extractOffersPrice } from '../utils/jsonLdExtract';
 
 // --- DATE WINDOW: 30 dagar ---
 const now = new Date();
@@ -70,6 +71,7 @@ interface EventimItem {
     eventUrl: string;
     image?: string;
     description?: string;
+    price?: string;
 }
 
 async function extractCategoryItems(browser: Browser, catUrl: string): Promise<EventimItem[]> {
@@ -88,11 +90,11 @@ async function extractCategoryItems(browser: Browser, catUrl: string): Promise<E
         await page.goto(catUrl, { waitUntil: 'networkidle2', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2000));
 
-        const items: EventimItem[] = await page.evaluate(() => {
+        const rawItems = await page.evaluate(() => {
             const results: {
                 name: string; startDate: string; endDate?: string;
                 locationName: string; locationCity: string; eventUrl: string;
-                image?: string; description?: string;
+                image?: string; description?: string; offers?: any;
             }[] = [];
 
             document.querySelectorAll('script[type="application/ld+json"]').forEach(scriptEl => {
@@ -121,6 +123,7 @@ async function extractCategoryItems(browser: Browser, catUrl: string): Promise<E
                             locationName: item.location?.name || '',
                             locationCity: item.location?.address?.addressLocality || '',
                             eventUrl,
+                            offers: item.offers ?? null,
                         });
                     }
                 }
@@ -128,6 +131,11 @@ async function extractCategoryItems(browser: Browser, catUrl: string): Promise<E
             return results;
         });
 
+        // Normalisera pris ur offers i Node (delad helper).
+        const items: EventimItem[] = rawItems.map(({ offers, ...rest }) => ({
+            ...rest,
+            price: extractOffersPrice(offers),
+        }));
         return items;
     } finally {
         await page.close();
@@ -207,7 +215,7 @@ export async function scrapeEventim() {
                         category,
                         createdAt: new Date(),
                         coverImage: item.image || await searchGoogleImage(googlePage, item.name) || null,
-                        price: '',
+                        price: item.price || '',
                         description: item.description || '',
                         isLocationVerified: coords !== null,
                     });

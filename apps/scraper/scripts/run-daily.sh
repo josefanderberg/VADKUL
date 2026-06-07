@@ -62,6 +62,16 @@ if [ "$WITH_CLEANUP" = "--with-cleanup" ]; then
     else
         echo "⚠️ Cleanup misslyckades — fortsätter ändå med scrapern." >> "$LOG_FILE"
     fi
+
+    # SQLite-housekeeping: rensa passerade events ur lokala events.db (default 30d).
+    # Firestore rensas av cleanup-old ovan; detta håller den lokala spegeln slank.
+    echo "── PRUNE SQLITE (gamla events) ──" >> "$LOG_FILE"
+    if npm run prune-old >> "$LOG_FILE" 2>&1; then
+        PRUNED_COUNT="$(grep -oE '"deleted":[[:space:]]*[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+        echo "Prune OK (raderade=${PRUNED_COUNT:-0})" >> "$LOG_FILE"
+    else
+        echo "⚠️ Prune misslyckades — fortsätter ändå." >> "$LOG_FILE"
+    fi
 fi
 
 # ─── Scraper ────────────────────────────────────────────────────────────────
@@ -89,6 +99,18 @@ if npm run hide-foreign -- --apply >> "$LOG_FILE" 2>&1; then
     echo "Hide-foreign OK (gömda=${HIDDEN_FOREIGN:-0})" >> "$LOG_FILE"
 else
     echo "⚠️ Hide-foreign misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
+# ─── Dölj junk-keywords (vaccin etc) — deterministisk regex-filter ──────────
+# Lägg till nya patterns i JUNK_PATTERNS-arrayen i hide-junk-keywords.ts.
+# Körs efter hide-foreign så samma "filtreringssvep" är klart innan audit.
+echo "" >> "$LOG_FILE"
+echo "── HIDE JUNK-KEYWORDS (vaccin etc) ──" >> "$LOG_FILE"
+if npm run hide-junk -- --apply >> "$LOG_FILE" 2>&1; then
+    HIDDEN_JUNK="$(grep -oE 'SQLite hidden:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Hide-junk OK (gömda=${HIDDEN_JUNK:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Hide-junk misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
@@ -137,16 +159,16 @@ else
     echo "⚠️ AI-audit misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
-# ─── Re-aggregera EFTER alla quality-svep ───────────────────────────────────
-# Den publika feeden byggs från SQLite. Aggregeringen inuti scrapern (index.ts)
-# körs FÖRE svepen ovan (hide-foreign, llm-enrich, audit), så vi måste aggregera
-# om här för att dolda/berikade events ska nå användarna samma natt.
+# ─── Re-aggregate så audit-fyllda fält (price/category/emoji + hidden) når web ──
+# Aggregate kördes redan av npm-scriptet ovan (start/today), men då hade audit
+# inte hunnit fylla i price/category/emoji eller dölja junk för dagens nya events.
+# Ny aggregate nu garanterar att dagens audit-resultat publiceras samma dygn.
 echo "" >> "$LOG_FILE"
-echo "── RE-AGGREGATE (efter quality-svep) ──" >> "$LOG_FILE"
+echo "── RE-AGGREGATE (efter audit, så priser/kategorier/döljningar syns idag) ──" >> "$LOG_FILE"
 if npm run aggregate >> "$LOG_FILE" 2>&1; then
     echo "Re-aggregate OK" >> "$LOG_FILE"
 else
-    echo "⚠️ Re-aggregate misslyckades — feeden kan vara en körning gammal." >> "$LOG_FILE"
+    echo "⚠️ Re-aggregate misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
@@ -352,6 +374,18 @@ else
 fi
 
 rm -f "$PAYLOAD_FILE" /tmp/vadkul-teams-resp
+
+# ─── Andra Teams-kort: kvalitet + 7-dagars trend (60s efter huvudkortet) ────
+# Detacheras så vi inte blockerar exit. Sover en minut för att inte krocka
+# visuellt med huvudkortet i samma Teams-tråd.
+echo "" >> "$LOG_FILE"
+echo "── QUALITY-STATS (postas om 60s) ──" >> "$LOG_FILE"
+(
+    sleep 60
+    cd "$SCRAPER_DIR" && npm run quality-stats >> "$LOG_FILE" 2>&1
+) &
+QUALITY_PID=$!
+echo "Quality-stats schemalagd (PID $QUALITY_PID, postas ~$(date -v+1M '+%H:%M' 2>/dev/null || date -d '+1 minute' '+%H:%M'))" >> "$LOG_FILE"
 
 echo "" >> "$LOG_FILE"
 echo "Klart: $(date '+%Y-%m-%d %H:%M:%S') (exit=$EXIT_CODE, duration=${DURATION}s)" >> "$LOG_FILE"

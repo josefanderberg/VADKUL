@@ -228,7 +228,7 @@ export default function CreateEvent() {
     // Vi rensar BARA vid lyckad publicering.
 
     const handlePromoSuccess = (_code: string, customName: string) => {
-        setFormData({ ...formData, type: 'campus', customCategory: customName });
+        setFormData({ ...formData, type: 'other', customCategory: customName });
         toast.success(`Kategori inställd: ${customName} `);
     };
 
@@ -582,7 +582,6 @@ export default function CreateEvent() {
                         <h3 className="text-lg font-bold mb-4 text-foreground">Vad vill du hitta på?</h3>
                         <div className="flex flex-wrap gap-3 justify-center">
                             {CATEGORY_LIST
-                                .filter(cat => cat.id !== 'campus') // Dölj "Nation & Kår" från listan
                                 .map(cat => {
                                     const isSelected = formData.type === cat.id;
 

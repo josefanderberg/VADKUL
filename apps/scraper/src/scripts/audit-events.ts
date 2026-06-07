@@ -18,7 +18,9 @@
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
-import { setHidden } from '../utils/sqliteHelper';
+import { setHidden, setEventAuditWithCategory } from '../utils/sqliteHelper';
+
+const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 
 const args = (() => {
     const out: any = {};
@@ -78,7 +80,7 @@ async function main() {
         console.log(`Hoppar över ${alreadyAudited.size} redan auditerade.\n`);
     }
 
-    let stats = { ok: 0, suspect: 0, junk: 0, error: 0, hidden: 0 };
+    let stats = { ok: 0, suspect: 0, junk: 0, error: 0, hidden: 0, gone: 0 };
     const gpsStats = { ok: 0, suspect: 0, wrong: 0, 'no-coords': 0, unknown: 0, hidden: 0, llmCalls: 0 };
     const startedAt = Date.now();
 
@@ -102,7 +104,8 @@ async function main() {
             : '✅';
         const swMark = result.inSweden ? '' : ' [🌍 EJ SVERIGE]';
         const progress = `[${i + 1}/${rows.length}]`;
-        console.log(`  ${progress} ${prefix} ${result.verdict}/${result.confidence}${swMark} | ${(r.title || '').slice(0, 50)} → ${result.reason}`);
+        const catTag = `${result.category}/${result.categoryConfidence}`;
+        console.log(`  ${progress} ${prefix} ${result.verdict}/${result.confidence} 🏷️ ${catTag}${swMark} | ${(r.title || '').slice(0, 50)} → ${result.reason}`);
 
         // GPS-check körs sekventiellt efter event-audit (Nominatim 1 req/s).
         // Hoppa om vi redan vet att eventet är junk — det ska bort ändå.
@@ -133,10 +136,19 @@ async function main() {
                 confidence: result.confidence,
                 reason: result.reason,
                 inSweden: result.inSweden,
+                category: result.category,
+                categoryConfidence: result.categoryConfidence,
                 at: new Date(),
-                model: process.env.OLLAMA_AUDIT_MODEL ?? 'qwen3:8b',
+                model: AUDIT_MODEL,
             },
         };
+
+        // Top-level category skrivs över när audit ger high-confidence —
+        // scraperns gissning är ofta 'other' så LLM-klassningen är bättre signal.
+        // Vid medium/low behåller vi befintlig category för att inte degradera bra rader.
+        if (result.categoryConfidence === 'high') {
+            updates.category = result.category;
+        }
 
         if (gpsResult) {
             updates.aiAudit.gpsCheck = {
@@ -163,13 +175,28 @@ async function main() {
 
         try {
             await db.collection('linkEvents').doc(r.firestoreId).update(updates);
+            setEventAuditWithCategory(r.url, {
+                verdict: result.verdict,
+                confidence: result.confidence,
+                category: result.category,
+                categoryConfidence: result.categoryConfidence,
+                emoji: result.emoji,
+                price: result.price,
+            });
             // Spegla hidden till SQLite — den publika feeden aggregeras från SQLite
             // (aggregate-events.ts), inte Firestore. Utan detta når auto-hide aldrig
             // användarna och junk återpubliceras vid varje körning.
             if (updates.hidden === true) setHidden(r.url, true);
         } catch (e) {
-            stats.error++;
-            console.error(`     ❌ DB write fail: ${(e as Error).message}`);
+            const err = e as Error & { code?: number };
+            // Firestore NOT_FOUND (gRPC code 5): doc har raderats av cleanup-old
+            // tidigare i samma run. Ingen att uppdatera — tyst skip, inte fel.
+            if (err.code === 5) {
+                stats.gone++;
+            } else {
+                stats.error++;
+                console.error(`     ❌ DB write fail: ${err.message}`);
+            }
         }
     }
 
@@ -181,6 +208,7 @@ async function main() {
     console.log(`  ❓ suspect:    ${stats.suspect}`);
     console.log(`  🗑️ junk:       ${stats.junk}`);
     console.log(`  🌍 hidden:     ${stats.hidden}  (auto-hide om aktiverat)`);
+    console.log(`  👻 gone:       ${stats.gone}  (Firestore-doc raderat av cleanup-old — skippat)`);
     console.log(`  ❌ errors:     ${stats.error}`);
     if (CHECK_GPS) {
         console.log('\n=== GPS-check ===');
