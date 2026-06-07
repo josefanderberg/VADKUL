@@ -198,8 +198,14 @@ export async function scrapeTickster() {
                     lng = jsonLdLng;
                 } else {
                     const coords = await geocodeVenue(finalLocation);
-                    lat = coords ? coords[0] : 56.8796;
-                    lng = coords ? coords[1] : 14.8094;
+                    if (!coords) {
+                        // Geokodning misslyckades — hoppa över hellre än att stämpla
+                        // eventet på Stortorget (vilket staplar falska pins på centrum).
+                        console.warn(`  ⏭️ Hoppar över "${title}" — kunde inte geokoda "${finalLocation}"`);
+                        continue;
+                    }
+                    lat = coords[0];
+                    lng = coords[1];
                 }
 
                 const linkEvent = {

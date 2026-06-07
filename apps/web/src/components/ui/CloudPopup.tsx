@@ -41,6 +41,32 @@ interface CloudPopupProps {
    *  latch the camera onto a mid-flight throw (focus button) and chase its
    *  predicted landing point. */
   glideStateRef?: React.MutableRefObject<{ sp: { x: number; y: number }; vx: number; vy: number } | null>;
+  /** Live drag-offset i pixlar relativt anchorPos. Fyrar varje gång användaren
+   *  drar molnet så föräldern kan rita t.ex. slangbella-gummiband som hänger
+   *  med molnet i realtid. (0, 0) när molnet inte är draget. */
+  onLiveOffsetChange?: (ox: number, oy: number) => void;
+  /** Rapporterar molnets nuvarande (manuellt valda) mood uppåt — så föräldern
+   *  kan föra över det till det andra molnet när man drar ett moln över det. */
+  onMoodChange?: (mood: CloudExpression | null) => void;
+  /** Mood som "stämplas" på molnet utifrån (när ett annat moln dras över det).
+   *  Tillämpas när incomingMoodNonce ökar. */
+  incomingMood?: CloudExpression | null;
+  incomingMoodNonce?: number;
+  /** Fyrar vid ett tryck (utan drag) på molnet — sol-molnet använder det för
+   *  att fälla tillbaka kartans lutning. */
+  onTap?: () => void;
+  /** True när kartan är lutad. Då stabiliseras molnet rakt upp (ingen spin-
+   *  rotation) så ansiktet står rakt — ögon upp, mun ner. */
+  tilted?: boolean;
+  /** Föräldern svarar med molnets perspektiv-djup vid en given skärmpunkt
+   *  (1 = normalt djup, < 1 = långt bort i lutad vy). Anropas varje glide-frame
+   *  med molnets nuvarande punkt så att friktionen ökar progressivt när molnet
+   *  glider in i horisonten — då bromsas det in och flyger inte ut över kanten.
+   *  Returnera 1 (eller utelämna proppen) för platt vy / ingen dämpning. */
+  getDepthAtPoint?: (screenX: number, screenY: number) => number;
+  /** Stacking-ordning för molnets overlay. Föräldern sätter det så att det
+   *  MINSTA molnet alltid ligger överst (det stora hamnar bakom). Default 9999. */
+  zIndex?: number;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -136,6 +162,178 @@ function CloudLayer({
 }
 
 
+// Ansiktet ritas i lokala face-koordinater (SVG); föräldern ger oss positionerna
+// för ögon och mun-anchor + kontrollpunkt. Färgen "#bae6fd" matchar resten av
+// uttrycken (sky-200). En `<g>`-wrapper gör att uttrycksbyten kan animeras med
+// opacity/transform om vi vill, men nu räcker ett direkt byte.
+type FacePoints = {
+  leftEye: { x: number; y: number };
+  rightEye: { x: number; y: number };
+  mouthLeft: { x: number; y: number };
+  mouthRight: { x: number; y: number };
+  mouthCtrl: { x: number; y: number };
+};
+
+export type CloudExpression = 'neutral' | 'blink' | 'wink' | 'dizzy' | 'sleepy' | 'happy' | 'cool' | 'love' | 'surprised' | 'sad';
+
+// Moods man bläddrar igenom genom att klicka på molnet (i ordning). Efter sista
+// moodet → tillbaka till det levande auto-läget (slumpvisa blinkningar m.m.).
+const MOOD_CYCLE: CloudExpression[] = ['neutral', 'happy', 'wink', 'cool', 'love', 'surprised', 'sad', 'sleepy', 'dizzy'];
+
+function renderFace(
+  expression: CloudExpression,
+  p: FacePoints
+) {
+  const C = '#bae6fd';
+  const smile = (
+    <path
+      d={`M ${p.mouthLeft.x} ${p.mouthLeft.y} Q ${p.mouthCtrl.x} ${p.mouthCtrl.y} ${p.mouthRight.x} ${p.mouthRight.y}`}
+      stroke={C} strokeWidth="7" strokeLinecap="round" fill="none"
+    />
+  );
+  const eyeOpen = (cx: number, cy: number) => (
+    <circle cx={cx} cy={cy} r="7" fill={C} />
+  );
+  // Tunn vågrät linje = stängt öga (blink).
+  const eyeClosed = (cx: number, cy: number) => (
+    <line x1={cx - 7} y1={cy} x2={cx + 7} y2={cy} stroke={C} strokeWidth="5" strokeLinecap="round" />
+  );
+  // ^^ — glada kisögon.
+  const eyeHappy = (cx: number, cy: number) => (
+    <path
+      d={`M ${cx - 7} ${cy + 3} Q ${cx} ${cy - 6} ${cx + 7} ${cy + 3}`}
+      stroke={C} strokeWidth="5" strokeLinecap="round" fill="none"
+    />
+  );
+  // Halvmåne = sömnigt halvslutet öga.
+  const eyeSleepy = (cx: number, cy: number) => (
+    <path
+      d={`M ${cx - 7} ${cy + 1} Q ${cx} ${cy + 6} ${cx + 7} ${cy + 1}`}
+      stroke={C} strokeWidth="5" strokeLinecap="round" fill="none"
+    />
+  );
+  // Spiral för dizzy (förenklat som en X-formad markering — tydligt på små storlekar).
+  const eyeDizzy = (cx: number, cy: number) => (
+    <g stroke={C} strokeWidth="3.5" strokeLinecap="round" fill="none">
+      <path d={`M ${cx - 7} ${cy - 7} L ${cx + 7} ${cy + 7}`} />
+      <path d={`M ${cx + 7} ${cy - 7} L ${cx - 7} ${cy + 7}`} />
+    </g>
+  );
+
+  switch (expression) {
+    case 'happy':
+      return (
+        <>
+          {eyeHappy(p.leftEye.x, p.leftEye.y)}
+          {eyeHappy(p.rightEye.x, p.rightEye.y)}
+          <ellipse cx={150} cy={p.leftEye.y + 36} rx="9" ry="11" fill={C} />
+        </>
+      );
+    case 'blink':
+      return (
+        <>
+          {eyeClosed(p.leftEye.x, p.leftEye.y)}
+          {eyeClosed(p.rightEye.x, p.rightEye.y)}
+          {smile}
+        </>
+      );
+    case 'wink':
+      return (
+        <>
+          {eyeClosed(p.leftEye.x, p.leftEye.y)}
+          {eyeOpen(p.rightEye.x, p.rightEye.y)}
+          {smile}
+        </>
+      );
+    case 'dizzy':
+      return (
+        <>
+          {eyeDizzy(p.leftEye.x, p.leftEye.y)}
+          {eyeDizzy(p.rightEye.x, p.rightEye.y)}
+          {/* Vågig mun. */}
+          <path
+            d={`M ${p.mouthLeft.x} ${p.mouthLeft.y + 4} q 6 -8 12 0 t 12 0 t 12 0`}
+            stroke={C} strokeWidth="5" strokeLinecap="round" fill="none"
+          />
+        </>
+      );
+    case 'sleepy':
+      return (
+        <>
+          {eyeSleepy(p.leftEye.x, p.leftEye.y)}
+          {eyeSleepy(p.rightEye.x, p.rightEye.y)}
+          {/* Liten avslappnad mun. */}
+          <path
+            d={`M ${p.mouthLeft.x + 4} ${p.mouthCtrl.y - 4} Q ${p.mouthCtrl.x} ${p.mouthCtrl.y - 1} ${p.mouthRight.x - 4} ${p.mouthCtrl.y - 4}`}
+            stroke={C} strokeWidth="5" strokeLinecap="round" fill="none"
+          />
+        </>
+      );
+    case 'cool': {
+      // Solglasögon: två mörka linser + brygga, plus avslappnat leende.
+      const lw = 20, lh = 14, ry = p.leftEye.y;
+      return (
+        <>
+          <rect x={p.leftEye.x - lw / 2} y={ry - lh / 2} width={lw} height={lh} rx="5" fill="#0f172a" opacity="0.92" />
+          <rect x={p.rightEye.x - lw / 2} y={ry - lh / 2} width={lw} height={lh} rx="5" fill="#0f172a" opacity="0.92" />
+          <line x1={p.leftEye.x + lw / 2 - 2} y1={ry} x2={p.rightEye.x - lw / 2 + 2} y2={ry} stroke="#0f172a" strokeWidth="3" />
+          <line x1={p.leftEye.x - 5} y1={ry - 3} x2={p.leftEye.x - 1} y2={ry - 3} stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+          {smile}
+        </>
+      );
+    }
+    case 'love': {
+      // Hjärtögon (två puffar + en triangel = rent hjärta) + stort leende.
+      const heart = (cx: number, cy: number) => (
+        <g fill="#fb7185">
+          <circle cx={cx - 3.2} cy={cy - 2} r="4" />
+          <circle cx={cx + 3.2} cy={cy - 2} r="4" />
+          <path d={`M ${cx - 6.6} ${cy - 0.2} L ${cx} ${cy + 7} L ${cx + 6.6} ${cy - 0.2} Z`} />
+        </g>
+      );
+      return (
+        <>
+          {heart(p.leftEye.x, p.leftEye.y)}
+          {heart(p.rightEye.x, p.rightEye.y)}
+          {smile}
+        </>
+      );
+    }
+    case 'surprised':
+      return (
+        <>
+          <circle cx={p.leftEye.x} cy={p.leftEye.y} r="9" fill={C} />
+          <circle cx={p.rightEye.x} cy={p.rightEye.y} r="9" fill={C} />
+          {/* Liten "O"-mun. */}
+          <ellipse cx={150} cy={p.mouthCtrl.y} rx="6" ry="8" fill={C} />
+        </>
+      );
+    case 'sad':
+      return (
+        <>
+          {/* Lite hängande bryn + små ögon + nedåtböjd mun. */}
+          <line x1={p.leftEye.x - 7} y1={p.leftEye.y - 9} x2={p.leftEye.x + 5} y2={p.leftEye.y - 5} stroke={C} strokeWidth="3" strokeLinecap="round" />
+          <line x1={p.rightEye.x + 7} y1={p.rightEye.y - 9} x2={p.rightEye.x - 5} y2={p.rightEye.y - 5} stroke={C} strokeWidth="3" strokeLinecap="round" />
+          <circle cx={p.leftEye.x} cy={p.leftEye.y + 1} r="6" fill={C} />
+          <circle cx={p.rightEye.x} cy={p.rightEye.y + 1} r="6" fill={C} />
+          <path
+            d={`M ${p.mouthLeft.x} ${p.mouthLeft.y + 4} Q ${p.mouthCtrl.x} ${p.mouthLeft.y - 6} ${p.mouthRight.x} ${p.mouthLeft.y + 4}`}
+            stroke={C} strokeWidth="7" strokeLinecap="round" fill="none"
+          />
+        </>
+      );
+    case 'neutral':
+    default:
+      return (
+        <>
+          {eyeOpen(p.leftEye.x, p.leftEye.y)}
+          {eyeOpen(p.rightEye.x, p.rightEye.y)}
+          {smile}
+        </>
+      );
+  }
+}
+
 export default function CloudPopup({
   message,
   autoDismissMs = 0,
@@ -151,8 +349,19 @@ export default function CloudPopup({
   following = false,
   onToggleFollow,
   onFollowFling,
-  glideStateRef
+  glideStateRef,
+  onLiveOffsetChange,
+  onMoodChange,
+  incomingMood,
+  incomingMoodNonce,
+  onTap,
+  tilted = false,
+  getDepthAtPoint,
+  zIndex = 9999
 }: CloudPopupProps) {
+  // Ref-cache så glide-tick alltid läser senaste callbacken utan att bindas om.
+  const getDepthAtPointRef = useRef(getDepthAtPoint);
+  getDepthAtPointRef.current = getDepthAtPoint;
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [clicked, setClicked] = useState(false);
@@ -179,13 +388,110 @@ export default function CloudPopup({
   // Drag states
   const [isDragging, setIsDragging] = useState(false);
   const [isGliding, setIsGliding] = useState(false);
+  // Karaktärsuttryck — molnet är en levande karaktär:
+  //   neutral   — default leende
+  //   blink     — kort blink (~150ms), kommer slumpvis var 3–6:e sekund
+  //   wink      — vänster öga blundar, höger är öppet — typ var 4:e blink
+  //   surprised — stora ögon + liten O-mun, triggas medan man håller molnet
+  //   dizzy     — spiralögon + vågig mun, efter en kraftig spin
+  //   sleepy    — tunga ögonlock + litet leende, efter lång inaktivitet
+  //   happy     — ^^-ögon + öppen glad mun, samma som följa-läget
+  type Expression = CloudExpression;
+  const [expression, setExpression] = useState<Expression>('neutral');
+  // Manuellt valt mood via klick. null = det levande auto-läget (blink/wink/…).
+  const [manualMood, setManualMood] = useState<Expression | null>(null);
+
+  // Rapportera molnets mood uppåt så föräldern kan föra över det till det andra
+  // molnet när man drar ett moln över det.
+  const onMoodChangeRef = useRef(onMoodChange);
+  onMoodChangeRef.current = onMoodChange;
+  useEffect(() => {
+    onMoodChangeRef.current?.(manualMood);
+  }, [manualMood]);
+
+  // Stämpla på ett mood utifrån (när det andra molnet dras över detta). Körs när
+  // nonce ökar, så samma mood kan stämplas på flera gånger.
+  const prevIncomingNonceRef = useRef(0);
+  useEffect(() => {
+    if (incomingMoodNonce && incomingMoodNonce !== prevIncomingNonceRef.current) {
+      prevIncomingNonceRef.current = incomingMoodNonce;
+      setManualMood(incomingMood ?? null);
+      setClicked(true); // se till att ansiktet visas
+    }
+  }, [incomingMoodNonce, incomingMood]);
+  const lastInteractionAtRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+  const dizzyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Serietidnings-"GRABB!"-effekt: korta actionlinjer som blixtrar utåt runt
+  // molnet vid grepp och fadar bort på ~400ms. En key bumpas vid varje nytt
+  // grepp så animationen återstartar även om man greppar igen direkt.
+  const [grabBurstKey, setGrabBurstKey] = useState(0);
+  const prevIsDraggingRef = useRef(false);
+  useEffect(() => {
+    if (isDragging && !prevIsDraggingRef.current) {
+      setGrabBurstKey(k => k + 1);
+    }
+    prevIsDraggingRef.current = isDragging;
+  }, [isDragging]);
+
+  // Dubbelklicks-effekt: när man dubbelklickar växlar kamera-följningen
+  // (`following`). Centrerar man IN på molnet (following → true) gör det ett extra
+  // högt skutt uppåt; går man tillbaka till mood-läget (following → false) landar
+  // det med en studs. Skuttet körs via Web Animations API på en egen wrapper så
+  // det stackas ovanpå float-animationen utan att slåss om transform-egenskapen,
+  // och en "skvätt"-burst (puff-streck nedåt/åt sidorna) ritas samtidigt.
+  const jumpWrapperRef = useRef<HTMLDivElement>(null);
+  const prevFollowingRef = useRef(following);
+  const [splashKey, setSplashKey] = useState(0);
+  const [splashDir, setSplashDir] = useState<'up' | 'down'>('up');
+  useEffect(() => {
+    if (following === prevFollowingRef.current) return;
+    const goingUp = following;
+    prevFollowingRef.current = following;
+    setSplashDir(goingUp ? 'up' : 'down');
+    setSplashKey(k => k + 1);
+    const el = jumpWrapperRef.current;
+    if (!el || typeof el.animate !== 'function') return;
+    if (goingUp) {
+      // Centrering: kraftigt skutt uppåt med liten stretch, sedan tillbaka.
+      el.animate(
+        [
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' },
+          { transform: 'translateY(-80px) scaleX(0.92) scaleY(1.12)', offset: 0.4 },
+          { transform: 'translateY(-64px) scaleX(1.02) scaleY(0.98)', offset: 0.62 },
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
+        ],
+        { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      );
+    } else {
+      // Tillbaka till mood-läget: landar uppifrån med en squash-studs.
+      el.animate(
+        [
+          { transform: 'translateY(-48px) scaleX(0.96) scaleY(1.05)' },
+          { transform: 'translateY(12px) scaleX(1.16) scaleY(0.82)', offset: 0.55 },
+          { transform: 'translateY(-6px) scaleX(0.98) scaleY(1.03)', offset: 0.78 },
+          { transform: 'translateY(0) scaleX(1) scaleY(1)' }
+        ],
+        { duration: 660, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+      );
+    }
+  }, [following]);
   // Resting rotation = the rotation the cloud has when its position has been
   // stable for a short moment. It only updates after any kind of motion
   // (cloud drag, glide, OR map pan moving anchorPos) has settled. While
   // anything is in motion, this value stays put — the face stays where it was.
   const [restingRotation, setRestingRotation] = useState(0);
   const [dragSpinAngle, setDragSpinAngle] = useState(0);
+  // Pausa vind- och float-animationen så fort pekaren är ovanför grab-ytan, så
+  // molnet inte "hoppar undan" i samma sekund man försöker ta tag i det.
+  const [pointerOverGrab, setPointerOverGrab] = useState(false);
 const [offset, setOffset] = useState({ x: 0, y: 0 });
+  // Rapportera live drag-offset till föräldern (slangbella-banden använder den
+  // för att stretcha med molnet i realtid). Ref-cache så vi inte binder om hookar.
+  const onLiveOffsetChangeRef = useRef(onLiveOffsetChange);
+  onLiveOffsetChangeRef.current = onLiveOffsetChange;
+  useEffect(() => {
+    onLiveOffsetChangeRef.current?.(offset.x, offset.y);
+  }, [offset.x, offset.y]);
   const [throwDirection, setThrowDirection] = useState<{ x: number; y: number } | null>(null);
   // When releasing in anchored mode the parent updates anchorPos to compensate
   // for the new (0, 0) offset in the same commit — but a CSS transform transition
@@ -221,6 +527,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // threshold. A pointer-up with no movement is treated as a tap (toggle follow).
   const downClient = useRef({ x: 0, y: 0 });
   const dragMoved = useRef(false);
+  // Tryck-tajming: enkeltryck byter mood, dubbeltryck växlar kamera-följning (POV).
+  const lastTapAtRef = useRef(0);
+  const moodBeforeTapRef = useRef<Expression | null>(null);
 
   // Small delay so it "pops in" after the page settles
   useEffect(() => {
@@ -358,12 +667,33 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     pointerId.current = null;
     setIsDragging(false);
 
-    // Tap (no meaningful movement) → toggle camera-follow, no glide.
+    // Tap (no meaningful movement). Enkeltryck = byt molnets mood; dubbeltryck =
+    // växla kamera-följning (POV). Inget glid.
     if (!dragMoved.current) {
       setClicked(true);
-      onToggleFollow?.();
       velocitySamples.current = [];
       setOffset({ x: 0, y: 0 });
+      onTap?.(); // t.ex. sol-molnet: fäll tillbaka kartans lutning
+
+      const now = performance.now();
+      const isDouble = now - lastTapAtRef.current < 300;
+      lastTapAtRef.current = isDouble ? 0 : now;
+
+      if (isDouble) {
+        // Andra trycket i paret: ångra mood-stegningen från första trycket och
+        // växla istället kamera-följningen.
+        setManualMood(moodBeforeTapRef.current);
+        onToggleFollow?.();
+      } else {
+        // Enkeltryck: stega till nästa mood. Efter sista moodet → null = det
+        // levande auto-läget (slumpvisa blinkningar igen).
+        setManualMood(prev => {
+          moodBeforeTapRef.current = prev;
+          if (prev === null) return MOOD_CYCLE[0];
+          const i = MOOD_CYCLE.indexOf(prev);
+          return i === MOOD_CYCLE.length - 1 ? null : MOOD_CYCLE[i + 1];
+        });
+      }
       return;
     }
 
@@ -472,7 +802,17 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       setOffset({ x: curX, y: curY });
       setDragSpinAngle(curSpinAngle);
 
-      const decay = Math.exp(-friction * dt / 1000);
+      // Djup-skalad friktion: i lutad vy returnerar föräldern < 1 för molnets
+      // nuvarande skärmpunkt när det ligger långt bort. Vi delar friktionen
+      // med djupet → ju mindre djup desto snabbare avtagande hastighet, så
+      // ett moln som kastas in i horisonten bromsas in och stannar innan det
+      // glider ut över skärmkanten. Platt vy / ingen callback → depth = 1.
+      const depthCb = getDepthAtPointRef.current;
+      const depth = depthCb
+        ? Math.max(depthCb(baseX + curX, baseY + curY), 0.25)
+        : 1;
+      const effectiveFriction = friction / depth;
+      const decay = Math.exp(-effectiveFriction * dt / 1000);
       curVx *= decay;
       curVy *= decay;
       vSpin *= decay;
@@ -509,6 +849,74 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       // Keep it exactly where it was dragged when pointer left viewport, no snapping back
     }
   };
+
+  // Räkna det som "interaktion" varje gång molnet rörs (drag, glide, follow-toggle).
+  // Sleepy-läget triggas bara när inget hänt på en stund.
+  useEffect(() => {
+    if (isDragging || isGliding || following) {
+      lastInteractionAtRef.current = performance.now();
+    }
+  }, [isDragging, isGliding, following]);
+
+  // Driver expression-tillståndet utifrån interaktion + en slumpvis blink/wink-loop.
+  // Prio: leaving > dizzy > surprised > happy > sleepy > blink/wink/neutral.
+  useEffect(() => {
+    if (!visible || !clicked) return;
+
+    // Manuellt valt mood (via klick) låser ansiktet — auto-blinkandet pausas.
+    if (manualMood !== null) return;
+
+    // Höga prio: follow tar över direkt. Drag tar INTE över längre — molnet
+    // behåller sitt vanliga uttryck när man greppar, och en grabb-burst-effekt
+    // (actionlinjer) ritas separat utanför ansiktet.
+    if (following) {
+      setExpression('happy');
+      return;
+    }
+    if (isDragging) return; // ingen ändring — sitt kvar i nuvarande uttryck
+
+    // Schemaläggning av blink/wink/sleepy via timer.
+    let timer: NodeJS.Timeout;
+    const schedule = () => {
+      const sinceLast = performance.now() - lastInteractionAtRef.current;
+      // Inaktiv > 25s → halvblunda av och till.
+      if (sinceLast > 25_000 && Math.random() < 0.45) {
+        setExpression('sleepy');
+        timer = setTimeout(() => { setExpression('neutral'); schedule(); }, 1800);
+        return;
+      }
+      // ~12% av blinkningarna blir winks för lite personlighet.
+      const isWink = Math.random() < 0.12;
+      setExpression(isWink ? 'wink' : 'blink');
+      timer = setTimeout(() => {
+        setExpression('neutral');
+        // Nästa blink om 2.5–5.5s.
+        const next = 2500 + Math.random() * 3000;
+        timer = setTimeout(schedule, next);
+      }, isWink ? 280 : 140);
+    };
+    // Lite slumpvis fördröjning innan första blinken så molnen inte synkar.
+    const startDelay = 1500 + Math.random() * 2500;
+    timer = setTimeout(schedule, startDelay);
+    return () => clearTimeout(timer);
+  }, [visible, clicked, isDragging, following, manualMood]);
+
+  // När ett glid är slut OCH spinnet varit stort → kort dizzy-snurr.
+  // Hooked in på handlePointerUp-flödet via dragSpinAngle-jämförelser hade krävt
+  // mer state-trådning; istället övervakar vi förändringar i restingRotation:
+  // ett stort hopp = nyss bakat in spin → dizzy en stund.
+  const prevRestingRotRef = useRef(restingRotation);
+  useEffect(() => {
+    const delta = Math.abs(restingRotation - prevRestingRotRef.current);
+    prevRestingRotRef.current = restingRotation;
+    if (delta > 270 && !isDragging && !following) {
+      setExpression('dizzy');
+      if (dizzyTimerRef.current) clearTimeout(dizzyTimerRef.current);
+      dizzyTimerRef.current = setTimeout(() => setExpression('neutral'), 1400);
+    }
+  }, [restingRotation, isDragging, following]);
+
+  useEffect(() => () => { if (dizzyTimerRef.current) clearTimeout(dizzyTimerRef.current); }, []);
 
   // Forward wheel events to whatever sits beneath the cloud (typically the map).
   // The hit area has pointer-events:auto so it would otherwise swallow scroll/zoom.
@@ -614,7 +1022,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // (Disabled during the leaving throw so the dismiss-rotation isn't doubled.)
   // Always use the resting rotation as the base; live faceRotDeg is never used
   // for the visible rotation. Spin from a fling is added on top.
-  const currentRotation = restingRotation + dragSpinAngle;
+  // När kartan är lutad stabiliseras molnet rakt upp (rotation 0) så ansiktet
+  // står rakt — ögon upp, mun ner — istället för att luta med ev. kast-spin.
+  const currentRotation = tilted ? 0 : (restingRotation + dragSpinAngle);
   const cloudBodyRotation = leaving ? '' : `rotate(${currentRotation}deg)`;
   const cloudBodyRotTransition = (isDragging || isGliding || skipTransition)
     ? 'none'
@@ -627,9 +1037,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     ? transformStyle
     : `${cloudBodyRotation} scale(1.05)`;
 
+  // z-index sätts via inline-stil (zIndex-propen) så föräldern kan ordna molnen
+  // sinsemellan — minsta överst. Behåller annars samma lager som tidigare (9999).
   const outerClassName = isAnchored
-    ? "fixed inset-0 z-[9999] pointer-events-none"
-    : `fixed inset-0 z-[9999] flex pointer-events-none ${wrapperPositionClass}`;
+    ? "fixed inset-0 pointer-events-none"
+    : `fixed inset-0 flex pointer-events-none ${wrapperPositionClass}`;
 
   const draggableStyle: React.CSSProperties = isAnchored
     ? {
@@ -657,7 +1069,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // Vilo-formen är avlång (klassiskt moln); vid klick morphar den till det runda
   // "default"-molnet. Samma uppsättning används av skuggor + förgrund så hela
   // molnet morphar som en enhet (cx/cy/r-transition).
-  const activeCircles = clicked ? baseCircles : elongatedCircles;
+  // När kartan är lutad återgår molnet till den breda formen (som i start-läget)
+  // — då ser det bättre ut i 3D-vyn. `clicked` styr fortfarande ansikte/text,
+  // så ansiktet och all funktionalitet behålls; `tilted` styr bara silhuetten.
+  const activeCircles = (clicked && !tilted) ? baseCircles : elongatedCircles;
 
   const getShadowCircles = (intensity: number, maxShift: number) => {
     const rawDx = faceVec.x * intensity;
@@ -766,36 +1181,62 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
                 transition: 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
-              {following ? (
-                <>
-                  {/* Focused "flight mode": happy squinted eyes (^ ^) + open
-                      excited mouth — signals the camera is locked on. */}
-                  <path
-                    d={`M ${leftEye.x - 7} ${leftEye.y + 3} Q ${leftEye.x} ${leftEye.y - 6} ${leftEye.x + 7} ${leftEye.y + 3}`}
-                    stroke="#bae6fd" strokeWidth="5" strokeLinecap="round" fill="none"
-                  />
-                  <path
-                    d={`M ${rightEye.x - 7} ${rightEye.y + 3} Q ${rightEye.x} ${rightEye.y - 6} ${rightEye.x + 7} ${rightEye.y + 3}`}
-                    stroke="#bae6fd" strokeWidth="5" strokeLinecap="round" fill="none"
-                  />
-                  <ellipse cx={150} cy={135 + 18} rx="9" ry="11" fill="#bae6fd" />
-                </>
-              ) : (
-                <>
-                  {/* Eyes */}
-                  <circle cx={leftEye.x} cy={leftEye.y} r="7" fill="#bae6fd" />
-                  <circle cx={rightEye.x} cy={rightEye.y} r="7" fill="#bae6fd" />
-                  {/* Mouth: always a smile U-shape in local face space */}
-                  <path
-                    d={`M ${mouthLeft.x} ${mouthLeft.y} Q ${mouthCtrl.x} ${mouthCtrl.y} ${mouthRight.x} ${mouthRight.y}`}
-                    stroke="#bae6fd"
-                    strokeWidth="7"
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                </>
-              )}
+              {renderFace(following ? 'happy' : (manualMood ?? expression), { leftEye, rightEye, mouthLeft, mouthRight, mouthCtrl })}
             </g>
+
+            {/* Serietidnings-grabb-effekt: 10 korta actionlinjer i en cirkel runt
+                molnet, en burst per gång man tar tag. key=grabBurstKey gör att
+                <g> remountas vid varje grepp så CSS-animationen startar om. */}
+            {grabBurstKey > 0 && (
+              <g key={`grab-burst-${grabBurstKey}`} className="animate-cloud-grab-burst" style={{ pointerEvents: 'none' }}>
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
+                  const rInner = 110;
+                  const rOuter = 138;
+                  const x1 = 150 + Math.cos(angle) * rInner;
+                  const y1 = 135 + Math.sin(angle) * rInner;
+                  const x2 = 150 + Math.cos(angle) * rOuter;
+                  const y2 = 135 + Math.sin(angle) * rOuter;
+                  return (
+                    <line
+                      key={i}
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="#0284c7"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+              </g>
+            )}
+
+            {/* Hopp-"skvätt": puff-streck som blixtrar nedåt/åt sidorna i samma
+                stund molnet skuttar (centrering) eller landar (tillbaka till
+                mood-läget). key=splashKey remountar gruppen så CSS-animationen
+                startar om vid varje dubbelklick. */}
+            {splashKey > 0 && (
+              <g key={`jump-splash-${splashKey}`} className="animate-cloud-jump-splash" style={{ pointerEvents: 'none' }}>
+                {Array.from({ length: 9 }).map((_, i) => {
+                  // Nedre halvan, fläktat från höger (~22°) till vänster (~158°).
+                  const angle = Math.PI * 0.12 + (i / 8) * (Math.PI * 0.76);
+                  const rInner = splashDir === 'down' ? 70 : 76;
+                  const rOuter = splashDir === 'down' ? 124 : 104;
+                  const x1 = 150 + Math.cos(angle) * rInner;
+                  const y1 = 135 + Math.sin(angle) * rInner;
+                  const x2 = 150 + Math.cos(angle) * rOuter;
+                  const y2 = 135 + Math.sin(angle) * rOuter;
+                  return (
+                    <line
+                      key={i}
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="#7dd3fc"
+                      strokeWidth={splashDir === 'down' ? 6 : 5}
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+              </g>
+            )}
 
             <defs>
               <filter id="cloud-blur" filterUnits="userSpaceOnUse" x="-100" y="-100" width="540" height="440">
@@ -824,8 +1265,8 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   };
 
   return (
-    <div className={outerClassName}>
-      <div 
+    <div className={outerClassName} style={{ zIndex }}>
+      <div
         className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${leaving ? 'opacity-0' : 'opacity-100'}`}
         style={{ transition: isDragging ? 'none' : 'opacity 0.5s ease' }}
       />
@@ -845,7 +1286,17 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
             transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
-        <div className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}>
+        <div
+          className={isDragging || isGliding || leaving ? '' : 'animate-cloud-windy-intro'}
+          style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
+        >
+        <div
+          className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}
+          style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
+        >
+        {/* Hopp-wrapper: dubbelklicks-skuttet (Web Animations API) körs här så det
+            stackas ovanpå float utan att slåss om transform-egenskapen. */}
+        <div ref={jumpWrapperRef} style={{ transformOrigin: '50% 56.25%', willChange: 'transform' }}>
 
           {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
 
@@ -853,20 +1304,24 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           <div
             role="button"
             aria-label="Drag cloud"
-            onPointerDown={handlePointerDown}
+            onPointerEnter={() => setPointerOverGrab(true)}
+            onPointerLeave={() => setPointerOverGrab(false)}
+            onPointerDown={(e) => { setPointerOverGrab(true); handlePointerDown(e); }}
             onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
+            onPointerUp={(e) => { setPointerOverGrab(false); handlePointerUp(e); }}
+            onPointerCancel={(e) => { setPointerOverGrab(false); handlePointerCancel(e); }}
             onWheel={handleWheel}
             className="absolute cursor-grab active:cursor-grabbing select-none pointer-events-auto touch-none"
             style={{
-              left: '26%',
-              top: '26.25%',
-              width: '48%',
-              height: '60%',
+              left: '14%',
+              top: '20%',
+              width: '72%',
+              height: '70%',
               borderRadius: '50%'
             }}
           />
+        </div>
+        </div>
         </div>
         </div>
       </div>

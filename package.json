@@ -19,6 +19,6 @@
     "scrape": "npm run start -w vadkul-scraper"
   },
   "dependencies": {
-    "next": "^16.2.7"
+    "next": "^15.5.0"
   }
 }

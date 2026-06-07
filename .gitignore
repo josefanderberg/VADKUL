@@ -44,12 +44,16 @@ vadkul-*-firebase-adminsdk-*.json
 !.env.example
 
 # Generated / auto-updated data files
-apps/scraper/events.db
-apps/scraper/events.db-shm
-apps/scraper/events.db-wal
+**/events.db
+**/events.db-shm
+**/events.db-wal
+apps/fix_addresses_report.json
 apps/scraper/keyword_stats.json
 apps/scraper/keyword_test_results.json
 apps/scraper/scraper_run_history.json
+
+# Functions build output (genereras av tsc i predeploy)
+apps/functions/lib/
 
 # Probe snapshots — växer över tid, regenereras av `npm run probe-all`
 apps/scraper/src/sources/data/probe-snapshots/

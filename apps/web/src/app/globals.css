@@ -190,8 +190,66 @@
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* Serietidnings-grabb: korta actionlinjer som blixtrar utåt runt molnet vid
+   grepp, fadar och skalar bort. Startas via key-bump på elementet så animationen
+   kan återstartas vid varje nytt grepp. */
+@keyframes cloud-grab-burst {
+  0%   { opacity: 0; transform: scale(0.55); }
+  25%  { opacity: 1; transform: scale(1.00); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+.animate-cloud-grab-burst {
+  transform-origin: 150px 135px;
+  animation: cloud-grab-burst 480ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
+/* Hopp-"skvätt": puff-streck som expanderar nedåt/åt sidorna när molnet skuttar
+   upp (centrering) eller landar (tillbaka till mood-läget) vid dubbelklick.
+   Startas via key-bump på <g> så den kan återstartas vid varje dubbelklick. */
+@keyframes cloud-jump-splash {
+  0%   { opacity: 0; transform: scale(0.5); }
+  25%  { opacity: 0.95; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.animate-cloud-jump-splash {
+  transform-origin: 150px 135px;
+  animation: cloud-jump-splash 560ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
 .animate-cloud-float {
   animation: cloud-float 12s ease-in-out infinite;
+}
+
+/* "Det blåser" — molnet svänger stort och pulserar i storlek i början, för att
+   sedan lugna sig och övergå till den vanliga cloud-float. Körs som EN
+   iteration; läggs på en yttre wrapper så det stackas med cloud-float utan att
+   slåss om transform-egenskapen. */
+@keyframes cloud-windy-intro {
+  0%   { transform: translate(0px, 0px)   scale(0.55) rotate(0deg); }
+  10%  { transform: translate(8px, -4px)  scale(1.22) rotate(1deg); }
+  22%  { transform: translate(-10px, -2px) scale(0.78) rotate(-0.8deg); }
+  36%  { transform: translate(6px, -6px)  scale(1.16) rotate(0.8deg); }
+  52%  { transform: translate(-6px, -2px) scale(0.88) rotate(-0.5deg); }
+  68%  { transform: translate(4px, -3px)  scale(1.08) rotate(0.4deg); }
+  84%  { transform: translate(-2px, -1px) scale(0.96) rotate(-0.2deg); }
+  100% { transform: translate(0px, 0px)   scale(1)    rotate(0deg); }
+}
+.animate-cloud-windy-intro {
+  animation: cloud-windy-intro 14s cubic-bezier(0.32, 0.72, 0.35, 1) 1 both;
+  will-change: transform;
+}
+
+/* Texten på molnet driver med en egen, motfas-rörelse mot molnet — ger ett mjukt
+   parallax-djup. Lift höjer också upp texten en aning så den sitter över mitten. */
+@keyframes cloud-text-drift {
+  0%, 100% { transform: translate(0px, -12px); }
+  25%      { transform: translate(-6px, -16px); }
+  50%      { transform: translate(2px, -10px); }
+  75%      { transform: translate(5px, -14px); }
+}
+.animate-cloud-text-drift {
+  animation: cloud-text-drift 9s ease-in-out infinite;
+  will-change: transform;
 }
 
 .animate-cloud-pop-in {

@@ -159,12 +159,12 @@ else
     echo "⚠️ AI-audit misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
-# ─── Re-aggregate så audit-fyllda fält (price/category/emoji) når web JSON ──
+# ─── Re-aggregate så audit-fyllda fält (price/category/emoji + hidden) når web ──
 # Aggregate kördes redan av npm-scriptet ovan (start/today), men då hade audit
-# inte hunnit fylla i price/category/emoji för dagens nya events. Ny aggregate
-# nu garanterar att dagens audit-resultat publiceras samma dygn — inte morgon.
+# inte hunnit fylla i price/category/emoji eller dölja junk för dagens nya events.
+# Ny aggregate nu garanterar att dagens audit-resultat publiceras samma dygn.
 echo "" >> "$LOG_FILE"
-echo "── RE-AGGREGATE (efter audit, så priser/kategorier syns idag) ──" >> "$LOG_FILE"
+echo "── RE-AGGREGATE (efter audit, så priser/kategorier/döljningar syns idag) ──" >> "$LOG_FILE"
 if npm run aggregate >> "$LOG_FILE" 2>&1; then
     echo "Re-aggregate OK" >> "$LOG_FILE"
 else

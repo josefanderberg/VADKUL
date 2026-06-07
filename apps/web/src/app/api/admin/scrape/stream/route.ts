@@ -1,7 +1,11 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import { requireAdmin } from '@/lib/firestore-admin';
 
-export async function POST() {
+export async function POST(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
     const scraperDir = path.join(process.cwd(), 'scraper-bot');
     const encoder = new TextEncoder();
 

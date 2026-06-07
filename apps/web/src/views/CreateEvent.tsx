@@ -434,7 +434,7 @@ export default function CreateEvent() {
 
             // Om vi har en ny fil, ladda upp den och uppdatera URL
             if (coverImageFile) {
-                const path = `event - images / ${user.uid}/${Date.now()}_${coverImageFile.name}`;
+                const path = `event-images/${user.uid}/${Date.now()}_${coverImageFile.name}`;
                 const url = await storageService.uploadFile(path, coverImageFile);
                 commonData.coverImage = url;
             }
@@ -582,7 +582,6 @@ export default function CreateEvent() {
                         <h3 className="text-lg font-bold mb-4 text-foreground">Vad vill du hitta på?</h3>
                         <div className="flex flex-wrap gap-3 justify-center">
                             {CATEGORY_LIST
-                                .filter(cat => cat.id !== 'campus') // Dölj "Nation & Kår" från listan
                                 .map(cat => {
                                     const isSelected = formData.type === cat.id;
 

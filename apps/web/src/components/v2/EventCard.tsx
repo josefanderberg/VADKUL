@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
+import { normalizePriceLabel } from '../../utils/priceLabel';
 import LinkEventCard from '../ui/LinkEventCard';
 import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
@@ -48,17 +49,6 @@ const formatTimeHint = (time: Date, now: number): string => {
     if (sameDay) return `kl ${hhmm}`;
     const weekday = time.toLocaleDateString('sv-SE', { weekday: 'short' });
     return `${weekday} ${hhmm}`;
-};
-
-// Samma logik som i LinkEventCard: ren siffra → "X kr", "0"/"gratis" → "Gratis",
-// allt annat visas som det är. null = inget pris angivet.
-const formatPriceLabel = (p: number | string | undefined): string | null => {
-    if (p === undefined || p === null || p === '') return null;
-    const s = String(p).trim();
-    if (!s) return null;
-    if (s === '0' || /^gratis$/i.test(s)) return 'Gratis';
-    if (/^\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?$/.test(s)) return `${s} kr`;
-    return s;
 };
 
 // Haversine-avstånd i km mellan två punkter
@@ -158,7 +148,7 @@ function StatusBadge({ status }: { status: EventStatus }) {
         past: { label: 'Har varit', cls: 'bg-slate-300 text-slate-700' },
     }[status];
     return (
-        <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${cfg.cls}`}>
+        <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${cfg.cls}`}>
             {cfg.label}
         </span>
     );
@@ -172,7 +162,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
 }) {
     const status = getEventStatus(evt.time, now);
     const timeHint = formatTimeHint(evt.time, now);
-    const priceLabel = formatPriceLabel(evt.price);
+    const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
     return (
         <li>
@@ -302,9 +292,18 @@ interface EventCardProps {
     /** Flyg kartan tillbaka till det valda eventet (vi går dit — eventet
      *  teleporteras inte till vyn). Triggas av recenter-knappen på kortet. */
     onRecenter?: () => void;
+    /** True när molnen ligger på varandra → slangbella aktiv. Fyller fokusknappen
+     *  vit som en mätare. */
+    slingshotReady?: boolean;
+    /** True när slangbellan är armad (efter första klicket på ready-knappen).
+     *  Knappen visas inverterad (solid blå) som signal att nästa klick avfyrar. */
+    slingshotEngaged?: boolean;
+    /** True under "Hitta eventet"-spelet: kortet visar mål-eventet men navigering
+     *  (Nästa/Bakåt) och svep åt sidan stängs av så spelaren inte byter mål. */
+    gameMode?: boolean;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -540,7 +539,9 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
             if (absX > 5 || absY > 5) {
                 if (absY > absX) {
                     dragDirection.current = 'vertical';
-                } else {
+                } else if (!gameMode) {
+                    // I spelläget är svep åt sidan avstängt (annars skulle man råka
+                    // byta/spara mål-eventet) — bara vertikal drag (storlek/stäng).
                     dragDirection.current = 'horizontal';
                 }
             }
@@ -661,19 +662,21 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
-                {/* Vänster: Antal + Idag-knapp (samma höjd, längst till vänster) */}
+                {/* Vänster: Idag-knapp med antals-badge ovanpå (sparar plats på raden) */}
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <span className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold tabular-nums px-3 rounded-full shadow-lg border border-white/50 h-[38px] flex items-center justify-center min-w-[38px] box-border">
-                        {events.length}
-                    </span>
-                    <button
-                        onClick={() => setDayOffset((dayOffset + 1) % 7)}
-                        className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
-                    >
-                        <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                        <span>{getDayLabel(dayOffset)}</span>
-                        <ChevronRight size={15} className="text-slate-400" />
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setDayOffset((dayOffset + 1) % 7)}
+                            className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
+                        >
+                            <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                            <span>{getDayLabel(dayOffset)}</span>
+                            <ChevronRight size={15} className="text-slate-400" />
+                        </button>
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
+                            {events.length}
+                        </span>
+                    </div>
                     {dayOffset !== 0 && (
                         <button
                             onClick={() => setDayOffset(0)}
@@ -696,11 +699,22 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                         <button
                             type="button"
                             onClick={onRecenter}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
-                            title="Visa molnet på kartan"
-                            aria-label="Visa molnet på kartan"
+                            className={`relative overflow-hidden p-2 rounded-full shadow-xl border transition-colors h-[38px] w-[38px] flex items-center justify-center box-border ${
+                                slingshotEngaged
+                                    ? 'bg-[#006AA7] border-[#006AA7] ring-2 ring-sky-300'
+                                    : slingshotReady
+                                        ? 'bg-white/90 backdrop-blur-md border-sky-400 ring-2 ring-sky-300 animate-pulse'
+                                        : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
+                            }`}
+                            title={slingshotEngaged ? 'Klicka för att avfyra slangbellan' : slingshotReady ? 'Klicka för att arma slangbellan' : 'Visa molnet på kartan'}
+                            aria-label={slingshotEngaged ? 'Avfyra slangbella' : slingshotReady ? 'Arma slangbella' : 'Visa molnet på kartan'}
                         >
-                            <LocateFixed size={16} className="text-[#006AA7]" />
+                            {/* Slangbella-mätare: fylls vit när läget är ready (steg 1).
+                                När armad (engaged) inverteras knappen istället → ikonen blir vit på blå. */}
+                            {slingshotReady && !slingshotEngaged && (
+                                <span className="absolute inset-0 bg-white rounded-full animate-in fade-in zoom-in duration-200 pointer-events-none" />
+                            )}
+                            <LocateFixed size={16} className={`relative ${slingshotEngaged ? 'text-white' : 'text-[#006AA7]'}`} />
                         </button>
                     )}
                     {mainCloudOffScreen && onRecallMainCloud && (
@@ -719,8 +733,9 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                         tillbaka det. Bara EN moln-knapp (för info-molnet). */}
                 </div>
 
-                {/* Höger: bakåt + Nästa (samma höjd, längst till höger) */}
-                {selectedEvent && (
+                {/* Höger: bakåt + Nästa (samma höjd, längst till höger).
+                    Döljs i spelläget — då ska man inte kunna navigera bort målet. */}
+                {selectedEvent && !gameMode && (
                     <div className="flex items-center gap-2 pointer-events-auto">
                         {historyStack.length > 0 && (
                             <button
@@ -758,17 +773,20 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                     transition: isAnimating ? 'transform 200ms ease-out, opacity 200ms ease-out, height 350ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
                 }}
             >
-                {/* Thin invisible drag strip — still grabbable, no visual handle */}
+                {/* Drag-grip-zon — luftig så grip-indikatorn syns tydligt och får
+                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px). */}
                 <div
-                    className="w-full flex-shrink-0 h-3 cursor-grab active:cursor-grabbing select-none bg-card"
+                    className="w-full flex-shrink-0 h-6 cursor-grab active:cursor-grabbing select-none bg-card"
                     style={{ touchAction: 'none' }}
                 />
 
-                {/* Absolut drag-indikator. Ligger ovanpå kortet (absolute) så den
+                {/* Absolut drag-indikator: två parallella streck för tydligare
+                    "dra upp/ner"-affordance. Ligger ovanpå kortet (absolute) så den
                     inte adderar någon höjd/padding. pointer-events-none → drag går
                     rakt igenom till kortet. */}
-                <div className="absolute top-1.5 left-0 right-0 z-40 flex items-center justify-center pointer-events-none">
-                    <div className="h-1.5 w-10 rounded-full bg-slate-300/90 dark:bg-slate-600/80" />
+                <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
                 </div>
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}

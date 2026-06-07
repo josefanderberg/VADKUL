@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { linkEventService } from '@/services/linkEventService';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import { useAuth } from '@/context/AuthContext';
 import Layout from '@/components/layout/Layout';
 import type { LinkEvent } from '@/types';
@@ -285,7 +286,7 @@ export default function LinkEventsAdminPage() {
         setShowLogs(true);
 
         try {
-            const response = await fetch('/api/admin/scrape/stream', { method: 'POST' });
+            const response = await fetch('/api/admin/scrape/stream', { method: 'POST', headers: { ...(await getAuthHeaders()) } });
 
             if (!response.body) throw new Error('No response body from scrape endpoint');
 

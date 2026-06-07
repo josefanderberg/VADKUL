@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import Navbar from '../ui/Navbar';
-// import InstallPrompt from '../ui/InstallPrompt';
 // NYTT: Importera Toaster
 import { Toaster } from 'react-hot-toast'; // Lägg till denna import
 

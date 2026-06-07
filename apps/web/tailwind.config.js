@@ -48,6 +48,10 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        // Rundad display-font för "lockande" inslag som t.ex. moln-texten.
+        rounded: ["var(--font-fredoka)", "ui-rounded", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [

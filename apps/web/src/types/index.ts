@@ -19,7 +19,7 @@ export interface UserProfile {
   ratingCount?: number;  // Antal omdömen
   inviteCount?: number;  // <--- NY: Antal inbjudna
   invitedBy?: string;    // <--- NY: Vem bjöd in mig?
-  redeemedCodes?: string[]; // <--- NY: Inlösta koder (t.ex. ['H2K2'])
+  redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
 }
 
 export interface UserReview {

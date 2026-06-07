@@ -33,7 +33,7 @@ export default function RedeemCodeModal({ isOpen, onClose, onSuccess }: RedeemCo
 
             if (result.success) {
                 setIsSuccess(true);
-                toast.success('H2K2! Koden godkänd.');
+                toast.success('Koden godkänd! Premium upplåst.');
                 setTimeout(() => {
                     onSuccess();
                     onClose();

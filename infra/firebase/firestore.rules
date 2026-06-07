@@ -108,13 +108,20 @@ service cloud.firestore {
     // 4. NOTIFICATIONS (Om du använder det)
     match /notifications/{notifId} {
       allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      allow create: if isAuthenticated(); // Tillåt användare att skicka notiser till varandra
+      // Man får skapa notiser, men bara MED SIG SJÄLV som avsändare (anti-spoof/spam).
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid; // TILLÅT uppdatering (markera som läst)
     }
     
     // 5. FEEDBACK
     match /feedback/{feedbackId} {
-        allow create: if true; 
+        // Anonym feedback tillåts (medvetet), men begränsa form + storlek mot spam/abuse.
+        allow create: if request.resource.data.keys().hasOnly(['rating', 'message', 'createdAt', 'userAgent', 'userId'])
+          && request.resource.data.keys().hasAll(['rating', 'message', 'createdAt'])
+          && request.resource.data.rating is number
+          && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+          && request.resource.data.message is string
+          && request.resource.data.message.size() < 2000;
         allow read: if isAdmin();
     }
 

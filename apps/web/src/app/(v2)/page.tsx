@@ -5,6 +5,7 @@ import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import EventCard from '@/components/v2/EventCard';
+import { Target, Trophy, X, Sparkles } from 'lucide-react';
 
 // We must dynamically import V2Map because leaflet requires window object
 import dynamic from 'next/dynamic';
@@ -28,6 +29,13 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 const hasValidCoords = (evt: LinkEvent) =>
     typeof evt.lat === 'number' && typeof evt.lng === 'number' &&
     !(evt.lat === 0 && evt.lng === 0);
+
+// Avstånd för spelets "så nära var du"-feedback: meter under 1 km, annars km.
+const formatGuessDistance = (km: number): string => {
+    if (km < 1) return `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m`;
+    if (km < 10) return `${km.toFixed(1)} km`;
+    return `${Math.round(km)} km`;
+};
 
 /**
  * Vid dagbyte: välj eventet som ligger närmast användarens nuvarande position
@@ -73,12 +81,20 @@ export default function HomePage() {
     // flash overlay (and the resulting cloud) remount cleanly.
     const [sunFlashKey, setSunFlashKey] = useState(0);
     const [sunCloudKey, setSunCloudKey] = useState(0);
+    // Solknappen vinklar också kameran: första klicket lutar kartan till en
+    // sidovy (3D-perspektiv), nästa klick fäller tillbaka den till platt vy.
+    const [mapTilted, setMapTilted] = useState(false);
     const handleSunClick = useCallback(() => {
         // Flash and cloud both fire simultaneously — cloud appears at the same
         // instant the screen pops white, then the light fades over the cloud.
         setSunFlashKey(k => k + 1);
         setSunCloudKey(k => k + 1);
+        setMapTilted(t => !t);
     }, []);
+    // Tryck på sol-molnet → fäll tillbaka kartans lutning till platt vy.
+    const handleSunCloudTap = useCallback(() => setMapTilted(false), []);
+    // Tilt-knappen (under satellit-knappen) togglar lutningen snabbt.
+    const handleToggleTilt = useCallback(() => setMapTilted(t => !t), []);
 
     // Återkallningssystem för molnen: V2Map rapporterar off-screen, sidan
     // visar en knapp jämte solen som triggar en räknare → V2Map snäpper
@@ -92,7 +108,42 @@ export default function HomePage() {
     // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
     // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
     const [recenterTrigger, setRecenterTrigger] = useState(0);
-    const handleRecenter = useCallback(() => setRecenterTrigger(t => t + 1), []);
+
+    // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
+    // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
+    // gummibanden alltid och nästa release av ett moln blir en slangbella-snärt.
+    // Auto-avarmar när snärten är klar (eller om molnen separeras igen).
+    const [slingshotActive, setSlingshotActive] = useState(false);
+    const [slingshotEngaged, setSlingshotEngaged] = useState(false);
+    const handleRecenter = useCallback(() => {
+        if (slingshotEngaged) {
+            // Klick medan armad → avbryt utan att avfyra. Avfyrning sker när man
+            // släpper ett moln efter att ha dragit isär dem.
+            setSlingshotEngaged(false);
+        } else if (slingshotActive) {
+            // Första klicket när banden är "ready" → arma + visa band.
+            setSlingshotEngaged(true);
+        } else {
+            // Vanligt recenter när slangbellan inte är aktiv.
+            setRecenterTrigger(t => t + 1);
+        }
+    }, [slingshotActive, slingshotEngaged]);
+    // Notera: engaged-läget får INTE auto-avarmas när molnen separeras — det är
+    // ju själva poängen att dra isär dem under armning. Disarming sker antingen
+    // genom klick på den armade knappen, eller automatiskt när V2Map avfyrar.
+
+    // "Hitta eventet"-spelets tillstånd (logiken längre ner — efter
+    // searchFilteredEvents). gameActive = runda pågår (gissningsläge).
+    const [gameActive, setGameActive] = useState(false);
+    const [gameScore, setGameScore] = useState(0);
+    const [gameResult, setGameResult] = useState<'correct' | 'wrong' | null>(null);
+    const [goldEventId, setGoldEventId] = useState<string | null>(null); // rätt svar (guldmarkör)
+    const [gameDistanceKm, setGameDistanceKm] = useState<number | null>(null); // hur långt fel-gissningen låg
+    // Streck mellan gissningen och rätt svar. När satt zoomar kartan ut så båda
+    // punkterna syns, och V2Map ritar en linje + avståndsetikett mellan dem.
+    const [guessLine, setGuessLine] = useState<{ from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null>(null);
+    // Event-id för markören man gissade på — hålls synlig (brickan) efter avslöjet.
+    const [guessedEventId, setGuessedEventId] = useState<string | null>(null);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
@@ -227,6 +278,79 @@ export default function HomePage() {
         });
     };
 
+    // ── "Hitta eventet"-spel ────────────────────────────────────────────────
+    // Ett slumpat event för dagen visas som kort UTAN att kartan flyttas dit.
+    // Spelaren ska hitta och klicka rätt markör på kartan. Rätt → +1 poäng;
+    // fel → rätt markör avslöjas i guld och kameran flyger dit.
+    // (Definieras här nere så gamePool kan läsa searchFilteredEvents ovan.)
+    const gamePool = useMemo(
+        () => searchFilteredEvents.filter(hasValidCoords),
+        [searchFilteredEvents]
+    );
+
+    const startRound = useCallback(() => {
+        if (gamePool.length === 0) return;
+        const target = gamePool[Math.floor(Math.random() * gamePool.length)];
+        setGoldEventId(null);
+        setGameResult(null);
+        setGameDistanceKm(null);
+        setGuessLine(null);
+        setGuessedEventId(null);
+        setGameActive(true);
+        setSelectedEvent(target); // visar mål-kortet; V2Map (gameMode) hindrar recenter/highlight
+    }, [gamePool]);
+
+    const handleGuess = useCallback((group: LinkEvent[]) => {
+        if (!gameActive || !selectedEvent) return;
+        const correct = group.some(e => e.id === selectedEvent.id);
+        if (correct) {
+            setGameScore(s => s + 1);
+            setGameResult('correct');
+            setGameDistanceKm(0);
+            setGuessLine(null);
+            setGuessedEventId(null);
+        } else {
+            // Hur långt ifrån svarade man? Avstånd mellan gissad markör och målet.
+            const guessed = group.find(hasValidCoords) ?? group[0];
+            const dist = (hasValidCoords(guessed) && hasValidCoords(selectedEvent))
+                ? haversineKm(selectedEvent.lat, selectedEvent.lng, guessed.lat, guessed.lng)
+                : null;
+            setGameDistanceKm(dist);
+            setGameResult('wrong');
+            // Streck mellan gissningen och rätt svar; kartan zoomar ut så båda syns.
+            setGuessedEventId(guessed.id);
+            if (hasValidCoords(guessed) && hasValidCoords(selectedEvent)) {
+                setGuessLine({
+                    from: { lat: guessed.lat, lng: guessed.lng },
+                    to: { lat: selectedEvent.lat, lng: selectedEvent.lng },
+                    label: dist !== null ? formatGuessDistance(dist) : ''
+                });
+            }
+        }
+        setGoldEventId(selectedEvent.id);
+        setGameActive(false);
+    }, [gameActive, selectedEvent]);
+
+    const clearGame = useCallback(() => {
+        setGameActive(false);
+        setGameResult(null);
+        setGoldEventId(null);
+        setGuessLine(null);
+        setGuessedEventId(null);
+        setSelectedEvent(null);
+    }, []);
+
+    // Stänger spelaren kortet (drar ner det) mitt i en runda/resultat → städa spelet.
+    useEffect(() => {
+        if (selectedEvent === null && (gameActive || gameResult !== null)) {
+            setGameActive(false);
+            setGameResult(null);
+            setGoldEventId(null);
+            setGuessLine(null);
+            setGuessedEventId(null);
+        }
+    }, [selectedEvent, gameActive, gameResult]);
+
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
             {/* 1. Svävande transparent Navbar överst */}
@@ -257,6 +381,17 @@ export default function HomePage() {
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
                 onCloudVisibilityChange={setCloudOffScreen}
+                onSlingshotChange={setSlingshotActive}
+                slingshotEngaged={slingshotEngaged}
+                onSlingshotFired={() => setSlingshotEngaged(false)}
+                gameMode={gameActive}
+                onGuess={handleGuess}
+                goldEventId={goldEventId}
+                guessedEventId={guessedEventId}
+                guessLine={guessLine}
+                tilted={mapTilted}
+                onSunCloudTap={handleSunCloudTap}
+                onToggleTilt={handleToggleTilt}
             />
 
             {/* Modal för att skapa event */}
@@ -324,7 +459,103 @@ export default function HomePage() {
                 onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={handleRecenter}
+                slingshotReady={slingshotActive}
+                slingshotEngaged={slingshotEngaged}
+                gameMode={gameActive || gameResult !== null}
             />
+
+            {/* ── "Hitta eventet"-spel: poäng, start-knapp och banners ───────── */}
+
+            {/* Poäng — sitter under sök-knappen (uppe till vänster). Visas alltid. */}
+            <div className="fixed top-[70px] left-4 z-[1000] flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-3 h-[34px] rounded-full shadow-lg border border-white/50 pointer-events-none">
+                <Trophy size={15} className="text-amber-500 shrink-0" />
+                <span className="text-sm font-black tabular-nums text-slate-800">{gameScore}</span>
+            </div>
+
+            {/* Start-knapp — visas bara när inget kort visas och ingen runda pågår. */}
+            {!selectedEvent && !gameActive && gameResult === null && gamePool.length > 0 && (
+                <button
+                    type="button"
+                    onClick={startRound}
+                    className="fixed top-[114px] left-4 z-[1000] flex items-center gap-2 bg-[#006AA7] hover:bg-[#005590] text-white font-bold text-sm px-4 h-[38px] rounded-full shadow-xl border border-white/20 active:scale-95 transition-all"
+                >
+                    <Target size={16} className="shrink-0" />
+                    Hitta event
+                </button>
+            )}
+
+            {/* Hint-banner under gissningsläget. */}
+            {gameActive && selectedEvent && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl border border-white/60 max-w-[92vw] pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-300">
+                    <Target size={18} className="text-[#006AA7] shrink-0" />
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-[#006AA7] leading-tight">Hitta på kartan</p>
+                        <p className="text-sm font-bold text-slate-800 truncate max-w-[60vw]">{selectedEvent.title}</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={clearGame}
+                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                        aria-label="Avbryt"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+            )}
+
+            {/* Resultat-banner efter en gissning. */}
+            {gameResult !== null && (
+                <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center gap-2 px-5 py-3 rounded-2xl shadow-xl border max-w-[92vw] pointer-events-auto animate-in fade-in zoom-in duration-300 ${
+                    gameResult === 'correct'
+                        ? 'bg-emerald-500 border-emerald-300 text-white'
+                        : 'bg-white/95 backdrop-blur-md border-amber-300 text-slate-800'
+                }`}>
+                    <div className="flex flex-col items-center gap-0.5">
+                        {gameResult === 'correct' ? (
+                            <span className="flex items-center gap-2 font-black">
+                                <Sparkles size={18} className="shrink-0" />
+                                Rätt! +1 poäng
+                            </span>
+                        ) : (
+                            <>
+                                <span className="flex items-center gap-2 font-black">
+                                    <Target size={18} className="text-amber-500 shrink-0" />
+                                    {gameDistanceKm !== null
+                                        ? `Fel! Du var ${formatGuessDistance(gameDistanceKm)} ifrån.`
+                                        : 'Fel!'}
+                                </span>
+                                <span className="text-[12px] font-semibold text-slate-500">
+                                    Rätt event lyser i guld.
+                                </span>
+                            </>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={startRound}
+                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors whitespace-nowrap ${
+                                gameResult === 'correct'
+                                    ? 'bg-white text-emerald-600 hover:bg-emerald-50'
+                                    : 'bg-[#006AA7] text-white hover:bg-[#005590]'
+                            }`}
+                        >
+                            Spela igen
+                        </button>
+                        <button
+                            type="button"
+                            onClick={clearGame}
+                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors ${
+                                gameResult === 'correct'
+                                    ? 'bg-emerald-400/40 text-white hover:bg-emerald-400/60'
+                                    : 'text-slate-500 hover:bg-slate-100'
+                            }`}
+                        >
+                            Stäng
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.
                 När animationen slutar trigger:as ett nytt moln i V2Map som

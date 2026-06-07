@@ -1,6 +1,7 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getAuthHeaders } from '../lib/authHeaders';
 
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. Try Firestore Client SDK first
@@ -158,7 +159,7 @@ export const linkEventService = {
     async create(linkEvent: Omit<LinkEvent, 'id' | 'createdAt'>) {
         const res = await fetch('/api/link-events', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
             body: JSON.stringify(linkEvent)
         });
         if (!res.ok) {
@@ -171,7 +172,8 @@ export const linkEventService = {
     // Ta bort link event
     async delete(id: string) {
         const res = await fetch(`/api/link-events?id=${encodeURIComponent(id)}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { ...(await getAuthHeaders()) }
         });
         if (!res.ok) {
             const errData = await res.json();
@@ -184,7 +186,7 @@ export const linkEventService = {
     async update(id: string, updates: Partial<Omit<LinkEvent, 'id' | 'createdAt'>>) {
         const res = await fetch(`/api/link-events?id=${encodeURIComponent(id)}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
             body: JSON.stringify(updates)
         });
         if (!res.ok) {
@@ -200,7 +202,7 @@ export const linkEventService = {
         
         const res = await fetch('/api/link-events', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
             body: JSON.stringify({
                 action: 'bulkCreate',
                 events: linkEvents
@@ -222,7 +224,7 @@ export const linkEventService = {
 
         const res = await fetch('/api/link-events', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
             body: JSON.stringify({
                 action: 'bulkDelete',
                 ids: eventIds

@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firestore-admin';
+import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 function toDate(value: any): Date {
@@ -23,6 +23,9 @@ function toDate(value: any): Date {
 }
 
 export async function GET(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
     const db = getAdminDb();
     if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
 

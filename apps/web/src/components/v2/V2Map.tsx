@@ -3,9 +3,70 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Layers, Box, Globe, Mountain } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
-import CloudPopup from '../ui/CloudPopup';
+import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
+
+// Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
+// (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
+// de är DOM-element i container, inte en del av style-spec:en.
+const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
+    version: 8,
+    sources: {
+        satellite: {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+        },
+        // Transparent etikett-overlay med ort- och landsnamn ovanpå satellit-bilden,
+        // så man fortfarande ser var man är även när basbilden är fotorealistisk.
+        labels: {
+            type: 'raster',
+            tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256,
+            attribution: 'Labels &copy; Esri'
+        }
+    },
+    layers: [
+        { id: 'satellite', type: 'raster', source: 'satellite' },
+        { id: 'labels', type: 'raster', source: 'labels' }
+    ]
+};
+
+// Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
+// källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
+// tas bort igen när det stängs av, så DEM-tiles inte ligger och tar minne i onödan.
+// Tile-cachen (maxTileCacheSize på kartan) gäller även den här källan.
+const TERRAIN_DEM_ID = 'terrain-dem';
+const TERRAIN_DEM_SOURCE: maplibregl.RasterDEMSourceSpecification = {
+    type: 'raster-dem',
+    tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
+    encoding: 'terrarium',
+    tileSize: 256,
+    maxzoom: 13,
+    attribution: 'Elevation: Mapzen / AWS Terrain Tiles'
+};
+const TERRAIN_EXAGGERATION = 1.4;
+
+// Skifta klot-projektionen på/av. Nästan gratis — samma tiles, annan projektion.
+function applyProjection(map: maplibregl.Map, globe: boolean) {
+    map.setProjection({ type: globe ? 'globe' : 'mercator' });
+}
+
+// Slå på/av 3D-terräng. DEM-källan läggs till lazy och tas bort när läget stängs
+// av, så höjddatan inte ligger och äter minne när man kör platt.
+function applyTerrain(map: maplibregl.Map, on: boolean) {
+    if (on) {
+        if (!map.getSource(TERRAIN_DEM_ID)) map.addSource(TERRAIN_DEM_ID, TERRAIN_DEM_SOURCE);
+        map.setTerrain({ source: TERRAIN_DEM_ID, exaggeration: TERRAIN_EXAGGERATION });
+    } else {
+        map.setTerrain(null);
+        if (map.getSource(TERRAIN_DEM_ID)) map.removeSource(TERRAIN_DEM_ID);
+    }
+}
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -33,6 +94,39 @@ interface V2MapProps {
     /** Skickar status om huruvida respektive molns ankare ligger utanför skärmen.
      *  Sidan använder det för att visa återkallnings-knappar jämte solen. */
     onCloudVisibilityChange?: (visibility: { main: boolean; sun: boolean }) => void;
+    /** True när båda molnen ligger på varandra → slangbella tillgänglig.
+     *  Sidan fyller fokusknappen vit för att visa att läget är aktivt. */
+    onSlingshotChange?: (active: boolean) => void;
+    /** True när användaren tryckt på fokusknappen i ready-läge → gummibanden
+     *  blir alltid synliga och nästa drag-release av ett moln avfyrar slangbellan
+     *  i motsatt riktning mot dragget. */
+    slingshotEngaged?: boolean;
+    /** Fyrar när snärten avlossats så sidan kan avarma engaged-läget. */
+    onSlingshotFired?: () => void;
+    /** "Hitta eventet"-spel: när true är kartan i gissningsläge — markörklick blir
+     *  en gissning (onGuess) i stället för ett vanligt val, det valda mål-eventet
+     *  highlightas INTE (så det inte avslöjas) och kameran flyttas inte dit. */
+    gameMode?: boolean;
+    /** Anropas vid markörklick i gissningsläge med hela gruppen som klickades.
+     *  Sidan avgör om mål-eventet finns i gruppen. */
+    onGuess?: (group: LinkEvent[]) => void;
+    /** Event-id som ska ritas som en guld-skimrande markör (det rätta svaret när
+     *  rundan avslöjats). null = ingen guldmarkör. */
+    goldEventId?: string | null;
+    /** Event-id för markören man gissade på — hålls synlig (brickan visas direkt)
+     *  efter avslöjet så man ser var man klickade. null = ingen. */
+    guessedEventId?: string | null;
+    /** Streck mellan gissningen (from) och rätt svar (to) som ritas efter en
+     *  felgissning. När satt zoomar kartan ut så båda punkterna syns och en
+     *  streckad linje + avståndsetikett ritas mellan dem. null = inget streck. */
+    guessLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null;
+    /** True = luta kameran till en sidovy (3D-perspektiv); false = platt vy.
+     *  Togglas av solknappen + tilt-knappen. */
+    tilted?: boolean;
+    /** Fyrar när man trycker på sol-molnet — sidan fäller tillbaka lutningen. */
+    onSunCloudTap?: () => void;
+    /** Togglar lutningen via tilt-knappen under satellit-knappen. */
+    onToggleTilt?: () => void;
 }
 
 export default function V2Map({
@@ -49,7 +143,18 @@ export default function V2Map({
     recallMainTrigger = 0,
     recallSunTrigger = 0,
     recenterTrigger = 0,
-    onCloudVisibilityChange
+    onCloudVisibilityChange,
+    onSlingshotChange,
+    slingshotEngaged = false,
+    onSlingshotFired,
+    gameMode = false,
+    onGuess,
+    goldEventId = null,
+    guessedEventId = null,
+    guessLine = null,
+    tilted = false,
+    onSunCloudTap,
+    onToggleTilt
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -60,6 +165,27 @@ export default function V2Map({
     const revealedKeysRef = useRef<Set<string>>(new Set());
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
+    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
+
+    // Två oberoende 3D-lägen som kan skiftas var för sig (och kombineras):
+    //   isGlobe      — projicera kartan på ett klot (mercator ↔ globe). ~0 minne.
+    //   is3DTerrain  — res upp höjder/berg ur kartan via en DEM-källa. Minnestungt,
+    //                  därför läggs DEM-källan till/tas bort dynamiskt (se effekt).
+    // Refs så att stil-omladdningen (setStyle nollställer projektion + custom-källor)
+    // kan återställa rätt läge utan att bindas om.
+    const [isGlobe, setIsGlobe] = useState(false);
+    const [is3DTerrain, setIs3DTerrain] = useState(false);
+    const isGlobeRef = useRef(isGlobe);
+    isGlobeRef.current = isGlobe;
+    const is3DTerrainRef = useRef(is3DTerrain);
+    is3DTerrainRef.current = is3DTerrain;
+
+    // Gissnings-streck (spelet): geo-ankaret i en ref + de projicerade skärm-
+    // positionerna i state. Skärmpositionerna uppdateras varje kart-frame så
+    // strecket sitter fast mellan gissningen och rätt svar medan kartan rör sig.
+    const guessLineRef = useRef(guessLine);
+    guessLineRef.current = guessLine;
+    const [guessLineScreen, setGuessLineScreen] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
 
     // Spara undan callbacks i refs så map-event-handlers inte ständigt behöver bindas om
     const onSelectEventRef = useRef(onSelectEvent);
@@ -70,6 +196,13 @@ export default function V2Map({
 
     const onMapDragRef = useRef(onMapDrag);
     onMapDragRef.current = onMapDrag;
+
+    // Spel-läge + gissnings-callback i refs så markör-klickhanterare kan läsa
+    // senaste värdet utan att bindas om.
+    const gameModeRef = useRef(gameMode);
+    gameModeRef.current = gameMode;
+    const onGuessRef = useRef(onGuess);
+    onGuessRef.current = onGuess;
 
     // Cloud popup geographic map anchor state and projection variables
     // Solves request: anchor cloud to a position on map, move with map
@@ -105,6 +238,39 @@ export default function V2Map({
     const sunCloudAnchorPosRef = useRef(sunCloudAnchorPos);
     sunCloudAnchorPosRef.current = sunCloudAnchorPos;
 
+    // Tilt-status i ref så hjälpare som depthAtPoint (anropad senare från
+    // CloudPopups glide-tick) kan läsa senaste värdet utan att bindas om.
+    const tiltedRef = useRef(tilted);
+    tiltedRef.current = tilted;
+
+    // Perspektiv-skalning i lutad vy: ett moln som ligger längre bort från
+    // kameran (högre upp på skärmen i 3D-vyn) ritas mindre och kastas
+    // svagare (mer friktion under glidet) så det inte flyger ut över kanten.
+    // Ratio = skärm-pixlar-per-meter vid molnets nuvarande punkt jämfört med
+    // kartans centrum. Pitch=0 → ratio = 1 överallt (ingen skalning/dämpning).
+    // depthAtPoint får skärmpunkten och projicerar via map.unproject så det
+    // funkar för molnets LIVE-position (ankare + drag/glid-offset), inte
+    // bara dess geografiska ankarpunkt.
+    const depthAtPoint = (screenX: number, screenY: number): number => {
+        if (!tiltedRef.current) return 1;
+        const map = mapRef.current;
+        if (!map) return 1;
+        const center = map.getCenter();
+        const dlat = 0.0008;
+        const c1 = map.project([center.lng, center.lat]);
+        const c2 = map.project([center.lng, center.lat + dlat]);
+        const cScale = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+        if (!isFinite(cScale) || cScale < 1e-4) return 1;
+        const ll = map.unproject([screenX, screenY]);
+        const a1 = map.project([ll.lng, ll.lat]);
+        const a2 = map.project([ll.lng, ll.lat + dlat]);
+        const aScale = Math.hypot(a2.x - a1.x, a2.y - a1.y);
+        if (!isFinite(aScale)) return 1;
+        return Math.min(Math.max(aScale / cScale, 0.3), 1.5);
+    };
+    const depthAtPointRef = useRef(depthAtPoint);
+    depthAtPointRef.current = depthAtPoint;
+
     // Camera-follow: tapping ett moln pinnar det vid en skärmpunkt. Båda molnen
     // kan följas samtidigt — och kartan får dras fritt även medan de följs (panna
     // under molnen). När man kastar ett följt moln glider kameran med, och båda
@@ -129,6 +295,55 @@ export default function V2Map({
     const sunOffScreenRef = useRef(sunOffScreen);
     sunOffScreenRef.current = sunOffScreen;
 
+    // Slangbella: aktiv när båda molnen ligger på (nästan) varandra på skärmen.
+    const [slingshotActive, setSlingshotActive] = useState(false);
+    const slingshotActiveRef = useRef(slingshotActive);
+    slingshotActiveRef.current = slingshotActive;
+    // Live drag-offset per moln, så slangbella-gummibanden hänger med molnet
+    // när användaren drar i det. Nollställs när dragget släpps.
+    const [mainLiveOffset, setMainLiveOffset] = useState({ x: 0, y: 0 });
+    const [sunLiveOffset, setSunLiveOffset] = useState({ x: 0, y: 0 });
+
+    // Perspektiv-skala per moln, beräknat på molnets LIVE skärmpunkt (ankare +
+    // drag/glid-offset). Pitch=0 → alltid 1. I lutad vy: molnet uppåt på
+    // skärmen (in i horisonten) → ratio < 1 → ritas mindre. Eftersom useMemo
+    // beror på live-offsetten uppdateras skalan automatiskt även mitt under
+    // glidet — molnet krymper smidigt när det glider in i djupet.
+    const mainPerspectiveScale = useMemo(() => {
+        if (!tilted || !cloudAnchorPos) return 1;
+        return depthAtPoint(cloudAnchorPos.x + mainLiveOffset.x, cloudAnchorPos.y + mainLiveOffset.y);
+    }, [tilted, cloudAnchorPos, mainLiveOffset]);
+    const sunPerspectiveScale = useMemo(() => {
+        if (!tilted || !sunCloudAnchorPos) return 1;
+        return depthAtPoint(sunCloudAnchorPos.x + sunLiveOffset.x, sunCloudAnchorPos.y + sunLiveOffset.y);
+    }, [tilted, sunCloudAnchorPos, sunLiveOffset]);
+
+    // Molnens nuvarande moods (rapporterade av respektive CloudPopup) + en
+    // "incoming"-stämpel per moln. När man drar ett moln med en min över det
+    // andra molnet får det andra molnet samma min.
+    const [mainMood, setMainMood] = useState<CloudExpression | null>(null);
+    const [sunMood, setSunMood] = useState<CloudExpression | null>(null);
+    const mainMoodRef = useRef(mainMood); mainMoodRef.current = mainMood;
+    const sunMoodRef = useRef(sunMood); sunMoodRef.current = sunMood;
+    const [mainIncomingMood, setMainIncomingMood] = useState<{ mood: CloudExpression | null; nonce: number }>({ mood: null, nonce: 0 });
+    const [sunIncomingMood, setSunIncomingMood] = useState<{ mood: CloudExpression | null; nonce: number }>({ mood: null, nonce: 0 });
+    const slingshotEngagedRef = useRef(slingshotEngaged);
+    slingshotEngagedRef.current = slingshotEngaged;
+    // Snapshot av båda molns skärmpositioner i samma sekund slangbellan armas.
+    // Används vid avfyrning för att räkna ut pull-vektorn (current - origin) och
+    // avgöra vilket moln som är "projektilen" (det som flyttats längst).
+    const engageSnapshotRef = useRef<{ main: { x: number; y: number } | null; sun: { x: number; y: number } | null }>({ main: null, sun: null });
+    useEffect(() => {
+        if (slingshotEngaged) {
+            engageSnapshotRef.current = {
+                main: cloudAnchorPosRef.current ? { ...cloudAnchorPosRef.current } : null,
+                sun: sunCloudAnchorPosRef.current ? { ...sunCloudAnchorPosRef.current } : null,
+            };
+        } else {
+            engageSnapshotRef.current = { main: null, sun: null };
+        }
+    }, [slingshotEngaged]);
+
     const baseZoomRef = useRef<number>(8);
 
     // Live glide-snapshot från respektive moln. CloudPopup skriver hit varje
@@ -139,14 +354,8 @@ export default function V2Map({
     const mainGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
     const sunGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
 
-    // Ticking counter used to cycle through events at the same coordinate.
-    // Increments once per second; markers with count > 1 swap their displayed
-    // event (emoji + click target) each tick like a slideshow.
-    const [slideshowTick, setSlideshowTick] = useState(0);
-    useEffect(() => {
-        const id = setInterval(() => setSlideshowTick(t => t + 1), 1000);
-        return () => clearInterval(id);
-    }, []);
+    // (Bildväxlingen för grupper med flera event på samma plats sköts av en
+    //  desyncad cycler längre ner — se effekten efter visibleGroups.)
 
     // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
     const groups = useMemo(() => {
@@ -175,12 +384,86 @@ export default function V2Map({
             // Visa alltid det valda eventet omedelbart, även om det råkar ligga utanför skärmens gränser just nu
             const containsSelected = group.some(e => e.id === selectedEvent?.id);
             if (containsSelected) return true;
+            // Visa alltid markören man gissade på (spelet) så brickan syns efter avslöjet.
+            if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
 
             const rep = group[0];
             if (!rep.lng || !rep.lat) return false;
             return paddedBounds.contains([rep.lng, rep.lat]);
         });
-    }, [groups, mapBounds, selectedEvent]);
+    }, [groups, mapBounds, selectedEvent, guessedEventId]);
+
+    // ── Desyncad bildväxling för grupper med flera event på samma plats ───────
+    // Tidigare bytte ALLA sådana grupper emoji på exakt samma 1-sekunderstick
+    // (en synkad DOM-skur) OCH det triggade en full omsynk av varenda markör.
+    // Nu sprider vi ut det: en sub-tick var 200 ms, och varje grupp får en fast
+    // fas-offset utifrån sin nyckel → varje grupp byter ~1 gång/sekund men vid
+    // olika tidpunkter, och bytet rör BARA den gruppens emoji (ingen omsynk).
+    const visibleGroupsRef = useRef(visibleGroups);
+    visibleGroupsRef.current = visibleGroups;
+    const selectedEventValRef = useRef(selectedEvent);
+    selectedEventValRef.current = selectedEvent;
+    const discardedEventIdsRef = useRef(discardedEventIds);
+    discardedEventIdsRef.current = discardedEventIds;
+    useEffect(() => {
+        const STEPS = 5; // 5 × 200 ms ≈ 1 s per bildbyte och grupp
+        const phaseForKey = (key: string) => {
+            let h = 0;
+            for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+            return h % STEPS;
+        };
+        let sub = 0;
+        const id = setInterval(() => {
+            sub++;
+            const sel = selectedEventValRef.current;
+            const disc = discardedEventIdsRef.current;
+            for (const [key, group] of visibleGroupsRef.current) {
+                if (group.length <= 1) continue;
+                if (sel && group.some(e => e.id === sel.id)) continue; // valt sköts av synken
+                const md = markersRef.current.get(key);
+                if (!md) continue;
+                const nonDiscarded = group.filter(e => !disc.has(e.id));
+                if (nonDiscarded.length === 0) continue;
+                const step = Math.floor((sub + phaseForKey(key)) / STEPS);
+                const cur = nonDiscarded[step % nonDiscarded.length];
+                // Uppdatera bara när den faktiskt visade gruppmedlemmen byts —
+                // billigt, och klickmålet följer den som visas just nu.
+                if (md.element.dataset.cycleId === cur.id) continue;
+                md.element.dataset.cycleId = cur.id;
+                const catKey = cur.category && EVENT_CATEGORIES[cur.category] ? cur.category : 'other';
+                const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
+                const emojiEl = md.element.querySelector('.pin-emoji');
+                if (emojiEl && emojiEl.textContent !== emoji) emojiEl.textContent = emoji;
+                md.element.onclick = (e) => {
+                    e.stopPropagation();
+                    if (gameModeRef.current) { onGuessRef.current?.(group); return; }
+                    onSelectEventRef.current(cur);
+                };
+            }
+        }, 200);
+        return () => clearInterval(id);
+    }, []);
+
+    // Spårar ORDNINGEN man bläddrat genom den valda gruppen, så grupp-markörens
+    // siffra speglar din position (Nästa → mindre, Bakåt → större). Nollställs
+    // när man byter grupp. (Ett event som man går tillbaka till finns redan i
+    // listan → ordningen ändras inte, men index/siffran följer det valda.)
+    const visitedOrderRef = useRef<string[]>([]);
+    const visitedGroupKeyRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!selectedEvent || selectedEvent.lat == null || selectedEvent.lng == null) {
+            visitedOrderRef.current = [];
+            visitedGroupKeyRef.current = null;
+            return;
+        }
+        const gk = `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}`;
+        if (gk !== visitedGroupKeyRef.current) {
+            visitedGroupKeyRef.current = gk;
+            visitedOrderRef.current = [selectedEvent.id];
+        } else if (!visitedOrderRef.current.includes(selectedEvent.id)) {
+            visitedOrderRef.current.push(selectedEvent.id);
+        }
+    }, [selectedEvent]);
 
     // 1. Initiera MapLibre kartan en gång
     useEffect(() => {
@@ -188,9 +471,28 @@ export default function V2Map({
 
         const map = new maplibregl.Map({
             container: mapContainerRef.current,
-            style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+            // Initial style matchar default-värdet på mapStyle (satellit) så
+            // kartan inte måste byta stil direkt efter mount → ingen flicker.
+            style: SATELLITE_STYLE,
             center: [14.8091, 56.8777], // Lng, Lat (Växjö)
-            zoom: 8
+            zoom: 8,
+            // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
+            // världen (zoom 0) vilket ibland kraschar appen (massa tiles + globe-
+            // /terräng-edgecases långt bort). 3 ≈ hela Skandinavien i bild — gott
+            // om kontext men utan världs-vyn som ställer till det.
+            minZoom: 3,
+            // ── Minnestak för tile-cachen ──────────────────────────────────
+            // Satellitvyn använder TVÅ raster-källor (bilder + etiketter). Varje
+            // 256px-tile blir en GPU-textur (~256 KB). Utan tak växer cachen
+            // obegränsat ju mer man pannar/zoomar ("ju mer av kartan man läser
+            // in") → minnet drar iväg mot ~600 MB. Vi sätter ett hårt tak per
+            // källa och behåller färre zoom-nivåer (default 5) så cachen trimmas
+            // löpande i stället för att ackumulera.
+            maxTileCacheSize: 80,
+            maxTileCacheZoomLevels: 3,
+            // Ladda inte om utgångna tiles i bakgrunden — sparar både nät och
+            // minne (gamla texturer hålls inte kvar i väntan på refresh).
+            refreshExpiredTiles: false
         });
 
         mapRef.current = map;
@@ -210,6 +512,9 @@ export default function V2Map({
         map.on('zoomend', showBricks);
 
         map.on('click', () => {
+            // I gissningsläge ska ett klick på tom karta inte stänga mål-kortet
+            // (det skulle avbryta rundan av misstag).
+            if (gameModeRef.current) return;
             onSelectEventRef.current(null);
         });
 
@@ -269,17 +574,45 @@ export default function V2Map({
                 const scaled = Math.min(Math.max(SUN_CLOUD_BASE_SCALE * Math.pow(2, zoomDelta), 0.25), 4);
                 setSunCloudScale((prevScale) => Math.abs(prevScale - scaled) > 0.001 ? scaled : prevScale);
             }
+
+            // Gissnings-streck: projicera geo→skärm varje frame så strecket sitter
+            // fast mellan gissningen och rätt svar medan kartan zoomar/pannas.
+            const gl = guessLineRef.current;
+            if (gl) {
+                const pf = map.project([gl.from.lng, gl.from.lat]);
+                const pt = map.project([gl.to.lng, gl.to.lat]);
+                setGuessLineScreen((prev) => {
+                    if (prev
+                        && Math.round(prev.from.x) === Math.round(pf.x) && Math.round(prev.from.y) === Math.round(pf.y)
+                        && Math.round(prev.to.x) === Math.round(pt.x) && Math.round(prev.to.y) === Math.round(pt.y)) return prev;
+                    return { from: { x: pf.x, y: pf.y }, to: { x: pt.x, y: pt.y } };
+                });
+            }
         };
 
         map.on('move', updateCloudPosition);
         map.on('zoom', updateCloudPosition);
 
-        // Uppdatera synliga bounds och anropa callback när rörelsen stannat
-        const handleMoveEnd = () => {
+        // Uppdatera synliga bounds + center-callback. THROTTLAD: idle-driftens
+        // panBy fyrar 'moveend' ~60fps och setMapBounds triggar marker-omsync —
+        // kör därför som mest ~var 200ms (≈5x/sek) i stället för varje frame.
+        let moveEndTimer: ReturnType<typeof setTimeout> | null = null;
+        let moveEndLastAt = 0;
+        const applyBounds = () => {
+            moveEndLastAt = performance.now();
             setMapBounds(map.getBounds());
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
+            }
+        };
+        const handleMoveEnd = () => {
+            const since = performance.now() - moveEndLastAt;
+            if (since >= 200) {
+                if (moveEndTimer) { clearTimeout(moveEndTimer); moveEndTimer = null; }
+                applyBounds();
+            } else if (!moveEndTimer) {
+                moveEndTimer = setTimeout(() => { moveEndTimer = null; applyBounds(); }, 200 - since);
             }
         };
 
@@ -296,39 +629,144 @@ export default function V2Map({
         });
 
         return () => {
+            if (moveEndTimer) clearTimeout(moveEndTimer);
             map.remove();
             mapRef.current = null;
         };
     }, []);
 
-    // Mjuk idle-drift: när användaren inte rört kartan på en stund driver vi
-    // den långsamt i sinus-bana så bilden lever. Pausas direkt vid interaktion.
+    // Kör fn så snart kartans stil är redo (annars går addSource/setTerrain fel).
+    const runWhenStyleReady = (fn: (map: maplibregl.Map) => void) => {
+        const map = mapRef.current;
+        if (!map) return;
+        if (map.isStyleLoaded()) fn(map);
+        else map.once('style.load', () => fn(map));
+    };
+
+    // Byt baskartan när användaren togglar satellit-knappen. Markörerna ligger som
+    // DOM-element i container och påverkas inte av setStyle.
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
+        map.setStyle(mapStyle === 'satellite' ? SATELLITE_STYLE : STREETS_STYLE_URL);
+        // setStyle ersätter HELA stilen → projektionen nollställs och custom-källor
+        // (DEM) försvinner. Återställ globe + terräng när nya stilen laddat klart.
+        map.once('style.load', () => {
+            applyProjection(map, isGlobeRef.current);
+            applyTerrain(map, is3DTerrainRef.current);
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mapStyle]);
+
+    // Globe-läge: skifta projektion mercator ↔ globe. Helt fristående toggle.
+    useEffect(() => {
+        runWhenStyleReady(map => applyProjection(map, isGlobe));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGlobe]);
+
+    // 3D-terräng: fristående toggle. Lägger till/tar bort DEM-källan + terräng-mesh.
+    useEffect(() => {
+        runWhenStyleReady(map => applyTerrain(map, is3DTerrain));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [is3DTerrain]);
+
+    // Luta kameran när solknappen togglar tilt: pitch 60° = sidovy, 0° = platt.
+    // Hoppar över det initiala körningen (då tilt redan matchar kartans 0°).
+    const prevTiltedRef = useRef(tilted);
+    useEffect(() => {
+        if (prevTiltedRef.current === tilted) return;
+        prevTiltedRef.current = tilted;
+        const map = mapRef.current;
+        if (!map) return;
+        driftSuppressUntilRef.current = performance.now() + 1400;
+        map.easeTo({ pitch: tilted ? 60 : 0, duration: 900 });
+    }, [tilted]);
+
+    // Tidsstämpel som idle-driften ska hålla sig pausad till. Sätts av våra egna
+    // programmatiska kamera-flytt (easeTo) så driften inte slåss mot centreringen.
+    const driftSuppressUntilRef = useRef(0);
+
+    // Mjuk idle-drift: när användaren inte rört kartan på en stund driver vi
+    // den långsamt i sinus-bana så bilden lever. Pausas direkt vid interaktion
+    // OCH under våra egna kamera-flytt (driftSuppressUntilRef).
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        // Respektera prefers-reduced-motion OCH spara resurser: hoppa över hela
+        // idle-driften om användaren bett om mindre rörelse. Driften kör en RAF
+        // i all evighet + setState varje frame för moln-projektionen; i ett
+        // framtida 3D-läge (globe/terräng) blir varje frame dessutom en omritning
+        // av hela scenen, så det här är billig huvudvärk att slippa.
+        if (typeof window !== 'undefined'
+            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
         let raf = 0;
         let interactingUntil = 0;
-        let startedAt = performance.now();
+        // startedAt nollställs ALDRIG efter init — vågens fas är kontinuerlig
+        // över pauser så driften aldrig "snäpper" till en ny startposition när
+        // den återupptas. Boost-envelopen löper bara på den initiala starten.
+        const startedAt = performance.now();
         let last = { x: 0, y: 0 };
+        // Tidpunkt då aktuell paus slutade. Används för att fade-ina drift-
+        // amplituden över ~1s istället för att klippa in direkt — så man inte
+        // ser ett "hack" precis efter att man släppt kartan.
+        let resumeAt = startedAt;
+        let wasPaused = false;
         const pause = () => { interactingUntil = performance.now() + 2500; };
         map.on('dragstart', pause);
+        map.on('drag', pause);        // förläng pausen under HELA draget (annars motas långa drag av driften)
         map.on('zoomstart', pause);
         map.on('rotatestart', pause);
         map.on('pitchstart', pause);
+        // Pausa direkt vid beröring (innan dragstart hinner fyras), så driften
+        // aldrig slåss med att man börjar dra kartan.
+        const canvas = map.getCanvasContainer();
+        canvas.addEventListener('pointerdown', pause);
         const tick = (now: number) => {
-            if (now >= interactingUntil && !document.hidden) {
+            // Pausa driften i 3D-läge (globe/terräng): där tvingar varje panBy en
+            // omritning av hela 3D-scenen (terräng-mesh m.m.) → klart dyrare än i
+            // platt vy. 3D känns dessutom levande ändå. Den lilla grunddriften är
+            // bara värd sin kostnad i den platta vyn.
+            const isPaused = now < interactingUntil || now < driftSuppressUntilRef.current
+                || document.hidden || isGlobeRef.current || is3DTerrainRef.current;
+            if (!isPaused) {
                 const t = (now - startedAt) / 1000;
-                const targetX = Math.sin(t * 0.18) * 18;
-                const targetY = Math.cos(t * 0.13) * 10;
-                const dx = targetX - last.x;
-                const dy = targetY - last.y;
+                // Driften = stor dämpad initial puls + liten konstant grunddrift.
+                // Bägge termerna använder sin() så de startar och oscillerar runt
+                // 0 → ingen kumulativ förskjutning. Pulsen dör ut på ~6s (τ=2.5),
+                // så snart är bara den lugna grunddriften kvar.
+                const pulse = Math.exp(-t / 2.5);
+                // Initial puls — stora svep i tre frekvenser för chaotisk vind.
+                const pulseX = (Math.sin(t * 0.85) * 70 + Math.sin(t * 0.42) * 50 + Math.sin(t * 1.30) * 30) * pulse;
+                const pulseY = (Math.sin(t * 0.71) * 45 + Math.sin(t * 0.33) * 32 + Math.sin(t * 1.10) * 18) * pulse;
+                // Konstant grunddrift — små sinusvågor som lever vidare.
+                const baseX = Math.sin(t * 0.18) * 10 + Math.sin(t * 0.07) * 6;
+                const baseY = Math.sin(t * 0.13) * 7 + Math.sin(t * 0.05) * 4;
+                const targetX = pulseX + baseX;
+                const targetY = pulseY + baseY;
+                // Första frame efter paus: synka last till vågens nuvarande
+                // position så dx=0 → ingen abrupt panBy. Fasen löper vidare
+                // under pausen, så vi tar bara vid där vi "skulle ha varit".
+                if (wasPaused) {
+                    last = { x: targetX, y: targetY };
+                    resumeAt = now;
+                    wasPaused = false;
+                }
+                // Fade-in efter återupptagning: 0 → 1 över 1s, ease-out.
+                const sinceResume = (now - resumeAt) / 1000;
+                const fade = Math.min(1, sinceResume / 1.0);
+                const eased = 1 - Math.pow(1 - fade, 3);
+                const dx = (targetX - last.x) * eased;
+                const dy = (targetY - last.y) * eased;
                 if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
                     map.panBy([dx, dy], { duration: 0, animate: false });
                 }
+                // last följer vågen i fullt belopp så fasen är intakt; bara
+                // applicerad delta dämpas under fade-in.
                 last = { x: targetX, y: targetY };
             } else {
-                startedAt = now;
-                last = { x: 0, y: 0 };
+                wasPaused = true;
             }
             raf = requestAnimationFrame(tick);
         };
@@ -336,9 +774,11 @@ export default function V2Map({
         return () => {
             cancelAnimationFrame(raf);
             map.off('dragstart', pause);
+            map.off('drag', pause);
             map.off('zoomstart', pause);
             map.off('rotatestart', pause);
             map.off('pitchstart', pause);
+            canvas.removeEventListener('pointerdown', pause);
         };
     }, []);
 
@@ -373,6 +813,7 @@ export default function V2Map({
         // Negative offset relative to center moves it towards the top of the viewport
         const yOffset = map.getContainer().clientHeight * (targetYRatio - 0.5);
 
+        driftSuppressUntilRef.current = performance.now() + 1500;
         map.easeTo({
             center: [selectedEvent.lng, selectedEvent.lat],
             zoom: nextZoom,
@@ -381,11 +822,14 @@ export default function V2Map({
         });
     };
 
-    // 2. Hantera kamera-panorering och zoomning vid val av event
+    // 2. Hantera kamera-panorering och zoomning vid val av event.
+    //    I gissningsläge flyttar vi ALDRIG kameran till det valda eventet — då
+    //    skulle spelaren ju få mål-eventets position serverad direkt.
     useEffect(() => {
+        if (gameMode) return;
         recenterOnSelected();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent, cardExpanded]);
+    }, [selectedEvent, cardExpanded, gameMode]);
 
     // Recenter-knappen flyger kameran TILL ett moln (vi går dit — molnet
     // teleporteras inte till oss). Finns båda molnen framme → toggla till det
@@ -393,45 +837,40 @@ export default function V2Map({
     // moln → alltid det. Inget moln → inget händer.
     const lastRecenterRef = useRef<'main' | 'sun'>('sun');
 
-    // Jaga ett moln som fortfarande är i luften: räkna ut var det kommer landa
-    // utifrån nuvarande hastighet och friktion, sikta kameran dit, och låt den
-    // flyga lika länge som molnet glider. Med matchande easing slutar de på
-    // samma punkt — molnet hamnar mitt i bild när det stannar.
+    // Jagar ett moln som fortfarande är i luften (mitt i ett glid): räknar ut var
+    // det landar utifrån live-hastighet + friktion, flyger kameran dit och slår
+    // sedan på POV (follow) så vi följer det medan det glider klart. Avsluta med
+    // tryck på molnet igen.
     const latchOntoGlidingCloud = (
         kind: 'main' | 'sun',
         state: { sp: { x: number; y: number }; vx: number; vy: number }
     ) => {
         const map = mapRef.current; if (!map) return;
-        // Under själva jakten äger V2Map:s easeTo kameran ostört.
         setMainFollowing(false);
         setSunFollowing(false);
         lastRecenterRef.current = kind;
 
-        // När kameran kommit ifatt molnet: slå på follow så vi FORTSÄTTER följa
-        // dess bana (molnet pinnas på skärmen, kartan glider under). Avslutas
-        // genom att trycka på molnet igen (onToggleFollow).
         const startFollow = () => {
             if (kind === 'main') { setSunFollowing(false); setMainFollowing(true); }
             else { setMainFollowing(false); setSunFollowing(true); }
         };
 
         const k = 2.2 / 1000;       // matchar CloudPopups GLIDE_FRICTION
-        const stopThreshold = 0.04; // matchar CloudPopup
+        const stopThreshold = 0.04;
         const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
 
         if (speed < stopThreshold) {
-            // Knappt rörelse kvar — fall tillbaka till en enkel centrering.
             const ll = map.unproject([state.sp.x, state.sp.y]);
+            driftSuppressUntilRef.current = performance.now() + 900;
             map.easeTo({ center: [ll.lng, ll.lat], duration: 500 });
             map.once('moveend', startFollow);
             return;
         }
 
-        // Var molnet landar (i nuvarande kamera-frame) om vi inte rör kameran:
-        // SP + v/k är formeln för en exponentiellt avtagande hastighet.
         const landSP = { x: state.sp.x + state.vx / k, y: state.sp.y + state.vy / k };
         const targetLL = map.unproject([landSP.x, landSP.y]);
         const duration = Math.min(Math.max(Math.log(speed / stopThreshold) / k, 300), 2600);
+        driftSuppressUntilRef.current = performance.now() + duration + 400;
         map.easeTo({
             center: [targetLL.lng, targetLL.lat],
             duration,
@@ -448,46 +887,67 @@ export default function V2Map({
         const hasSun = !!sunCloudAnchorRef.current;
         if (!hasMain && !hasSun) return;
 
-        // Ett moln som fortfarande är mitt i ett kast har ett inaktuellt geo-ankare
-        // (det commitas inte förrän glidet är slut). Läs istället det live-state
-        // CloudPopup skriver till varje frame och sikta kameran på den förutspådda
-        // landningsplatsen — så jagar vi molnet ner i mitten istället för att
-        // hoppa till "platsen där det kastades ifrån".
+        // Ett moln mitt i ett kast (glid) har inte commitat sitt nya ankare än —
+        // läs live-glidet och JAGA molnet dit det faktiskt är på väg, inte dit det
+        // kastades ifrån.
         const mainGlide = hasMain ? mainGlideStateRef.current : null;
         const sunGlide = hasSun ? sunGlideStateRef.current : null;
         if (mainGlide || sunGlide) {
-            let go: 'main' | 'sun';
-            if (mainGlide && sunGlide) go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
-            else go = mainGlide ? 'main' : 'sun';
-            latchOntoGlidingCloud(go, (go === 'main' ? mainGlide : sunGlide)!);
+            const g: 'main' | 'sun' = (mainGlide && sunGlide)
+                ? (lastRecenterRef.current === 'main' ? 'sun' : 'main')
+                : (mainGlide ? 'main' : 'sun');
+            latchOntoGlidingCloud(g, (g === 'main' ? mainGlide : sunGlide)!);
             return;
         }
 
-        // Ett moln som slängts iväg (ligger utanför bild) prioriteras: dit flyttas
-        // kameran först. Sen växlar knappen mellan molnens position som vanligt.
+        // Ett iväg-kastat moln (ligger utanför bild) prioriteras.
         const mainThrown = hasMain && mainOffScreenRef.current;
         const sunThrown = hasSun && sunOffScreenRef.current;
+        const thrown = mainThrown || sunThrown;
 
         let go: 'main' | 'sun';
-        if (mainThrown || sunThrown) {
+        if (thrown) {
             if (mainThrown && sunThrown) go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
             else go = mainThrown ? 'main' : 'sun';
         } else if (hasMain && hasSun) {
-            // Växla till det andra molnet jämfört med förra klicket.
+            // Växla till det andra molnet — men om målet redan ligger (nära) mitten
+            // skulle det bli en ~1px-flytt. Hoppa då till det andra molnet.
+            const cx = map.getContainer().clientWidth / 2;
+            const cy = map.getContainer().clientHeight / 2;
+            const distFromCenter = (a: { lat: number; lng: number } | null) => {
+                if (!a) return -1;
+                const p = map.project([a.lng, a.lat]);
+                return Math.hypot(p.x - cx, p.y - cy);
+            };
+            const CENTER_EPS = 60; // px — räknas som "redan centrerat"
             go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
+            const other: 'main' | 'sun' = go === 'main' ? 'sun' : 'main';
+            const goDist = distFromCenter(go === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current);
+            const otherDist = distFromCenter(other === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current);
+            if (goDist >= 0 && goDist < CENTER_EPS && otherDist >= CENTER_EPS) go = other;
         } else {
             go = hasMain ? 'main' : 'sun';
         }
         lastRecenterRef.current = go;
 
-        // Molnen ska STANNA på sina geo-platser — bara kameran flyttas. Stäng av
-        // follow (annars pinnas ett moln vid skärmen och glider in över det andra).
-        setMainFollowing(false);
-        setSunFollowing(false);
-
         const target = go === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current;
         if (!target) return;
+        // Pausa idle-driften under flytten (annars motas centreringen bort).
+        driftSuppressUntilRef.current = performance.now() + 1600;
         map.easeTo({ center: [target.lng, target.lat], duration: 600 });
+
+        if (thrown) {
+            // Kastat moln + fokus: flyg dit OCH aktivera POV (follow) så vi följer
+            // det medan det snurrar/glider klart. Avsluta med tryck på molnet igen.
+            map.once('moveend', () => {
+                if (go === 'main') { setSunFollowing(false); setMainFollowing(true); }
+                else { setMainFollowing(false); setSunFollowing(true); }
+            });
+        } else {
+            // Vanlig växling: molnen står still, bara kameran flyttas.
+            setMainFollowing(false);
+            setSunFollowing(false);
+        }
     };
 
     useEffect(() => {
@@ -495,6 +955,40 @@ export default function V2Map({
         recenterOnClouds();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recenterTrigger]);
+
+    // Gissnings-streck: när det sätts (efter en felgissning) zoomar kartan ut/in
+    // så BÅDE gissningen och rätt svar syns, och vi projicerar strecket direkt.
+    // När det nollställs försvinner strecket.
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) { setGuessLineScreen(null); return; }
+        if (!guessLine) { setGuessLineScreen(null); return; }
+
+        // Projicera direkt så strecket finns redan första framen.
+        const pf = map.project([guessLine.from.lng, guessLine.from.lat]);
+        const pt = map.project([guessLine.to.lng, guessLine.to.lat]);
+        setGuessLineScreen({ from: { x: pf.x, y: pf.y }, to: { x: pt.x, y: pt.y } });
+
+        // Zooma ut så båda punkterna ryms. Generös padding för banner (topp) och
+        // eventkortet (botten) så streck och markörer inte hamnar under dem.
+        const bounds = new maplibregl.LngLatBounds(
+            [guessLine.from.lng, guessLine.from.lat],
+            [guessLine.from.lng, guessLine.from.lat]
+        );
+        bounds.extend([guessLine.to.lng, guessLine.to.lat]);
+        driftSuppressUntilRef.current = performance.now() + 2000;
+        map.fitBounds(bounds, {
+            padding: {
+                top: 150,
+                bottom: Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) * 0.42),
+                left: 90,
+                right: 90
+            },
+            maxZoom: 13,
+            duration: 900
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [guessLine]);
 
     // Spawn a new sun-cloud at the current map center whenever the parent
     // bumps sunCloudTrigger (which it does after the white-flash animation
@@ -594,10 +1088,58 @@ export default function V2Map({
             const duration = Math.min(Math.max(Math.log(speed / stopThreshold) / k, 300), 2600);
             const cs = map.project(map.getCenter());
             const target = map.unproject([cs.x + dispX, cs.y + dispY]);
+            driftSuppressUntilRef.current = performance.now() + duration + 400;
             map.easeTo({ center: target, duration, easing: (t) => 1 - Math.pow(1 - t, 3) });
         };
     const handleMainFling = useMemo(() => makeFlingHandler('main'), []);
     const handleSunFling = useMemo(() => makeFlingHandler('sun'), []);
+
+    // Slangbella-avfyrning: anropas från drag-release-handlers när användaren
+    // släpper ett moln efter att ha dragit det medan slangbellan var armad.
+    // Det dragna molnet är projektilen — vi slungar det åt motsatt håll mot
+    // dragget (origin → current ger pull-vektor; vi skjuter längs current →
+    // origin och vidare ut, som en sten i en riktig slangbella).
+    const fireSlingshot = (kind: 'main' | 'sun', curScreenX: number, curScreenY: number) => {
+        const map = mapRef.current;
+        if (!map) return;
+        const snap = engageSnapshotRef.current;
+        const origin = kind === 'main' ? snap.main : snap.sun;
+        if (!origin) { onSlingshotFired?.(); return; }
+        const cur = { x: curScreenX, y: curScreenY };
+        const pullDist = Math.hypot(cur.x - origin.x, cur.y - origin.y);
+        if (pullDist < 20) { onSlingshotFired?.(); return; } // för kort → avbryt
+        // Vektor från current TILL origin = motsatt mot dragget. Snärten flyger
+        // genom origin och vidare lika långt eller längre på andra sidan.
+        const dx = origin.x - cur.x, dy = origin.y - cur.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const ux = dx / len, uy = dy / len;
+        const shoot = Math.min(1600, Math.max(600, pullDist * 3));
+        const targetX = cur.x + ux * shoot;
+        const targetY = cur.y + uy * shoot;
+        const fromLL = map.unproject([cur.x, cur.y]);
+        const toLL = map.unproject([targetX, targetY]);
+        const startTime = performance.now();
+        const duration = 900;
+        const tick = (now: number) => {
+            const t = Math.min(1, (now - startTime) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const lat = fromLL.lat + (toLL.lat - fromLL.lat) * eased;
+            const lng = fromLL.lng + (toLL.lng - fromLL.lng) * eased;
+            const sp = map.project([lng, lat]);
+            if (kind === 'main') {
+                cloudAnchorRef.current = { lat, lng };
+                setCloudAnchor({ lat, lng });
+                setCloudAnchorPos({ x: sp.x, y: sp.y });
+            } else {
+                sunCloudAnchorRef.current = { lat, lng };
+                setSunCloudAnchor({ lat, lng });
+                setSunCloudAnchorPos({ x: sp.x, y: sp.y });
+            }
+            if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        onSlingshotFired?.();
+    };
 
     // Off-screen-detektering. Ett moln räknas som ute ur bild när dess
     // skärmpunkt ligger en bra bit utanför viewporten — då visar sidan en
@@ -618,6 +1160,63 @@ export default function V2Map({
     useEffect(() => {
         onCloudVisibilityChangeRef.current?.({ main: mainOffScreen, sun: sunOffScreen });
     }, [mainOffScreen, sunOffScreen]);
+
+    // ── Z-ordning mellan molnen: MINSTA molnet alltid överst ─────────────────
+    // Huvudmolnet är fast (~1), sol-molnet växer/krymper med zoomen (sunCloudScale).
+    // Det minsta ska ligga framför → när sol-molnet zoomas större hamnar det bakom.
+    // Ett litet hysteres-band runt jämn storlek (där de "möts" storleksmässigt)
+    // gör att ordningen inte flippar fram och tillbaka precis vid mötespunkten.
+    const MAIN_CLOUD_SCALE = 1; // huvudmolnet skalas inte med zoom
+    const [frontCloud, setFrontCloud] = useState<'main' | 'sun'>('sun');
+    useEffect(() => {
+        const band = 0.08; // halva mötes-spannet (i scale-enheter runt jämn storlek)
+        setFrontCloud(prev => {
+            if (sunCloudScale < MAIN_CLOUD_SCALE - band) return 'sun';  // sol mindre → överst
+            if (sunCloudScale > MAIN_CLOUD_SCALE + band) return 'main'; // sol större → bakom
+            return prev; // inom mötes-spannet: behåll ordningen (de sitter ihop här)
+        });
+    }, [sunCloudScale]);
+    // Det främre molnet får högre z, det bakre lägre — runt det gamla 9999-lagret.
+    const mainCloudZ = frontCloud === 'main' ? 10000 : 9998;
+    const sunCloudZ = frontCloud === 'sun' ? 10000 : 9998;
+
+    // Slangbella aktiv när båda molnen är inom räckhåll av varandra (skärmpunkter
+    // någorlunda nära). Större yta = man behöver inte träffa molnet exakt med det
+    // andra — det räcker att de är i samma område för att fokus-knappen ska kunna
+    // armas. Själva gummibanden visas inte här — bara när användaren armat läget.
+    useEffect(() => {
+        const a = cloudAnchorPos, b = sunCloudAnchorPos;
+        const both = showCloud && sunCloudAnchor !== null && !!a && !!b;
+        const inRange = both && Math.hypot(a!.x - b!.x, a!.y - b!.y) < 240;
+        setSlingshotActive(!!inRange);
+    }, [cloudAnchorPos, sunCloudAnchorPos, showCloud, sunCloudAnchor]);
+
+    // Mood-överföring: drar man ett moln med en min OVANPÅ det andra molnet får
+    // det andra molnet samma min. Vi använder live-drag-offsetterna för att veta
+    // vilket moln som dras och var det är just nu (inkl. pågående drag).
+    useEffect(() => {
+        const a = cloudAnchorPos, b = sunCloudAnchorPos;
+        if (!showCloud || sunCloudAnchor === null || !a || !b) return;
+        const aPos = { x: a.x + mainLiveOffset.x, y: a.y + mainLiveOffset.y };
+        const bPos = { x: b.x + sunLiveOffset.x, y: b.y + sunLiveOffset.y };
+        const overlapping = Math.hypot(aPos.x - bPos.x, aPos.y - bPos.y) < 90;
+        if (!overlapping) return;
+        const mainDragged = mainLiveOffset.x !== 0 || mainLiveOffset.y !== 0;
+        const sunDragged = sunLiveOffset.x !== 0 || sunLiveOffset.y !== 0;
+        // Det DRAGNA molnets min stämplas på det andra (om det dragna har en min
+        // och de inte redan har samma — annars skulle det stämpla om i all evighet).
+        if (mainDragged && mainMoodRef.current != null && sunMoodRef.current !== mainMoodRef.current) {
+            setSunIncomingMood(prev => ({ mood: mainMoodRef.current, nonce: prev.nonce + 1 }));
+        } else if (sunDragged && sunMoodRef.current != null && mainMoodRef.current !== sunMoodRef.current) {
+            setMainIncomingMood(prev => ({ mood: sunMoodRef.current, nonce: prev.nonce + 1 }));
+        }
+    }, [mainLiveOffset, sunLiveOffset, cloudAnchorPos, sunCloudAnchorPos, sunCloudAnchor, showCloud]);
+
+    const onSlingshotChangeRef = useRef(onSlingshotChange);
+    onSlingshotChangeRef.current = onSlingshotChange;
+    useEffect(() => {
+        onSlingshotChangeRef.current?.(slingshotActive);
+    }, [slingshotActive]);
 
     // Återkalla ett moln till en synlig position. Snäpper både skärm- och
     // geo-ankaret till en punkt i nedre högra kanten (där sol-knappen sitter),
@@ -661,6 +1260,10 @@ export default function V2Map({
             const lngLat = map.unproject([newScreenX, newScreenY]);
             setSunCloudAnchorPos({ x: newScreenX, y: newScreenY });
             setSunCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
+            // Slangbella armad → avfyra åt motsatt håll mot dragget.
+            if (slingshotEngagedRef.current) {
+                fireSlingshot('sun', newScreenX, newScreenY);
+            }
         }
     };
 
@@ -674,6 +1277,10 @@ export default function V2Map({
             const lngLat = map.unproject([newScreenX, newScreenY]);
             setCloudAnchorPos({ x: newScreenX, y: newScreenY });
             setCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
+            // Slangbella armad → avfyra åt motsatt håll mot dragget.
+            if (slingshotEngagedRef.current) {
+                fireSlingshot('main', newScreenX, newScreenY);
+            }
         }
     };
 
@@ -691,16 +1298,19 @@ export default function V2Map({
             const count = group.length;
             const inGroupSelected = group.find(e => e.id === selectedEvent?.id);
             const nonDiscarded = group.filter(e => !discardedEventIds.has(e.id));
-            // For multi-event groups, cycle the displayed event each tick like
-            // a slideshow. Selected event always wins over the cycle.
-            const cycleRep = count > 1 && !inGroupSelected && nonDiscarded.length > 0
-                ? nonDiscarded[slideshowTick % nonDiscarded.length]
-                : null;
-            const rep = inGroupSelected || cycleRep || nonDiscarded[0] || group[0];
+            // Stabil representant. Själva bildväxlingen för multi-grupper sköts av
+            // den desyncade cyclern ovan (rör bara emoji/klickmål, inte DOM-synken).
+            const rep = inGroupSelected || nonDiscarded[0] || group[0];
 
-            const isSelected = !!inGroupSelected;
+            // I gissningsläge highlightas ALDRIG mål-eventet — annars skulle dess
+            // markör lysa upp blå och avslöja var spelaren ska klicka.
+            const isSelected = !gameMode && !!inGroupSelected;
             const isSaved = group.some(e => savedEventIds.has(e.id));
             const isDiscarded = group.every(e => discardedEventIds.has(e.id));
+            // Guld-markör = det rätta svaret som avslöjats. Skimrar och ligger överst.
+            const isGold = !!goldEventId && group.some(e => e.id === goldEventId);
+            // Markören man gissade på — hålls synlig (brickan visas direkt) efter avslöjet.
+            const isGuessed = !!guessedEventId && group.some(e => e.id === guessedEventId);
 
             // Något event i gruppen börjar inom 1 timme → nålhuvudet + pin-ramen
             // blir orange, så man enkelt ser vilka som är på gång nu.
@@ -715,7 +1325,8 @@ export default function V2Map({
 
             // Markera gruppen som "avslöjad" så fort den varit vald. Avslöjade
             // grupper visar brickan direkt även när de inte längre är valda.
-            if (isSelected) revealedKeysRef.current.add(key);
+            // (Guldmarkören + gissnings-brickan avslöjas också direkt — utan kö.)
+            if (isSelected || isGold || isGuessed) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
@@ -724,7 +1335,7 @@ export default function V2Map({
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -750,15 +1361,18 @@ export default function V2Map({
                 // Uppdatera z-index på elementet. Multi-event-grupper (count > 1)
                 // ligger ovanpå enskilda nålhuvuden så att siffer-badgen aldrig
                 // skyms av en tom nål.
-                const zIndex = isSelected ? 1000
+                const zIndex = isGold ? 1500
+                    : isSelected ? 1000
                     : isSaved ? 500
                     : count > 1 ? 200
                     : isDiscarded ? -100 : 0;
                 markerData.element.style.zIndex = String(zIndex);
 
-                // Sätt eventlyssnare på klick
+                // Sätt eventlyssnare på klick. I gissningsläge är klicket en
+                // gissning på hela gruppen i stället för ett vanligt val.
                 markerData.element.onclick = (e) => {
                     e.stopPropagation();
+                    if (gameModeRef.current) { onGuessRef.current?.(group); return; }
                     onSelectEventRef.current(rep);
                 };
 
@@ -775,8 +1389,12 @@ export default function V2Map({
                 const needleDotSize = isSelected ? 10 : isSaved ? 8 : 7;
                 const needleLineH = isSelected ? 28 : 22;
 
-                const pinBg = isSaved ? '#ffffff' : '#1e293b';
-                const pinBorder = isSelected
+                const pinBg = isGold
+                    ? 'linear-gradient(135deg, #fff7d6 0%, #fbbf24 45%, #d97706 100%)'
+                    : isSaved ? '#ffffff' : '#1e293b';
+                const pinBorder = isGold
+                    ? '3px solid #fde68a'
+                    : isSelected
                     ? '3px solid #006AA7'
                     : isSaved
                     ? '2px solid #5BA3CC'
@@ -785,13 +1403,15 @@ export default function V2Map({
                     : '2px solid rgba(255,255,255,0.25)';
 
                 // Använd högpresterande CSS box-shadow
-                const pinShadow = isSelected
+                const pinShadow = isGold
+                    ? '0 0 0 4px rgba(251,191,36,0.35), 0 6px 22px rgba(217,119,6,0.55)'
+                    : isSelected
                     ? '0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)'
                     : isSaved
                     ? '0 4px 10px rgba(0,0,0,0.2)'
                     : '0 4px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.08)';
 
-                const scaleStyle = isSelected ? 'scale(1.25) translateY(-10px)' : 'scale(1)';
+                const scaleStyle = (isSelected || isGold) ? 'scale(1.25) translateY(-10px)' : 'scale(1)';
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
                 const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
@@ -828,7 +1448,7 @@ export default function V2Map({
 
                         <!-- PIN ELEMENT -->
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble${isGold ? ' pin-bubble-gold' : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji">${emoji}</div>
                             </div>
                             ${countBadge}
@@ -837,20 +1457,24 @@ export default function V2Map({
                 `;
             }
 
-            // Slideshow-uppdatering för multi-event-grupper: byt enbart emoji +
-            // klickmål utan att riva ner brickans DOM (så pop-in inte återstartas).
-            if (cycleRep) {
-                const cycleCatKey = cycleRep.category && EVENT_CATEGORIES[cycleRep.category]
-                    ? cycleRep.category : 'other';
-                const cycleEmoji = EVENT_CATEGORIES[cycleCatKey as EventCategoryType]?.emoji ?? '🎫';
+            // Vald grupp med flera event: byt emoji till det event man tittar på,
+            // och räkna ner siffran (kvar att bläddra till) medan man trycker
+            // Nästa — kirurgiskt, utan att riva ner brickan.
+            if (inGroupSelected && count > 1) {
+                const selCatKey = inGroupSelected.category && EVENT_CATEGORIES[inGroupSelected.category]
+                    ? inGroupSelected.category : 'other';
+                const selEmoji = EVENT_CATEGORIES[selCatKey as EventCategoryType]?.emoji ?? '🎫';
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
-                if (emojiEl && emojiEl.textContent !== cycleEmoji) {
-                    emojiEl.textContent = cycleEmoji;
-                }
-                markerData.element.onclick = (e) => {
-                    e.stopPropagation();
-                    onSelectEventRef.current(cycleRep);
-                };
+                if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
+
+                // Siffran = count − position i bläddrings-ordningen. Nästa → index
+                // ökar → siffran minskar; Bakåt → index minskar → siffran ökar.
+                const idx = visitedOrderRef.current.indexOf(inGroupSelected.id);
+                const remaining = Math.min(count, Math.max(1, count - (idx >= 0 ? idx : 0)));
+                const remStr = remaining > 99 ? '99+' : String(remaining);
+                markerData.element.querySelectorAll('.badge-needle-count, .badge-count').forEach((el) => {
+                    if (el.textContent !== remStr) el.textContent = remStr;
+                });
             }
         });
 
@@ -864,7 +1488,7 @@ export default function V2Map({
                 }
             }
         });
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, slideshowTick]);
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, gameMode, goldEventId, guessedEventId]);
 
     return (
         <div className="absolute inset-0 z-0 bg-slate-100" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0 }}>
@@ -943,6 +1567,21 @@ export default function V2Map({
                     position: relative;
                     z-index: 1;
                 }
+                /* Guld-markör: skimrar med en pulserande gloria runt brickan så
+                   det rätta svaret syns tydligt även från avstånd. */
+                @keyframes gold-marker-shimmer {
+                    0%, 100% {
+                        box-shadow: 0 0 0 3px rgba(251,191,36,0.30), 0 6px 22px rgba(217,119,6,0.45);
+                        filter: brightness(1);
+                    }
+                    50% {
+                        box-shadow: 0 0 0 7px rgba(251,191,36,0.12), 0 8px 28px rgba(217,119,6,0.7);
+                        filter: brightness(1.18);
+                    }
+                }
+                .pin-bubble-gold {
+                    animation: gold-marker-shimmer 1.4s ease-in-out infinite;
+                }
                 .badge-count {
                     position: absolute;
                     top: -6px;
@@ -1019,23 +1658,169 @@ export default function V2Map({
                 }
             `}</style>
             <div ref={mapContainerRef} className="absolute inset-0 map-state-full" style={{ width: '100%', height: '100%' }} />
+            {/* Satellit/karta-toggle: liten knapp på höger sida, under navbaren.
+                Växlar mellan vektor-stilen och en raster-satellitvy. */}
+            <button
+                type="button"
+                onClick={() => setMapStyle(s => s === 'satellite' ? 'streets' : 'satellite')}
+                aria-label={mapStyle === 'satellite' ? 'Byt till kartvy' : 'Byt till satellitvy'}
+                title={mapStyle === 'satellite' ? 'Byt till kartvy' : 'Byt till satellitvy'}
+                className={`absolute top-24 right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
+                    mapStyle === 'satellite'
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
+                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
+                }`}
+            >
+                <Layers size={18} />
+            </button>
+            {/* Tilt-toggle: sitter under satellit-knappen. Växlar snabbt mellan att
+                kolla rakt ner på kartan (platt) och med vinkel (3D-sidovy). */}
+            <button
+                type="button"
+                onClick={() => onToggleTilt?.()}
+                aria-label={tilted ? 'Platta ut kartan' : 'Luta kartan'}
+                title={tilted ? 'Platta ut kartan' : 'Luta kartan'}
+                className={`absolute top-[140px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
+                    tilted
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
+                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
+                }`}
+            >
+                <Box size={18} />
+            </button>
+            {/* Globe-toggle: skiftar mellan platt karta (mercator) och jorden som
+                ett 3D-klot. Fristående från terräng-knappen — kan kombineras. */}
+            <button
+                type="button"
+                onClick={() => setIsGlobe(g => !g)}
+                aria-label={isGlobe ? 'Platta ut kartan (mercator)' : 'Visa som klot (globe)'}
+                title={isGlobe ? 'Platt karta' : 'Visa som klot'}
+                className={`absolute top-[184px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
+                    isGlobe
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
+                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
+                }`}
+            >
+                <Globe size={18} />
+            </button>
+            {/* 3D-terräng-toggle: reser upp höjder/berg ur kartan. Fristående —
+                DEM-källan laddas bara medan läget är på (minnessnålt). */}
+            <button
+                type="button"
+                onClick={() => setIs3DTerrain(t => !t)}
+                aria-label={is3DTerrain ? 'Stäng av 3D-terräng' : 'Slå på 3D-terräng'}
+                title={is3DTerrain ? 'Stäng av 3D-terräng' : '3D-terräng'}
+                className={`absolute top-[228px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
+                    is3DTerrain
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
+                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
+                }`}
+            >
+                <Mountain size={18} />
+            </button>
+            {/* Slangbella-gummiband: ritas mellan huvudmolnet och solmolnet.
+                Använder live drag-offsetterna så banden stretchar med molnet i
+                realtid när användaren drar. När slangbellan är "engaged" (armad
+                via fokusknappen) syns banden alltid; annars fadar de in när
+                molnen är nära varandra. */}
+            {showCloud && cloudAnchorPos && sunCloudAnchorPos && slingshotEngaged && (() => {
+                const aRaw = { x: cloudAnchorPos.x + mainLiveOffset.x, y: cloudAnchorPos.y + mainLiveOffset.y };
+                const bRaw = { x: sunCloudAnchorPos.x + sunLiveOffset.x, y: sunCloudAnchorPos.y + sunLiveOffset.y };
+                const distRaw = Math.hypot(aRaw.x - bRaw.x, aRaw.y - bRaw.y);
+                // Banden visas BARA när slangbellan är armad — i ready-läget syns
+                // ingenting, fokusknappen ändras bara så användaren kan godkänna.
+                const opacity = 1;
+                // Degenererat fall: när molnen ligger ovanpå varandra (eller mycket
+                // nära) finns ingen riktning mellan dem → bandberäkningen kollapsar.
+                // Vi tvingar då fram en minsta horisontell separation så banden
+                // syns som ett armat "=" runt molnen, redo att dras isär.
+                const minDist = 36;
+                let a = aRaw, b = bRaw;
+                if (distRaw < minDist) {
+                    const cx0 = (aRaw.x + bRaw.x) / 2, cy0 = (aRaw.y + bRaw.y) / 2;
+                    a = { x: cx0 - minDist / 2, y: cy0 };
+                    b = { x: cx0 + minDist / 2, y: cy0 };
+                }
+                const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                const dx = b.x - a.x, dy = b.y - a.y;
+                const len = Math.max(1, Math.hypot(dx, dy));
+                const nx = -dy / len, ny = dx / len; // perpendikulär
+                const spread = 13; // halva bandbredden i pixlar
+                const sag = 18 + dist * 0.08; // hur mycket banden bågnar utåt
+                const a1 = { x: a.x + nx * spread, y: a.y + ny * spread };
+                const a2 = { x: a.x - nx * spread, y: a.y - ny * spread };
+                const b1 = { x: b.x + nx * spread, y: b.y + ny * spread };
+                const b2 = { x: b.x - nx * spread, y: b.y - ny * spread };
+                const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+                const c1 = { x: cx + nx * (spread + sag), y: cy + ny * (spread + sag) };
+                const c2 = { x: cx - nx * (spread + sag), y: cy - ny * (spread + sag) };
+                return (
+                    <svg
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ width: '100%', height: '100%', opacity, transition: 'opacity 0.2s ease-out' }}
+                    >
+                        <path
+                            d={`M ${a1.x} ${a1.y} Q ${c1.x} ${c1.y} ${b1.x} ${b1.y}`}
+                            stroke="#006AA7" strokeWidth={4} strokeLinecap="round" fill="none"
+                            opacity={0.85}
+                        />
+                        <path
+                            d={`M ${a2.x} ${a2.y} Q ${c2.x} ${c2.y} ${b2.x} ${b2.y}`}
+                            stroke="#006AA7" strokeWidth={4} strokeLinecap="round" fill="none"
+                            opacity={0.85}
+                        />
+                    </svg>
+                );
+            })()}
+            {/* Gissnings-streck: streckad linje mellan din gissning och rätt svar,
+                med avståndet i mitten. Ritas efter en felgissning i spelet. */}
+            {guessLineScreen && guessLine && (() => {
+                const a = guessLineScreen.from, b = guessLineScreen.to;
+                const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+                return (
+                    <>
+                        <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
+                            <line
+                                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                                stroke="#f59e0b" strokeWidth={3} strokeDasharray="7 7" strokeLinecap="round" opacity={0.95}
+                            />
+                            <circle cx={a.x} cy={a.y} r={7} fill="#475569" stroke="#fff" strokeWidth={2.5} />
+                            <circle cx={b.x} cy={b.y} r={7} fill="#f59e0b" stroke="#fff" strokeWidth={2.5} />
+                        </svg>
+                        {guessLine.label && (
+                            <div
+                                className="absolute -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-lg border border-white/60 pointer-events-none whitespace-nowrap"
+                                style={{ left: midX, top: midY }}
+                            >
+                                {guessLine.label}
+                            </div>
+                        )}
+                    </>
+                );
+            })()}
             {showCloud && cloudAnchorPos && (
                 <CloudPopup
                     message={cloudStats ? (
-                        <>
-                            <span className="block text-sky-500 font-black text-[26px] sm:text-[30px] leading-tight">
-                                {cloudStats.today} unika event
+                        <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
+                            <span
+                                className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
+                                style={{ color: '#006AA7', fontWeight: 700, letterSpacing: '-0.01em' }}
+                            >
+                                {cloudStats.today} unika event idag
                             </span>
                             <span
-                                className="block font-black text-[16px] sm:text-[18px] leading-snug my-1"
-                                style={{ color: '#FFCD00', textShadow: '0 1px 0 rgba(0,0,0,0.25), 0 0 2px rgba(0,0,0,0.35)' }}
+                                className="block text-[15px] sm:text-[17px] leading-snug my-1"
+                                style={{ color: '#006AA7', fontWeight: 600 }}
                             >
-                                {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}
+                                {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}.
                             </span>
-                            <span className="block text-sky-500 font-black text-[18px] sm:text-[20px] leading-snug">
-                                i Sverige idag
+                            <span
+                                className="block text-[13px] sm:text-[14px] leading-snug"
+                                style={{ color: '#006AA7', fontWeight: 500 }}
+                            >
+                                Alla spontana event i Sverige.
                             </span>
-                        </>
+                        </span>
                     ) : `Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund.`}
                     anchorPos={cloudAnchorPos}
                     onDragEnd={handleCloudDragEnd}
@@ -1044,6 +1829,14 @@ export default function V2Map({
                     onToggleFollow={() => setMainFollowing(f => !f)}
                     onFollowFling={handleMainFling}
                     glideStateRef={mainGlideStateRef}
+                    onLiveOffsetChange={(ox, oy) => setMainLiveOffset({ x: ox, y: oy })}
+                    onMoodChange={setMainMood}
+                    incomingMood={mainIncomingMood.mood}
+                    incomingMoodNonce={mainIncomingMood.nonce}
+                    tilted={tilted}
+                    scale={mainPerspectiveScale}
+                    getDepthAtPoint={depthAtPointRef.current}
+                    zIndex={mainCloudZ}
                 />
             )}
             {sunCloudAnchor && sunCloudAnchorPos && (
@@ -1055,11 +1848,19 @@ export default function V2Map({
                     onDismiss={() => { setSunCloudAnchor(null); setSunFollowing(false); }}
                     faceScale={0.6}
                     showDelayMs={0}
-                    scale={sunCloudScale}
+                    scale={sunCloudScale * sunPerspectiveScale}
+                    getDepthAtPoint={depthAtPointRef.current}
                     following={sunFollowing}
                     onToggleFollow={() => setSunFollowing(f => !f)}
                     onFollowFling={handleSunFling}
                     glideStateRef={sunGlideStateRef}
+                    onLiveOffsetChange={(ox, oy) => setSunLiveOffset({ x: ox, y: oy })}
+                    onMoodChange={setSunMood}
+                    incomingMood={sunIncomingMood.mood}
+                    incomingMoodNonce={sunIncomingMood.nonce}
+                    onTap={onSunCloudTap}
+                    tilted={tilted}
+                    zIndex={sunCloudZ}
                 />
             )}
         </div>

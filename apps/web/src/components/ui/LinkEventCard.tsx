@@ -2,6 +2,7 @@ import { ExternalLink, Trash2, Clock, MapPin, Ticket } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
+import { normalizePriceLabel } from '../../utils/priceLabel';
 import { linkEventService } from '../../services/linkEventService';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
@@ -128,23 +129,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
     const faviconUrl = getFaviconUrl(linkEvent.url);
 
-    // Formatera pris för visning. Rena siffror/intervall får "kr" påsatt;
-    // "Gratis" och redan formaterade strängar visas som de är. null = dölj chip.
-    const priceLabel = (() => {
-        const p = linkEvent.price;
-        if (p === undefined || p === null || p === '') return null;
-        const s = String(p).trim();
-        if (!s) return null;
-        if (s === '0' || /^gratis$/i.test(s)) return 'Gratis';
-        if (/^\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?$/.test(s)) return `${s} kr`;
-        return s;
-    })();
+    // Formatera pris för visning. Normaliserar de vanliga svenska varianter vi
+    // ser i scraper-datan: "Fri entré"/"Avgiftsfritt"/"kostnadsfritt" → "Gratis";
+    // "30kr"/"160:-"/"40 SEK" → "X kr"; rena siffror/intervall får "kr" påsatt.
+    const priceLabel = normalizePriceLabel(linkEvent.price);
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
             {/* 1. Header (Always visible) */}
             <div
-                className={`p-4 md:p-6 pt-5 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
+                className={`p-4 md:p-6 pt-2 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
