@@ -131,6 +131,16 @@ service cloud.firestore {
         allow read, update, delete: if isAdmin();
     }
 
+    // 6b. WAITLIST ("ställ dig i kö" för funktioner som inte byggts än)
+    // Anonym create tillåts (man kan stå i kö utan konto), men shape-begränsad.
+    match /waitlist/{docId} {
+        allow create: if request.resource.data.keys().hasOnly(['featureId', 'uid', 'email', 'createdAt'])
+          && request.resource.data.keys().hasAll(['featureId', 'createdAt'])
+          && request.resource.data.featureId is string
+          && request.resource.data.featureId.size() < 100;
+        allow read, update, delete: if isAdmin();
+    }
+
     // 7. PUBLIC SETTINGS
     match /settings/{settingId} {
       allow read: if true;
