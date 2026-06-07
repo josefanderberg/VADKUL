@@ -41,6 +41,10 @@ interface CloudPopupProps {
    *  latch the camera onto a mid-flight throw (focus button) and chase its
    *  predicted landing point. */
   glideStateRef?: React.MutableRefObject<{ sp: { x: number; y: number }; vx: number; vy: number } | null>;
+  /** Live drag-offset i pixlar relativt anchorPos. Fyrar varje gång användaren
+   *  drar molnet så föräldern kan rita t.ex. slangbella-gummiband som hänger
+   *  med molnet i realtid. (0, 0) när molnet inte är draget. */
+  onLiveOffsetChange?: (ox: number, oy: number) => void;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -151,7 +155,8 @@ export default function CloudPopup({
   following = false,
   onToggleFollow,
   onFollowFling,
-  glideStateRef
+  glideStateRef,
+  onLiveOffsetChange
 }: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -185,7 +190,17 @@ export default function CloudPopup({
   // anything is in motion, this value stays put — the face stays where it was.
   const [restingRotation, setRestingRotation] = useState(0);
   const [dragSpinAngle, setDragSpinAngle] = useState(0);
+  // Pausa vind- och float-animationen så fort pekaren är ovanför grab-ytan, så
+  // molnet inte "hoppar undan" i samma sekund man försöker ta tag i det.
+  const [pointerOverGrab, setPointerOverGrab] = useState(false);
 const [offset, setOffset] = useState({ x: 0, y: 0 });
+  // Rapportera live drag-offset till föräldern (slangbella-banden använder den
+  // för att stretcha med molnet i realtid). Ref-cache så vi inte binder om hookar.
+  const onLiveOffsetChangeRef = useRef(onLiveOffsetChange);
+  onLiveOffsetChangeRef.current = onLiveOffsetChange;
+  useEffect(() => {
+    onLiveOffsetChangeRef.current?.(offset.x, offset.y);
+  }, [offset.x, offset.y]);
   const [throwDirection, setThrowDirection] = useState<{ x: number; y: number } | null>(null);
   // When releasing in anchored mode the parent updates anchorPos to compensate
   // for the new (0, 0) offset in the same commit — but a CSS transform transition
@@ -845,7 +860,14 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
             transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
-        <div className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}>
+        <div
+          className={isDragging || isGliding || leaving ? '' : 'animate-cloud-windy-intro'}
+          style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
+        >
+        <div
+          className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}
+          style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
+        >
 
           {renderCloudBody(cloudBodyRotation, cloudBodyRotTransition)}
 
@@ -853,20 +875,23 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           <div
             role="button"
             aria-label="Drag cloud"
-            onPointerDown={handlePointerDown}
+            onPointerEnter={() => setPointerOverGrab(true)}
+            onPointerLeave={() => setPointerOverGrab(false)}
+            onPointerDown={(e) => { setPointerOverGrab(true); handlePointerDown(e); }}
             onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
+            onPointerUp={(e) => { setPointerOverGrab(false); handlePointerUp(e); }}
+            onPointerCancel={(e) => { setPointerOverGrab(false); handlePointerCancel(e); }}
             onWheel={handleWheel}
             className="absolute cursor-grab active:cursor-grabbing select-none pointer-events-auto touch-none"
             style={{
-              left: '26%',
-              top: '26.25%',
-              width: '48%',
-              height: '60%',
+              left: '14%',
+              top: '20%',
+              width: '72%',
+              height: '70%',
               borderRadius: '50%'
             }}
           />
+        </div>
         </div>
         </div>
       </div>

@@ -1,8 +1,18 @@
 import type { Metadata, Viewport } from 'next';
+import { Fredoka } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import Hotjar from '@/components/analytics/Hotjar';
 import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
+
+// Rundad, vänlig display-font för moln-texten och andra "lockande" inslag.
+// Variabel font så vi får alla vikter (300–700) i en fil.
+const fredoka = Fredoka({
+    subsets: ['latin'],
+    weight: ['400', '500', '600', '700'],
+    display: 'swap',
+    variable: '--font-fredoka',
+});
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://vadkul.se'),
@@ -31,11 +41,11 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="sv" suppressHydrationWarning>
+        <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
                 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
                 <link rel="apple-touch-icon" href="/favicon.svg" />
-                <meta name="theme-color" content="#16a34a" />
+                <meta name="theme-color" content="#38bdf8" />
                 <meta name="impact-site-verification" content="17f79b5d-182e-4a80-bff9-634b6d47ebc7" />
             </head>
             <body>

@@ -92,7 +92,24 @@ export default function HomePage() {
     // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
     // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
     const [recenterTrigger, setRecenterTrigger] = useState(0);
-    const handleRecenter = useCallback(() => setRecenterTrigger(t => t + 1), []);
+
+    // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
+    // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
+    // gummibanden alltid och nästa release av ett moln blir en slangbella-snärt.
+    // Auto-avarmar när snärten är klar (eller om molnen separeras igen).
+    const [slingshotActive, setSlingshotActive] = useState(false);
+    const [slingshotEngaged, setSlingshotEngaged] = useState(false);
+    const handleRecenter = useCallback(() => {
+        if (slingshotActive) {
+            setSlingshotEngaged(e => !e); // toggle: arm slangbellan istället för recenter
+        } else {
+            setRecenterTrigger(t => t + 1);
+        }
+    }, [slingshotActive]);
+    // Säkerhetsspärr: om molnen inte längre ligger på varandra, avarma slangbellan.
+    useEffect(() => {
+        if (!slingshotActive && slingshotEngaged) setSlingshotEngaged(false);
+    }, [slingshotActive, slingshotEngaged]);
 
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
@@ -257,6 +274,9 @@ export default function HomePage() {
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
                 onCloudVisibilityChange={setCloudOffScreen}
+                onSlingshotChange={setSlingshotActive}
+                slingshotEngaged={slingshotEngaged}
+                onSlingshotFired={() => setSlingshotEngaged(false)}
             />
 
             {/* Modal för att skapa event */}
@@ -324,6 +344,7 @@ export default function HomePage() {
                 onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={handleRecenter}
+                slingshotReady={slingshotActive}
             />
 
             {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.

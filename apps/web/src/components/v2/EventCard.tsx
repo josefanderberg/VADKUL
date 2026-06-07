@@ -302,9 +302,12 @@ interface EventCardProps {
     /** Flyg kartan tillbaka till det valda eventet (vi går dit — eventet
      *  teleporteras inte till vyn). Triggas av recenter-knappen på kortet. */
     onRecenter?: () => void;
+    /** True när molnen ligger på varandra → slangbella aktiv. Fyller fokusknappen
+     *  vit som en mätare. */
+    slingshotReady?: boolean;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter, slingshotReady }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -696,11 +699,16 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                         <button
                             type="button"
                             onClick={onRecenter}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
-                            title="Visa molnet på kartan"
-                            aria-label="Visa molnet på kartan"
+                            className={`relative overflow-hidden bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border transition-colors h-[38px] w-[38px] flex items-center justify-center box-border ${slingshotReady ? 'border-sky-400 ring-2 ring-sky-300 animate-pulse' : 'border-white/50 hover:bg-white'}`}
+                            title={slingshotReady ? 'Slangbella aktiv — dra ett moln' : 'Visa molnet på kartan'}
+                            aria-label={slingshotReady ? 'Slangbella aktiv' : 'Visa molnet på kartan'}
                         >
-                            <LocateFixed size={16} className="text-[#006AA7]" />
+                            {/* Slangbella-mätare: fylls vit när läget är aktivt (steg 1).
+                                Styrkan i 3 färger under drag kommer i steg 2. */}
+                            {slingshotReady && (
+                                <span className="absolute inset-0 bg-white rounded-full animate-in fade-in zoom-in duration-200 pointer-events-none" />
+                            )}
+                            <LocateFixed size={16} className="relative text-[#006AA7]" />
                         </button>
                     )}
                     {mainCloudOffScreen && onRecallMainCloud && (
@@ -758,17 +766,20 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                     transition: isAnimating ? 'transform 200ms ease-out, opacity 200ms ease-out, height 350ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
                 }}
             >
-                {/* Thin invisible drag strip — still grabbable, no visual handle */}
+                {/* Drag-grip-zon — luftig så grip-indikatorn syns tydligt och får
+                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px). */}
                 <div
-                    className="w-full flex-shrink-0 h-3 cursor-grab active:cursor-grabbing select-none bg-card"
+                    className="w-full flex-shrink-0 h-6 cursor-grab active:cursor-grabbing select-none bg-card"
                     style={{ touchAction: 'none' }}
                 />
 
-                {/* Absolut drag-indikator. Ligger ovanpå kortet (absolute) så den
+                {/* Absolut drag-indikator: två parallella streck för tydligare
+                    "dra upp/ner"-affordance. Ligger ovanpå kortet (absolute) så den
                     inte adderar någon höjd/padding. pointer-events-none → drag går
                     rakt igenom till kortet. */}
-                <div className="absolute top-1.5 left-0 right-0 z-40 flex items-center justify-center pointer-events-none">
-                    <div className="h-1.5 w-10 rounded-full bg-slate-300/90 dark:bg-slate-600/80" />
+                <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
                 </div>
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
