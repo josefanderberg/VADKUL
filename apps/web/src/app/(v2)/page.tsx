@@ -93,6 +93,8 @@ export default function HomePage() {
     }, []);
     // Tryck på sol-molnet → fäll tillbaka kartans lutning till platt vy.
     const handleSunCloudTap = useCallback(() => setMapTilted(false), []);
+    // Tilt-knappen (under satellit-knappen) togglar lutningen snabbt.
+    const handleToggleTilt = useCallback(() => setMapTilted(t => !t), []);
 
     // Återkallningssystem för molnen: V2Map rapporterar off-screen, sidan
     // visar en knapp jämte solen som triggar en räknare → V2Map snäpper

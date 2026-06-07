@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers } from 'lucide-react';
+import { Layers, Box } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
@@ -89,10 +89,12 @@ interface V2MapProps {
      *  streckad linje + avståndsetikett ritas mellan dem. null = inget streck. */
     guessLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null;
     /** True = luta kameran till en sidovy (3D-perspektiv); false = platt vy.
-     *  Togglas av solknappen. */
+     *  Togglas av solknappen + tilt-knappen. */
     tilted?: boolean;
     /** Fyrar när man trycker på sol-molnet — sidan fäller tillbaka lutningen. */
     onSunCloudTap?: () => void;
+    /** Togglar lutningen via tilt-knappen under satellit-knappen. */
+    onToggleTilt?: () => void;
 }
 
 export default function V2Map({
@@ -119,7 +121,8 @@ export default function V2Map({
     guessedEventId = null,
     guessLine = null,
     tilted = false,
-    onSunCloudTap
+    onSunCloudTap,
+    onToggleTilt
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1476,6 +1479,21 @@ export default function V2Map({
             >
                 <Layers size={18} />
             </button>
+            {/* Tilt-toggle: sitter under satellit-knappen. Växlar snabbt mellan att
+                kolla rakt ner på kartan (platt) och med vinkel (3D-sidovy). */}
+            <button
+                type="button"
+                onClick={() => onToggleTilt?.()}
+                aria-label={tilted ? 'Platta ut kartan' : 'Luta kartan'}
+                title={tilted ? 'Platta ut kartan' : 'Luta kartan'}
+                className={`absolute top-[140px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
+                    tilted
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
+                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
+                }`}
+            >
+                <Box size={18} />
+            </button>
             {/* Slangbella-gummiband: ritas mellan huvudmolnet och solmolnet.
                 Använder live drag-offsetterna så banden stretchar med molnet i
                 realtid när användaren drar. När slangbellan är "engaged" (armad
@@ -1591,6 +1609,7 @@ export default function V2Map({
                     onMoodChange={setMainMood}
                     incomingMood={mainIncomingMood.mood}
                     incomingMoodNonce={mainIncomingMood.nonce}
+                    tilted={tilted}
                 />
             )}
             {sunCloudAnchor && sunCloudAnchorPos && (
@@ -1612,6 +1631,7 @@ export default function V2Map({
                     incomingMood={sunIncomingMood.mood}
                     incomingMoodNonce={sunIncomingMood.nonce}
                     onTap={onSunCloudTap}
+                    tilted={tilted}
                 />
             )}
         </div>

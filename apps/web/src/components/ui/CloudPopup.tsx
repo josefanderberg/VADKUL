@@ -55,6 +55,9 @@ interface CloudPopupProps {
   /** Fyrar vid ett tryck (utan drag) på molnet — sol-molnet använder det för
    *  att fälla tillbaka kartans lutning. */
   onTap?: () => void;
+  /** True när kartan är lutad. Då stabiliseras molnet rakt upp (ingen spin-
+   *  rotation) så ansiktet står rakt — ögon upp, mun ner. */
+  tilted?: boolean;
 }
 
 // Perfectly symmetrical cloud ball base layout built of smaller circular puffs
@@ -342,7 +345,8 @@ export default function CloudPopup({
   onMoodChange,
   incomingMood,
   incomingMoodNonce,
-  onTap
+  onTap,
+  tilted = false
 }: CloudPopupProps) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -951,7 +955,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // (Disabled during the leaving throw so the dismiss-rotation isn't doubled.)
   // Always use the resting rotation as the base; live faceRotDeg is never used
   // for the visible rotation. Spin from a fling is added on top.
-  const currentRotation = restingRotation + dragSpinAngle;
+  // När kartan är lutad stabiliseras molnet rakt upp (rotation 0) så ansiktet
+  // står rakt — ögon upp, mun ner — istället för att luta med ev. kast-spin.
+  const currentRotation = tilted ? 0 : (restingRotation + dragSpinAngle);
   const cloudBodyRotation = leaving ? '' : `rotate(${currentRotation}deg)`;
   const cloudBodyRotTransition = (isDragging || isGliding || skipTransition)
     ? 'none'
