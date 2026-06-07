@@ -30,6 +30,7 @@
     "migrate-images": "ts-node src/scripts/migrate-images-to-storage.ts",
     "sync-storage-urls": "ts-node src/scripts/sync-storage-urls.ts",
     "hide-foreign": "ts-node src/scripts/hide-foreign-misclassified.ts",
+    "hide-junk": "ts-node src/scripts/hide-junk-keywords.ts",
     "audit-events": "ts-node src/scripts/audit-events.ts",
     "audit-pending": "ts-node src/scripts/audit-all-pending.ts",
     "smoke": "ts-node src/scripts/smoke.ts",

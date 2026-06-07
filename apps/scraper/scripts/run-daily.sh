@@ -101,6 +101,18 @@ else
     echo "⚠️ Hide-foreign misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Dölj junk-keywords (vaccin etc) — deterministisk regex-filter ──────────
+# Lägg till nya patterns i JUNK_PATTERNS-arrayen i hide-junk-keywords.ts.
+# Körs efter hide-foreign så samma "filtreringssvep" är klart innan audit.
+echo "" >> "$LOG_FILE"
+echo "── HIDE JUNK-KEYWORDS (vaccin etc) ──" >> "$LOG_FILE"
+if npm run hide-junk -- --apply >> "$LOG_FILE" 2>&1; then
+    HIDDEN_JUNK="$(grep -oE 'SQLite hidden:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Hide-junk OK (gömda=${HIDDEN_JUNK:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Hide-junk misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
