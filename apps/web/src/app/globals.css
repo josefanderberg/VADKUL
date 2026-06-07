@@ -190,6 +190,19 @@
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* Serietidnings-grabb: korta actionlinjer som blixtrar utåt runt molnet vid
+   grepp, fadar och skalar bort. Startas via key-bump på elementet så animationen
+   kan återstartas vid varje nytt grepp. */
+@keyframes cloud-grab-burst {
+  0%   { opacity: 0; transform: scale(0.55); }
+  25%  { opacity: 1; transform: scale(1.00); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+.animate-cloud-grab-burst {
+  transform-origin: 150px 135px;
+  animation: cloud-grab-burst 480ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+}
+
 .animate-cloud-float {
   animation: cloud-float 12s ease-in-out infinite;
 }
