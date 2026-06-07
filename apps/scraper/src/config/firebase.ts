@@ -68,6 +68,10 @@ if (target.emulatorHost) {
 }
 
 const db = admin.apps.length ? admin.firestore() : null;
+// Extra skydd: utelämna undefined-fält i skrivningar i stället för att kasta.
+// Annars spränger t.ex. ett enda price=undefined hela event-uploaden.
+// settings() måste anropas exakt en gång, före första Firestore-operationen.
+if (db) db.settings({ ignoreUndefinedProperties: true });
 const storage = admin.apps.length ? admin.storage() : null;
 const STORAGE_BUCKET = 'vadkul-f2cb2.firebasestorage.app';
 const bucket = storage ? storage.bucket(STORAGE_BUCKET) : null;
