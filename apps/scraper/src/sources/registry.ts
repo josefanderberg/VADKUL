@@ -56,6 +56,49 @@ export const SOURCES: Source[] = [
     },
 
     {
+        id: 'gso',
+        hostName: 'Göteborgs Symfoniker',
+        region: 'goteborg',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.gso.se/wp-sitemap-posts-event-1.xml',
+            urlPatterns: [/\/program\/[^/]+\/[^/]+\/?$/i],
+            defaultCity: 'Göteborg',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: wp-sitemap-posts-event, JSON-LD @type=Event + startDate.',
+        lastVerified: '2026-06-08',
+    },
+    {
+        id: 'liljevalchs',
+        hostName: 'Liljevalchs Konsthall',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://liljevalchs.se/tribe_events-sitemap.xml',
+            urlPatterns: [/\/kalender\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: Tribe Events Calendar sitemap, svensk text-datum.',
+        lastVerified: '2026-06-08',
+    },
+    {
+        id: 'tekniskamuseet',
+        hostName: 'Tekniska Museet',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.tekniskamuseet.se/calendar-event-sitemap.xml',
+            urlPatterns: [/\/pa-gang\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: calendar-event-sitemap, svensk text-datum.',
+        lastVerified: '2026-06-08',
+    },
+
+    {
         id: 'uppsala',
         hostName: 'Destination Uppsala',
         region: 'uppsala',
