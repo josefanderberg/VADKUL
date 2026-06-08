@@ -20,7 +20,13 @@ import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
 const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
 
-const DEFAULT_WINDOW_DAYS = parseInt(process.env.SCRAPE_WINDOW_DAYS || '30', 10);
+// 60 dagar (var 30). Detalj-sidorna hämtas ändå för att FÅ event-datumet —
+// fönstret avgör bara save/skip efteråt, så att vidga det är nästan gratis på
+// scrape-sidan men fångar sommarevents (festivaler/konserter 1-2 mån fram som
+// folk planerar i förväg). Tillsammans med sitemap-datum-fixen (föredra
+// framtida text-datum) gick t.ex. Höganäs från 0 → 135 events.
+// Override med SCRAPE_WINDOW_DAYS=N vid behov.
+const DEFAULT_WINDOW_DAYS = parseInt(process.env.SCRAPE_WINDOW_DAYS || '60', 10);
 
 function buildWindow(days: number): { windowStart: Date; windowEnd: Date } {
     const windowStart = new Date();
