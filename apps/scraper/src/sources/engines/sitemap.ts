@@ -461,8 +461,16 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         }
     }
 
-    // 2) Svensk text-fallback — skanna body-text efter datumtext
-    if (!startDate) {
+    // 2) Svensk text-fallback — skanna body-text efter datumtext.
+    //    Körs när (a) ingen strukturerad datum hittades, ELLER (b) den
+    //    strukturerade datumen ligger i DET FÖRFLUTNA. Många SiteVision-
+    //    kommuner sätter <time datetime> till sidans PUBLICERINGSdatum, inte
+    //    event-datumet: t.ex. Höganäs "Arilds Jazzfestival" hade
+    //    time=2026-01-13 (publicerad) men eventet är 1 augusti 2026 enligt
+    //    brödtexten. Utan detta föll ~100 SiteVision-kommuner bort som
+    //    "outside window" för att deras sommarevents fick januari-datum.
+    const structuredIsPast = startDate !== null && startDate.getTime() < Date.now();
+    if (!startDate || structuredIsPast) {
         // Prioritera text nära header/event-info, fall sedan tillbaka till hela body
         const candidateText = [
             $('.event-info, .event-date, .event-date-time, #event-dates-list, .evenemang-datum, .datum, .date').text(),
@@ -471,9 +479,14 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         ].join('\n').slice(0, 5000); // cap för parser-prestanda
         const parsed = findFirstDateInText(candidateText);
         if (parsed) {
-            startDate = parsed;
-            // hasSpecificTime: gissa via om datumet har tid != 00:00 lokalt
-            hasSpecificTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
+            // Om vi inte hade något strukturerat datum: använd text rakt av.
+            // Om det strukturerade var förflutet: föredra text BARA om den ger
+            // ett framtida datum (annars är eventet genuint passerat och ska
+            // filtreras bort av fönstret som vanligt).
+            if (!startDate || (structuredIsPast && parsed.getTime() >= Date.now())) {
+                startDate = parsed;
+                hasSpecificTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
+            }
         }
     }
 
