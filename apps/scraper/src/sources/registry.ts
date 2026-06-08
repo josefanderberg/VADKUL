@@ -99,6 +99,20 @@ export const SOURCES: Source[] = [
     },
 
     {
+        id: 'hallwylska',
+        hostName: 'Hallwylska Museet',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://hallwylskamuseet.se/wp-sitemap-posts-shm_event-1.xml',
+            urlPatterns: [/\/pa-gang\/kalender\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: wp-sitemap-posts-shm_event, /pa-gang/kalender/-events.',
+        lastVerified: '2026-06-08',
+    },
+    {
         id: 'uppsala',
         hostName: 'Destination Uppsala',
         region: 'uppsala',
