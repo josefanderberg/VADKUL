@@ -315,8 +315,14 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
     }, dateFromUrl);
 }
 
-export async function scrapeTickster() {
-    console.log('🎟️  Starting Tickster scraper (Puppeteer, Sverige-bred)...');
+export interface TicksterOptions {
+    /** Bara dagens URLs (date_from=date_to=idag). Default false = idag + veckan.
+     *  today-scrapern kör med todayOnly=true för snabb dagsleverans. */
+    todayOnly?: boolean;
+}
+
+export async function scrapeTickster(opts: TicksterOptions = {}) {
+    console.log(`🎟️  Starting Tickster scraper (Puppeteer, Sverige-bred${opts.todayOnly ? ', todayOnly' : ''})...`);
 
     let browser: Browser | null = null;
 
@@ -354,7 +360,12 @@ export async function scrapeTickster() {
         const seenHrefs = new Set<string>();
         const allLinks: { href: string; dateFromUrl: string }[] = [];
 
-        for (const searchUrl of SEARCH_URLS) {
+        const urls = opts.todayOnly
+            ? SEARCH_URLS.filter(u => u.includes(`date_from=${todayStr}&date_to=${todayStr}`))
+            : SEARCH_URLS;
+        console.log(`  ${urls.length} URLs att söka igenom.`);
+
+        for (const searchUrl of urls) {
             console.log(`  🔍 Söker: ${searchUrl}`);
             const links = await discoverEventLinks(page, searchUrl);
             let newCount = 0;

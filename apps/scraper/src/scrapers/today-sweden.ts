@@ -92,25 +92,47 @@ export async function scrapeTodaySweden(): Promise<void> {
 
     const n1 = await scrapeNojesguiden();
 
+    // Källor med URL-baserat dag-filter, kallas med todayOnly=true så bara
+    // dagens URLs hämtas (skippar veckan/kategori-URLs som full-jobbet ändå
+    // sveper senare). JSON-LD från Tickster/Billetto ger ofta pris direkt
+    // utan att vänta på LLM-audit.
+    let billettoErr = false, ticksterErr = false, fbErr = false;
+    try {
+        console.log(`\n🎫 Billetto (idag)…`);
+        const { scrapeBilletto } = require('./billetto');
+        await scrapeBilletto({ todayOnly: true });
+    } catch (e) {
+        billettoErr = true;
+        console.error('⚠️ Billetto-idag misslyckades — fortsätter ändå:', e);
+    }
+
+    try {
+        console.log(`\n🎟️  Tickster (idag)…`);
+        const { scrapeTickster } = require('./tickster');
+        await scrapeTickster({ todayOnly: true });
+    } catch (e) {
+        ticksterErr = true;
+        console.error('⚠️ Tickster-idag misslyckades — fortsätter ändå:', e);
+    }
+
     // Facebook med BARA 'idag'-filtret. Halverar query-volymen mot full-svepet
     // (som kör idag + denna veckan) men ger dagens events ~3 timmar tidigare
     // — kritiskt så audit + aggregate hinner publicera priser/kategorier för
     // dagens events innan användare kollar webben.
-    let fbCount = 0;
     try {
         console.log(`\n👥 Facebook (filter: idag)…`);
         const { scrapeFacebookEvents } = require('./facebook');
         await scrapeFacebookEvents({ filters: ['idag'] });
-        // scrapeFacebookEvents loggar själv sina counts; vi har inget direkt
-        // returvärde att rapportera här.
-        fbCount = -1; // -1 = vi vet inte exakt, men det körde
-    } catch (fbErr) {
-        console.error('⚠️ FB-idag-skrapan misslyckades — fortsätter ändå:', fbErr);
+    } catch (e) {
+        fbErr = true;
+        console.error('⚠️ FB-idag-skrapan misslyckades — fortsätter ändå:', e);
     }
 
-    console.log(`\n✅ Klar! Sparade ${n1} nya event för idag från Nöjesguiden.`);
-    console.log(`   Nöjesguiden: ${n1}`);
-    if (fbCount === -1) console.log(`   Facebook (idag): se "totalt sparade nya" i loggen ovan`);
+    console.log(`\n✅ Klar med dag-fokuserade källor.`);
+    console.log(`   Nöjesguiden:        ${n1} nya`);
+    console.log(`   Billetto (idag):    ${billettoErr ? 'FEL' : 'se logg ovan'}`);
+    console.log(`   Tickster (idag):    ${ticksterErr ? 'FEL' : 'se logg ovan'}`);
+    console.log(`   Facebook (idag):    ${fbErr ? 'FEL' : 'se logg ovan'}`);
 
     // Aggregera all data till progressiva lager direkt efter insamling
     try {

@@ -144,13 +144,24 @@ async function processJsonLdEvent(evt: any): Promise<boolean> {
     return true;
 }
 
-export async function scrapeBilletto() {
-    console.log('Starting Billetto scraper...');
+export interface BillettoOptions {
+    /** Bara dagens URLs (start_date=end_date=idag). Default false = idag + veckan + kategorier.
+     *  today-scrapern kör med todayOnly=true för snabb dagsleverans. */
+    todayOnly?: boolean;
+}
+
+export async function scrapeBilletto(opts: BillettoOptions = {}) {
+    console.log(`Starting Billetto scraper${opts.todayOnly ? ' (todayOnly)' : ''}...`);
     let totalSaved = 0;
     const seenUrls = new Set<string>();
     const summary: { url: string; status: number; bytes: number; links: number; jsonLd: number; saved: number }[] = [];
 
-    for (const url of BILLETTO_URLS) {
+    const urls = opts.todayOnly
+        ? BILLETTO_URLS.filter(u => u.includes(`start_date=${todayStr}&end_date=${todayStr}`))
+        : BILLETTO_URLS;
+    console.log(`  ${urls.length} URLs att hämta.`);
+
+    for (const url of urls) {
         console.log(`  Fetching: ${url}`);
         const savedBefore = totalSaved;
         try {
