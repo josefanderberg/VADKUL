@@ -9,8 +9,14 @@ now.setHours(0, 0, 0, 0);
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 const oneWeekFromNow = new Date(now.getTime() + ONE_WEEK);
 
-const todayStr = now.toISOString().split('T')[0];
-const endStr = oneWeekFromNow.toISOString().split('T')[0];
+// LOKAL datum-sträng (YYYY-MM-DD) — använd inte .toISOString() här eftersom
+// den ger UTC-datum vilket är gårdagen under svensk natt (00:00-02:00 CEST
+// = 22:00-00:00 UTC dagen innan). Buggen syntes som "0 nya event" från
+// Tickster när jobbet körde kl 00:30 svensk tid.
+const localDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayStr = localDateStr(now);
+const endStr   = localDateStr(oneWeekFromNow);
 
 // Sverige-bred sökning — idag prioriteras, sedan hela veckan
 const SEARCH_URLS = [

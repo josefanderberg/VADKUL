@@ -8,8 +8,14 @@ now.setHours(0, 0, 0, 0);
 const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-const todayStr = now.toISOString().split('T')[0];
-const endStr = oneWeekFromNow.toISOString().split('T')[0];
+// LOKAL datum-sträng (YYYY-MM-DD) — använd inte .toISOString() här eftersom
+// den ger UTC-datum vilket är gårdagen under svensk natt (00:00-02:00 CEST
+// = 22:00-00:00 UTC dagen innan). Buggen syntes som 404 från Billetto för
+// "idag" när jobbet körde kl 00:30 svensk tid.
+const localDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayStr = localDateStr(now);
+const endStr   = localDateStr(oneWeekFromNow);
 
 // Billetto Sverige — idag + kommande vecka
 // Idag prioriteras med egna URLs
