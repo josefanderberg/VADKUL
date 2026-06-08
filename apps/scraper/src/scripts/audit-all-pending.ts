@@ -32,6 +32,11 @@ const args = (() => {
 
 const LIMIT   = args.limit   ? parseInt(args.limit as string, 10) : 999_999;
 const DRY_RUN = !!args['dry-run'];
+// --force: re-audita även events som redan har emoji/verdict (för att applicera
+//          en uppdaterad prompt på befintlig data).
+// --category=sport: begränsa till en specifik kategori (kombinera med --force).
+const FORCE    = !!args['force'];
+const CATEGORY = typeof args.category === 'string' ? args.category : null;
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
@@ -53,12 +58,18 @@ async function main() {
     }
 
     const db = new Database(DB_PATH, { readonly: true });
+    // Med --force tar vi events oavsett om de redan auditerats (för ny prompt).
+    // Utan --force: bara de som saknar verdict eller emoji (normal backfill).
+    const pendingClause = FORCE ? '1=1' : '(aiVerdict IS NULL OR emoji IS NULL)';
+    const categoryClause = CATEGORY ? `AND category = '${CATEGORY.replace(/'/g, "''")}'` : '';
+    console.log(`Filter: ${FORCE ? 'FORCE (alla)' : 'bara pending'}${CATEGORY ? ` · category=${CATEGORY}` : ''}`);
     const rows = db.prepare<[], Row>(`
         SELECT url, title, locationName, extractedAddress, description, hostName
         FROM link_events
         WHERE time >= datetime('now')
           AND hidden = 0
-          AND (aiVerdict IS NULL OR emoji IS NULL)
+          AND ${pendingClause}
+          ${categoryClause}
         ORDER BY time ASC
         LIMIT ${LIMIT}
     `).all();
