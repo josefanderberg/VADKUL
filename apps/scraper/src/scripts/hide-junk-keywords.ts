@@ -34,6 +34,15 @@ const JUNK_PATTERNS: { name: string; re: RegExp }[] = [
     // Vaccinations-events från Vaccin.nu, Fästingambulansen, Glömstapoolen mfl.
     // "vaccin" matchar både vaccin, vaccination, vaccinering, vaccinatör m.fl.
     { name: 'vaccin', re: /\bvaccin/i },
+
+    // Falun Dafa / Falun Gong — sektrekrytering förklädd som "gratis qigong workshops"
+    // i kommun-kalendrar. LLM:n auto-hider redan det men deterministisk filter
+    // är snabbare och billigare än LLM-anrop per event.
+    { name: 'falun-dafa', re: /\bfalun\s*(dafa|gong)\b/i },
+
+    // Pyramidspel / MLM-rekrytering förklädd som "föreläsning" eller "workshop".
+    // Konservativt — bara explicita branschord.
+    { name: 'mlm', re: /\b(pyramidspel|multi[- ]?level[- ]?marketing|nätverksmarknadsföring)\b/i },
 ];
 
 interface Row {
