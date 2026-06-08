@@ -22,6 +22,39 @@ import { Source } from './types';
 export const SOURCES: Source[] = [
     // ─── WP-REST KOMMUNER (auto-upptäckta via probe-wp) ──────────────────────
 
+    // ─── VENUES (dedikerade event-sitemaps, JSON-LD Event) ──────────────────
+    {
+        id: 'cirkus',
+        hostName: 'Cirkus Stockholm',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://cirkus.se/sitemap-events.xml',
+            // Bara svenska event-URLs (/sv/evenemang/...), inte /en/shows/-dubbletter.
+            urlPatterns: [/\/sv\/evenemang\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida.',
+        lastVerified: '2026-06-08',
+    },
+    {
+        id: 'dansenshus',
+        hostName: 'Dansens Hus',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://dansenshus.se/sitemap-post-type-dh_event.xml',
+            // /program/SLUG/ på svenska; blacklista engelska /en/program/-dubbletter.
+            urlPatterns: [/\/program\/[^/]+\/?$/i],
+            urlBlacklist: [/\/en\//i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        notes: 'Probe 2026-06-08: 1338 URLs i sitemap-post-type-dh_event.xml (sv + en).',
+        lastVerified: '2026-06-08',
+    },
+
     {
         id: 'uppsala',
         hostName: 'Destination Uppsala',
