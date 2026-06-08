@@ -92,8 +92,25 @@ export async function scrapeTodaySweden(): Promise<void> {
 
     const n1 = await scrapeNojesguiden();
 
-    console.log(`\n✅ Klar! Sparade ${n1} nya event för idag.`);
+    // Facebook med BARA 'idag'-filtret. Halverar query-volymen mot full-svepet
+    // (som kör idag + denna veckan) men ger dagens events ~3 timmar tidigare
+    // — kritiskt så audit + aggregate hinner publicera priser/kategorier för
+    // dagens events innan användare kollar webben.
+    let fbCount = 0;
+    try {
+        console.log(`\n👥 Facebook (filter: idag)…`);
+        const { scrapeFacebookEvents } = require('./facebook');
+        await scrapeFacebookEvents({ filters: ['idag'] });
+        // scrapeFacebookEvents loggar själv sina counts; vi har inget direkt
+        // returvärde att rapportera här.
+        fbCount = -1; // -1 = vi vet inte exakt, men det körde
+    } catch (fbErr) {
+        console.error('⚠️ FB-idag-skrapan misslyckades — fortsätter ändå:', fbErr);
+    }
+
+    console.log(`\n✅ Klar! Sparade ${n1} nya event för idag från Nöjesguiden.`);
     console.log(`   Nöjesguiden: ${n1}`);
+    if (fbCount === -1) console.log(`   Facebook (idag): se "totalt sparade nya" i loggen ovan`);
 
     // Aggregera all data till progressiva lager direkt efter insamling
     try {

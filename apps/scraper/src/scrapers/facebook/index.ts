@@ -75,9 +75,20 @@ function parseDateFromText(text: string): Date | null {
     return null;
 }
 
-export async function scrapeFacebookEvents() {
+export interface FacebookScraperOptions {
+    /** Datumfilter att applicera per sökord/stad. Default: ['idag', 'den här veckan'].
+     *  today-scrapern kör med ['idag'] för snabb dagsleverans utan att vänta på
+     *  vecko-svepet (halverar antalet queries och ger event till audit långt
+     *  innan det stora full-jobbet är klart). */
+    filters?: string[];
+}
+
+export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
     const fbStart = Date.now();
-    console.log('🚀 Startar Facebook-skrapan (Refactored)...');
+    const DATE_FILTERS_INPUT = opts.filters && opts.filters.length > 0
+        ? opts.filters
+        : ['idag', 'den här veckan'];
+    console.log(`🚀 Startar Facebook-skrapan (Refactored) — filter: [${DATE_FILTERS_INPUT.join(', ')}]`);
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
     const keywordStatsPath = path.resolve(__dirname, '../../../keyword_stats.json');
@@ -271,8 +282,9 @@ export async function scrapeFacebookEvents() {
             'kväll', 'helg', 'lördag', 'fredag', 'torsdag', 'söndag'
         ];
 
-        // Datumfilter: idag + denna vecka
-        const DATE_FILTERS = ['idag', 'den här veckan'];
+        // Datumfilter — tas från opts.filters (default: idag + denna vecka).
+        // today-scrapern skickar ['idag'] för att halvera query-volymen.
+        const DATE_FILTERS = DATE_FILTERS_INPUT;
 
         const SOURCES: FacebookSource[] = [];
 
