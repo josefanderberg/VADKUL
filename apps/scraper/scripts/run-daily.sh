@@ -113,6 +113,21 @@ else
     echo "⚠️ Hide-junk misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Fixa "kl 02 på natten"-events genom att re-fetcha detail-sidor ─────────
+# sitevision-engine och liknande list-scrapers fångar bara <time datetime=YYYY-MM-DD>,
+# inte HH:MM. Resultat: time=00:00 UTC = 02:00 svensk = "natten". fix-event-times.ts
+# fetchar detail-sidor och plockar "klockan HH:MM" via regex.
+# Begränsat till 100/körning så det inte saktar ner pipelinen för mycket
+# (~5-8 min per natt). Backfill går i steady-state efter ett par dygn.
+echo "" >> "$LOG_FILE"
+echo "── FIX EVENT-TIMES (detail-page för 'kl 02:00'-events) ──" >> "$LOG_FILE"
+if npm run fix-times -- --apply --limit=100 >> "$LOG_FILE" 2>&1; then
+    FIXED_TIMES="$(grep -oE '✅ Fixade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Fix-times OK (fixade=${FIXED_TIMES:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Fix-times misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
