@@ -492,6 +492,30 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
 
     if (!startDate) return null;
 
+    // Om datumet saknar specifik tid (midnatt), leta efter ett fristående HH:MM.
+    // Visit Linköping m.fl. lägger datum och tid i SKILDA <time>-element, så
+    // <time>.first() ovan ger bara datumet — tiden ligger i ett separat element.
+    // Kolla BÅDE lokal och UTC midnatt: date-only "YYYY-MM-DD" parsas som
+    // UTC-midnatt (= lokalt 02:00), så enbart getHours()===0 missar dem.
+    const lacksTime =
+        (startDate.getHours() === 0 && startDate.getMinutes() === 0) ||
+        (startDate.getUTCHours() === 0 && startDate.getUTCMinutes() === 0);
+    if (lacksTime) {
+        const timeCands: string[] = [];
+        $('time[datetime]').each((_i, el) => { const v = $(el).attr('datetime'); if (v) timeCands.push(v); });
+        $('time').each((_i, el) => { const v = $(el).text().trim(); if (v) timeCands.push(v); });
+        const infoText = $('.event-info, .event-date-time, .event-time, .datum, .tid, .klockslag').text();
+        const km = infoText.match(/kl[.\s]*(\d{1,2})[:.](\d{2})/i);
+        if (km) timeCands.push(`${km[1]}:${km[2]}`);
+        for (const c of timeCands) {
+            const m = c.match(/^(\d{1,2})[:.](\d{2})$/);   // bara tid, inte datum
+            if (m) {
+                const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+                if (h <= 23 && min <= 59) { startDate.setHours(h, min, 0, 0); break; }
+            }
+        }
+    }
+
     const description =
         ($('meta[property="og:description"]').attr('content') ||
             $('meta[name="description"]').attr('content') || '').trim();
@@ -516,23 +540,56 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
  * Försök extrahera en RawEvent från en detalj-sida. JSON-LD först, cheerio
  * som fallback.
  */
+/**
+ * Plockar HH:MM ur en `?startTime=HH:MM`-query. Vissa kalender-CMS:er (t.ex.
+ * Mölndals) lägger den specifika förekomstens tid i URL-queryn medan sidan
+ * bara visar serie-info. Returnerar null om ingen giltig tid finns.
+ */
+function timeFromUrlQuery(url: string): { h: number; m: number } | null {
+    const m = url.match(/[?&]startTime=(\d{1,2})[:.](\d{2})/);
+    if (!m) return null;
+    const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+    if (h > 23 || min > 59) return null;
+    return { h, m: min };
+}
+
+/**
+ * Om eventet saknar specifik tid (midnatt) men URL:en har ?startTime=HH:MM,
+ * applicera den på datumet. Datumet bevaras — bara klockan sätts.
+ */
+function applyUrlTime(ev: RawEvent, url: string): void {
+    const d = ev.startDate;
+    if (!d) return;
+    const isMidnight =
+        (d.getHours() === 0 && d.getMinutes() === 0) ||
+        (d.getUTCHours() === 0 && d.getUTCMinutes() === 0);
+    if (!isMidnight) return;
+    const t = timeFromUrlQuery(url);
+    if (t) d.setHours(t.h, t.m, 0, 0);
+}
+
 function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
     const nodes: any[] = [];
     for (const b of blocks) collectEvents(b, DEFAULT_EVENT_TYPES, nodes);
+    let ev: RawEvent | null = null;
     for (const node of nodes) {
-        const ev = jsonLdToRawEvent(node, url);
-        if (ev) {
+        const candidate = jsonLdToRawEvent(node, url);
+        if (candidate) {
             // Title-blacklist gäller oavsett källa — JSON-LD-events kan också
             // ha junk-titlar ("Startsida", "Nyköpings kommuns webbplats" m.fl.)
-            if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(ev.title))) return null;
-            if (!ev.city && defaultCity) ev.city = defaultCity;
-            return ev;
+            if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(candidate.title))) return null;
+            if (!candidate.city && defaultCity) candidate.city = defaultCity;
+            ev = candidate;
+            break;
         }
     }
     // 2) Cheerio-fallback
-    return cheerioFallback(html, url, defaultCity);
+    if (!ev) ev = cheerioFallback(html, url, defaultCity);
+    // 3) Tid ur URL-query om sidan inte gav specifik tid (host-agnostiskt).
+    if (ev) applyUrlTime(ev, url);
+    return ev;
 }
 
 async function pMap<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
