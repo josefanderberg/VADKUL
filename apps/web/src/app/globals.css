@@ -16,6 +16,19 @@
   }
 }
 
+/* Onboarding-blink: en pulserande blå ring runt en knapp/rad/pil för att visa
+   att en ny funktion finns att prova. Använder outline (rundas med border-radius
+   i moderna browsers) så den inte krockar med befintlig box-shadow. */
+@keyframes feature-blink {
+  0%, 100% { outline-color: rgba(0, 106, 167, 0); }
+  50%      { outline-color: rgba(0, 106, 167, 0.6); }
+}
+.feature-blink {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  animation: feature-blink 1s ease-in-out infinite;
+}
+
 @layer base {
   :root {
     /* Base HSL values */

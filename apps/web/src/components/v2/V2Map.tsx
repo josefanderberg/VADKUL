@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Cloud, Flag } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
@@ -278,6 +278,9 @@ interface V2MapProps {
     /** Skickar status om huruvida respektive molns ankare ligger utanför skärmen.
      *  Sidan använder det för att visa återkallnings-knappar jämte solen. */
     onCloudVisibilityChange?: (visibility: { main: boolean; sun: boolean }) => void;
+    /** Onboarding: true när Fokus-verktyget (recenter-knappen vid "Idag") ska
+     *  blinka för att visa att det är nytt — tills användaren klickat på det. */
+    onFocusToolHint?: (blink: boolean) => void;
     /** True när båda molnen ligger på varandra → slangbella tillgänglig.
      *  Sidan fyller fokusknappen vit för att visa att läget är aktivt. */
     onSlingshotChange?: (active: boolean) => void;
@@ -347,6 +350,7 @@ export default function V2Map({
     recallSunTrigger = 0,
     recenterTrigger = 0,
     onCloudVisibilityChange,
+    onFocusToolHint,
     onSlingshotChange,
     slingshotEngaged = false,
     onSlingshotFired,
@@ -414,16 +418,6 @@ export default function V2Map({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [funcBagOpen]);
-    // Öppna väskan scrollad längst NER i listan (Lutning sist syns direkt). Man
-    // scrollar UPPÅT för att nå övriga funktioner. rAF så layouten hunnit sättas.
-    useEffect(() => {
-        if (!funcBagOpen) return;
-        const raf = requestAnimationFrame(() => {
-            const el = funcBagPanelRef.current;
-            if (el) el.scrollTop = el.scrollHeight;
-        });
-        return () => cancelAnimationFrame(raf);
-    }, [funcBagOpen]);
     // Rapportera öppet/stängt uppåt så sidan kan gömma spel-knapparna (poäng +
     // Hitta event) medan väskan är utfälld — de delar vänsterkolumn.
     const onFuncBagOpenChangeRef = useRef(onFuncBagOpenChange);
@@ -451,24 +445,27 @@ export default function V2Map({
         createEvent: boolean;
         multiplayer: boolean;
         record: boolean;
+        flowers: boolean;
     };
     const [shopFlags, setShopFlags] = useState<ShopFlags>({
         // Defaults valda så att 5-aktiva-gränsen är respekterad redan från start.
         // Tilt/globe/terrain/satellit har egen state (inte i flags) — av dem är
         // bara satellit på som default, vilket ger 5 totalt:
         // satellit + sun + focus + throw + createEvent.
-        sun: true,
-        focus: true,
-        throw: true,
+        // Bara Satellit (mapStyle='satellite') är aktiv från start — allt annat av.
+        sun: false,
+        focus: false,
+        throw: false,
         slingshot: false,
         faces: false,
         bigCloud: false,
         fastThrow: false,
         sparkle: false,
         snowball: false,
-        createEvent: true,    // basfunktion — på som default
+        createEvent: false,   // av som default (kan slås på i funktions-popupen)
         multiplayer: false,   // kräver konto-registrering
-        record: false         // låst tills "köpt"
+        record: false,        // låst tills "köpt"
+        flowers: false        // av som default (kan slås på i funktions-popupen)
     });
 
     // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
@@ -691,6 +688,48 @@ export default function V2Map({
     const sunOffScreenRef = useRef(sunOffScreen);
     sunOffScreenRef.current = sunOffScreen;
 
+    // ── Onboarding/intro ────────────────────────────────────────────────────
+    // Knuffa användaren att testa funktioner när molnet kastas bort / går utanför
+    // skärmen. INGA lås — bara blinkning + en "Ny funktion"-pil som visar att det
+    // finns nytt att prova. 1:a gången molnet försvinner → Fokus surfas upp
+    // (recenter-knappen vid "Idag" blinkar tills man klickar → centrerar). 2:a
+    // gången → Hitta molnet (raden i menyn blinkar).
+    const [cloudGoneCount, setCloudGoneCount] = useState(0);
+    const [featureHint, setFeatureHint] = useState<'focus' | 'findcloud' | null>(null);
+    const cloudWasGoneRef = useRef(false);
+    useEffect(() => {
+        const gone = mainOffScreen || !showCloud;
+        if (gone && !cloudWasGoneRef.current) {
+            cloudWasGoneRef.current = true;
+            setCloudGoneCount(c => Math.min(c + 1, 2));
+        } else if (!gone && cloudWasGoneRef.current) {
+            cloudWasGoneRef.current = false;
+        }
+    }, [mainOffScreen, showCloud]);
+    useEffect(() => {
+        if (cloudGoneCount === 1) {
+            setFeatureHint('focus');
+            // Slå på Fokus så recenter-knappen (vid Idag) dyker upp och kan blinka.
+            setShopFlags(prev => prev.focus ? prev : { ...prev, focus: true });
+        } else if (cloudGoneCount === 2) {
+            setFeatureHint('findcloud');
+        }
+    }, [cloudGoneCount]);
+    // Klick på recenter-knappen (focus) → sluta blinka fokus-hinten.
+    const prevRecenterHintRef = useRef(recenterTrigger);
+    useEffect(() => {
+        if (recenterTrigger !== prevRecenterHintRef.current) {
+            prevRecenterHintRef.current = recenterTrigger;
+            setFeatureHint(h => h === 'focus' ? null : h);
+        }
+    }, [recenterTrigger]);
+    // Rapportera uppåt om Fokus-verktyget (recenter-knappen vid Idag) ska blinka.
+    const onFocusToolHintRef = useRef(onFocusToolHint);
+    onFocusToolHintRef.current = onFocusToolHint;
+    useEffect(() => {
+        onFocusToolHintRef.current?.(featureHint === 'focus');
+    }, [featureHint]);
+
     // Slangbella: aktiv när båda molnen ligger på (nästan) varandra på skärmen.
     const [slingshotActive, setSlingshotActive] = useState(false);
     const slingshotActiveRef = useRef(slingshotActive);
@@ -770,6 +809,12 @@ export default function V2Map({
         const map = mapRef.current;
         if (!map) return;
 
+        // Blommor-funktionen avstängd → ingen vattning startas (avbryt ev. pågående).
+        if (!shopFlags.flowers) {
+            if (wateringKey !== null) setWateringKey(null);
+            return;
+        }
+
         const liveCloudScreenCoords: { x: number; y: number }[] = [];
 
         // 1. Live position för huvudmolnet
@@ -837,7 +882,8 @@ export default function V2Map({
         sunCloudAnchorPos,
         sunLiveOffset,
         wateredKeys,
-        wateringKey
+        wateringKey,
+        shopFlags.flowers
     ]);
 
     // Molnens nuvarande moods (rapporterade av respektive CloudPopup) + en
@@ -1274,19 +1320,16 @@ export default function V2Map({
                 || document.hidden || isGlobeRef.current || is3DTerrainRef.current;
             if (!isPaused) {
                 const t = (now - startedAt) / 1000;
-                // Driften = stor dämpad initial puls + liten konstant grunddrift.
-                // Bägge termerna använder sin() så de startar och oscillerar runt
-                // 0 → ingen kumulativ förskjutning. Pulsen dör ut på ~6s (τ=2.5),
-                // så snart är bara den lugna grunddriften kvar.
+                // Driften = ENBART en stor dämpad initial puls (intro-rörelsen i
+                // början). Pulsen använder sin() → startar och oscillerar runt 0
+                // (ingen kumulativ förskjutning) och dör ut på ~6s (τ=2.5).
+                // DÄREFTER står kartan HELT STILLA — ingen konstant grunddrift mer.
                 const pulse = Math.exp(-t / 2.5);
                 // Initial puls — stora svep i tre frekvenser för chaotisk vind.
                 const pulseX = (Math.sin(t * 0.85) * 70 + Math.sin(t * 0.42) * 50 + Math.sin(t * 1.30) * 30) * pulse;
                 const pulseY = (Math.sin(t * 0.71) * 45 + Math.sin(t * 0.33) * 32 + Math.sin(t * 1.10) * 18) * pulse;
-                // Konstant grunddrift — små sinusvågor som lever vidare.
-                const baseX = Math.sin(t * 0.18) * 10 + Math.sin(t * 0.07) * 6;
-                const baseY = Math.sin(t * 0.13) * 7 + Math.sin(t * 0.05) * 4;
-                const targetX = pulseX + baseX;
-                const targetY = pulseY + baseY;
+                const targetX = pulseX;
+                const targetY = pulseY;
                 // Första frame efter paus: synka last till vågens nuvarande
                 // position så dx=0 → ingen abrupt panBy. Fasen löper vidare
                 // under pausen, så vi tar bara vid där vi "skulle ha varit".
@@ -1871,8 +1914,8 @@ export default function V2Map({
             if (isSelected || isGold || isGuessed) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
-            const isWatered = wateredKeys.has(key);
-            const isWatering = wateringKey === key;
+            const isWatered = shopFlags.flowers && wateredKeys.has(key);
+            const isWatering = shopFlags.flowers && wateringKey === key;
 
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
@@ -1980,8 +2023,8 @@ export default function V2Map({
                     ? 'animation: none !important; opacity: 1 !important; transform: ' + scaleStyle + ' !important;'
                     : `transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
-                const isWatered = wateredKeys.has(key);
-                const isWatering = wateringKey === key;
+                const isWatered = shopFlags.flowers && wateredKeys.has(key);
+                const isWatering = shopFlags.flowers && wateringKey === key;
                 const flowersHtml = isWatered
                     ? `<div class="marker-flowers">
                            <span class="sprouting-flower anim-flower-1">🌸</span>
@@ -2526,44 +2569,36 @@ export default function V2Map({
                 renderas via portal till <body> så den garanterat ligger ÖVER allt
                 annat (V2Map-roten är z-0). */}
             {(() => {
-                type CrateItem = { key: string; label: string; icon: React.ReactNode; kind?: 'game'; locked?: boolean };
+                type CrateItem = { key: string; label: string; desc: string; color: string; icon: React.ReactNode; kind?: 'game' | 'cloud'; locked?: boolean };
                 const crateItems: CrateItem[] = [
-                    // Väskan öppnas scrollad LÄNGST NER, så de viktigaste funktionerna
-                    // ligger SIST (i botten) och syns direkt. Övriga/sällan-använda
-                    // ligger högst upp (man scrollar upp för att nå dem).
-                    { key: 'record', label: 'Spela in', icon: <Video size={20} />, locked: true },
-                    { key: 'multiplayer', label: 'Multiplayer', icon: <Users size={20} /> },
-                    { key: 'slingshot', label: 'Slangbella', icon: <Crosshair size={20} /> },
-                    { key: 'findgame', label: 'Hitta event', icon: <Gamepad2 size={20} />, kind: 'game' },
-                    { key: 'fastThrow', label: 'Snabbare kast', icon: <Zap size={20} /> },
-                    { key: 'snowball', label: 'Snöboll', icon: <Snowflake size={20} /> },
-                    { key: 'sparkle', label: 'Glitter', icon: <Sparkles size={20} /> },
-                    { key: 'sun', label: 'Sol', icon: <Sun size={20} /> },
-                    { key: 'faces', label: 'Ansikten', icon: <Smile size={20} /> },
-                    { key: 'createEvent', label: 'Skapa event', icon: <Plus size={20} strokeWidth={2.5} /> },
-                    { key: 'bigCloud', label: 'Större moln', icon: <Maximize2 size={20} /> },
-
-                    // Prioriterade nederst (syns vid öppning, nerifrån och upp:
-                    // Lutning → 3D-terräng → Klot → Kasta → Fokus). Lutning allra sist.
-                    { key: 'focus', label: 'Fokus', icon: <Target size={20} /> },
-                    { key: 'throw', label: 'Kasta', icon: <Send size={20} /> },
-                    { key: 'globe', label: 'Klot', icon: <Globe size={20} /> },
-                    { key: 'terrain', label: '3D-terräng', icon: <Mountain size={20} /> },
-                    { key: 'tilt', label: 'Lutning', icon: <Box size={20} /> }
+                    // Popup-meny: symbol + namn + kort info. Varje funktion har en egen
+                    // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
+                    { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
+                    { key: 'focus', label: 'Fokus', desc: 'Centrera kartan på molnet', color: '#2563eb', icon: <Target size={20} /> },
+                    { key: 'throw', label: 'Kasta', desc: 'Dubbelklick: kameran följer molnet när du kastar', color: '#0ea5e9', icon: <Send size={20} /> },
+                    { key: 'findcloud', label: 'Hitta molnet', desc: 'Hämta molnet till kartan', color: '#60a5fa', icon: <Cloud size={20} />, kind: 'cloud' },
+                    { key: 'tilt', label: 'Lutning', desc: 'Luta kartan till en 3D-vy', color: '#6366f1', icon: <Box size={20} /> },
+                    { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
+                    { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} /> },
+                    { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
+                    { key: 'faces', label: 'Ansikten', desc: 'Molnen får ansikten & uttryck', color: '#ec4899', icon: <Smile size={20} /> },
+                    { key: 'findgame', label: 'Hitta event', desc: 'Spel: hitta eventet på kartan', color: '#8b5cf6', icon: <Gamepad2 size={20} />, kind: 'game' },
+                    { key: 'flowers', label: 'Blommor', desc: 'Vattna nålar så blommor växer', color: '#db2777', icon: <Flower2 size={20} /> },
+                    { key: 'sun', label: 'Sol', desc: 'Sol-effekt som lyser upp kartan', color: '#f59e0b', icon: <Sun size={20} /> },
+                    { key: 'slingshot', label: 'Slangbella', desc: 'Skjut iväg molnet med slangbella', color: '#ef4444', icon: <Crosshair size={20} /> },
+                    { key: 'bigCloud', label: 'Större moln', desc: 'Gör molnen större', color: '#64748b', icon: <Maximize2 size={20} />, locked: true },
+                    { key: 'sparkle', label: 'Glitter', desc: 'Glitter runt molnen', color: '#a855f7', icon: <Sparkles size={20} />, locked: true },
+                    { key: 'snowball', label: 'Snöboll', desc: 'Kasta snöbollar i stället', color: '#38bdf8', icon: <Snowflake size={20} />, locked: true },
+                    { key: 'fastThrow', label: 'Snabbare kast', desc: 'Mer fart när du kastar molnen', color: '#f59e0b', icon: <Zap size={20} />, locked: true },
+                    { key: 'multiplayer', label: 'Multiplayer', desc: 'Spela med andra (kräver konto)', color: '#6366f1', icon: <Users size={20} />, locked: true },
+                    { key: 'record', label: 'Spela in', desc: 'Spela in din skärm', color: '#ef4444', icon: <Video size={20} />, locked: true },
+                    // Låst funktion längst ner — kan inte aktiveras än (visas med hänglås).
+                    { key: 'golf', label: 'Golf', desc: 'Kommer snart', color: '#65a30d', icon: <Flag size={20} />, locked: true }
                 ];
-                const isCrateActive = (it: CrateItem) => it.kind === 'game' ? findGameActive : isFeatureActive(it.key);
+                // 'cloud' (Hitta molnet) är en ren ACTION — hämtar molnet till kartan.
+                // Den har inget på/av-läge, så den visar aldrig "PÅ".
+                const isCrateActive = (it: CrateItem) => it.kind === 'game' ? findGameActive : it.kind === 'cloud' ? false : isFeatureActive(it.key);
                 const activeBagCount = crateItems.reduce((n, it) => n + (isCrateActive(it) ? 1 : 0), 0);
-
-                // Enhetlig "pärla" för ALLA funktioner — inga lås, ingen gråskala,
-                // ingen egen färg per funktion. Aktiv markeras BARA med en subtil
-                // kant-glöd (lyser lite på kanten); av/på syns inte mer än så.
-                const ORB_BASE_BG = 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.98) 0%, rgba(225,238,250,0.85) 25%, rgba(170,205,235,0.55) 65%, rgba(110,160,210,0.55) 100%)';
-                // Aktiv pärla: sky-blå fyllning så att den vita symbolen i mitten
-                // lyser tydligt (lyser i vitt i mitten), med blå kant-glöd runt om.
-                const ORB_ACTIVE_BG = 'radial-gradient(circle at 32% 28%, #a8ddf7 0%, #5cc0ef 55%, #38bdf8 100%)';
-                const ORB_BASE_SHADOW = '0 6px 14px rgba(60,90,140,0.30), inset -3px -5px 12px rgba(60,90,140,0.30), inset 0 3px 6px rgba(255,255,255,0.85)';
-                const ORB_ACTIVE_GLOW = '0 0 0 1.5px rgba(56,189,248,0.95), 0 0 11px 2px rgba(56,189,248,0.55)';
-                const ORB_ICON_COLOR = '#006AA7';
 
                 const handleCrate = (it: CrateItem) => {
                     if (it.kind === 'game') {
@@ -2572,118 +2607,91 @@ export default function V2Map({
                         setFuncBagOpen(false);
                         return;
                     }
+                    if (it.kind === 'cloud') {
+                        // Hämta molnet till kartan (snäpper det till en synlig punkt).
+                        recallCloud('main');
+                        setFeatureHint(h => h === 'findcloud' ? null : h); // sluta blinka
+                        setFuncBagOpen(false);
+                        return;
+                    }
                     toggleFeature(it.key);
                 };
 
                 return typeof document === 'undefined' ? null : createPortal(
                     <>
-                        {/* Funktions-kolumnen renderas FÖRE lager-knappen i portalen → den
-                            målas BAKOM knappen, så kulorna försvinner in UNDER knappen upptill.
-                            Öppnas scrollad längst ner (se effekten ovan). En fade i NEDERKANTEN
-                            (mask) gör att kulorna tonar ut / försvinner längst ner. */}
+                        {/* Funktions-popup: liten meny-panel under lager-knappen. Varje rad =
+                            symbol (i sin egen färg) + namn + kort info. Klick slår på/av;
+                            aktiv rad tonas i funktionens färg + "PÅ"-bricka. Scrollbar om lång. */}
                         {funcBagOpen && (
-                                <div
-                                    ref={funcBagPanelRef}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="fixed top-[84px] right-[10px] z-[1150] max-h-[200px] overflow-y-auto overflow-x-visible px-2 pt-8 pb-14 flex flex-col items-end gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto no-scrollbar"
-                                    style={{
-                                        // Kolumnen lite vänster (right-[10px]) + högre (max-h-200) så att
-                                        // de TVÅ nedersta (Lutning + 3D-terräng) syns HELA utan fade när
-                                        // man öppnar. Stor bottom-padding (pb-14) + sen fade-start (78%)
-                                        // gör att uttoningen sker i tomrummet UNDER kulorna, inte på dem.
-                                        maskImage: 'linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)',
-                                        WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)'
-                                    }}
-                                >
-                                        {crateItems.map((it) => {
-                                            // Inga lås längre: ALLA funktioner går att slå på/av direkt.
-                                            // Aktiv markeras bara med en subtil kant-glöd (lyser lite på
-                                            // kanten) — av/på syns inte mer än så.
-                                            const active = isCrateActive(it);
-                                            // Enda kvarvarande begränsning är funktionell: "Hitta event"
-                                            // kan bara startas när en runda är möjlig (eller avbrytas när
-                                            // den pågår). Det är inget köp-/positionslås.
-                                            const disabled = it.kind === 'game' && !findGameActive && !canStartFindGame;
-
-                                            // Aktiv: symbolen i mitten lyser VITT mot den blå pärlan.
-                                            // Inaktiv behåller den mörkare blå grundfärgen.
-                                            const iconColor = active ? '#ffffff' : ORB_ICON_COLOR;
-                                            const faceColor = iconColor;
-
-                                            return (
-                                                <button
-                                                    key={it.key}
-                                                    type="button"
-                                                    onClick={disabled ? undefined : () => handleCrate(it)}
-                                                    disabled={disabled}
-                                                    title={
-                                                        it.kind === 'game'
-                                                            ? (findGameActive ? 'Hitta event — pågår, klicka för att avbryta' : canStartFindGame ? 'Hitta event — starta en runda' : 'Hitta event — inte tillgängligt just nu')
-                                                            : active ? `${it.label} — På, klicka för att stänga av`
-                                                            : `${it.label} — Klicka för att slå på`
-                                                    }
-                                                    className={`relative h-[38px] w-[38px] shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110 active:scale-95'}`}
-                                                    style={{
-                                                        background: active ? ORB_ACTIVE_BG : ORB_BASE_BG,
-                                                        border: active ? '1px solid rgba(56,189,248,0.95)' : '1px solid rgba(255,255,255,0.75)',
-                                                        boxShadow: active ? `${ORB_ACTIVE_GLOW}, ${ORB_BASE_SHADOW}` : ORB_BASE_SHADOW,
-                                                        color: iconColor
-                                                    }}
-                                                >
-                                                    {/* Inre ikon */}
-                                                    <div className="relative z-[2] flex items-center justify-center">
-                                                        {it.key === 'faces' ? (
-                                                            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <circle cx="9" cy="10" r="1.7" fill={faceColor} />
-                                                                <circle cx="15" cy="10" r="1.7" fill={faceColor} />
-                                                                <path
-                                                                    d="M 8 14.5 Q 12 17.5 16 14.5"
-                                                                    stroke={faceColor}
-                                                                    strokeWidth="1.7"
-                                                                    strokeLinecap="round"
-                                                                    fill="none"
-                                                                />
-                                                            </svg>
-                                                        ) : it.icon}
-                                                    </div>
-                                                    {/* Topp-glint */}
-                                                    <div
-                                                        aria-hidden="true"
-                                                        className="absolute pointer-events-none"
-                                                        style={{
-                                                            top: '11%',
-                                                            left: '17%',
-                                                            width: '40%',
-                                                            height: '24%',
-                                                            borderRadius: '50%',
-                                                            background: 'radial-gradient(ellipse, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.55) 35%, rgba(255,255,255,0) 75%)',
-                                                            transform: 'rotate(-22deg)',
-                                                            filter: 'blur(0.3px)'
-                                                        }}
-                                                    />
-                                                    {/* Sub-glint */}
-                                                    <div
-                                                        aria-hidden="true"
-                                                        className="absolute pointer-events-none"
-                                                        style={{
-                                                            bottom: '14%',
-                                                            right: '20%',
-                                                            width: '16%',
-                                                            height: '10%',
-                                                            borderRadius: '50%',
-                                                            background: 'radial-gradient(ellipse, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%)'
-                                                        }}
-                                                    />
-                                                </button>
-                                            );
-                                        })}
+                            <div
+                                ref={funcBagPanelRef}
+                                onClick={(e) => e.stopPropagation()}
+                                className="fixed top-[118px] right-3 z-[1150] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+                            >
+                                <div className="px-2.5 pt-1 pb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Funktioner
                                 </div>
+                                {crateItems.map((it) => {
+                                    const active = isCrateActive(it);
+                                    // Låst funktion (Golf) → går inte att aktivera (visas med hänglås).
+                                    // "Hitta event" är bara avstängd när ingen runda är möjlig.
+                                    const locked = !!it.locked;
+                                    const disabled = locked || (it.kind === 'game' && !findGameActive && !canStartFindGame);
+                                    // Onboarding: blinka Hitta molnet-raden när den surfas upp (2:a kastet).
+                                    const blinking = featureHint === 'findcloud' && it.key === 'findcloud';
+                                    return (
+                                        <button
+                                            key={it.key}
+                                            type="button"
+                                            onClick={disabled ? undefined : () => handleCrate(it)}
+                                            disabled={disabled}
+                                            className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${blinking ? 'feature-blink' : ''} ${disabled ? 'opacity-40 cursor-not-allowed' : active ? '' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+                                            style={active ? { background: `${it.color}14` } : undefined}
+                                        >
+                                            {/* Symbol-bricka — neutral/blek bakgrund, symbolen i sin egen
+                                                passande färg. Aktiv: bakgrund + ring i samma färg. */}
+                                            <span
+                                                className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center"
+                                                style={{
+                                                    background: active ? `${it.color}24` : '#f8fafc',
+                                                    border: `1px solid ${active ? it.color : '#e2e8f0'}`,
+                                                    boxShadow: active ? `0 0 0 3px ${it.color}1f` : 'none',
+                                                    color: it.color
+                                                }}
+                                            >
+                                                {it.icon}
+                                            </span>
+                                            {/* Namn + kort info-text */}
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-sm font-bold text-slate-800 leading-tight">{it.label}</span>
+                                                <span className="block text-[11px] text-slate-500 leading-tight truncate">{it.desc}</span>
+                                            </span>
+                                            {/* Indikator: LÅST (hänglås) för låsta funktioner,
+                                                annars PÅ i funktionens egen färg när aktiv. */}
+                                            {locked ? (
+                                                <span className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide bg-slate-200 text-slate-500">
+                                                    <Lock size={9} strokeWidth={3} /> LÅST
+                                                </span>
+                                            ) : active && (
+                                                <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide" style={{ background: `${it.color}24`, color: it.color }}>PÅ</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         )}
 
-                        {/* Lager-knappen — ALLTID synlig, renderas SIST i portalen → ligger
-                            ovanpå kolumnen (z-[1151]) så kulorna döljs bakom den. Samma
-                            viewport-position som tidigare (top-[72px] right-4). */}
+                        {/* Lager-knappen — ALLTID synlig (top-[72px] right-4). Klick
+                            öppnar/stänger funktions-popupen ovan. Onboarding: blinkar +
+                            visar en "Ny funktion"-pil till vänster när det finns en ny
+                            funktion att upptäcka (featureHint), tills menyn öppnas. */}
                         <div className="fixed top-[72px] right-4 z-[1151] pointer-events-auto">
+                            {featureHint !== null && !funcBagOpen && (
+                                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 flex items-center gap-1 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-right-1 duration-300">
+                                    <span className="feature-blink bg-[#006AA7] text-white text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-full shadow-lg">Ny funktion</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006AA7" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                                </div>
+                            )}
                             <button
                                 ref={funcBagBtnRef}
                                 type="button"
@@ -2692,6 +2700,8 @@ export default function V2Map({
                                 title="Funktioner"
                                 aria-expanded={funcBagOpen}
                                 className={`relative h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors ${
+                                    featureHint !== null && !funcBagOpen ? 'feature-blink' : ''
+                                } ${
                                     funcBagOpen ? 'bg-[#006AA7] text-white border-white/30' : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
                                 }`}
                             >
@@ -2844,7 +2854,8 @@ export default function V2Map({
                     anchorPos={cloudAnchorPos}
                     onDragEnd={handleCloudDragEnd}
                     onDismiss={() => { setShowCloud(false); setMainFollowing(false); }}
-                    throwEnabled={isFeatureActive('throw')}
+                    throwEnabled={true}
+                    followEnabled={isFeatureActive('throw')}
                     facesEnabled={isFeatureActive('faces')}
                     following={mainFollowing}
                     onToggleFollow={() => setMainFollowing(f => !f)}
@@ -2868,7 +2879,8 @@ export default function V2Map({
                     anchorPos={sunCloudAnchorPos}
                     onDragEnd={handleSunCloudDragEnd}
                     onDismiss={() => { setSunCloudAnchor(null); setSunFollowing(false); }}
-                    throwEnabled={isFeatureActive('throw')}
+                    throwEnabled={true}
+                    followEnabled={isFeatureActive('throw')}
                     facesEnabled={isFeatureActive('faces')}
                     faceScale={0.6}
                     showDelayMs={0}

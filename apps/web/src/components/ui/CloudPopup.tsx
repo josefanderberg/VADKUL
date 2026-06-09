@@ -34,6 +34,11 @@ interface CloudPopupProps {
    *  ett släpp efter drag stannar molnet där det släpps (inom skärmen), utan
    *  glid, snurr eller kamera-fling. Default true. */
   throwEnabled?: boolean;
+  /** Kamera-följ-funktionen ("Kasta"-raden i väskan). När true: dubbelklick på
+   *  molnet växlar kamera-följning (molnet ler) → kastar man det följer kameran
+   *  efter. När false gör dubbelklicket ingen följning. Molnet gör ett dubbelhopp
+   *  när detta värde slås på/av. Default true. */
+  followEnabled?: boolean;
   /** Ansikten-funktionen påslagen i väskan. När false visar molnet bara de
    *  grundläggande uttrycken (blink, leende/neutral, sleepy ibland) — ingen
    *  mood-bläddring vid tryck, inga winks, ingen dizzy. Default true. */
@@ -383,6 +388,7 @@ export default function CloudPopup({
   scale = 1,
   maxScale = 2.5,
   throwEnabled = true,
+  followEnabled = true,
   facesEnabled = true,
   following = false,
   onToggleFollow,
@@ -618,6 +624,14 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     el.style.animation = 'cloud-bounce 0.55s ease-out';
   };
 
+  // Dubbelhopp av sig själv när "Kasta"/följ-funktionen slås PÅ eller AV
+  // (followEnabled ändras). Hoppar inte vid första monteringen.
+  const didMountFollowRef = useRef(false);
+  useEffect(() => {
+    if (!didMountFollowRef.current) { didMountFollowRef.current = true; return; }
+    triggerBounce(DOUBLE_BOUNCE_PEAK);
+  }, [followEnabled]);
+
   // Small delay so it "pops in" after the page settles
   useEffect(() => {
     if (showDelayMs <= 0) {
@@ -771,9 +785,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
         // Andra trycket i paret: ångra mood-stegningen från första trycket och
         // växla istället kamera-följningen. Plus en dubbelt så hög studs.
         setManualMood(moodBeforeTapRef.current);
-        // Kamera-följning hör till kast-funktionen → starta den bara när kast
-        // är på. Tillåt alltid att stänga av en pågående följning (ingen fälla).
-        if (throwEnabled || following) onToggleFollow?.();
+        // Kamera-följning styrs av "Kasta"-funktionen (followEnabled) → starta den
+        // bara när den är på. Tillåt alltid att stänga av en pågående följning.
+        if (followEnabled || following) onToggleFollow?.();
         triggerBounce(DOUBLE_BOUNCE_PEAK);
         // Kraftigare vatten-burst i takt med den höga studsen.
         setGrabBurstBig(true);

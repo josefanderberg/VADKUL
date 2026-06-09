@@ -104,6 +104,8 @@ export default function HomePage() {
     // visar en knapp jämte solen som triggar en räknare → V2Map snäpper
     // molnet tillbaka in i bild.
     const [cloudOffScreen, setCloudOffScreen] = useState<{ main: boolean; sun: boolean }>({ main: false, sun: false });
+    // Onboarding: när true ska Fokus/recenter-knappen på event-kortet blinka (ny funktion).
+    const [focusToolBlink, setFocusToolBlink] = useState(false);
     const [recallMainTrigger, setRecallMainTrigger] = useState(0);
     const [recallSunTrigger, setRecallSunTrigger] = useState(0);
     const handleRecallMain = useCallback(() => setRecallMainTrigger(t => t + 1), []);
@@ -408,6 +410,7 @@ export default function HomePage() {
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
                 onCloudVisibilityChange={setCloudOffScreen}
+                onFocusToolHint={setFocusToolBlink}
                 onSlingshotChange={setSlingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 onSlingshotFired={() => setSlingshotEngaged(false)}
@@ -493,25 +496,14 @@ export default function HomePage() {
                 onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={shopFlags.focus ? handleRecenter : undefined}
+                recenterBlink={focusToolBlink}
                 slingshotReady={slingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
             />
 
-            {/* ── "Hitta eventet"-spel: poäng, start-knapp och banners ───────── */}
-
-            {/* Poäng — sitter under profil + funktions-väskan (uppe till vänster).
-                Göms medan väskan är utfälld (delar vänsterkolumn). */}
-            {!funcBagOpen && (
-            <div className="fixed top-[124px] left-4 z-[1000] flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-3 h-[34px] rounded-full shadow-lg border border-white/50 pointer-events-none">
-                <Trophy size={15} className="text-amber-500 shrink-0" />
-                <span className="text-sm font-black tabular-nums text-slate-800">{gameScore}</span>
-            </div>
-            )}
-
-            {/* "Hitta event"-spelet startas numera från funktions-väskan (uppe till
-                vänster), inte från en root-knapp — så all funktionalitet bor på ett
-                ställe. Hint- och resultat-bannrarna nedan visas fortfarande. */}
+            {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets
+                banners (inte som en egen alltid-synlig bricka) — den hör till spelet. */}
 
             {/* Hint-banner under gissningsläget. */}
             {gameActive && selectedEvent && (
@@ -521,6 +513,9 @@ export default function HomePage() {
                         <p className="text-[11px] font-black uppercase tracking-wider text-[#006AA7] leading-tight">Hitta på kartan</p>
                         <p className="text-sm font-bold text-slate-800 truncate max-w-[60vw]">{selectedEvent.title}</p>
                     </div>
+                    <span className="shrink-0 inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-black tabular-nums">
+                        <Trophy size={12} className="shrink-0" /> {gameScore}
+                    </span>
                     <button
                         type="button"
                         onClick={clearGame}
@@ -559,6 +554,9 @@ export default function HomePage() {
                             </>
                         )}
                     </div>
+                    <span className={`inline-flex items-center gap-1 text-xs font-black tabular-nums ${gameResult === 'correct' ? 'text-white/90' : 'text-amber-700'}`}>
+                        <Trophy size={13} className="shrink-0" /> {gameScore} poäng totalt
+                    </span>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"

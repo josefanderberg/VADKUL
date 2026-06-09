@@ -292,6 +292,8 @@ interface EventCardProps {
     /** Flyg kartan tillbaka till det valda eventet (vi går dit — eventet
      *  teleporteras inte till vyn). Triggas av recenter-knappen på kortet. */
     onRecenter?: () => void;
+    /** Onboarding: blinka recenter-/Fokus-knappen (ny funktion) tills man klickat. */
+    recenterBlink?: boolean;
     /** True när molnen ligger på varandra → slangbella aktiv. Fyller fokusknappen
      *  vit som en mätare. */
     slingshotReady?: boolean;
@@ -303,7 +305,7 @@ interface EventCardProps {
     gameMode?: boolean;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -782,6 +784,8 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                             type="button"
                             onClick={onRecenter}
                             className={`relative overflow-hidden p-2 rounded-full shadow-xl border transition-colors h-[38px] w-[38px] flex items-center justify-center box-border ${
+                                recenterBlink && !slingshotReady && !slingshotEngaged ? 'feature-blink' : ''
+                            } ${
                                 slingshotEngaged
                                     ? 'bg-[#006AA7] border-[#006AA7] ring-2 ring-sky-300'
                                     : slingshotReady
