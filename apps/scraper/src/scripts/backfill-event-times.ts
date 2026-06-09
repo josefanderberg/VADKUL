@@ -68,10 +68,13 @@ async function timeFromPage(browser: Browser, url: string): Promise<{ h: number;
     }
 }
 
-/** Behåller (UTC-)datumet, sätter lokal tid → ISO (matchar scraperns format). */
+/** Behåller datumet, sätter lokal tid → ISO (matchar scraperns format). */
 function withTime(oldIso: string, h: number, m: number): string {
     const o = new Date(oldIso);
-    return new Date(o.getUTCFullYear(), o.getUTCMonth(), o.getUTCDate(), h, m, 0, 0).toISOString();
+    // LOKALA datum-komponenter: en date-only "11 juni" parsad som lokal midnatt
+    // lagras som 22:00Z DAGEN INNAN — getUTCDate() ger då fel dag. getDate()
+    // (lokal) ger rätt avsedd dag för både 00:00- och 22:00/23:00-fallen.
+    return new Date(o.getFullYear(), o.getMonth(), o.getDate(), h, m, 0, 0).toISOString();
 }
 
 async function main() {
@@ -79,38 +82,51 @@ async function main() {
     db.pragma('busy_timeout = 8000');
     const rows = db.prepare<[], Row>(`
         SELECT url, hostName, time, title FROM link_events
-        WHERE time >= datetime('now') AND strftime('%H:%M', time) = '00:00'
+        WHERE time >= datetime('now')
+          AND strftime('%H:%M', time) IN ('00:00', '22:00', '23:00')
         ORDER BY hostName, time
         LIMIT ${LIMIT}
     `).all();
 
-    console.log(`\n🔧 ${DRY_RUN ? '[DRY-RUN] ' : ''}Backfill av ${rows.length} events på 00:00\n`);
+    console.log(`\n🔧 ${DRY_RUN ? '[DRY-RUN] ' : ''}Backfill av ${rows.length} events på 00:00/22:00/23:00 (lokal midnatt)\n`);
     const updateStmt = db.prepare('UPDATE link_events SET time = ?, updatedAt = ? WHERE url = ?');
 
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
-    const stats = { fromUrl: 0, fromPage: 0, noTime: 0 };
+    const stats = { fromUrl: 0, fromPage: 0, noTime: 0, done: 0 };
     const perHostNoTime: Record<string, number> = {};
+    const CONCURRENCY = 6;
+    let next = 0;
 
-    try {
-        for (let i = 0; i < rows.length; i++) {
+    // Säkerhet: vi sätter ALDRIG en påhittad tid — bara om URL/sida bekräftar
+    // ett konkret HH:MM. Events utan bekräftad tid lämnas orörda (genuint tidlösa).
+    async function worker() {
+        while (true) {
+            const i = next++;
+            if (i >= rows.length) break;
             const r = rows[i];
-            const prefix = `[${i + 1}/${rows.length}] ${(r.hostName || '?').slice(0, 16).padEnd(16)}`;
+            const tag = (r.hostName || '?').slice(0, 16).padEnd(16);
             let t = timeFromUrl(r.url);
             let via = 'url';
             if (!t) { t = await timeFromPage(browser, r.url); via = 'sida'; }
+            stats.done++;
+            const prog = `[${String(stats.done).padStart(4)}/${rows.length}]`;
 
             if (!t) {
                 stats.noTime++;
                 perHostNoTime[r.hostName || '?'] = (perHostNoTime[r.hostName || '?'] ?? 0) + 1;
-                console.log(`${prefix} ⏳ ingen tid       | ${(r.title || '').slice(0, 40)}`);
+                if (stats.done % 25 === 0) console.log(`${prog} … ${stats.fromUrl + stats.fromPage} fixade hittills`);
                 continue;
             }
             const newIso = withTime(r.time, t.h, t.m);
             const newHM = `${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}`;
             if (via === 'url') stats.fromUrl++; else stats.fromPage++;
-            console.log(`${prefix} ✅ ${via.padEnd(4)} → ${newHM} | ${(r.title || '').slice(0, 40)}`);
+            console.log(`${prog} ${tag} ✅ ${via.padEnd(4)} → ${newHM} | ${(r.title || '').slice(0, 36)}`);
             if (!DRY_RUN) updateStmt.run(newIso, new Date().toISOString(), r.url);
         }
+    }
+
+    try {
+        await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
     } finally {
         await browser.close();
         db.close();
@@ -119,7 +135,7 @@ async function main() {
     console.log('\n══════════════════════════════════════════');
     console.log(`  ✅ tid ur URL:   ${stats.fromUrl}`);
     console.log(`  ✅ tid ur sida:  ${stats.fromPage}`);
-    console.log(`  ⏳ ingen tid:    ${stats.noTime}  (lämnas 00:00 — genuint tidlösa)`);
+    console.log(`  ⏳ ingen tid:    ${stats.noTime}  (orörda — genuint tidlösa)`);
     const totalFixed = stats.fromUrl + stats.fromPage;
     console.log(`  ── totalt fixade: ${totalFixed} / ${rows.length}`);
     if (Object.keys(perHostNoTime).length) {
