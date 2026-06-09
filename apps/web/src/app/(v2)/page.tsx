@@ -6,6 +6,7 @@ import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import EventCard from '@/components/v2/EventCard';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
@@ -84,6 +85,9 @@ export default function HomePage() {
     // Solknappen vinklar också kameran: första klicket lutar kartan till en
     // sidovy (3D-perspektiv), nästa klick fäller tillbaka den till platt vy.
     const [mapTilted, setMapTilted] = useState(false);
+    // True när funktions-väskan (uppe till vänster i V2Map) är utfälld — då gömmer
+    // vi spel-knapparna (poäng + Hitta event) som delar vänsterkolumn.
+    const [funcBagOpen, setFuncBagOpen] = useState(false);
     const handleSunClick = useCallback(() => {
         // Flash and cloud both fire simultaneously — cloud appears at the same
         // instant the screen pops white, then the light fades over the cloud.
@@ -112,12 +116,24 @@ export default function HomePage() {
     // Shop-flaggor från V2Map. När användaren avaktiverar "Sol" eller "Fokus" i
     // funktioner-shoppen försvinner respektive knapp ur EventCard (vi skickar
     // helt enkelt inte ner callbacken — kortet renderar inte knappen utan den).
-    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean }>({ sun: true, focus: true });
-    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean }) => {
+    // createEvent styr om +-knappen i navbaren renderas; multiplayer används som
+    // gate för delade event m.m. (bara visning av status tills vidare).
+    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }>({
+        sun: true, focus: true, createEvent: true, multiplayer: false
+    });
+    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => {
         setShopFlags(prev =>
-            prev.sun === flags.sun && prev.focus === flags.focus ? prev : flags
+            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer
+                ? prev : flags
         );
     }, []);
+    // Multiplayer aktiveras via en kontoregistrering. Tills vidare routar vi
+    // bara till inloggnings-sidan — när användaren kommer tillbaka kan de manuellt
+    // toggla på multiplayer-badgen i shoppen.
+    const router = useRouter();
+    const handleActivateMultiplayer = useCallback(() => {
+        router.push('/login');
+    }, [router]);
 
     // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
     // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
@@ -366,6 +382,7 @@ export default function HomePage() {
             {/* 1. Svävande transparent Navbar överst */}
             <FloatingNavbar
                 creationMode={creationMode}
+                createEventEnabled={shopFlags.createEvent}
                 onStartCreate={() => setCreationMode('placing')}
                 onConfirmPlacement={() => {
                     if (!mapCenter) return;
@@ -403,6 +420,12 @@ export default function HomePage() {
                 onSunCloudTap={handleSunCloudTap}
                 onToggleTilt={handleToggleTilt}
                 onFeatureFlagsChange={handleFeatureFlagsChange}
+                onActivateMultiplayer={handleActivateMultiplayer}
+                onFuncBagOpenChange={setFuncBagOpen}
+                findGameActive={gameActive}
+                canStartFindGame={!selectedEvent && !gameActive && gameResult === null && gamePool.length > 0}
+                onStartFindGame={startRound}
+                onStopFindGame={clearGame}
             />
 
             {/* Modal för att skapa event */}
@@ -477,23 +500,18 @@ export default function HomePage() {
 
             {/* ── "Hitta eventet"-spel: poäng, start-knapp och banners ───────── */}
 
-            {/* Poäng — sitter under sök-knappen (uppe till vänster). Visas alltid. */}
-            <div className="fixed top-[70px] left-4 z-[1000] flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-3 h-[34px] rounded-full shadow-lg border border-white/50 pointer-events-none">
+            {/* Poäng — sitter under profil + funktions-väskan (uppe till vänster).
+                Göms medan väskan är utfälld (delar vänsterkolumn). */}
+            {!funcBagOpen && (
+            <div className="fixed top-[124px] left-4 z-[1000] flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-3 h-[34px] rounded-full shadow-lg border border-white/50 pointer-events-none">
                 <Trophy size={15} className="text-amber-500 shrink-0" />
                 <span className="text-sm font-black tabular-nums text-slate-800">{gameScore}</span>
             </div>
-
-            {/* Start-knapp — visas bara när inget kort visas och ingen runda pågår. */}
-            {!selectedEvent && !gameActive && gameResult === null && gamePool.length > 0 && (
-                <button
-                    type="button"
-                    onClick={startRound}
-                    className="fixed top-[114px] left-4 z-[1000] flex items-center gap-2 bg-[#006AA7] hover:bg-[#005590] text-white font-bold text-sm px-4 h-[38px] rounded-full shadow-xl border border-white/20 active:scale-95 transition-all"
-                >
-                    <Target size={16} className="shrink-0" />
-                    Hitta event
-                </button>
             )}
+
+            {/* "Hitta event"-spelet startas numera från funktions-väskan (uppe till
+                vänster), inte från en root-knapp — så all funktionalitet bor på ett
+                ställe. Hint- och resultat-bannrarna nedan visas fortfarande. */}
 
             {/* Hint-banner under gissningsläget. */}
             {gameActive && selectedEvent && (

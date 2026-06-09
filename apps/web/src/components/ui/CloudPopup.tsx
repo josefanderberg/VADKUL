@@ -26,6 +26,18 @@ interface CloudPopupProps {
   /** Uniform scale of the whole cloud. 1 = default. Used to let a map-anchored
    *  cloud grow/shrink with the map zoom. */
   scale?: number;
+  /** Hård övre gräns för `scale` (den zoom-drivna storleken). Molnet slutar
+   *  växa vid detta värde, så en stor blur-tung moln-SVG inte får kartan att
+   *  lagga när man zoomar in. Krymper fortfarande fritt nedåt. Default 2.5. */
+  maxScale?: number;
+  /** Kasta-funktionen påslagen i väskan. När false kan molnet inte kastas:
+   *  ett släpp efter drag stannar molnet där det släpps (inom skärmen), utan
+   *  glid, snurr eller kamera-fling. Default true. */
+  throwEnabled?: boolean;
+  /** Ansikten-funktionen påslagen i väskan. När false visar molnet bara de
+   *  grundläggande uttrycken (blink, leende/neutral, sleepy ibland) — ingen
+   *  mood-bläddring vid tryck, inga winks, ingen dizzy. Default true. */
+  facesEnabled?: boolean;
   /** True when the camera is locked to / following this cloud. Drives a
    *  focused face expression. */
   following?: boolean;
@@ -114,6 +126,13 @@ const elongatedCircles = [
 const SPIN_STRENGTH = 1.6;   // deg/ms per (grepp × hastighet). Högre = mer snurr.
 const GLIDE_FRICTION = 2.2;  // hastighetsavtagande per sekund under glidet.
 
+// Studs vid tryck: molnet poppar upp och fjädrar tillbaka, som en boll som
+// studsar. Enkeltryck ger en liten studs (+AMPLITUDE), dubbeltryck dubbelt så
+// hög studs (+2×AMPLITUDE) — "stutsa dubbelt så högt".
+const BOUNCE_AMPLITUDE = 0.22;                     // enkeltryck: +22 % i topp
+const SINGLE_BOUNCE_PEAK = 1 + BOUNCE_AMPLITUDE;   // 1.22
+const DOUBLE_BOUNCE_PEAK = 2.0;                    // dubbeltryck: 2x storlek (dubbelt så stort!)
+
 // Sub-component to render a full cloud layer of puffs
 interface CloudLayerProps {
   circles: { cx: number; cy: number; r: number }[];
@@ -174,11 +193,13 @@ type FacePoints = {
   mouthCtrl: { x: number; y: number };
 };
 
-export type CloudExpression = 'neutral' | 'blink' | 'wink' | 'dizzy' | 'sleepy' | 'happy' | 'cool' | 'love' | 'surprised' | 'sad';
+export type CloudExpression = 'neutral' | 'blink' | 'wink' | 'dizzy' | 'sleepy' | 'happy' | 'cool' | 'love' | 'surprised' | 'sad' | 'focus';
 
 // Moods man bläddrar igenom genom att klicka på molnet (i ordning). Efter sista
 // moodet → tillbaka till det levande auto-läget (slumpvisa blinkningar m.m.).
-const MOOD_CYCLE: CloudExpression[] = ['neutral', 'happy', 'wink', 'cool', 'love', 'surprised', 'sad', 'sleepy', 'dizzy'];
+// OBS: 'happy' ingår INTE här — det uttrycket är reserverat för kast-/follow-
+// läget så man inte förväxlar ett bläddrat moln med ett som följs av kameran.
+const MOOD_CYCLE: CloudExpression[] = ['neutral', 'focus', 'wink', 'cool', 'love', 'surprised', 'sad', 'sleepy', 'dizzy'];
 
 function renderFace(
   expression: CloudExpression,
@@ -322,6 +343,20 @@ function renderFace(
           />
         </>
       );
+    case 'focus':
+      return (
+        <>
+          {/* Fokuserade ögonbryn: lätt sänkta med mjuk lutning mot mitten —
+              koncentrerad, inte arg. */}
+          <line x1={p.leftEye.x - 8} y1={p.leftEye.y - 10} x2={p.leftEye.x + 7} y2={p.leftEye.y - 7.5} stroke={C} strokeWidth="4" strokeLinecap="round" />
+          <line x1={p.rightEye.x + 8} y1={p.rightEye.y - 10} x2={p.rightEye.x - 7} y2={p.rightEye.y - 7.5} stroke={C} strokeWidth="4" strokeLinecap="round" />
+          {/* Smala, intensiva ögon strax under brynen. */}
+          <circle cx={p.leftEye.x} cy={p.leftEye.y + 2} r="6" fill={C} />
+          <circle cx={p.rightEye.x} cy={p.rightEye.y + 2} r="6" fill={C} />
+          {/* Sammanbiten, rak mun. */}
+          <line x1={p.mouthLeft.x + 6} y1={p.mouthCtrl.y} x2={p.mouthRight.x - 6} y2={p.mouthCtrl.y} stroke={C} strokeWidth="6" strokeLinecap="round" />
+        </>
+      );
     case 'neutral':
     default:
       return (
@@ -346,6 +381,9 @@ export default function CloudPopup({
   faceScale = 1,
   showDelayMs = 600,
   scale = 1,
+  maxScale = 2.5,
+  throwEnabled = true,
+  facesEnabled = true,
   following = false,
   onToggleFollow,
   onFollowFling,
@@ -410,24 +448,36 @@ export default function CloudPopup({
   }, [manualMood]);
 
   // Stämpla på ett mood utifrån (när det andra molnet dras över detta). Körs när
-  // nonce ökar, så samma mood kan stämplas på flera gånger.
+  // nonce ökar, så samma mood kan stämplas på flera gånger. Kräver Ansikten —
+  // utan den funktionen har molnet inga rika uttryck att ta emot.
   const prevIncomingNonceRef = useRef(0);
   useEffect(() => {
+    if (!facesEnabled) return;
     if (incomingMoodNonce && incomingMoodNonce !== prevIncomingNonceRef.current) {
       prevIncomingNonceRef.current = incomingMoodNonce;
       setManualMood(incomingMood ?? null);
       setClicked(true); // se till att ansiktet visas
     }
-  }, [incomingMoodNonce, incomingMood]);
+  }, [incomingMoodNonce, incomingMood, facesEnabled]);
+
+  // Ansikten avstängt → nollställ ev. manuellt valt uttryck så molnet faller
+  // tillbaka till auto-läget (blink/leende/sleepy).
+  useEffect(() => {
+    if (!facesEnabled) setManualMood(null);
+  }, [facesEnabled]);
   const lastInteractionAtRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
   const dizzyTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Serietidnings-"GRABB!"-effekt: korta actionlinjer som blixtrar utåt runt
   // molnet vid grepp och fadar bort på ~400ms. En key bumpas vid varje nytt
   // grepp så animationen återstartar även om man greppar igen direkt.
   const [grabBurstKey, setGrabBurstKey] = useState(0);
+  // Kraftigare burst (fler & längre droppar) vid dubbeltryckets höga studs.
+  // Vanligt grepp/enkeltryck nollställer det igen.
+  const [grabBurstBig, setGrabBurstBig] = useState(false);
   const prevIsDraggingRef = useRef(false);
   useEffect(() => {
     if (isDragging && !prevIsDraggingRef.current) {
+      setGrabBurstBig(false);
       setGrabBurstKey(k => k + 1);
     }
     prevIsDraggingRef.current = isDragging;
@@ -519,6 +569,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [skipTransition, setSkipTransition] = useState(false);
   // One-shot pop-in: plays once when the cloud first appears, never re-fires.
   const [hasPoppedIn, setHasPoppedIn] = useState(false);
+  // "Det blåser"-introt (windy-intro) skalar molnet litet→stort i början. Den
+  // ska BARA spelas vid första visningen — inte spelas om varje gång man drar
+  // och stannar molnet. Latchas så fort man greppar molnet.
+  const [windyIntroDone, setWindyIntroDone] = useState(false);
 
   useEffect(() => {
     if (!skipTransition) return;
@@ -549,6 +603,20 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // Tryck-tajming: enkeltryck byter mood, dubbeltryck växlar kamera-följning (POV).
   const lastTapAtRef = useRef(0);
   const moodBeforeTapRef = useRef<Expression | null>(null);
+
+  // Studs-wrappern. Vi startar studs-animationen imperativt (none → reflow →
+  // animation) så den kan spelas om vid varje tryck utan att remounta molnet
+  // (vilket annars skulle starta om pop-in/float). Topphöjden sätts via
+  // CSS-variabeln --bounce-peak innan animationen startar.
+  const bounceRef = useRef<HTMLDivElement>(null);
+  const triggerBounce = (peak: number) => {
+    const el = bounceRef.current;
+    if (!el) return;
+    el.style.setProperty('--bounce-peak', String(peak));
+    el.style.animation = 'none';
+    void el.offsetWidth; // tvinga reflow så animationen kan startas om
+    el.style.animation = 'cloud-bounce 0.55s ease-out';
+  };
 
   // Small delay so it "pops in" after the page settles
   useEffect(() => {
@@ -608,6 +676,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     e.currentTarget.setPointerCapture(e.pointerId);
 
     setIsDragging(true);
+    setWindyIntroDone(true); // greppat → spela aldrig windy-introt igen
     startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
     downClient.current = { x: e.clientX, y: e.clientY };
     dragMoved.current = false;
@@ -695,23 +764,34 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       onTap?.(); // t.ex. sol-molnet: fäll tillbaka kartans lutning
 
       const now = performance.now();
-      const isDouble = now - lastTapAtRef.current < 300;
+      const isDouble = now - lastTapAtRef.current < 400;
       lastTapAtRef.current = isDouble ? 0 : now;
 
       if (isDouble) {
         // Andra trycket i paret: ångra mood-stegningen från första trycket och
-        // växla istället kamera-följningen.
+        // växla istället kamera-följningen. Plus en dubbelt så hög studs.
         setManualMood(moodBeforeTapRef.current);
-        onToggleFollow?.();
+        // Kamera-följning hör till kast-funktionen → starta den bara när kast
+        // är på. Tillåt alltid att stänga av en pågående följning (ingen fälla).
+        if (throwEnabled || following) onToggleFollow?.();
+        triggerBounce(DOUBLE_BOUNCE_PEAK);
+        // Kraftigare vatten-burst i takt med den höga studsen.
+        setGrabBurstBig(true);
+        setGrabBurstKey(k => k + 1);
       } else {
-        // Enkeltryck: stega till nästa mood. Efter sista moodet → null = det
-        // levande auto-läget (slumpvisa blinkningar igen).
-        setManualMood(prev => {
-          moodBeforeTapRef.current = prev;
-          if (prev === null) return MOOD_CYCLE[0];
-          const i = MOOD_CYCLE.indexOf(prev);
-          return i === MOOD_CYCLE.length - 1 ? null : MOOD_CYCLE[i + 1];
-        });
+        // Enkeltryck: liten studs. Mood-bläddringen kräver Ansikten — utan den
+        // ger trycket bara en studs och molnet stannar i auto-läget.
+        triggerBounce(SINGLE_BOUNCE_PEAK);
+        if (facesEnabled) {
+          // Stega till nästa mood. Efter sista moodet → null = det levande
+          // auto-läget (slumpvisa blinkningar igen).
+          setManualMood(prev => {
+            moodBeforeTapRef.current = prev;
+            if (prev === null) return MOOD_CYCLE[0];
+            const i = MOOD_CYCLE.indexOf(prev);
+            return i === MOOD_CYCLE.length - 1 ? null : MOOD_CYCLE[i + 1];
+          });
+        }
       }
       return;
     }
@@ -730,6 +810,22 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       }
     }
     velocitySamples.current = [];
+
+    // Kast avstängt i väskan → molnet kan inte kastas. Det stannar där man
+    // släpper det (klampat inom skärmen), utan glid, snurr eller kamera-fling.
+    if (!throwEnabled) {
+      const { minX, maxX, minY, maxY } = getOffsetLimits();
+      const clampedX = Math.min(Math.max(offset.x, minX), maxX);
+      const clampedY = Math.min(Math.max(offset.y, minY), maxY);
+      if (onDragEnd) {
+        setSkipTransition(true);
+        onDragEnd(clampedX, clampedY);
+        setOffset({ x: 0, y: 0 });
+      } else {
+        setOffset({ x: clampedX, y: clampedY });
+      }
+      return;
+    }
 
     // Follow mode: the cloud holds wherever you released it (its current screen
     // point), and the camera flies with the release momentum — so the cloud
@@ -894,6 +990,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     }
     if (isDragging) return; // ingen ändring — sitt kvar i nuvarande uttryck
 
+    // Just lämnat follow-/kast-läget (utan manuellt valt mood) → rensa det
+    // kvarvarande 'happy'-uttrycket DIREKT, annars fryser ansiktet kvar som
+    // glatt tills nästa blink och det ser ut som att kast-läget inte stängdes av.
+    setExpression(prev => (prev === 'happy' ? 'neutral' : prev));
+
     // Schemaläggning av blink/wink/sleepy via timer.
     let timer: NodeJS.Timeout;
     const schedule = () => {
@@ -904,8 +1005,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
         timer = setTimeout(() => { setExpression('neutral'); schedule(); }, 1800);
         return;
       }
-      // ~12% av blinkningarna blir winks för lite personlighet.
-      const isWink = Math.random() < 0.12;
+      // ~12% av blinkningarna blir winks för lite personlighet — bara när
+      // Ansikten är på. Annars enbart vanlig blink.
+      const isWink = facesEnabled && Math.random() < 0.12;
       setExpression(isWink ? 'wink' : 'blink');
       timer = setTimeout(() => {
         setExpression('neutral');
@@ -918,7 +1020,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     const startDelay = 1500 + Math.random() * 2500;
     timer = setTimeout(schedule, startDelay);
     return () => clearTimeout(timer);
-  }, [visible, clicked, isDragging, following, manualMood]);
+  }, [visible, clicked, isDragging, following, manualMood, facesEnabled]);
 
   // När ett glid är slut OCH spinnet varit stort → kort dizzy-snurr.
   // Hooked in på handlePointerUp-flödet via dragSpinAngle-jämförelser hade krävt
@@ -928,12 +1030,13 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
     const delta = Math.abs(restingRotation - prevRestingRotRef.current);
     prevRestingRotRef.current = restingRotation;
-    if (delta > 270 && !isDragging && !following) {
+    // Dizzy är ett rikt uttryck → bara med Ansikten påslaget.
+    if (facesEnabled && delta > 270 && !isDragging && !following) {
       setExpression('dizzy');
       if (dizzyTimerRef.current) clearTimeout(dizzyTimerRef.current);
       dizzyTimerRef.current = setTimeout(() => setExpression('neutral'), 1400);
     }
-  }, [restingRotation, isDragging, following]);
+  }, [restingRotation, isDragging, following, facesEnabled]);
 
   useEffect(() => () => { if (dizzyTimerRef.current) clearTimeout(dizzyTimerRef.current); }, []);
 
@@ -980,6 +1083,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // Storleksskillnaden start↔default görs via en inline scale-transform nedan
   // (pålitligt) i stället för nya Tailwind-bredder som kanske inte hinner genereras.
   const stateScale = clicked ? 1.0 : 1.7; // avlångt startmoln stort, runt default-moln mindre
+  // Tak på den zoom-drivna skalan: molnet slutar växa vid maxScale så en stor
+  // blur-tung SVG inte får kartan att lagga vid inzoomning. (Krymper fritt nedåt.)
+  const cappedScale = Math.min(scale, maxScale);
   const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
 
   // Screen center & cloud-to-center vector (used for face rotation + shadow offset).
@@ -1248,10 +1354,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
                 <g> remountas vid varje grepp så CSS-animationen startar om. */}
             {grabBurstKey > 0 && (
               <g key={`grab-burst-${grabBurstKey}`} className="animate-cloud-grab-burst" style={{ pointerEvents: 'none' }}>
-                {Array.from({ length: 10 }).map((_, i) => {
-                  const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
-                  const rInner = 110;
-                  const rOuter = 138;
+                {Array.from({ length: grabBurstBig ? 16 : 10 }).map((_, i, arr) => {
+                  const angle = (i / arr.length) * Math.PI * 2 - Math.PI / 2;
+                  const rInner = grabBurstBig ? 116 : 110;
+                  const rOuter = grabBurstBig ? 158 : 138;
                   const x1 = 150 + Math.cos(angle) * rInner;
                   const y1 = 135 + Math.sin(angle) * rInner;
                   const x2 = 150 + Math.cos(angle) * rOuter;
@@ -1261,7 +1367,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
                       key={i}
                       x1={x1} y1={y1} x2={x2} y2={y2}
                       stroke="#0284c7"
-                      strokeWidth="5"
+                      strokeWidth={grabBurstBig ? 6 : 5}
                       strokeLinecap="round"
                     />
                   );
@@ -1306,19 +1412,23 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
         className="relative select-none pointer-events-none"
         style={draggableStyle}
       >
+        {/* Studs-wrapper — skalar tillfälligt vid tryck (cloud-bounce, startas
+            imperativt via bounceRef). Ligger UTANFÖR zoom-scale-wrappern så
+            studsen multipliceras ovanpå moln-storleken utan att störa den. */}
+        <div ref={bounceRef} style={{ transformOrigin: '50% 56.25%' }}>
         {/* Zoom-scale wrapper — kept separate from the float div so its inline
             transform isn't overridden by the float animation's transform.
             Det avlånga start-molnet visas i full storlek; när man klickat och det
             morphar till det runda default-molnet krymper det också (× 0.8). */}
         <div
           style={{
-            transform: `scale(${scale * stateScale})`,
+            transform: `scale(${cappedScale * stateScale})`,
             transformOrigin: '50% 56.25%',
             transition: (isDragging || isGliding || skipTransition) ? 'none' : 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
         <div
-          className={isDragging || isGliding || leaving ? '' : 'animate-cloud-windy-intro'}
+          className={(!windyIntroDone && !isDragging && !isGliding && !leaving) ? 'animate-cloud-windy-intro' : ''}
           style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
         >
         <div
@@ -1348,6 +1458,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
               borderRadius: '50%'
             }}
           />
+        </div>
         </div>
         </div>
         </div>

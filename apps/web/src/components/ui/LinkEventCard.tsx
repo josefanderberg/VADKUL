@@ -53,12 +53,17 @@ interface LinkEventCardProps {
     isPanelMode?: boolean;
     showFullAddress?: boolean;
     onRevealStepChange?: (step: number) => void;
-    // När true: kortet är alltid fullt utvecklat. Klick på header/innehåll gör inget,
-    // och peek-bilden + "Stäng detaljer"-knappen visas inte.
+    // När true: kortet är alltid fullt utvecklat. peek-bilden + "Stäng
+    // detaljer"-knappen visas inte. Klick på header/bild/beskrivning fäller i
+    // stället ihop bottensheeten via onContentTap (se nedan).
     alwaysExpanded?: boolean;
+    // I alwaysExpanded-läget: fyrar när man klickar på header, bild eller
+    // beskrivning. Föräldern (bottensheeten) använder det för att fälla ihop
+    // kortet — så man kan stänga den uppfällda bilden genom att klicka igen.
+    onContentTap?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
@@ -102,12 +107,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
 
     const handleHeaderClick = () => {
-        if (alwaysExpanded) return;
+        if (alwaysExpanded) { onContentTap?.(); return; }
         setInternalRevealStep(prev => prev === 0 ? 1 : 0);
     };
 
     const handleContentClick = (e: React.MouseEvent) => {
-        if (alwaysExpanded) return;
+        if (alwaysExpanded) { onContentTap?.(); return; }
         e.stopPropagation();
         setInternalRevealStep(prev => prev === 1 ? 2 : 1);
     };
@@ -120,6 +125,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
     const patternIndex = getHash(linkEvent.id || linkEvent.title || '') % ALL_PATTERNS.length;
     const coverSrc = linkEvent.coverImage || ALL_PATTERNS[patternIndex];
+    // Sant bara när eventet har en riktig omslagsbild. Fallback-mönstren ska
+    // INTE visas i full höjd — de är bara dekorativa platshållare och beskärs
+    // som tidigare.
+    const hasRealCover = !!linkEvent.coverImage;
 
     const getFaviconUrl = (url: string) => {
         try {
@@ -184,7 +193,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
-                <div className="border-t border-border pt-2 flex items-end justify-between gap-4">
+                <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">
                     {/* Värd */}
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                         <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Värd</span>
@@ -237,26 +246,44 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             {/* 2. Revealed Content (Image + Description) */}
             {revealStep >= 1 && (
                 <div className="flex flex-col w-full animate-in fade-in slide-in-from-top-2 duration-300">
-                    {/* Image */}
-                    <div
-                        className={`relative w-full h-48 md:h-64 bg-muted/30 border-t border-border overflow-hidden ${alwaysExpanded ? '' : 'cursor-pointer'}`}
-                        onClick={handleContentClick}
-                    >
-                        <Image unoptimized
-                            src={coverSrc}
-                            alt={linkEvent.title}
-                            fill
-                            sizes="100vw"
-                            className="object-cover transition-transform duration-700 hover:scale-105"
-                        />
-                    </div>
+                    {/* Image — i panel-/sheet-läget (alwaysExpanded) visas HELA
+                        den RIKTIGA omslagsbilden (object-contain, höjd-capad till
+                        48vh) i stället för en beskuren remsa, så man ser hela
+                        motivet. Fallback-mönster (utan riktig coverImage) och alla
+                        övriga lägen behåller den beskurna h-48/h-64-remsan. */}
+                    {alwaysExpanded && hasRealCover ? (
+                        <div
+                            className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
+                            onClick={handleContentClick}
+                        >
+                            <img
+                                data-cover-img
+                                src={coverSrc as string}
+                                alt={linkEvent.title}
+                                className="w-full h-auto max-h-[48vh] object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div
+                            className="relative w-full h-48 md:h-64 bg-muted/30 border-t border-border overflow-hidden cursor-pointer"
+                            onClick={handleContentClick}
+                        >
+                            <Image unoptimized
+                                src={coverSrc}
+                                alt={linkEvent.title}
+                                fill
+                                sizes="100vw"
+                                className="object-cover transition-transform duration-700 hover:scale-105"
+                            />
+                        </div>
+                    )}
 
                     {/* Description Section */}
                     <div
                         className={`p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
-                        <p className={`text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium ${revealStep === 1 ? 'line-clamp-3' : ''}`}>
+                        <p data-event-description className={`text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium ${revealStep === 1 ? 'line-clamp-3' : ''}`}>
                             {(linkEvent as any).description || 'Ingen beskrivning tillgänglig.'}
                         </p>
                         

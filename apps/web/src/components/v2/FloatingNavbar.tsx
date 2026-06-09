@@ -7,6 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 
 interface FloatingNavbarProps {
     creationMode?: 'idle' | 'placing' | 'editing';
+    /** När false → +-knappen renderas inte alls (shop-flaggan "Skapa event"
+     *  är avaktiverad). Default true så befintliga kallningar inte ändras. */
+    createEventEnabled?: boolean;
     onStartCreate?: () => void;
     onConfirmPlacement?: () => void;
     searchQuery: string;
@@ -15,6 +18,7 @@ interface FloatingNavbarProps {
 
 export default function FloatingNavbar({
     creationMode = 'idle',
+    createEventEnabled = true,
     onStartCreate,
     onConfirmPlacement,
     searchQuery,
@@ -106,55 +110,9 @@ export default function FloatingNavbar({
                 {/* Top Row */}
                 <div className="flex items-center gap-2 w-full">
 
-                    {/* Vänster: expanderbar sök */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 pointer-events-auto">
-
-
-                        {/* Sök */}
-                        {searchOpen ? (
-                            <div className="flex items-center flex-1 min-w-0 bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">
-                                <Search size={15} className="text-slate-400 shrink-0 mr-2" />
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    placeholder="Sök event..."
-                                    className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 min-w-0"
-                                />
-                                <button
-                                    onClick={handleCloseSearch}
-                                    className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
-                                >
-                                    <X size={15} />
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => setSearchOpen(true)}
-                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors"
-                            >
-                                <Search size={18} className="text-slate-700" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Höger: plus + profil */}
-                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-                        {creationMode !== 'editing' && (
-                            <button
-                                ref={plusBtnRef}
-                                type="button"
-                                onClick={handlePlusClick}
-                                disabled={plusDropping}
-                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
-                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100]"
-                            >
-                                <Plus size={22} className="text-white" />
-                            </button>
-                        )}
-
-                        {/* Profil / inloggning */}
+                    {/* Vänster: profil i hörnet (väskan + funktioner ligger under,
+                        renderade i V2Map). */}
+                    <div className="flex items-center pointer-events-auto shrink-0">
                         <div className="relative" ref={profileMenuRef}>
                             <button
                                 type="button"
@@ -169,7 +127,7 @@ export default function FloatingNavbar({
                             </button>
 
                             {profileMenuOpen && user && (
-                                <div className="absolute right-0 top-full mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 overflow-hidden min-w-[160px]">
+                                <div className="absolute left-0 top-full mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 overflow-hidden min-w-[160px]">
                                     <div className="px-4 py-3 border-b border-slate-100">
                                         <p className="text-xs text-slate-500">Inloggad som</p>
                                         <p className="text-sm font-semibold text-slate-800 truncate">{user.displayName || user.email}</p>
@@ -191,6 +149,55 @@ export default function FloatingNavbar({
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Höger: expanderbar sök + skapa event */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
+                        {/* Sök */}
+                        {searchOpen ? (
+                            <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">
+                                <Search size={15} className="text-slate-400 shrink-0 mr-2" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Sök event..."
+                                    className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 min-w-0"
+                                />
+                                <button
+                                    onClick={handleCloseSearch}
+                                    className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                                >
+                                    <X size={15} />
+                                </button>
+                            </div>
+                        ) : (
+                            // Hopfälld sök: samma 40px-storlek som lager- + funktions-
+                            // knapparna, och order-last gör den ytterst till höger så den
+                            // hamnar rakt ovanför lager-knappen (i linje med kolumnen).
+                            // När söket öppnas tas order bort → input fyller som förut.
+                            <button
+                                onClick={() => setSearchOpen(true)}
+                                className="order-last bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                aria-label="Sök event"
+                            >
+                                <Search size={20} className="text-slate-700" />
+                            </button>
+                        )}
+
+                        {creationMode !== 'editing' && createEventEnabled && (
+                            <button
+                                ref={plusBtnRef}
+                                type="button"
+                                onClick={handlePlusClick}
+                                disabled={plusDropping}
+                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
+                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0"
+                            >
+                                <Plus size={22} className="text-white" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

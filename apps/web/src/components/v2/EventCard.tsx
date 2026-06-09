@@ -308,6 +308,18 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
     const PEEK_HEIGHT_VH = 28;
+    // Default-höjd när ett event öppnas FRÅN STÄNGT läge: lite högre upp så man
+    // ser kortets header + toppen på bilden (men inte hela vägen ner). Byter man
+    // event medan kortet redan är öppet behålls den höjd man har (se anchor-effekt).
+    const DEFAULT_OPEN_HEIGHT_VH = 40;
+    // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
+    // mätningen saknas.
+    const OPEN_HEIGHT_VH = 80;
+    // Minsta höjd kortet kan dras ner till — "peek"-läget längst ner där bara
+    // kortets header (titel, tid, plats) syns. Ett nedåt-drag stannar HÄR; kortet
+    // försvinner aldrig av att man drar ner det. (Stäng kortet genom att klicka
+    // utanför det på kartan — V2Map avmarkerar då eventet.)
+    const COLLAPSED_HEIGHT_VH = 22;
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
     const updateHeightVh = (vh: number) => {
@@ -348,22 +360,81 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         onCardExpandedChange?.(heightVh > 50);
     }, [heightVh, onCardExpandedChange]);
 
+    // Räkna ut hur högt kortet ska öppnas: precis så att hela bilden + FÖRSTA
+    // raden av beskrivningen syns — inte hela vägen ner till "Anmäl dig här".
+    // Vi mäter var beskrivnings-stycket börjar (bildens höjd varierar) och lägger
+    // på ~1,4 radhöjder. Faller tillbaka till OPEN_HEIGHT_VH om mätning saknas.
+    const measureOpenHeight = (): number => {
+        const sc = scrollContainerRef.current;
+        if (!sc) return OPEN_HEIGHT_VH;
+        const desc = sc.querySelector('[data-event-description]') as HTMLElement | null;
+        if (!desc) return OPEN_HEIGHT_VH;
+        const scRect = sc.getBoundingClientRect();
+        const descRect = desc.getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(desc).lineHeight) || 22;
+        // Beskrivningens topp relativt scroll-innehållets topp (oberoende av
+        // nuvarande korthöjd). + grip-zonen (h-6 = 24px) ovanför scroll-containern.
+        const descTopWithinContent = (descRect.top - scRect.top) + sc.scrollTop;
+        const targetPx = 24 + descTopWithinContent + lineHeight * 1.4;
+        const vh = (targetPx / window.innerHeight) * 100;
+        return Math.max(PEEK_HEIGHT_VH, Math.min(90, Math.round(vh)));
+    };
+
+    // Minsta höjd kortet kan dras ner till: precis så att kortets nedre kant
+    // hamnar på sträcket (border-linjen) under tid + plats — d.v.s. titel +
+    // tid/plats syns, men Värd/Pris-raden är dold under vikningen. Mäter var den
+    // linjen ligger (markerad med data-peek-boundary i LinkEventCard) relativt
+    // scroll-innehållet + grip-zonen (h-6 = 24px). Faller tillbaka till
+    // COLLAPSED_HEIGHT_VH om mätning saknas.
+    const measureCollapsedHeight = (): number => {
+        const sc = scrollContainerRef.current;
+        if (!sc) return COLLAPSED_HEIGHT_VH;
+        const line = sc.querySelector('[data-peek-boundary]') as HTMLElement | null;
+        if (!line) return COLLAPSED_HEIGHT_VH;
+        const scRect = sc.getBoundingClientRect();
+        const lineRect = line.getBoundingClientRect();
+        // Linjens topp relativt scroll-innehållets topp (oberoende av nuvarande
+        // korthöjd/scroll). + grip-zonen ovanför scroll-containern.
+        const lineTopWithinContent = (lineRect.top - scRect.top) + sc.scrollTop;
+        const targetPx = 24 + lineTopWithinContent;
+        const vh = (targetPx / window.innerHeight) * 100;
+        return Math.max(10, Math.min(PEEK_HEIGHT_VH, Math.round(vh)));
+    };
+    // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
+    // botten-gränsen utan att bindas om. Default = konstanten tills vi mätt.
+    const collapsedVhRef = useRef(COLLAPSED_HEIGHT_VH);
+
+    // Föregående valda event-id, så vi kan skilja "öppna från stängt" (null → X)
+    // från "byta event medan kortet är öppet" (X → Y). Höjden ska bara nollställas
+    // till default vid en ny öppning, inte vid byte.
+    const prevSelectedIdRef = useRef<string | null>(null);
+
     // Detektera om selectedEvent ändrats utifrån (kartklick) → då är det en ny ankare.
     useEffect(() => {
+        const prevId = prevSelectedIdRef.current;
+        prevSelectedIdRef.current = selectedEvent?.id ?? null;
         if (!selectedEvent) return;
-        if (expectedNextIdRef.current === selectedEvent.id) {
-            // Det var pickNext som drev fram detta event — anchorId behålls
-            // OCH höjden bevaras, så användaren får navigera utan att kortet
-            // hoppar tillbaka till peek-läget.
+
+        const isPickNext = expectedNextIdRef.current === selectedEvent.id;
+        if (isPickNext) {
+            // Det var pickNext som drev fram detta event — anchorId behålls.
             expectedNextIdRef.current = null;
-            return;
+        } else {
+            // Användaren valde ett nytt event (kartklick / första valet) → ny ankare.
+            setAnchorId(selectedEvent.id);
+            setVisitedEventIds(new Set());
         }
-        // Användaren valde ett nytt event (kartklick / första valet) → ny ankare.
-        // Detta är också vägen för "stäng → öppna igen", så här ska höjden
-        // återställas till default peek.
-        setAnchorId(selectedEvent.id);
-        setVisitedEventIds(new Set());
-        updateHeightVh(PEEK_HEIGHT_VH);
+
+        setIsAnimating(true);
+        // Default-höjd ENBART när kortet öppnas från stängt läge (prevId === null):
+        // lite högre upp så man ser header + toppen på bilden. Byter man event
+        // medan kortet redan är öppet behålls den nuvarande höjden (inget hopp).
+        const freshOpen = prevId === null;
+        const raf = requestAnimationFrame(() => {
+            collapsedVhRef.current = measureCollapsedHeight();
+            if (freshOpen) updateHeightVh(DEFAULT_OPEN_HEIGHT_VH);
+        });
+        return () => cancelAnimationFrame(raf);
     }, [selectedEvent]);
 
     // Reset pagination and scroll position when the active event changes.
@@ -522,6 +593,9 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         startY.current = e.clientY;
         startHeightVh.current = heightVhRef.current;
         startDragX.current = dragXRef.current;
+        // Mät botten-gränsen (sträcket under tid/plats) färskt vid drag-start så
+        // den är korrekt även efter att fönstret ändrat storlek.
+        collapsedVhRef.current = measureCollapsedHeight();
         setExitX(null); // Reset any exit animation
         setIsAnimating(false);
     };
@@ -549,7 +623,10 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
 
         if (dragDirection.current === 'vertical') {
             const deltaVh = (deltaY / window.innerHeight) * 100;
-            const newHeight = Math.max(15, Math.min(95, startHeightVh.current + deltaVh));
+            // Klampa nedåt till den mätta botten-gränsen (sträcket under tid/plats)
+            // så kortet stannar där när man drar ner det — det kan inte dras
+            // bort/försvinna. Titel + tid/plats syns; Värd/Pris döljs under vikningen.
+            const newHeight = Math.max(collapsedVhRef.current, Math.min(95, startHeightVh.current + deltaVh));
             updateHeightVh(newHeight);
         } else if (dragDirection.current === 'horizontal') {
             updateDragX(startDragX.current + deltaX);
@@ -567,14 +644,11 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         setIsAnimating(true);
 
         if (dragDirection.current === 'vertical') {
-            const currentHeight = heightVhRef.current;
-
-            if (currentHeight < 20) {
-                onSelectEvent(null);
-            } else {
-                // Let the card stay at the exact height the user dragged it to, no snapping
-                updateHeightVh(currentHeight);
-            }
+            // Stanna på exakt den höjd användaren dragit till (redan klampad till
+            // minst COLLAPSED_HEIGHT_VH i onPointerMove). Inget snäpp, ingen
+            // stängning — ett nedåt-drag kollapsar bara kortet till peek-läget
+            // längst ner. Stäng kortet genom att klicka utanför det på kartan.
+            updateHeightVh(heightVhRef.current);
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
             if (currentDragX > THRESHOLD) {
@@ -584,6 +658,14 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
             } else {
                 updateDragX(0);
             }
+        } else {
+            // Tap utan rörelse (dragDirection === 'none') → toggla mellan öppet
+            // och hopfällt. Så man kan stänga den uppfällda bilden genom att
+            // klicka var som helst på kortet. Knappar/länkar ignoreras redan i
+            // onPointerDown så de fortsätter fungera som vanligt. Öppning mäts så
+            // bara första raden av beskrivningen visas (inte ända ner till knappen);
+            // hopfällning går till sträcket under tid/plats (samma som drag-botten).
+            updateHeightVh(heightVhRef.current > 50 ? measureCollapsedHeight() : measureOpenHeight());
         }
 
         dragDirection.current = 'none';

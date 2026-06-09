@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
@@ -68,6 +69,189 @@ function applyTerrain(map: maplibregl.Map, on: boolean) {
     }
 }
 
+const GEM_THEMES: Record<string, {
+    activeBg: string;
+    inactiveBg: string;
+    activeShadow: string;
+    inactiveShadow: string;
+    activeIconColor: string;
+    inactiveIconColor: string;
+}> = {
+    findgame: { // Purple Amethyst
+        activeBg: 'radial-gradient(circle at 30% 25%, #f3e8ff 0%, #c084fc 25%, #8b5cf6 55%, #6d28d9 85%, #4c1d95 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(243,232,255,0.25) 0%, rgba(192,132,252,0.15) 25%, rgba(139,92,246,0.08) 65%, rgba(109,40,217,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(139,92,246,0.5), 0 0 26px rgba(192,132,252,0.4), inset -3px -6px 14px rgba(76,29,149,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(139,92,246,0.05), inset -3px -5px 12px rgba(76,29,149,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#d8b4fe'
+    },
+    tilt: { // Cyan Topaz
+        activeBg: 'radial-gradient(circle at 30% 25%, #e0f2fe 0%, #38bdf8 25%, #0284c7 55%, #0369a1 85%, #0c4a6e 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(224,242,254,0.25) 0%, rgba(56,189,248,0.15) 25%, rgba(2,132,199,0.08) 65%, rgba(3,105,161,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(2,132,199,0.5), 0 0 26px rgba(56,189,248,0.4), inset -3px -6px 14px rgba(12,74,110,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(2,132,199,0.05), inset -3px -5px 12px rgba(12,74,110,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#7dd3fc'
+    },
+    throw: { // Fire Opal (Orange)
+        activeBg: 'radial-gradient(circle at 30% 25%, #ffedd5 0%, #fb923c 25%, #ea580c 55%, #c2410c 85%, #7c2d12 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,237,213,0.25) 0%, rgba(251,146,60,0.15) 25%, rgba(234,88,12,0.08) 65%, rgba(194,65,12,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(234,88,12,0.5), 0 0 26px rgba(251,146,60,0.4), inset -3px -6px 14px rgba(124,45,18,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(234,88,12,0.05), inset -3px -5px 12px rgba(124,45,18,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#ffb07c'
+    },
+    sun: { // Citrine/Sun Yellow
+        activeBg: 'radial-gradient(circle at 30% 25%, #fef9c3 0%, #facc15 25%, #ca8a04 55%, #a16207 85%, #713f12 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,249,195,0.25) 0%, rgba(250,204,21,0.15) 25%, rgba(202,138,4,0.08) 65%, rgba(161,98,7,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(202,138,4,0.5), 0 0 26px rgba(250,204,21,0.4), inset -3px -6px 14px rgba(113,63,18,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(202,138,4,0.05), inset -3px -5px 12px rgba(113,63,18,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fef08a'
+    },
+    focus: { // Ruby Red
+        activeBg: 'radial-gradient(circle at 30% 25%, #fee2e2 0%, #f87171 25%, #dc2626 55%, #b91c1c 85%, #7f1d1d 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,226,226,0.25) 0%, rgba(248,113,113,0.15) 25%, rgba(220,38,38,0.08) 65%, rgba(185,28,28,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(220,38,38,0.5), 0 0 26px rgba(248,113,113,0.4), inset -3px -6px 14px rgba(127,29,29,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(220,38,38,0.05), inset -3px -5px 12px rgba(127,29,29,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fca5a5'
+    },
+    slingshot: { // Emerald Green
+        activeBg: 'radial-gradient(circle at 30% 25%, #dcfce7 0%, #4ade80 25%, #16a34a 55%, #15803d 85%, #14532d 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(220,252,231,0.25) 0%, rgba(74,222,128,0.15) 25%, rgba(22,163,74,0.08) 65%, rgba(21,128,61,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(22,163,74,0.5), 0 0 26px rgba(74,222,128,0.4), inset -3px -6px 14px rgba(20,83,45,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(22,163,74,0.05), inset -3px -5px 12px rgba(20,83,45,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#86efac'
+    },
+    faces: { // Rose Quartz (Pink)
+        activeBg: 'radial-gradient(circle at 30% 25%, #fce7f3 0%, #f472b6 25%, #db2777 55%, #be185d 85%, #831843 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(252,231,243,0.25) 0%, rgba(244,114,182,0.15) 25%, rgba(219,39,119,0.08) 65%, rgba(190,24,93,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(219,39,119,0.5), 0 0 26px rgba(244,114,182,0.4), inset -3px -6px 14px rgba(131,24,67,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(219,39,119,0.05), inset -3px -5px 12px rgba(131,24,67,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fbcfe8'
+    },
+    bigCloud: { // Sapphire Blue
+        activeBg: 'radial-gradient(circle at 30% 25%, #e0e7ff 0%, #818cf8 25%, #4f46e5 55%, #3730a3 85%, #1e1b4b 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(224,231,255,0.25) 0%, rgba(129,140,248,0.15) 25%, rgba(79,70,229,0.08) 65%, rgba(55,48,163,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(79,70,229,0.5), 0 0 26px rgba(129,140,248,0.4), inset -3px -6px 14px rgba(30,27,75,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(79,70,229,0.05), inset -3px -5px 12px rgba(30,27,75,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#c7d2fe'
+    },
+    fastThrow: { // Orange/Lightning Yellow
+        activeBg: 'radial-gradient(circle at 30% 25%, #fffbeb 0%, #fbbf24 25%, #d97706 55%, #b45309 85%, #78350f 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,251,235,0.25) 0%, rgba(251,191,36,0.15) 25%, rgba(217,119,6,0.08) 65%, rgba(180,83,9,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(217,119,6,0.5), 0 0 26px rgba(251,191,36,0.4), inset -3px -6px 14px rgba(120,53,15,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(217,119,6,0.05), inset -3px -5px 12px rgba(120,53,15,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fde68a'
+    },
+    sparkle: { // Magenta/Purple Star
+        activeBg: 'radial-gradient(circle at 30% 25%, #fae8ff 0%, #e879f9 25%, #c084fc 55%, #8b5cf6 85%, #4c1d95 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(250,232,255,0.25) 0%, rgba(232,121,249,0.15) 25%, rgba(192,132,252,0.08) 65%, rgba(139,92,246,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(139,92,246,0.5), 0 0 26px rgba(232,121,249,0.4), inset -3px -6px 14px rgba(76,29,149,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(139,92,246,0.05), inset -3px -5px 12px rgba(76,29,149,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#f5d0fe'
+    },
+    snowball: { // Frost/Light Blue
+        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdfa 0%, #2dd4bf 25%, #0d9488 55%, #0f766e 85%, #115e59 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,250,0.25) 0%, rgba(45,212,191,0.15) 25%, rgba(13,148,136,0.08) 65%, rgba(15,118,110,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(13,148,136,0.5), 0 0 26px rgba(45,212,191,0.4), inset -3px -6px 14px rgba(17,94,89,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(13,148,136,0.05), inset -3px -5px 12px rgba(17,94,89,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#99f6e4'
+    },
+    createEvent: { // Emerald/Jade Green
+        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdf4 0%, #4ade80 25%, #16a34a 55%, #15803d 85%, #14532d 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,244,0.25) 0%, rgba(74,222,128,0.15) 25%, rgba(22,163,74,0.08) 65%, rgba(21,128,61,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(22,163,74,0.5), 0 0 26px rgba(74,222,128,0.4), inset -3px -6px 14px rgba(20,83,45,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(22,163,74,0.05), inset -3px -5px 12px rgba(20,83,45,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#bbf7d0'
+    },
+    multiplayer: { // Electric Purple/Blue
+        activeBg: 'radial-gradient(circle at 30% 25%, #eff6ff 0%, #60a5fa 25%, #2563eb 55%, #1d4ed8 85%, #1e3a8a 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(239,246,255,0.25) 0%, rgba(96,165,250,0.15) 25%, rgba(37,99,235,0.08) 65%, rgba(29,78,216,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(37,99,235,0.5), 0 0 26px rgba(96,165,250,0.4), inset -3px -6px 14px rgba(29,78,216,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(37,99,235,0.05), inset -3px -5px 12px rgba(29,78,216,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#93c5fd'
+    },
+    record: { // Deep Crimson/Ruby
+        activeBg: 'radial-gradient(circle at 30% 25%, #fff1f2 0%, #fb7185 25%, #e11d48 55%, #be123c 85%, #881337 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,241,242,0.25) 0%, rgba(251,113,133,0.15) 25%, rgba(225,29,72,0.08) 65%, rgba(190,18,60,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(225,29,72,0.5), 0 0 26px rgba(251,113,133,0.4), inset -3px -6px 14px rgba(136,19,55,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(225,29,72,0.05), inset -3px -5px 12px rgba(136,19,55,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fecdd3'
+    },
+    satellite: { // Blue/Sky Pearl
+        activeBg: 'radial-gradient(circle at 30% 25%, #f0f9ff 0%, #38bdf8 25%, #0284c7 55%, #0369a1 85%, #075985 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,249,255,0.25) 0%, rgba(56,189,248,0.15) 25%, rgba(2,132,199,0.08) 65%, rgba(3,105,161,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(2,132,199,0.5), 0 0 26px rgba(56,189,248,0.4), inset -3px -6px 14px rgba(7,89,133,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(2,132,199,0.05), inset -3px -5px 12px rgba(7,89,133,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#bae6fd'
+    },
+    globe: { // Ocean Teal
+        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdfa 0%, #2dd4bf 25%, #0d9488 55%, #0f766e 85%, #115e59 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,250,0.25) 0%, rgba(45,212,191,0.15) 25%, rgba(13,148,136,0.08) 65%, rgba(15,118,110,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(13,148,136,0.5), 0 0 26px rgba(45,212,191,0.4), inset -3px -6px 14px rgba(17,94,89,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(13,148,136,0.05), inset -3px -5px 12px rgba(17,94,89,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#99f6e4'
+    },
+    terrain: { // Mountain Gold/Bronze
+        activeBg: 'radial-gradient(circle at 30% 25%, #fef3c7 0%, #fbbf24 25%, #d97706 55%, #b45309 85%, #78350f 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,243,199,0.25) 0%, rgba(251,191,36,0.15) 25%, rgba(217,119,6,0.08) 65%, rgba(180,83,9,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(217,119,6,0.5), 0 0 26px rgba(251,191,36,0.4), inset -3px -6px 14px rgba(12,74,110,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(217,119,6,0.05), inset -3px -5px 12px rgba(12,74,110,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fde68a'
+    }
+};
+
+type OrbState = 'active' | 'inactive' | 'locked' | 'capped';
+
+const getGemStyles = (key: string, state: OrbState) => {
+    const theme = GEM_THEMES[key];
+    if (!theme) {
+        const active = state === 'active';
+        return {
+            bg: active
+                ? 'radial-gradient(circle at 32% 28%, #e6f4ff 0%, #7dc4ec 20%, #1d8ec9 55%, #006AA7 85%, #003d65 100%)'
+                : 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.98) 0%, rgba(225,238,250,0.85) 25%, rgba(170,205,235,0.55) 65%, rgba(110,160,210,0.55) 100%)',
+            shadow: active
+                ? '0 8px 18px rgba(0,90,160,0.50), inset -3px -6px 14px rgba(0,40,80,0.55)'
+                : '0 6px 14px rgba(60,90,140,0.30), inset -3px -5px 12px rgba(60,90,140,0.30)',
+            iconColor: active ? '#ffffff' : '#006AA7',
+            border: active ? '1px solid rgba(255,255,255,0.40)' : '1px solid rgba(255,255,255,0.75)'
+        };
+    }
+
+    if (state === 'locked') {
+        const recordTheme = GEM_THEMES['record'];
+        return {
+            bg: recordTheme.inactiveBg,
+            shadow: recordTheme.inactiveShadow,
+            iconColor: '#7c2d12',
+            border: '1px solid rgba(255,235,180,0.65)'
+        };
+    }
+
+    const active = state === 'active';
+    return {
+        bg: active ? theme.activeBg : theme.inactiveBg,
+        shadow: active ? theme.activeShadow : theme.inactiveShadow,
+        iconColor: active ? theme.activeIconColor : theme.inactiveIconColor,
+        border: active ? '1px solid rgba(255,255,255,0.40)' : '1px solid rgba(255,255,255,0.25)'
+    };
+};
+
 interface V2MapProps {
     events: LinkEvent[];
     selectedEvent: LinkEvent | null;
@@ -128,9 +312,24 @@ interface V2MapProps {
     /** Togglar lutningen via tilt-knappen under satellit-knappen. */
     onToggleTilt?: () => void;
     /** Skickar shop-flaggor uppåt så page.tsx kan gömma/visa knappar som inte
-     *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard). Fyrar varje
-     *  gång användaren togglar något i shoppen. */
-    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean }) => void;
+     *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard, eller
+     *  +-knappen i navbaren för att skapa event). Fyrar varje gång användaren
+     *  togglar något relevant i shoppen. */
+    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => void;
+    /** Triggas när användaren klickar på Multiplayer-badgen i shoppen och inte är
+     *  inloggad — föräldern hanterar då navigation till /login så användaren kan
+     *  registrera sig / skapa konto. */
+    onActivateMultiplayer?: () => void;
+    /** Fyrar när funktions-"väskan" (uppe till vänster) öppnas/stängs. Sidan
+     *  använder det för att tillfälligt gömma poäng-brickan som annars ligger i
+     *  samma vänsterkolumn och skulle krocka med utfällningen. */
+    onFuncBagOpenChange?: (open: boolean) => void;
+    /** "Hitta event"-spelet ligger numera som en funktion i väskan (inte i root).
+     *  Sidan skickar in spelets tillstånd + start/stopp så väske-brickan kan styra det. */
+    findGameActive?: boolean;
+    canStartFindGame?: boolean;
+    onStartFindGame?: () => void;
+    onStopFindGame?: () => void;
 }
 
 export default function V2Map({
@@ -159,7 +358,13 @@ export default function V2Map({
     tilted = false,
     onSunCloudTap,
     onToggleTilt,
-    onFeatureFlagsChange
+    onFeatureFlagsChange,
+    onActivateMultiplayer,
+    onFuncBagOpenChange,
+    findGameActive = false,
+    canStartFindGame = false,
+    onStartFindGame,
+    onStopFindGame
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -171,11 +376,61 @@ export default function V2Map({
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
+    // True om WebGL inte gick att initiera (t.ex. blockerad efter en tidigare
+    // kontextförlust). Då visar vi en fallback-ruta i stället för att krascha.
+    const [mapError, setMapError] = useState(false);
+
+    // Två oberoende 3D-lägen — deklarerade tidigt så shop-flaggornas
+    // isFeatureActive() kan läsa dem under render (annars TDZ-error). Mer
+    // detaljer om hur de samverkar finns i kommentaren längre ned där
+    // applyProjection/applyTerrain används.
+    const [isGlobe, setIsGlobe] = useState(false);
+    const [is3DTerrain, setIs3DTerrain] = useState(false);
+    const isGlobeRef = useRef(isGlobe);
+    isGlobeRef.current = isGlobe;
+    const is3DTerrainRef = useRef(is3DTerrain);
+    is3DTerrainRef.current = is3DTerrain;
 
     // Funktioner-shop: centrerad modal med ett grid av kort över befintliga
     // (och framtida) funktioner. Öppnas via +-knappen i höger-stacken. För
     // tillfället är "köp" mockat — klicket aktiverar funktionen direkt.
     const [shopOpen, setShopOpen] = useState(false);
+    // Funktions-"väskan" uppe till vänster: fäller ut en inline-lista med
+    // kart-funktioner (lutning, kasta, sol, fokus, slangbella). Separat från
+    // shopOpen (hela funktioner-shoppen).
+    const [funcBagOpen, setFuncBagOpen] = useState(false);
+    // Refs till knappen + den utfällda panelen så ett klick utanför båda
+    // stänger väskan (panelen renderas via portal, därav två separata refs).
+    const funcBagBtnRef = useRef<HTMLButtonElement>(null);
+    const funcBagPanelRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!funcBagOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            const target = e.target as Node;
+            if (funcBagBtnRef.current?.contains(target)) return;
+            if (funcBagPanelRef.current?.contains(target)) return;
+            setFuncBagOpen(false);
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [funcBagOpen]);
+    // Öppna väskan scrollad längst NER i listan (Lutning sist syns direkt). Man
+    // scrollar UPPÅT för att nå övriga funktioner. rAF så layouten hunnit sättas.
+    useEffect(() => {
+        if (!funcBagOpen) return;
+        const raf = requestAnimationFrame(() => {
+            const el = funcBagPanelRef.current;
+            if (el) el.scrollTop = el.scrollHeight;
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [funcBagOpen]);
+    // Rapportera öppet/stängt uppåt så sidan kan gömma spel-knapparna (poäng +
+    // Hitta event) medan väskan är utfälld — de delar vänsterkolumn.
+    const onFuncBagOpenChangeRef = useRef(onFuncBagOpenChange);
+    onFuncBagOpenChangeRef.current = onFuncBagOpenChange;
+    useEffect(() => {
+        onFuncBagOpenChangeRef.current?.(funcBagOpen);
+    }, [funcBagOpen]);
 
     // Shop-flaggor: vilka funktioner som är "påslagna". Vissa funktioner har
     // egen state i V2Map (tilt/globe/terräng) — de hanteras separat nedan i
@@ -193,52 +448,114 @@ export default function V2Map({
         fastThrow: boolean;
         sparkle: boolean;
         snowball: boolean;
+        createEvent: boolean;
+        multiplayer: boolean;
         record: boolean;
     };
     const [shopFlags, setShopFlags] = useState<ShopFlags>({
+        // Defaults valda så att 5-aktiva-gränsen är respekterad redan från start.
+        // Tilt/globe/terrain/satellit har egen state (inte i flags) — av dem är
+        // bara satellit på som default, vilket ger 5 totalt:
+        // satellit + sun + focus + throw + createEvent.
         sun: true,
         focus: true,
         throw: true,
-        slingshot: true,
-        faces: true,
+        slingshot: false,
+        faces: false,
         bigCloud: false,
         fastThrow: false,
         sparkle: false,
         snowball: false,
-        record: false // låst tills "köpt"
+        createEvent: true,    // basfunktion — på som default
+        multiplayer: false,   // kräver konto-registrering
+        record: false         // låst tills "köpt"
     });
+
+    // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
+    const MAX_ACTIVE_FEATURES = 999;
+    const COUNTED_FEATURE_KEYS = [
+        'satellite', 'tilt', 'globe', 'terrain',
+        'sun', 'focus', 'throw', 'slingshot', 'faces',
+        'bigCloud', 'fastThrow', 'sparkle', 'snowball',
+        'createEvent'
+    ];
 
     const onFeatureFlagsChangeRef = useRef(onFeatureFlagsChange);
     onFeatureFlagsChangeRef.current = onFeatureFlagsChange;
     useEffect(() => {
-        onFeatureFlagsChangeRef.current?.({ sun: shopFlags.sun, focus: shopFlags.focus });
-    }, [shopFlags.sun, shopFlags.focus]);
+        onFeatureFlagsChangeRef.current?.({
+            sun: shopFlags.sun,
+            focus: shopFlags.focus,
+            createEvent: shopFlags.createEvent,
+            multiplayer: shopFlags.multiplayer
+        });
+    }, [shopFlags.sun, shopFlags.focus, shopFlags.createEvent, shopFlags.multiplayer]);
 
-    // Inkluderar tilt/globe/terräng i samma "is this feature active?"-modell
-    // som de övriga shop-flaggorna, så master-toggle och kort-rendering kan
-    // hanteras likadant.
+    const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
+    onActivateMultiplayerRef.current = onActivateMultiplayer;
+
+    // Inkluderar tilt/globe/terräng/satellit i samma "is this feature active?"-
+    // modell som övriga shop-flaggor, så master-toggle och kort-rendering kan
+    // hanteras likadant. mapStyle är inte boolean → satellit-mappas via lik.
     const isFeatureActive = (key: string): boolean => {
         if (key === 'tilt') return tilted;
         if (key === 'globe') return isGlobe;
         if (key === 'terrain') return is3DTerrain;
+        if (key === 'satellite') return mapStyle === 'satellite';
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
+    const activeFeatureCount = COUNTED_FEATURE_KEYS.reduce(
+        (n, k) => n + (isFeatureActive(k) ? 1 : 0),
+        0
+    );
+
     const setFeatureActive = (key: string, value: boolean) => {
+        // 'record' är inte längre låst — den togglas som vilken annan flagga (faller
+        // igenom till setShopFlags nedan). Multiplayer behåller sin egen logik.
+        if (key === 'multiplayer') {
+            if (value && !shopFlags.multiplayer) {
+                onActivateMultiplayerRef.current?.();
+                return;
+            }
+            setShopFlags(prev => ({ ...prev, multiplayer: value }));
+            return;
+        }
         if (key === 'tilt') { if (tilted !== value) onToggleTilt?.(); return; }
         if (key === 'globe') { setIsGlobe(value); return; }
         if (key === 'terrain') { setIs3DTerrain(value); return; }
-        if (key === 'record') return; // låst — kräver "köp"
+        if (key === 'satellite') { setMapStyle(value ? 'satellite' : 'streets'); return; }
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
     const setAllFeatures = (value: boolean) => {
-        if (tilted !== value) onToggleTilt?.();
-        setIsGlobe(value);
-        setIs3DTerrain(value);
+        if (!value) {
+            // Avaktivera allting (utom record/multiplayer som har egen logik).
+            if (tilted) onToggleTilt?.();
+            setIsGlobe(false);
+            setIs3DTerrain(false);
+            setMapStyle('streets');
+            setShopFlags(prev => {
+                const next = { ...prev };
+                (Object.keys(next) as Array<keyof ShopFlags>).forEach(k => {
+                    if (k !== 'record' && k !== 'multiplayer') next[k] = false;
+                });
+                return next;
+            });
+            return;
+        }
+        // Aktivera bara de första MAX_ACTIVE_FEATURES i COUNTED_FEATURE_KEYS-ordningen,
+        // resten lämnas avaktiverade. (Användaren får sin "loadout" automatiskt.)
+        const toActivate = new Set(COUNTED_FEATURE_KEYS.slice(0, MAX_ACTIVE_FEATURES));
+        const want = (k: string) => toActivate.has(k);
+        if (tilted !== want('tilt')) onToggleTilt?.();
+        setIsGlobe(want('globe'));
+        setIs3DTerrain(want('terrain'));
+        setMapStyle(want('satellite') ? 'satellite' : 'streets');
         setShopFlags(prev => {
             const next = { ...prev };
             (Object.keys(next) as Array<keyof ShopFlags>).forEach(k => {
-                if (k !== 'record') next[k] = value;
+                if (k === 'record' || k === 'multiplayer') return;
+                next[k] = want(k);
             });
             return next;
         });
@@ -250,12 +567,7 @@ export default function V2Map({
     //                  därför läggs DEM-källan till/tas bort dynamiskt (se effekt).
     // Refs så att stil-omladdningen (setStyle nollställer projektion + custom-källor)
     // kan återställa rätt läge utan att bindas om.
-    const [isGlobe, setIsGlobe] = useState(false);
-    const [is3DTerrain, setIs3DTerrain] = useState(false);
-    const isGlobeRef = useRef(isGlobe);
-    isGlobeRef.current = isGlobe;
-    const is3DTerrainRef = useRef(is3DTerrain);
-    is3DTerrainRef.current = is3DTerrain;
+    // (state + refs är deklarerade högre upp så shop-flaggorna kan läsa dem.)
 
     // Gissnings-streck (spelet): geo-ankaret i en ref + de projicerade skärm-
     // positionerna i state. Skärmpositionerna uppdateras varje kart-frame så
@@ -309,6 +621,11 @@ export default function V2Map({
     const [sunCloudScale, setSunCloudScale] = useState(1);
     const sunCloudCreationZoomRef = useRef<number>(8);
     const SUN_CLOUD_BASE_SCALE = 0.7; // lite mindre än huvudmolnet vid skapande
+    // Gemensamt max-storlekstak för BÅDA molnen: när man zoomar in slutar molnet
+    // växa vid den här skalan, så en stor blur-tung moln-SVG inte får kartan att
+    // lagga. Skickas till CloudPopup (maxScale) och kapar även sol-molnets eget
+    // zoom-skalningsläge nedan. Molnen krymper fortfarande fritt när man zoomar ut.
+    const CLOUD_MAX_SCALE = 2.5;
 
     const sunCloudAnchorRef = useRef(sunCloudAnchor);
     sunCloudAnchorRef.current = sunCloudAnchor;
@@ -319,6 +636,8 @@ export default function V2Map({
     // CloudPopups glide-tick) kan läsa senaste värdet utan att bindas om.
     const tiltedRef = useRef(tilted);
     tiltedRef.current = tilted;
+
+
 
     // Perspektiv-skalning i lutad vy: ett moln som ligger längre bort från
     // kameran (högre upp på skärmen i 3D-vyn) ritas mindre och kastas
@@ -394,6 +713,132 @@ export default function V2Map({
         if (!tilted || !sunCloudAnchorPos) return 1;
         return depthAtPoint(sunCloudAnchorPos.x + sunLiveOffset.x, sunCloudAnchorPos.y + sunLiveOffset.y);
     }, [tilted, sunCloudAnchorPos, sunLiveOffset]);
+
+    // Vattnade nålar (blommor): laddas från localStorage vid mount, sparas vid förändring.
+    const [wateredKeys, setWateredKeys] = useState<Set<string>>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('vadkul_watered_markers');
+                if (saved) return new Set(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to load watered markers', e);
+            }
+        }
+        return new Set();
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem('vadkul_watered_markers', JSON.stringify(Array.from(wateredKeys)));
+            } catch (e) {
+                console.error('Failed to save watered markers', e);
+            }
+        }
+    }, [wateredKeys]);
+
+    const [wateringKey, setWateringKey] = useState<string | null>(null);
+    const wateringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Hanterar 1-sekunds timer för pågående vattning
+    useEffect(() => {
+        if (wateringTimeoutRef.current) {
+            clearTimeout(wateringTimeoutRef.current);
+            wateringTimeoutRef.current = null;
+        }
+
+        if (wateringKey) {
+            wateringTimeoutRef.current = setTimeout(() => {
+                setWateredKeys(prev => {
+                    const next = new Set(prev);
+                    next.add(wateringKey);
+                    return next;
+                });
+                setWateringKey(null);
+            }, 1000); // 1 sekund
+        }
+
+        return () => {
+            if (wateringTimeoutRef.current) {
+                clearTimeout(wateringTimeoutRef.current);
+            }
+        };
+    }, [wateringKey]);
+
+    // Kollar om något av molnen är i närheten av någon nål (baserat på skärmpixlar!) och sätter igång vattning
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+
+        const liveCloudScreenCoords: { x: number; y: number }[] = [];
+
+        // 1. Live position för huvudmolnet
+        if (showCloud && cloudAnchorPos) {
+            liveCloudScreenCoords.push({
+                x: cloudAnchorPos.x + mainLiveOffset.x,
+                y: cloudAnchorPos.y + mainLiveOffset.y
+            });
+        }
+
+        // 2. Live position för solmolnet
+        if (sunCloudAnchor && sunCloudAnchorPos) {
+            liveCloudScreenCoords.push({
+                x: sunCloudAnchorPos.x + sunLiveOffset.x,
+                y: sunCloudAnchorPos.y + sunLiveOffset.y
+            });
+        }
+
+        if (liveCloudScreenCoords.length === 0) {
+            if (wateringKey !== null) {
+                setWateringKey(null);
+            }
+            return;
+        }
+
+        let closestKey: string | null = null;
+        let closestDist = Infinity;
+
+        events.forEach(evt => {
+            if (!evt.lat || !evt.lng) return;
+            const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+            if (wateredKeys.has(key)) return;
+
+            try {
+                // Projektion till skärmkoordinater för att få samma avståndsbedömning oavsett zoom
+                const pos = map.project([evt.lng, evt.lat]);
+
+                for (const cloudPos of liveCloudScreenCoords) {
+                    const dx = pos.x - cloudPos.x;
+                    const dy = pos.y - cloudPos.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    // Tröskel: 85 skärmpixlar (mycket enklare och mer intuitivt!)
+                    if (dist < 85) {
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            closestKey = key;
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignorera
+            }
+        });
+
+        if (closestKey !== wateringKey) {
+            setWateringKey(closestKey);
+        }
+    }, [
+        events,
+        showCloud,
+        cloudAnchorPos,
+        mainLiveOffset,
+        sunCloudAnchor,
+        sunCloudAnchorPos,
+        sunLiveOffset,
+        wateredKeys,
+        wateringKey
+    ]);
 
     // Molnens nuvarande moods (rapporterade av respektive CloudPopup) + en
     // "incoming"-stämpel per moln. När man drar ett moln med en min över det
@@ -546,7 +991,9 @@ export default function V2Map({
     useEffect(() => {
         if (!mapContainerRef.current) return;
 
-        const map = new maplibregl.Map({
+        let map: maplibregl.Map;
+        try {
+        map = new maplibregl.Map({
             container: mapContainerRef.current,
             // Initial style matchar default-värdet på mapStyle (satellit) så
             // kartan inte måste byta stil direkt efter mount → ingen flicker.
@@ -554,10 +1001,10 @@ export default function V2Map({
             center: [14.8091, 56.8777], // Lng, Lat (Växjö)
             zoom: 8,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
-            // världen (zoom 0) vilket ibland kraschar appen (massa tiles + globe-
-            // /terräng-edgecases långt bort). 3 ≈ hela Skandinavien i bild — gott
-            // om kontext men utan världs-vyn som ställer till det.
-            minZoom: 3,
+            // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
+            // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
+            // kontext men utan den minnestunga kontinent-/världsvyn som dödar GPU:n.
+            minZoom: 4,
             // ── Minnestak för tile-cachen ──────────────────────────────────
             // Satellitvyn använder TVÅ raster-källor (bilder + etiketter). Varje
             // 256px-tile blir en GPU-textur (~256 KB). Utan tak växer cachen
@@ -571,8 +1018,24 @@ export default function V2Map({
             // minne (gamla texturer hålls inte kvar i väntan på refresh).
             refreshExpiredTiles: false
         });
+        } catch (err) {
+            // WebGL kunde inte initieras (ofta "blocked" efter en tidigare
+            // kontextförlust). Krascha inte hela appen — visa fallback i stället.
+            console.error('Kartan kunde inte initieras (WebGL)', err);
+            setMapError(true);
+            return;
+        }
 
         mapRef.current = map;
+
+        // WebGL-säkerhetsnät: om GPU:n tappar renderingskontexten (t.ex. vid
+        // minnespress) ska sidan inte dö. preventDefault gör förlusten
+        // återställbar, och vid återställning ritar vi om kartan.
+        const glCanvas = map.getCanvas();
+        const onCtxLost = (e: Event) => { e.preventDefault(); };
+        const onCtxRestored = () => { try { map.triggerRepaint(); } catch { /* noop */ } };
+        glCanvas.addEventListener('webglcontextlost', onCtxLost as EventListener, false);
+        glCanvas.addEventListener('webglcontextrestored', onCtxRestored as EventListener, false);
 
         // Lägg till zoom/pan klasshantering för att växla mellan brickor och nålar
         const container = mapContainerRef.current;
@@ -648,7 +1111,7 @@ export default function V2Map({
             // Skala med zoom: 2x per zoom-nivå relativt skapande-zoomen.
             if (sunCloudAnchorRef.current) {
                 const zoomDelta = map.getZoom() - sunCloudCreationZoomRef.current;
-                const scaled = Math.min(Math.max(SUN_CLOUD_BASE_SCALE * Math.pow(2, zoomDelta), 0.25), 4);
+                const scaled = Math.min(Math.max(SUN_CLOUD_BASE_SCALE * Math.pow(2, zoomDelta), 0.25), CLOUD_MAX_SCALE);
                 setSunCloudScale((prevScale) => Math.abs(prevScale - scaled) > 0.001 ? scaled : prevScale);
             }
 
@@ -707,6 +1170,8 @@ export default function V2Map({
 
         return () => {
             if (moveEndTimer) clearTimeout(moveEndTimer);
+            glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
+            glCanvas.removeEventListener('webglcontextrestored', onCtxRestored as EventListener);
             map.remove();
             mapRef.current = null;
         };
@@ -1406,13 +1871,16 @@ export default function V2Map({
             if (isSelected || isGold || isGuessed) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
+            const isWatered = wateredKeys.has(key);
+            const isWatering = wateringKey === key;
+
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
             // att stateKey inte ändras varje slideshow-tick (annars rivs brickan
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -1512,6 +1980,50 @@ export default function V2Map({
                     ? 'animation: none !important; opacity: 1 !important; transform: ' + scaleStyle + ' !important;'
                     : `transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
+                const isWatered = wateredKeys.has(key);
+                const isWatering = wateringKey === key;
+                const flowersHtml = isWatered
+                    ? `<div class="marker-flowers">
+                           <span class="sprouting-flower anim-flower-1">🌸</span>
+                           <span class="sprouting-flower anim-flower-2">🌼</span>
+                           <span class="sprouting-flower anim-flower-3">🌱</span>
+                       </div>`
+                    : '';
+
+                const isSparkleActive = isFeatureActive('sparkle');
+                const isSnowballActive = isFeatureActive('snowball');
+
+                let dropsHtml = '';
+                if (isSparkleActive) {
+                    dropsHtml = `
+                        <span class="sparkle-drop">✨</span>
+                        <span class="sparkle-drop">✨</span>
+                        <span class="sparkle-drop">✨</span>
+                    `;
+                } else if (isSnowballActive) {
+                    dropsHtml = `
+                        <span class="snow-drop">❄️</span>
+                        <span class="snow-drop">❄️</span>
+                        <span class="snow-drop">❄️</span>
+                    `;
+                } else {
+                    dropsHtml = `
+                        <span class="rain-drop"></span>
+                        <span class="rain-drop"></span>
+                        <span class="rain-drop"></span>
+                    `;
+                }
+
+                const wateringFeedbackHtml = isWatering
+                    ? `<div class="watering-rain">
+                           ${dropsHtml}
+                       </div>
+                       <svg class="watering-progress-svg" viewBox="0 0 36 36">
+                           <path class="watering-progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                           <path class="watering-progress-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke: ${isSparkleActive ? '#f472b6' : isSnowballActive ? '#93c5fd' : '#38bdf8'}; filter: drop-shadow(0 0 3px ${isSparkleActive ? 'rgba(244,114,182,0.8)' : isSnowballActive ? 'rgba(147,197,253,0.8)' : 'rgba(56,189,248,0.8)'});" />
+                       </svg>`
+                    : '';
+
                 markerData.element.innerHTML = `
                     <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
                         <!-- NEEDLE ELEMENT -->
@@ -1525,11 +2037,15 @@ export default function V2Map({
 
                         <!-- PIN ELEMENT -->
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble${isGold ? ' pin-bubble-gold' : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble${isGold ? ' pin-bubble-gold' : ''}${isWatering ? (isSparkleActive ? ' pin-bubble-watering-sparkle' : isSnowballActive ? ' pin-bubble-watering-snowball' : ' pin-bubble-watering') : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji">${emoji}</div>
                             </div>
                             ${countBadge}
+                            ${wateringFeedbackHtml}
                         </div>
+
+                        <!-- FLOWERS -->
+                        ${flowersHtml}
                     </div>
                 `;
             }
@@ -1565,7 +2081,7 @@ export default function V2Map({
                 }
             }
         });
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, gameMode, goldEventId, guessedEventId]);
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, gameMode, goldEventId, guessedEventId, wateredKeys, wateringKey, shopFlags, tilted]);
 
     return (
         <div className="absolute inset-0 z-0 bg-slate-100" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0 }}>
@@ -1733,75 +2249,464 @@ export default function V2Map({
                     display: block;
                     animation: marker-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
                 }
+
+                /* Vattnade markörer / blommor */
+                .marker-flowers {
+                    position: absolute;
+                    bottom: -6px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    display: flex;
+                    gap: 1.5px;
+                    justify-content: center;
+                    pointer-events: none;
+                    z-index: 20;
+                    width: max-content;
+                }
+                .sprouting-flower {
+                    font-size: 11px;
+                    display: inline-block;
+                    line-height: 1;
+                    transform-origin: bottom center;
+                    animation: flower-sprout 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both, flower-sway 2.5s ease-in-out infinite alternate;
+                }
+                .anim-flower-1 {
+                    animation-delay: 0ms;
+                }
+                .anim-flower-2 {
+                    animation-delay: 150ms;
+                    font-size: 9px;
+                }
+                .anim-flower-3 {
+                    animation-delay: 300ms;
+                    font-size: 10px;
+                }
+                @keyframes flower-sprout {
+                    0% {
+                        transform: scale(0) translateY(8px);
+                        opacity: 0;
+                    }
+                    100% {
+                        transform: scale(1) translateY(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes flower-sway {
+                    0% {
+                        transform: rotate(-8deg);
+                    }
+                    100% {
+                        transform: rotate(8deg);
+                    }
+                }
+
+                /* Vattnings-feedback (regn, pulserande bubbla + förloppsindikator) */
+                .watering-rain {
+                    position: absolute;
+                    top: -30px;
+                    left: 0;
+                    width: 44px;
+                    height: 30px;
+                    overflow: visible;
+                    pointer-events: none;
+                    z-index: 10;
+                }
+                .rain-drop {
+                    position: absolute;
+                    width: 2px;
+                    height: 8px;
+                    background: linear-gradient(to bottom, rgba(56, 189, 248, 0), rgba(56, 189, 248, 1));
+                    border-radius: 999px;
+                    opacity: 0;
+                    animation: rain-fall-down 0.4s linear infinite;
+                }
+                .rain-drop:nth-child(1) {
+                    left: 10px;
+                    animation-delay: 0s;
+                }
+                .rain-drop:nth-child(2) {
+                    left: 22px;
+                    animation-delay: 0.12s;
+                }
+                .rain-drop:nth-child(3) {
+                    left: 34px;
+                    animation-delay: 0.24s;
+                }
+                @keyframes rain-fall-down {
+                    0% {
+                        transform: translateY(0) scaleY(1);
+                        opacity: 0;
+                    }
+                    15% {
+                        opacity: 0.9;
+                    }
+                    85% {
+                        opacity: 0.9;
+                        transform: translateY(28px) scaleY(1);
+                    }
+                    100% {
+                        transform: translateY(32px) scaleY(0.1);
+                        opacity: 0;
+                    }
+                }
+
+                .watering-progress-svg {
+                    position: absolute;
+                    top: -4px;
+                    left: -4px;
+                    width: 52px;
+                    height: 52px;
+                    z-index: 5;
+                    transform: rotate(-90deg);
+                    pointer-events: none;
+                }
+                .watering-progress-bg {
+                    fill: none;
+                    stroke: rgba(56, 189, 248, 0.2);
+                    stroke-width: 3.5;
+                }
+                .watering-progress-fill {
+                    fill: none;
+                    stroke: #38bdf8;
+                    stroke-width: 3.5;
+                    stroke-linecap: round;
+                    stroke-dasharray: 100 100;
+                    stroke-dashoffset: 100;
+                    filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.8));
+                    animation: fill-watering-progress 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                @keyframes fill-watering-progress {
+                    to {
+                        stroke-dashoffset: 0;
+                    }
+                }
+
+                @keyframes bubble-watering-pulse {
+                    0%, 100% {
+                        transform: rotate(45deg) scale(1);
+                    }
+                    50% {
+                        transform: rotate(45deg) scale(1.06);
+                        box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+                    }
+                }
+                .pin-bubble-watering {
+                    animation: bubble-watering-pulse 0.8s ease-in-out infinite;
+                }
+
+                /* Sparkles / Glitter-fall */
+                .sparkle-drop {
+                    position: absolute;
+                    font-size: 14px;
+                    opacity: 0;
+                    pointer-events: none;
+                    animation: sparkle-fall-down 0.5s linear infinite;
+                }
+                .sparkle-drop:nth-child(1) {
+                    left: 6px;
+                    animation-delay: 0s;
+                }
+                .sparkle-drop:nth-child(2) {
+                    left: 20px;
+                    animation-delay: 0.15s;
+                }
+                .sparkle-drop:nth-child(3) {
+                    left: 32px;
+                    animation-delay: 0.3s;
+                }
+                @keyframes sparkle-fall-down {
+                    0% {
+                        transform: translateY(0) scale(0) rotate(0deg);
+                        opacity: 0;
+                    }
+                    15% {
+                        opacity: 1;
+                        transform: translateY(4px) scale(1.1) rotate(45deg);
+                    }
+                    85% {
+                        opacity: 1;
+                        transform: translateY(24px) scale(0.9) rotate(180deg);
+                    }
+                    100% {
+                        transform: translateY(32px) scale(0) rotate(270deg);
+                        opacity: 0;
+                    }
+                }
+
+                /* Snowflakes / Snöfall */
+                .snow-drop {
+                    position: absolute;
+                    font-size: 14px;
+                    opacity: 0;
+                    pointer-events: none;
+                    animation: snow-fall-down 0.6s ease-in-out infinite;
+                }
+                .snow-drop:nth-child(1) {
+                    left: 8px;
+                    animation-delay: 0s;
+                }
+                .snow-drop:nth-child(2) {
+                    left: 20px;
+                    animation-delay: 0.18s;
+                }
+                .snow-drop:nth-child(3) {
+                    left: 32px;
+                    animation-delay: 0.36s;
+                }
+                @keyframes snow-fall-down {
+                    0% {
+                        transform: translateY(0) translateX(0) rotate(0deg);
+                        opacity: 0;
+                    }
+                    15% {
+                        opacity: 0.95;
+                    }
+                    85% {
+                        opacity: 0.95;
+                        transform: translateY(24px) translateX(-4px) rotate(180deg);
+                    }
+                    100% {
+                        transform: translateY(32px) translateX(2px) rotate(360deg);
+                        opacity: 0;
+                    }
+                }
+
+                /* Custom bubble pulses for glitter & snow */
+                @keyframes bubble-watering-sparkle-pulse {
+                    0%, 100% {
+                        transform: rotate(45deg) scale(1);
+                    }
+                    50% {
+                        transform: rotate(45deg) scale(1.06);
+                        box-shadow: 0 0 15px rgba(244, 114, 182, 0.75);
+                    }
+                }
+                .pin-bubble-watering-sparkle {
+                    animation: bubble-watering-sparkle-pulse 0.8s ease-in-out infinite;
+                }
+
+                @keyframes bubble-watering-snowball-pulse {
+                    0%, 100% {
+                        transform: rotate(45deg) scale(1);
+                    }
+                    50% {
+                        transform: rotate(45deg) scale(1.06);
+                        box-shadow: 0 0 15px rgba(147, 197, 253, 0.75);
+                    }
+                }
+                .pin-bubble-watering-snowball {
+                    animation: bubble-watering-snowball-pulse 0.8s ease-in-out infinite;
+                }
             `}</style>
             <div ref={mapContainerRef} className="absolute inset-0 map-state-full" style={{ width: '100%', height: '100%' }} />
-            {/* Satellit/karta-toggle: liten knapp på höger sida, under navbaren.
-                Växlar mellan vektor-stilen och en raster-satellitvy. */}
-            <button
-                type="button"
-                onClick={() => setMapStyle(s => s === 'satellite' ? 'streets' : 'satellite')}
-                aria-label={mapStyle === 'satellite' ? 'Byt till kartvy' : 'Byt till satellitvy'}
-                title={mapStyle === 'satellite' ? 'Byt till kartvy' : 'Byt till satellitvy'}
-                className={`absolute top-24 right-4 z-[900] h-10 w-10 rounded-full shadow-xl border flex items-center justify-center transition-colors backdrop-blur-md ${
-                    mapStyle === 'satellite'
-                        ? 'bg-[#006AA7] border-[#006AA7] text-white hover:bg-[#005590]'
-                        : 'bg-white/90 border-white/50 text-slate-700 hover:bg-white'
-                }`}
-            >
-                <Layers size={18} />
-            </button>
-            {/* Funktioner-shop: plus-knappen sitter direkt under satellit-knappen
-                och öppnar en luftballongskorg-stylad ruta där alla övriga kart-
-                funktioner (lutning, klot, terräng + framtida köpbara) bor. */}
-            <button
-                type="button"
-                onClick={() => setShopOpen(true)}
-                aria-label="Öppna funktioner"
-                title="Funktioner"
-                className="absolute top-[140px] right-4 z-[900] h-10 w-10 rounded-full shadow-xl border bg-white/90 border-white/50 text-slate-700 hover:bg-white flex items-center justify-center transition-colors backdrop-blur-md"
-            >
-                <Plus size={20} strokeWidth={2.5} />
-            </button>
-            {/* Aktiva-funktioner-chips: små runda ikoner till vänster om +-knappen,
-                en per shop-funktion som är på just nu. Klick togglar av direkt så
-                du slipper öppna shoppen för att stänga av något. */}
-            {(tilted || isGlobe || is3DTerrain) && (
-                <div className="absolute top-[140px] right-[60px] z-[900] flex items-center gap-1.5 h-10">
-                    {tilted && (
+
+            {/* Fallback om WebGL inte gick att initiera (t.ex. blockerad efter en
+                tidigare kontextförlust) — sidan kraschar inte, man kan ladda om. */}
+            {mapError && (
+                <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-slate-100 p-6 text-center">
+                    <div className="max-w-sm">
+                        <p className="text-base font-semibold text-slate-800">Kartan kunde inte laddas</p>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Webbläsarens grafik (WebGL) är otillgänglig just nu. Ladda om sidan för att försöka igen.
+                        </p>
                         <button
                             type="button"
-                            onClick={() => onToggleTilt?.()}
-                            aria-label="Stäng av lutning"
-                            title="Lutning aktiv — klicka för att stänga av"
-                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
+                            onClick={() => window.location.reload()}
+                            className="mt-4 rounded-full bg-[#006AA7] px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-[#005590] transition-colors"
                         >
-                            <Box size={14} />
+                            Ladda om
                         </button>
-                    )}
-                    {isGlobe && (
-                        <button
-                            type="button"
-                            onClick={() => setIsGlobe(false)}
-                            aria-label="Stäng av klot"
-                            title="Klot aktivt — klicka för att stänga av"
-                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
-                        >
-                            <Globe size={14} />
-                        </button>
-                    )}
-                    {is3DTerrain && (
-                        <button
-                            type="button"
-                            onClick={() => setIs3DTerrain(false)}
-                            aria-label="Stäng av terräng"
-                            title="Terräng aktiv — klicka för att stänga av"
-                            className="h-8 w-8 rounded-full bg-[#006AA7] text-white shadow-lg border border-white/40 flex items-center justify-center hover:bg-[#005590] active:scale-90 transition-all"
-                        >
-                            <Mountain size={14} />
-                        </button>
-                    )}
+                    </div>
                 </div>
             )}
+            {/* Funktions-"väskan" (under profilen, uppe till vänster): lager-ikonen
+                fäller NER en bricka (crate) med funktioner man kan testa & köpa —
+                som Worms-vapen fast funktioner. Spelet "Hitta event" ligger med här
+                (inte i root) så allt är ett "filsystem" för användaren. Brickan
+                renderas via portal till <body> så den garanterat ligger ÖVER allt
+                annat (V2Map-roten är z-0). */}
+            {(() => {
+                type CrateItem = { key: string; label: string; icon: React.ReactNode; kind?: 'game'; locked?: boolean };
+                const crateItems: CrateItem[] = [
+                    // Väskan öppnas scrollad LÄNGST NER, så de viktigaste funktionerna
+                    // ligger SIST (i botten) och syns direkt. Övriga/sällan-använda
+                    // ligger högst upp (man scrollar upp för att nå dem).
+                    { key: 'record', label: 'Spela in', icon: <Video size={20} />, locked: true },
+                    { key: 'multiplayer', label: 'Multiplayer', icon: <Users size={20} /> },
+                    { key: 'slingshot', label: 'Slangbella', icon: <Crosshair size={20} /> },
+                    { key: 'findgame', label: 'Hitta event', icon: <Gamepad2 size={20} />, kind: 'game' },
+                    { key: 'fastThrow', label: 'Snabbare kast', icon: <Zap size={20} /> },
+                    { key: 'snowball', label: 'Snöboll', icon: <Snowflake size={20} /> },
+                    { key: 'sparkle', label: 'Glitter', icon: <Sparkles size={20} /> },
+                    { key: 'sun', label: 'Sol', icon: <Sun size={20} /> },
+                    { key: 'faces', label: 'Ansikten', icon: <Smile size={20} /> },
+                    { key: 'createEvent', label: 'Skapa event', icon: <Plus size={20} strokeWidth={2.5} /> },
+                    { key: 'bigCloud', label: 'Större moln', icon: <Maximize2 size={20} /> },
+
+                    // Prioriterade nederst (syns vid öppning, nerifrån och upp:
+                    // Lutning → 3D-terräng → Klot → Kasta → Fokus). Lutning allra sist.
+                    { key: 'focus', label: 'Fokus', icon: <Target size={20} /> },
+                    { key: 'throw', label: 'Kasta', icon: <Send size={20} /> },
+                    { key: 'globe', label: 'Klot', icon: <Globe size={20} /> },
+                    { key: 'terrain', label: '3D-terräng', icon: <Mountain size={20} /> },
+                    { key: 'tilt', label: 'Lutning', icon: <Box size={20} /> }
+                ];
+                const isCrateActive = (it: CrateItem) => it.kind === 'game' ? findGameActive : isFeatureActive(it.key);
+                const activeBagCount = crateItems.reduce((n, it) => n + (isCrateActive(it) ? 1 : 0), 0);
+
+                // Enhetlig "pärla" för ALLA funktioner — inga lås, ingen gråskala,
+                // ingen egen färg per funktion. Aktiv markeras BARA med en subtil
+                // kant-glöd (lyser lite på kanten); av/på syns inte mer än så.
+                const ORB_BASE_BG = 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.98) 0%, rgba(225,238,250,0.85) 25%, rgba(170,205,235,0.55) 65%, rgba(110,160,210,0.55) 100%)';
+                // Aktiv pärla: sky-blå fyllning så att den vita symbolen i mitten
+                // lyser tydligt (lyser i vitt i mitten), med blå kant-glöd runt om.
+                const ORB_ACTIVE_BG = 'radial-gradient(circle at 32% 28%, #a8ddf7 0%, #5cc0ef 55%, #38bdf8 100%)';
+                const ORB_BASE_SHADOW = '0 6px 14px rgba(60,90,140,0.30), inset -3px -5px 12px rgba(60,90,140,0.30), inset 0 3px 6px rgba(255,255,255,0.85)';
+                const ORB_ACTIVE_GLOW = '0 0 0 1.5px rgba(56,189,248,0.95), 0 0 11px 2px rgba(56,189,248,0.55)';
+                const ORB_ICON_COLOR = '#006AA7';
+
+                const handleCrate = (it: CrateItem) => {
+                    if (it.kind === 'game') {
+                        if (findGameActive) onStopFindGame?.();
+                        else if (canStartFindGame) onStartFindGame?.();
+                        setFuncBagOpen(false);
+                        return;
+                    }
+                    toggleFeature(it.key);
+                };
+
+                return typeof document === 'undefined' ? null : createPortal(
+                    <>
+                        {/* Funktions-kolumnen renderas FÖRE lager-knappen i portalen → den
+                            målas BAKOM knappen, så kulorna försvinner in UNDER knappen upptill.
+                            Öppnas scrollad längst ner (se effekten ovan). En fade i NEDERKANTEN
+                            (mask) gör att kulorna tonar ut / försvinner längst ner. */}
+                        {funcBagOpen && (
+                                <div
+                                    ref={funcBagPanelRef}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="fixed top-[84px] right-[10px] z-[1150] max-h-[200px] overflow-y-auto overflow-x-visible px-2 pt-8 pb-14 flex flex-col items-end gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto no-scrollbar"
+                                    style={{
+                                        // Kolumnen lite vänster (right-[10px]) + högre (max-h-200) så att
+                                        // de TVÅ nedersta (Lutning + 3D-terräng) syns HELA utan fade när
+                                        // man öppnar. Stor bottom-padding (pb-14) + sen fade-start (78%)
+                                        // gör att uttoningen sker i tomrummet UNDER kulorna, inte på dem.
+                                        maskImage: 'linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)',
+                                        WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%)'
+                                    }}
+                                >
+                                        {crateItems.map((it) => {
+                                            // Inga lås längre: ALLA funktioner går att slå på/av direkt.
+                                            // Aktiv markeras bara med en subtil kant-glöd (lyser lite på
+                                            // kanten) — av/på syns inte mer än så.
+                                            const active = isCrateActive(it);
+                                            // Enda kvarvarande begränsning är funktionell: "Hitta event"
+                                            // kan bara startas när en runda är möjlig (eller avbrytas när
+                                            // den pågår). Det är inget köp-/positionslås.
+                                            const disabled = it.kind === 'game' && !findGameActive && !canStartFindGame;
+
+                                            // Aktiv: symbolen i mitten lyser VITT mot den blå pärlan.
+                                            // Inaktiv behåller den mörkare blå grundfärgen.
+                                            const iconColor = active ? '#ffffff' : ORB_ICON_COLOR;
+                                            const faceColor = iconColor;
+
+                                            return (
+                                                <button
+                                                    key={it.key}
+                                                    type="button"
+                                                    onClick={disabled ? undefined : () => handleCrate(it)}
+                                                    disabled={disabled}
+                                                    title={
+                                                        it.kind === 'game'
+                                                            ? (findGameActive ? 'Hitta event — pågår, klicka för att avbryta' : canStartFindGame ? 'Hitta event — starta en runda' : 'Hitta event — inte tillgängligt just nu')
+                                                            : active ? `${it.label} — På, klicka för att stänga av`
+                                                            : `${it.label} — Klicka för att slå på`
+                                                    }
+                                                    className={`relative h-[38px] w-[38px] shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110 active:scale-95'}`}
+                                                    style={{
+                                                        background: active ? ORB_ACTIVE_BG : ORB_BASE_BG,
+                                                        border: active ? '1px solid rgba(56,189,248,0.95)' : '1px solid rgba(255,255,255,0.75)',
+                                                        boxShadow: active ? `${ORB_ACTIVE_GLOW}, ${ORB_BASE_SHADOW}` : ORB_BASE_SHADOW,
+                                                        color: iconColor
+                                                    }}
+                                                >
+                                                    {/* Inre ikon */}
+                                                    <div className="relative z-[2] flex items-center justify-center">
+                                                        {it.key === 'faces' ? (
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <circle cx="9" cy="10" r="1.7" fill={faceColor} />
+                                                                <circle cx="15" cy="10" r="1.7" fill={faceColor} />
+                                                                <path
+                                                                    d="M 8 14.5 Q 12 17.5 16 14.5"
+                                                                    stroke={faceColor}
+                                                                    strokeWidth="1.7"
+                                                                    strokeLinecap="round"
+                                                                    fill="none"
+                                                                />
+                                                            </svg>
+                                                        ) : it.icon}
+                                                    </div>
+                                                    {/* Topp-glint */}
+                                                    <div
+                                                        aria-hidden="true"
+                                                        className="absolute pointer-events-none"
+                                                        style={{
+                                                            top: '11%',
+                                                            left: '17%',
+                                                            width: '40%',
+                                                            height: '24%',
+                                                            borderRadius: '50%',
+                                                            background: 'radial-gradient(ellipse, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.55) 35%, rgba(255,255,255,0) 75%)',
+                                                            transform: 'rotate(-22deg)',
+                                                            filter: 'blur(0.3px)'
+                                                        }}
+                                                    />
+                                                    {/* Sub-glint */}
+                                                    <div
+                                                        aria-hidden="true"
+                                                        className="absolute pointer-events-none"
+                                                        style={{
+                                                            bottom: '14%',
+                                                            right: '20%',
+                                                            width: '16%',
+                                                            height: '10%',
+                                                            borderRadius: '50%',
+                                                            background: 'radial-gradient(ellipse, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%)'
+                                                        }}
+                                                    />
+                                                </button>
+                                            );
+                                        })}
+                                </div>
+                        )}
+
+                        {/* Lager-knappen — ALLTID synlig, renderas SIST i portalen → ligger
+                            ovanpå kolumnen (z-[1151]) så kulorna döljs bakom den. Samma
+                            viewport-position som tidigare (top-[72px] right-4). */}
+                        <div className="fixed top-[72px] right-4 z-[1151] pointer-events-auto">
+                            <button
+                                ref={funcBagBtnRef}
+                                type="button"
+                                onClick={() => setFuncBagOpen(o => !o)}
+                                aria-label="Funktioner"
+                                title="Funktioner"
+                                aria-expanded={funcBagOpen}
+                                className={`relative h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors ${
+                                    funcBagOpen ? 'bg-[#006AA7] text-white border-white/30' : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
+                                }`}
+                            >
+                                <Layers size={20} />
+                                {activeBagCount > 0 && !funcBagOpen && (
+                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white">
+                                        {activeBagCount}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    </>,
+                    document.body
+                );
+            })()}
             {/* Slangbella-gummiband: ritas mellan huvudmolnet och solmolnet.
                 Använder live drag-offsetterna så banden stretchar med molnet i
                 realtid när användaren drar. När slangbellan är "engaged" (armad
@@ -1884,31 +2789,63 @@ export default function V2Map({
             })()}
             {showCloud && cloudAnchorPos && (
                 <CloudPopup
-                    message={cloudStats ? (
-                        <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
-                            <span
-                                className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
-                                style={{ color: '#006AA7', fontWeight: 700, letterSpacing: '-0.01em' }}
-                            >
-                                {cloudStats.today} unika event idag
+                    message={
+                        isFeatureActive('sparkle') ? (
+                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
+                                <span
+                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
+                                    style={{ color: '#db2777', fontWeight: 700, letterSpacing: '-0.01em' }}
+                                >
+                                    Magiskt glitter! ✨
+                                </span>
+                                <span
+                                    className="block text-[14px] sm:text-[16px] leading-snug my-1 text-pink-600 font-semibold"
+                                >
+                                    Håll mig över en nål för att dränka den i glittrande stjärnfall!
+                                </span>
                             </span>
-                            <span
-                                className="block text-[15px] sm:text-[17px] leading-snug my-1"
-                                style={{ color: '#006AA7', fontWeight: 600 }}
-                            >
-                                {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}.
+                        ) : isFeatureActive('snowball') ? (
+                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
+                                <span
+                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
+                                    style={{ color: '#1d4ed8', fontWeight: 700, letterSpacing: '-0.01em' }}
+                                >
+                                    Snöbollskrig! ❄️
+                                </span>
+                                <span
+                                    className="block text-[14px] sm:text-[16px] leading-snug my-1 text-blue-600 font-semibold"
+                                >
+                                    Brrr! Håll mig över en nål för att kyla ner den med virvlande snöflingor!
+                                </span>
                             </span>
-                            <span
-                                className="block text-[13px] sm:text-[14px] leading-snug"
-                                style={{ color: '#006AA7', fontWeight: 500 }}
-                            >
-                                Alla spontana event i Sverige.
+                        ) : cloudStats ? (
+                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
+                                <span
+                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
+                                    style={{ color: '#006AA7', fontWeight: 700, letterSpacing: '-0.01em' }}
+                                >
+                                    {cloudStats.today} unika event idag
+                                </span>
+                                <span
+                                    className="block text-[15px] sm:text-[17px] leading-snug my-1"
+                                    style={{ color: '#006AA7', fontWeight: 600 }}
+                                >
+                                    {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}.
+                                </span>
+                                <span
+                                    className="block text-[13px] sm:text-[14px] leading-snug"
+                                    style={{ color: '#006AA7', fontWeight: 500 }}
+                                >
+                                    Alla spontana event i Sverige.
+                                </span>
                             </span>
-                        </span>
-                    ) : `Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund.`}
+                        ) : `Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund.`
+                    }
                     anchorPos={cloudAnchorPos}
                     onDragEnd={handleCloudDragEnd}
                     onDismiss={() => { setShowCloud(false); setMainFollowing(false); }}
+                    throwEnabled={isFeatureActive('throw')}
+                    facesEnabled={isFeatureActive('faces')}
                     following={mainFollowing}
                     onToggleFollow={() => setMainFollowing(f => !f)}
                     onFollowFling={handleMainFling}
@@ -1919,6 +2856,7 @@ export default function V2Map({
                     incomingMoodNonce={mainIncomingMood.nonce}
                     tilted={tilted}
                     scale={mainPerspectiveScale}
+                    maxScale={CLOUD_MAX_SCALE}
                     getDepthAtPoint={depthAtPointRef.current}
                     zIndex={mainCloudZ}
                 />
@@ -1930,9 +2868,12 @@ export default function V2Map({
                     anchorPos={sunCloudAnchorPos}
                     onDragEnd={handleSunCloudDragEnd}
                     onDismiss={() => { setSunCloudAnchor(null); setSunFollowing(false); }}
+                    throwEnabled={isFeatureActive('throw')}
+                    facesEnabled={isFeatureActive('faces')}
                     faceScale={0.6}
                     showDelayMs={0}
                     scale={sunCloudScale * sunPerspectiveScale}
+                    maxScale={CLOUD_MAX_SCALE}
                     getDepthAtPoint={depthAtPointRef.current}
                     following={sunFollowing}
                     onToggleFollow={() => setSunFollowing(f => !f)}
@@ -1947,53 +2888,45 @@ export default function V2Map({
                     zIndex={sunCloudZ}
                 />
             )}
-            {/* Funktioner-shop: stylad som en luftballongskorg ovanifrån.
-                Yttre lager = flätad rotting (diagonal weave); inre = varmt
-                cream-golv där funktions-kort ligger som föremål. Klick på
-                backdrop eller X stänger. */}
+            {/* Funktioner-shop: clean dashboard-panel. Varje funktion ritas
+                som en kristallkula (radial gradient + topp-glint) — aktiverade
+                kulor glöder i brand-blått, övriga är klart glas. Max 5 kan vara
+                aktiva samtidigt (räknare överst). Klick på backdrop eller X stänger. */}
             {shopOpen && (
                 <div
-                    className="absolute inset-0 z-[10500] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4"
+                    className="absolute inset-0 z-[10500] flex items-center justify-center bg-slate-950/50 backdrop-blur-md p-4"
                     onClick={() => setShopOpen(false)}
                 >
-                    {/* Yttre korg-rim: tätare rotting-fläta med tre tonade band
-                        (mörk skugga / mellan / ljus topp) som ger en mer
-                        professionell vävnad. Tvärs och längs gradient = warp/weft. */}
                     <div
-                        className="rounded-[26px] p-[12px]"
+                        className="rounded-3xl w-[min(88vw,440px)] max-h-[82vh] overflow-y-auto"
                         style={{
-                            background:
-                                'repeating-linear-gradient(45deg, #5a3a1f 0 2px, #8a5a30 2px 5px, #b58050 5px 9px, #8a5a30 9px 12px), repeating-linear-gradient(-45deg, transparent 0 4px, rgba(60,30,10,0.35) 4px 5px, transparent 5px 12px)',
-                            boxShadow:
-                                '0 30px 60px rgba(0,0,0,0.45), 0 8px 18px rgba(0,0,0,0.25), inset 0 0 0 1.5px rgba(40,20,5,0.65), inset 0 0 0 3px rgba(200,150,90,0.30), inset 0 2px 6px rgba(255,220,170,0.20)'
+                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(240, 246, 252, 0.5) 100%)',
+                            border: '1px solid rgba(255, 255, 255, 0.45)',
+                            backdropFilter: 'blur(24px)',
+                            WebkitBackdropFilter: 'blur(24px)',
+                            boxShadow: '0 30px 60px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.06)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Inre korggolv: mjukt cream med varm radial-glow i mitten,
-                            som om man tittade ner i en korg där en lampa lyser uppifrån.
-                            Tunn mörk inner-ring markerar gränsen mellan rim och interior. */}
-                        <div
-                            className="rounded-[18px] p-4 w-[min(88vw,440px)] max-h-[78vh] overflow-y-auto"
-                            style={{
-                                background:
-                                    'radial-gradient(ellipse 80% 60% at center 35%, #fdf6e3 0%, #f6e6c2 55%, #e7cb95 100%)',
-                                boxShadow: 'inset 0 0 0 1px rgba(90,55,25,0.45), inset 0 8px 16px rgba(120,75,30,0.22), inset 0 -4px 10px rgba(120,75,30,0.12)'
-                            }}
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-[11px] font-bold text-[#7a4f2a] tracking-[0.18em] uppercase">Funktioner</h2>
+                        <div className="p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex flex-col gap-0.5">
+                                    <h2 className="text-[11px] font-bold text-slate-500 tracking-[0.20em] uppercase">Funktioner</h2>
+                                    <div className="text-[10px] font-bold tracking-wide text-slate-400">
+                                        Aktiva: <span className="text-[#006AA7]">{activeFeatureCount}</span>
+                                    </div>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setShopOpen(false)}
                                     aria-label="Stäng"
-                                    className="h-7 w-7 rounded-full hover:bg-amber-100 flex items-center justify-center text-[#7a4f2a] transition-colors"
+                                    className="h-7 w-7 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
-                            {/* Master-toggle: ett klick aktiverar / avaktiverar
-                                allt på en gång (utom låsta saker som behöver "köpas"). */}
-                            <div className="flex gap-1.5 mb-3">
+                            {/* Master-toggle: snabbt sätta alla på / av. */}
+                            <div className="flex gap-1.5 mb-4">
                                 <button
                                     type="button"
                                     onClick={() => setAllFeatures(true)}
@@ -2005,20 +2938,20 @@ export default function V2Map({
                                 <button
                                     type="button"
                                     onClick={() => setAllFeatures(false)}
-                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-white/80 border border-[#7a4f2a]/30 text-[#7a4f2a] hover:bg-white transition-colors"
-                                    style={{ boxShadow: '0 2px 4px rgba(120,75,30,0.12)' }}
+                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+                                    style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}
                                 >
-                                    Avaktivera alla
+                                    Töm
                                 </button>
                             </div>
-                            {/* Kategorier — runda badges scatterade i flex-wrap.
-                                Varje badge har en liten translateY + rotate-jitter
-                                baserat på index, så de ser ut som föremål som vilar
-                                naturligt i korgen i stället för stelt rad-justerade. */}
+                            {/* Kategorier — varje funktion ritas som en kristallkula.
+                                Småskala translateY + rotate-jitter per index så de
+                                känns levande (lätt vinklat ljus, inte stelt rad). */}
                             {(() => {
                                 type ShopCard = { key: string; label: string; icon?: React.ReactNode; isFaceBadge?: boolean; locked?: boolean };
                                 const categories: Array<{ title: string; items: ShopCard[] }> = [
                                     { title: 'Karta', items: [
+                                        { key: 'satellite', label: 'Satellit', icon: <Layers size={18} /> },
                                         { key: 'tilt', label: 'Lutning', icon: <Box size={18} /> },
                                         { key: 'globe', label: 'Klot', icon: <Globe size={18} /> },
                                         { key: 'terrain', label: 'Terräng', icon: <Mountain size={18} /> }
@@ -2036,6 +2969,10 @@ export default function V2Map({
                                         { key: 'sparkle', label: 'Glitter', icon: <Sparkles size={18} /> },
                                         { key: 'snowball', label: 'Snöboll', icon: <Snowflake size={18} /> }
                                     ]},
+                                    { title: 'Kommunikation', items: [
+                                        { key: 'createEvent', label: 'Skapa event', icon: <Plus size={20} strokeWidth={2.5} /> },
+                                        { key: 'multiplayer', label: 'Multiplayer (kräver konto)', icon: <Users size={18} /> }
+                                    ]},
                                     { title: 'Inspelning', items: [
                                         { key: 'record', label: 'Spela in', icon: <Video size={18} />, locked: true }
                                     ]}
@@ -2046,75 +2983,98 @@ export default function V2Map({
                                 const ROTATE_DEG = [-3, 2, -1, 3, 0, -2, 1, -3];
                                 return categories.map(cat => (
                                     <div key={cat.title} className="mb-4 last:mb-0">
-                                        <div className="text-[9px] font-bold text-[#7a4f2a] tracking-[0.20em] uppercase mb-2 text-center">
+                                        <div className="text-[9px] font-bold text-slate-400 tracking-[0.22em] uppercase mb-2.5 text-center">
                                             {cat.title}
                                         </div>
-                                        <div className="flex flex-wrap justify-center gap-2.5 px-2">
+                                        <div className="flex flex-wrap justify-center gap-3 px-2 py-1">
                                             {cat.items.map((item, i) => {
                                                 const active = isFeatureActive(item.key);
                                                 const locked = !!item.locked;
-                                                const state: 'active' | 'inactive' | 'locked' = locked ? 'locked' : (active ? 'active' : 'inactive');
+                                                const state: OrbState = locked ? 'locked' : active ? 'active' : 'inactive';
                                                 const offY = STAGGER_Y[i % STAGGER_Y.length];
                                                 const rot = ROTATE_DEG[i % ROTATE_DEG.length];
-                                                // Mini cloud-face: matchar molnens egna ansikten
-                                                // (samma sky-200/vit som CloudPopup), så badgen
-                                                // ser ut som ett miniatyrmoln med ansikte.
-                                                const faceColor = state === 'active' ? '#ffffff' : '#7dd3fc';
+                                                const styles = getGemStyles(item.key, state);
+                                                const faceColor = styles.iconColor;
                                                 return (
                                                     <button
                                                         key={item.key}
                                                         type="button"
                                                         onClick={locked ? undefined : () => toggleFeature(item.key)}
-                                                        title={`${item.label}${state === 'locked' ? ' — Köp' : state === 'active' ? ' — Aktiv (klicka för att stänga av)' : ' — Klicka för att aktivera'}`}
+                                                        title={
+                                                            state === 'locked' ? `${item.label} — Köp`
+                                                            : state === 'active' ? `${item.label} — Aktiv, klicka för att stänga av`
+                                                            : `${item.label} — Klicka för att aktivera`
+                                                        }
                                                         aria-label={item.label}
                                                         className={`relative rounded-full flex items-center justify-center transition-all duration-200 ${
-                                                            state === 'active'
-                                                                ? 'text-white hover:scale-110'
-                                                                : state === 'locked'
-                                                                ? 'text-amber-700/50 cursor-pointer hover:scale-105'
-                                                                : 'text-[#7a4f2a] hover:scale-110 active:scale-95'
+                                                            state === 'active' ? 'text-white hover:scale-110'
+                                                            : state === 'locked' ? 'text-amber-900/70 cursor-pointer hover:scale-105'
+                                                            : 'hover:scale-110 active:scale-95'
                                                         }`}
                                                         style={{
-                                                            width: 48,
-                                                            height: 48,
+                                                            width: 56,
+                                                            height: 56,
                                                             transform: `translateY(${offY}px) rotate(${rot}deg)`,
-                                                            background: state === 'active'
-                                                                ? 'radial-gradient(circle at 35% 30%, #1d8ec9 0%, #006AA7 65%, #004f80 100%)'
-                                                                : state === 'locked'
-                                                                ? 'radial-gradient(circle at 35% 30%, #fff8e8 0%, #f5e3bf 100%)'
-                                                                : 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fbf3df 100%)',
-                                                            border: state === 'locked'
-                                                                ? '1px solid rgba(180,130,60,0.55)'
-                                                                : state === 'active'
-                                                                ? '1px solid rgba(0,60,100,0.4)'
-                                                                : '1px solid rgba(180,130,60,0.40)',
-                                                            boxShadow: state === 'active'
-                                                                ? '0 6px 14px rgba(0,80,130,0.45), 0 2px 4px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.35)'
-                                                                : '0 4px 10px rgba(120,75,30,0.20), 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6)'
+                                                            background: styles.bg,
+                                                            border: styles.border,
+                                                            boxShadow: styles.shadow,
+                                                            color: styles.iconColor
                                                         }}
                                                     >
-                                                        {item.isFaceBadge ? (
-                                                            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <circle cx="9" cy="10" r="1.7" fill={faceColor} />
-                                                                <circle cx="15" cy="10" r="1.7" fill={faceColor} />
-                                                                <path
-                                                                    d="M 8 14.5 Q 12 17.5 16 14.5"
-                                                                    stroke={faceColor}
-                                                                    strokeWidth="1.7"
-                                                                    strokeLinecap="round"
-                                                                    fill="none"
-                                                                />
-                                                            </svg>
-                                                        ) : (
-                                                            item.icon
-                                                        )}
+                                                        {/* Inre ikon */}
+                                                        <div className="relative z-[2] flex items-center justify-center" style={{ transform: `rotate(${-rot}deg)` }}>
+                                                            {item.isFaceBadge ? (
+                                                                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <circle cx="9" cy="10" r="1.7" fill={faceColor} />
+                                                                    <circle cx="15" cy="10" r="1.7" fill={faceColor} />
+                                                                    <path
+                                                                        d="M 8 14.5 Q 12 17.5 16 14.5"
+                                                                        stroke={faceColor}
+                                                                        strokeWidth="1.7"
+                                                                        strokeLinecap="round"
+                                                                        fill="none"
+                                                                    />
+                                                                </svg>
+                                                            ) : item.icon}
+                                                        </div>
+                                                        {/* Topp-glint — den klassiska glas-reflektionen
+                                                            i övre vänstra hörnet som ger kulan karaktär. */}
+                                                        <div
+                                                            aria-hidden="true"
+                                                            className="absolute pointer-events-none"
+                                                            style={{
+                                                                top: '11%',
+                                                                left: '17%',
+                                                                width: '40%',
+                                                                height: '24%',
+                                                                borderRadius: '50%',
+                                                                background: 'radial-gradient(ellipse, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.55) 35%, rgba(255,255,255,0) 75%)',
+                                                                transform: 'rotate(-22deg)',
+                                                                filter: 'blur(0.3px)'
+                                                            }}
+                                                        />
+                                                        {/* Sub-glint nere höger — en svag andra
+                                                            reflektion för djup. */}
+                                                        <div
+                                                            aria-hidden="true"
+                                                            className="absolute pointer-events-none"
+                                                            style={{
+                                                                bottom: '14%',
+                                                                right: '20%',
+                                                                width: '16%',
+                                                                height: '10%',
+                                                                borderRadius: '50%',
+                                                                background: 'radial-gradient(ellipse, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%)'
+                                                            }}
+                                                        />
                                                         {state === 'locked' && (
                                                             <div
-                                                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                                                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center z-[3]"
                                                                 style={{
                                                                     background: '#d97706',
                                                                     border: '1.5px solid #fff7ed',
-                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                                                    transform: `rotate(${-rot}deg)`
                                                                 }}
                                                             >
                                                                 <Lock size={8} className="text-white" strokeWidth={3} />
@@ -2127,10 +3087,10 @@ export default function V2Map({
                                     </div>
                                 ));
                             })()}
-                            <div className="mt-3 pt-3 border-t border-[#c19a6b]/40 text-center">
+                            <div className="mt-4 pt-3 border-t border-slate-200 text-center">
                                 <button
                                     type="button"
-                                    className="text-[11px] font-semibold text-[#7a4f2a] hover:underline tracking-wide"
+                                    className="text-[11px] font-semibold text-[#006AA7] hover:underline tracking-wide"
                                 >
                                     Uppgradera konto
                                 </button>
