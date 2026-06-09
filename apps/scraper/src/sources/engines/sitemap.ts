@@ -495,7 +495,12 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     // Om datumet saknar specifik tid (midnatt), leta efter ett fristående HH:MM.
     // Visit Linköping m.fl. lägger datum och tid i SKILDA <time>-element, så
     // <time>.first() ovan ger bara datumet — tiden ligger i ett separat element.
-    if (startDate.getHours() === 0 && startDate.getMinutes() === 0) {
+    // Kolla BÅDE lokal och UTC midnatt: date-only "YYYY-MM-DD" parsas som
+    // UTC-midnatt (= lokalt 02:00), så enbart getHours()===0 missar dem.
+    const lacksTime =
+        (startDate.getHours() === 0 && startDate.getMinutes() === 0) ||
+        (startDate.getUTCHours() === 0 && startDate.getUTCMinutes() === 0);
+    if (lacksTime) {
         const timeCands: string[] = [];
         $('time[datetime]').each((_i, el) => { const v = $(el).attr('datetime'); if (v) timeCands.push(v); });
         $('time').each((_i, el) => { const v = $(el).text().trim(); if (v) timeCands.push(v); });
