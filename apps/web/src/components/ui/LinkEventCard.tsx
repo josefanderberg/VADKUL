@@ -67,6 +67,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
+    // Sant när den RIKTIGA omslagsbilden inte gick att ladda (t.ex. ett
+    // facebook-event utan bild bakom URL:en). Då har vi ingen fallback att visa
+    // → rendera INGEN bild i stället för webbläsarens trasiga bild-ikon med
+    // titeln (alt-texten) bredvid.
+    const [coverFailed, setCoverFailed] = useState(false);
+    // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
+    useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
 
     // Notifiera förälder när expansionsnivån ändras (för t.ex. karta-offset)
     useEffect(() => {
@@ -251,7 +258,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         48vh) i stället för en beskuren remsa, så man ser hela
                         motivet. Fallback-mönster (utan riktig coverImage) och alla
                         övriga lägen behåller den beskurna h-48/h-64-remsan. */}
-                    {alwaysExpanded && hasRealCover ? (
+                    {/* Riktig omslagsbild som inte gick att ladda (coverFailed) och
+                        inget fallback-mönster → rendera INGEN bild i stället för
+                        webbläsarens trasiga bild-ikon med titeln bredvid. */}
+                    {hasRealCover && coverFailed ? null : alwaysExpanded && hasRealCover ? (
                         <div
                             className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={handleContentClick}
@@ -260,6 +270,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 data-cover-img
                                 src={coverSrc as string}
                                 alt={linkEvent.title}
+                                onError={() => setCoverFailed(true)}
                                 className="w-full h-auto max-h-[48vh] object-contain"
                             />
                         </div>
@@ -273,6 +284,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 alt={linkEvent.title}
                                 fill
                                 sizes="100vw"
+                                onError={() => { if (hasRealCover) setCoverFailed(true); }}
                                 className="object-cover transition-transform duration-700 hover:scale-105"
                             />
                         </div>

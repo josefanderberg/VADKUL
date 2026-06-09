@@ -16,18 +16,22 @@
   }
 }
 
-/* Onboarding-blink: en pulserande blå ring runt en knapp/rad/pil för att visa
-   att en ny funktion finns att prova. Använder outline (rundas med border-radius
-   i moderna browsers) så den inte krockar med befintlig box-shadow. */
-@keyframes feature-blink {
-  0%, 100% { outline-color: rgba(0, 106, 167, 0); }
-  50%      { outline-color: rgba(0, 106, 167, 0.6); }
+/* Onboarding-blink: pulserande ring runt knapp/pärla/rad för att visa att en ny
+   funktion finns. Ritas med box-shadow så ringen FÖLJER elementets rundning, +
+   en liten bas-skugga så knappar inte tappar sin. Två varianter:
+   - vit: "Ny funktion"-pärlan + lager-knappen (syns mot kartan).
+   - blå: raden i listan för den nya funktionen + fokus-knappen vid Idag. */
+@keyframes feature-blink-white {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(255, 255, 255, 0); }
+  50%      { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(255, 255, 255, 0.95); }
 }
-.feature-blink {
-  outline: 3px solid transparent;
-  outline-offset: 2px;
-  animation: feature-blink 1s ease-in-out infinite;
+.feature-blink-white { animation: feature-blink-white 1s ease-in-out infinite; }
+
+@keyframes feature-blink-blue {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 0 rgba(37, 99, 235, 0); }
+  50%      { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 4px rgba(37, 99, 235, 0.55); }
 }
+.feature-blink-blue { animation: feature-blink-blue 1s ease-in-out infinite; }
 
 @layer base {
   :root {

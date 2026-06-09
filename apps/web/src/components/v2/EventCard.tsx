@@ -784,7 +784,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                             type="button"
                             onClick={onRecenter}
                             className={`relative overflow-hidden p-2 rounded-full shadow-xl border transition-colors h-[38px] w-[38px] flex items-center justify-center box-border ${
-                                recenterBlink && !slingshotReady && !slingshotEngaged ? 'feature-blink' : ''
+                                recenterBlink && !slingshotReady && !slingshotEngaged ? 'feature-blink-white' : ''
                             } ${
                                 slingshotEngaged
                                     ? 'bg-[#006AA7] border-[#006AA7] ring-2 ring-sky-300'

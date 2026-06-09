@@ -39,19 +39,21 @@ const formatGuessDistance = (km: number): string => {
 };
 
 /**
- * Vid dagbyte: välj eventet som ligger närmast användarens nuvarande position
- * (det tidigare selectedEvent). Faller tillbaka till första event i listan om
- * ankare saknar koords eller om inget event för dagen har koords.
+ * Vid dagbyte: välj eventet som ligger närmast en geo-PUNKT (kartans mitt — det
+ * man tittar på just nu) i stället för det tidigare eventet. Då slipper man flyga
+ * iväg till en annan stad bara för att den nya dagen råkar ha sitt närmaste event
+ * (relativt det gamla) någon annanstans. Faller tillbaka till första event om
+ * punkten saknas eller inget event för dagen har koords.
  */
-const pickNearestForDay = (anchor: LinkEvent | null, dayEvents: LinkEvent[]): LinkEvent | null => {
+const pickNearestToPoint = (point: { lat: number; lng: number } | null, dayEvents: LinkEvent[]): LinkEvent | null => {
     if (dayEvents.length === 0) return null;
-    if (!anchor || !hasValidCoords(anchor)) return dayEvents[0];
+    if (!point) return dayEvents[0];
 
     let nearest: LinkEvent | null = null;
     let nearestDist = Infinity;
     for (const evt of dayEvents) {
         if (!hasValidCoords(evt)) continue;
-        const d = haversineKm(anchor.lat, anchor.lng, evt.lat, evt.lng);
+        const d = haversineKm(point.lat, point.lng, evt.lat, evt.lng);
         if (d < nearestDist) {
             nearestDist = d;
             nearest = evt;
@@ -70,10 +72,14 @@ export default function HomePage() {
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const prevDayOffset = useRef(dayOffset);
+    // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
+    const [daySwitchNonce, setDaySwitchNonce] = useState(0);
     // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
     // 'editing' = modal öppen med formulär. (Drop-animationen körs internt i FloatingNavbar.)
     const [creationMode, setCreationMode] = useState<'idle' | 'placing' | 'editing'>('idle');
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+    const mapCenterRef = useRef(mapCenter);
+    mapCenterRef.current = mapCenter;
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
 
@@ -82,8 +88,10 @@ export default function HomePage() {
     // flash overlay (and the resulting cloud) remount cleanly.
     const [sunFlashKey, setSunFlashKey] = useState(0);
     const [sunCloudKey, setSunCloudKey] = useState(0);
-    // Solknappen vinklar också kameran: första klicket lutar kartan till en
-    // sidovy (3D-perspektiv), nästa klick fäller tillbaka den till platt vy.
+    // Solknappen vinklar också kameran till en sidovy (3D-perspektiv). Ett
+    // nytt sol-klick lutar ALLTID (behåller lutningen om den redan lutar) —
+    // det fäller aldrig tillbaka till platt vy. Avlutning sker via tryck på
+    // sol-molnet (handleSunCloudTap) eller tilt-knappen (handleToggleTilt).
     const [mapTilted, setMapTilted] = useState(false);
     // True när funktions-väskan (uppe till vänster i V2Map) är utfälld — då gömmer
     // vi spel-knapparna (poäng + Hitta event) som delar vänsterkolumn.
@@ -93,7 +101,9 @@ export default function HomePage() {
         // instant the screen pops white, then the light fades over the cloud.
         setSunFlashKey(k => k + 1);
         setSunCloudKey(k => k + 1);
-        setMapTilted(t => !t);
+        // Luta alltid in 3D-vyn — om kameran redan lutar stannar den kvar lutad
+        // (inget tillbaka-fällande till platt vy när man skapar ett nytt moln).
+        setMapTilted(true);
     }, []);
     // Tryck på sol-molnet → fäll tillbaka kartans lutning till platt vy.
     const handleSunCloudTap = useCallback(() => setMapTilted(false), []);
@@ -120,12 +130,12 @@ export default function HomePage() {
     // helt enkelt inte ner callbacken — kortet renderar inte knappen utan den).
     // createEvent styr om +-knappen i navbaren renderas; multiplayer används som
     // gate för delade event m.m. (bara visning av status tills vidare).
-    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }>({
-        sun: true, focus: true, createEvent: true, multiplayer: false
+    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean; findcloud: boolean }>({
+        sun: true, focus: true, createEvent: true, multiplayer: false, findcloud: false
     });
-    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => {
+    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean; findcloud: boolean }) => {
         setShopFlags(prev =>
-            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer
+            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer && prev.findcloud === flags.findcloud
                 ? prev : flags
         );
     }, []);
@@ -198,11 +208,14 @@ export default function HomePage() {
         });
 
         setFilteredEvents(filtered);
-        // När dagen byts: välj eventet som ligger närmast nuvarande position
-        // (gör det inte vid varje Firestore-uppdatering — bara när användaren bytt dag)
+        // När dagen byts: välj eventet närmast KARTANS MITT (det man tittar på) och
+        // be V2Map att INTE flytta kameran — vi vill stanna kvar i vyn i stället för
+        // att flyga iväg till en annan stad. (Bara vid dagbyte, inte vid varje
+        // Firestore-uppdatering.)
         if (prevDayOffset.current !== dayOffset) {
-            setSelectedEvent(prev => pickNearestForDay(prev, filtered));
+            setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filtered));
             prevDayOffset.current = dayOffset;
+            setDaySwitchNonce(n => n + 1);
         }
     }, [events, dayOffset]);
 
@@ -409,6 +422,7 @@ export default function HomePage() {
                 recallMainTrigger={recallMainTrigger}
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
+                daySwitchNonce={daySwitchNonce}
                 onCloudVisibilityChange={setCloudOffScreen}
                 onFocusToolHint={setFocusToolBlink}
                 onSlingshotChange={setSlingshotActive}
@@ -493,7 +507,7 @@ export default function HomePage() {
                 onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}
-                onRecallMainCloud={handleRecallMain}
+                onRecallMainCloud={shopFlags.findcloud ? handleRecallMain : undefined}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={shopFlags.focus ? handleRecenter : undefined}
                 recenterBlink={focusToolBlink}
