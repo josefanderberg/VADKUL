@@ -501,18 +501,21 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         (startDate.getHours() === 0 && startDate.getMinutes() === 0) ||
         (startDate.getUTCHours() === 0 && startDate.getUTCMinutes() === 0);
     if (lacksTime) {
-        const timeCands: string[] = [];
-        $('time[datetime]').each((_i, el) => { const v = $(el).attr('datetime'); if (v) timeCands.push(v); });
-        $('time').each((_i, el) => { const v = $(el).text().trim(); if (v) timeCands.push(v); });
-        const infoText = $('.event-info, .event-date-time, .event-time, .datum, .tid, .klockslag').text();
-        const km = infoText.match(/kl[.\s]*(\d{1,2})[:.](\d{2})/i);
-        if (km) timeCands.push(`${km[1]}:${km[2]}`);
-        for (const c of timeCands) {
-            const m = c.match(/^(\d{1,2})[:.](\d{2})$/);   // bara tid, inte datum
-            if (m) {
-                const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
-                if (h <= 23 && min <= 59) { startDate.setHours(h, min, 0, 0); break; }
-            }
+        const cands: { h: number; m: number }[] = [];
+        const push = (h: number, m: number) => { if (h <= 23 && m <= 59) cands.push({ h, m }); };
+        // 1. Fristående <time>-element med bara HH:MM (Visit Linköping m.fl.)
+        $('time[datetime]').each((_i, el) => { const v = ($(el).attr('datetime') || '').match(/^(\d{1,2})[:.](\d{2})$/); if (v) push(+v[1], +v[2]); });
+        $('time').each((_i, el) => { const v = $(el).text().trim().match(/^(\d{1,2})[:.](\d{2})$/); if (v) push(+v[1], +v[2]); });
+        // 2. "kl HH:MM" eller bara HH.MM i HUVUDINNEHÅLLET (ej footer/nav) — venues
+        //    (Nalen/Norrlandsoperan/Pustervik) lägger showtiden i renderad brödtext.
+        const content = ($('main, article, .content, .event-info, .single-event, .program, .evenemang').first().text()
+            || '').slice(0, 4000);
+        for (const mt of content.matchAll(/(?:kl[.\s]*)?\b(\d{1,2})[:.](\d{2})\b/gi)) push(parseInt(mt[1], 10), parseInt(mt[2], 10));
+        if (cands.length) {
+            // Heuristik: kvällstid (>=17) först (konserter); annars tidigaste kronologiskt.
+            const evening = cands.find(c => c.h >= 17);
+            const pick = evening || cands.slice().sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m))[0];
+            startDate.setHours(pick.h, pick.m, 0, 0);
         }
     }
 

@@ -2786,6 +2786,8 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.norrlandsoperan.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?forestallning(?:ar)?\/[^/]+\/?$/i],
             defaultCity: 'Umeå',
+            // Showtiden renderas av JS → krävs för text-tidsparsning (annars 00:00).
+            useBrowser: true,
         },
         updateFrequency: 'daily',
         notes: 'Probe-venues 2026-06-09: 354 event-URLs (forestallning-mönster) — opera.',
@@ -3055,6 +3057,8 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
             defaultCity: 'Göteborg',
             maxUrls: 300,
+            // Showtiden renderas av JS → krävs för text-tidsparsning (annars 00:00).
+            useBrowser: true,
         },
         updateFrequency: 'every-3d',
         status: 'active',
