@@ -144,6 +144,23 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'sodra-teatern',
+        hostName: 'Södra Teatern',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://sodrateatern.com/sitemap.xml',
+            // /evenemang/<kategori>/<slug>/ — musik-show, annat, etc.
+            urlPatterns: [/\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://sodrateatern.com/sitemap.xml', date: '2026-06-10' },
+        notes: 'Probe 2026-06-10: DevTools-scout visade 0 XHR (server-renderat). Sitemap har 54 /evenemang/-URLs; JSON-LD saknar Event/startDate så datum (t.ex. "14 juni 2026") + "kl HH.MM" plockas ur sidtext via cheerie-fallback.',
+        lastVerified: '2026-06-10',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
