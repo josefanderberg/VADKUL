@@ -14,8 +14,23 @@ Mappen håller analyser per scrapingkälla samt löpande spårning av förbättr
 - [facebook.md](facebook.md) — egen, störst (1073/1200)
 - [tickster.md](tickster.md) — egen, näst störst (79)
 - [övriga.md](övriga.md) — Meetup, VäxjöCo, Upplev (små men fungerar)
-- [inaktiva.md](inaktiva.md) — Eventbrite, Billetto, Nöjesguiden, today-sweden (0 events)
-- [kommuner/](kommuner/) — **auto-genererade playbooks** för alla 50 registry-källor. En `.md` per kommun med discovery + field-map + troubleshooting. Re-generera: `npm run provenance`.
+- [inaktiva.md](inaktiva.md) — Eventbrite, Billetto, Nöjesguiden, today-sweden (egna scrapers, 0 events)
+- [kommuner/](kommuner/) — **auto-genererade playbooks** för alla registry-källor. En `.md` per kommun med discovery + field-map + troubleshooting. Re-generera: `npm run provenance`.
+
+## Källa-status (registry)
+
+Varje källa i [registry.ts](../../apps/scraper/src/sources/registry.ts) bär ett `status`-fält — vår **medvetna** klassning (skild från `health` som gissar ur körhistorik):
+
+- 🟢 **active** — i rotation (default).
+- 🧪 **experimental** — tillagd men underpresterar; utveckla vidare (fel mönster, behöver overlap-fönster, sommaruppehåll). Körs fortfarande, oftast `weekly`.
+- ⚰️ **dead** — bevisat tom (stale sitemap, landningssidor). **Hoppas över av schemaläggare + runner** — så vi inte probar om den. Kräver `notes` (varför) + `lastVerified` (när).
+
+**Så dokumenterar vi en upptäckt:** probe (`npm run probe-sitemap` / `probe-venues`) → snapshot i [probe-snapshots/](../../apps/scraper/src/sources/data/probe-snapshots/) → lägg i registry med `status` + `notes` + `lastVerified`.
+
+**Inventarium & hälsa:**
+- `npm run sources-list` — hela registret grupperat på status + senaste utfall. `-- --status=experimental` filtrerar.
+- `npm run health` — STABLE/WATCH/BROKEN ur körhistorik.
+- `npm run coverage` — kommun-täckning (vilka av 290 vi når).
 
 ## Skrivregler
 

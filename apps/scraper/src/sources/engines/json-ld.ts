@@ -107,18 +107,38 @@ async function fetchRendered(url: string, cfg: JsonLdConfig): Promise<string | n
     }
 }
 
+/** Avkodar HTML-entiteter i attribut-inbäddad JSON (&amp; sist för korrekthet). */
+function decodeHtmlEntities(s: string): string {
+    return s
+        .replace(/&quot;/g, '"')
+        .replace(/&#34;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+}
+
 /** Plocka ut alla JSON-LD-block ur en HTML-sträng. */
 export function extractJsonLdBlocks(html: string): any[] {
     const blocks: any[] = [];
-    const regex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    const push = (raw: string) => {
+        const t = raw.trim();
+        if (!t) return;
+        try { blocks.push(JSON.parse(t)); } catch { /* Ignorera ogiltiga JSON-LD-block */ }
+    };
+
+    // 1. Standard: JSON i script-taggens textinnehåll.
+    const bodyRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
     let m: RegExpExecArray | null;
-    while ((m = regex.exec(html)) !== null) {
-        try {
-            blocks.push(JSON.parse(m[1].trim()));
-        } catch {
-            // Ignorera ogiltiga JSON-LD-block
-        }
-    }
+    while ((m = bodyRe.exec(html)) !== null) push(m[1]);
+
+    // 2. SSR-quirk (Nuxt/React, t.ex. goteborg.com): JSON ligger i ett
+    //    children="..."-attribut, HTML-entity-kodat — textinnehållet är tomt
+    //    så (1) missar det. Avkoda entiteter och parsa attributvärdet.
+    const attrRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*\bchildren=["']([\s\S]*?)["']\s*\/?>/gi;
+    while ((m = attrRe.exec(html)) !== null) push(decodeHtmlEntities(m[1]));
+
     return blocks;
 }
 
