@@ -128,6 +128,22 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'kulturbolaget',
+        hostName: 'Kulturbolaget',
+        region: 'malmo',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://kulturbolaget.se/sitemap.xml',
+            // /konserter/YYYY/ — år-flexibelt.
+            urlPatterns: [/\/konserter\/\d{4}\/[a-z0-9-]+/i],
+            defaultCity: 'Malmö',
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Probe 2026-06-10: ~112 /konserter/YYYY/-URLs, datum+venue+bild ur sidan (även Malmö Arena-shows: Jack White, Fleetwood Mac-tribute). Konsertbokare Malmö (KB).',
+        lastVerified: '2026-06-10',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
