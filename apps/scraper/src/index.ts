@@ -13,6 +13,7 @@ import { scrapeUpplevStockholm } from './scrapers/upplev-stockholm';
 import { scrapeHembygd } from './scrapers/hembygd';
 import { scrapeSvenskaKyrkan } from './scrapers/svenskakyrkan';
 import { scrapeNaturskyddsforeningen } from './scrapers/naturskyddsforeningen';
+import { scrapeRotary } from './scrapers/rotary';
 
 // Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
 import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
@@ -58,6 +59,7 @@ async function runAllScrapers() {
         await runStep('hembygd', scrapeHembygd);                     // Hela Hembygdsförbundet (~1988 föreningar via plattforms-API)
         await runStep('svenska-kyrkan', scrapeSvenskaKyrkan);        // Hela Svenska kyrkan (alla församlingar via nationellt Azure-API)
         await runStep('naturskydd', scrapeNaturskyddsforeningen);    // Naturskyddsföreningen (alla kretsar via nationellt GraphQL)
+        await runStep('rotary', scrapeRotary);                       // Rotary Sverige (6 ClubRunner-distrikt aggregerar klubbarnas event)
 
         // 5. Lokala Växjö-scrapers
         await runStep('vaxjo-co', scrapeVaxjoCo);           // Växjö & Co (officiell evenemangsida)
