@@ -285,6 +285,10 @@ interface V2MapProps {
     /** Skickar status om huruvida respektive molns ankare ligger utanför skärmen.
      *  Sidan använder det för att visa återkallnings-knappar jämte solen. */
     onCloudVisibilityChange?: (visibility: { main: boolean; sun: boolean }) => void;
+    /** Fyrar när huvudmolnet hämtats tillbaka via molnsymbolen minst en gång
+     *  (cloudRecalled). Sidan använder det för att sluta blinka molnsymbol-knappen
+     *  efter att den använts. */
+    onMainRecalledChange?: (recalled: boolean) => void;
     /** Onboarding: true när Fokus-verktyget (recenter-knappen vid "Idag") ska
      *  blinka för att visa att det är nytt — tills användaren klickat på det. */
     onFocusToolHint?: (blink: boolean) => void;
@@ -359,6 +363,7 @@ export default function V2Map({
     recenterTrigger = 0,
     daySwitchNonce = 0,
     onCloudVisibilityChange,
+    onMainRecalledChange,
     onFocusToolHint,
     onSlingshotChange,
     slingshotEngaged = false,
@@ -720,32 +725,20 @@ export default function V2Map({
     sunOffScreenRef.current = sunOffScreen;
 
     // ── Onboarding/intro ────────────────────────────────────────────────────
-    // Knuffa användaren att testa funktioner när molnet kastas bort / går utanför
-    // skärmen. INGA lås — bara blinkning + en "Ny funktion"-pil som visar att det
-    // finns nytt att prova. 1:a gången molnet försvinner → Fokus surfas upp
-    // (recenter-knappen vid "Idag" blinkar tills man klickar → centrerar). 2:a
-    // gången → Hitta molnet (raden i menyn blinkar).
-    const [cloudGoneCount, setCloudGoneCount] = useState(0);
+    // Knuffa användaren att testa Fokus-funktionen — men FÖRST när hen hämtat
+    // tillbaka molnet via molnsymbolen (inte direkt när start-molnet stängs).
+    // INGA lås — bara en "Ny funktion"-pil + blinkning som visar att det finns
+    // nytt att prova.
     const [featureHint, setFeatureHint] = useState<'focus' | null>(null);
     // True när väskan öppnats medan ett tips var aktivt → då slutar "Ny funktion"-
     // pilen + lager-blinket (för gott för det tipset). Själva funktionsraden blinkar
     // dock kvar tills man klickat på den. Nollställs när ett NYTT tips dyker upp.
     const [hintAcknowledged, setHintAcknowledged] = useState(false);
-    // 4s startfönster: ignorera "moln-borta"-händelser i början — kartan/molnet
-    // laddar och rör sig under intron, annars tänds tipset direkt.
-    const [onboardingReady, setOnboardingReady] = useState(false);
+    // Tipsa om Fokus när molnet hämtats tillbaka (cloudRecalled) — inte när man
+    // bara stängt start-molnet. Aktiverar INGET automatiskt; bara ett tips.
     useEffect(() => {
-        const t = setTimeout(() => setOnboardingReady(true), 4000);
-        return () => clearTimeout(t);
-    }, []);
-    // (Moln-interaktions-detektorn som tickar cloudGoneCount ligger längre ner —
-    //  efter mainLiveOffset, eftersom den läser drag-offseten.)
-    // 1:a gången molnet flyttas/försvinner → tipsa om Fokus, 2:a → Hitta molnet.
-    // Aktiverar INGET automatiskt (Fokus är inte default-på) — bara ett tips;
-    // användaren slår på funktionen själv från väskan.
-    useEffect(() => {
-        if (cloudGoneCount >= 1) setFeatureHint('focus');
-    }, [cloudGoneCount]);
+        if (cloudRecalled) setFeatureHint('focus');
+    }, [cloudRecalled]);
     // Nytt tips → visa pilen igen.
     useEffect(() => { if (featureHint !== null) setHintAcknowledged(false); }, [featureHint]);
     // Öppnar väskan medan tipset är aktivt → kvittera (pilen/lager-blinket slutar).
@@ -778,30 +771,6 @@ export default function V2Map({
     const [mainLiveOffset, setMainLiveOffset] = useState({ x: 0, y: 0 });
     const [sunLiveOffset, setSunLiveOffset] = useState({ x: 0, y: 0 });
 
-    // Onboarding-detektor: tickar cloudGoneCount när man RÖR molnet (drar det >8px),
-    // kastar bort det eller det går utanför skärmen — en gång per gest. Hoppar över
-    // de första 4 sekunderna (onboardingReady) så intro-rörelsen inte räknas.
-    const cloudInteractedRef = useRef(false);
-    useEffect(() => {
-        const moved = Math.abs(mainLiveOffset.x) > 8 || Math.abs(mainLiveOffset.y) > 8;
-        // "Borta" = molnet ligger FAKTISKT utanför skärmen (eller är dolt). I lutad
-        // vy projiceras molnet nära horisonten och stannar synligt även när man
-        // pannar långt → då är det INTE borta och Hitta molnet ska inte tipsas.
-        const gone = mainOffScreen || !showCloud;
-        const interacted = moved || gone;
-        if (interacted && !cloudInteractedRef.current) {
-            cloudInteractedRef.current = true;
-            if (onboardingReady) setCloudGoneCount(c => {
-                // Steg 1 (Fokus) räcker att man rört molnet. Steg 2 (Hitta molnet)
-                // ska BARA tändas när molnet verkligen är borta — annars tipsar vi
-                // om att leta efter ett moln som syns (särskilt i lutad vy).
-                if (c >= 1 && !gone) return c;
-                return Math.min(c + 1, 2);
-            });
-        } else if (!interacted && cloudInteractedRef.current) {
-            cloudInteractedRef.current = false;
-        }
-    }, [mainLiveOffset, mainOffScreen, showCloud, onboardingReady]);
 
     // Perspektiv-skala per moln, beräknat på molnets LIVE skärmpunkt (ankare +
     // drag/glid-offset). Pitch=0 → alltid 1. I lutad vy: molnet uppåt på
@@ -1827,6 +1796,12 @@ export default function V2Map({
         // false) — i båda fallen ska molnsymbolen (återkalla-knappen) visas.
         onCloudVisibilityChangeRef.current?.({ main: mainOffScreen || !showCloud, sun: sunOffScreen });
     }, [mainOffScreen, sunOffScreen, showCloud]);
+
+    const onMainRecalledChangeRef = useRef(onMainRecalledChange);
+    onMainRecalledChangeRef.current = onMainRecalledChange;
+    useEffect(() => {
+        onMainRecalledChangeRef.current?.(cloudRecalled);
+    }, [cloudRecalled]);
 
     // ── Z-ordning mellan molnen: MINSTA molnet alltid överst ─────────────────
     // Huvudmolnet är fast (~1), sol-molnet växer/krymper med zoomen (sunCloudScale).

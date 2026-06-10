@@ -118,6 +118,9 @@ export default function HomePage() {
     // visar en knapp jämte solen som triggar en räknare → V2Map snäpper
     // molnet tillbaka in i bild.
     const [cloudOffScreen, setCloudOffScreen] = useState<{ main: boolean; sun: boolean }>({ main: false, sun: false });
+    // True så fort molnet hämtats tillbaka via molnsymbolen minst en gång. Innan
+    // dess (efter första stängningen) blinkar molnsymbol-knappen som ett tips.
+    const [mainRecalled, setMainRecalled] = useState(false);
     // Onboarding: när true ska Fokus/recenter-knappen på event-kortet blinka (ny funktion).
     const [focusToolBlink, setFocusToolBlink] = useState(false);
     const [recallMainTrigger, setRecallMainTrigger] = useState(0);
@@ -430,6 +433,7 @@ export default function HomePage() {
                 recenterTrigger={recenterTrigger}
                 daySwitchNonce={daySwitchNonce}
                 onCloudVisibilityChange={setCloudOffScreen}
+                onMainRecalledChange={setMainRecalled}
                 onFocusToolHint={setFocusToolBlink}
                 onSlingshotChange={setSlingshotActive}
                 slingshotEngaged={slingshotEngaged}
@@ -513,6 +517,7 @@ export default function HomePage() {
                 onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}
+                recallMainBlink={!mainRecalled}
                 onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={shopFlags.focus ? handleRecenter : undefined}

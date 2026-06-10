@@ -289,6 +289,9 @@ interface EventCardProps {
     sunCloudOffScreen?: boolean;
     onRecallMainCloud?: () => void;
     onRecallSunCloud?: () => void;
+    /** Onboarding: blinka molnsymbol-knappen (en pulsande ring) tills man hämtat
+     *  tillbaka molnet första gången — så användaren ser att den går att klicka. */
+    recallMainBlink?: boolean;
     /** Flyg kartan tillbaka till det valda eventet (vi går dit — eventet
      *  teleporteras inte till vyn). Triggas av recenter-knappen på kortet. */
     onRecenter?: () => void;
@@ -305,7 +308,7 @@ interface EventCardProps {
     gameMode?: boolean;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -806,11 +809,14 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                     {mainCloudOffScreen && onRecallMainCloud && (
                         <button
                             onClick={onRecallMainCloud}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border animate-in fade-in zoom-in duration-200"
+                            className="relative bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border animate-in fade-in zoom-in duration-200"
                             title="Hämta tillbaka molnet"
                             aria-label="Hämta tillbaka molnet"
                         >
-                            <svg viewBox="0 0 24 24" width="16" height="16" className="text-sky-500" fill="currentColor">
+                            {recallMainBlink && (
+                                <span className="absolute inset-0 rounded-full animate-recall-pulse pointer-events-none" />
+                            )}
+                            <svg viewBox="0 0 24 24" width="16" height="16" className="relative text-sky-500" fill="currentColor">
                                 <path d="M19.36 10.04a7 7 0 0 0-13.36 1.4A4.5 4.5 0 0 0 6.5 20h12a4 4 0 0 0 .86-7.96Z" />
                             </svg>
                         </button>
