@@ -19,7 +19,7 @@ import { closeJsonLdBrowser } from '../sources/engines/json-ld';
 import { closeXhrDiscoveryBrowser } from '../sources/engines/xhr-discovery';
 import { closeSitemapBrowser } from '../sources/engines/sitemap';
 
-function parseArgs(): { id?: string; region?: string; engine?: string; concurrency?: number; dryRun?: boolean; respectSchedule?: boolean } {
+function parseArgs(): { id?: string; region?: string; engine?: string; verified?: string; ids?: string[]; concurrency?: number; dryRun?: boolean; respectSchedule?: boolean } {
     const out: any = {};
     for (const arg of process.argv.slice(2)) {
         if (arg === '--dry-run' || arg === '--dryrun') { out.dryRun = true; continue; }
@@ -28,6 +28,7 @@ function parseArgs(): { id?: string; region?: string; engine?: string; concurren
         if (!m) continue;
         const [, key, val] = m;
         if (key === 'concurrency') out.concurrency = parseInt(val, 10);
+        else if (key === 'ids') out.ids = val.split(',').map((s) => s.trim()).filter(Boolean);
         else if (key === 'dry-run' || key === 'dryrun') out.dryRun = val !== 'false';
         else if (key === 'respect-schedule' || key === 'schedule') out.respectSchedule = val !== 'false';
         else out[key] = val;
@@ -37,8 +38,8 @@ function parseArgs(): { id?: string; region?: string; engine?: string; concurren
 
 async function main() {
     const args = parseArgs();
-    let filtered = (args.id || args.region || args.engine)
-        ? filterSources({ id: args.id, region: args.region, engine: args.engine })
+    let filtered = (args.id || args.region || args.engine || args.verified || args.ids)
+        ? filterSources({ id: args.id, region: args.region, engine: args.engine, verified: args.verified, ids: args.ids })
         : SOURCES.filter((s) => !s.disabled);
 
     if (args.respectSchedule) {
