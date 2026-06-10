@@ -144,7 +144,7 @@ async function handleCommand(msg: string): Promise<void> {
             if (active.which === 'digest') {
                 await sendMessage(
                     `⏳ 10-listan pågår (PID ${active.pid}).\n\n` +
-                    `Svara: <code>byt 5</code> · <code>byt 3,7,10</code> · <code>nytt</code> · <code>klar</code> · <code>stopp</code>`
+                    `Svara: <code>byt 5</code> · <code>byt 3,7,10</code> · <code>bild 5 &lt;URL&gt;</code> · <code>nytt</code> · <code>klar</code> · <code>stopp</code>`
                 );
             } else {
                 await sendMessage(

@@ -23,6 +23,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { sendMessage, waitForReply, flushPendingUpdates, isTelegramConfigured } from '../utils/telegram';
+import { setEventImage, isValidImageUrl } from '../utils/setEventImage';
 
 // ── Lock-fil ─────────────────────────────────────────────────────────────────
 const LOCK_FILE = '/tmp/vadkul-publish-digest.lock';
@@ -76,6 +77,7 @@ interface EventRow {
     hostName: string;
     lat: number;
     lng: number;
+    coverImage: string | null;
 }
 
 interface DigestEvent extends EventRow {
@@ -202,7 +204,7 @@ function loadCandidates(db: Database.Database, excludedUrls: Set<string>): Diges
     const { start, end } = todayBounds();
     const rows = db.prepare(`
         SELECT url, title, time, locationName, extractedAddress, geocodedQuery,
-               category, hostName, lat, lng
+               category, hostName, lat, lng, coverImage
         FROM link_events
         WHERE datetime(time) >= datetime(?)
           AND datetime(time) <= datetime(?)
@@ -299,7 +301,13 @@ function buildDigestText(picks: DigestEvent[], totalToday: number): string {
 
     const lines = picks.map((e, i) => {
         const num = String(i + 1).padStart(2, ' ');
-        return ` ${num}. <b>${escapeHtml(e.city)}</b> — ${escapeHtml(e.cleanTitle)}`;
+        const head = ` ${num}. <b>${escapeHtml(e.city)}</b> — ${escapeHtml(e.cleanTitle)}`;
+        // Bildrad: klickbar länk Josef kan öppna/spara för Instagram. Saknas bild
+        // → påminn om hur man sätter en.
+        const img = e.coverImage && e.coverImage.trim()
+            ? `\n      🖼 <a href="${escapeHtml(e.coverImage.trim())}">bild</a>`
+            : `\n      🖼 <i>saknas — skriv</i> <code>bild ${i + 1} &lt;URL&gt;</code>`;
+        return head + img;
     }).join('\n');
 
     const footer = '\n\n<i>Vilket hade du helst velat gå på?</i>';
@@ -313,11 +321,12 @@ function escapeHtml(s: string): string {
 
 const HELP = `
 — Svara:
-  <code>byt 5</code>        = byt event #5
-  <code>byt 3,7,10</code>   = byt flera
-  <code>nytt</code>         = byt alla 10
-  <code>klar</code>         = bekräfta utkastet
-  <code>stopp</code>        = avbryt`;
+  <code>byt 5</code>          = byt event #5
+  <code>byt 3,7,10</code>     = byt flera
+  <code>bild 5 &lt;URL&gt;</code>   = sätt bild för #5 (DB + Firestore)
+  <code>nytt</code>           = byt alla 10
+  <code>klar</code>           = bekräfta utkastet
+  <code>stopp</code>          = avbryt`;
 
 // ── Approval-loop ────────────────────────────────────────────────────────────
 
@@ -330,6 +339,15 @@ interface DigestState {
 async function sendDraft(state: DigestState): Promise<void> {
     const body = buildDigestText(state.picks, state.totalToday);
     await sendMessage(body + HELP);
+}
+
+/** Tolka "bild 5 https://..." / "setimage 5 https://..." → { slot, url } (1-indexerat). */
+function parseSetImage(cmd: string): { slot: number; url: string } | null {
+    const m = cmd.match(/^(?:bild|setimage|sätt\s*bild)\s+(\d+)\s+(\S+)$/i);
+    if (!m) return null;
+    const slot = parseInt(m[1], 10);
+    if (isNaN(slot) || slot < 1 || slot > TARGET_COUNT) return null;
+    return { slot, url: m[2] };
 }
 
 /** Tolka "byt 5" / "byt 3,7,10" / "byt 3 7" → [3,7,10] (1-indexerat) */
@@ -365,6 +383,38 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
             return;
         }
         const cmd = reply.toLowerCase().trim();
+
+        // OBS: "bild N <URL>" tolkas från reply i ORIGINAL-case — URL:er är
+        // case-känsliga och får inte lowercasas.
+        const setImg = parseSetImage(reply.trim());
+        if (setImg) {
+            const target = state.picks[setImg.slot - 1];
+            if (!target) {
+                await sendMessage(`🤷 Det finns inget event #${setImg.slot} i listan.`);
+                continue;
+            }
+            if (!isValidImageUrl(setImg.url)) {
+                await sendMessage('⚠️ Det ser inte ut som en giltig bild-URL (måste börja med http:// eller https://).');
+                continue;
+            }
+            await sendMessage(`🖼 Sätter bild för #${setImg.slot} (${escapeHtml(target.city)})…`);
+            try {
+                const res = await setEventImage(target.url, setImg.url);
+                if (!res.found) {
+                    await sendMessage('🚫 Hittade inte eventet i databasen — bilden sattes inte.');
+                    continue;
+                }
+                target.coverImage = setImg.url; // uppdatera utkastet direkt
+                const fsNote = res.firestoreUpdated
+                    ? 'DB + Firestore'
+                    : (res.error ? `DB ✓, Firestore-fel (${escapeHtml(res.error)})` : 'DB ✓, Firestore ej tillgängligt');
+                await sendMessage(`✅ Bild satt för #${setImg.slot} (${fsNote}).`);
+            } catch (e) {
+                await sendMessage(`⚠️ Kunde inte sätta bild: ${escapeHtml((e as Error).message)}`);
+            }
+            await sendDraft(state);
+            continue;
+        }
 
         if (['klar', 'ok', '👍', '✅'].includes(cmd)) {
             await sendMessage(
@@ -445,17 +495,37 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+/** Smoke-test: bygg listan och skriv ut den (med bildrader) utan att röra Telegram. */
+function runDry(db: Database.Database): void {
+    const totalToday = countTodayTotal(db);
+    const picks = pickTen(loadCandidates(db, new Set<string>()));
+    if (picks.length === 0) {
+        console.log('🤷 Inga event idag som matchar filtren.');
+        return;
+    }
+    console.log(buildDigestText(picks, totalToday));
+    console.log(HELP);
+}
+
 async function main() {
-    if (!isTelegramConfigured()) {
+    const dry = process.argv.includes('--dry');
+
+    if (!dry && !isTelegramConfigured()) {
         console.error('❌ TG_BOT_TOKEN / TG_CHAT_ID saknas');
         process.exit(1);
     }
-    if (!acquireLock()) process.exit(0);
     if (!fs.existsSync(DB_PATH)) {
         console.error(`❌ DB saknas: ${DB_PATH}`);
         process.exit(1);
     }
 
+    if (dry) {
+        const db = new Database(DB_PATH, { readonly: true });
+        try { runDry(db); } finally { db.close(); }
+        return;
+    }
+
+    if (!acquireLock()) process.exit(0);
     const db = new Database(DB_PATH, { readonly: true });
     try {
         await runApprovalLoop(db);
