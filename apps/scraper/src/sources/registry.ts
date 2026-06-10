@@ -60,6 +60,28 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'stockholms-stadsbibliotek',
+        hostName: 'Stockholms Stadsbibliotek',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            // JS-renderad katalog: isHtmlCatalog + useBrowser renderar listsidan
+            // och plockar event-länkarna (annars är statiska HTML:en tom).
+            sitemapUrl: 'https://biblioteket.stockholm.se/evenemang',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 4000,   // event-korten laddas sent av JS
+            urlPatterns: [/\/evenemang\/[a-z][a-z0-9-]{3,}/i],
+            urlBlacklist: [/\/filter/i],
+            defaultCity: 'Stockholm',
+            maxUrls: 100,
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Probe 2026-06-10: JS-renderad katalog (21 event-länkar via isHtmlCatalog+useBrowser). Detaljsidor date-i-text ("10 juni"), date-only.',
+        lastVerified: '2026-06-10',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
