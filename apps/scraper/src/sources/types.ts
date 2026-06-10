@@ -118,6 +118,21 @@ export interface Source {
     updateFrequency?: 'hourly' | 'daily' | 'every-3d' | 'weekly';
     /** Engångskoll-flagga: hoppa över denna källa */
     disabled?: boolean;
+    /**
+     * Medveten livscykel-status (satt av människa, inte av körhistorik).
+     * Styr schemaläggning OCH dokumenterar vad vi vet om källan.
+     *   - 'active'        — fungerar, i rotation (default om utelämnad)
+     *   - 'experimental'  — tillagd men underpresterar; värd att utveckla
+     *                       vidare (fel mönster, behöver overlap-fönster,
+     *                       säsong/sommaruppehåll). Körs fortfarande, men
+     *                       sätt gärna 'weekly' så den inte hamrar i onödan.
+     *   - 'dead'          — bevisat utan användbara events (stale sitemap,
+     *                       landningssidor, fel CMS). Hoppas över av både
+     *                       schemaläggare och runner — så vi inte slösar tid
+     *                       på att proba om den. Skriv ALLTID `notes` med
+     *                       varför + `lastVerified` med när vi konstaterade det.
+     */
+    status?: 'active' | 'experimental' | 'dead';
     /** Fri anteckning till oss själva */
     notes?: string;
     /**

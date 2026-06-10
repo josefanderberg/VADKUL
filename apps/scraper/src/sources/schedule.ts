@@ -28,6 +28,7 @@ import { Source } from './types';
 
 export function shouldRunToday(source: Source, today: Date = new Date()): boolean {
     if (source.disabled) return false;
+    if (source.status === 'dead') return false;  // bevisat tom — proba aldrig om
     const freq = source.updateFrequency ?? 'daily';
     if (freq === 'hourly' || freq === 'daily') return true;
 
