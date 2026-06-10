@@ -144,6 +144,26 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'tickster-sitemap',
+        hostName: 'Tickster',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            // 9000+ event-URLs med datum-i-URL. urlDateRegex förfiltrerar till
+            // fönstret innan detalj-fetch. Samma URL-format som befintliga
+            // Tickster-scrapern → dedup-säkert (adderar de ~9000 vi missar).
+            sitemapUrl: 'https://www.tickster.com/sitemap.xml',
+            urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
+            urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
+            maxUrls: 2500,
+        },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tickster.com/sitemap.xml', date: '2026-06-11' },
+        notes: 'Probe 2026-06-11: sitemap har 9104 framtida event-URLs (datum-i-URL). Ingen JSON-LD men og:title + "DD månad"/ISO i text → cheerie-fallback. urlDateRegex förfiltrerar till fönstret.',
+        lastVerified: '2026-06-11',
+    },
+    {
         id: 'sodra-teatern',
         hostName: 'Södra Teatern',
         region: 'stockholm',
