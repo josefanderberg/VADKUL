@@ -20,6 +20,26 @@
 import { Source } from './types';
 
 export const SOURCES: Source[] = [
+    // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
+    {
+        id: 'billetto',
+        hostName: 'Billetto',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            // Årsuppdelad event-sitemap (gzippad). UPPDATERA året årligen (2027 …).
+            sitemapUrl: 'https://billetto.se/sitemapevents-2026.xml.gz',
+            // Bara sv-default /e/ — ej /en/e/ resp. /no/e/ språk-dubbletter.
+            urlPatterns: [/^https:\/\/billetto\.se\/e\/[^/]+/],
+            defaultCity: '',
+            maxUrls: 400,
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Probe 2026-06-10: 5160 sv /e/-URLs i 2026-sitemap. JSON-LD Event + startDate (med tid), addressCountry=Sverige. 30d-fönstret filtrerar passerade. UPPDATERA sitemapUrl årligen.',
+        lastVerified: '2026-06-10',
+    },
+
     // ─── WP-REST KOMMUNER (auto-upptäckta via probe-wp) ──────────────────────
 
     // ─── VENUES (dedikerade event-sitemaps, JSON-LD Event) ──────────────────
