@@ -11,6 +11,7 @@ import { scrapeTodaySweden } from './scrapers/today-sweden';
 import { scrapeKollektivetLivet } from './scrapers/kollektivetlivet';
 import { scrapeUpplevStockholm } from './scrapers/upplev-stockholm';
 import { scrapeHembygd } from './scrapers/hembygd';
+import { scrapeSvenskaKyrkan } from './scrapers/svenskakyrkan';
 
 // Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
 import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
@@ -54,6 +55,7 @@ async function runAllScrapers() {
         await runStep('kollektivet-livet', scrapeKollektivetLivet);  // Kollektivet Livet: klubb/scen, Slussen/Söder
         await runStep('upplev-stockholm', scrapeUpplevStockholm);    // Upplev Stockholm: stadens parkprogram + Parkteatern
         await runStep('hembygd', scrapeHembygd);                     // Hela Hembygdsförbundet (~1988 föreningar via plattforms-API)
+        await runStep('svenska-kyrkan', scrapeSvenskaKyrkan);        // Hela Svenska kyrkan (alla församlingar via nationellt Azure-API)
 
         // 5. Lokala Växjö-scrapers
         await runStep('vaxjo-co', scrapeVaxjoCo);           // Växjö & Co (officiell evenemangsida)
