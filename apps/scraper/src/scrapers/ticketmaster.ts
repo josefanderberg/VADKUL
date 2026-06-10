@@ -33,11 +33,13 @@ function buildAffiliateUrl(rawUrl: string): string {
     }
 }
 
-// ── Date window (7 dagar) ────────────────────────────────────────────────────
+// ── Date window (30 dagar) ───────────────────────────────────────────────────
+// 30d matchar pipelinens SCRAPE_WINDOW_DAYS. TM-arenor annonseras månader i
+// förväg, så 7d tappade ~3/4 av Sverige-utbudet (7d=9 vs 30d=37 events).
 function getDateWindow(): { start: string; end: string } {
     const now = new Date();
     const end = new Date(now);
-    end.setDate(end.getDate() + 7);
+    end.setDate(end.getDate() + 30);
     end.setHours(23, 59, 59, 999);
     // TM kräver format: "2024-05-31T00:00:00Z"
     const fmt = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, 'Z');
