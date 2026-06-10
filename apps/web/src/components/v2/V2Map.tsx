@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Cloud, Flag, Map as MapIcon } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
@@ -267,6 +267,10 @@ interface V2MapProps {
     /** Räknare som visas i molnet. Skickas in från sidan så molnet ser hela
      *  datasetet, inte bara det dag-/sökfiltrerade. */
     cloudStats?: { today: number; tomorrow: number; week: number; withinHour: number; withinHours: number };
+    /** True så fort första event-svaret från databasen kommit. Start-molnet
+     *  väntar på detta innan det poppar fram, så det inte hinner visa "0 unika
+     *  event idag" medan datan fortfarande laddas. Default true (bakåtkompat). */
+    eventsLoaded?: boolean;
     /** Räknare som triggar att respektive moln snäpper tillbaka in på skärmen
      *  (används av återkallnings-knapparna jämte solen). Varje ökning = ett anrop. */
     recallMainTrigger?: number;
@@ -321,7 +325,7 @@ interface V2MapProps {
      *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard, eller
      *  +-knappen i navbaren för att skapa event). Fyrar varje gång användaren
      *  togglar något relevant i shoppen. */
-    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean; findcloud: boolean }) => void;
+    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => void;
     /** Triggas när användaren klickar på Multiplayer-badgen i shoppen och inte är
      *  inloggad — föräldern hanterar då navigation till /login så användaren kan
      *  registrera sig / skapa konto. */
@@ -349,6 +353,7 @@ export default function V2Map({
     onMapDrag,
     sunCloudTrigger = 0,
     cloudStats,
+    eventsLoaded = true,
     recallMainTrigger = 0,
     recallSunTrigger = 0,
     recenterTrigger = 0,
@@ -460,7 +465,6 @@ export default function V2Map({
         multiplayer: boolean;
         record: boolean;
         flowers: boolean;
-        findcloud: boolean;
     };
     const [shopFlags, setShopFlags] = useState<ShopFlags>({
         // Defaults valda så att 5-aktiva-gränsen är respekterad redan från start.
@@ -480,14 +484,13 @@ export default function V2Map({
         createEvent: false,   // av som default (kan slås på i funktions-popupen)
         multiplayer: false,   // kräver konto-registrering
         record: false,        // låst tills "köpt"
-        flowers: false,       // av som default (kan slås på i funktions-popupen)
-        findcloud: false      // av: när på visas "hämta moln"-knappen vid dagväljaren
+        flowers: false        // av som default (kan slås på i funktions-popupen)
     });
 
     // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
     const MAX_ACTIVE_FEATURES = 999;
     const COUNTED_FEATURE_KEYS = [
-        'satellite', 'tilt', 'globe', 'terrain',
+        'satellite', 'globe', 'terrain',
         'sun', 'focus', 'throw', 'slingshot', 'faces',
         'bigCloud', 'fastThrow', 'sparkle', 'snowball',
         'createEvent'
@@ -500,10 +503,9 @@ export default function V2Map({
             sun: shopFlags.sun,
             focus: shopFlags.focus,
             createEvent: shopFlags.createEvent,
-            multiplayer: shopFlags.multiplayer,
-            findcloud: shopFlags.findcloud
+            multiplayer: shopFlags.multiplayer
         });
-    }, [shopFlags.sun, shopFlags.focus, shopFlags.createEvent, shopFlags.multiplayer, shopFlags.findcloud]);
+    }, [shopFlags.sun, shopFlags.focus, shopFlags.createEvent, shopFlags.multiplayer]);
 
     const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
     onActivateMultiplayerRef.current = onActivateMultiplayer;
@@ -617,9 +619,13 @@ export default function V2Map({
 
     // Cloud popup geographic map anchor state and projection variables
     // Solves request: anchor cloud to a position on map, move with map
-    const [cloudAnchor, setCloudAnchor] = useState<{ lat: number; lng: number }>({ lat: 56.8777, lng: 14.8091 });
+    const [cloudAnchor, setCloudAnchor] = useState<{ lat: number; lng: number }>({ lat: 58.0257, lng: 14.4664 });
     const [cloudAnchorPos, setCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
     const [showCloud, setShowCloud] = useState(true);
+    // True när molnet hämtats tillbaka via molnsymbolen minst en gång. Då ska det
+    // INTE komma tillbaka som start-molnet med text, utan som det runda molnet med
+    // ett leende (clicked-läget). Start-visningen (false) visar texten.
+    const [cloudRecalled, setCloudRecalled] = useState(false);
 
     const showCloudRef = useRef(showCloud);
     showCloudRef.current = showCloud;
@@ -720,7 +726,7 @@ export default function V2Map({
     // (recenter-knappen vid "Idag" blinkar tills man klickar → centrerar). 2:a
     // gången → Hitta molnet (raden i menyn blinkar).
     const [cloudGoneCount, setCloudGoneCount] = useState(0);
-    const [featureHint, setFeatureHint] = useState<'focus' | 'findcloud' | null>(null);
+    const [featureHint, setFeatureHint] = useState<'focus' | null>(null);
     // True när väskan öppnats medan ett tips var aktivt → då slutar "Ny funktion"-
     // pilen + lager-blinket (för gott för det tipset). Själva funktionsraden blinkar
     // dock kvar tills man klickat på den. Nollställs när ett NYTT tips dyker upp.
@@ -738,8 +744,7 @@ export default function V2Map({
     // Aktiverar INGET automatiskt (Fokus är inte default-på) — bara ett tips;
     // användaren slår på funktionen själv från väskan.
     useEffect(() => {
-        if (cloudGoneCount === 1) setFeatureHint('focus');
-        else if (cloudGoneCount === 2) setFeatureHint('findcloud');
+        if (cloudGoneCount >= 1) setFeatureHint('focus');
     }, [cloudGoneCount]);
     // Nytt tips → visa pilen igen.
     useEffect(() => { if (featureHint !== null) setHintAcknowledged(false); }, [featureHint]);
@@ -1103,8 +1108,8 @@ export default function V2Map({
             // Initial style matchar default-värdet på mapStyle (satellit) så
             // kartan inte måste byta stil direkt efter mount → ingen flicker.
             style: SATELLITE_STYLE,
-            center: [14.8091, 56.8777], // Lng, Lat (Växjö)
-            zoom: 8,
+            center: [14.4664, 58.0257], // Lng, Lat (Gränna, vid Vättern)
+            zoom: 6,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
@@ -1818,8 +1823,10 @@ export default function V2Map({
     const onCloudVisibilityChangeRef = useRef(onCloudVisibilityChange);
     onCloudVisibilityChangeRef.current = onCloudVisibilityChange;
     useEffect(() => {
-        onCloudVisibilityChangeRef.current?.({ main: mainOffScreen, sun: sunOffScreen });
-    }, [mainOffScreen, sunOffScreen]);
+        // "main borta" = molnet ligger utanför skärmen ELLER är stängt (showCloud
+        // false) — i båda fallen ska molnsymbolen (återkalla-knappen) visas.
+        onCloudVisibilityChangeRef.current?.({ main: mainOffScreen || !showCloud, sun: sunOffScreen });
+    }, [mainOffScreen, sunOffScreen, showCloud]);
 
     // ── Z-ordning mellan molnen: MINSTA molnet alltid överst ─────────────────
     // Huvudmolnet är fast (~1), sol-molnet växer/krymper med zoomen (sunCloudScale).
@@ -1884,14 +1891,18 @@ export default function V2Map({
     const recallCloud = (kind: 'main' | 'sun') => {
         const map = mapRef.current; if (!map) return;
         const w = window.innerWidth, h = window.innerHeight;
-        const targetX = w * 0.78;
-        const targetY = h * 0.55;
+        // Huvudmolnet hämtas tillbaka till skärmens MITT; sol-molnet till nedre
+        // högra hörnet (vid sol-knappen).
+        const targetX = kind === 'main' ? w * 0.5 : w * 0.78;
+        const targetY = kind === 'main' ? h * 0.5 : h * 0.55;
         const ll = map.unproject([targetX, targetY]);
         if (kind === 'main') {
             cloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
             setCloudAnchor({ lat: ll.lat, lng: ll.lng });
             setCloudAnchorPos({ x: targetX, y: targetY });
             setShowCloud(true);
+            // Återkallat moln kommer fram som det runda leende-molnet, inte texten.
+            setCloudRecalled(true);
             if (mainFollowingRef.current) mainFollowPtRef.current = { x: targetX, y: targetY };
         } else {
             sunCloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
@@ -2658,9 +2669,7 @@ export default function V2Map({
                     // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
                     { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
                     { key: 'focus', label: 'Fokus', desc: 'Centrera kartan på molnet', color: '#2563eb', icon: <Target size={20} /> },
-                    { key: 'findcloud', label: 'Hitta molnet', desc: 'Visar knappen för att hämta molnet vid dagväljaren', color: '#60a5fa', icon: <Cloud size={20} /> },
                     { key: 'throw', label: 'Kasta', desc: 'Dubbelklick: kameran följer molnet när du kastar', color: '#0ea5e9', icon: <Send size={20} /> },
-                    { key: 'tilt', label: 'Lutning', desc: 'Luta kartan till en 3D-vy', color: '#6366f1', icon: <Box size={20} /> },
                     { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
                     { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} /> },
                     { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
@@ -2817,12 +2826,11 @@ export default function V2Map({
                         </div>
 
                         {/* Snabb-toggle för lutning — sitter direkt UNDER lager-knappen
-                            (top-[72px] + 40px knapp + 8px lucka = top-[120px]). Visas så
-                            länge Lutning är AKTIVERAD i väskan (tiltEnabled). Klick togglar
-                            bara kameran på/av (blå = på, vit = av) — knappen ligger kvar.
-                            Knappen försvinner först när man stänger av Lutning i väskan.
-                            Göms medan väskan är öppen (krockar annars med panelen). */}
-                        {tiltEnabled && !funcBagOpen && (
+                            (top-[72px] + 40px knapp + 8px lucka = top-[120px]). Lutning är
+                            en alltid-aktiv funktion: knappen visas hela tiden (ligger inte i
+                            funktionslistan). Klick togglar bara kameran på/av (blå = på,
+                            vit = av). Göms bara medan väskan är öppen (krockar annars). */}
+                        {!funcBagOpen && (
                             <div className="fixed top-[120px] right-4 z-[1151] pointer-events-auto">
                                 <button
                                     type="button"
@@ -2922,7 +2930,7 @@ export default function V2Map({
                     </>
                 );
             })()}
-            {showCloud && cloudAnchorPos && (
+            {showCloud && cloudAnchorPos && eventsLoaded && (
                 <CloudPopup
                     message={
                         isFeatureActive('sparkle') ? (
@@ -2987,6 +2995,8 @@ export default function V2Map({
                     onFollowFling={handleMainFling}
                     glideStateRef={mainGlideStateRef}
                     onLiveOffsetChange={(ox, oy) => setMainLiveOffset({ x: ox, y: oy })}
+                    dismissOnTap={!cloudRecalled}
+                    startClicked={cloudRecalled}
                     onMoodChange={setMainMood}
                     incomingMood={mainIncomingMood.mood}
                     incomingMoodNonce={mainIncomingMood.nonce}

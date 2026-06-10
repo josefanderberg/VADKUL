@@ -64,6 +64,10 @@ const pickNearestToPoint = (point: { lat: number; lng: number } | null, dayEvent
 
 export default function HomePage() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
+    // True så fort första Firestore-svaret kommit in. Molnet (som visar
+    // "X unika event idag") väntar på detta så det inte hinner poppa fram med 0
+    // event innan databasen svarat.
+    const [eventsLoaded, setEventsLoaded] = useState(false);
     const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
@@ -130,12 +134,12 @@ export default function HomePage() {
     // helt enkelt inte ner callbacken — kortet renderar inte knappen utan den).
     // createEvent styr om +-knappen i navbaren renderas; multiplayer används som
     // gate för delade event m.m. (bara visning av status tills vidare).
-    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean; findcloud: boolean }>({
-        sun: true, focus: true, createEvent: true, multiplayer: false, findcloud: false
+    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }>({
+        sun: true, focus: true, createEvent: true, multiplayer: false
     });
-    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean; findcloud: boolean }) => {
+    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => {
         setShopFlags(prev =>
-            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer && prev.findcloud === flags.findcloud
+            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer
                 ? prev : flags
         );
     }, []);
@@ -188,6 +192,7 @@ export default function HomePage() {
         const unsubscribe = linkEventService.subscribeToAll(true, (fetched) => {
             const sorted = fetched.sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
+            setEventsLoaded(true);
         });
         return () => unsubscribe();
     }, []);
@@ -419,6 +424,7 @@ export default function HomePage() {
                 onCenterChange={handleMapCenterChange}
                 sunCloudTrigger={sunCloudKey}
                 cloudStats={cloudStats}
+                eventsLoaded={eventsLoaded}
                 recallMainTrigger={recallMainTrigger}
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
@@ -507,7 +513,7 @@ export default function HomePage() {
                 onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}
-                onRecallMainCloud={shopFlags.findcloud ? handleRecallMain : undefined}
+                onRecallMainCloud={handleRecallMain}
                 onRecallSunCloud={handleRecallSun}
                 onRecenter={shopFlags.focus ? handleRecenter : undefined}
                 recenterBlink={focusToolBlink}

@@ -72,6 +72,14 @@ interface CloudPopupProps {
   /** Fyrar vid ett tryck (utan drag) på molnet — sol-molnet använder det för
    *  att fälla tillbaka kartans lutning. */
   onTap?: () => void;
+  /** När true: ett tryck (utan drag) på molnet STÄNGER det (flyger bort) i
+   *  stället för att stega mood / växla följning. Start-molnet använder detta —
+   *  molnsymbolen (återkalla-knappen) hämtar tillbaka det. */
+  dismissOnTap?: boolean;
+  /** När true monteras molnet redan i "klickat" läge: det runda molnet med ett
+   *  leende (ansikte) i stället för start-formen med text. Används när molnet
+   *  hämtas tillbaka via molnsymbolen — då ska texten inte visas igen. */
+  startClicked?: boolean;
   /** True när kartan är lutad. Då stabiliseras molnet rakt upp (ingen spin-
    *  rotation) så ansiktet står rakt — ögon upp, mun ner. */
   tilted?: boolean;
@@ -399,6 +407,8 @@ export default function CloudPopup({
   incomingMood,
   incomingMoodNonce,
   onTap,
+  dismissOnTap = false,
+  startClicked = false,
   tilted = false,
   getDepthAtPoint,
   zIndex = 9999
@@ -408,7 +418,7 @@ export default function CloudPopup({
   getDepthAtPointRef.current = getDepthAtPoint;
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [clicked, setClicked] = useState(false);
+  const [clicked, setClicked] = useState(startClicked);
 
   // Global click listener to toggle smile/text view
   useEffect(() => {
@@ -649,7 +659,9 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     }
   }, [autoDismissMs]);
 
-  const dismiss = (dir: { x: number; y: number }) => {
+  // dir = riktning för en "kast-fling" (molnet flyger ut åt det hållet). dir =
+  // null → molnet försvinner PÅ PLATS med en poof i stället (animate-cloud-poof-out).
+  const dismiss = (dir: { x: number; y: number } | null) => {
     onDismissStart?.();
     setThrowDirection(dir);
     setLeaving(true);
@@ -772,6 +784,15 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     // Tap (no meaningful movement). Enkeltryck = byt molnets mood; dubbeltryck =
     // växla kamera-följning (POV). Inget glid.
     if (!dragMoved.current) {
+      // Start-molnet (dismissOnTap): ett tryck stänger molnet. Det försvinner PÅ
+      // PLATS med en poof (dir = null → ingen riktnings-fling), och onDismiss
+      // döljer det. Molnsymbolen (återkalla-knappen) hämtar tillbaka det.
+      if (dismissOnTap) {
+        velocitySamples.current = [];
+        setOffset({ x: 0, y: 0 });
+        dismiss(null);
+        return;
+      }
       setClicked(true);
       velocitySamples.current = [];
       setOffset({ x: 0, y: 0 });
@@ -1100,7 +1121,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // Tak på den zoom-drivna skalan: molnet slutar växa vid maxScale så en stor
   // blur-tung SVG inte får kartan att lagga vid inzoomning. (Krymper fritt nedåt.)
   const cappedScale = Math.min(scale, maxScale);
-  const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[10px]';
+  const textTranslateClass = size === 'md' ? 'translate-y-0' : 'translate-y-[20px]';
 
   // Screen center & cloud-to-center vector (used for face rotation + shadow offset).
   // Calculated up front so shadow shifts can use it.
@@ -1446,7 +1467,7 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
           style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
         >
         <div
-          className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'}`}
+          className={`${!hasPoppedIn ? 'animate-cloud-pop-in' : ''} ${isDragging || isGliding || leaving ? '' : 'animate-cloud-float'} ${leaving && !throwDirection ? 'animate-cloud-poof-out' : ''}`}
           style={pointerOverGrab ? { animationPlayState: 'paused' } : undefined}
         >
 
