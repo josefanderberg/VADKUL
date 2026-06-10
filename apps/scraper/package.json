@@ -12,6 +12,7 @@
     "probe-sitevision": "ts-node src/scripts/probe-sitevision.ts",
     "probe-drupal": "ts-node src/scripts/probe-drupal.ts",
     "probe-sitemap": "ts-node src/scripts/probe-sitemap.ts",
+    "scout": "ts-node src/scripts/network-scout.ts",
     "dashboard": "ts-node src/scripts/dashboard.ts",
     "dashboard:local": "DB_TARGET=2 ts-node src/scripts/dashboard.ts",
     "dashboard:test": "DB_TARGET=3 ts-node src/scripts/dashboard.ts",
