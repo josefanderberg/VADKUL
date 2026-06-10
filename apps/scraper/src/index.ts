@@ -8,6 +8,7 @@ import { scrapeFacebookEvents } from './scrapers/facebook/index';
 // import { scrapeBilletto } from './scrapers/billetto'; // Billetto.se → 404 (dead domain 2026)
 import { scrapeMeetup } from './scrapers/meetup';
 import { scrapeTodaySweden } from './scrapers/today-sweden';
+import { scrapeKollektivetLivet } from './scrapers/kollektivetlivet';
 
 // Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
 import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
@@ -46,6 +47,9 @@ async function runAllScrapers() {
 
         // 4. Facebook (ej inloggad, begränsad men täcker bredare sökord)
         await runStep('facebook', scrapeFacebookEvents);
+
+        // 4b. Stockholm-venyer (egen sajt, JS-renderad lista)
+        await runStep('kollektivet-livet', scrapeKollektivetLivet);  // Kollektivet Livet: klubb/scen, Slussen/Söder
 
         // 5. Lokala Växjö-scrapers
         await runStep('vaxjo-co', scrapeVaxjoCo);           // Växjö & Co (officiell evenemangsida)
