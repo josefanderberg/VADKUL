@@ -24,6 +24,7 @@ import puppeteer, { Browser } from 'puppeteer';
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const LIMIT = (() => { const a = args.find(x => x.startsWith('--limit=')); return a ? parseInt(a.split('=')[1], 10) : 100000; })();
+const HOST = (() => { const a = args.find(x => x.startsWith('--host=')); return a ? a.split('=')[1] : null; })();
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
@@ -49,17 +50,18 @@ async function timeFromPage(browser: Browser, url: string): Promise<{ h: number;
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 25000 });
         await new Promise(r => setTimeout(r, 1500));
         return await page.evaluate(() => {
-            const cands: string[] = [];
-            document.querySelectorAll('time[datetime]').forEach(t => { const v = t.getAttribute('datetime'); if (v) cands.push(v); });
-            document.querySelectorAll('time').forEach(t => { const v = (t.textContent || '').trim(); if (v) cands.push(v); });
-            const info = (document.querySelector('.event-info, .event-date-time, .event-time, .datum, .tid, .klockslag') as HTMLElement)?.innerText || '';
-            const km = info.match(/kl[.\s]*(\d{1,2})[:.](\d{2})/i);
-            if (km) cands.push(`${km[1]}:${km[2]}`);
-            for (const c of cands) {
-                const m = c.match(/^(\d{1,2})[:.](\d{2})$/);
-                if (m) { const h = +m[1], mm = +m[2]; if (h <= 23 && mm <= 59) return { h, m: mm }; }
-            }
-            return null;
+            // Samma logik som sitemap-enginens venue-fix: <time> + content-text,
+            // kvälls-heuristik (>=17 först för konserter, annars tidigaste).
+            const cands: { h: number; m: number }[] = [];
+            const push = (h: number, m: number) => { if (h <= 23 && m <= 59) cands.push({ h, m }); };
+            document.querySelectorAll('time[datetime]').forEach(t => { const v = (t.getAttribute('datetime') || '').match(/^(\d{1,2})[:.](\d{2})$/); if (v) push(+v[1], +v[2]); });
+            document.querySelectorAll('time').forEach(t => { const v = (t.textContent || '').trim().match(/^(\d{1,2})[:.](\d{2})$/); if (v) push(+v[1], +v[2]); });
+            const el = document.querySelector('main, article, .content, .event-info, .single-event, .program, .evenemang');
+            const content = ((el as HTMLElement)?.innerText || '').slice(0, 4000);
+            for (const mt of content.matchAll(/(?:kl[.\s]*)?\b(\d{1,2})[:.](\d{2})\b/gi)) push(parseInt(mt[1], 10), parseInt(mt[2], 10));
+            if (!cands.length) return null;
+            const evening = cands.find(c => c.h >= 17);
+            return evening || cands.slice().sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m))[0];
         });
     } catch {
         return null;
@@ -84,6 +86,7 @@ async function main() {
         SELECT url, hostName, time, title FROM link_events
         WHERE time >= datetime('now')
           AND strftime('%H:%M', time) IN ('00:00', '22:00', '23:00')
+          AND (${HOST ? `hostName = '${HOST.replace(/'/g, "''")}'` : '1=1'})
         ORDER BY hostName, time
         LIMIT ${LIMIT}
     `).all();
