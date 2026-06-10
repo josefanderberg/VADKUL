@@ -9,6 +9,7 @@ import { scrapeFacebookEvents } from './scrapers/facebook/index';
 import { scrapeMeetup } from './scrapers/meetup';
 import { scrapeTodaySweden } from './scrapers/today-sweden';
 import { scrapeKollektivetLivet } from './scrapers/kollektivetlivet';
+import { scrapeUpplevStockholm } from './scrapers/upplev-stockholm';
 
 // Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
 import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
@@ -50,6 +51,7 @@ async function runAllScrapers() {
 
         // 4b. Stockholm-venyer (egen sajt, JS-renderad lista)
         await runStep('kollektivet-livet', scrapeKollektivetLivet);  // Kollektivet Livet: klubb/scen, Slussen/Söder
+        await runStep('upplev-stockholm', scrapeUpplevStockholm);    // Upplev Stockholm: stadens parkprogram + Parkteatern
 
         // 5. Lokala Växjö-scrapers
         await runStep('vaxjo-co', scrapeVaxjoCo);           // Växjö & Co (officiell evenemangsida)
