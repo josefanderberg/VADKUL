@@ -341,7 +341,11 @@ function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
 }
 
 async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<SitemapEntry[]> {
-    const root = await fetchText(cfg.sitemapUrl, cfg, ctx.signal);
+    // JS-renderad katalogsida: rendera den med Puppeteer så event-länkarna (som
+    // injiceras av JS) blir synliga. Kräver isHtmlCatalog + useBrowser.
+    const root = (cfg.isHtmlCatalog && cfg.useBrowser)
+        ? await fetchRenderedHtml(cfg.sitemapUrl, cfg)
+        : await fetchText(cfg.sitemapUrl, cfg, ctx.signal);
     if (!root) {
         ctx.log(`sitemap: kunde inte hämta ${cfg.sitemapUrl}`);
         return [];
