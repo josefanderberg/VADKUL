@@ -44,6 +44,22 @@ export const SOURCES: Source[] = [
 
     // ─── VENUES (dedikerade event-sitemaps, JSON-LD Event) ──────────────────
     {
+        id: 'berns',
+        hostName: 'Berns',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://berns.se/event-sitemap.xml',
+            // Bara sv-default /sv/kalender/, ej /calendar/-engelska dubbletter.
+            urlPatterns: [/\/sv\/kalender\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Probe 2026-06-10: 168 event-URLs i event-sitemap.xml. JSON-LD Event saknar startDate → datum ur text-fallback ("18 oktober 2026"), date-only (ingen tid på sidan).',
+        lastVerified: '2026-06-10',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
