@@ -69,8 +69,8 @@ export async function runSource(
         }
     }
 
-    if (source.disabled) {
-        result.errors.push('source is disabled');
+    if (source.disabled || source.status === 'dead') {
+        result.errors.push(source.status === 'dead' ? 'source is dead' : 'source is disabled');
         result.durationMs = Date.now() - startedAt;
         return result;
     }

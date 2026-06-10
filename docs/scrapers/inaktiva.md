@@ -1,4 +1,4 @@
-# Inaktiva: Eventbrite, Billetto, Nöjesguiden, today-sweden
+# Inaktiva: Billetto, Nöjesguiden, today-sweden (Eventbrite ✅ löst 2026-06-09)
 
 Scrapers som är inkopplade i [index.ts](../../apps/scraper/src/index.ts) men gav 0 användbara events i senaste körningen.
 
@@ -10,9 +10,11 @@ Scrapers som är inkopplade i [index.ts](../../apps/scraper/src/index.ts) men ga
 
 Slutsats: alla tre kräver omdesign innan de kan ge data. Inga snabbfixar möjliga.
 
+**2026-06-09: Eventbrite LÖST.** Omvärderat — den gamla diagnosen "0 JSON-LD" gällde fel sak. Stadssidan (`eventbrite.se/d/sweden--<stad>/events/`) bäddar in en JSON-LD `ItemList` med ~40 kompletta Event-objekt server-side (namn, ISO-datum, **bild**, **beskrivning**, adress + geo). Vi behövde aldrig rendera React. [eventbrite.ts](../../apps/scraper/src/scrapers/eventbrite.ts) omskriven till plain-fetch + JSON-LD (ingen Puppeteer/geokodning/datum-parsing). Probe-läge: `npm run scrape-eventbrite -- --dry-run`. Smoke 2026-06-09: 43 events i 7d-fönster (Sthlm/Gbg/Malmö/Hbg/Lund), **100% bild+bio+geo**; 13 nya sparade. SE-filter (`addressCountry='SE'`) avvisar Eventbrites utländska online-fyllnad ("New York City Career Fair" etc) i småstäder.
+
 | Källa | Events i DB | Status |
 |---|---|---|
-| Eventbrite | 0 | Tyst miss |
+| Eventbrite | 43/körning (rik data) | ✅ LÖST 2026-06-09 — JSON-LD ItemList |
 | Billetto | 0 | Tyst miss |
 | Nöjesguiden (via today-sweden) | 0 | Tyst miss |
 | Tickster-idag (via today-sweden) | 8 skräp | Felaktig matchning, sparar söklistor |
