@@ -112,6 +112,22 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'malmo-pride',
+        hostName: 'Malmö Pride',
+        region: 'malmo',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.malmopride.com/sitemap.xml',
+            // /programYYYY/ — år-flexibelt (program2026, program2027 …).
+            urlPatterns: [/\/program\d{4}\/[a-z0-9-]+/i],
+            defaultCity: 'Malmö',
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Probe 2026-06-10: 95 program-events (/program2026/). JSON-LD Event + startDate (tid) + venue, alla under Pride-veckan (juli) → i fönstret. Säsongs-event (sommar).',
+        lastVerified: '2026-06-10',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
