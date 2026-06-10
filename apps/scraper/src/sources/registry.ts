@@ -161,6 +161,24 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-10',
     },
     {
+        id: 'visit-ostersund',
+        hostName: 'Visit Östersund',
+        region: 'ostersund',
+        engine: 'sitemap',
+        config: {
+            // sitemap_index → enginen expanderar evenemang-sitemap{1,2}.xml (~245 URLs).
+            sitemapUrl: 'https://visitostersund.se/sitemap_index.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Östersund',
+            maxUrls: 300,
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://visitostersund.se/sitemap_index.xml', date: '2026-06-11' },
+        notes: 'Probe 2026-06-11: dedikerade evenemang-sitemap{1,2}.xml (~245 URLs). JSON-LD @type=Event men utan startDate → datum ("14 juni 2026") ur sidtext via cheerie-fallback. Turistbyråns officiella evenemangskalender (Jamtli, biathlon-VM m.m.). Dry-run: 74 i 30d-fönstret.',
+        lastVerified: '2026-06-11',
+    },
+    {
         id: 'cirkus',
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
