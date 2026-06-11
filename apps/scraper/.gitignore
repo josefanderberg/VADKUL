@@ -7,3 +7,9 @@ test-fb.ts
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Körnings-artefakter (genereras av scrapers/stats — ska aldrig committas)
+events.db
+keyword_stats.json
+scraper_run_history.json
+keyword_test_results.json
