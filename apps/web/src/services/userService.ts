@@ -66,6 +66,23 @@ export const userService = {
     return null;
   },
 
+  // Sparade event (hjärtan): läses vid inloggning och slås ihop med localStorage.
+  async getSavedEventIds(uid: string): Promise<string[]> {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const ids = snap.exists() ? (snap.data() as any).savedEventIds : null;
+      return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
+    } catch (e) {
+      console.warn('Kunde inte läsa sparade event:', e);
+      return [];
+    }
+  },
+
+  // Spegla hela sparlistan till users/{uid}. Cap:ad så dokumentet hålls litet.
+  async setSavedEventIds(uid: string, ids: string[]): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { savedEventIds: ids.slice(-500) }, { merge: true });
+  },
+
   // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
     const userRef = doc(db, 'users', targetUid);

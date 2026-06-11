@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, LogOut, Store } from 'lucide-react';
+import { User, Plus, Search, X, LogOut, Store, Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
@@ -16,6 +16,10 @@ interface FloatingNavbarProps {
     setSearchQuery: (q: string) => void;
     /** Öppna inloggningsmodalen (utan att lämna kartan). Utan prop → gamla /login-routen. */
     onLoginClick?: () => void;
+    /** Antal sparade event — visas som badge på hjärtknappen. */
+    savedCount?: number;
+    /** Öppna/stäng panelen med sparade event. */
+    onToggleSaved?: () => void;
 }
 
 export default function FloatingNavbar({
@@ -26,6 +30,8 @@ export default function FloatingNavbar({
     searchQuery,
     setSearchQuery,
     onLoginClick,
+    savedCount = 0,
+    onToggleSaved,
 }: FloatingNavbarProps) {
     const router = useRouter();
     const { user, logout } = useAuth();
@@ -156,8 +162,28 @@ export default function FloatingNavbar({
                         </div>
                     </div>
 
-                    {/* Höger: expanderbar sök + skapa event */}
+                    {/* Höger: sparade event + expanderbar sök + skapa event */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
+                        {/* Sparade event (hjärtan) — panel med allt man sparat */}
+                        {onToggleSaved && (
+                            <button
+                                type="button"
+                                onClick={onToggleSaved}
+                                aria-label="Sparade event"
+                                className="relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                            >
+                                <Heart
+                                    size={19}
+                                    className="text-rose-500"
+                                    fill={savedCount > 0 ? 'currentColor' : 'none'}
+                                />
+                                {savedCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#006AA7] text-white text-[10px] font-black tabular-nums min-w-[18px] h-[18px] px-1 rounded-full border-2 border-white flex items-center justify-center leading-none">
+                                        {savedCount > 99 ? '99+' : savedCount}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                         {/* Sök */}
                         {searchOpen ? (
                             <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">

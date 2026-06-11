@@ -20,6 +20,7 @@ export interface UserProfile {
   inviteCount?: number;  // <--- NY: Antal inbjudna
   invitedBy?: string;    // <--- NY: Vem bjöd in mig?
   redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
+  savedEventIds?: string[]; // Sparade event (hjärtan) — synkas mellan enheter
 }
 
 export interface UserReview {

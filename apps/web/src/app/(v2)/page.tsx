@@ -7,6 +7,10 @@ import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
+import SearchResults from '@/components/v2/SearchResults';
+import SavedPanel from '@/components/v2/SavedPanel';
+import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
+import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
@@ -78,11 +82,16 @@ export default function HomePage() {
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
+    // Antal dagar i det visade intervallet: 1 = en dag (default), 3 = fre–sön osv.
+    const [dayRangeDays, setDayRangeDays] = useState(1);
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    // Panel med sparade event (hjärtknappen i navbaren).
+    const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    const prevDayOffset = useRef(dayOffset);
+    // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
+    const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
     // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
@@ -215,15 +224,16 @@ export default function HomePage() {
         return () => unsubscribe();
     }, []);
 
-    // Filtrera events för den specifika dagen
+    // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
     useEffect(() => {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayOffset);
-        
+
         const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
-        
+
         const endOfDay = new Date(targetDate);
+        endOfDay.setDate(endOfDay.getDate() + (dayRangeDays - 1));
         endOfDay.setHours(23, 59, 59, 999);
 
         const filtered = events.filter(evt => {
@@ -231,16 +241,17 @@ export default function HomePage() {
         });
 
         setFilteredEvents(filtered);
-        // När dagen byts: välj eventet närmast KARTANS MITT (det man tittar på) och
-        // be V2Map att INTE flytta kameran — vi vill stanna kvar i vyn i stället för
-        // att flyga iväg till en annan stad. (Bara vid dagbyte, inte vid varje
-        // Firestore-uppdatering.)
-        if (prevDayOffset.current !== dayOffset) {
+        // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
+        // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
+        // vyn i stället för att flyga iväg till en annan stad. (Bara vid byte,
+        // inte vid varje Firestore-uppdatering.)
+        const dayKey = `${dayOffset}:${dayRangeDays}`;
+        if (prevDayKey.current !== dayKey) {
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filtered));
-            prevDayOffset.current = dayOffset;
+            prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
         }
-    }, [events, dayOffset]);
+    }, [events, dayOffset, dayRangeDays]);
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -265,6 +276,35 @@ export default function HomePage() {
     useEffect(() => {
         localStorage.setItem('vadkul_discarded_events', JSON.stringify([...discardedEventIds]));
     }, [discardedEventIds]);
+
+    // Inloggad: sparade event synkas till users/{uid} så de följer med mellan
+    // enheter. Vid inloggning slås Firestore-listan ihop med den lokala (union)
+    // — därefter speglas varje ändring dit, debouncad. Utloggad: bara localStorage.
+    const savedSyncReady = useRef(false);
+    const savedRef = useRef(savedEventIds);
+    savedRef.current = savedEventIds;
+    useEffect(() => {
+        savedSyncReady.current = false;
+        if (!user) return;
+        let cancelled = false;
+        (async () => {
+            const remote = await userService.getSavedEventIds(user.uid);
+            if (cancelled) return;
+            const merged = new Set([...savedRef.current, ...remote]);
+            savedSyncReady.current = true;
+            // Alltid nytt Set → skriv-effekten nedan speglar unionen till Firestore.
+            setSavedEventIds(merged);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+    useEffect(() => {
+        if (!user || !savedSyncReady.current) return;
+        const t = setTimeout(() => {
+            userService.setSavedEventIds(user.uid, [...savedEventIds]).catch(err =>
+                console.warn('Kunde inte synka sparade event:', err));
+        }, 800);
+        return () => clearTimeout(t);
+    }, [savedEventIds, user]);
 
     // Skapa event på riktigt: kräver konto, skrivs till Firestore (reglerna
     // begränsar formen) och dyker upp direkt på kartan via optimistisk insättning
@@ -321,19 +361,21 @@ export default function HomePage() {
         });
     };
 
-    // Sökfiltrering — appliceras ovanpå dag-filtreringen. Matchar titel, plats,
-    // arrangör (hostName) samt eventets URL/källa, så att en sökning på t.ex.
-    // "tickster" får fram alla event från den plattformen (domänen ligger i url).
+    // Sökfiltrering — söker över ALLA dagar (inte bara den valda): man ska kunna
+    // hitta "Håkan Hellström" även om konserten är om tre veckor. Matchar titel,
+    // plats, arrangör (hostName) samt eventets URL/källa, så att en sökning på
+    // t.ex. "tickster" får fram alla event från den plattformen (domänen ligger
+    // i url). Utan sökterm gäller dag-/intervallfiltret som vanligt.
     const searchFilteredEvents = useMemo(() => {
         if (!searchQuery.trim()) return filteredEvents;
         const q = searchQuery.toLowerCase();
-        return filteredEvents.filter(evt =>
+        return events.filter(evt =>
             evt.title.toLowerCase().includes(q) ||
             (evt.locationName?.toLowerCase().includes(q) ?? false) ||
             (evt.hostName?.toLowerCase().includes(q) ?? false) ||
             (evt.url?.toLowerCase().includes(q) ?? false)
         );
-    }, [filteredEvents, searchQuery]);
+    }, [events, filteredEvents, searchQuery]);
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(() => {
@@ -352,6 +394,46 @@ export default function HomePage() {
     }, []);
     const handleClearCategories = useCallback(() => setSelectedCategories(new Set()), []);
 
+    // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
+    const handleDayRangeChange = useCallback((offset: number, days: number) => {
+        setDayOffset(offset);
+        setDayRangeDays(days);
+    }, []);
+
+    // Sök och sparat-panelen delar plats under navbaren — bara en i taget.
+    useEffect(() => {
+        if (searchQuery.trim()) setSavedPanelOpen(false);
+    }, [searchQuery]);
+    const handleToggleSaved = useCallback(() => {
+        setSavedPanelOpen(o => !o);
+        setSearchQuery('');
+    }, []);
+
+    // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
+    // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
+    // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
+    // vårt val mot närmaste-event-logiken.
+    const jumpToEvent = useCallback((evt: LinkEvent) => {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const offset = Math.floor((evt.time.getTime() - startOfToday.getTime()) / 86_400_000);
+        prevDayKey.current = `${offset}:1`;
+        setDayOffset(offset);
+        setDayRangeDays(1);
+        setSelectedEvent(evt);
+        setSearchQuery('');
+        setSavedPanelOpen(false);
+    }, []);
+
+    // Ta bort från sparade (hjärtat på kortet eller krysset i sparat-listan).
+    const handleUnsaveEvent = useCallback((eventId: string) => {
+        setSavedEventIds(prev => {
+            const next = new Set(prev);
+            next.delete(eventId);
+            return next;
+        });
+    }, []);
+
     // ── Delbara länkar: ?event=<id>&dag=<n>&kategori=<a,b> ──────────────────
     // Läses EN gång när eventlistan först landat; därefter speglas valt event/
     // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
@@ -368,6 +450,7 @@ export default function HomePage() {
             if (valid.length) setSelectedCategories(new Set(valid));
         }
         const dag = parseInt(params.get('dag') ?? '', 10);
+        const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
         const target = eventId ? events.find(e => e.id === eventId) : undefined;
         if (target) {
@@ -376,11 +459,12 @@ export default function HomePage() {
             // bort vårt deep-linkade val mot närmaste-event-heuristiken.
             const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
             const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
-            prevDayOffset.current = offset;
+            prevDayKey.current = `${offset}:1`;
             setDayOffset(offset);
             setSelectedEvent(target);
         } else if (!Number.isNaN(dag)) {
             setDayOffset(dag);
+            if (!Number.isNaN(dagar) && dagar > 1) setDayRangeDays(Math.min(dagar, 31));
         }
     }, [eventsLoaded, events]);
 
@@ -389,10 +473,11 @@ export default function HomePage() {
         const params = new URLSearchParams();
         if (selectedEvent) params.set('event', selectedEvent.id);
         if (dayOffset !== 0) params.set('dag', String(dayOffset));
+        if (dayRangeDays > 1) params.set('dagar', String(dayRangeDays));
         if (selectedCategories.size > 0) params.set('kategori', [...selectedCategories].join(','));
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [selectedEvent, dayOffset, selectedCategories]);
+    }, [selectedEvent, dayOffset, dayRangeDays, selectedCategories]);
 
     // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
     // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
@@ -550,6 +635,8 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onLoginClick={() => openLogin()}
+                savedCount={savedEventIds.size}
+                onToggleSaved={handleToggleSaved}
             />
 
             {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken */}
@@ -558,6 +645,23 @@ export default function HomePage() {
                 selected={selectedCategories}
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
+            />
+
+            {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}
+            <SearchResults
+                query={searchQuery}
+                results={visibleEvents}
+                onPick={jumpToEvent}
+            />
+
+            {/* 1d. Sparade event — hjärtknappen i navbaren */}
+            <SavedPanel
+                open={savedPanelOpen}
+                events={events}
+                savedEventIds={savedEventIds}
+                onPick={jumpToEvent}
+                onRemove={handleUnsaveEvent}
+                onClose={() => setSavedPanelOpen(false)}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -675,6 +779,11 @@ export default function HomePage() {
                 onClose={() => setAuthModal({ open: false })}
             />
 
+            {/* Onboarding vid första besöket — en skärm, sen ut på kartan */}
+            <WelcomeOverlay
+                onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+            />
+
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
                 events={visibleEvents}
@@ -683,9 +792,12 @@ export default function HomePage() {
                 onSaveEvent={handleSaveEvent}
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
+                savedEventIds={savedEventIds}
+                onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
                 dayOffset={dayOffset}
-                setDayOffset={setDayOffset}
+                dayRangeDays={dayRangeDays}
+                onDayRangeChange={handleDayRangeChange}
                 onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}

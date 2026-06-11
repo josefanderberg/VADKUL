@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2 } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
@@ -61,9 +61,12 @@ interface LinkEventCardProps {
     // beskrivning. Föräldern (bottensheeten) använder det för att fälla ihop
     // kortet — så man kan stänga den uppfällda bilden genom att klicka igen.
     onContentTap?: () => void;
+    /** Hjärtat på kortet: nuvarande status + toggle. Utan handler → ingen knapp. */
+    saved?: boolean;
+    onToggleSave?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
@@ -111,6 +114,25 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         e.preventDefault();
         e.stopPropagation();
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
+    };
+
+    // Vägbeskrivning i Google Maps (öppnar appen på mobil). Koordinaterna är
+    // pålitligare än adressträngen, så de används som destination.
+    const hasCoords = typeof linkEvent.lat === 'number' && typeof linkEvent.lng === 'number'
+        && !(linkEvent.lat === 0 && linkEvent.lng === 0);
+    const handleDirections = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(
+            `https://www.google.com/maps/dir/?api=1&destination=${linkEvent.lat},${linkEvent.lng}`,
+            '_blank', 'noopener,noreferrer'
+        );
+    };
+
+    const handleToggleSave = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggleSave?.();
     };
 
     // Dela eventet: native share-dialog på mobil, annars kopiera deep-länken
@@ -194,6 +216,30 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                     {revealStep >= 1 && (
                         <div className="shrink-0 flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
+                            {onToggleSave && (
+                                <button
+                                    onClick={handleToggleSave}
+                                    aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+                                    title={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+                                    className={`border p-1.5 rounded shadow-lg transition-colors ${
+                                        saved
+                                            ? 'bg-rose-500 border-rose-500 text-white hover:bg-rose-400'
+                                            : 'bg-white hover:bg-rose-50 text-rose-500 border-slate-200'
+                                    }`}
+                                >
+                                    <Heart size={14} fill={saved ? 'currentColor' : 'none'} />
+                                </button>
+                            )}
+                            {hasCoords && (
+                                <button
+                                    onClick={handleDirections}
+                                    aria-label="Vägbeskrivning"
+                                    title="Hitta hit (Google Maps)"
+                                    className="bg-white hover:bg-slate-50 text-[#006AA7] border border-slate-200 p-1.5 rounded shadow-lg transition-colors"
+                                >
+                                    <Navigation size={14} />
+                                </button>
+                            )}
                             <button
                                 onClick={handleShare}
                                 aria-label="Dela eventet"
@@ -337,14 +383,26 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         )}
 
                         {revealStep === 2 && (
-                            <div className="mt-6 flex flex-col gap-4">
-                                <button
-                                    onClick={handleVisitSite}
-                                    className="flex items-center justify-center gap-4 w-full py-4 bg-[#006AA7] hover:bg-[#005590] text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
-                                >
-                                    <span>ANMÄL DIG HÄR</span>
-                                    <ExternalLink size={24} />
-                                </button>
+                            <div className="mt-6 flex flex-col gap-3">
+                                {/* Användarskapade event saknar extern anmälningssida */}
+                                {linkEvent.url && (
+                                    <button
+                                        onClick={handleVisitSite}
+                                        className="flex items-center justify-center gap-4 w-full py-4 bg-[#006AA7] hover:bg-[#005590] text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
+                                    >
+                                        <span>ANMÄL DIG HÄR</span>
+                                        <ExternalLink size={24} />
+                                    </button>
+                                )}
+                                {hasCoords && (
+                                    <button
+                                        onClick={handleDirections}
+                                        className="flex items-center justify-center gap-3 w-full py-3.5 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-base font-black transition-all active:scale-[0.97]"
+                                    >
+                                        <Navigation size={20} />
+                                        <span>HITTA HIT</span>
+                                    </button>
+                                )}
                                 {!alwaysExpanded && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setInternalRevealStep(0); }}
