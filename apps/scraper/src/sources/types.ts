@@ -27,6 +27,12 @@ export interface RawEvent {
     address?: string;
     /** Om källan levererar färdiga koordinater (t.ex. JSON-LD med geo) */
     coords?: [number, number];
+    /**
+     * Ordnade geocoding-frågor som runnern provar i tur och ordning (första träff
+     * vinner) när coords saknas. Utelämnad → runnern frågar "venueName, city".
+     * För paraply-källor med fallback-kedjor (kyrkonamn → församling → ortnamn).
+     */
+    geocodeCandidates?: string[];
 
     description?: string;
     imageUrl?: string;
@@ -34,6 +40,16 @@ export interface RawEvent {
     /** Kategori om källan vet (annars klassificerar runnern via title+desc) */
     category?: string;
     price?: string;
+    /**
+     * Per-event-värd för paraply-källor (församling, klubb, lokalkrets).
+     * Utelämnad → source.hostName används.
+     */
+    hostName?: string;
+    /**
+     * Sätt när källan VET om tiden är specifik (t.ex. isFullDayEvent-fält).
+     * Utelämnad → runnern använder midnatts-heuristiken (00:00 lokal/UTC = heldag).
+     */
+    hasSpecificTime?: boolean;
 }
 
 /**
@@ -154,7 +170,11 @@ export interface Source {
     troubleshooting?: string[];
 }
 
-export type EngineName = 'json-ld' | 'wp-rest' | 'ical' | 'api' | 'sitevision' | 'xhr-discovery' | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap';
+export type EngineName =
+    | 'json-ld' | 'wp-rest' | 'ical' | 'api' | 'sitevision' | 'xhr-discovery'
+    | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap'
+    // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
+    | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.
@@ -167,6 +187,12 @@ export interface EngineContext {
     log: (msg: string) => void;
     /** Avbryt om den här tickar — för timeouts */
     signal?: AbortSignal;
+    /**
+     * Finns URL:en redan i DB? Låter engines hoppa över dyra per-event-hämtningar
+     * (detail-sidor, content-API-anrop) för event vi redan har. Dedup sker ändå
+     * alltid i runnern — detta är enbart en kostnadsoptimering.
+     */
+    isKnownUrl?: (url: string) => Promise<boolean>;
 }
 
 /**

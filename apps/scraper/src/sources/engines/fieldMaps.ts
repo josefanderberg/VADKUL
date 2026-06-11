@@ -224,6 +224,10 @@ export function defaultFieldMap(engine: EngineName, variant?: string): SourceFie
             return DRUPAL_VARIANTS[variant || 'jsonapi'] || DRUPAL_VARIANTS['jsonapi'];
         case 'sitemap':
             return SITEMAP_FIELDS;
+        default:
+            // Nätverks-engines (hembygd, svenskakyrkan, …) — mappningen
+            // dokumenteras i respektive engine-fils header istället.
+            return API_FIELDS;
     }
 }
 
@@ -250,5 +254,8 @@ export function rediscoverCommand(engine: EngineName, region: string): string {
             return `npm run probe-drupal -- --filter=${region}`;
         case 'sitemap':
             return `npm run probe-sitemap -- --filter=${region}`;
+        default:
+            // Nätverks-engines — endpoint + rediscovery-steg står i engine-filens header.
+            return `# Nätverks-engine — se header i src/scrapers/ för endpoint & rediscovery`;
     }
 }

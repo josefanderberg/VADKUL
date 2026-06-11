@@ -87,12 +87,44 @@ Alla script skriver ut ett tydligt banner när de startar så du ser vilken DB d
 4. Justera kod, iterera. Allt sker gratis lokalt.
 5. När det ser bra ut: kör mot PROD utan target-flagga.
 
-## Hur det fungerar i koden:
+## Arkitektur
 
-- `src/index.ts`: Själva startpunkten för botten. Den ropar på alla valda skrapor en och en.
-- `src/scrapers/vaxjoco.ts`: Ett exempelskript som öppnar en osynlig Chrome-webbläsare och går till vaxjoco.se för att läsa ut eventdata. **OBS:** Denna kod måste anpassas för varje hemsidas unika HTML-struktur.
-- `src/utils/dbHelper.ts`: Går förbi säkerhetsreglerna via Firebase Admin SDK och pratar rakt med databasen för att lägga till nya event och hoppa över dubbletter.
+Två nivåer — och **registryt är default-hemmet för alla nya källor**:
 
-## Automatisk Schemaläggning (Cron)
-När skriptet fungerar felfritt kan du schemalägga det med t.ex. GitHub Actions för att köra det helt gratis kl 02:00 varje natt.
+1. **Sources-systemet** (`src/sources/`) — deklarativt registry ([registry.ts](src/sources/registry.ts))
+   med ~300 källor som körs genom återanvändbara engines (`sitemap`, `wp-rest`,
+   `sitevision`, …). En ny källa = en config-entry, ingen kod.
+   - **Runnern** ([runner.ts](src/sources/runner.ts)) äger den gemensamma pipelinen:
+     validera → datumfönster → dedup → geocoding → klassificering → DB-skrivning →
+     run-historik (`scrape_runs`). Engines gör BARA extraction (`RawEvent[]`).
+   - **Nätverks-engines**: paraply-API:er där EN engine täcker hela nätverket
+     (Hembygd, Svenska kyrkan, Naturskyddsföreningen, Rotary, Röda Korset).
+     Koden bor i `src/scrapers/<id>.ts`, registreras i `ENGINES` (`src/sources/index.ts`)
+     och får schemaläggning/dry-run/run-historik gratis via registryt.
+     Kör en enskild: `npm run sources -- --ids=svenska-kyrkan --dry-run`
+   - **Schemaläggning**: `updateFrequency` (hourly/daily/every-3d/weekly) sprider
+     körningar över veckan — se [schedule.ts](src/sources/schedule.ts).
+
+2. **Bespoke-scrapers** (`src/index.ts` → `src/scrapers/`) — Puppeteer/HTML-tunga
+   källor som inte passar engine-formen än (Facebook, Eventbrite, Tickster,
+   Meetup, lokala Växjö-sajter). Skriver direkt via `dbHelper`. Nya källor ska
+   i första hand byggas som engines, inte här.
+
+- `src/utils/dbHelper.ts`: skriver till lokal SQLite (`events.db`) + Firestore parallellt.
+- `src/scripts/aggregate-events.ts`: exporterar publicerade events till `apps/web/public/*.json`.
+
+## Tester
+
+```bash
+npm test          # vitest — runner-pipeline, engine-mappers, schedule, registry-sanity
+npm run test:watch
+```
+
+Testerna kör mot `:memory:`-SQLite och mockar allt nätverk/Firebase — de kan aldrig
+röra riktiga databaser. Registry-sanity-testet fångar felkonfig (dubblerade ids,
+engine-namn utan implementation) innan nattjobbet gör det.
+
+## Automatisk Schemaläggning
+Nattliga körningar orkestreras av `scripts/run-daily.sh` (launchd) som kör
+scrapers + cleanup/enrich/audit-stegen och postar resultat till Teams.
 

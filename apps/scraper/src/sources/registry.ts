@@ -56,8 +56,9 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'daily',
         status: 'experimental',
-        notes: 'Probe 2026-06-10: 168 event-URLs i event-sitemap.xml. JSON-LD Event saknar startDate → datum ur text-fallback ("18 oktober 2026"), date-only (ingen tid på sidan).',
+        notes: 'Probe 2026-06-10: 168 event-URLs i event-sitemap.xml. JSON-LD Event saknar startDate → datum ur text-fallback ("18 oktober 2026"), date-only (ingen tid på sidan). Verifierad 2026-06-09 (äldre probe-config): 2 sparade, spridda datum (rena).',
         lastVerified: '2026-06-10',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.berns.se/sitemap_index.xml', date: '2026-06-09' },
     },
     {
         id: 'stockholms-stadsbibliotek',
@@ -288,20 +289,6 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-08',
     },
     {
-        id: 'dalateatern',
-        hostName: 'Dalateatern',
-        region: 'dalarna',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: 'https://dalateatern.se/event-sitemap.xml',
-            urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
-            defaultCity: 'Falun',
-        },
-        updateFrequency: 'daily',
-        notes: 'Probe 2026-06-08: event-sitemap.xml, /evenemang/-events (länsteater Dalarna).',
-        lastVerified: '2026-06-08',
-    },
-    {
         id: 'parkenzoo',
         hostName: 'Parken Zoo',
         region: 'eskilstuna',
@@ -327,20 +314,6 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'daily',
         notes: 'Probe 2026-06-08: evenemang-sitemap.xml (konserthus Norrköping).',
-        lastVerified: '2026-06-08',
-    },
-    {
-        id: 'sofiero',
-        hostName: 'Sofiero Slott',
-        region: 'helsingborg',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: 'https://www.sofiero.se/event-sitemap.xml',
-            urlPatterns: [/\/event\/[^/]+\/?$/i],
-            defaultCity: 'Helsingborg',
-        },
-        updateFrequency: 'daily',
-        notes: 'Probe 2026-06-08: event-sitemap.xml, /event/ (slott, stora konserter — Håkan Hellström m.fl.).',
         lastVerified: '2026-06-08',
     },
     {
@@ -3155,22 +3128,6 @@ export const SOURCES: Source[] = [
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.munchenbryggeriet.se/sitemap_index.xml', date: '2026-06-09' },
     },
     {
-        id: 'berns',
-        hostName: 'Berns',
-        region: 'stockholm',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: 'https://www.berns.se/sitemap_index.xml',
-            urlPatterns: [/\/(?:sv\/)?kalender\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
-        },
-        updateFrequency: 'daily',
-        status: 'active',
-        lastVerified: '2026-06-09',
-        notes: 'Probe-venues 2026-06-09: 84 event-URLs (kalender-mönster) — livemusik (Stockholm). Verifierad: 2 sparade, spridda datum (rena).',
-        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.berns.se/sitemap_index.xml', date: '2026-06-09' },
-    },
-    {
         id: 'katalin',
         hostName: 'Katalin',
         region: 'uppsala',
@@ -3222,7 +3179,7 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'sofiero',
-        hostName: 'Sofiero',
+        hostName: 'Sofiero Slott',
         region: 'helsingborg',
         engine: 'sitemap',
         config: {
@@ -4242,6 +4199,102 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         discovery: { method: 'probe-wp', probeUrl: 'http://bjorndammensmasugn.se', date: '2026-06-11' },
         notes: 'Bulk-probe 2026-06-11: tribe, ~6 event upptäckta. Medlemslista-runda (lägre tröskel ≥3).',
+        lastVerified: '2026-06-11',
+    },
+
+    // ─── NÄTVERK (paraply-API:er — EN källa = hela nätverket) ────────────────
+    // Engines bor i src/scrapers/<id>.ts. hostName nedan är fallback;
+    // engines sätter per-event-värd (församling/klubb/krets/förening).
+    {
+        id: 'hembygd',
+        hostName: 'Hembygdsförbundet',
+        region: 'national',
+        engine: 'hembygd',
+        config: {},   // config.maxSites för smoke-test
+        windowDays: 180,
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 200,
+        notes: 'Hela Hembygdsförbundet (~1988 föreningar) via plattforms-API. ' +
+            'Discovery: /api/siteSearch/GetAllSites → per-region childSites → /api/<siteId>/activities.',
+        lastVerified: '2026-06-11',
+    },
+    {
+        id: 'svenska-kyrkan',
+        hostName: 'Svenska kyrkan',
+        region: 'national',
+        engine: 'svenskakyrkan',
+        config: {},
+        // 30d-fönster (default) — API:t levererar ~1500+ event/30d, längre fram glider in senare.
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 500,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://svk-apim-prod.azure-api.net/calendar/v1/event/search/',
+            date: '2026-06-11',
+            notes: 'Subscription-key hittad i /kalender-sidans XHR (Chromium-UA krävs mot svenskakyrkan.se).',
+        },
+        notes: 'ETT nationellt endpoint för alla församlingar. owner.type=Utlandet (SKUT) filtreras bort. Inga bilder i API:t. ' +
+            'HÅRT FILTER sedan 2026-06-11 (incident: ofiltrerat = ~19 700/30d, mest gudstjänster/ceremonier): ' +
+            'eventType gudstjanstOchMassa + stodOchOmsorg bort, online-only bort, öppettidsnotiser bort — se isPublicSvkEvent.',
+        lastVerified: '2026-06-11',
+    },
+    {
+        id: 'naturskyddsforeningen',
+        hostName: 'Naturskyddsföreningen',
+        region: 'national',
+        engine: 'naturskyddsforeningen',
+        config: {},
+        windowDays: 180,
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 100,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://admin.naturskyddsforeningen.se/graphql',
+            date: '2026-06-11',
+            notes: 'Öppet GraphQL (searchContent context:"calendar"). Koordinater + bild i payloaden.',
+        },
+        notes: 'Alla kretsar via nationellt GraphQL. ISO-datum ur URL-slugen (dateString kan vara intervall).',
+        lastVerified: '2026-06-11',
+    },
+    {
+        id: 'rotary',
+        hostName: 'Rotary',
+        region: 'national',
+        engine: 'rotary',
+        config: { districts: ['2325', '2335', '2355', '2365', '2395', '2405'] },
+        windowDays: 180,   // klubb-event är glesa; distrikten publicerar långt fram
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 50,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://rotary2325.se/<siteId>/Event/GetDistrictEvents',
+            date: '2026-06-11',
+            notes: 'ClubRunner per distrikt; siteId runtime-upptäcks från /events. US-datumformat "MMM d, yyyy" KRÄVS (ISO ger 0).',
+        },
+        notes: '6 distrikt, bara 3 exponerar endpointen (övriga widget-iframes). ~370 event/180d.',
+        lastVerified: '2026-06-11',
+    },
+    {
+        id: 'roda-korset',
+        hostName: 'Röda Korset',
+        region: 'national',
+        engine: 'rodakorset',
+        config: {},
+        windowDays: 180,
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 30,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.rodakorset.se/api/episerver/v3.0/content?contentUrl=<url>',
+            date: '2026-06-11',
+            notes: 'EPiServer/Optimizely Content API, öppen. Sitemap → /kalendarium/-URL:er → resolva var och en.',
+        },
+        notes: 'Lokalkretsars kalendarium (~100 event). Kända URL:er hoppas över före API-anrop (ctx.isKnownUrl).',
         lastVerified: '2026-06-11',
     },
 ];
