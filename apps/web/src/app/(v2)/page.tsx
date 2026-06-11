@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
+import CategoryFilter from '@/components/v2/CategoryFilter';
 import EventCard from '@/components/v2/EventCard';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { EVENT_CATEGORIES } from '@/utils/categories';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
@@ -75,6 +77,8 @@ export default function HomePage() {
     const [dayOffset, setDayOffset] = useState(0);
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    // Kategorifilter (flerval). Tom set = visa alla kategorier.
+    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     const prevDayOffset = useRef(dayOffset);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
@@ -263,6 +267,65 @@ export default function HomePage() {
         );
     }, [filteredEvents, searchQuery]);
 
+    // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
+    const visibleEvents = useMemo(() => {
+        if (selectedCategories.size === 0) return searchFilteredEvents;
+        return searchFilteredEvents.filter(evt =>
+            selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
+        );
+    }, [searchFilteredEvents, selectedCategories]);
+
+    const handleToggleCategory = useCallback((id: string) => {
+        setSelectedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }, []);
+    const handleClearCategories = useCallback(() => setSelectedCategories(new Set()), []);
+
+    // ── Delbara länkar: ?event=<id>&dag=<n>&kategori=<a,b> ──────────────────
+    // Läses EN gång när eventlistan först landat; därefter speglas valt event/
+    // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
+    // Next-navigation). Att dela länken återskapar exakt vy.
+    const urlApplied = useRef(false);
+    useEffect(() => {
+        if (!eventsLoaded || urlApplied.current) return;
+        urlApplied.current = true;
+
+        const params = new URLSearchParams(window.location.search);
+        const kategori = params.get('kategori');
+        if (kategori) {
+            const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES);
+            if (valid.length) setSelectedCategories(new Set(valid));
+        }
+        const dag = parseInt(params.get('dag') ?? '', 10);
+        const eventId = params.get('event');
+        const target = eventId ? events.find(e => e.id === eventId) : undefined;
+        if (target) {
+            // Härled eventets dag så dagfiltret inte gömmer det — och markera
+            // dagbytet som "redan hanterat" så day-switch-effekten inte byter
+            // bort vårt deep-linkade val mot närmaste-event-heuristiken.
+            const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+            const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
+            prevDayOffset.current = offset;
+            setDayOffset(offset);
+            setSelectedEvent(target);
+        } else if (!Number.isNaN(dag)) {
+            setDayOffset(dag);
+        }
+    }, [eventsLoaded, events]);
+
+    useEffect(() => {
+        if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
+        const params = new URLSearchParams();
+        if (selectedEvent) params.set('event', selectedEvent.id);
+        if (dayOffset !== 0) params.set('dag', String(dayOffset));
+        if (selectedCategories.size > 0) params.set('kategori', [...selectedCategories].join(','));
+        const qs = params.toString();
+        window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    }, [selectedEvent, dayOffset, selectedCategories]);
+
     // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
     // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
     // och söktermen. nowTick uppdateras varje minut så "börjar inom 1 timme" rör
@@ -305,7 +368,7 @@ export default function HomePage() {
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
-        ? searchFilteredEvents.findIndex(e => e.id === selectedEvent.id)
+        ? visibleEvents.findIndex(e => e.id === selectedEvent.id)
         : -1;
 
     // Stabil referens så V2Map:s useEffect inte loopar.
@@ -333,8 +396,8 @@ export default function HomePage() {
     // fel → rätt markör avslöjas i guld och kameran flyger dit.
     // (Definieras här nere så gamePool kan läsa searchFilteredEvents ovan.)
     const gamePool = useMemo(
-        () => searchFilteredEvents.filter(hasValidCoords),
-        [searchFilteredEvents]
+        () => visibleEvents.filter(hasValidCoords),
+        [visibleEvents]
     );
 
     const startRound = useCallback(() => {
@@ -416,9 +479,17 @@ export default function HomePage() {
                 setSearchQuery={setSearchQuery}
             />
 
+            {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken */}
+            <CategoryFilter
+                events={searchFilteredEvents}
+                selected={selectedCategories}
+                onToggle={handleToggleCategory}
+                onClear={handleClearCategories}
+            />
+
             {/* 2. Fullskärmskarta underst */}
             <V2MapDynamic
-                events={searchFilteredEvents}
+                events={visibleEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 savedEventIds={savedEventIds}
@@ -505,7 +576,7 @@ export default function HomePage() {
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
-                events={searchFilteredEvents}
+                events={visibleEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}
