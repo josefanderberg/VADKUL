@@ -124,9 +124,32 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     console.log('   📤 Uploading aggregated layers to Firestore collection "aggregatedEvents"...');
 
     // Varje upload försöker separat — en stor doc ska inte stoppa de andra.
+    // Destinations: shardas likt cards om för stort (passerade 1 MB-gränsen
+    // 2026-06-11 när per-event-emojin tillkom — webbens fetchLayer är generisk).
     try {
-        await db.collection('aggregatedEvents').doc('destinations').set(destinationsPayload);
-        console.log('      ✅ Uploaded "destinations" document');
+        const destBytes = Buffer.byteLength(JSON.stringify(destinationsPayload), 'utf-8');
+        if (destBytes < 900_000) {
+            await db.collection('aggregatedEvents').doc('destinations').set(destinationsPayload);
+            await deleteShards(db, 'destinations_');
+            console.log(`      ✅ Uploaded "destinations" document (${(destBytes / 1024).toFixed(0)} KB)`);
+        } else {
+            const SHARD_SIZE = 2000;   // ~230 B/event → ~450 KB per shard
+            const shards: any[][] = [];
+            for (let i = 0; i < destinations.length; i += SHARD_SIZE) {
+                shards.push(destinations.slice(i, i + SHARD_SIZE));
+            }
+            console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
+            await db.collection('aggregatedEvents').doc('destinations').set({
+                updatedAt, shardCount: shards.length, totalEvents: destinations.length,
+            });
+            for (let i = 0; i < shards.length; i++) {
+                await db.collection('aggregatedEvents').doc(`destinations_${i}`).set({
+                    updatedAt, shardIndex: i, events: shards[i],
+                });
+            }
+            await deleteShards(db, 'destinations_', shards.length);
+            console.log(`      ✅ Uploaded "destinations" + ${shards.length} shards`);
+        }
     } catch (e) {
         console.error('      ❌ "destinations" upload failed:', (e as Error).message);
     }
