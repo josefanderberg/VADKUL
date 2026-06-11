@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-11T13:33:48.052Z",
+  "updatedAt": "2026-06-11T15:33:39.911Z",
   "events": [
     {
       "id": "https://helsingborg.se/event/morgonbad-med-frukost-pa-palsjobaden/",
@@ -889,16 +889,6 @@
       "emoji": "🧘"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-studio-med-hagar-malin-hellkvist-sellen/",
-      "title": "Öppen studio med Hagar Malin Hellkvist Sellén",
-      "time": "2026-06-11T08:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://www.facebook.com/events/875062788447811/",
       "title": "Pekboksklubb på Norbergs bibliotek",
       "time": "2026-06-11T08:00:00.000Z",
@@ -969,36 +959,6 @@
       "emoji": "🎓"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/up-north-workshop-hip-hop/",
-      "title": "Up North Workshop – Hip Hop",
-      "time": "2026-06-11T08:30:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/up-north-workshop-house/",
-      "title": "Up North Workshop – House",
-      "time": "2026-06-11T08:30:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/up-north-workshop-raphael-moussa-hillebrand/",
-      "title": "Up North Workshop – Raphael Moussa Hillebrand",
-      "time": "2026-06-11T08:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://www.rodakorset.se/ort/halland/varbergs-kommun/kalendarium/promenad-/",
       "title": "Promenad i gemenskap",
       "time": "2026-06-11T08:30:00.000Z",
@@ -1037,16 +997,6 @@
       "locationName": "Landskrona",
       "category": "family",
       "emoji": "🎉"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lunchsamtal-med-hagar-malin-hellkvist-sellen/",
-      "title": "Lunchsamtal med Hagar Malin Hellkvist Sellén",
-      "time": "2026-06-11T09:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "social",
-      "emoji": "🎓"
     },
     {
       "id": "https://www.rodakorset.se/ort/stockholm/vallentuna-kommun/kalendarium/tordagsoppet-kl.11-till-kl3.18",
@@ -1107,566 +1057,6 @@
       "locationName": "Götene kyrka",
       "category": "music",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kids-battle-workshop-kids-takeover/",
-      "title": "Kids Battle Workshop / Kids Takeover",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/barnen-mitt-i-musiken/",
-      "title": "Barnen mitt i musiken",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/melodikrysset-live/",
-      "title": "Melodikrysset live!",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "social",
-      "emoji": "❓"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/musik-i-fagelsangens-tid/",
-      "title": "Musik i fågelsångens tid",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/toner-till-var-och-sommar/",
-      "title": "Toner till vår och sommar",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/gunga-pa-turne-2/",
-      "title": "Gunga! på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/gunga/",
-      "title": "Gunga!",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/sjaddo-liv-aira/",
-      "title": "Sjaddo – Liv Aira",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/dansworkshop-agnes-nilsson-svakko/",
-      "title": "Dansworkshop – Agnes Nilsson Svakko",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/musikcirkus-med-norrlandsoperans-symfoniorkester/",
-      "title": "Musikcirkus med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-infor-premiaren-av-verk-och-dagar-ett-epos/",
-      "title": "Öppen repetition inför premiären av Verk och Dagar",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/maxida-marak-pa-turne/",
-      "title": "Maxida Märak på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/systerpolskan-och-fredrik-hangasjarvi-pa-turne/",
-      "title": "Systerpolskan och Fredrik Hangasjärvi på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kom-ode-o-radd/",
-      "title": "Kom öde ö rädd",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/arctic-pulse-orchestra-pa-turne/",
-      "title": "Arctic Pulse Orchestra på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kom-ode-o-radd-pa-turne/",
-      "title": "Kom öde ö rädd på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/jag-ser-dig-helena-franzen/",
-      "title": "Jag ser dig / Helena Franzén",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/en-musikalisk-resa-med-filip-jers-emil-ernebro/",
-      "title": "En musikalisk resa med Filip Jers & Emil Ernebro",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/en-musikalisk-resa-med-filip-jers-emil-ernebro-pa-turne-2/",
-      "title": "En musikalisk resa med Filip Jers & Emil Ernebro på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kammarmusik/",
-      "title": "Kammarmusik i juletid med flöjt- och celloduo",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kammarmusik-i-juletid-med-avatarkvartetten/",
-      "title": "Kammarmusik i juletid med Avatarkvartetten",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/samuel-ljungblahd/",
-      "title": "Samuel Ljungblahd på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎤"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/ar-grus-claire-parsons-co/",
-      "title": "Är : Grus – Claire Parsons Co.",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/ar-grus-clarie-parsons-co-2/",
-      "title": "Är : Grus – Claire Parsons Co. på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/baskery/",
-      "title": "Baskery på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎤"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/brahms-och-dvorak-pa-turne/",
-      "title": "Brahms och Dvořák på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/loopa-med-dan-pa-turne-2/",
-      "title": "Loopa med Dan på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/loopa-med-dan/",
-      "title": "Loopa med Dan!",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/babiskonsert/",
-      "title": "Bäbiskonsert",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/rundvandring-i-ateljeer-och-verkstader-2/",
-      "title": "Rundvandring i ateljéer och verkstäder",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppet-rep-mercury-rising-jefta-van-dinther/",
-      "title": "Öppet rep Mercury Rising / Jefta van Dinther",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/trallande-troll/",
-      "title": "Trallande troll",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/familjekonsert/",
-      "title": "Familjekonsert",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/norrlandsoperans-barn-och-ungdomskor/",
-      "title": "Norrlandsoperans barn-och ungdomskör",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/tipsrunda-for-barn-kostymprovning-och-selfiestation/",
-      "title": "Tipsrunda för barn, kostymprovning och selfiestation",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/silent-disco/",
-      "title": "Silent Disco",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "party",
-      "emoji": "🎧"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/workshop-isipantsula/",
-      "title": "Workshop isiPantsula",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kids-battle-workshop/",
-      "title": "Kids Battle Workshop",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/la-boheme-pa-turne/",
-      "title": "La Bohème på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/varldens-musik/",
-      "title": "Världens musik!",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/hyperspace-james-batchelor/",
-      "title": "Hyperspace – James Batchelor",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/svenska-vyer-hillborg-och-laurin-turne/",
-      "title": "Svenska vyer på Sara Kulturhus",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/avus/",
-      "title": "Àvus",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-och-samtal-infor-premiaren-av-masc/",
-      "title": "Öppen repetition och samtal inför premiären av MASC",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/konsertburkar/",
-      "title": "Konsertburkar",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/nordic/",
-      "title": "Nordic",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/det-ror-pa-sig/",
-      "title": "DET RÖR PÅ SIG",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/langbacka-badagard/",
-      "title": "Långbacka/Bådagård",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/folk-dans-och-turer-om-figurer/",
-      "title": "Folk – Dans och turer om figurer",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/korngold-och-tjajkovskij-turne/",
-      "title": "Korngold och Tjajkovskij på Sara Kulturhus",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/workshop-med-bjorn-safsten-samtal-och-rorelse-for-dig-som-ar-pensionar/",
-      "title": "Workshop med Björn Säfsten – samtal och rörelse för dig som är pensionär",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "🧘"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/mikro-makro-tove-skeidsvoll/",
-      "title": "Mikro Makro – Tove Skeidsvoll",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/katarina-barruk-moter-norrlandsoperans-symfoniorkester-turne/",
-      "title": "Katarina Barruk möter Norrlandsoperans symfoniorkester på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/flamenco-workshop-maria-del-mar-suarez-la-chachi-flamenco-para-cuerpos-no-flamencos/",
-      "title": "Flamenco Workshop – María del Mar Suárez la Chachi – Flamenco para cuerpos no flamencos",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/flamenco-workshop-maria-del-mar-suarez-la-chachi-first-steps/",
-      "title": "Flamenco Workshop – María del Mar Suárez la Chachi – First steps",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/skapa-dans/",
-      "title": "Skapa Dans",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://portal.clubrunner.ca/16308/Event/program-kommer-3",
@@ -2249,16 +1639,6 @@
       "emoji": "🎷"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/workshop-for-dig-som-ar-60-philip-berlin/",
-      "title": "Workshop för dig som är 60+ – Philip Berlin",
-      "time": "2026-06-11T15:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
       "id": "https://www.goteborg.com/evenemang/arvid-nero-maria-jane-smith-och-simon-superti/",
       "title": "Arvid Nero, Maria Jane Smith och Simon Superti - Tre konserter med svensk pop",
       "time": "2026-06-11T15:00:00.000Z",
@@ -2367,16 +1747,6 @@
       "locationName": "Bruksvägen 18, Vänersborg, Lillåstugan, Naturskyddsföreningen Vänersborg",
       "category": "social",
       "emoji": "🌿"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/friday-night-moves-workshops-i-street-dance/",
-      "title": "Friday Night Moves – workshops i street dance",
-      "time": "2026-06-11T15:45:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
     },
     {
       "id": "https://www.facebook.com/events/1484631743390864/",
@@ -2679,106 +2049,6 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/var-drivkraft/",
-      "title": "Vår Drivkraft",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "other",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/indisk-dansworkshop-parijat-naik/",
-      "title": "Indisk dansworkshop – Parijat Naik",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/friday-night-moves-johanna-yared/",
-      "title": "Friday Night Moves – Joanna & Yared",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/yonder-or-eller/",
-      "title": "Yonder – OR/ELLER",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/klossen-moves/",
-      "title": "Klossen Moves",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/dansmingel-varen-2026/",
-      "title": "Dansmingel våren 2026",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/workshop-jazzfunk-med-matilda-fleberg/",
-      "title": "Workshop – Jazzfunk med Matilda Fleberg",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/dansmingel-2/",
-      "title": "Dansmingel hösten 2025",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "social",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/infinetude-alma-soderberg/",
-      "title": "Infinétude / Alma Söderberg",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/impulso-rocio-molina-sabil/",
-      "title": "Impulso – Rocío Molina & Sabîl",
-      "time": "2026-06-11T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "💃"
-    },
-    {
       "id": "https://www.facebook.com/events/1682548192796976/",
       "title": "OldTimerTorsdag",
       "time": "2026-06-11T16:00:00.000Z",
@@ -2889,36 +2159,6 @@
       "emoji": "🎤"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/fysisk-introduktion-till-forestallningen-knocking/",
-      "title": "Fysisk introduktion till föreställningen Knocking",
-      "time": "2026-06-11T16:10:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/fysisk-introduktion-till-air-body-sad/",
-      "title": "Fysisk introduktion till AIR BODY SAD",
-      "time": "2026-06-11T16:10:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/fysisk-introduktion-till-drip-tekhne/",
-      "title": "Fysisk introduktion till Drip Tekhne",
-      "time": "2026-06-11T16:10:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://www.facebook.com/events/961613506872052/",
       "title": "Sommarträning Jujutsu",
       "time": "2026-06-11T16:15:00.000Z",
@@ -2977,16 +2217,6 @@
       "locationName": "Kulturen i Lund",
       "category": "art",
       "emoji": "🎨"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/workshop-med-philip-berlin/",
-      "title": "Workshop med Philip Berlin",
-      "time": "2026-06-11T16:30:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "🎓"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/e61l58tcpby7wza/2026-06-11/all-of-it",
@@ -3169,206 +2399,6 @@
       "emoji": "🎡"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/made-of-space-guy-nader-maria-campos/",
-      "title": "MADE OF SPACE – Guy Nader / Maria Campos",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/varsalong/",
-      "title": "Vårsalong 2026",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/strauss-och-beethoven-pa-turne/",
-      "title": "Strauss och Beethoven på turné",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/forelasning-jefta-van-dinther/",
-      "title": "Föreläsning – Jefta van Dinther",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/ethno-on-the-road/",
-      "title": "Ethno on the Road på turné",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/revolution-blues-pa-turne/",
-      "title": "Revolution: Blues! på turné",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/musgrave-och-schumann-2/",
-      "title": "Musgrave och Schumann på turné",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/sol-invictus-herve-koubi/",
-      "title": "Sol Invictus / Hervé Koubi",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/debussy-och-poulenc-pa-turne/",
-      "title": "Debussy och Poulenc på turné",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/this-is-not-a-religion-lava-markusson-och-michael-tang-bobbi-lo-produktion/",
-      "title": "This is not a religion – Lava Markusson och Michael Tang / Bobbi Lo Produktion",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/friday-night-freestyle/",
-      "title": "Friday Night Freestyle",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/air-body-sad/",
-      "title": "AIR BODY SAD",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/stolen-k-kvarnstrom-co/",
-      "title": "STOLEN / K. Kvarnström & Co",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/and-so-were-gone-bjorn-safsten/",
-      "title": "And so we’re gone / Björn Säfsten",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/in-bloom-a-rite-of-spring/",
-      "title": "In Bloom – a rite of spring",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/nattexpressen/",
-      "title": "Nattexpressen",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/johan-lindstrom-norrbotten-big-band/",
-      "title": "Johan Lindström & Norrbotten Big Band",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎷"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/hip-hop-heels-med-elodie-antonio/",
-      "title": "Hip Hop Heels med Elodie Antonio",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/attitudes-workshopdag/",
-      "title": "Attitudes Workshopdag",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/taranto-aleatoria-av-maria-del-mar-suarez-la-chachi/",
-      "title": "Taranto Aleatorio av María del Mar Suárez la Chachi",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "💃"
-    },
-    {
       "id": "https://www.facebook.com/events/1618980939222405/",
       "title": "Masterclass i sång i Östersund",
       "time": "2026-06-11T17:00:00.000Z",
@@ -3467,16 +2497,6 @@
       "locationName": "Västra Storgatan 15, 64631 Gnesta, Sweden",
       "category": "stage",
       "emoji": "🎬"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/friday-night-moves-tr3sa/",
-      "title": "Friday Night Moves – Tr3sa",
-      "time": "2026-06-11T17:30:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "course",
-      "emoji": "💃"
     },
     {
       "id": "https://www.facebook.com/events/966618615826634/",
@@ -3627,16 +2647,6 @@
       "locationName": "Östra Storgatan 2, 646 31 Gnesta, Sweden",
       "category": "sport",
       "emoji": "⚽"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/blacklight-x-up-north-official-afterparty/",
-      "title": "Blacklight x Up North – Official Afterparty",
-      "time": "2026-06-11T19:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "party",
-      "emoji": "🎉"
     },
     {
       "id": "https://www.facebook.com/events/1748175379676829/",
@@ -18759,16 +17769,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/konsert/",
-      "title": "Föreställningar – Konsert",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.tradgarn.se/kalender/epic-tuesday-premiar-1/",
       "title": "EPIC TUESDAY PREMIÄR",
       "time": "2026-06-16T22:00:00.000Z",
@@ -18797,16 +17797,6 @@
       "locationName": "Uppsala",
       "category": "party",
       "emoji": "🎉"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/vindelfjallens-kammarmusikfestival/",
-      "title": "Vindelfjällens kammarmusikfestival",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
     },
     {
       "id": "https://www.gotland.se/arkiv/evenemang/arkiv/2026-06-17-sommarfest-i-svaidestugan",
@@ -19019,26 +18009,6 @@
       "emoji": "🥞"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester-5/",
-      "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T09:15:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester-4/",
-      "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T09:15:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.landskrona.se/evenemang/tychotema-tradgardsmastaren-berattar/",
       "title": "TYCHOTEMA: Trädgårdsmästaren berättar",
       "time": "2026-06-17T09:30:00.000Z",
@@ -19097,196 +18067,6 @@
       "locationName": "Södertälje",
       "category": "social",
       "emoji": "🧶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lunchkonsert-med-dirigentstudenter-fran-kungliga-musikhogskolan-och-norrlandsoperans-symfoniorkester/",
-      "title": "Lunchkonsert med Dirigentstudenter från Kungliga Musikhögskolan och Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/varkonsert-umea-musiksallskap/",
-      "title": "Vårkonsert – Umeå Musiksällskap",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lunchkonsert-med-dirigent-och-kompositionsstudenter-fran-musikhogskolan-i-pitea-och-norrlandsoperans-symfoniorkester/",
-      "title": "Lunchkonsert med Dirigent och kompositionsstudenter från Musikhögskolan i Piteå och Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/forsvarsmusiken-500-ar/",
-      "title": "Försvarsmusiken 500 år",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/arctic-pulse-orchestra/",
-      "title": "Arctic Pulse Orchestra",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lunchkonsert-2/",
-      "title": "Lunchkonsert",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/en-vintersaga-med-snowflake-singers/",
-      "title": "En vintersaga med Snowflake Singers",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/balkongbrass/",
-      "title": "Balkongbrass",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/mobiltelefonorkestern-moter-norrlandsoperans-symfoniorkester/",
-      "title": "Mobiltelefonorkestern möter Norrlandsoperans symfoniorkester",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lust-och-fagring/",
-      "title": "Lust och fägring",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lunchkonsert/",
-      "title": "Lunchkonsert",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/molly-hammar/",
-      "title": "Molly Hammar",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎤"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/februarikonsert-umea-musiksallskap/",
-      "title": "Februarikonsert Umeå Musiksällskap",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/bartok-och-brahms/",
-      "title": "Bartók och Brahms",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/no-i-parken/",
-      "title": "NO i Parken",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/juvlla-joulu-julkonsert/",
-      "title": "Juvlla- joulu- julkonsert!",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎄"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/decemberkonsert-med-umea-musiksallskap/",
-      "title": "Decemberkonsert med Umeå Musiksällskap",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/katarina-barruk-moter-norrlandsoperans-symfoniorkester/",
-      "title": "Katarina Barruk möter Norrlandsoperans symfoniorkester",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/herreys-en-gyllene-kvall/",
-      "title": "Herreys – En Gyllene Kväll",
-      "time": "2026-06-17T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://upplev.stockholm/aktuellt/kalendarium/2026/06/sommaren-med-kulturskolan-17-juni/",
@@ -19549,16 +18329,6 @@
       "emoji": "🏞️"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/avant-joik/",
-      "title": "Avant Joik",
-      "time": "2026-06-17T14:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://www.facebook.com/events/1435004904879527/",
       "title": "Regnbågscafé",
       "time": "2026-06-17T14:00:00.000Z",
@@ -19679,66 +18449,6 @@
       "emoji": "🧸"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/klassisk-aw-feat-sjostakovitj/",
-      "title": "Klassisk AW feat. Sjostakovitj",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/februarikonsert-umea-musiksallskap-2/",
-      "title": "Februarikonsert – Umeå Musiksällskap",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/klassisk-aw-feat-mozart/",
-      "title": "Klassisk AW feat. Mozart",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "party",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/hostkonsert-umea-musiksallskap/",
-      "title": "Höstkonsert – Umeå Musiksällskap",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/klassisk-aw/",
-      "title": "Klassisk AW",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "party",
-      "emoji": "🥂"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/engelsk-afton-umea-musiksallskap/",
-      "title": "Engelsk afton – Umeå Musiksällskap",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.tickster.com/se/sv/events/ezv040ed0rnryp4/2026-06-17/quizterrassen",
       "title": "Quizterrassen",
       "time": "2026-06-17T16:00:00.000Z",
@@ -19827,46 +18537,6 @@
       "locationName": "Karlskrona",
       "category": "other",
       "emoji": "🚶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/samspelsdagar-med-lanets-kulturskolor-blasdag/",
-      "title": "Samspelsdagar med Länets Kulturskolor – Blåsdag",
-      "time": "2026-06-17T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/samspelsdagar-med-lanets-kulturskolor-strakdag/",
-      "title": "Samspelsdagar med Länets Kulturskolor – Stråkdag",
-      "time": "2026-06-17T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/solala-koket-pa-turne-2025/",
-      "title": "Solala – Köket på turné 2025",
-      "time": "2026-06-17T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎤"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/det-sjalvspelande-pianot-och-maria-w-horn/",
-      "title": "Det självspelande pianot och Maria W Horn",
-      "time": "2026-06-17T16:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎹"
     },
     {
       "id": "https://www.hembygd.se/frinnaryd?a=54399",
@@ -19959,16 +18629,6 @@
       "emoji": "🎤"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/jonathan-johansson-moter-norrlandsoperans-symfoniorkester/",
-      "title": "Jonathan Johansson möter Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.norrkopingskonstmuseum.se/kalender/hundpromenad-med-konst-och-arkitektur/",
       "title": "Hundpromenad med konst och arkitektur",
       "time": "2026-06-17T17:00:00.000Z",
@@ -19977,126 +18637,6 @@
       "locationName": "Norrköping",
       "category": "art",
       "emoji": "🐕🎨"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/kammarmusikkonsert/",
-      "title": "Kammarmusikkonsert",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/1900-en-audiovisuell-konsert-kontragarde/",
-      "title": "1900 – En audiovisuell konsert: Kontragarde",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/novemberkonsert-och-julkonsert-med-umea-musiksallskap/",
-      "title": "Novemberkonsert och julkonsert med Umeå Musiksällskap",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/debussy-och-poulenc/",
-      "title": "Debussy och Poulenc",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/stumfilmskonsert-med-ackja-och-ren-i-inka-lantas-vinterland/",
-      "title": "Stumfilmskonsert: Med ackja och ren i Inka Läntas vinterland",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/clyne-och-mendelssohn/",
-      "title": "Clyne och Mendelssohn",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/internationell-pianoafton/",
-      "title": "Internationell pianoafton",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎹"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/brahms-och-dvorak/",
-      "title": "Brahms och Dvorák",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/sasongsoppning-med-monnakgotla-och-brahms/",
-      "title": "Säsongsöppning med Monnakgotla och Brahms",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/haydn-och-camille-pepin/",
-      "title": "Haydn och Camille Pepin",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/lisa-miskovsky-moter-norrlandsoperans-symfoniorkester/",
-      "title": "Lisa Miskovsky möter Norrlandsoperans symfoniorkester",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/de-forvisades-karneval/",
-      "title": "De Förvisades Karneval",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/tctlazyea6djr9r/2026-06-17/focus-forward-gala-focus-dance-30-ar",
@@ -20137,16 +18677,6 @@
       "locationName": "Uppsala Konsert &amp; Kongress",
       "category": "stage",
       "emoji": "💃"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/avus-2/",
-      "title": "Ávus",
-      "time": "2026-06-17T18:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
     },
     {
       "id": "https://www.goteborg.com/evenemang/brad-paisley/",
@@ -21777,16 +20307,6 @@
       "locationName": "Fållan, Johanneshov",
       "category": "music",
       "emoji": "🎸"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/arctic-arts-summit/",
-      "title": "ARCTIC ARTS SUMMIT",
-      "time": "2026-06-18T19:30:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "art",
-      "emoji": "🎨"
     },
     {
       "id": "https://www.lessebo.se/arkiv/evenemang/evenemang/2026-06-01-musik-i-midsommarnatt.html",
@@ -31847,16 +30367,6 @@
       "locationName": "Uppsala",
       "category": "other",
       "emoji": "🌾"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/pianofavoriter-med-norrdans/",
-      "title": "Pianofavoriter med Norrdans",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://www.kil.se/arkiv/evenemang/evenemang/2026-06-27-stage-event-skallerud---powered-by-thorens-i-kil",
