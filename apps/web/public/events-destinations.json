@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-11T13:08:41.258Z",
+  "updatedAt": "2026-06-11T13:33:48.052Z",
   "events": [
     {
       "id": "https://helsingborg.se/event/morgonbad-med-frukost-pa-palsjobaden/",
@@ -122,16 +122,6 @@
       "emoji": "🌿"
     },
     {
-      "id": "https://www.studieframjandet.se/hallands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/visningstradgard-i-falkenberg/",
-      "title": "Visningsträdgård i Falkenberg",
-      "time": "2026-06-10T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🌿"
-    },
-    {
       "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/bokstund-ute/",
       "title": "Bokstund ute - Motala kommun",
       "time": "2026-06-10T22:00:00.000Z",
@@ -163,16 +153,6 @@
     },
     {
       "id": "https://ale.se/evenemang/evenemang/2026-06-04-ansok-till-ale-kulturskola.html",
-      "title": "Ansök till Ale Kulturskola",
-      "time": "2026-06-10T22:00:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "course",
-      "emoji": "📚"
-    },
-    {
-      "id": "https://ale.se/evenemang/evenemang/ansoktillalekulturskola.5.62e13f4c19e641f27bc413e7.html",
       "title": "Ansök till Ale Kulturskola",
       "time": "2026-06-10T22:00:00.000Z",
       "lat": 58,
@@ -500,16 +480,6 @@
       "locationName": "Upplands Väsby bibliotek",
       "category": "social",
       "emoji": "🎉"
-    },
-    {
-      "id": "https://www.falun.se/kulturhuset-tio14/evenemang/evenemang/2026-05-05-lunchdisco.html",
-      "title": "Dela sidan på sociala medier",
-      "time": "2026-06-10T22:00:00.000Z",
-      "lat": 60.6070068,
-      "lng": 15.6323059,
-      "locationName": "Falun",
-      "category": "stage",
-      "emoji": "💃"
     },
     {
       "id": "https://www.lulea.se/uppleva--gora/ung-i-lulea/aktivitetskalender/aktiviteter/2026-06-08-glassprovning.html",
@@ -1059,16 +1029,6 @@
       "emoji": "🧸"
     },
     {
-      "id": "https://upplev.stockholm/aktuellt/kalendarium/2026/06/diva-cruz-valios-djungelns-ljud/",
-      "title": "Diva Cruz Valios: Djungelns ljud",
-      "time": "2026-06-11T08:45:00.000Z",
-      "lat": 59.3293,
-      "lng": 18.0686,
-      "locationName": "Medborgarplatsen, Södermalm",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.landskrona.se/evenemang/fira-skolavslutningen/",
       "title": "Fira skolavslutningen",
       "time": "2026-06-11T09:00:00.000Z",
@@ -1217,16 +1177,6 @@
       "locationName": "Umeå",
       "category": "music",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/gunga-pa-turne/",
-      "title": "Gunga! på turné",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 63.8256568,
-      "lng": 20.2630745,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://norrlandsoperan.se/forestallningar/sjaddo-liv-aira/",
@@ -1639,27 +1589,7 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://norrlandsoperan.se/forestallningar/konsertburkar-3/",
-      "title": "Konsertburkar",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://norrlandsoperan.se/forestallningar/folk-dans-och-turer-om-figurer/",
-      "title": "Folk – Dans och turer om figurer",
-      "time": "2026-06-11T10:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/folk-dans-och-turer-om-figurer-3/",
       "title": "Folk – Dans och turer om figurer",
       "time": "2026-06-11T10:00:00.000Z",
       "lat": 0,
@@ -1757,16 +1687,6 @@
       "locationName": "Vaktelvägen 2, Örebro",
       "category": "family",
       "emoji": "👶"
-    },
-    {
-      "id": "https://www.molndal.se/evenemang/evenemang/2026-05-25-acrylic-pouring?selectedDate=2026-06-11&startTime=12:30",
-      "title": "Acrylic pouring",
-      "time": "2026-06-11T10:30:00.000Z",
-      "lat": 57.6564918,
-      "lng": 12.0153085,
-      "locationName": "Konstkollektivet",
-      "category": "art",
-      "emoji": "🎨"
     },
     {
       "id": "https://varmlandsmuseum.se/aktivitet/lunchvisning-250611/",
@@ -2306,16 +2226,6 @@
       "lng": 17.9727718,
       "locationName": "Tulegatan 23, SE-172 78 Sundbyberg, Sverige",
       "category": "course",
-      "emoji": "🎬"
-    },
-    {
-      "id": "https://www.facebook.com/events/27663015103282483/",
-      "title": "Öppet hus med filmvisning hos Fasciaklinikerna Sundbyberg",
-      "time": "2026-06-11T15:00:00.000Z",
-      "lat": 59.3651958,
-      "lng": 17.9727718,
-      "locationName": "Tulegatan 23, SE-172 78 Sundbyberg, Sverige",
-      "category": "stage",
       "emoji": "🎬"
     },
     {
@@ -3209,26 +3119,6 @@
       "emoji": "🎤"
     },
     {
-      "id": "https://www.facebook.com/events/1350209906961427/",
-      "title": "Stand-up Comedy Mölndal",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 57.6564918,
-      "lng": 12.0153085,
-      "locationName": "Hotel Mölndals Bro - Roy Restaurant Café & Bar",
-      "category": "stage",
-      "emoji": "🎤"
-    },
-    {
-      "id": "https://www.facebook.com/events/1544343424020133/",
-      "title": "Stand-up Comedy Mölndal",
-      "time": "2026-06-11T17:00:00.000Z",
-      "lat": 57.6564918,
-      "lng": 12.0153085,
-      "locationName": "Hotel Mölndals Bro - Roy Restaurant Café & Bar",
-      "category": "stage",
-      "emoji": "🎤"
-    },
-    {
       "id": "https://www.facebook.com/events/1646904706894942/",
       "title": "Provföreställning med Ina Lundström",
       "time": "2026-06-11T17:00:00.000Z",
@@ -3709,16 +3599,6 @@
       "emoji": "⚽"
     },
     {
-      "id": "https://www.facebook.com/events/1401923781761529/",
-      "title": "Se FIFA Fotbolls-VM 2026 på Stenungsbaden Yacht Club",
-      "time": "2026-06-11T19:00:00.000Z",
-      "lat": 58.0642004,
-      "lng": 11.8074423,
-      "locationName": "Stenungsbaden Yacht Club , Stenungsön, 444 48 Stenungsund, Sweden",
-      "category": "sport",
-      "emoji": "⚽"
-    },
-    {
       "id": "https://www.facebook.com/events/1680563893142595/",
       "title": "AVSLUTNINGSFEST HÖGSTADIET",
       "time": "2026-06-11T19:00:00.000Z",
@@ -3786,16 +3666,6 @@
       "lng": 0,
       "locationName": "Göteborg",
       "category": "party",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://pustervik.nu/event/locus-7/",
-      "title": "Pustervik",
-      "time": "2026-06-11T20:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "music",
       "emoji": "🎶"
     },
     {
@@ -4029,16 +3899,6 @@
       "emoji": "🎻"
     },
     {
-      "id": "https://karlstad.se/alstersherrgard/evenemang/kalender/sommarkonsertmedstrakensemble.17628.html",
-      "title": "Sommarkonsert med stråkensemble",
-      "time": "2026-06-11T22:00:00.000Z",
-      "lat": 59.3809146,
-      "lng": 13.5027631,
-      "locationName": "Karlstad",
-      "category": "music",
-      "emoji": "🎻"
-    },
-    {
       "id": "https://www.tyreso.se/arkiv/evenemang/evenemang/2026-03-04-forskolefredag.html",
       "title": "Förskolefredag",
       "time": "2026-06-11T22:00:00.000Z",
@@ -4117,36 +3977,6 @@
       "locationName": "Stockholm",
       "category": "other",
       "emoji": "🗓️"
-    },
-    {
-      "id": "https://www.tekniskamuseet.se/pa-gang/retrorundturer-i-play-beyond-play/",
-      "title": "Kalendarium",
-      "time": "2026-06-11T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other",
-      "emoji": "🗓️"
-    },
-    {
-      "id": "https://www.tekniskamuseet.se/pa-gang/helgvisningar/",
-      "title": "Kalendarium",
-      "time": "2026-06-11T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "other",
-      "emoji": "🗓️"
-    },
-    {
-      "id": "https://www.tekniskamuseet.se/pa-gang/game-nights-bradspel-och-vr-spel/",
-      "title": "Kalendarium",
-      "time": "2026-06-11T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "social",
-      "emoji": "🎲"
     },
     {
       "id": "https://nbv.se/arrangemang/vill-du-bli-demokratiambassador-med-nbv-%f0%9f%a4%9d/",
@@ -4579,16 +4409,6 @@
       "emoji": "🎾"
     },
     {
-      "id": "https://www.facebook.com/events/1350181550508318/",
-      "title": "Kom igång med Nose Work!",
-      "time": "2026-06-12T08:00:00.000Z",
-      "lat": 59.3641455,
-      "lng": 18.1234772,
-      "locationName": "Torsvikssvängen 62, 18134 Lidingö, Sweden",
-      "category": "course",
-      "emoji": "🐕"
-    },
-    {
       "id": "https://www.facebook.com/events/1663666497891902/",
       "title": "SOMMARFEST PÅ ALLÈVÄGEN",
       "time": "2026-06-12T08:00:00.000Z",
@@ -4887,16 +4707,6 @@
       "locationName": "Stadsparken Nässjö",
       "category": "party",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://blekingemuseum.se/events/invigning-fangat-i-farg-ogonblicksbilder-fran-ett-svunnet-karlskrona/",
-      "title": "INVIGNING – FÅNGAT I FÄRG, ögonblicksbilder från ett svunnet Karlskrona",
-      "time": "2026-06-12T10:00:00.000Z",
-      "lat": 56.1621073,
-      "lng": 15.5866422,
-      "locationName": "Karlskrona",
-      "category": "art",
-      "emoji": "🎨"
     },
     {
       "id": "https://www.goteborg.com/evenemang/brunchkryssning-i-sodra-skargarden/",
@@ -5599,16 +5409,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://munchenbryggeriet.se/event/what-a-view-12-13-juni-2026/",
-      "title": "What A View 12-13 juni 2026",
-      "time": "2026-06-12T15:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.goteborg.com/evenemang/fortress-of-metal-festival/",
       "title": "Fortress of Metal Festival - Tvådagars metalfestival",
       "time": "2026-06-12T15:00:00.000Z",
@@ -5729,16 +5529,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://www.tickster.com/se/sv/events/azpetzkn8wktllr/2026-06-12/kramfors-stadsfest-2026",
-      "title": "Kramfors Stadsfest 2026",
-      "time": "2026-06-12T16:00:00.000Z",
-      "lat": 62.916667,
-      "lng": 17.666667,
-      "locationName": "Kramfors, Kramfors",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://www.meetup.com/offline-cafe-events/events/314647828/",
       "title": "World History Quiz Night",
       "time": "2026-06-12T16:00:00.000Z",
@@ -5837,16 +5627,6 @@
       "locationName": "Movendi Mjölby",
       "category": "social",
       "emoji": "🔥"
-    },
-    {
-      "id": "https://www.facebook.com/events/1694961018413629/",
-      "title": "✈️ MWR Life & Whieda Europe – Travel • Wellness • Lifestyle",
-      "time": "2026-06-12T16:00:00.000Z",
-      "lat": 59.4306217,
-      "lng": 17.9469802,
-      "locationName": "Turebergsvägen 1, 191 47 Sollentuna",
-      "category": "social",
-      "emoji": "🌐"
     },
     {
       "id": "https://www.facebook.com/events/4238132173074893/",
@@ -7449,16 +7229,6 @@
       "emoji": "🎓"
     },
     {
-      "id": "http://formdesigncenter.com/en/program/bok-prat-tim-anstey",
-      "title": "Bok-prat: Tim Anstey",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://malmolive.se/en/program/stravinsky-and-beethoven-saturday",
       "title": "Stravinsky and Beethoven\n    \n                     \n            Saturday concert",
       "time": "2026-06-12T22:00:00.000Z",
@@ -7589,16 +7359,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://destinationuppsala.se/en/event/echoes-and-first-notes/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "other",
-      "emoji": "🎶"
-    },
-    {
       "id": "https://helsingborg.se/event/graffitiworkshop-mala-graffiti-med-konstnaren-julia-stranovska/",
       "title": "Graffitiworkshop – måla graffiti med konstnären Julia Stranovska",
       "time": "2026-06-12T22:00:00.000Z",
@@ -7669,56 +7429,6 @@
       "emoji": "🎂"
     },
     {
-      "id": "https://formdesigncenter.com/program/varldsstickardagen-2026",
-      "title": "Världsstickardagen 2026",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "other",
-      "emoji": "🗓️"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/world-wide-knit-public-day-2026",
-      "title": "World Wide Knit In Public Day 2026",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "social",
-      "emoji": "🧶"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/bok-prat-tim-anstey",
-      "title": "Bok-prat: Tim Anstey",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/bok-prat-tim-anstey",
-      "title": "Bok-prat: Tim Anstey",
-      "time": "2026-06-12T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://www.facebook.com/events/1563937318495640/",
-      "title": "RUN Against child abuse",
-      "time": "2026-06-12T22:02:00.000Z",
-      "lat": 56.9998205,
-      "lng": 13.2395069,
-      "locationName": "Storgatan 8, Hyltebruk",
-      "category": "party",
-      "emoji": "🎉"
-    },
-    {
       "id": "https://www.hammaro.se/uppleva-och-gora/evenemang/evenemangsbeskrivning?id=117568",
       "title": "Bearplay Game Fair",
       "time": "2026-06-13T00:00:00.000Z",
@@ -7749,16 +7459,6 @@
       "emoji": "💃"
     },
     {
-      "id": "https://www.eventbrite.se/e/the-fifa-world-cup-live-tickets-1990562776850",
-      "title": "The FIFA World Cup Live",
-      "time": "2026-06-13T01:00:00.000Z",
-      "lat": 59.3358575,
-      "lng": 18.0507213,
-      "locationName": "Generator Stockholm",
-      "category": "sport",
-      "emoji": "⚽"
-    },
-    {
       "id": "https://www.facebook.com/events/1307896261225002/",
       "title": "Frukostklubben Göteborg",
       "time": "2026-06-13T04:00:00.000Z",
@@ -7770,16 +7470,6 @@
     },
     {
       "id": "https://www.goteborg.com/en/events/elfsborgsmarschen/",
-      "title": "Elfsborgsmarschen",
-      "time": "2026-06-13T04:30:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
-      "id": "https://www.goteborg.com/evenemang/elfsborgsmarschen",
       "title": "Elfsborgsmarschen",
       "time": "2026-06-13T04:30:00.000Z",
       "lat": 57.7072326,
@@ -8139,16 +7829,6 @@
       "emoji": "🥾"
     },
     {
-      "id": "https://www.facebook.com/events/1199156065538496/",
-      "title": "Jami Hundsport + skärgårdspromenad",
-      "time": "2026-06-13T07:00:00.000Z",
-      "lat": 57.7594186,
-      "lng": 16.6385035,
-      "locationName": "Västervik, Kalmar län",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
       "id": "https://www.facebook.com/events/1371988880483798/",
       "title": "Swap Meet på Slottet Boden SLCR",
       "time": "2026-06-13T07:00:00.000Z",
@@ -8390,16 +8070,6 @@
     },
     {
       "id": "https://www.facebook.com/events/1682805156102939/",
-      "title": "Huddinge parkrun #288",
-      "time": "2026-06-13T07:30:00.000Z",
-      "lat": 59.216667,
-      "lng": 18,
-      "locationName": "Huddinge Parkrun",
-      "category": "sport",
-      "emoji": "🏃"
-    },
-    {
-      "id": "https://www.facebook.com/events/2018067372126192/",
       "title": "Huddinge parkrun #288",
       "time": "2026-06-13T07:30:00.000Z",
       "lat": 59.216667,
@@ -8679,16 +8349,6 @@
       "emoji": "☕"
     },
     {
-      "id": "https://www.facebook.com/events/1371402934814558/",
-      "title": "Jubileumsdag Rörstrand 300 år",
-      "time": "2026-06-13T08:00:00.000Z",
-      "lat": 58.5067031,
-      "lng": 13.1583679,
-      "locationName": "Fabriksgatan 4, 53130 Lidköping, Sweden",
-      "category": "art",
-      "emoji": "🏺"
-    },
-    {
       "id": "https://www.facebook.com/events/1042336942074523/",
       "title": "Sydkustturen Ystad-trelleborg",
       "time": "2026-06-13T08:00:00.000Z",
@@ -8919,16 +8579,6 @@
       "emoji": "🏀"
     },
     {
-      "id": "https://www.facebook.com/events/3001197873422614/",
-      "title": "🏀 Dream Builders Team @ Европын Монголчуудын Сагсан Бөмбөгийн АШТ XVI 🌍🇸🇪",
-      "time": "2026-06-13T08:00:00.000Z",
-      "lat": 59.2189213,
-      "lng": 17.9489911,
-      "locationName": "Fleminghallen, Huddinge",
-      "category": "sport",
-      "emoji": "🏀"
-    },
-    {
       "id": "https://www.facebook.com/events/1151479144709508/",
       "title": "Täby Kyrkby Promenadloppis",
       "time": "2026-06-13T08:00:00.000Z",
@@ -9049,16 +8699,6 @@
       "emoji": "🧸"
     },
     {
-      "id": "https://www.facebook.com/events/987502773726639/",
-      "title": "Run against child abuse ",
-      "time": "2026-06-13T08:00:00.000Z",
-      "lat": 56.9999142,
-      "lng": 13.2403039,
-      "locationName": "Hyltebruk, Hallands län",
-      "category": "other",
-      "emoji": "🍪"
-    },
-    {
       "id": "https://www.facebook.com/events/1033971882035640/",
       "title": "Tierp Motorfest 13 Juni 2026 ",
       "time": "2026-06-13T08:00:00.000Z",
@@ -9167,16 +8807,6 @@
       "locationName": "Verkstadsgatan 9, 904 32 Umeå",
       "category": "social",
       "emoji": "🚗"
-    },
-    {
-      "id": "https://www.facebook.com/events/1294420039072029/",
-      "title": "Healingkurs i Västerås",
-      "time": "2026-06-13T08:00:00.000Z",
-      "lat": 59.6749712,
-      "lng": 14.5208584,
-      "locationName": "Tallmätargatan 3 (1 tr upp), 72134 Västerås, Sweden",
-      "category": "course",
-      "emoji": "🧘"
     },
     {
       "id": "https://www.facebook.com/events/4349201125318112/",
@@ -9779,16 +9409,6 @@
       "emoji": "🛍️"
     },
     {
-      "id": "https://www.facebook.com/events/1563451618445024/",
-      "title": "Premiär öppning🥳",
-      "time": "2026-06-13T09:00:00.000Z",
-      "lat": 58.55,
-      "lng": 11.666667,
-      "locationName": "Rom 24 Dingle, Munkedal",
-      "category": "market",
-      "emoji": "🛍️"
-    },
-    {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/hamnmarknadisikea.5240.html",
       "title": "Hamnmarknad i Sikeå",
       "time": "2026-06-13T09:00:00.000Z",
@@ -10129,16 +9749,6 @@
       "emoji": "🚗"
     },
     {
-      "id": "https://kalmarlansmuseum.se/evenemang/ladda-krut-skjut-2/",
-      "title": "Kalmar Läns Museum",
-      "time": "2026-06-13T09:30:00.000Z",
-      "lat": 56.6628826,
-      "lng": 16.3662382,
-      "locationName": "Kalmar",
-      "category": "other",
-      "emoji": "🚢"
-    },
-    {
       "id": "https://www.kulturen.com/program/kalendarium/livet-i-thomanderska-huset-7-3-2-4-2-2-2/",
       "title": "Livet i Thomanderska huset",
       "time": "2026-06-13T09:30:00.000Z",
@@ -10287,16 +9897,6 @@
       "locationName": "Uppsala",
       "category": "food",
       "emoji": "🍽️"
-    },
-    {
-      "id": "https://www.facebook.com/events/879998364583443/",
-      "title": "Matmilen Uppsala",
-      "time": "2026-06-13T10:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "food",
-      "emoji": "🍔"
     },
     {
       "id": "https://www.facebook.com/events/1134603548745323/",
@@ -11059,16 +10659,6 @@
       "emoji": "🧸"
     },
     {
-      "id": "https://www.tickster.com/se/sv/events/z8b5njv1bt84ck5/2026-06-13/ville-och-valle-och-viktor",
-      "title": "Ville och Valle och Viktor",
-      "time": "2026-06-13T11:40:00.000Z",
-      "lat": 64.7520185,
-      "lng": 20.959339,
-      "locationName": "Medleforsparken, Skellefteå",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://www.hoor.se/event/konsert-med-kulturskolans-sommarensemble/",
       "title": "Konsert med Kulturskolans sommarensemble",
       "time": "2026-06-13T12:00:00.000Z",
@@ -11579,16 +11169,6 @@
       "emoji": "🚗"
     },
     {
-      "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Flinkopings-storbandsfestival-tickets%2F813434662%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
-      "title": "LINKÖPINGS STORBANDSFESTIVAL",
-      "time": "2026-06-13T13:30:00.000Z",
-      "lat": 58.41323,
-      "lng": 15.61516,
-      "locationName": "Linköping",
-      "category": "music",
-      "emoji": "🎷"
-    },
-    {
       "id": "https://visitlinkoping.se/evenemang/linkopings-storbandsfestival/",
       "title": "Linköpings Storbandsfestival",
       "time": "2026-06-13T13:45:00.000Z",
@@ -11627,16 +11207,6 @@
       "locationName": "Gällivare kyrka",
       "category": "music",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://amal.se/upplevaochgora/upptackamal/evenemang/ifkamalshemmamatcheridiv4.5.6f0e3dd019d24ee29904f52f.html",
-      "title": "IFK Åmåls hemmamatcher i Div. 4",
-      "time": "2026-06-13T14:00:00.000Z",
-      "lat": 58.983838,
-      "lng": 12.6126708,
-      "locationName": "Åmål",
-      "category": "sport",
-      "emoji": "⚽"
     },
     {
       "id": "https://www.facebook.com/events/4223149394600389/",
@@ -11807,16 +11377,6 @@
       "locationName": "Engelska Skolan I Järfälla",
       "category": "stage",
       "emoji": "🎭"
-    },
-    {
-      "id": "https://www.facebook.com/events/2249223045819784/",
-      "title": "🔥🕺🏼 Latin Night- Baila Södertälje 🔥💃",
-      "time": "2026-06-13T15:30:00.000Z",
-      "lat": 59.1932584,
-      "lng": 17.62729,
-      "locationName": "Quality Hotel Park",
-      "category": "stage",
-      "emoji": "💃"
     },
     {
       "id": "https://www.facebook.com/events/2415443128897631/",
@@ -12529,16 +12089,6 @@
       "emoji": "🥾"
     },
     {
-      "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juni/de-vilda-blommornas-dag/",
-      "title": "De vilda blommornas dag",
-      "time": "2026-06-13T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
       "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juni/rundvandring-vid-dagstorpsjon/",
       "title": "Rundvandring vid Dagstorpsjön",
       "time": "2026-06-13T22:00:00.000Z",
@@ -12717,16 +12267,6 @@
       "locationName": "Mönsterås",
       "category": "other",
       "emoji": "🗓️"
-    },
-    {
-      "id": "https://www.studieframjandet.se/vastra-gotalands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/de-vilda-blommornas-dag2/",
-      "title": "De vilda blommornas dag",
-      "time": "2026-06-13T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "sport",
-      "emoji": "🥾"
     },
     {
       "id": "https://orsa.se/arkiv/kalender/evenemang/2025-06-04-hank---en-musikalisk-resa-med-the-lost-highway-boys.html",
@@ -13359,16 +12899,6 @@
       "emoji": "🏃"
     },
     {
-      "id": "https://www.facebook.com/events/1678753613549440/",
-      "title": "Folksam Grand Prix Sollentuna 2026",
-      "time": "2026-06-14T07:00:00.000Z",
-      "lat": 59.4363411,
-      "lng": 17.9533687,
-      "locationName": "Sollentunavallen",
-      "category": "sport",
-      "emoji": "🏃"
-    },
-    {
       "id": "https://www.facebook.com/events/964922522995049/",
       "title": "Habo Mixed - beachvolley",
       "time": "2026-06-14T07:00:00.000Z",
@@ -13650,16 +13180,6 @@
     },
     {
       "id": "https://www.facebook.com/events/873817468612116/",
-      "title": "Bakluckeloppis",
-      "time": "2026-06-14T08:00:00.000Z",
-      "lat": 59.1397739,
-      "lng": 17.8334224,
-      "locationName": "Rosenhill 23, Botkyrka, Sweden",
-      "category": "market",
-      "emoji": "🛍️"
-    },
-    {
-      "id": "https://www.facebook.com/events/1208286798165632/",
       "title": "Bakluckeloppis",
       "time": "2026-06-14T08:00:00.000Z",
       "lat": 59.1397739,
@@ -14187,16 +13707,6 @@
       "locationName": "Världskulturmuséet                                                                                  ",
       "category": "music",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://kalmarlansmuseum.se/evenemang/bildbingo-bland-kronans-fynd-och-skatter-2/",
-      "title": "Kalmar Läns Museum",
-      "time": "2026-06-14T09:30:00.000Z",
-      "lat": 56.6628826,
-      "lng": 16.3662382,
-      "locationName": "Kalmar",
-      "category": "art",
-      "emoji": "🎨"
     },
     {
       "id": "https://www.kulturen.com/program/kalendarium/dioramat-slaget-vid-lutzen-1632-2-3-3/",
@@ -14759,16 +14269,6 @@
       "emoji": "☕"
     },
     {
-      "id": "https://kalmarlansmuseum.se/evenemang/familjeguidning-om-regalskeppet-kronan-2/",
-      "title": "Kalmar Läns Museum",
-      "time": "2026-06-14T11:30:00.000Z",
-      "lat": 56.6628826,
-      "lng": 16.3662382,
-      "locationName": "Kalmar",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.tickster.com/se/sv/events/jbg5mub2a3mpw6h/2026-06-14/ville-och-valle-och-viktor",
       "title": "Ville och Valle och Viktor",
       "time": "2026-06-14T11:40:00.000Z",
@@ -14940,16 +14440,6 @@
     },
     {
       "id": "https://www.facebook.com/events/998537963137809/",
-      "title": "Fria själars vandring",
-      "time": "2026-06-14T12:00:00.000Z",
-      "lat": 55.5565541,
-      "lng": 14.3499903,
-      "locationName": "Tobisvik",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
-      "id": "https://www.facebook.com/events/1644900970072241/",
       "title": "Fria själars vandring",
       "time": "2026-06-14T12:00:00.000Z",
       "lat": 55.5565541,
@@ -15809,56 +15299,6 @@
       "emoji": "🎈"
     },
     {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/sommarijarnvagsparken.5.52f7529019cfe7f2e3941fb.html",
-      "title": "Sommar i Järnvägsparken",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Järnvägsparkwn",
-      "category": "family",
-      "emoji": "🎈"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/sommarijarnvagsparken.5.52f7529019cfe7f2e3941eb.html",
-      "title": "Sommar i Järnvägsparken",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Järnvägsparkwn",
-      "category": "family",
-      "emoji": "🎈"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/sommarijarnvagsparken.5.52f7529019cfe7f2e3941db.html",
-      "title": "Sommar i Järnvägsparken",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Järnvägsparkwn",
-      "category": "family",
-      "emoji": "🎈"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/sommarijarnvagsparken.5.52f7529019cfe7f2e3941cc.html",
-      "title": "Sommar i Järnvägsparken",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Järnvägsparkwn",
-      "category": "family",
-      "emoji": "🎈"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/sommarijarnvagsparken.5.52f7529019cfe7f2e3941bc.html",
-      "title": "Sommar i Järnvägsparken",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Järnvägsparkwn",
-      "category": "family",
-      "emoji": "🎈"
-    },
-    {
       "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-19-sommarskrivet-6-8-ar",
       "title": "Sommarskrivet 6-8 år",
       "time": "2026-06-14T22:00:00.000Z",
@@ -15940,16 +15380,6 @@
     },
     {
       "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/gor-din-egen-frukostmugg-3/",
-      "title": "Gör din egen frukostmugg! - Motala kommun",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Motala",
-      "category": "course",
-      "emoji": "🏺"
-    },
-    {
-      "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/gor-din-egen-frukostmugg/",
       "title": "Gör din egen frukostmugg! - Motala kommun",
       "time": "2026-06-14T22:00:00.000Z",
       "lat": 0,
@@ -16429,46 +15859,6 @@
       "emoji": "🎲"
     },
     {
-      "id": "https://formdesigncenter.com/program/fran-ord-till-handling-att-implementera-mangfald",
-      "title": "Från ord till handling – Att implementera mångfald",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/words-action-implementing-diversity",
-      "title": "From Words to Action – Implementing Diversity",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/vem-har-ratt-att-forma-malmo",
-      "title": "VEM har rätt att forma Malmö?",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/who-has-right-shape-malmo",
-      "title": "WHO has the right to shape Malmö?",
-      "time": "2026-06-14T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://www.goteborg.com/en/events/fifa-world-cup-on-the-big-screen/",
       "title": "FIFA World Cup on the Big Screen",
       "time": "2026-06-15T02:00:00.000Z",
@@ -16929,16 +16319,6 @@
       "emoji": "📚"
     },
     {
-      "id": "https://ale.se/evenemang/evenemang/malanaturmotivmedakvarellmedkulturskolan.5.62e13f4c19e641f27bc3fc2c.html",
-      "title": "Måla naturmotiv med akvarell med Kulturskolan",
-      "time": "2026-06-15T11:00:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "course",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://upplev.vaxjo.se/evenemang/evenemang/2026-06-09-sommarkollo",
       "title": "Sommarkollo",
       "time": "2026-06-15T11:00:00.000Z",
@@ -16990,16 +16370,6 @@
     },
     {
       "id": "https://ale.se/evenemang/evenemang/2025-11-04-sommarklubben-sommarsagostund.html",
-      "title": "Sommarklubben: Sommarsagostund",
-      "time": "2026-06-15T13:00:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "family",
-      "emoji": "📚"
-    },
-    {
-      "id": "https://ale.se/evenemang/evenemang/2025-11-21-sommarklubben-sommarsagostund.html",
       "title": "Sommarklubben: Sommarsagostund",
       "time": "2026-06-15T13:00:00.000Z",
       "lat": 58,
@@ -17229,16 +16599,6 @@
       "emoji": "🎷"
     },
     {
-      "id": "https://pustervik.nu/event/steve-vai/",
-      "title": "Pustervik",
-      "time": "2026-06-15T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
       "id": "https://www.goteborg.com/evenemang/kanekoayano/",
       "title": "Kanekoayano - Konsert med japansk indie",
       "time": "2026-06-15T17:00:00.000Z",
@@ -17319,16 +16679,6 @@
       "emoji": "✨"
     },
     {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/fjarilsresa-till-sodra-dalarna-16-juni/",
-      "title": "Fjärilsresa till södra Dalarna 16 juni",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
       "id": "https://www.studieframjandet.se/sormlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/seniorvandring-i-mariefred-166/",
       "title": "Seniorvandring i Mariefred 16/6",
       "time": "2026-06-15T22:00:00.000Z",
@@ -17369,46 +16719,6 @@
       "emoji": "✨"
     },
     {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/sprakcafekulturhusetangeln.5.744c675e19c934f0bb2df5db.html",
-      "title": "Språkcafé Kulturhuset Ängeln",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/sprakcafekulturhusetangeln.5.744c675e19c934f0bb2df5cb.html",
-      "title": "Språkcafé Kulturhuset Ängeln",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/sprakcafekulturhusetangeln.5.744c675e19c934f0bb2df5bb.html",
-      "title": "Språkcafé Kulturhuset Ängeln",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/sprakcafekulturhusetangeln.5.744c675e19c934f0bb2df5ab.html",
-      "title": "Språkcafé Kulturhuset Ängeln",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
       "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-06-01-cirkusskola-i-sigma",
       "title": "Cirkusskola i Sigma",
       "time": "2026-06-15T22:00:00.000Z",
@@ -17420,26 +16730,6 @@
     },
     {
       "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/tecknamanga.5.52f7529019cfe7f2e392a65.html",
-      "title": "Teckna manga",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 59.517164,
-      "lng": 17.9164192,
-      "locationName": "Upplands Väsby",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/tecknamanga.5.52f7529019cfe7f2e392a59.html",
-      "title": "Teckna manga",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 59.517164,
-      "lng": 17.9164192,
-      "locationName": "Upplands Väsby",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-19-teckna-manga",
       "title": "Teckna manga",
       "time": "2026-06-15T22:00:00.000Z",
       "lat": 59.517164,
@@ -17520,16 +16810,6 @@
     },
     {
       "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/skapa-din-egen-frukostmugg/",
-      "title": "Gör din egen frukostmugg! - Motala kommun",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Motala",
-      "category": "course",
-      "emoji": "🏺"
-    },
-    {
-      "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/gor-din-egen-frukostmugg-2/",
       "title": "Gör din egen frukostmugg! - Motala kommun",
       "time": "2026-06-15T22:00:00.000Z",
       "lat": 0,
@@ -17839,92 +17119,12 @@
       "emoji": "🎓"
     },
     {
-      "id": "https://www.studieframjandet.se/dalarnas-lan/gustav-arrangemang/kalenderhandelser/2026/juli/bekampa-invasiva-vaxter/",
-      "title": "Bekämpa invasiva växter",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://www.studieframjandet.se/dalarnas-lan/gustav-arrangemang/kalenderhandelser/2026/juli/bekampa-invasiva-vaxter2/",
-      "title": "Bekämpa invasiva växter",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://www.studieframjandet.se/dalarnas-lan/gustav-arrangemang/kalenderhandelser/2026/juli/bekampa-invasiva-vaxter3/",
-      "title": "Bekämpa invasiva växter",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://www.studieframjandet.se/dalarnas-lan/gustav-arrangemang/kalenderhandelser/2026/juni/bekampa-invasiva-vaxter/",
-      "title": "Bekämpa invasiva växter",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
       "id": "https://www.bilda.nu/arr/1298235/behover-du-hjalp-med-att-soka-jobb-och-trana-pa-din-svenska-584296/",
       "title": "Behöver du hjälp med att söka jobb och träna på din svenska?",
       "time": "2026-06-15T22:00:00.000Z",
       "lat": 0,
       "lng": 0,
       "locationName": "Sverige",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/obekvam-demokrati-vem-far-plats-vid-rit-och-beslutsbordet",
-      "title": "Obekväm demokrati: Vem får plats vid rit- och beslutsbordet?",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/uncomfortable-democracy-who-gets-seat-drawing-and-decision-making-table",
-      "title": "Uncomfortable Democracy: Who Gets a Seat at the Drawing and Decision-Making Table?",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/varfor-ar-arkitektur-form-och-planering-en-demokratifraga",
-      "title": "VARFÖR är arkitektur, form och planering en demokratifråga?",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/why-are-architecture-design-and-planning-matters-democracy",
-      "title": "WHY are architecture, design, and planning matters of democracy?",
-      "time": "2026-06-15T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
       "category": "course",
       "emoji": "🎓"
     },
@@ -17967,16 +17167,6 @@
       "locationName": "Capgemini's Applied Innovation Exchange",
       "category": "course",
       "emoji": "🎓"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/valkomna-pa-grillning-fragesport-fika-och-trevlig-samvaro-anmalan-kravs-kontakta-elin/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-16T05:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "☕"
     },
     {
       "id": "https://www.klippan.se/arkiv/evenemang/2026/2026-06-16-aby-marknad",
@@ -18259,16 +17449,6 @@
       "emoji": "✨"
     },
     {
-      "id": "https://ale.se/evenemang/evenemang/2026-05-11-sommarklubben-lar-dig-rovarspraket.html",
-      "title": "Sommarklubben: Lär dig rövarspråket",
-      "time": "2026-06-16T08:30:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "course",
-      "emoji": "🗣️"
-    },
-    {
       "id": "https://www.sodertalje.se/kultur-och-fritid/futurum/aktiviteter/fritidsgarden-tisdag-formiddagar---motesplast-for-seniorer32/",
       "title": "Mötesplats för seniorer! Fika och umgänge - Matstudion",
       "time": "2026-06-16T09:00:00.000Z",
@@ -18459,26 +17639,6 @@
       "emoji": "✨"
     },
     {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/2026-06-04-sommarlovspyssel",
-      "title": "Sommarlovspyssel",
-      "time": "2026-06-16T11:00:00.000Z",
-      "lat": 57.7748689,
-      "lng": 14.2637637,
-      "locationName": "Öxnehaga bibliotek",
-      "category": "other",
-      "emoji": "✨"
-    },
-    {
-      "id": "https://ale.se/evenemang/evenemang/skapadinegenocellerseriefigurmedkulturskolan.5.62e13f4c19e641f27bc3f9bc.html",
-      "title": "Skapa din egen O.C. eller seriefigur med Kulturskolan",
-      "time": "2026-06-16T11:00:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "course",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://ale.se/evenemang/evenemang/2026-04-30-sommarklubben-lar-dig-rovarspraket.html",
       "title": "Sommarklubben: Lär dig rövarspråket",
       "time": "2026-06-16T11:00:00.000Z",
@@ -18647,16 +17807,6 @@
       "locationName": "Ale",
       "category": "course",
       "emoji": "🎨"
-    },
-    {
-      "id": "https://ale.se/evenemang/evenemang/2026-05-12-sommarklubben-lar-dig-rovarspraket.html",
-      "title": "Sommarklubben: Lär dig rövarspråket",
-      "time": "2026-06-16T13:00:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "course",
-      "emoji": "🗣️"
     },
     {
       "id": "https://www.gso.se/program/konserter/side-by-side-2026-festival-concert/",
@@ -19009,16 +18159,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/kvallsbad-vaggabadet/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-16T17:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "🏊"
-    },
-    {
       "id": "https://www.gso.se/program/konserter/side-by-side-2026-wind-string-in-concert/",
       "title": "Side by Side 2026: Wind & String in Concert",
       "time": "2026-06-16T17:30:00.000Z",
@@ -19216,16 +18356,6 @@
       "lng": 0,
       "locationName": "Motala",
       "category": "family",
-      "emoji": "🤖"
-    },
-    {
-      "id": "https://www.motala.se/uppleva-och-gora/kul-i-motala/aktivitet/skapa-ditt-eget-spel-i-roblox/",
-      "title": "Skapa ditt eget spel i Roblox - Motala kommun",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Motala",
-      "category": "course",
       "emoji": "🤖"
     },
     {
@@ -19509,16 +18639,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.norrkopingskonstmuseum.se/kalender/torsdagsvisning-2026-16/",
-      "title": "Torsdagsvisning: Subterranean Hunger – Sara-Vide Ericson",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 58.5909124,
-      "lng": 16.1903511,
-      "locationName": "Norrköping",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://www.norrkopingskonstmuseum.se/kalender/konstworkshop-med-pridetema/",
       "title": "Konstworkshop med Pridetema",
       "time": "2026-06-16T22:00:00.000Z",
@@ -19590,16 +18710,6 @@
     },
     {
       "id": "https://www.norrkopingskonstmuseum.se/kalender/torsdagsvisning-tyra-kleen-6/",
-      "title": "Torsdagsvisning: Tyra Kleen",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Norrköping",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://www.norrkopingskonstmuseum.se/kalender/torsdagsvisning-tyra-kleen-2/",
       "title": "Torsdagsvisning: Tyra Kleen",
       "time": "2026-06-16T22:00:00.000Z",
       "lat": 0,
@@ -19697,46 +18807,6 @@
       "locationName": "Umeå",
       "category": "music",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/hoj-rosten-malmo-fran-initiativ-till-verklighet",
-      "title": "Höj rösten Malmö! Från initiativ till verklighet",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/raise-your-voice-malmo-initiative-reality",
-      "title": "Raise Your Voice, Malmö! From Initiative to Reality",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/arkitekturkunskap-alla-att-lara-sig-staden",
-      "title": "Arkitekturkunskap för alla – Att lära sig staden",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/architecture-literacy-all-learning-city",
-      "title": "Architecture Literacy for All – Learning the City",
-      "time": "2026-06-16T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
     },
     {
       "id": "https://www.gotland.se/arkiv/evenemang/arkiv/2026-06-17-sommarfest-i-svaidestugan",
@@ -19859,16 +18929,6 @@
       "emoji": "☕"
     },
     {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/komochbyggskrotskulptur.5.6f1e98c919e024cd605505a2.html",
-      "title": "Kom och bygg skrotskulptur",
-      "time": "2026-06-17T08:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "art",
-      "emoji": "🏗️"
-    },
-    {
       "id": "https://ale.se/evenemang/evenemang/provapataekwondomedbohustkd.5.7424f84f19e6418eba940144.html",
       "title": "Prova på Taekwon-Do med Bohus TKD",
       "time": "2026-06-17T08:00:00.000Z",
@@ -19970,36 +19030,6 @@
     },
     {
       "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester-4/",
-      "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T09:15:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester-3/",
-      "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T09:15:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester-2/",
-      "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
-      "time": "2026-06-17T09:15:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Umeå",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://norrlandsoperan.se/forestallningar/oppen-repetition-med-norrlandsoperans-symfoniorkester/",
       "title": "Öppen repetition med Norrlandsoperans Symfoniorkester",
       "time": "2026-06-17T09:15:00.000Z",
       "lat": 0,
@@ -20639,16 +19669,6 @@
       "emoji": "🌿"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/femkamp-roliga-tavlingar-pa-fritidsgarden/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-17T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "family",
-      "emoji": "🎉"
-    },
-    {
       "id": "https://www.karlshamn.se/evenemang/sommaroppet-pa-fritidsgardarna/",
       "title": "Karlshamns kommun",
       "time": "2026-06-17T16:00:00.000Z",
@@ -21089,16 +20109,6 @@
       "emoji": "💃"
     },
     {
-      "id": "https://www.hembygd.se/eslof?a=55032",
-      "title": "Konsert: Yellowbrenda",
-      "time": "2026-06-17T17:00:00.000Z",
-      "lat": 55.840344,
-      "lng": 13.304628,
-      "locationName": "Kvarteret Gjutaren, Bastugatan 6, Eslöv, Eslöfs museiförening",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
       "id": "https://www.hembygd.se/knislinge?a=54789",
       "title": "Musik till midsommar",
       "time": "2026-06-17T17:00:00.000Z",
@@ -21147,16 +20157,6 @@
       "locationName": "Liseberg - Nöjespark",
       "category": "music",
       "emoji": "🎸"
-    },
-    {
-      "id": "https://pustervik.nu/event/instant-9/",
-      "title": "Pustervik",
-      "time": "2026-06-17T20:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "party",
-      "emoji": "🎶"
     },
     {
       "id": "https://helsingborg.se/event/orby-daglager/",
@@ -21589,36 +20589,6 @@
       "emoji": "☀️"
     },
     {
-      "id": "https://formdesigncenter.com/program/seminarium-material-depot-plastics",
-      "title": "Seminarium: Material Depot – Plastics",
-      "time": "2026-06-17T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎓"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/sommarmingel-0",
-      "title": "Sommarmingel",
-      "time": "2026-06-17T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/summer-mingle-0",
-      "title": "Summer Mingle",
-      "time": "2026-06-17T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://www.hembygd.se/undersaker?a=55395",
       "title": "Fira midsommar på hembygdsgården",
       "time": "2026-06-17T22:01:00.000Z",
@@ -21627,16 +20597,6 @@
       "locationName": "Undersåkers Hembygdsförening",
       "category": "party",
       "emoji": "🌼"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/oppet-cafe-med-kabo-och-kommunen-fika-och-trevlig-samvaro-obs-vid-fint-vader-ar-vi-utanfor-porten-pa-iglavagen-34-3/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-18T05:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "☕"
     },
     {
       "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/xflowssummercamp.5.7079ce8d19e7385a196445c1.html",
@@ -21739,27 +20699,7 @@
       "emoji": "🐴"
     },
     {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/cirkusworkshop.5.3c93b52f19e7382059a2ac2d.html",
-      "title": "Cirkusworkshop",
-      "time": "2026-06-18T08:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Jönköping",
-      "category": "family",
-      "emoji": "🎪"
-    },
-    {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/finsk-bokklubb/",
-      "title": "Kreativ verkstad på Bergvik torsdagar",
-      "time": "2026-06-18T08:00:00.000Z",
-      "lat": 59.1964289,
-      "lng": 17.6271663,
-      "locationName": "Södertälje",
-      "category": "course",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://www.sodertalje.se/arkiv/aldreomsorg-old/motesplatser-for-seniorer/aktiviteter/kreativ-verkstad-pa-bergvik-torsdagar/",
       "title": "Kreativ verkstad på Bergvik torsdagar",
       "time": "2026-06-18T08:00:00.000Z",
       "lat": 59.1964289,
@@ -21890,16 +20830,6 @@
     },
     {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/kreativ-verkstad-bergvik4/",
-      "title": "Styrketräning på Bergvik torsdagar",
-      "time": "2026-06-18T08:15:00.000Z",
-      "lat": 59.1964289,
-      "lng": 17.6271663,
-      "locationName": "Södertälje",
-      "category": "sport",
-      "emoji": "🏋️"
-    },
-    {
-      "id": "https://www.sodertalje.se/arkiv/aldreomsorg-old/motesplatser-for-seniorer/aktiviteter/morkullan-stangt-idag53/",
       "title": "Styrketräning på Bergvik torsdagar",
       "time": "2026-06-18T08:15:00.000Z",
       "lat": 59.1964289,
@@ -22809,16 +21739,6 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://pustervik.nu/event/brian-jonestown-massacre-les-big-byrd/",
-      "title": "Pustervik",
-      "time": "2026-06-18T17:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
       "id": "https://www.hembygd.se/tingstade?a=10906",
       "title": "Vi klär midsommarstången inför midsommarafton",
       "time": "2026-06-18T17:00:00.000Z",
@@ -22887,16 +21807,6 @@
       "locationName": "Göteborg",
       "category": "party",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://pustervik.nu/event/great-shakes-8/",
-      "title": "Pustervik",
-      "time": "2026-06-18T20:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "party",
-      "emoji": "💃"
     },
     {
       "id": "https://helsingborg.se/event/midsommar-pa-sofiero-2026-2/",
@@ -23220,36 +22130,6 @@
     },
     {
       "id": "https://destinationuppsala.se/en/event/midsummer-celebration-in-ulleraker/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-18T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "party",
-      "emoji": "🎉"
-    },
-    {
-      "id": "https://destinationuppsala.se/en/event/midsummer-celebration-at-liljekonvaljeholmen/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-18T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "party",
-      "emoji": "🎉"
-    },
-    {
-      "id": "https://destinationuppsala.se/en/event/midsummer-prep-at-forumtorget/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-18T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "other",
-      "emoji": "🌸"
-    },
-    {
-      "id": "https://destinationuppsala.se/en/event/midsummers-eve-at-disagarden/",
       "title": "Events in Uppsala",
       "time": "2026-06-18T22:00:00.000Z",
       "lat": 59.8586126,
@@ -25609,16 +24489,6 @@
       "emoji": "🧺"
     },
     {
-      "id": "https://helsingborg.entryevent.se/ticketshop/products/7002",
-      "title": "Midsommar på Fredriksdal",
-      "time": "2026-06-19T14:00:00.000Z",
-      "lat": 56.0560556,
-      "lng": 12.7140793,
-      "locationName": "Fredriksdal museer och trädgårdar",
-      "category": "party",
-      "emoji": "💃"
-    },
-    {
       "id": "https://www.hembygd.se/halasjo?a=54481",
       "title": "Traditionellt midsommarfirande",
       "time": "2026-06-19T14:00:00.000Z",
@@ -25940,16 +24810,6 @@
     },
     {
       "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/midsommarnattens-fagelroster-i-kvismaren2/",
-      "title": "Midsommarnattens fågelröster i Kvismaren",
-      "time": "2026-06-19T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
-      "id": "https://www.studieframjandet.se/Hopajola/lanssida---subwebb/gustav-arrangemang/kalenderhandelser/2026/juni/midsommarnattens-fagelroster-i-kvismaren2/",
       "title": "Midsommarnattens fågelröster i Kvismaren",
       "time": "2026-06-19T22:00:00.000Z",
       "lat": 0,
@@ -26379,16 +25239,6 @@
       "emoji": "⛪"
     },
     {
-      "id": "https://visithelsingborg.com/event/hela-hbg-hejar-se-sverige-nederlanderna-i-drottninghogsparken/",
-      "title": "Se VM-matchen Sverige–Nederländerna i Drottninghögsparken",
-      "time": "2026-06-20T16:00:00.000Z",
-      "lat": 56.0442098,
-      "lng": 12.703706,
-      "locationName": "Drottninghögsparken (Vid Drottninghögsbadet)",
-      "category": "sport",
-      "emoji": "⚽"
-    },
-    {
       "id": "https://www.hembygd.se/kareby?a=54149",
       "title": "Friluftsgudstjänst",
       "time": "2026-06-20T16:00:00.000Z",
@@ -26629,26 +25479,6 @@
       "emoji": "🥾"
     },
     {
-      "id": "https://destinationuppsala.se/en/event/alla-katters-cafe-in-pelleparken/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-20T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "other",
-      "emoji": "☕"
-    },
-    {
-      "id": "https://destinationuppsala.se/en/event/season-opening-of-alla-katters-cafe/",
-      "title": "Events in Uppsala",
-      "time": "2026-06-20T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "other",
-      "emoji": "☕"
-    },
-    {
       "id": "https://www.studieframjandet.se/Hopajola/lanssida---subwebb/gustav-arrangemang/kalenderhandelser/2026/juni/spaning-efter-nattskarror-i-osternarke/",
       "title": "Spaning efter nattskärror i Östernärke",
       "time": "2026-06-20T22:00:00.000Z",
@@ -26809,16 +25639,6 @@
       "emoji": "⛪"
     },
     {
-      "id": "https://kalmarlansmuseum.se/evenemang/ladda-krut-skjut/",
-      "title": "Kalmar Läns Museum",
-      "time": "2026-06-21T09:30:00.000Z",
-      "lat": 56.6628826,
-      "lng": 16.3662382,
-      "locationName": "Kalmar",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.kulturen.com/program/kalendarium/vastra-vrams-prastgard-2-3-3-2-2-2-2-2/",
       "title": "Västra Vrams prästgård",
       "time": "2026-06-21T09:30:00.000Z",
@@ -26917,16 +25737,6 @@
       "locationName": "Starrkärr-Kilanda Hembygdsförening",
       "category": "social",
       "emoji": "☕"
-    },
-    {
-      "id": "https://kalmarlansmuseum.se/evenemang/familjeguidning-om-regalskeppet-kronan-9/",
-      "title": "Kalmar Läns Museum",
-      "time": "2026-06-21T11:30:00.000Z",
-      "lat": 56.6628826,
-      "lng": 16.3662382,
-      "locationName": "Kalmar",
-      "category": "family",
-      "emoji": "🧸"
     },
     {
       "id": "https://www.hembygd.se/spannarps-hembygdsforening?a=54818",
@@ -27169,196 +25979,6 @@
       "emoji": "🚒"
     },
     {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-102/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-104/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-103/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-106/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-105/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-107/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-108/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-90/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-89/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-91/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-93/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-92/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-95/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-94/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-97/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-96/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-98/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-100/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-99/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
       "id": "https://www.studieframjandet.se/sormlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/4h-djulo-gardslager-v.26-halvdagar-/",
       "title": "4H-Djulö gårdsläger v.26 halvdagar",
       "time": "2026-06-21T22:00:00.000Z",
@@ -27377,266 +25997,6 @@
       "locationName": "Sverige",
       "category": "family",
       "emoji": "🐑"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-83/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-82/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-84/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-85/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-86/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-87/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-88/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-63/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-64/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-65/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-66/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-67/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-68/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-70/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-69/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-72/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-71/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-73/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-74/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-76/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-75/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-77/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-78/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-79/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-81/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-80/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
     },
     {
       "id": "https://www.bilda.nu/arr/1294738/ojarlagret-v26-628161/",
@@ -27670,16 +26030,6 @@
     },
     {
       "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/kodkollo913ar.5.52f7529019cfe7f2e392de4.html",
-      "title": "Kodkollo 9-13 år",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Sigma Centrum",
-      "category": "family",
-      "emoji": "💻"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-19-kodkollo-9-13-ar",
       "title": "Kodkollo 9-13 år",
       "time": "2026-06-21T22:00:00.000Z",
       "lat": 59.516667,
@@ -27749,26 +26099,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-62/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-61/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
       "id": "https://www.osby.se/se--gora/evenemang/evenemang/2026-05-26-vernissage-det-som-blev-kvar.html",
       "title": "Vernissage: Det som blev kvar",
       "time": "2026-06-21T22:00:00.000Z",
@@ -27817,56 +26147,6 @@
       "locationName": "Gislaved",
       "category": "sport",
       "emoji": "💦"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-52/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-51/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-53/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-54/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
-    },
-    {
-      "id": "https://www.studieframjandet.se/skane-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsrundturer-med-veteranbrandbil-55/",
-      "title": "Stadsrundturer med veteranbrandbil",
-      "time": "2026-06-21T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚒"
     },
     {
       "id": "https://www.svalov.se/evenemang/evenemang/2025-06-09-sommarsondag-pa-fridhem-med-nic-schroder",
@@ -28549,16 +26829,6 @@
       "emoji": "🏺"
     },
     {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/temalera.5.2d9dea1319bde1a8ec4259c.html",
-      "title": "Tema Lera",
-      "time": "2026-06-22T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Friluftsmuseet Vikingagården Gunnes gård",
-      "category": "course",
-      "emoji": "🏺"
-    },
-    {
       "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-02-17-tema-gjutning",
       "title": "Tema Gjutning",
       "time": "2026-06-22T22:00:00.000Z",
@@ -28849,16 +27119,6 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://www.ockero.se/evenemangskalender/evenemang/2026-06-09-kulturmix",
-      "title": "Kulturmix",
-      "time": "2026-06-22T22:00:00.000Z",
-      "lat": 57.716667,
-      "lng": 11.633333,
-      "locationName": "Öckerö",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://tomelilla.se/upplevaochgora/ungfritid/lovaktiviteter/evenemang/konsertmedsommarbandet.11018.html",
       "title": "Konsert med Sommarbandet",
       "time": "2026-06-22T22:00:00.000Z",
@@ -28979,16 +27239,6 @@
       "emoji": "🧠"
     },
     {
-      "id": "https://ale.se/evenemang/evenemang/sommarklubbengattraff.5.30ad33ce19ddca806b15f913.html",
-      "title": "Sommarklubben: Gåtträff",
-      "time": "2026-06-23T08:30:00.000Z",
-      "lat": 58,
-      "lng": 12.283333,
-      "locationName": "Ale",
-      "category": "party",
-      "emoji": "🎉"
-    },
-    {
       "id": "https://www.kulturen.com/program/kalendarium/pyssel-med-drop-in-madickens-karamellstrutar/",
       "title": "Pyssel med drop-in: Madickens karamellstrutar",
       "time": "2026-06-23T08:30:00.000Z",
@@ -29099,16 +27349,6 @@
       "emoji": "✂️"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-06-23T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/tipsrundatillsammanspromenad.5255.html",
       "title": "Tipsrunda/Tillsammans-promenad",
       "time": "2026-06-23T11:00:00.000Z",
@@ -29199,26 +27439,6 @@
       "emoji": "🎉"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/oppet-rum-ungt-perspektiv/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-23T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "💬"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/spela-discgolf-med-fritidsgardarna/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-23T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "⛳"
-    },
-    {
       "id": "https://www.taby.se/arkiv/evenemang/arkiv/2026-05-28-sommarlasklubben",
       "title": "Sommarläsklubben",
       "time": "2026-06-23T14:00:00.000Z",
@@ -29307,16 +27527,6 @@
       "locationName": "Falkenberg",
       "category": "other",
       "emoji": "🏞️"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/spelkvall-pa-morrums-fritidsgard/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-23T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "🎲"
     },
     {
       "id": "https://www.karlshamn.se/evenemang/gaminghang-pa-pop-up-fritidsgarden/",
@@ -30099,16 +28309,6 @@
       "emoji": "☀️"
     },
     {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-06-04-komtek-pa-sommarlovet.html",
-      "title": "KomTek på Sommarlovet",
-      "time": "2026-06-24T08:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "family",
-      "emoji": "☀️"
-    },
-    {
       "id": "https://www.hembygd.se/ostra-torsas?a=31985",
       "title": "Cykling",
       "time": "2026-06-24T08:00:00.000Z",
@@ -30167,16 +28367,6 @@
       "locationName": "Ale",
       "category": "social",
       "emoji": "🎉"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/skapardagar-pa-kofsa-med-fritidsgardarna/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-24T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "art",
-      "emoji": "🎨"
     },
     {
       "id": "https://www.landskrona.se/evenemang/tychotema-myter-sanningar/",
@@ -30309,26 +28499,6 @@
       "emoji": "⚽"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-06-24T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
-      "id": "https://www.norrkopingskonstmuseum.se/kalender/sommarlov-2024/",
-      "title": "Sommarlov på museet",
-      "time": "2026-06-24T11:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Norrköping",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://www.rodakorset.se/ort/skane/ystads-kommun/kalendarium/lokal-krisberedskapsgrupp-motes13/",
       "title": "Lokal krisberedskapsgrupp mötes",
       "time": "2026-06-24T11:00:00.000Z",
@@ -30389,16 +28559,6 @@
       "emoji": "☕"
     },
     {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/komochbyggskrotskulptur.5.6f1e98c919e024cd605507b2.html",
-      "title": "Kom och bygg skrotskulptur",
-      "time": "2026-06-24T12:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "art",
-      "emoji": "🛠️"
-    },
-    {
       "id": "https://www.hoganas.se/arkiv/evenemanghoganaskommun/evenemang/aterhamtningscafe.5.633abefc19c98970d1d562.html",
       "title": "Återhämtningscafé",
       "time": "2026-06-24T12:00:00.000Z",
@@ -30440,16 +28600,6 @@
     },
     {
       "id": "https://helsingborg.se/event/prova-pa-att-sy-egna-scrunchies-eller-laga-dina-klader-2/",
-      "title": "Prova på att sy egna scrunchies eller laga dina kläder",
-      "time": "2026-06-24T12:30:00.000Z",
-      "lat": 56.0442098,
-      "lng": 12.703706,
-      "locationName": "Helsingborg",
-      "category": "course",
-      "emoji": "🧵"
-    },
-    {
-      "id": "https://helsingborg.se/event/prova-pa-att-sy-egna-scrunchies-eller-laga-dina-klader/",
       "title": "Prova på att sy egna scrunchies eller laga dina kläder",
       "time": "2026-06-24T12:30:00.000Z",
       "lat": 56.0442098,
@@ -30949,57 +29099,7 @@
       "emoji": "☕"
     },
     {
-      "id": "https://www.hallsberg.se/visithallsberg/evenemang/sommarcafemedmusikivibygamlaprastgard.5.6ebf618c19dd772ff901be7.html",
-      "title": "Sommarcafé med musik i Viby gamla prästgård",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 59.05,
-      "lng": 15.25,
-      "locationName": "Hallsberg",
-      "category": "social",
-      "emoji": "☕"
-    },
-    {
       "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juni/stadsvandringar-i-soderhamn/",
-      "title": "Stadsvandringar i Söderhamn",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚶"
-    },
-    {
-      "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsvandringar-i-soderhamn/",
-      "title": "Stadsvandringar i Söderhamn",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚶"
-    },
-    {
-      "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsvandringar-i-soderhamn2/",
-      "title": "Stadsvandringar i Söderhamn",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚶"
-    },
-    {
-      "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsvandringar-i-soderhamn3/",
-      "title": "Stadsvandringar i Söderhamn",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "other",
-      "emoji": "🚶"
-    },
-    {
-      "id": "https://www.studieframjandet.se/gavleborgs-lan/gustav-arrangemang/kalenderhandelser/2026/juli/stadsvandringar-i-soderhamn4/",
       "title": "Stadsvandringar i Söderhamn",
       "time": "2026-06-24T22:00:00.000Z",
       "lat": 0,
@@ -31189,16 +29289,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://havremagasinet.se/event/guidad-visning-sommar/",
-      "title": "Guidad visning",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 65.8275004,
-      "lng": 21.6964105,
-      "locationName": "Boden",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://www.tradgarn.se/kalender/countrykvall-pa-tradgar-n-25-juni/",
       "title": "COUNTRYKVÄLL PÅ TRÄDGÅR'N - 25 JUNI",
       "time": "2026-06-24T22:00:00.000Z",
@@ -31247,36 +29337,6 @@
       "locationName": "Tomelilla",
       "category": "music",
       "emoji": "🎸"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/sommarvernissage-1",
-      "title": "Sommarvernissage",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/summer-exhibition-openings",
-      "title": "Summer Exhibition Openings",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/festlig-sommarverkstad-med-sussi",
-      "title": "Festlig sommarverkstad med Sussi",
-      "time": "2026-06-24T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "✂️"
     },
     {
       "id": "https://www.visitstockholm.com/events/cullberg-guerrilla-fragments/next/",
@@ -31509,16 +29569,6 @@
       "emoji": "⚽"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-06-25T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://waldemarsudde.se/aktiviteter/tradgardsvisning-25-juni-kl-13-00/",
       "title": "Trädgårdsvisning 25 juni kl 13.00 - Waldemarsudde",
       "time": "2026-06-25T11:00:00.000Z",
@@ -31681,256 +29731,6 @@
     {
       "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet20/",
       "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet19/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet9/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet11/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet10/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet13/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet12/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet14/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet16/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet15/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet18/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet17/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet6/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet3/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet5/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet4/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet7/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet6/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet8/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juli/vaktarens-hemlighet2/",
-      "title": "Väktarens hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet3/",
-      "title": "Väktarens Hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet2/",
-      "title": "Väktarens Hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet4/",
-      "title": "Väktarens Hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet5/",
-      "title": "Väktarens Hemlighet",
-      "time": "2026-06-25T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/orebro-lan/gustav-arrangemang/kalenderhandelser/2026/juni/vaktarens-hemlighet/",
-      "title": "Väktarens Hemlighet",
       "time": "2026-06-25T15:00:00.000Z",
       "lat": 0,
       "lng": 0,
@@ -32227,16 +30027,6 @@
       "locationName": "Göteborg",
       "category": "music",
       "emoji": "🎸"
-    },
-    {
-      "id": "https://pustervik.nu/event/baby-scratch-3/",
-      "title": "Pustervik",
-      "time": "2026-06-25T20:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "party",
-      "emoji": "🎶"
     },
     {
       "id": "https://helsingborg.se/event/prova-pa-faktning-under-sommarlovet/",
@@ -32609,116 +30399,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2027/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2025/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2022/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2023/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2024/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/ej-for-publicering/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2021/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2020/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2019/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2018/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2017/",
-      "title": "Program & biljetter",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 59.3251172,
-      "lng": 18.0710935,
-      "locationName": "Stockholm",
-      "category": "music",
-      "emoji": "🎶"
-    },
-    {
       "id": "http://formdesigncenter.com/program/kreativ-sommarverkstad",
       "title": "Kreativ sommarverkstad",
       "time": "2026-06-25T22:00:00.000Z",
@@ -32817,26 +30497,6 @@
       "locationName": "Tomelilla",
       "category": "music",
       "emoji": "🎸"
-    },
-    {
-      "id": "https://formdesigncenter.com/program/kreativ-sommarverkstad",
-      "title": "Kreativ sommarverkstad",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://formdesigncenter.com/en/program/creative-summer-workshop",
-      "title": "Creative summer workshop",
-      "time": "2026-06-25T22:00:00.000Z",
-      "lat": 55.6052931,
-      "lng": 13.0001566,
-      "locationName": "Malmö",
-      "category": "course",
-      "emoji": "🎨"
     },
     {
       "id": "http://www.riksteatern.se/forestallningar/allgott--villgott/",
@@ -33139,16 +30799,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/fredagshang-pa-vaggabadet-after-beach-pa-annexet/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-26T12:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "family",
-      "emoji": "🏊"
-    },
-    {
       "id": "https://www.goteborg.com/en/events/butterfly-festival/",
       "title": "Butterfly Festival",
       "time": "2026-06-26T13:00:00.000Z",
@@ -33177,16 +30827,6 @@
       "locationName": "Karlshamn",
       "category": "family",
       "emoji": "🎨"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/gymma-med-oss-pa-stenbacka-fritidsgard/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-26T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "🏋️"
     },
     {
       "id": "https://www.goteborg.com/evenemang/butterfly-festival/",
@@ -33357,26 +30997,6 @@
       "locationName": "Säffle",
       "category": "art",
       "emoji": "🎨"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/quiz-night-pa-morrums-fritidsgard/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-26T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "🧠"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/after-beach-pa-annexet/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-26T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "party",
-      "emoji": "🍹"
     },
     {
       "id": "https://www.hembygd.se/tunabygdens-hembygdsf-rening?a=53866",
@@ -33629,16 +31249,6 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://www.bilda.nu/arr/1295322/alfvengarden-skog-av-toner-familjeforestallning-628245/",
-      "title": "Alfvéngården - Skog av toner - familjeföreställning",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "family",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://www.bilda.nu/arr/1295111/varldsarvets-schabloner-i-miniatyr-628202/",
       "title": "Världsarvets schabloner i miniatyr",
       "time": "2026-06-26T22:00:00.000Z",
@@ -33749,16 +31359,6 @@
       "emoji": "🛠️"
     },
     {
-      "id": "https://www.sodertalje.se/arkiv/aldreomsorg-old/motesplatser-for-seniorer/aktiviteter/snickeri-pa-bergvik22/",
-      "title": "Snickeri på Bergvik fredagar",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 59.1964289,
-      "lng": 17.6271663,
-      "locationName": "Södertälje",
-      "category": "course",
-      "emoji": "🛠️"
-    },
-    {
       "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/2026-05-29-katrineholms-bokklubb.html",
       "title": "Katrineholms Bokklubb",
       "time": "2026-06-26T22:00:00.000Z",
@@ -33780,36 +31380,6 @@
     },
     {
       "id": "https://krokom.se/omsorg-och-hjalp/evenemang/2024-06-27-offerdals-forsamling.html",
-      "title": "Offerdals församling",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 63.733333,
-      "lng": 14.2,
-      "locationName": "Krokom",
-      "category": "other",
-      "emoji": "⛪"
-    },
-    {
-      "id": "https://krokom.se/omsorgochhjalp/evenemang/offerdalsforsamling.5.66a35f951900c5bd64935505.html",
-      "title": "Offerdals församling",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 63.733333,
-      "lng": 14.2,
-      "locationName": "Krokom",
-      "category": "other",
-      "emoji": "⛪"
-    },
-    {
-      "id": "https://krokom.se/omsorgochhjalp/evenemang/offerdalsforsamling.5.66a35f951900c5bd649354f9.html",
-      "title": "Offerdals församling",
-      "time": "2026-06-26T22:00:00.000Z",
-      "lat": 63.733333,
-      "lng": 14.2,
-      "locationName": "Krokom",
-      "category": "other",
-      "emoji": "⛪"
-    },
-    {
-      "id": "https://krokom.se/omsorgochhjalp/evenemang/offerdalsforsamling.5.66a35f951900c5bd649354ed.html",
       "title": "Offerdals församling",
       "time": "2026-06-26T22:00:00.000Z",
       "lat": 63.733333,
@@ -34649,66 +32219,6 @@
       "emoji": "🎭"
     },
     {
-      "id": "https://www.studieframjandet.se/varmlands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/alsters-hemlighet/",
-      "title": "Alsters Hemlighet",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/varmlands-lan/gustav-arrangemang/kalenderhandelser/2026/juni/alsters-hemlighet2/",
-      "title": "Alsters Hemlighet",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/varmlands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/alsters-hemlighet2/",
-      "title": "Alsters Hemlighet",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/varmlands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/alsters-hemlighet3/",
-      "title": "Alsters Hemlighet",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.studieframjandet.se/varmlands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/alsters-hemlighet4/",
-      "title": "Alsters Hemlighet",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Sverige",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/fjalletencirkusmusikal.5.6f53a36e19e4add9b721f61c.html",
-      "title": "Fjället - en cirkusmusikal",
-      "time": "2026-06-27T09:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Museiparken, Jönköpings läns museum",
-      "category": "stage",
-      "emoji": "🎪"
-    },
-    {
       "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/berattaformigomoronochskonheten.5.52bee7de19d670a79e61d3bf.html",
       "title": "Berätta för mig om oron och skönheten",
       "time": "2026-06-27T09:00:00.000Z",
@@ -34927,16 +32437,6 @@
       "locationName": "Norrköping",
       "category": "art",
       "emoji": "🎨"
-    },
-    {
-      "id": "https://visithelsingborg.com/event/rosfest/",
-      "title": "Rosfest",
-      "time": "2026-06-27T10:00:00.000Z",
-      "lat": 56.0560556,
-      "lng": 12.7140793,
-      "locationName": "Fredriksdal museer och trädgårdar",
-      "category": "other",
-      "emoji": "🌸"
     },
     {
       "id": "https://www.goteborg.com/evenemang/craft-beer-circus/",
@@ -35339,16 +32839,6 @@
       "emoji": "📚"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/chill-och-grill-i-langasjon/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-27T15:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "family",
-      "emoji": "🔥"
-    },
-    {
       "id": "https://www.varldskulturmuseet.se/kalendarium/program/invigning---tatau/",
       "title": "Invigning av TATAU",
       "time": "2026-06-27T15:00:00.000Z",
@@ -35710,16 +33200,6 @@
     },
     {
       "id": "https://www.hallsberg.se/visithallsberg/evenemang/sommarcafemedsondagslunchivibygamlaprastgard.5.6ebf618c19dd772ff901c1d.html",
-      "title": "Sommarcafé med söndagslunch i Viby gamla prästgård",
-      "time": "2026-06-27T22:00:00.000Z",
-      "lat": 59.05,
-      "lng": 15.25,
-      "locationName": "Hallsberg",
-      "category": "food",
-      "emoji": "☕"
-    },
-    {
-      "id": "https://www.hallsberg.se/visithallsberg/evenemang/sommarcafemedsondagslunchivibygamlaprastgard.5.6ebf618c19dd772ff901c0b.html",
       "title": "Sommarcafé med söndagslunch i Viby gamla prästgård",
       "time": "2026-06-27T22:00:00.000Z",
       "lat": 59.05,
@@ -37079,16 +34559,6 @@
       "emoji": "🤖"
     },
     {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80df.html",
-      "title": "Teatervandring",
-      "time": "2026-06-29T09:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Rosenlunds Herrgård och Rosarium ",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-06-29-konstutstallning-med-matti-ohvo.html",
       "title": "Konstutställning med Matti Ohvo",
       "time": "2026-06-29T09:00:00.000Z",
@@ -37479,16 +34949,6 @@
       "emoji": "🕵️‍♀️"
     },
     {
-      "id": "https://www.hallsberg.se/visithallsberg/evenemang/sommarcafemedmordgatorochquizivibygamlaprastgard.5.6ebf618c19dd772ff901b7b.html",
-      "title": "Sommarcafé med mordgåtor och quiz i Viby gamla prästgård",
-      "time": "2026-06-29T22:00:00.000Z",
-      "lat": 59.05,
-      "lng": 15.25,
-      "locationName": "Hallsberg",
-      "category": "social",
-      "emoji": "🕵️‍♀️"
-    },
-    {
       "id": "https://www.gislaved.se/uppleva-och-gora/evenemang-och-aktiviteter/evenemangskalender/evenemang/2026-05-28-sommar-pa-anderstorps-bibliotek",
       "title": "Sommar på Anderstorps bibliotek",
       "time": "2026-06-29T22:00:00.000Z",
@@ -37709,16 +35169,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80fd.html",
-      "title": "Teatervandring",
-      "time": "2026-06-30T09:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Rosenlunds Herrgård och Rosarium ",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-06-30-konstutstallning-med-matti-ohvo.html",
       "title": "Konstutställning med Matti Ohvo",
       "time": "2026-06-30T09:00:00.000Z",
@@ -37809,16 +35259,6 @@
       "emoji": "✂️"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-06-30T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/tipsrundatillsammanspromenad.5275.html",
       "title": "Tipsrunda/Tillsammans-promenad",
       "time": "2026-06-30T11:00:00.000Z",
@@ -37849,16 +35289,6 @@
       "emoji": "📸"
     },
     {
-      "id": "https://www.katrineholm.se/evenemangskalendern/evenemang/komochbyggskrotskulptur.5.6f1e98c919e024cd6055082e.html",
-      "title": "Kom och bygg skrotskulptur",
-      "time": "2026-06-30T12:00:00.000Z",
-      "lat": 58.9959119,
-      "lng": 16.2062225,
-      "locationName": "Katrineholm",
-      "category": "art",
-      "emoji": "🛠️"
-    },
-    {
       "id": "https://www.thielskagalleriet.se/kalender/allman-visning-av-konstsamlingen-246/",
       "title": "Allmän visning av konstsamlingen",
       "time": "2026-06-30T12:00:00.000Z",
@@ -37887,16 +35317,6 @@
       "locationName": "Karlshamn",
       "category": "family",
       "emoji": "⛳"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/hang-med-stenbacka-fritidsgard-till-ute-gym/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-30T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "🥾"
     },
     {
       "id": "https://www.hembygd.se/ojaby?a=53244",
@@ -37957,16 +35377,6 @@
       "locationName": "Falkenberg",
       "category": "sport",
       "emoji": "🥾"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/sommarbingo-pa-annexet/",
-      "title": "Karlshamns kommun",
-      "time": "2026-06-30T16:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "🎉"
     },
     {
       "id": "https://www.hembygd.se/bjorketorp?a=54162",
@@ -38319,16 +35729,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/provapahantverkdjurvardochteaterpagunnesgard.5.52f7529019cfe7f2e393338.html",
-      "title": "Prova på hantverk, djurvård och teater på Gunnes Gård",
-      "time": "2026-06-30T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Gunnes Gård, Ryttargatan 272B.",
-      "category": "family",
-      "emoji": "🎨"
-    },
-    {
       "id": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2020-07-01-rullskidor-med-alvdalens-if-skidor.html",
       "title": "Rullskidor med Älvdalens IF Skidor",
       "time": "2026-06-30T22:00:00.000Z",
@@ -38639,16 +36039,6 @@
       "emoji": "🎤"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/bingo-fika-och-trevlig-samvaro-med-pro-14/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-01T05:30:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "☕"
-    },
-    {
       "id": "https://ic-calendar.svenljunga.se/events/familjecentralens-oppna-forskola-babyoppet-0-18-manader-MTgxNTEyLDIwMjYtMDctMDEgMDc6MDA=",
       "title": "Familjecentralens öppna förskola: babyöppet 0-18 månader och blivande föräldrar",
       "time": "2026-07-01T07:00:00.000Z",
@@ -38727,16 +36117,6 @@
       "locationName": "Strömsund",
       "category": "market",
       "emoji": "🌿"
-    },
-    {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc8011b.html",
-      "title": "Teatervandring",
-      "time": "2026-07-01T09:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Rosenlunds Herrgård och Rosarium ",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-07-01-konstutstallning-med-matti-ohvo.html",
@@ -38929,16 +36309,6 @@
       "emoji": "🌿"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-07-01T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.norrkopingskonstmuseum.se/kalender/folj-vildhundens-spar-7/",
       "title": "Följ vildhundens spår!",
       "time": "2026-07-01T11:00:00.000Z",
@@ -39057,16 +36427,6 @@
       "locationName": "Arbrå Hembygds- och Fornminnesförening",
       "category": "social",
       "emoji": "🍰"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/spela-discgolf-med-stenbacka-fritidsgard/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-01T13:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "⛳"
     },
     {
       "id": "https://leksand.se/uppleva-och-gora/det-hander-i-leksand/evenemang/2026-05-21-besok-frasgarden",
@@ -39397,16 +36757,6 @@
       "locationName": "Långsele-Graninge Hembygdsförening",
       "category": "social",
       "emoji": "🎶"
-    },
-    {
-      "id": "https://pustervik.nu/event/follakzoid-magna-mater-lamagaia/",
-      "title": "Pustervik",
-      "time": "2026-07-01T19:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "music",
-      "emoji": "🎸"
     },
     {
       "id": "https://www.studieframjandet.se/sormlands-lan/gustav-arrangemang/kalenderhandelser/2026/juli/prova-pa-att-spela-traditionella-instrument2/",
@@ -40009,16 +37359,6 @@
       "emoji": "🥾"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-07-02T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://waldemarsudde.se/aktiviteter/tradgardsvisning-2-juli-kl-13-00/",
       "title": "Trädgårdsvisning",
       "time": "2026-07-02T11:00:00.000Z",
@@ -40057,16 +37397,6 @@
       "locationName": "Sandsveden 4010 Kilafors, Hanebo Hembygdsförening",
       "category": "sport",
       "emoji": "🥾"
-    },
-    {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80139.html",
-      "title": "Teatervandring",
-      "time": "2026-07-02T12:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Rosenlunds Herrgård och Rosarium ",
-      "category": "stage",
-      "emoji": "🎭"
     },
     {
       "id": "https://saffle.se/arkiv/evenemang/evenemang/2026-07-02-kilaveckan-2026---foton-fran-da-och-nu---bygdefotograf-karl-rud-och-9fotoinspirerade.html",
@@ -40409,16 +37739,6 @@
       "emoji": "🎶"
     },
     {
-      "id": "https://pustervik.nu/event/high-time-snake-lady-banana/",
-      "title": "Pustervik",
-      "time": "2026-07-02T20:00:00.000Z",
-      "lat": 0,
-      "lng": 0,
-      "locationName": "Göteborg",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
       "id": "https://www.hembygd.se/baskemolla?a=36526",
       "title": "Öppet Hus i Kråsebo Ålabod och Ivan och Nisses Garnbod",
       "time": "2026-07-02T20:59:00.000Z",
@@ -40580,16 +37900,6 @@
     },
     {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/eftermiddagarpamuseet.3415.html",
-      "title": "Eftermiddagar på museet",
-      "time": "2026-07-02T22:00:00.000Z",
-      "lat": 64.1910877,
-      "lng": 20.8470259,
-      "locationName": "Robertsfors",
-      "category": "art",
-      "emoji": "🎨"
-    },
-    {
-      "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/eftermiddagarpamuseet.2169.html",
       "title": "Eftermiddagar på museet",
       "time": "2026-07-02T22:00:00.000Z",
       "lat": 64.1910877,
@@ -41729,26 +39039,6 @@
       "emoji": "🛍️"
     },
     {
-      "id": "https://destinationuppsala.se/en/event/day-trip-to-fjardhundra-land/",
-      "title": "Events in Uppsala",
-      "time": "2026-07-03T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "sport",
-      "emoji": "🥾"
-    },
-    {
-      "id": "https://destinationuppsala.se/en/event/uppsala-rumble-locals-aret-at-parksnackan/",
-      "title": "Events in Uppsala",
-      "time": "2026-07-03T22:00:00.000Z",
-      "lat": 59.8586126,
-      "lng": 17.6387436,
-      "locationName": "Uppsala",
-      "category": "party",
-      "emoji": "🎉"
-    },
-    {
       "id": "https://www.bilda.nu/arr/1297842/lordagskvall-pa-ekhojden-838795/",
       "title": "Lördagskväll på Ekhöjden",
       "time": "2026-07-03T22:00:00.000Z",
@@ -42729,36 +40019,6 @@
       "emoji": "🏡"
     },
     {
-      "id": "https://www.osby.se/segora/evenemang/evenemang/sommaroppetosbyhembygdsmuseumpaenebacken.5.30e73e2b19dcd90f9b7d5d8.html",
-      "title": "Sommaröppet Osby Hembygdsmuseum på Enebacken",
-      "time": "2026-07-04T22:00:00.000Z",
-      "lat": 56.416667,
-      "lng": 14.083333,
-      "locationName": "Osby",
-      "category": "family",
-      "emoji": "🏡"
-    },
-    {
-      "id": "https://www.osby.se/segora/evenemang/evenemang/sommaroppetosbyhembygdsmuseumpaenebacken.5.30e73e2b19dcd90f9b7d58b.html",
-      "title": "Sommaröppet Osby Hembygdsmuseum på Enebacken",
-      "time": "2026-07-04T22:00:00.000Z",
-      "lat": 56.416667,
-      "lng": 14.083333,
-      "locationName": "Osby",
-      "category": "family",
-      "emoji": "🏡"
-    },
-    {
-      "id": "https://www.osby.se/se--gora/evenemang/evenemang/2026-04-28-sommaroppet-osby-hembygdsmuseum-pa-enebacken.html",
-      "title": "Sommaröppet Osby Hembygdsmuseum på Enebacken",
-      "time": "2026-07-04T22:00:00.000Z",
-      "lat": 56.416667,
-      "lng": 14.083333,
-      "locationName": "Osby",
-      "category": "family",
-      "emoji": "🏛️"
-    },
-    {
       "id": "https://karlstad.se/alsters-herrgard/evenemang/kalender/2025-06-30-visor-med-linden-ohlsson",
       "title": "Visor med Lindén/Ohlsson",
       "time": "2026-07-04T22:00:00.000Z",
@@ -43029,16 +40289,6 @@
       "emoji": "🚴"
     },
     {
-      "id": "https://www.jonkoping.se/evenemangskalender/evenemangskalender/evenemang/teatervandring.5.521230f819e6333cc80157.html",
-      "title": "Teatervandring",
-      "time": "2026-07-05T09:00:00.000Z",
-      "lat": 57.7825634,
-      "lng": 14.165719,
-      "locationName": "Rosenlunds Herrgård och Rosarium ",
-      "category": "stage",
-      "emoji": "🎭"
-    },
-    {
       "id": "https://www.stromsund.se/17655.html",
       "title": "Rädda Barnens Sommardagar Hammerdal",
       "time": "2026-07-05T09:00:00.000Z",
@@ -43267,26 +40517,6 @@
       "locationName": "Garpenbergs Hembygdsförening",
       "category": "social",
       "emoji": "☕"
-    },
-    {
-      "id": "https://www.hembygd.se/albo-harad?a=55317",
-      "title": "Skånsk mölledag Söndag 5 juli",
-      "time": "2026-07-05T11:00:00.000Z",
-      "lat": 55.68493789999999,
-      "lng": 14.225083499999982,
-      "locationName": "Albo härads hembygdsförening",
-      "category": "social",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://www.hembygd.se/albo-harad?a=55318",
-      "title": "Skånsk mölledag söndag 5 juli",
-      "time": "2026-07-05T11:00:00.000Z",
-      "lat": 55.68493789999999,
-      "lng": 14.225083499999982,
-      "locationName": "Albo härads hembygdsförening",
-      "category": "other",
-      "emoji": "🧺"
     },
     {
       "id": "https://www.hembygd.se/albo-harad?a=55319",
@@ -44399,26 +41629,6 @@
       "emoji": "✂️"
     },
     {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/pyssel.5.52f7529019cfe7f2e392a28.html",
-      "title": "Pyssel",
-      "time": "2026-07-06T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Upplandsväsby bibliotek",
-      "category": "family",
-      "emoji": "✂️"
-    },
-    {
-      "id": "https://www.upplandsvasby.se/arkiv/evenemang/evenemangskalender/evenemang/2026-05-19-pyssel",
-      "title": "Pyssel",
-      "time": "2026-07-06T22:00:00.000Z",
-      "lat": 59.516667,
-      "lng": 17.916667,
-      "locationName": "Upplandsväsby bibliotek",
-      "category": "family",
-      "emoji": "✂️"
-    },
-    {
       "id": "https://www.alvdalen.se/arkiv/evenemang/evenemang/2019-07-03-konstutstallning-i-salem-alvdalen.html",
       "title": "Konstutställning i Salem Älvdalen",
       "time": "2026-07-06T22:00:00.000Z",
@@ -44496,16 +41706,6 @@
       "lng": 15.5866422,
       "locationName": "Karlskrona",
       "category": "other",
-      "emoji": "🚶"
-    },
-    {
-      "id": "https://blekingemuseum.se/events/guidad-tur-av-kvarteret-wachtmeister/",
-      "title": "Guidad tur av kvarteret Wachtmeister",
-      "time": "2026-07-06T22:00:00.000Z",
-      "lat": 56.1621073,
-      "lng": 15.5866422,
-      "locationName": "Karlskrona",
-      "category": "art",
       "emoji": "🚶"
     },
     {
@@ -44789,16 +41989,6 @@
       "emoji": "✂️"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-07-07T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/tipsrundatillsammanspromenad.5280.html",
       "title": "Tipsrunda/Tillsammans-promenad",
       "time": "2026-07-07T11:00:00.000Z",
@@ -44857,16 +42047,6 @@
       "locationName": "Kulturen i Lund",
       "category": "family",
       "emoji": "🧸"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/beachboll-pa-stenbacka-fritidsgard/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-07T13:00:00.000Z",
-      "lat": 56.1701723,
-      "lng": 14.8631279,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "🏐"
     },
     {
       "id": "https://www.karlshamn.se/evenemang/picknick-kubb-och-bad-pa-piren-med-fritidsgardarna/",
@@ -44937,16 +42117,6 @@
       "locationName": "Falkenberg",
       "category": "course",
       "emoji": "🚶"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/testa-rollspelet-dungeons-dragons-pa-annexet/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-07T16:00:00.000Z",
-      "lat": 56.1701723,
-      "lng": 14.8631279,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "🎲"
     },
     {
       "id": "https://www.hembygd.se/nora?a=55422",
@@ -45239,16 +42409,6 @@
       "emoji": "🍰"
     },
     {
-      "id": "https://www.karlshamn.se/evenemang/fc-26-turnering-och-burgare/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-08T05:30:00.000Z",
-      "lat": 56.1701723,
-      "lng": 14.8631279,
-      "locationName": "Karlshamn",
-      "category": "sport",
-      "emoji": "⚽"
-    },
-    {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2Ffalsterbo-horse-show-jumping-vip-tickets-wednesday-tickets%2F1735703036%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
       "title": "Falsterbo Horse Show - Jumping, VIP Tickets Wednesday",
       "time": "2026-07-08T07:00:00.000Z",
@@ -45359,16 +42519,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2-2-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-07-08T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://www.hembygd.se/angelholm?a=28050",
       "title": "Barnteater: Pettson och Findus i Tuppens minut!",
       "time": "2026-07-08T11:00:00.000Z",
@@ -45417,16 +42567,6 @@
       "locationName": "Kulturen i Lund",
       "category": "family",
       "emoji": "🧸"
-    },
-    {
-      "id": "https://www.karlshamn.se/evenemang/pop-up-vid-langasjon/",
-      "title": "Karlshamns kommun",
-      "time": "2026-07-08T12:30:00.000Z",
-      "lat": 56.1701723,
-      "lng": 14.8631279,
-      "locationName": "Karlshamn",
-      "category": "social",
-      "emoji": "🎲"
     },
     {
       "id": "https://leksand.se/upplevaochgora/dethanderileksand/evenemang/besokfrasgarden.5.7267b8e519e48ccb8492fde.html",
@@ -46019,16 +43159,6 @@
       "emoji": "🎨"
     },
     {
-      "id": "https://www.kulturen.com/program/kalendarium/lekfulla-tidsresor-31-2-2-2-2-2-2-2-2/",
-      "title": "Lekfulla tidsresor",
-      "time": "2026-07-09T11:00:00.000Z",
-      "lat": 55.7055697,
-      "lng": 13.1983137,
-      "locationName": "Kulturen i Lund",
-      "category": "family",
-      "emoji": "🧸"
-    },
-    {
       "id": "https://falkenberg.se/evenemang/komtek-on-the-road-3/",
       "title": "KomTek on the road",
       "time": "2026-07-09T11:00:00.000Z",
@@ -46189,16 +43319,6 @@
       "emoji": "🎸"
     },
     {
-      "id": "https://falkenberg.se/evenemang/willy-clay-band-calaisa-caspar-camitz/",
-      "title": "Willy Clay Band + Calaisa + Caspar Camitz",
-      "time": "2026-07-09T16:00:00.000Z",
-      "lat": 56.904894,
-      "lng": 12.4912926,
-      "locationName": "Falkenberg",
-      "category": "music",
-      "emoji": "🎸"
-    },
-    {
       "id": "https://www.robertsfors.se/upplevaochgora/evenemang/evenemang/musikibiblioteksparken.5283.html",
       "title": "Musik i biblioteksparken",
       "time": "2026-07-09T16:00:00.000Z",
@@ -46300,16 +43420,6 @@
     },
     {
       "id": "https://pustervik.nu/event/klubb-locus-w-filou-ivo-mono-locus-dj-esper/",
-      "title": "Pustervik",
-      "time": "2026-07-09T20:00:00.000Z",
-      "lat": 57.7072326,
-      "lng": 11.9670171,
-      "locationName": "Göteborg",
-      "category": "party",
-      "emoji": "🎶"
-    },
-    {
-      "id": "https://pustervik.nu/event/baby-scratch-4/",
       "title": "Pustervik",
       "time": "2026-07-09T20:00:00.000Z",
       "lat": 57.7072326,
@@ -53407,16 +50517,6 @@
       "locationName": "Knislinge Hembygdsförening",
       "category": "other",
       "emoji": "🧺"
-    },
-    {
-      "id": "https://www.hembygd.se/knislinge?a=54794",
-      "title": "Hemvändardag och maskinutställning",
-      "time": "2026-09-12T08:00:00.000Z",
-      "lat": 56.1922153140828,
-      "lng": 14.08465020358232,
-      "locationName": "Knislinge Hembygdsförening",
-      "category": "social",
-      "emoji": "🏡"
     },
     {
       "id": "https://www.hembygd.se/botkyrka?a=55409",
