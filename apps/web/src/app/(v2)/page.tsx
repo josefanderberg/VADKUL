@@ -11,7 +11,6 @@ import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
-import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
@@ -849,14 +848,11 @@ export default function HomePage() {
                 onClose={() => setAuthModal({ open: false })}
             />
 
-            {/* Onboarding vid första besöket — en skärm, sen ut på kartan */}
+            {/* Onboarding vid första besöket — en skärm, sen ut på kartan.
+                (PWA-installbannern monteras globalt i Providers, inte här.) */}
             <WelcomeOverlay
                 onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
             />
-
-            {/* PWA-installbanner — självgated (visas från andra besöket, aldrig
-                i standalone-läge, och bara när webbläsaren erbjuder install). */}
-            <InstallPrompt />
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
