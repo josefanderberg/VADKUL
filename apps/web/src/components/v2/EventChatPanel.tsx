@@ -84,11 +84,11 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
                                     ? 'bg-[#006AA7] text-white rounded-br-sm'
                                     : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-border rounded-bl-sm'
                             }`}>
-                                {!isMe && (
-                                    <p className="text-[10px] font-black text-[#006AA7] dark:text-sky-300 mb-0.5">
-                                        {msg.senderName || 'Deltagare'}
-                                    </p>
-                                )}
+                                {/* Användarnamnet syns på ALLA kommentarer — även ens egna,
+                                    så man ser hur man framstår för andra. */}
+                                <p className={`text-[10px] font-black mb-0.5 ${isMe ? 'text-white/85' : 'text-[#006AA7] dark:text-sky-300'}`}>
+                                    {isMe ? `${msg.senderName || 'Du'} (du)` : (msg.senderName || 'Deltagare')}
+                                </p>
                                 <p className="break-words">{msg.text}</p>
                                 <span className={`block text-right text-[9px] mt-0.5 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
                                     {time}
