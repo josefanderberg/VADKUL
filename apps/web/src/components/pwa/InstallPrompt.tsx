@@ -22,6 +22,15 @@ export default function InstallPrompt() {
             return;
         }
 
+        // Visa inte för förstagångsbesökare — de har redan välkomstkortet och
+        // har inte hunnit få något skäl att installera. Från andra besöket.
+        let visits = 0;
+        try {
+            visits = parseInt(localStorage.getItem('vadkul_visits') ?? '0', 10) + 1;
+            localStorage.setItem('vadkul_visits', String(visits));
+        } catch { /* localStorage blockerad → visa inte */ }
+        if (visits < 2) return;
+
         const handler = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -55,8 +64,8 @@ export default function InstallPrompt() {
     if (!showPrompt) return null;
 
     return (
-        <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-bottom duration-300">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl shadow-2xl p-4 border border-green-400/20">
+        <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[1100] animate-in slide-in-from-bottom duration-300">
+            <div className="bg-[#006AA7] text-white rounded-2xl shadow-2xl p-4 border border-white/20">
                 <button
                     onClick={handleDismiss}
                     className="absolute top-2 right-2 p-1 hover:bg-white/20 rounded-full transition-colors"
@@ -73,13 +82,13 @@ export default function InstallPrompt() {
                         <h3 className="font-bold text-lg mb-1">
                             Installera VADKUL
                         </h3>
-                        <p className="text-sm text-green-50 mb-3">
-                            Lägg till på hemskärmen för snabb åtkomst och push-notiser!
+                        <p className="text-sm text-sky-100 mb-3">
+                            Lägg till på hemskärmen — kartan ett tryck bort.
                         </p>
                         <div className="flex gap-2">
                             <button
                                 onClick={handleInstall}
-                                className="bg-white text-green-600 font-bold px-4 py-2 rounded-lg hover:bg-green-50 transition-colors text-sm"
+                                className="bg-white text-[#006AA7] font-bold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors text-sm"
                             >
                                 Installera
                             </button>

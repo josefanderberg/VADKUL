@@ -1,9 +1,11 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { linkEventService } from '../../services/linkEventService';
+import { feedbackService } from '../../services/feedbackService';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -64,9 +66,12 @@ interface LinkEventCardProps {
     /** Hjärtat på kortet: nuvarande status + toggle. Utan handler → ingen knapp. */
     saved?: boolean;
     onToggleSave?: () => void;
+    /** Ägaren av ett användarskapat event får ta bort det (reglerna verifierar). */
+    canDelete?: boolean;
+    onDeleteOwn?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn }: LinkEventCardProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
@@ -77,6 +82,22 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [coverFailed, setCoverFailed] = useState(false);
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
+
+    // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
+    const [reportOpen, setReportOpen] = useState(false);
+    const [reportSent, setReportSent] = useState(false);
+    useEffect(() => { setReportOpen(false); setReportSent(false); }, [linkEvent.id]);
+    const handleReport = async (e: React.MouseEvent, reason: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await feedbackService.reportEvent(linkEvent, reason);
+            setReportSent(true);
+        } catch (err) {
+            console.error('Kunde inte skicka eventrapporten:', err);
+            toast.error('Kunde inte skicka rapporten. Försök igen.');
+        }
+    };
 
     // Notifiera förälder när expansionsnivån ändras (för t.ex. karta-offset)
     useEffect(() => {
@@ -403,6 +424,62 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         <span>HITTA HIT</span>
                                     </button>
                                 )}
+
+                                {/* Lägg till i kalender — Google-länk + .ics för Apple/Outlook */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(googleCalendarUrl(linkEvent), '_blank', 'noopener,noreferrer'); }}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
+                                    >
+                                        <CalendarPlus size={16} className="shrink-0" />
+                                        Google Kalender
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadIcs(linkEvent); }}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
+                                    >
+                                        <CalendarPlus size={16} className="shrink-0" />
+                                        Kalenderfil (.ics)
+                                    </button>
+                                </div>
+
+                                {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
+                                <div className="flex flex-col items-center gap-1 pt-1">
+                                    {reportSent ? (
+                                        <p className="text-xs font-bold text-emerald-600 py-1.5">Tack! Vi tittar på det. 🙏</p>
+                                    ) : reportOpen ? (
+                                        <div className="flex flex-wrap justify-center gap-2 py-1" onClick={(e) => e.stopPropagation()}>
+                                            {['Fel information', 'Eventet finns inte', 'Olämpligt innehåll'].map(reason => (
+                                                <button
+                                                    key={reason}
+                                                    onClick={(e) => handleReport(e, reason)}
+                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                >
+                                                    {reason}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpen(true); }}
+                                            className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 py-1.5 transition-colors"
+                                        >
+                                            Rapportera event
+                                        </button>
+                                    )}
+                                    {canDelete && onDeleteOwn && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (confirm(`Ta bort "${linkEvent.title}" permanent?`)) onDeleteOwn();
+                                            }}
+                                            className="text-[10px] uppercase tracking-widest font-bold text-red-400 hover:text-red-600 py-1.5 transition-colors"
+                                        >
+                                            Ta bort eventet
+                                        </button>
+                                    )}
+                                </div>
                                 {!alwaysExpanded && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setInternalRevealStep(0); }}

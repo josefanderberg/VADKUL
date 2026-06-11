@@ -10,6 +10,7 @@ import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
+import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -104,6 +105,8 @@ export default function HomePage() {
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
     const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
+    const [newEventPlace, setNewEventPlace] = useState('');         // platsnamn, valfritt
+    const [newEventDescription, setNewEventDescription] = useState(''); // valfri
     const [creatingEvent, setCreatingEvent] = useState(false);
 
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
@@ -320,16 +323,18 @@ export default function HomePage() {
                 time,
                 lat: pickedLocation.lat,
                 lng: pickedLocation.lng,
+                locationName: newEventPlace,
+                description: newEventDescription,
                 category: newEventCategory,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
                 hostUid: user.uid,
             });
             const created: LinkEvent = {
                 id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
-                locationName: '', lat: pickedLocation.lat, lng: pickedLocation.lng,
+                locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
-                category: newEventCategory, coverImage: '', description: '', attendees: 0,
-                isLocationVerified: true,
+                category: newEventCategory, coverImage: '', description: newEventDescription.trim(), attendees: 0,
+                isLocationVerified: true, userCreated: true, hostUid: user.uid,
             } as LinkEvent;
             setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
             setSelectedEvent(created);
@@ -339,13 +344,35 @@ export default function HomePage() {
             setNewEventTitle('');
             setNewEventTime('');
             setNewEventCategory('other');
+            setNewEventPlace('');
+            setNewEventDescription('');
         } catch (err) {
             console.error(err);
             toast.error('Kunde inte skapa eventet. Försök igen.');
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, user, openLogin]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, user, openLogin]);
+
+    // Ta bort sitt EGET användarskapade event: Firestore-delete (reglerna
+    // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
+    const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
+        try {
+            await linkEventService.deleteUserEvent(eventId);
+            setEvents(prev => prev.filter(e => e.id !== eventId));
+            setSelectedEvent(prev => (prev?.id === eventId ? null : prev));
+            setSavedEventIds(prev => {
+                if (!prev.has(eventId)) return prev;
+                const next = new Set(prev);
+                next.delete(eventId);
+                return next;
+            });
+            toast.success('Eventet är borttaget.');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte ta bort eventet.');
+        }
+    }, []);
 
     const handleSaveEvent = (eventId: string) => {
         setSavedEventIds(prev => {
@@ -741,6 +768,22 @@ export default function HomePage() {
                                 ))}
                             </select>
                         </label>
+                        <input
+                            type="text"
+                            value={newEventPlace}
+                            onChange={e => setNewEventPlace(e.target.value)}
+                            placeholder="Plats — t.ex. Vasaparken (valfritt)"
+                            maxLength={120}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+                        />
+                        <textarea
+                            value={newEventDescription}
+                            onChange={e => setNewEventDescription(e.target.value)}
+                            placeholder="Beskrivning — vad händer? (valfritt)"
+                            maxLength={1000}
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
+                        />
                         {!user && (
                             <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
                                 Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
@@ -754,6 +797,8 @@ export default function HomePage() {
                                     setPickedLocation(null);
                                     setNewEventTitle('');
                                     setNewEventTime('');
+                                    setNewEventPlace('');
+                                    setNewEventDescription('');
                                 }}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
@@ -784,6 +829,10 @@ export default function HomePage() {
                 onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
             />
 
+            {/* PWA-installbanner — självgated (visas från andra besöket, aldrig
+                i standalone-läge, och bara när webbläsaren erbjuder install). */}
+            <InstallPrompt />
+
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
                 events={visibleEvents}
@@ -810,6 +859,8 @@ export default function HomePage() {
                 slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
+                currentUserUid={user?.uid}
+                onDeleteOwnEvent={handleDeleteOwnEvent}
             />
 
             {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets

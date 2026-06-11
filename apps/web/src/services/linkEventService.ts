@@ -1,6 +1,6 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
 
 /**
@@ -36,6 +36,7 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     isLocationVerified: true,
                     hasSpecificTime: deriveHasSpecificTime(time),
                     userCreated: true,
+                    hostUid: v.hostUid || undefined,
                 } as LinkEvent;
             })
             .filter((e) => e.title && e.time >= cutoff && !(e as any).hidden);
@@ -239,6 +240,15 @@ export const linkEventService = {
             createdAt: serverTimestamp(),
         });
         return ref.id;
+    },
+
+    /**
+     * Ta bort ett eget användarskapat event. Firestore-reglerna släpper bara
+     * igenom delete när hostUid == auth.uid — så fel användare stoppas där.
+     */
+    async deleteUserEvent(id: string): Promise<void> {
+        if (!db) throw new Error('Firestore ej initierad');
+        await deleteDoc(doc(db, 'linkEvents', id));
     },
 
     // Skapa nytt link event

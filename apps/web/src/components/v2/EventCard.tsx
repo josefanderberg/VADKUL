@@ -357,9 +357,12 @@ interface EventCardProps {
     gameMode?: boolean;
     /** Öppna inloggningsmodalen (chatten kräver konto för att skriva). */
     onRequireLogin?: () => void;
+    /** Inloggad användares uid — ägaren av ett användarskapat event får ta bort det. */
+    currentUserUid?: string;
+    onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -789,13 +792,16 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         updateDragX(0);
     };
 
-    if (events.length === 0) return null;
+    // OBS: ingen early-return när dagen saknar event — då försvann hela
+    // bottenraden inkl. dagväljaren och man satt fast på en tom dag.
+    // window-accessen skyddas i stället (sidan prerendras; ingen drag där).
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
 
     // Calculate dynamic rotation based on drag
-    const rotation = (dragX / window.innerWidth) * 20; // Max 20 degrees rotation
+    const rotation = (dragX / vw) * 20; // Max 20 degrees rotation
 
     // Calculate opacity (slightly fades out at edges)
-    const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
+    const opacity = 1 - Math.abs(dragX / vw) * 0.5;
 
     return (
         <>
@@ -978,6 +984,8 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                                 ? onUnsaveEvent(selectedEvent.id)
                                 : onSaveEvent(selectedEvent.id))
                             : undefined}
+                        canDelete={!!(currentUserUid && selectedEvent.userCreated && selectedEvent.hostUid === currentUserUid)}
+                        onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
                     />
                     {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
                     {onRequireLogin && (
@@ -998,8 +1006,26 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                 </div>
             </div>
             ) : (
-                /* Håll reglaget på 30% höjd från botten när inget kort visas */
-                <div style={{ height: '30vh' }} className="w-full flex-shrink-0" />
+                /* Håll reglaget på 30% höjd från botten när inget kort visas.
+                   Tom dag/period → liten hint så man inte tror att appen är trasig. */
+                <div style={{ height: '30vh' }} className="w-full flex-shrink-0 flex items-start justify-center pointer-events-none">
+                    {events.length === 0 && (
+                        <div className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <p className="text-sm font-bold text-slate-700">
+                                Inga event {dayRangeDays > 1 ? 'den här perioden' : 'den här dagen'} 😴
+                            </p>
+                            {(dayOffset !== 0 || dayRangeDays !== 1) && (
+                                <button
+                                    type="button"
+                                    onClick={() => onDayRangeChange(0, 1)}
+                                    className="text-xs font-black uppercase tracking-widest text-[#006AA7] hover:text-[#005590] transition-colors"
+                                >
+                                    Visa idag
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
         </>
