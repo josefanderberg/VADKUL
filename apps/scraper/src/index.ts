@@ -29,44 +29,52 @@ async function runStep(name: string, fn: () => Promise<unknown>): Promise<void> 
     }
 }
 
+/** Aggregera SQLite → Firestore + web-JSON. Körs både direkt efter Facebook
+ *  (snabb publicering av dagens färskaste) och en sista gång på slutet. */
+async function aggregate(label: string): Promise<void> {
+    await runStep(label, async () => {
+        const { runAggregation } = require('./scripts/aggregate-events');
+        await runAggregation();
+    });
+}
+
 async function runAllScrapers() {
     console.log('--- VADKUL SCRAPER BOT STARTING ---');
     console.log(`Time: ${new Date().toISOString()}`);
-    console.log(`Mode: Idag prioriterat, sedan kommande 7 dagar`);
+    console.log(`Mode: Facebook först (volatilast), publicera, sedan resten`);
 
     try {
-        // 1. Idag-fokuserade scrapers (körs först för snabb täckning av dagens events)
-        await runStep('today-sweden', scrapeTodaySweden);   // Nöjesguiden + Tickster-idag: Sverige-brett
+        // 1. FACEBOOK FÖRST. FB-event är de mest volatila och kortast horisont —
+        //    de skiljer sig mest mellan körningar, så de ska köras dagligen och
+        //    först. Övriga sajter uppdateras långsamt och kan vänta.
+        await runStep('facebook', scrapeFacebookEvents);
 
-        // 2. Rikstäckande vecko-scrapers
+        // 2. Publicera FB direkt så dagens färskaste är live innan den långsamma
+        //    svansen kör (resten kan ta timmar). Audit/enrich fyller på senare i
+        //    nattjobbet och en sista aggregering (finally) skickar ut det.
+        await aggregate('aggregate-efter-facebook');
+
+        // 3. Övriga idag-/vecko-scrapers (bespoke). Körs EFTER att FB publicerats.
+        await runStep('today-sweden', scrapeTodaySweden);   // Nöjesguiden + Tickster-idag: Sverige-brett
         await runStep('tickster', scrapeTickster);          // Tickster: Sverige-brett, 7 dagar
         await runStep('ticketmaster', scrapeTicketmaster);  // TicketMaster: Discovery API, SE, 7 dagar
         // scrapeBilletto — avstängd, billetto.se är dead (404)
         await runStep('eventbrite', scrapeEventbrite);      // Eventbrite: 14 städer, 7 dagar (Puppeteer, .se-events only)
         // scrapeEventim — avstängd, blockerad av Akamai WAF (0 events)
-
-        // 3. Meetup: Sverige-brett, idag + 7 dagar (community events)
-        await runStep('meetup', scrapeMeetup);
-
-        // 4. Facebook (ej inloggad, begränsad men täcker bredare sökord)
-        await runStep('facebook', scrapeFacebookEvents);
-
-        // 4b. Stockholm-venyer (egen sajt, JS-renderad lista)
+        await runStep('meetup', scrapeMeetup);              // Meetup: Sverige-brett, idag + 7 dagar
         await runStep('kollektivet-livet', scrapeKollektivetLivet);  // Kollektivet Livet: klubb/scen, Slussen/Söder
         await runStep('upplev-stockholm', scrapeUpplevStockholm);    // Upplev Stockholm: stadens parkprogram + Parkteatern
-
-        // 5. Lokala Växjö-scrapers
         await runStep('vaxjo-co', scrapeVaxjoCo);           // Växjö & Co (officiell evenemangsida)
         await runStep('upplev-vaxjo', scrapeUpplevVaxjo);   // Upplev Växjö (kommunens guide)
 
-        // 6. Nya skalbara Sources — respekterar updateFrequency så vi sprider ut
-        //    körningar över veckan (kommunsajter behöver inte hamras dagligen).
+        // 4. Skalbara Sources — respekterar updateFrequency så vi sprider ut
+        //    körningar över veckan (kommunsajter/venyer behöver inte hamras dagligen).
         try {
             console.log('\n--- SOURCES (nytt skalbart system) ---');
             console.log(summarizeSchedule(SOURCES.filter((s) => !s.disabled)));
             const dueToday = scheduledForToday(SOURCES);
             if (dueToday.length > 0) {
-                const results = await runSources(dueToday, ENGINES, { concurrency: 3 });
+                const results = await runSources(dueToday, ENGINES, { concurrency: 6 });
                 summarize(results);
             } else {
                 console.log('Inga sources schemalagda för idag.');
@@ -75,13 +83,8 @@ async function runAllScrapers() {
             console.error('⚠️ Sources-systemet crashade:', srcErr);
         }
     } finally {
-        // 7. Aggregera ALLTID — även om något ovan kraschade — så feeden uppdateras.
-        try {
-            const { runAggregation } = require('./scripts/aggregate-events');
-            await runAggregation();
-        } catch (aggErr) {
-            console.error('⚠️ Det gick inte att köra aggregations-scriptet:', aggErr);
-        }
+        // 5. Aggregera ALLTID — även om något ovan kraschade — så feeden uppdateras.
+        await aggregate('aggregate-final');
     }
 
     console.log('--- ALL SCRAPERS FINISHED ---');
