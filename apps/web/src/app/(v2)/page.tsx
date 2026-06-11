@@ -4,9 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
+import CategoryFilter from '@/components/v2/CategoryFilter';
+import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
+import SearchResults from '@/components/v2/SearchResults';
+import SavedPanel from '@/components/v2/SavedPanel';
+import ProfilePanel from '@/components/v2/ProfilePanel';
+import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
+import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
@@ -73,9 +82,18 @@ export default function HomePage() {
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
+    // Antal dagar i det visade intervallet: 1 = en dag (default), 3 = fre–sön osv.
+    const [dayRangeDays, setDayRangeDays] = useState(1);
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const prevDayOffset = useRef(dayOffset);
+    // Panel med sparade event (hjärtknappen i navbaren).
+    const [savedPanelOpen, setSavedPanelOpen] = useState(false);
+    // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
+    const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+    // Kategorifilter (flerval). Tom set = visa alla kategorier.
+    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+    // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
+    const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
     // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
@@ -86,6 +104,16 @@ export default function HomePage() {
     mapCenterRef.current = mapCenter;
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
+    const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
+    const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
+    const [newEventPlace, setNewEventPlace] = useState('');         // platsnamn, valfritt
+    const [newEventDescription, setNewEventDescription] = useState(''); // valfri
+    const [creatingEvent, setCreatingEvent] = useState(false);
+
+    // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
+    const { user } = useAuth();
+    const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
+    const openLogin = useCallback((reason?: string) => setAuthModal({ open: true, reason }), []);
 
     // Sun-button effect: brightness flash on the map, followed by a fresh cloud
     // popping up in the middle of the screen. Each click bumps a key so the
@@ -146,13 +174,11 @@ export default function HomePage() {
                 ? prev : flags
         );
     }, []);
-    // Multiplayer aktiveras via en kontoregistrering. Tills vidare routar vi
-    // bara till inloggnings-sidan — när användaren kommer tillbaka kan de manuellt
-    // toggla på multiplayer-badgen i shoppen.
-    const router = useRouter();
+    // Multiplayer aktiveras via en kontoregistrering — i modalen, på kartan
+    // (gamla /login-sidan är skrotad). Efteråt togglar man badgen i väskan.
     const handleActivateMultiplayer = useCallback(() => {
-        router.push('/login');
-    }, [router]);
+        openLogin('Skapa ett konto för att aktivera multiplayer');
+    }, [openLogin]);
 
     // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
     // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
@@ -200,15 +226,16 @@ export default function HomePage() {
         return () => unsubscribe();
     }, []);
 
-    // Filtrera events för den specifika dagen
+    // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
     useEffect(() => {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayOffset);
-        
+
         const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
-        
+
         const endOfDay = new Date(targetDate);
+        endOfDay.setDate(endOfDay.getDate() + (dayRangeDays - 1));
         endOfDay.setHours(23, 59, 59, 999);
 
         const filtered = events.filter(evt => {
@@ -216,16 +243,17 @@ export default function HomePage() {
         });
 
         setFilteredEvents(filtered);
-        // När dagen byts: välj eventet närmast KARTANS MITT (det man tittar på) och
-        // be V2Map att INTE flytta kameran — vi vill stanna kvar i vyn i stället för
-        // att flyga iväg till en annan stad. (Bara vid dagbyte, inte vid varje
-        // Firestore-uppdatering.)
-        if (prevDayOffset.current !== dayOffset) {
+        // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
+        // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
+        // vyn i stället för att flyga iväg till en annan stad. (Bara vid byte,
+        // inte vid varje Firestore-uppdatering.)
+        const dayKey = `${dayOffset}:${dayRangeDays}`;
+        if (prevDayKey.current !== dayKey) {
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filtered));
-            prevDayOffset.current = dayOffset;
+            prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
         }
-    }, [events, dayOffset]);
+    }, [events, dayOffset, dayRangeDays]);
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -233,6 +261,116 @@ export default function HomePage() {
         return () => {
             document.body.style.overflow = 'auto';
         };
+    }, []);
+
+    // Sparade/avfärdade event överlever omladdning (localStorage).
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('vadkul_saved_events') ?? '[]');
+            const discarded = JSON.parse(localStorage.getItem('vadkul_discarded_events') ?? '[]');
+            if (Array.isArray(saved) && saved.length) setSavedEventIds(new Set(saved));
+            if (Array.isArray(discarded) && discarded.length) setDiscardedEventIds(new Set(discarded));
+        } catch { /* korrupt localStorage — börja om tomt */ }
+    }, []);
+    useEffect(() => {
+        localStorage.setItem('vadkul_saved_events', JSON.stringify([...savedEventIds]));
+    }, [savedEventIds]);
+    useEffect(() => {
+        localStorage.setItem('vadkul_discarded_events', JSON.stringify([...discardedEventIds]));
+    }, [discardedEventIds]);
+
+    // Inloggad: sparade event synkas till users/{uid} så de följer med mellan
+    // enheter. Vid inloggning slås Firestore-listan ihop med den lokala (union)
+    // — därefter speglas varje ändring dit, debouncad. Utloggad: bara localStorage.
+    const savedSyncReady = useRef(false);
+    const savedRef = useRef(savedEventIds);
+    savedRef.current = savedEventIds;
+    useEffect(() => {
+        savedSyncReady.current = false;
+        if (!user) return;
+        let cancelled = false;
+        (async () => {
+            const remote = await userService.getSavedEventIds(user.uid);
+            if (cancelled) return;
+            const merged = new Set([...savedRef.current, ...remote]);
+            savedSyncReady.current = true;
+            // Alltid nytt Set → skriv-effekten nedan speglar unionen till Firestore.
+            setSavedEventIds(merged);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+    useEffect(() => {
+        if (!user || !savedSyncReady.current) return;
+        const t = setTimeout(() => {
+            userService.setSavedEventIds(user.uid, [...savedEventIds]).catch(err =>
+                console.warn('Kunde inte synka sparade event:', err));
+        }, 800);
+        return () => clearTimeout(t);
+    }, [savedEventIds, user]);
+
+    // Skapa event på riktigt: kräver konto, skrivs till Firestore (reglerna
+    // begränsar formen) och dyker upp direkt på kartan via optimistisk insättning
+    // (pollen plockar sedan upp samma event från Firestore inom 30 s).
+    const handleCreateEvent = useCallback(async () => {
+        if (!pickedLocation || !newEventTitle.trim() || !newEventTime) return;
+        if (!user) { openLogin('Logga in för att skapa event'); return; }
+        setCreatingEvent(true);
+        try {
+            const time = new Date(newEventTime);
+            const docId = await linkEventService.createUserEvent({
+                title: newEventTitle,
+                time,
+                lat: pickedLocation.lat,
+                lng: pickedLocation.lng,
+                locationName: newEventPlace,
+                description: newEventDescription,
+                category: newEventCategory,
+                hostName: user.displayName || user.email || 'VADKUL-användare',
+                hostUid: user.uid,
+            });
+            const created: LinkEvent = {
+                id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
+                locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
+                hostName: user.displayName || user.email || 'VADKUL-användare',
+                category: newEventCategory, coverImage: '', description: newEventDescription.trim(), attendees: 0,
+                isLocationVerified: true, userCreated: true, hostUid: user.uid,
+            } as LinkEvent;
+            setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
+            setSelectedEvent(created);
+            toast.success('Eventet är skapat och syns på kartan! 🎉');
+            setCreationMode('idle');
+            setPickedLocation(null);
+            setNewEventTitle('');
+            setNewEventTime('');
+            setNewEventCategory('other');
+            setNewEventPlace('');
+            setNewEventDescription('');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte skapa eventet. Försök igen.');
+        } finally {
+            setCreatingEvent(false);
+        }
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, user, openLogin]);
+
+    // Ta bort sitt EGET användarskapade event: Firestore-delete (reglerna
+    // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
+    const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
+        try {
+            await linkEventService.deleteUserEvent(eventId);
+            setEvents(prev => prev.filter(e => e.id !== eventId));
+            setSelectedEvent(prev => (prev?.id === eventId ? null : prev));
+            setSavedEventIds(prev => {
+                if (!prev.has(eventId)) return prev;
+                const next = new Set(prev);
+                next.delete(eventId);
+                return next;
+            });
+            toast.success('Eventet är borttaget.');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte ta bort eventet.');
+        }
     }, []);
 
     const handleSaveEvent = (eventId: string) => {
@@ -249,19 +387,136 @@ export default function HomePage() {
         });
     };
 
-    // Sökfiltrering — appliceras ovanpå dag-filtreringen. Matchar titel, plats,
-    // arrangör (hostName) samt eventets URL/källa, så att en sökning på t.ex.
-    // "tickster" får fram alla event från den plattformen (domänen ligger i url).
+    // Sökfiltrering — söker över ALLA dagar (inte bara den valda): man ska kunna
+    // hitta "Håkan Hellström" även om konserten är om tre veckor. Matchar titel,
+    // plats, arrangör (hostName) samt eventets URL/källa, så att en sökning på
+    // t.ex. "tickster" får fram alla event från den plattformen (domänen ligger
+    // i url). Utan sökterm gäller dag-/intervallfiltret som vanligt.
     const searchFilteredEvents = useMemo(() => {
         if (!searchQuery.trim()) return filteredEvents;
         const q = searchQuery.toLowerCase();
-        return filteredEvents.filter(evt =>
+        return events.filter(evt =>
             evt.title.toLowerCase().includes(q) ||
             (evt.locationName?.toLowerCase().includes(q) ?? false) ||
             (evt.hostName?.toLowerCase().includes(q) ?? false) ||
             (evt.url?.toLowerCase().includes(q) ?? false)
         );
-    }, [filteredEvents, searchQuery]);
+    }, [events, filteredEvents, searchQuery]);
+
+    // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
+    const visibleEvents = useMemo(() => {
+        if (selectedCategories.size === 0) return searchFilteredEvents;
+        return searchFilteredEvents.filter(evt =>
+            selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
+        );
+    }, [searchFilteredEvents, selectedCategories]);
+
+    const handleToggleCategory = useCallback((id: string) => {
+        setSelectedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }, []);
+    const handleClearCategories = useCallback(() => setSelectedCategories(new Set()), []);
+
+    // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
+    const handleDayRangeChange = useCallback((offset: number, days: number) => {
+        setDayOffset(offset);
+        setDayRangeDays(days);
+    }, []);
+
+    // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
+    useEffect(() => {
+        if (searchQuery.trim()) { setSavedPanelOpen(false); setProfilePanelOpen(false); }
+    }, [searchQuery]);
+    const handleToggleSaved = useCallback(() => {
+        setSavedPanelOpen(o => !o);
+        setProfilePanelOpen(false);
+        setSearchQuery('');
+    }, []);
+    const handleToggleProfile = useCallback(() => {
+        setProfilePanelOpen(o => !o);
+        setSavedPanelOpen(false);
+        setSearchQuery('');
+    }, []);
+
+    // Användarens egna skapade event — visas i profilpanelen.
+    const myEvents = useMemo(
+        () => (user ? events.filter(e => e.userCreated && e.hostUid === user.uid) : []),
+        [events, user]
+    );
+
+    // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
+    // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
+    // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
+    // vårt val mot närmaste-event-logiken.
+    const jumpToEvent = useCallback((evt: LinkEvent) => {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const offset = Math.floor((evt.time.getTime() - startOfToday.getTime()) / 86_400_000);
+        prevDayKey.current = `${offset}:1`;
+        setDayOffset(offset);
+        setDayRangeDays(1);
+        setSelectedEvent(evt);
+        setSearchQuery('');
+        setSavedPanelOpen(false);
+        setProfilePanelOpen(false);
+    }, []);
+
+    // Ta bort från sparade (hjärtat på kortet eller krysset i sparat-listan).
+    const handleUnsaveEvent = useCallback((eventId: string) => {
+        setSavedEventIds(prev => {
+            const next = new Set(prev);
+            next.delete(eventId);
+            return next;
+        });
+    }, []);
+
+    // ── Delbara länkar: ?event=<id>&dag=<n>&kategori=<a,b> ──────────────────
+    // Läses EN gång när eventlistan först landat; därefter speglas valt event/
+    // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
+    // Next-navigation). Att dela länken återskapar exakt vy.
+    const urlApplied = useRef(false);
+    useEffect(() => {
+        if (!eventsLoaded || urlApplied.current) return;
+        urlApplied.current = true;
+
+        const params = new URLSearchParams(window.location.search);
+        const kategori = params.get('kategori');
+        if (kategori) {
+            const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES);
+            if (valid.length) setSelectedCategories(new Set(valid));
+        }
+        const dag = parseInt(params.get('dag') ?? '', 10);
+        const dagar = parseInt(params.get('dagar') ?? '', 10);
+        const eventId = params.get('event');
+        const target = eventId ? events.find(e => e.id === eventId) : undefined;
+        if (target) {
+            // Härled eventets dag så dagfiltret inte gömmer det — och markera
+            // dagbytet som "redan hanterat" så day-switch-effekten inte byter
+            // bort vårt deep-linkade val mot närmaste-event-heuristiken.
+            const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+            const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
+            prevDayKey.current = `${offset}:1`;
+            setDayOffset(offset);
+            setSelectedEvent(target);
+        } else if (!Number.isNaN(dag)) {
+            setDayOffset(dag);
+            if (!Number.isNaN(dagar) && dagar > 1) setDayRangeDays(Math.min(dagar, 31));
+        }
+    }, [eventsLoaded, events]);
+
+    useEffect(() => {
+        if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
+        const params = new URLSearchParams();
+        if (selectedEvent) params.set('event', selectedEvent.id);
+        if (dayOffset !== 0) params.set('dag', String(dayOffset));
+        if (dayRangeDays > 1) params.set('dagar', String(dayRangeDays));
+        if (selectedCategories.size > 0) params.set('kategori', [...selectedCategories].join(','));
+        const qs = params.toString();
+        window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    }, [selectedEvent, dayOffset, dayRangeDays, selectedCategories]);
 
     // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
     // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
@@ -305,7 +560,7 @@ export default function HomePage() {
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
-        ? searchFilteredEvents.findIndex(e => e.id === selectedEvent.id)
+        ? visibleEvents.findIndex(e => e.id === selectedEvent.id)
         : -1;
 
     // Stabil referens så V2Map:s useEffect inte loopar.
@@ -333,8 +588,8 @@ export default function HomePage() {
     // fel → rätt markör avslöjas i guld och kameran flyger dit.
     // (Definieras här nere så gamePool kan läsa searchFilteredEvents ovan.)
     const gamePool = useMemo(
-        () => searchFilteredEvents.filter(hasValidCoords),
-        [searchFilteredEvents]
+        () => visibleEvents.filter(hasValidCoords),
+        [visibleEvents]
     );
 
     const startRound = useCallback(() => {
@@ -410,15 +665,59 @@ export default function HomePage() {
                 onConfirmPlacement={() => {
                     if (!mapCenter) return;
                     setPickedLocation(mapCenter);
+                    // Förifyll nästa hela timme idag — lokal tid i datetime-local-format.
+                    const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
+                    const pad = (n: number) => String(n).padStart(2, '0');
+                    setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
                     setCreationMode('editing');
                 }}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                onLoginClick={() => openLogin()}
+                onOpenProfile={handleToggleProfile}
+                savedCount={savedEventIds.size}
+                onToggleSaved={handleToggleSaved}
+            />
+
+            {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken */}
+            <CategoryFilter
+                events={searchFilteredEvents}
+                selected={selectedCategories}
+                onToggle={handleToggleCategory}
+                onClear={handleClearCategories}
+            />
+
+            {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}
+            <SearchResults
+                query={searchQuery}
+                results={visibleEvents}
+                onPick={jumpToEvent}
+            />
+
+            {/* 1d. Sparade event — hjärtknappen i navbaren */}
+            <SavedPanel
+                open={savedPanelOpen}
+                events={events}
+                savedEventIds={savedEventIds}
+                onPick={jumpToEvent}
+                onRemove={handleUnsaveEvent}
+                onClose={() => setSavedPanelOpen(false)}
+            />
+
+            {/* 1e. Profilen — allt konto-relaterat utan att lämna kartan */}
+            <ProfilePanel
+                open={profilePanelOpen}
+                onClose={() => setProfilePanelOpen(false)}
+                myEvents={myEvents}
+                onPickEvent={jumpToEvent}
+                onDeleteEvent={handleDeleteOwnEvent}
+                savedCount={savedEventIds.size}
+                onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
             />
 
             {/* 2. Fullskärmskarta underst */}
             <V2MapDynamic
-                events={searchFilteredEvents}
+                events={visibleEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 savedEventIds={savedEventIds}
@@ -455,13 +754,13 @@ export default function HomePage() {
                 onStopFindGame={clearGame}
             />
 
-            {/* Modal för att skapa event */}
+            {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
             {creationMode === 'editing' && pickedLocation && (
                 <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
                         <h2 className="text-xl font-bold text-slate-800">Skapa event</h2>
                         <p className="text-xs text-slate-500 tabular-nums">
-                            {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
+                            📍 {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
                         </p>
                         <input
                             type="text"
@@ -469,8 +768,51 @@ export default function HomePage() {
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder="Namn på event"
                             autoFocus
+                            maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
+                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                            När?
+                            <input
+                                type="datetime-local"
+                                value={newEventTime}
+                                onChange={e => setNewEventTime(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
+                            />
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                            Kategori
+                            <select
+                                value={newEventCategory}
+                                onChange={e => setNewEventCategory(e.target.value as EventCategoryType)}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
+                            >
+                                {Object.values(EVENT_CATEGORIES).map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.emoji} {cat.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <input
+                            type="text"
+                            value={newEventPlace}
+                            onChange={e => setNewEventPlace(e.target.value)}
+                            placeholder="Plats — t.ex. Vasaparken (valfritt)"
+                            maxLength={120}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+                        />
+                        <textarea
+                            value={newEventDescription}
+                            onChange={e => setNewEventDescription(e.target.value)}
+                            placeholder="Beskrivning — vad händer? (valfritt)"
+                            maxLength={1000}
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
+                        />
+                        {!user && (
+                            <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                                Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
+                            </p>
+                        )}
                         <div className="flex justify-end gap-2 mt-2">
                             <button
                                 type="button"
@@ -478,6 +820,9 @@ export default function HomePage() {
                                     setCreationMode('idle');
                                     setPickedLocation(null);
                                     setNewEventTitle('');
+                                    setNewEventTime('');
+                                    setNewEventPlace('');
+                                    setNewEventDescription('');
                                 }}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
@@ -485,35 +830,44 @@ export default function HomePage() {
                             </button>
                             <button
                                 type="button"
-                                disabled={!newEventTitle.trim()}
-                                onClick={() => {
-                                    // TODO: koppla mot linkEventService.create() när event-schemat är klart
-                                    // eslint-disable-next-line no-console
-                                    console.log('Skapa event', { title: newEventTitle, ...pickedLocation });
-                                    setCreationMode('idle');
-                                    setPickedLocation(null);
-                                    setNewEventTitle('');
-                                }}
+                                disabled={!newEventTitle.trim() || !newEventTime || creatingEvent}
+                                onClick={handleCreateEvent}
                                 className="px-5 py-2 rounded-full bg-green-600 text-white font-bold disabled:opacity-40 hover:bg-green-500 transition-colors"
                             >
-                                Skapa
+                                {creatingEvent ? 'Skapar…' : user ? 'Skapa' : 'Logga in & skapa'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Inloggning/registrering — utan att lämna kartan */}
+            <AuthModal
+                open={authModal.open}
+                reason={authModal.reason}
+                onClose={() => setAuthModal({ open: false })}
+            />
+
+            {/* Onboarding vid första besöket — en skärm, sen ut på kartan.
+                (PWA-installbannern monteras globalt i Providers, inte här.) */}
+            <WelcomeOverlay
+                onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+            />
+
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
-                events={searchFilteredEvents}
+                events={visibleEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
+                savedEventIds={savedEventIds}
+                onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
                 dayOffset={dayOffset}
-                setDayOffset={setDayOffset}
+                dayRangeDays={dayRangeDays}
+                onDayRangeChange={handleDayRangeChange}
                 onSunClick={shopFlags.sun ? handleSunClick : undefined}
                 mainCloudOffScreen={cloudOffScreen.main}
                 sunCloudOffScreen={cloudOffScreen.sun}
@@ -525,6 +879,9 @@ export default function HomePage() {
                 slingshotReady={slingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
+                onRequireLogin={() => openLogin('Logga in för att chatta')}
+                currentUserUid={user?.uid}
+                onDeleteOwnEvent={handleDeleteOwnEvent}
             />
 
             {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets

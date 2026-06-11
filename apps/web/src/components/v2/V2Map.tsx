@@ -8,6 +8,7 @@ import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crossh
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
+import toast from 'react-hot-toast';
 
 // Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
 // (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
@@ -427,6 +428,49 @@ export default function V2Map({
     // markerar funktionen som aktiverad.
     const [tiltEnabled, setTiltEnabled] = useState(false);
     useEffect(() => { if (tilted) setTiltEnabled(true); }, [tilted]);
+
+    // "Min plats": geolocation-knapp under lutnings-knappen. Position visas som
+    // en pulserande blå punkt (egen maplibre-markör — överlever stilbyten).
+    const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+    const [locating, setLocating] = useState(false);
+    const userPosMarkerRef = useRef<maplibregl.Marker | null>(null);
+    const handleLocateMe = () => {
+        if (locating) return;
+        if (!('geolocation' in navigator)) {
+            toast.error('Din webbläsare saknar platstjänster.');
+            return;
+        }
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setUserPos(next);
+                setLocating(false);
+                mapRef.current?.flyTo({ center: [next.lng, next.lat], zoom: Math.max(mapRef.current.getZoom(), 12), duration: 1200 });
+            },
+            (err) => {
+                setLocating(false);
+                toast.error(err.code === err.PERMISSION_DENIED
+                    ? 'Platsåtkomst nekad — tillåt plats i webbläsaren för att hitta dig.'
+                    : 'Kunde inte hämta din plats just nu.');
+            },
+            { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
+        );
+    };
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !userPos) return;
+        if (!userPosMarkerRef.current) {
+            const el = document.createElement('div');
+            el.className = 'user-pos-dot';
+            el.setAttribute('aria-label', 'Din plats');
+            userPosMarkerRef.current = new maplibregl.Marker({ element: el })
+                .setLngLat([userPos.lng, userPos.lat])
+                .addTo(map);
+        } else {
+            userPosMarkerRef.current.setLngLat([userPos.lng, userPos.lat]);
+        }
+    }, [userPos]);
     // Refs till knappen + den utfällda panelen så ett klick utanför båda
     // stänger väskan (panelen renderas via portal, därav två separata refs).
     const funcBagBtnRef = useRef<HTMLButtonElement>(null);
@@ -486,7 +530,8 @@ export default function V2Map({
         fastThrow: false,
         sparkle: false,
         snowball: false,
-        createEvent: false,   // av som default (kan slås på i funktions-popupen)
+        createEvent: true,    // PÅ som default — att skapa event är en kärnfunktion
+                              // (onboardingen lovar det). Kan stängas av i väskan.
         multiplayer: false,   // kräver konto-registrering
         record: false,        // låst tills "köpt"
         flowers: false        // av som default (kan slås på i funktions-popupen)
@@ -2818,6 +2863,25 @@ export default function V2Map({
                                     }`}
                                 >
                                     <Box size={20} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Min plats — under lutnings-knappen (120 + 40 + 8 = 168). Flyger
+                            till användarens position och visar en pulserande blå punkt. */}
+                        {!funcBagOpen && (
+                            <div className="fixed top-[168px] right-4 z-[1151] pointer-events-auto">
+                                <button
+                                    type="button"
+                                    onClick={handleLocateMe}
+                                    aria-label="Min plats"
+                                    title="Visa min plats på kartan"
+                                    disabled={locating}
+                                    className={`h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors ${
+                                        userPos ? 'bg-[#006AA7] text-white border-white/30' : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
+                                    } ${locating ? 'opacity-60' : ''}`}
+                                >
+                                    <Crosshair size={20} className={locating ? 'animate-spin' : ''} />
                                 </button>
                             </div>
                         )}

@@ -3,7 +3,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
+import EventChatPanel from './EventChatPanel';
+import DayPicker from './DayPicker';
 import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -17,7 +20,14 @@ const MAX_IMMINENT_DISTANCE_KM = 70;
 
 type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later';
 
-const getEventStatus = (time: Date, now: number): EventStatus => {
+const getEventStatus = (time: Date, now: number, hasSpecificTime = true): EventStatus => {
+    // Event utan klockslag (midnatt = bara datum): "pågår" hela sin dag —
+    // annars stämplas de "Har varit" från 00:00 och framåt.
+    if (!hasSpecificTime) {
+        const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
+        if (sameDay) return 'ongoing';
+        return time.getTime() < now ? 'past' : 'later';
+    }
     const start = time.getTime();
     const end = start + DEFAULT_EVENT_MS;
     if (now >= end) return 'past';
@@ -41,10 +51,16 @@ const formatDistanceKm = (km: number): string => {
 // "Inom 3h" / "Inom 5h" om eventet ligger nära i tid — annars klocktid eller
 // veckodag+tid om det är en annan dag. Returnerar tom sträng för Pågår/Snart;
 // då säger statusbadgen redan vad som behöver sägas.
-const formatTimeHint = (time: Date, now: number): string => {
+const formatTimeHint = (time: Date, now: number, hasSpecificTime = true): string => {
     // Visa ALLTID klockslaget — även för "Snart"/pågående event. Tidigare gav
     // <1h en tom sträng, så just de eventen saknade tid (det användaren såg).
+    // UNDANTAG: event utan riktigt klockslag (midnatt = bara datum från källan)
+    // ska inte påstå "kl 00:00" — visa bara dagen.
     const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
+    if (!hasSpecificTime) {
+        if (sameDay) return 'Idag';
+        return time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
     const hhmm = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     if (sameDay) return `kl ${hhmm}`;
     const weekday = time.toLocaleDateString('sv-SE', { weekday: 'short' });
@@ -119,12 +135,27 @@ const findNearestEvent = (
     return nearest ?? nearestNoCoords;
 };
 
-const getDayLabel = (offset: number) => {
+const getDayLabel = (offset: number, days = 1) => {
+    const capitalize = (s: string) => s.replace(/^\w/, (c) => c.toUpperCase());
+    if (days > 1) {
+        // Intervall: helgen känns igen på att den slutar på en söndag.
+        const start = new Date(); start.setDate(start.getDate() + offset);
+        const end = new Date(start); end.setDate(end.getDate() + days - 1);
+        if (end.getDay() === 0 && days <= 3) return 'I helgen';
+        if (offset === 0 && days === 7) return 'Hela veckan';
+        const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
+        return `${fmt(start)}–${fmt(end)}`;
+    }
     if (offset === 0) return 'Idag';
     if (offset === 1) return 'Imorgon';
+    if (offset === -1) return 'Igår';
     const date = new Date();
     date.setDate(date.getDate() + offset);
-    return date.toLocaleDateString('sv-SE', { weekday: 'long' }).replace(/^\w/, (c) => c.toUpperCase());
+    // Inom en vecka räcker veckodagen — längre bort (eller bakåt) behövs datumet.
+    if (offset > 6 || offset < 0) {
+        return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', ''));
+    }
+    return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'long' }));
 };
 
 interface NearbyEventsListProps {
@@ -154,14 +185,20 @@ function StatusBadge({ status }: { status: EventStatus }) {
     );
 }
 
+/** Samma emoji-logik som kartnålarna: AI:ns per-event-emoji, kategori-fallback. */
+function eventEmoji(evt: LinkEvent): string {
+    const catKey = (evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other') as EventCategoryType;
+    return evt.emoji || (EVENT_CATEGORIES[catKey]?.emoji ?? '🎫');
+}
+
 function NearbyRow({ evt, distanceKm, now, onSelect }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
     onSelect: (evt: LinkEvent) => void;
 }) {
-    const status = getEventStatus(evt.time, now);
-    const timeHint = formatTimeHint(evt.time, now);
+    const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
+    const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
     const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
     return (
@@ -171,6 +208,12 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                 onClick={() => onSelect(evt)}
                 className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
+                <span
+                    className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg leading-none"
+                    aria-hidden
+                >
+                    {eventEmoji(evt)}
+                </span>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
@@ -279,9 +322,15 @@ interface EventCardProps {
     onSaveEvent: (eventId: string) => void;
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
+    /** Sparade event — hjärtat på kortet visar/ändrar status. */
+    savedEventIds?: Set<string>;
+    onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
     dayOffset: number;
-    setDayOffset: (offset: number) => void;
+    /** Antal dagar i det visade intervallet (1 = en dag, 3 = t.ex. fre–sön). */
+    dayRangeDays?: number;
+    /** Byt visad dag/intervall — från dagväljaren eller återställningsknappen. */
+    onDayRangeChange: (offset: number, days: number) => void;
     onSunClick?: () => void;
     /** Sant när huvudmolnet/solmolnet ligger utanför skärmen — då visas en
      *  återkallnings-knapp jämte solknappen. */
@@ -306,9 +355,14 @@ interface EventCardProps {
     /** True under "Hitta eventet"-spelet: kortet visar mål-eventet men navigering
      *  (Nästa/Bakåt) och svep åt sidan stängs av så spelaren inte byter mål. */
     gameMode?: boolean;
+    /** Öppna inloggningsmodalen (chatten kräver konto för att skriva). */
+    onRequireLogin?: () => void;
+    /** Inloggad användares uid — ägaren av ett användarskapat event får ta bort det. */
+    currentUserUid?: string;
+    onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -326,6 +380,9 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // utanför det på kartan — V2Map avmarkerar då eventet.)
     const COLLAPSED_HEIGHT_VH = 22;
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
+    // Dagväljar-popover ovanför dagchippen (Idag/Imorgon/I helgen/datum).
+    const [dayPickerOpen, setDayPickerOpen] = useState(false);
+    const dayChipRef = useRef<HTMLButtonElement>(null);
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
     const updateHeightVh = (vh: number) => {
         heightVhRef.current = vh;
@@ -485,7 +542,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // sig i takt med klockan (uppdateras var 30:e sekund).
     const upcomingNearby = useMemo(() => {
         const kept = nearbyEvents.filter(n => {
-            const status = getEventStatus(n.evt.time, now);
+            const status = getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false);
             if (status === 'past') return false;
             // Imminent (Pågår/Snart, <1h): dölj det man inte hinner till (>7 mil).
             // Okänt avstånd (null) får vara kvar — vi kan inte avgöra.
@@ -496,7 +553,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         });
         // Imminenta (Pågår/Snart) först, sedan Senare — vardera närmast först.
         const isImminent = (n: { evt: LinkEvent }) => {
-            const s = getEventStatus(n.evt.time, now);
+            const s = getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false);
             return s === 'ongoing' || s === 'soon';
         };
         return [...kept].sort((a, b) => {
@@ -506,7 +563,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         });
     }, [nearbyEvents, now]);
     const pastNearby = useMemo(
-        () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now) === 'past'),
+        () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
 
@@ -735,13 +792,16 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         updateDragX(0);
     };
 
-    if (events.length === 0) return null;
+    // OBS: ingen early-return när dagen saknar event — då försvann hela
+    // bottenraden inkl. dagväljaren och man satt fast på en tom dag.
+    // window-accessen skyddas i stället (sidan prerendras; ingen drag där).
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
 
     // Calculate dynamic rotation based on drag
-    const rotation = (dragX / window.innerWidth) * 20; // Max 20 degrees rotation
+    const rotation = (dragX / vw) * 20; // Max 20 degrees rotation
 
     // Calculate opacity (slightly fades out at edges)
-    const opacity = 1 - Math.abs(dragX / window.innerWidth) * 0.5;
+    const opacity = 1 - Math.abs(dragX / vw) * 0.5;
 
     return (
         <>
@@ -749,24 +809,36 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
-                {/* Vänster: Idag-knapp med antals-badge ovanpå (sparar plats på raden) */}
+                {/* Vänster: dagväljare med antals-badge ovanpå (sparar plats på raden) */}
                 <div className="flex items-center gap-2 pointer-events-auto">
                     <div className="relative">
                         <button
-                            onClick={() => setDayOffset((dayOffset + 1) % 7)}
+                            ref={dayChipRef}
+                            onClick={() => setDayPickerOpen(o => !o)}
+                            aria-expanded={dayPickerOpen}
+                            aria-label="Välj dag eller period"
                             className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
                         >
                             <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                            <span>{getDayLabel(dayOffset)}</span>
-                            <ChevronRight size={15} className="text-slate-400" />
+                            <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
+                            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
                         </button>
                         <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
                             {events.length}
                         </span>
+                        {dayPickerOpen && (
+                            <DayPicker
+                                dayOffset={dayOffset}
+                                dayRangeDays={dayRangeDays}
+                                anchorRef={dayChipRef}
+                                onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
+                                onClose={() => setDayPickerOpen(false)}
+                            />
+                        )}
                     </div>
-                    {dayOffset !== 0 && (
+                    {(dayOffset !== 0 || dayRangeDays !== 1) && (
                         <button
-                            onClick={() => setDayOffset(0)}
+                            onClick={() => onDayRangeChange(0, 1)}
                             className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
                             title="Återställ till idag"
                         >
@@ -906,7 +978,21 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                         isAdmin={false}
                         showFullAddress
                         alwaysExpanded
+                        saved={savedEventIds?.has(selectedEvent.id) ?? false}
+                        onToggleSave={savedEventIds && onUnsaveEvent
+                            ? () => (savedEventIds.has(selectedEvent.id)
+                                ? onUnsaveEvent(selectedEvent.id)
+                                : onSaveEvent(selectedEvent.id))
+                            : undefined}
+                        canDelete={!!(currentUserUid && selectedEvent.userCreated && selectedEvent.hostUid === currentUserUid)}
+                        onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
                     />
+                    {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
+                    {onRequireLogin && (
+                        <div className="px-4 md:px-6 pb-4">
+                            <EventChatPanel eventId={selectedEvent.id} onRequireLogin={onRequireLogin} />
+                        </div>
+                    )}
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
                             upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
@@ -920,8 +1006,26 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                 </div>
             </div>
             ) : (
-                /* Håll reglaget på 30% höjd från botten när inget kort visas */
-                <div style={{ height: '30vh' }} className="w-full flex-shrink-0" />
+                /* Håll reglaget på 30% höjd från botten när inget kort visas.
+                   Tom dag/period → liten hint så man inte tror att appen är trasig. */
+                <div style={{ height: '30vh' }} className="w-full flex-shrink-0 flex items-start justify-center pointer-events-none">
+                    {events.length === 0 && (
+                        <div className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <p className="text-sm font-bold text-slate-700">
+                                Inga event {dayRangeDays > 1 ? 'den här perioden' : 'den här dagen'} 😴
+                            </p>
+                            {(dayOffset !== 0 || dayRangeDays !== 1) && (
+                                <button
+                                    type="button"
+                                    onClick={() => onDayRangeChange(0, 1)}
+                                    className="text-xs font-black uppercase tracking-widest text-[#006AA7] hover:text-[#005590] transition-colors"
+                                >
+                                    Visa idag
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
         </>

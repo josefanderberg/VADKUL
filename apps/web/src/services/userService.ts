@@ -66,6 +66,35 @@ export const userService = {
     return null;
   },
 
+  // Byt visningsnamn i users-dokumentet (Auth-profilen uppdateras i AuthContext).
+  async updateDisplayName(uid: string, name: string): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { displayName: name.trim() }, { merge: true });
+  },
+
+  // Radera users-dokumentet (vid kontoradering). Kräver att reglerna släpper
+  // igenom owner-delete — misslyckas det fortsätter Auth-raderingen ändå.
+  async deleteUserDoc(uid: string): Promise<void> {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'users', uid));
+  },
+
+  // Sparade event (hjärtan): läses vid inloggning och slås ihop med localStorage.
+  async getSavedEventIds(uid: string): Promise<string[]> {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const ids = snap.exists() ? (snap.data() as any).savedEventIds : null;
+      return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
+    } catch (e) {
+      console.warn('Kunde inte läsa sparade event:', e);
+      return [];
+    }
+  },
+
+  // Spegla hela sparlistan till users/{uid}. Cap:ad så dokumentet hålls litet.
+  async setSavedEventIds(uid: string, ids: string[]): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { savedEventIds: ids.slice(-500) }, { merge: true });
+  },
+
   // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
     const userRef = doc(db, 'users', targetUid);

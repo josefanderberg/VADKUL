@@ -20,6 +20,7 @@ export interface UserProfile {
   inviteCount?: number;  // <--- NY: Antal inbjudna
   invitedBy?: string;    // <--- NY: Vem bjöd in mig?
   redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
+  savedEventIds?: string[]; // Sparade event (hjärtan) — synkas mellan enheter
 }
 
 export interface UserReview {
@@ -149,11 +150,15 @@ export interface LinkEvent {
   hostName: string;
   category?: EventCategoryType;
   coverImage?: string;
+  description?: string;
   price?: number | string;
   isLocationVerified?: boolean;
   attendees?: number;
   /** Per-event-emoji från AI-audit (🧘/🏃 osv) — föredras framför kategori-default på kartpinnen. */
   emoji?: string;
+  /** Användarskapade event: skaparens uid — styr "Ta bort eventet" på kortet. */
+  hostUid?: string;
+  userCreated?: boolean;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {

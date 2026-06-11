@@ -14,10 +14,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Är man Admin? (Kräver att du sätter fältet 'isAdmin: true' på din user i Firestore)
+    // Är man Admin? Två vägar:
+    //  1. Konto-e-posten är admin@admin.com (hårdkodad ägar-admin). Kortsluter
+    //     före dok-läsningen → ingen extra läsning för admin-vägen.
+    //  2. Fältet 'isAdmin: true' på sin user i Firestore (för ev. fler admins).
+    // OBS: ägaren MÅSTE registrera/claima admin@admin.com — annars kan vem som
+    // helst skapa det kontot och bli admin.
     function isAdmin() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isAuthenticated() && (
+        request.auth.token.email == 'admin@admin.com'
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
     }
     
     // Är man värd för eventet? (Fältet 'host.uid' måste matcha)
@@ -42,6 +49,10 @@ service cloud.firestore {
         )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         
+      // Man får radera sitt eget users-dokument (kontoradering/GDPR) —
+      // Auth-kontot raderas i appen, det här släpper igenom dokumentet.
+      allow delete: if isOwner(userId);
+
       // Admins får göra allt (t.ex. verifiera användare)
       allow write: if isAdmin();
       
@@ -151,10 +162,47 @@ service cloud.firestore {
     match /linkEvents/{eventId} {
       // Alla kan läsa
       allow read: if true;
-      
-      // Endast admin kan skriva
-      allow create, update, delete: if isAuthenticated() 
+
+      // Inloggade får skapa EGNA event — hårt formbegränsade så de inte kan
+      // låtsas vara scrapade event eller skriva godtyckliga fält.
+      allow create: if isAuthenticated()
+        && request.resource.data.userCreated == true
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.status == 'published'
+        && request.resource.data.keys().hasOnly([
+            'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
+            'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
+            'description', 'createdAt', 'isLocationVerified'
+        ]);
+
+      // Uppdatera/radera: bara sitt eget användarskapade event…
+      allow update, delete: if isAuthenticated()
+        && resource.data.userCreated == true
+        && resource.data.hostUid == request.auth.uid;
+
+      // …eller admin (scrapade event förblir admin-only).
+      allow create, update, delete: if isAuthenticated()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).
+    // Läsning öppen (chatten syns för alla) — skrivning kräver konto och
+    // formbegränsas mot spam/spoofing (senderId måste vara ens eget uid).
+    match /eventChats/{chatId}/messages/{messageId} {
+      allow read: if true;
+      allow create: if isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.keys().hasOnly([
+            'senderId', 'senderName', 'senderImage', 'text', 'createdAt'
+        ]);
     }
 
     // 9. FCM TOKENS
