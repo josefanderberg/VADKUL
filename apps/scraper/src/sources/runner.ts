@@ -27,6 +27,8 @@ const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
 // datum) får near-term-events korrekt datum istället för att felaktigt
 // filtreras bort. Override med SCRAPE_WINDOW_DAYS=N för bredare svep vid behov.
 const DEFAULT_WINDOW_DAYS = parseInt(process.env.SCRAPE_WINDOW_DAYS || '30', 10);
+/** Volym-säkring: max sparade event per källa & körning (override: source.maxSavedPerRun). */
+const DEFAULT_SAVE_CAP = 3000;
 
 function buildWindow(days: number): { windowStart: Date; windowEnd: Date } {
     const windowStart = new Date();
@@ -137,7 +139,20 @@ export async function runSource(
     result.found = rawEvents.length;
     ctx.log(`engine returned ${rawEvents.length} events`);
 
+    // Volym-säkring (lärdom från SvK-floden 2026-06-11: ~19 700 ofiltrerade event
+    // autopublicerades tills jobbet stoppades manuellt). En källa som plötsligt
+    // levererar mångdubbel volym ska stanna vid taket och SYNAS som fel i
+    // daily-report — inte tyst dränka databasen. Per-källa-override i registryt.
+    const saveCap = source.maxSavedPerRun ?? DEFAULT_SAVE_CAP;
+
     for (const e of rawEvents) {
+        if (result.saved >= saveCap) {
+            const unprocessed = rawEvents.length - result.saved - result.skipped.duplicate
+                - result.skipped.outsideWindow - result.skipped.invalid - result.autoHidden;
+            result.errors.push(`volym-säkring: maxSavedPerRun=${saveCap} nått — ${unprocessed} event osparade (källan levererar onormalt mycket?)`);
+            ctx.log(`🛑 ${result.errors[result.errors.length - 1]}`);
+            break;
+        }
         try {
             if (!isValidEvent(e)) {
                 result.skipped.invalid++;

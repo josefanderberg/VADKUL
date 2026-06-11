@@ -4229,6 +4229,9 @@ export const SOURCES: Source[] = [
         updateFrequency: 'daily',
         status: 'active',
         expectedMinEvents: 500,
+        // Första importen efter filtret är ~9 250 — taket släpper igenom den men
+        // stoppar en ny ofiltrerad flod (~19 700). Sänk till ~3000 efter importen.
+        maxSavedPerRun: 12000,
         discovery: {
             method: 'manual',
             probeUrl: 'https://svk-apim-prod.azure-api.net/calendar/v1/event/search/',
@@ -4237,7 +4240,8 @@ export const SOURCES: Source[] = [
         },
         notes: 'ETT nationellt endpoint för alla församlingar. owner.type=Utlandet (SKUT) filtreras bort. Inga bilder i API:t. ' +
             'HÅRT FILTER sedan 2026-06-11 (incident: ofiltrerat = ~19 700/30d, mest gudstjänster/ceremonier): ' +
-            'eventType gudstjanstOchMassa + stodOchOmsorg bort, online-only bort, öppettidsnotiser bort — se isPublicSvkEvent.',
+            'eventType gudstjanstOchMassa + stodOchOmsorg bort, online-only bort, öppettidsnotiser bort — se isPublicSvkEvent. ' +
+            'Filtrerad volym uppmätt 2026-06-11: 9 249/30d (53 % bort). Nästa ratt om det är för mycket: släpp motasOchUmgas.',
         lastVerified: '2026-06-11',
     },
     {
@@ -4276,6 +4280,28 @@ export const SOURCES: Source[] = [
             notes: 'ClubRunner per distrikt; siteId runtime-upptäcks från /events. US-datumformat "MMM d, yyyy" KRÄVS (ISO ger 0).',
         },
         notes: '6 distrikt, bara 3 exponerar endpointen (övriga widget-iframes). ~370 event/180d.',
+        lastVerified: '2026-06-11',
+    },
+    {
+        id: 'friluftsframjandet',
+        hostName: 'Friluftsfrämjandet',
+        region: 'national',
+        engine: 'friluftsframjandet',
+        config: {},
+        windowDays: 180,
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 100,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.friluftsframjandet.se/Search/AdventureSearch/Search',
+            date: '2026-06-11',
+            notes: 'JSON-POST bakom ASP.NET anti-forgery (token ur hidden input + cookies från söksidan). ' +
+                'Endpoint hittad i /assets/build/index-bundlens fetch-anrop.',
+        },
+        notes: 'Hela äventyrssöket (~300 lokalavdelningar, ~535 kommande äventyr 2026-06). Koordinater+arrangör+gren ' +
+            'i sök-payloaden; exakt start/slut från detaljsidans "Anmälan, tid & plats". Ledarutbildningar filtreras. ' +
+            'OBS: departments-API:ts lat/lng är förväxlade — sökets är korrekta.',
         lastVerified: '2026-06-11',
     },
     {

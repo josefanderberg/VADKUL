@@ -164,6 +164,12 @@ export interface Source {
     sampleEventUrl?: string;
     /** Tröskel för larm — sjunker antalet under detta kan något vara trasigt */
     expectedMinEvents?: number;
+    /**
+     * Volym-säkring: max sparade event per körning (default 3000 i runnern).
+     * En källa som plötsligt levererar mångdubbelt stannar vid taket med fel
+     * i run-historiken istället för att dränka databasen (SvK-floden 2026-06-11).
+     */
+    maxSavedPerRun?: number;
     /** ISO-datum (YYYY-MM-DD) när källan senast bevisat fungerade i prod */
     lastVerified?: string;
     /** Kända fallgropar — pagination, login, rate limits, malformed JSON etc. */
@@ -174,7 +180,8 @@ export type EngineName =
     | 'json-ld' | 'wp-rest' | 'ical' | 'api' | 'sitevision' | 'xhr-discovery'
     | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap'
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
-    | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset';
+    | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
+    | 'friluftsframjandet';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

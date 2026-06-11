@@ -22,6 +22,7 @@ import { svenskaKyrkanEngine } from '../scrapers/svenskakyrkan';
 import { naturskyddsforeningenEngine } from '../scrapers/naturskyddsforeningen';
 import { rotaryEngine } from '../scrapers/rotary';
 import { rodaKorsetEngine } from '../scrapers/rodakorset';
+import { friluftsframjandetEngine } from '../scrapers/friluftsframjandet';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -66,4 +67,5 @@ export const ENGINES: Record<string, Engine> = {
     'naturskyddsforeningen': naturskyddsforeningenEngine,
     'rotary': rotaryEngine,
     'rodakorset': rodaKorsetEngine,
+    'friluftsframjandet': friluftsframjandetEngine,
 };

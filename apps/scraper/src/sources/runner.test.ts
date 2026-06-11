@@ -218,6 +218,20 @@ describe('runSource — fel & run-historik', () => {
         expect(crashed.errors[0]).toContain('boom');   // felet rapporteras ändå i resultatet
         expect(recordRunMock).not.toHaveBeenCalled();
     });
+
+    // SvK-floden 2026-06-11: en källa som plötsligt levererar mångdubbel volym
+    // ska stanna vid taket och synas som fel — inte tyst dränka databasen.
+    it('volym-säkringen stoppar vid maxSavedPerRun och rapporterar fel', async () => {
+        const result = await run(
+            Array.from({ length: 5 }, () => makeEvent()),
+            {},
+            { maxSavedPerRun: 2 },
+        );
+        expect(result.saved).toBe(2);
+        expect(addEventMock).toHaveBeenCalledTimes(2);
+        expect(result.errors[0]).toContain('volym-säkring');
+        expect(result.errors[0]).toContain('3 event osparade');
+    });
 });
 
 describe('deriveHasSpecificTime', () => {

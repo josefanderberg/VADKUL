@@ -22,24 +22,12 @@
 
 import { Engine, RawEvent } from '../sources/types';
 import { cleanDescription } from '../utils/text';
+import { mapPool } from '../utils/mapPool';
 
 const SITE = 'https://www.rodakorset.se';
 const API = `${SITE}/api/episerver/v3.0/content`;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const CONCURRENCY = 10;
-
-async function mapPool<T, R>(items: T[], limit: number, fn: (it: T) => Promise<R>): Promise<R[]> {
-    const out: R[] = new Array(items.length);
-    let next = 0;
-    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-        while (true) {
-            const i = next++;
-            if (i >= items.length) break;
-            out[i] = await fn(items[i]);
-        }
-    }));
-    return out;
-}
 
 /** Hämta alla kalendarium-event-URL:er ur sitemapen. */
 async function discoverEventUrls(): Promise<string[]> {
