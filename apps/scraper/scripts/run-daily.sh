@@ -128,6 +128,19 @@ else
     echo "⚠️ Fix-times misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Cross-source-dedup: samma event från flera källor → göm sämsta ────────
+# Kommun+Tickster+FB+paraplyer ser ofta samma event. Nyckel: titel+dag+plats
+# (~5km-koordinatrundning); bästa kandidaten per poäng behålls (bild/desc/geo).
+# Körs FÖRE llm-enrich och aggregate så förlorare varken berikas eller exporteras.
+echo "" >> "$LOG_FILE"
+echo "── CROSS-SOURCE DEDUP ──" >> "$LOG_FILE"
+if npm run dedupe-cross -- --apply >> "$LOG_FILE" 2>&1; then
+    DEDUPED_N="$(grep -oE '✅ [0-9]+ events gömda' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Dedup OK (gömda=${DEDUPED_N:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Dedup misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.

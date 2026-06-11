@@ -40,7 +40,7 @@ interface Row {
     firestoreId: string;
 }
 
-function normalizeTitle(s: string): string {
+export function normalizeTitle(s: string): string {
     return s.toLowerCase()
         .normalize('NFD')                          // splittra åäö → a + diacritic
         .replace(/[̀-ͯ]/g, '')           // ta bort diacritics (åäö → aao)
@@ -49,15 +49,17 @@ function normalizeTitle(s: string): string {
         .trim();
 }
 
-function localDay(iso: string): string {
+export function localDay(iso: string): string {
     return new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
 }
 
 /**
  * Plats-nyckel som tål bullriga adresser. Föredrar koordinater (rundas till
- * ~1 km), faller tillbaka på normaliserad locationName-substring.
+ * ~5 km), faller tillbaka på normaliserad locationName-substring.
+ * Tom sträng = platsen okänd → eventet ska INTE dedupas (två olika
+ * "Sommarfest" samma dag i olika byar får inte slås ihop).
  */
-function locationKey(r: Row): string {
+export function locationKey(r: Pick<Row, 'lat' | 'lng' | 'locationName'>): string {
     if (r.lat !== 0 && r.lng !== 0) {
         // Runda till 0.05° (~5km i Sverige) — fångar samma venue trots att
         // geocoder gav olika koords för olika query-varianter. Eftersom dedup
@@ -70,11 +72,11 @@ function locationKey(r: Row): string {
     return normalizeTitle(r.locationName).slice(0, 20);
 }
 
-function dedupKey(r: Row): string {
+export function dedupKey(r: Pick<Row, 'title' | 'time' | 'lat' | 'lng' | 'locationName'>): string {
     return `${normalizeTitle(r.title)}|${localDay(r.time)}|${locationKey(r)}`;
 }
 
-function scoreOf(r: Row): number {
+export function scoreOf(r: Row): number {
     let s = 0;
     const hasImage = r.coverImage && r.coverImage.length > 10;
     if (hasImage) s += 10;
@@ -99,13 +101,18 @@ async function main() {
         WHERE hidden = 0 AND firestoreId IS NOT NULL AND title IS NOT NULL AND time IS NOT NULL
     `).all() as Row[];
 
-    // Gruppera på dedup-nyckel
+    // Gruppera på dedup-nyckel. Events utan platsnyckel (varken koordinater
+    // eller locationName) hoppas över — utan plats kan vi inte skilja
+    // "Sommarfest" i Hörby från "Sommarfest" i Tranemo samma dag.
     const groups = new Map<string, Row[]>();
+    let skippedNoLocation = 0;
     for (const r of rows) {
+        if (locationKey(r) === '') { skippedNoLocation++; continue; }
         const k = dedupKey(r);
         if (!groups.has(k)) groups.set(k, []);
         groups.get(k)!.push(r);
     }
+    if (skippedNoLocation) console.log(`(${skippedNoLocation} events utan plats-nyckel hoppade — dedupas ej)`);
 
     // Filtrera fram bara grupper med dublett
     const dupGroups = Array.from(groups.entries()).filter(([, arr]) => arr.length > 1);
@@ -161,4 +168,7 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((e) => { console.error('Fatal:', e); process.exit(1); });
+// Kör bara vid direkt exekvering — testerna importerar funktionerna ovan.
+if (require.main === module) {
+    main().catch((e) => { console.error('Fatal:', e); process.exit(1); });
+}
