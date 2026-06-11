@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
@@ -154,6 +155,12 @@ function StatusBadge({ status }: { status: EventStatus }) {
     );
 }
 
+/** Samma emoji-logik som kartnålarna: AI:ns per-event-emoji, kategori-fallback. */
+function eventEmoji(evt: LinkEvent): string {
+    const catKey = (evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other') as EventCategoryType;
+    return evt.emoji || (EVENT_CATEGORIES[catKey]?.emoji ?? '🎫');
+}
+
 function NearbyRow({ evt, distanceKm, now, onSelect }: {
     evt: LinkEvent;
     distanceKm: number | null;
@@ -171,6 +178,12 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                 onClick={() => onSelect(evt)}
                 className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
+                <span
+                    className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg leading-none"
+                    aria-hidden
+                >
+                    {eventEmoji(evt)}
+                </span>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
