@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
@@ -113,6 +113,24 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
     };
 
+    // Dela eventet: native share-dialog på mobil, annars kopiera deep-länken
+    // (?event=<id> återställer exakt detta event på kartan hos mottagaren).
+    const handleShare = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const shareUrl = `${window.location.origin}/?event=${encodeURIComponent(linkEvent.id)}`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: linkEvent.title, url: shareUrl });
+                return;
+            }
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success('Länk kopierad!');
+        } catch {
+            // Avbruten share-dialog är inget fel — gör inget.
+        }
+    };
+
     const handleHeaderClick = () => {
         if (alwaysExpanded) { onContentTap?.(); return; }
         setInternalRevealStep(prev => prev === 0 ? 1 : 0);
@@ -175,12 +193,21 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </h3>
                     </div>
                     {revealStep >= 1 && (
-                        <button
-                            onClick={handleVisitSite}
-                            className="shrink-0 bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg animate-in fade-in zoom-in duration-300"
-                        >
-                            ANMÄL
-                        </button>
+                        <div className="shrink-0 flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
+                            <button
+                                onClick={handleShare}
+                                aria-label="Dela eventet"
+                                className="bg-white hover:bg-slate-50 text-[#006AA7] border border-slate-200 p-1.5 rounded shadow-lg transition-colors"
+                            >
+                                <Share2 size={14} />
+                            </button>
+                            <button
+                                onClick={handleVisitSite}
+                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
+                            >
+                                ANMÄL
+                            </button>
+                        </div>
                     )}
                 </div>
 
