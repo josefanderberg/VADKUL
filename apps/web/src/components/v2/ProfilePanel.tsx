@@ -5,7 +5,7 @@ import { LinkEvent } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProfilePanelProps {
@@ -218,6 +218,11 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                 <span className="flex-1">Byt lösenord</span>
                                 <span className="text-[10px] font-bold text-slate-400">via e-post</span>
                             </button>
+                            <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
+                                <ShieldCheck size={16} className="text-slate-500 shrink-0" />
+                                <span className="flex-1">Integritet</span>
+                                <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                            </a>
                             <button type="button" onClick={handleLogout} className={actionRow}>
                                 <LogOut size={16} className="text-slate-500 shrink-0" />
                                 <span className="flex-1">Logga ut</span>

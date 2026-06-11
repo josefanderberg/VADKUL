@@ -116,6 +116,15 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 >
                     {mode === 'login' ? 'Ny här? Skapa konto' : 'Har du redan konto? Logga in'}
                 </button>
+
+                {mode === 'register' && (
+                    <p className="text-[11px] font-semibold text-slate-400 text-center -mt-1">
+                        Genom att skapa konto godkänner du vår{' '}
+                        <a href="/integritet" target="_blank" rel="noopener" className="underline hover:text-slate-600 transition-colors">
+                            integritetspolicy
+                        </a>.
+                    </p>
+                )}
             </div>
         </div>
     );
