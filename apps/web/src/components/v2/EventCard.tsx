@@ -19,7 +19,14 @@ const MAX_IMMINENT_DISTANCE_KM = 70;
 
 type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later';
 
-const getEventStatus = (time: Date, now: number): EventStatus => {
+const getEventStatus = (time: Date, now: number, hasSpecificTime = true): EventStatus => {
+    // Event utan klockslag (midnatt = bara datum): "pågår" hela sin dag —
+    // annars stämplas de "Har varit" från 00:00 och framåt.
+    if (!hasSpecificTime) {
+        const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
+        if (sameDay) return 'ongoing';
+        return time.getTime() < now ? 'past' : 'later';
+    }
     const start = time.getTime();
     const end = start + DEFAULT_EVENT_MS;
     if (now >= end) return 'past';
@@ -43,10 +50,16 @@ const formatDistanceKm = (km: number): string => {
 // "Inom 3h" / "Inom 5h" om eventet ligger nära i tid — annars klocktid eller
 // veckodag+tid om det är en annan dag. Returnerar tom sträng för Pågår/Snart;
 // då säger statusbadgen redan vad som behöver sägas.
-const formatTimeHint = (time: Date, now: number): string => {
+const formatTimeHint = (time: Date, now: number, hasSpecificTime = true): string => {
     // Visa ALLTID klockslaget — även för "Snart"/pågående event. Tidigare gav
     // <1h en tom sträng, så just de eventen saknade tid (det användaren såg).
+    // UNDANTAG: event utan riktigt klockslag (midnatt = bara datum från källan)
+    // ska inte påstå "kl 00:00" — visa bara dagen.
     const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
+    if (!hasSpecificTime) {
+        if (sameDay) return 'Idag';
+        return time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
     const hhmm = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     if (sameDay) return `kl ${hhmm}`;
     const weekday = time.toLocaleDateString('sv-SE', { weekday: 'short' });
@@ -168,8 +181,8 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
     now: number;
     onSelect: (evt: LinkEvent) => void;
 }) {
-    const status = getEventStatus(evt.time, now);
-    const timeHint = formatTimeHint(evt.time, now);
+    const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
+    const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
     const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
     return (
@@ -501,7 +514,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // sig i takt med klockan (uppdateras var 30:e sekund).
     const upcomingNearby = useMemo(() => {
         const kept = nearbyEvents.filter(n => {
-            const status = getEventStatus(n.evt.time, now);
+            const status = getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false);
             if (status === 'past') return false;
             // Imminent (Pågår/Snart, <1h): dölj det man inte hinner till (>7 mil).
             // Okänt avstånd (null) får vara kvar — vi kan inte avgöra.
@@ -512,7 +525,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         });
         // Imminenta (Pågår/Snart) först, sedan Senare — vardera närmast först.
         const isImminent = (n: { evt: LinkEvent }) => {
-            const s = getEventStatus(n.evt.time, now);
+            const s = getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false);
             return s === 'ongoing' || s === 'soon';
         };
         return [...kept].sort((a, b) => {
@@ -522,7 +535,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         });
     }, [nearbyEvents, now]);
     const pastNearby = useMemo(
-        () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now) === 'past'),
+        () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
 

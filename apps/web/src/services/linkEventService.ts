@@ -34,6 +34,7 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     description: v.description || '',
                     attendees: 0,
                     isLocationVerified: true,
+                    hasSpecificTime: deriveHasSpecificTime(time),
                     userCreated: true,
                 } as LinkEvent;
             })
@@ -101,24 +102,36 @@ async function fetchShards(layerName: string, shardCount: number, updatedAt: any
     return { updatedAt, events };
 }
 
+/**
+ * Midnatt lokal tid = källan hade bara ett datum, inget klockslag (scraperns
+ * egen heuristik speglad) — flaggan saknas i aggregat-lagren så den härleds här.
+ */
+function deriveHasSpecificTime(t: Date): boolean {
+    return !(t.getHours() === 0 && t.getMinutes() === 0);
+}
+
 function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
-    return events.map((evt: any) => ({
-        id: evt.id,
-        url: evt.id,
-        title: evt.title,
-        time: new Date(evt.time),
-        createdAt: new Date(),
-        locationName: evt.locationName,
-        lat: evt.lat,
-        lng: evt.lng,
-        hostName: '',
-        category: evt.category || 'other',
-        coverImage: '',
-        description: '',
-        attendees: 0,
-        isLocationVerified: evt.isLocationVerified || false,
-        emoji: evt.emoji || undefined
-    }));
+    return events.map((evt: any) => {
+        const time = new Date(evt.time);
+        return {
+            id: evt.id,
+            url: evt.id,
+            title: evt.title,
+            time,
+            createdAt: new Date(),
+            locationName: evt.locationName,
+            lat: evt.lat,
+            lng: evt.lng,
+            hostName: '',
+            category: evt.category || 'other',
+            coverImage: '',
+            description: '',
+            attendees: 0,
+            isLocationVerified: evt.isLocationVerified || false,
+            emoji: evt.emoji || undefined,
+            hasSpecificTime: deriveHasSpecificTime(time),
+        };
+    });
 }
 
 function mergeCardsWithDestinations(destEvents: LinkEvent[], cards: any[]): LinkEvent[] {

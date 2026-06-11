@@ -23,13 +23,18 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
+    // Auto-scrolla BARA på nya meddelanden efter första laddningen — annars
+    // rycker kortet ner till chatten varje gång man öppnar ett event.
+    const initialLoad = useRef(true);
 
     useEffect(() => {
+        initialLoad.current = true;
         const unsubscribe = linkEventChatService.subscribeToMessages(eventId, setMessages);
         return () => unsubscribe();
     }, [eventId]);
 
     useEffect(() => {
+        if (initialLoad.current) { initialLoad.current = false; return; }
         bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, [messages]);
 

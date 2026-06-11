@@ -1372,11 +1372,13 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
             </g>
 
             {/* Face: rotation is on the SVG parent now — this group only
-                handles the click pop-in scale. */}
+                handles the click pop-in scale. Ansiktet visas BARA när
+                Ansikten-funktionen är på (shoppen) — annars hinner man se det
+                blinka fram när intro-molnet trycks bort. */}
             <g
               style={{
-                opacity: clicked ? 1 : 0,
-                transform: clicked ? `scale(${faceScale})` : `scale(${0.3 * faceScale})`,
+                opacity: clicked && facesEnabled ? 1 : 0,
+                transform: clicked && facesEnabled ? `scale(${faceScale})` : `scale(${0.3 * faceScale})`,
                 transformOrigin: '150px 135px',
                 transition: 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}

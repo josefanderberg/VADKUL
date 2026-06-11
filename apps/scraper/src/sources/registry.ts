@@ -2894,6 +2894,8 @@ export const SOURCES: Source[] = [
         hostName: 'Norrlandsoperan',
         region: 'umea',
         engine: 'sitemap',
+        disabled: true,
+        status: 'experimental',
         config: {
             sitemapUrl: 'https://www.norrlandsoperan.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?forestallning(?:ar)?\/[^/]+\/?$/i],
@@ -2902,7 +2904,11 @@ export const SOURCES: Source[] = [
             useBrowser: true,
         },
         updateFrequency: 'daily',
-        notes: 'Probe-venues 2026-06-09: 354 event-URLs (forestallning-mönster) — opera.',
+        notes: 'AVSTÄNGD 2026-06-11: föreställningssidorna delar ett "denna vecka"-block → ' +
+            'findFirstDateInText tog närmsta speldatum ur det för ALLA sidor (99 event "idag", t.ex. ' +
+            'hela vårrepertoaren på samma dag). JSON-LD finns men utan Event/startDate. ' +
+            'Återaktivera först med pålitlig datumkälla (kalendarium-sida eller spelschema-API).',
+        troubleshooting: ['Sidtexten börjar med dagens program — datum-fallback är opålitlig här.'],
         lastVerified: '2026-06-09',
     },
     {
