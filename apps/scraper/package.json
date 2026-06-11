@@ -55,6 +55,7 @@
     "prune-old": "ts-node src/scripts/prune-old-events.ts",
     "stats": "ts-node src/scripts/post-run-stats.ts",
     "quality-stats": "ts-node src/scripts/post-quality-stats.ts",
+    "daily-report": "ts-node src/scripts/teams-daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "sync-to-sqlite": "ts-node src/scripts/sync-firestore-to-sqlite.ts",
     "llm-enrich": "ts-node src/scripts/llm-enrich-missing.ts",
