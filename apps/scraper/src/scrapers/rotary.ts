@@ -1,5 +1,5 @@
 /**
- * rotary.ts — Rotary Sverige via ClubRunner-distriktens event-aggregat.
+ * rotary — Engine för Rotary Sverige via ClubRunner-distriktens event-aggregat.
  *
  * rotary.se (nationella portalen) saknar eget event-flöde. Däremot kör Sveriges
  * sex distrikt på ClubRunner, vars distriktssida har ETT POST-endpoint som
@@ -17,21 +17,21 @@
  *
  * StartDate "2026-06-10T18:30:00" = lokal Stockholmstid (ingen TZ). HasStartsAt
  * styr om tiden är specifik. Url = ClubRunner-portalens event-URL (unik dedup-nyckel).
+ *
+ * Körs via registryt: `npm run sources -- --ids=rotary [--dry-run]`
+ * (windowDays: 180 i registryt — klubb-event är glesa, distrikten publicerar långt fram.)
  */
 
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { classifyEvent } from '../utils/classify';
-import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { Engine, RawEvent } from '../sources/types';
+import { cleanDescription } from '../utils/text';
 
-const DISTRICTS = ['2325', '2335', '2355', '2365', '2395', '2405'];
+const DEFAULT_DISTRICTS = ['2325', '2335', '2355', '2365', '2395', '2405'];
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const DAYS = process.env.ROTARY_DAYS ? parseInt(process.env.ROTARY_DAYS, 10) : 180;
-const MAX_EVENTS = process.env.ROTARY_MAX_EVENTS ? parseInt(process.env.ROTARY_MAX_EVENTS, 10) : Infinity;
 const EVENT_TYPES = ['General', 'Fundraiser', 'ClubEvent', 'ClubMeeting', 'OfficialDgVisit'];
 // Rena interna markörer (Deadline/Board/Committee) utelämnas — sällan publika event.
 
-/** US-format "jun 11, 2026" (ClubRunner kräver MMM d, yyyy; ISO ger 0). */
-function usDate(d: Date): string {
+/** US-format "jun 11, 2026" (ClubRunner kräver MMM d, yyyy; ISO ger 0). Exporterad för test. */
+export function usDate(d: Date): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase();
 }
 
@@ -48,7 +48,7 @@ async function discoverSiteId(host: string): Promise<string | null> {
     }
 }
 
-async function fetchDistrictEvents(host: string, siteId: string, from: Date, to: Date): Promise<any[]> {
+async function fetchDistrictEvents(host: string, siteId: string, from: Date, to: Date, log: (msg: string) => void): Promise<any[]> {
     try {
         const r = await fetch(`https://${host}/${siteId}/Event/GetDistrictEvents`, {
             method: 'POST',
@@ -70,87 +70,66 @@ async function fetchDistrictEvents(host: string, siteId: string, from: Date, to:
         const j = await r.json();
         return Array.isArray(j?.Events) ? j.Events : [];
     } catch (err) {
-        console.error(`  [Rotary] ${host} fel:`, (err as Error).message);
+        log(`${host} fel: ${(err as Error).message}`);
         return [];
     }
 }
 
-export async function scrapeRotary(): Promise<number> {
-    console.log('[Rotary] Hämtar distriktsevent via ClubRunner…');
-    const now = new Date();
-    const to = new Date(now.getTime() + DAYS * 24 * 60 * 60 * 1000);
-    const todayIso = now.toISOString().slice(0, 10);
-    const geoCache = new Map<string, [number, number] | null>();
-    let saved = 0, scanned = 0, districtsOk = 0;
+/**
+ * Mappa ett ClubRunner-event → RawEvent. null = hoppa över (saknar titel/datum/URL).
+ * Exporterad för test.
+ */
+export function mapRotaryEvent(e: any): RawEvent | null {
+    const title = (e?.Name || '').toString().trim();
+    if (!title || !e?.StartDate) return null;
 
-    for (const d of DISTRICTS) {
+    const startDate = new Date(e.StartDate);   // lokal Stockholmstid (ISO utan TZ)
+    if (isNaN(startDate.getTime())) return null;
+    // Källan VET: HasStartsAt=false betyder datum-utan-klocka oavsett parsead tid.
+    const hasSpecificTime = e.HasStartsAt !== false && !(startDate.getHours() === 0 && startDate.getMinutes() === 0);
+
+    const url = (e.Url || e.RegistrationUrl || '').toString().trim();
+    if (!url) return null;
+
+    const club = (e.ClubShortName || '').toString().trim();
+    const location = (e.Location || e.LocationString || '').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+    return {
+        title,
+        url,
+        startDate,
+        hasSpecificTime,
+        venueName: location
+            ? `${location}${club ? `, Rotaryklubb ${club}` : ''}`
+            : (club ? `Rotaryklubb ${club}` : 'Rotary'),
+        geocodeCandidates: [location, club ? `${club}, Sverige` : ''].filter(Boolean),
+        hostName: club ? `Rotary ${club}` : 'Rotary',
+        imageUrl: e.ImageFullUrl || e.EventImageUrl || undefined,
+        description: cleanDescription(e.Description),
+    };
+}
+
+export const rotaryEngine: Engine = async (config, ctx) => {
+    const districts: string[] = config?.districts ?? DEFAULT_DISTRICTS;
+    const events: RawEvent[] = [];
+    let scanned = 0, districtsOk = 0;
+
+    for (const d of districts) {
         const host = `rotary${d}.se`;
         const siteId = await discoverSiteId(host);
-        if (!siteId) { console.log(`  [Rotary] ${host} — ingen GetDistrictEvents-endpoint (hoppas över)`); continue; }
-        const events = await fetchDistrictEvents(host, siteId, now, to);
-        if (!events.length) continue;
+        if (!siteId) { ctx.log(`${host} — ingen GetDistrictEvents-endpoint (hoppas över)`); continue; }
+        const districtEvents = await fetchDistrictEvents(host, siteId, ctx.windowStart, ctx.windowEnd, ctx.log);
+        if (!districtEvents.length) continue;
         districtsOk++;
-        console.log(`  [Rotary] ${host} (site ${siteId}) — ${events.length} event`);
+        ctx.log(`${host} (site ${siteId}) — ${districtEvents.length} event`);
 
-        for (const e of events) {
-            if (saved >= MAX_EVENTS) break;
+        for (const e of districtEvents) {
             scanned++;
-            try {
-                const title = (e.Name || '').toString().trim();
-                if (!title || !e.StartDate) continue;
-                if ((e.StartDate || '').slice(0, 10) < todayIso) continue;
-
-                const when = new Date(e.StartDate); // lokal Stockholmstid (ISO utan TZ)
-                if (isNaN(when.getTime())) continue;
-                const hasSpecificTime = e.HasStartsAt !== false && !(when.getHours() === 0 && when.getMinutes() === 0);
-
-                const url = (e.Url || e.RegistrationUrl || '').toString().trim();
-                if (!url) continue;
-                if (await eventExistsInDb(url)) continue;
-
-                const club = (e.ClubShortName || '').toString().trim();
-                const location = (e.Location || e.LocationString || '').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-                let lat = 0, lng = 0;
-                const geoKey = location || (club ? `${club}, Sverige` : '');
-                if (geoKey) {
-                    if (!geoCache.has(geoKey)) geoCache.set(geoKey, await geocodeVenueSweden(geoKey));
-                    const c = geoCache.get(geoKey);
-                    if (c) { lat = c[0]; lng = c[1]; }
-                }
-
-                const description = (e.Description || '')
-                    .toString().replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 500);
-
-                await addEventToDb({
-                    title,
-                    url,
-                    time: when,
-                    hasSpecificTime,
-                    locationName: location ? `${location}${club ? `, Rotaryklubb ${club}` : ''}` : (club ? `Rotaryklubb ${club}` : 'Rotary'),
-                    lat: lat || 0,
-                    lng: lng || 0,
-                    hostName: club ? `Rotary ${club}` : 'Rotary',
-                    category: classifyEvent(title, description),
-                    createdAt: new Date(),
-                    coverImage: e.ImageFullUrl || e.EventImageUrl || null,
-                    price: '',
-                    description,
-                    isLocationVerified: !!(lat && lng),
-                });
-                saved++;
-            } catch (err) {
-                console.error('  [Rotary] event-fel:', (err as Error).message);
-            }
+            const mapped = mapRotaryEvent(e);
+            if (mapped) events.push(mapped);
         }
     }
 
-    console.log(`[Rotary] Klar — ${saved} nya event (${scanned} skannade, ${districtsOk} distrikt med data).`);
-    return saved;
-}
-
-if (require.main === module) {
-    scrapeRotary()
-        .then((n) => { console.log(`Totalt sparat: ${n}`); process.exit(0); })
-        .catch((e) => { console.error(e); process.exit(1); });
-}
+    ctx.log(`${districtsOk} distrikt med data, ${events.length} kandidater (${scanned} skannade)`);
+    return events;
+};

@@ -1,5 +1,5 @@
 /**
- * rodakorset.ts — Röda Korsets lokalföreningars kalendarium.
+ * rodakorset — Engine för Röda Korsets lokalföreningars kalendarium.
  *
  * Svenska Röda Korset kör Optimizely/EPiServer med en öppen Content Delivery API.
  * Alla lokalkretsars kalenderhändelser ligger som CalendarPage under
@@ -8,37 +8,26 @@
  *
  *   1. sitemap.xml → alla /kalendarium/<slug>/-URL:er (~380)
  *   2. GET /api/episerver/v3.0/content?contentUrl=<url> → strukturerat event
- *      (öppet, ingen auth). Behåll status=Published, CalendarPage, framtida datum.
+ *      (öppet, ingen auth). Behåll status=Published, CalendarPage.
+ *
+ * Kända URL:er (redan i DB) hoppas över FÖRE content-API-anropet via ctx.isKnownUrl
+ * — sparar ~hundratals API-anrop per natt i steady state.
  *
  * startDateTime är ISO-8601 UTC ("2026-09-25T08:00:00Z") → new Date() ger rätt UTC
- * direkt (till skillnad från de TZ-lösa scrapern). Adress: addressLine1 + kommun
- * (ur URL:en) geocodas. Inrikes only. url = event-URL (unik dedup-nyckel).
+ * direkt. Adress: addressLine1 + kommun (ur URL:en) som geocode-kandidater.
+ * Inrikes only. url = event-URL (unik dedup-nyckel).
  *
- * Smoke-test: RK_MAX_EVENTS=<n>.
+ * Körs via registryt: `npm run sources -- --ids=roda-korset [--dry-run]`
  */
 
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { classifyEvent } from '../utils/classify';
-import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { Engine, RawEvent } from '../sources/types';
+import { cleanDescription } from '../utils/text';
+import { mapPool } from '../utils/mapPool';
 
 const SITE = 'https://www.rodakorset.se';
 const API = `${SITE}/api/episerver/v3.0/content`;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const MAX_EVENTS = process.env.RK_MAX_EVENTS ? parseInt(process.env.RK_MAX_EVENTS, 10) : Infinity;
 const CONCURRENCY = 10;
-
-async function mapPool<T, R>(items: T[], limit: number, fn: (it: T) => Promise<R>): Promise<R[]> {
-    const out: R[] = new Array(items.length);
-    let next = 0;
-    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-        while (true) {
-            const i = next++;
-            if (i >= items.length) break;
-            out[i] = await fn(items[i]);
-        }
-    }));
-    return out;
-}
 
 /** Hämta alla kalendarium-event-URL:er ur sitemapen. */
 async function discoverEventUrls(): Promise<string[]> {
@@ -69,89 +58,63 @@ async function fetchContent(url: string): Promise<any | null> {
     }
 }
 
-const prop = (v: any): string => (v && typeof v === 'object' ? v.value : v) ?? '';
+/** EPiServer-properties är ibland {value}-wrappade. Exporterad för test. */
+export const prop = (v: any): string => (v && typeof v === 'object' ? v.value : v) ?? '';
 
-/** "ystads-kommun" → "Ystad" (gissning för geocoding-stad). */
-function kommunFromUrl(url: string): string {
+/** "ystads-kommun" → "Ystad" (gissning för geocoding-stad). Exporterad för test. */
+export function kommunFromUrl(url: string): string {
     const m = url.match(/\/ort\/[^/]+\/([^/]+?)(?:-kommun)?\//i);
     if (!m) return '';
     return m[1].replace(/-/g, ' ').replace(/s$/i, '').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export async function scrapeRodaKorset(): Promise<number> {
-    console.log('[RödaKorset] Hämtar kalendarium-URL:er ur sitemap…');
+/**
+ * Mappa ett EPiServer-content-svar → RawEvent. null = hoppa över (fel typ/
+ * opublicerat/ogiltigt). Exporterad för test.
+ */
+export function mapRkContent(url: string, c: any): RawEvent | null {
+    if (!c) return null;
+    const types: string[] = Array.isArray(c.contentType) ? c.contentType : [];
+    if (!types.includes('CalendarPage')) return null;
+    if (prop(c.status) && prop(c.status) !== 'Published') return null;
+
+    const startIso = prop(c.startDateTime);
+    if (!startIso) return null;
+    const startDate = new Date(startIso);   // ISO UTC (Z) → korrekt
+    if (isNaN(startDate.getTime())) return null;
+
+    const title = (prop(c.heading) || c.name || '').toString().trim();
+    if (!title) return null;
+
+    const address = prop(c.addressLine1).toString().trim();
+    const kommun = kommunFromUrl(url);
+
+    return {
+        title,
+        url,
+        startDate,
+        venueName: address
+            ? `${address}${kommun ? `, ${kommun}` : ''}`
+            : (kommun ? `${kommun}, Röda Korset` : 'Röda Korset'),
+        geocodeCandidates: [...new Set([[address, kommun].filter(Boolean).join(', '), kommun].filter(Boolean))],
+        hostName: kommun ? `Röda Korset ${kommun}` : 'Röda Korset',
+        description: cleanDescription(prop(c.mainBody)),
+    };
+}
+
+export const rodaKorsetEngine: Engine = async (_config, ctx) => {
     const urls = await discoverEventUrls();
-    console.log(`[RödaKorset] ${urls.length} kalendarium-URL:er — hämtar via Content-API…`);
+    ctx.log(`${urls.length} kalendarium-URL:er i sitemapen`);
 
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const geoCache = new Map<string, [number, number] | null>();
-    let saved = 0, scanned = 0, future = 0;
-
-    await mapPool(urls, CONCURRENCY, async (url) => {
-        if (saved >= MAX_EVENTS) return;
-        scanned++;
-        try {
-            if (await eventExistsInDb(url)) return;
-            const c = await fetchContent(url);
-            if (!c) return;
-
-            const types: string[] = Array.isArray(c.contentType) ? c.contentType : [];
-            if (!types.includes('CalendarPage')) return;
-            if (prop(c.status) && prop(c.status) !== 'Published') return;
-
-            const startIso = prop(c.startDateTime);
-            if (!startIso || startIso.slice(0, 10) < todayIso) return;
-            const when = new Date(startIso); // ISO UTC (Z) → korrekt
-            if (isNaN(when.getTime())) return;
-            future++;
-            if (saved >= MAX_EVENTS) return;
-
-            const title = (prop(c.heading) || c.name || '').toString().trim();
-            if (!title) return;
-            const hasSpecificTime = !(when.getUTCHours() === 0 && when.getUTCMinutes() === 0);
-
-            const address = prop(c.addressLine1).toString().trim();
-            const kommun = kommunFromUrl(url);
-            const geoKey = [address, kommun].filter(Boolean).join(', ') || kommun;
-
-            let lat = 0, lng = 0;
-            if (geoKey) {
-                if (!geoCache.has(geoKey)) geoCache.set(geoKey, await geocodeVenueSweden(geoKey));
-                const hit = geoCache.get(geoKey);
-                if (hit) { lat = hit[0]; lng = hit[1]; }
-            }
-
-            const description = prop(c.mainBody).toString()
-                .replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 500);
-
-            await addEventToDb({
-                title,
-                url,
-                time: when,
-                hasSpecificTime,
-                locationName: address ? `${address}${kommun ? `, ${kommun}` : ''}` : (kommun ? `${kommun}, Röda Korset` : 'Röda Korset'),
-                lat: lat || 0,
-                lng: lng || 0,
-                hostName: kommun ? `Röda Korset ${kommun}` : 'Röda Korset',
-                category: classifyEvent(title, description),
-                createdAt: new Date(),
-                coverImage: null,
-                price: '',
-                description,
-                isLocationVerified: !!(lat && lng),
-            });
-            saved++;
-        } catch (err) {
-            console.error('  [RödaKorset] event-fel:', (err as Error).message);
-        }
+    let skippedKnown = 0;
+    const mapped = await mapPool(urls, CONCURRENCY, async (url): Promise<RawEvent | null> => {
+        // Hoppa över event vi redan har — slipp content-API-anropet helt.
+        if (ctx.isKnownUrl && (await ctx.isKnownUrl(url))) { skippedKnown++; return null; }
+        const c = await fetchContent(url);
+        return mapRkContent(url, c);
     });
 
-    console.log(`[RödaKorset] Klar — ${saved} nya event (${future} framtida av ${scanned} skannade).`);
-    return saved;
-}
-
-if (require.main === module) {
-    scrapeRodaKorset()
-        .then((n) => { console.log(`Totalt sparat: ${n}`); process.exit(0); })
-        .catch((e) => { console.error(e); process.exit(1); });
-}
+    const events = mapped.filter((e): e is RawEvent => e !== null);
+    ctx.log(`${events.length} kandidater (${skippedKnown} kända URL:er hoppade utan API-anrop)`);
+    return events;
+};

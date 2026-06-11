@@ -26,7 +26,7 @@
     "scrape-fb:test": "DB_TARGET=3 ts-node src/scrapers/facebook.ts",
     "fix-addresses": "ts-node src/scripts/fix-broken-addresses.ts",
     "list-broken": "ts-node src/scripts/fix-broken-addresses.ts --list",
-    "clear-db": "ts-node clear-db.ts",
+    "clear-db": "ts-node src/scripts/clear-db.ts",
     "today": "ts-node -e \"require('./src/scrapers/today-sweden').scrapeTodaySweden()\"",
     "test:regression": "ts-node src/scripts/test-regression.ts",
     "backfill-images": "ts-node src/scripts/backfill_images.ts",
@@ -47,7 +47,6 @@
     "inspect": "ts-node src/scripts/inspect-source.ts",
     "probe-venues": "ts-node src/scripts/probe-venues.ts",
     "probe-all": "ts-node src/scripts/probe-all.ts",
-    "coverage": "ts-node src/scripts/coverage.ts",
     "backfill-provenance": "ts-node src/scripts/backfill-provenance.ts",
     "gen-playbooks": "ts-node src/scripts/gen-source-playbooks.ts",
     "provenance": "ts-node src/scripts/backfill-provenance.ts && ts-node src/scripts/gen-source-playbooks.ts",
@@ -55,13 +54,15 @@
     "prune-old": "ts-node src/scripts/prune-old-events.ts",
     "stats": "ts-node src/scripts/post-run-stats.ts",
     "quality-stats": "ts-node src/scripts/post-quality-stats.ts",
+    "daily-report": "ts-node src/scripts/teams-daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "sync-to-sqlite": "ts-node src/scripts/sync-firestore-to-sqlite.ts",
     "llm-enrich": "ts-node src/scripts/llm-enrich-missing.ts",
     "venues": "ts-node src/scripts/manage-venues.ts",
     "emulator:dev": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.json --project demo-vadkul-local",
     "emulator:test": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.test.json --project demo-vadkul-test",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -80,6 +81,7 @@
     "@types/node": "^25.3.0",
     "@types/puppeteer": "^5.4.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

@@ -12,12 +12,15 @@ import fs from 'fs';
  * Kan overridas med env SCRAPER_SQLITE_PATH.
  */
 
-const dbPath = process.env.SCRAPER_SQLITE_PATH
-    ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
-    : path.resolve(__dirname, '../../events.db');
+// ':memory:' stöds för tester — ren in-memory-DB utan filsystem.
+const dbPath = process.env.SCRAPER_SQLITE_PATH === ':memory:'
+    ? ':memory:'
+    : process.env.SCRAPER_SQLITE_PATH
+        ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
+        : path.resolve(__dirname, '../../events.db');
 
 // Säkerställ att katalogen finns
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath);
 sqlite.pragma('journal_mode = WAL');

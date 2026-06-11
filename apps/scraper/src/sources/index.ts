@@ -15,6 +15,15 @@ import { nextjsDataEngine } from './engines/nextjs-data';
 import { nuxtDataEngine } from './engines/nuxt-data';
 import { sitevisionEngine } from './engines/sitevision';
 import { sitemapEngine } from './engines/sitemap';
+// Nätverks-engines — paraply-API:er där EN engine täcker hela nätverket.
+// Bor i src/scrapers/ (källspecifik kod) men kör genom samma runner-pipeline.
+import { hembygdEngine } from '../scrapers/hembygd';
+import { svenskaKyrkanEngine } from '../scrapers/svenskakyrkan';
+import { naturskyddsforeningenEngine } from '../scrapers/naturskyddsforeningen';
+import { rotaryEngine } from '../scrapers/rotary';
+import { rodaKorsetEngine } from '../scrapers/rodakorset';
+import { friluftsframjandetEngine } from '../scrapers/friluftsframjandet';
+import { proEngine } from '../scrapers/pro';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -53,4 +62,12 @@ export const ENGINES: Record<string, Engine> = {
     'nuxt-data': nuxtDataEngine,
     'sitevision': sitevisionEngine,
     'sitemap': sitemapEngine,
+    // Nätverks-engines (en källa = hela nätverket)
+    'hembygd': hembygdEngine,
+    'svenskakyrkan': svenskaKyrkanEngine,
+    'naturskyddsforeningen': naturskyddsforeningenEngine,
+    'rotary': rotaryEngine,
+    'rodakorset': rodaKorsetEngine,
+    'friluftsframjandet': friluftsframjandetEngine,
+    'pro': proEngine,
 };

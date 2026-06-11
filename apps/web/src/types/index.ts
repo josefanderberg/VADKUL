@@ -152,6 +152,8 @@ export interface LinkEvent {
   price?: number | string;
   isLocationVerified?: boolean;
   attendees?: number;
+  /** Per-event-emoji från AI-audit (🧘/🏃 osv) — föredras framför kategori-default på kartpinnen. */
+  emoji?: string;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {

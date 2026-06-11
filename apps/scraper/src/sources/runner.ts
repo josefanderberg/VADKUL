@@ -27,6 +27,8 @@ const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
 // datum) får near-term-events korrekt datum istället för att felaktigt
 // filtreras bort. Override med SCRAPE_WINDOW_DAYS=N för bredare svep vid behov.
 const DEFAULT_WINDOW_DAYS = parseInt(process.env.SCRAPE_WINDOW_DAYS || '30', 10);
+/** Volym-säkring: max sparade event per källa & körning (override: source.maxSavedPerRun). */
+const DEFAULT_SAVE_CAP = 3000;
 
 function buildWindow(days: number): { windowStart: Date; windowEnd: Date } {
     const windowStart = new Date();
@@ -40,6 +42,32 @@ function isValidEvent(e: RawEvent): boolean {
     if (!e.url) return false;
     if (!e.startDate || isNaN(e.startDate.getTime())) return false;
     return true;
+}
+
+/**
+ * hasSpecificTime: källans explicita flagga vinner (engines som har t.ex.
+ * isFullDayEvent VET). Annars heuristik: false om tiden är midnatt i ANTINGEN
+ * UTC eller lokal tid.
+ *  - Lokal midnatt: ParseSwedishDate skapar lokal Date(y,m,d) → CEST 00:00
+ *  - UTC midnatt:   ISO "2026-06-06" parsas av JS som UTC midnatt → 02:00 CEST
+ * Båda är "fake-tider" där källan bara hade ett datum, ingen klocka.
+ */
+export function deriveHasSpecificTime(startDate: Date, explicit?: boolean): boolean {
+    if (explicit !== undefined) return explicit;
+    const isMidnightLocal = startDate.getHours() === 0 && startDate.getMinutes() === 0;
+    const isMidnightUtc   = startDate.getUTCHours() === 0 && startDate.getUTCMinutes() === 0;
+    return !(isMidnightLocal || isMidnightUtc);
+}
+
+/**
+ * Geocoding-frågor i prioritetsordning för ett event: källans egna kandidater
+ * om de finns (paraply-källors fallback-kedjor), annars "venueName, city".
+ */
+export function geocodeQueriesFor(e: RawEvent): string[] {
+    const candidates = e.geocodeCandidates?.length
+        ? e.geocodeCandidates
+        : [[e.venueName, e.city].filter(Boolean).join(', ')];
+    return candidates.filter((q) => q && q.trim().length > 2);
 }
 
 export async function runSource(
@@ -70,6 +98,7 @@ export async function runSource(
     }
 
     if (source.disabled || source.status === 'dead') {
+        // Inget körförsök — registreras avsiktligt INTE i run-historiken.
         result.errors.push(source.status === 'dead' ? 'source is dead' : 'source is disabled');
         result.durationMs = Date.now() - startedAt;
         return result;
@@ -79,6 +108,7 @@ export async function runSource(
     if (!engine) {
         result.errors.push(`Unknown engine: ${source.engine}`);
         result.durationMs = Date.now() - startedAt;
+        if (!opts.dryRun) persistRun(source, startedAt, result);   // felkonfig ska synas i daily-report
         return result;
     }
 
@@ -87,7 +117,14 @@ export async function runSource(
         windowStart,
         windowEnd,
         log: (msg) => console.log(`  [${source.id}] ${msg}`),
+        // Kostnadsoptimering för engines med dyra per-event-hämtningar.
+        // I dry-run svarar vi alltid "okänd" så hela flödet syns i utskriften.
+        isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
     };
+
+    // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
+    // klubb/ort många gånger; spara Nominatim-anropen.
+    const geoCache = new Map<string, [number, number] | null>();
 
     let rawEvents: RawEvent[];
     try {
@@ -95,13 +132,27 @@ export async function runSource(
     } catch (err) {
         result.errors.push(`engine threw: ${(err as Error).message}`);
         result.durationMs = Date.now() - startedAt;
+        if (!opts.dryRun) persistRun(source, startedAt, result);   // krascher ska synas i run-historiken
         return result;
     }
 
     result.found = rawEvents.length;
     ctx.log(`engine returned ${rawEvents.length} events`);
 
+    // Volym-säkring (lärdom från SvK-floden 2026-06-11: ~19 700 ofiltrerade event
+    // autopublicerades tills jobbet stoppades manuellt). En källa som plötsligt
+    // levererar mångdubbel volym ska stanna vid taket och SYNAS som fel i
+    // daily-report — inte tyst dränka databasen. Per-källa-override i registryt.
+    const saveCap = source.maxSavedPerRun ?? DEFAULT_SAVE_CAP;
+
     for (const e of rawEvents) {
+        if (result.saved >= saveCap) {
+            const unprocessed = rawEvents.length - result.saved - result.skipped.duplicate
+                - result.skipped.outsideWindow - result.skipped.invalid - result.autoHidden;
+            result.errors.push(`volym-säkring: maxSavedPerRun=${saveCap} nått — ${unprocessed} event osparade (källan levererar onormalt mycket?)`);
+            ctx.log(`🛑 ${result.errors[result.errors.length - 1]}`);
+            break;
+        }
         try {
             if (!isValidEvent(e)) {
                 result.skipped.invalid++;
@@ -116,14 +167,15 @@ export async function runSource(
                 continue;
             }
 
-            // Geocoding: använd engine-koords om de finns, annars geocoda venue
+            // Geocoding: använd engine-koords om de finns, annars prova källans
+            // kandidat-kedja (eller default "venueName, city") tills träff.
             let lat = e.coords?.[0] ?? 0;
             let lng = e.coords?.[1] ?? 0;
             if (!opts.dryRun && !lat && !lng) {
-                const q = [e.venueName, e.city].filter(Boolean).join(', ');
-                if (q) {
-                    const coords = await geocodeVenueSweden(q);
-                    if (coords) { lat = coords[0]; lng = coords[1]; }
+                for (const q of geocodeQueriesFor(e)) {
+                    if (!geoCache.has(q)) geoCache.set(q, await geocodeVenueSweden(q));
+                    const coords = geoCache.get(q);
+                    if (coords) { lat = coords[0]; lng = coords[1]; break; }
                 }
             }
 
@@ -173,13 +225,7 @@ export async function runSource(
                 continue;
             }
 
-            // hasSpecificTime: false om tiden är midnatt i ANTINGEN UTC eller lokal tid.
-            //  - Lokal midnatt: ParseSwedishDate skapar lokal Date(y,m,d) → CEST 00:00
-            //  - UTC midnatt:   ISO "2026-06-06" parsas av JS som UTC midnatt → 02:00 CEST
-            // Båda är "fake-tider" där källan bara hade ett datum, ingen klocka.
-            const isMidnightLocal = e.startDate.getHours() === 0 && e.startDate.getMinutes() === 0;
-            const isMidnightUtc   = e.startDate.getUTCHours() === 0 && e.startDate.getUTCMinutes() === 0;
-            const hasSpecificTime = !(isMidnightLocal || isMidnightUtc);
+            const hasSpecificTime = deriveHasSpecificTime(e.startDate, e.hasSpecificTime);
 
             // Ladda upp bild till vår Storage — så vi inte är beroende av att
             // remote-URL inte expirar (typ FB CDN som expirar var 7:e dag).
@@ -198,7 +244,8 @@ export async function runSource(
                 locationName: e.venueName || e.city || 'Sverige',
                 lat,
                 lng,
-                hostName: source.hostName,
+                // Paraply-källor (församling/klubb/krets) sätter värd per event.
+                hostName: e.hostName || source.hostName,
                 category,
                 description: e.description || '',
                 coverImage: finalImageUrl,
@@ -231,7 +278,14 @@ export async function runSource(
         `invalid ${result.skipped.invalid}, errors ${result.errors.length}${auditSuffix}`,
     );
 
-    // Persist run-history för observability
+    // Dry-run lämnar inga spår: en "would save 19686"-rad i scrape_runs skulle
+    // förgifta daily-report och expectedMinEvents-regressionen.
+    if (!opts.dryRun) persistRun(source, startedAt, result);
+    return result;
+}
+
+/** Persist run-history för observability — anropas även vid engine-krasch/felkonfig. */
+function persistRun(source: Source, startedAt: number, result: SourceRunResult): void {
     recordScrapeRun({
         sourceId: source.id,
         hostName: source.hostName,
@@ -249,8 +303,6 @@ export async function runSource(
         auditedCount: result.audited,
         autoHiddenCount: result.autoHidden,
     });
-
-    return result;
 }
 
 /**

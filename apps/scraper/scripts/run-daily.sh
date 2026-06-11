@@ -390,6 +390,19 @@ fi
 
 rm -f "$PAYLOAD_FILE" /tmp/vadkul-teams-resp
 
+# ─── Per-scraper-kort: byggt på scrape_runs (30s efter huvudkortet) ─────────
+# Egen Adaptive Card direkt från scrape_runs-tabellen (ej logg-grep): aktiva/
+# inaktiva scrapers, top-producenter, källor som behöver ses över. Detacheras
+# och staggras så den inte krockar visuellt med huvudkortet.
+echo "" >> "$LOG_FILE"
+echo "── PER-SCRAPER RAPPORT (postas om 30s) ──" >> "$LOG_FILE"
+(
+    sleep 30
+    cd "$SCRAPER_DIR" && npm run daily-report >> "$LOG_FILE" 2>&1
+) &
+REPORT_PID=$!
+echo "Per-scraper-rapport schemalagd (PID $REPORT_PID)" >> "$LOG_FILE"
+
 # ─── Andra Teams-kort: kvalitet + 7-dagars trend (60s efter huvudkortet) ────
 # Detacheras så vi inte blockerar exit. Sover en minut för att inte krocka
 # visuellt med huvudkortet i samma Teams-tråd.
