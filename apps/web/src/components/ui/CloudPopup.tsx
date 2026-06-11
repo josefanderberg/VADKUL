@@ -420,10 +420,16 @@ export default function CloudPopup({
   const [leaving, setLeaving] = useState(false);
   const [clicked, setClicked] = useState(startClicked);
 
-  // Global click listener to toggle smile/text view
+  // Global click listener to toggle smile/text view.
+  // OBS: när molnet håller på att skingras (leaving) ska klicket INTE morpha
+  // det till lilla formen — tap-för-att-stänga fyrar både dismiss och detta
+  // globala klick, vilket fick start-molnet att "bli litet och hänga kvar"
+  // i poof-sekunden istället för att animeras ut direkt.
+  const leavingRef = useRef(false);
   useEffect(() => {
     if (!visible) return;
     const handleGlobalClick = () => {
+      if (leavingRef.current) return;
       setClicked(true);
     };
     
@@ -663,11 +669,13 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // null → molnet försvinner PÅ PLATS med en poof i stället (animate-cloud-poof-out).
   const dismiss = (dir: { x: number; y: number } | null) => {
     onDismissStart?.();
+    leavingRef.current = true;
     setThrowDirection(dir);
     setLeaving(true);
     setTimeout(() => {
       setVisible(false);
       setLeaving(false);
+      leavingRef.current = false;
       onDismiss?.();
     }, 600);
   };

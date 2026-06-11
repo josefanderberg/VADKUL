@@ -22,20 +22,19 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
-    const bottomRef = useRef<HTMLDivElement>(null);
-    // Auto-scrolla BARA på nya meddelanden efter första laddningen — annars
-    // rycker kortet ner till chatten varje gång man öppnar ett event.
-    const initialLoad = useRef(true);
+    // Scrolla ENBART chattens egen meddelandelista (aldrig scrollIntoView —
+    // den scrollar alla scrollbara föräldrar och drog ner hela eventkortet
+    // till chatten när serverns första snapshot landade efter mount).
+    const listRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        initialLoad.current = true;
         const unsubscribe = linkEventChatService.subscribeToMessages(eventId, setMessages);
         return () => unsubscribe();
     }, [eventId]);
 
     useEffect(() => {
-        if (initialLoad.current) { initialLoad.current = false; return; }
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const el = listRef.current;
+        if (el) el.scrollTop = el.scrollHeight;   // rör bara den inre listan
     }, [messages]);
 
     const handleSend = async (e: React.FormEvent) => {
@@ -67,7 +66,7 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
                 </span>
             </div>
 
-            <div className="max-h-56 overflow-y-auto p-3 space-y-2">
+            <div ref={listRef} className="max-h-56 overflow-y-auto p-3 space-y-2">
                 {messages.length === 0 && (
                     <p className="text-center text-xs font-semibold text-slate-400 py-3">
                         Inga meddelanden än — bli först att säga hej! 👋
@@ -98,7 +97,6 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
                         </div>
                     );
                 })}
-                <div ref={bottomRef} />
             </div>
 
             {user ? (
