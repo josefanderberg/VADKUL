@@ -14,10 +14,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Är man Admin? (Kräver att du sätter fältet 'isAdmin: true' på din user i Firestore)
+    // Är man Admin? Två vägar:
+    //  1. Konto-e-posten är admin@admin.com (hårdkodad ägar-admin). Kortsluter
+    //     före dok-läsningen → ingen extra läsning för admin-vägen.
+    //  2. Fältet 'isAdmin: true' på sin user i Firestore (för ev. fler admins).
+    // OBS: ägaren MÅSTE registrera/claima admin@admin.com — annars kan vem som
+    // helst skapa det kontot och bli admin.
     function isAdmin() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isAuthenticated() && (
+        request.auth.token.email == 'admin@admin.com'
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
     }
     
     // Är man värd för eventet? (Fältet 'host.uid' måste matcha)
