@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, LogOut, Store, Heart } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { User, Plus, Search, X, Heart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface FloatingNavbarProps {
@@ -14,8 +13,10 @@ interface FloatingNavbarProps {
     onConfirmPlacement?: () => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
-    /** Öppna inloggningsmodalen (utan att lämna kartan). Utan prop → gamla /login-routen. */
+    /** Öppna inloggningsmodalen (utan att lämna kartan). */
     onLoginClick?: () => void;
+    /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
+    onOpenProfile?: () => void;
     /** Antal sparade event — visas som badge på hjärtknappen. */
     savedCount?: number;
     /** Öppna/stäng panelen med sparade event. */
@@ -30,15 +31,13 @@ export default function FloatingNavbar({
     searchQuery,
     setSearchQuery,
     onLoginClick,
+    onOpenProfile,
     savedCount = 0,
     onToggleSaved,
 }: FloatingNavbarProps) {
-    const router = useRouter();
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
-    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const profileMenuRef = useRef<HTMLDivElement>(null);
     const plusBtnRef = useRef<HTMLButtonElement>(null);
     const animationRef = useRef<Animation | null>(null);
     const [plusDropping, setPlusDropping] = useState(false);
@@ -49,17 +48,6 @@ export default function FloatingNavbar({
             setTimeout(() => searchInputRef.current?.focus(), 50);
         }
     }, [searchOpen]);
-
-    // Stäng profilmeny vid klick utanför
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-                setProfileMenuOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     // Avbryt plus-animation när creationMode återgår till idle
     useEffect(() => {
@@ -99,13 +87,13 @@ export default function FloatingNavbar({
         };
     };
 
+    // Inloggad → profilpanelen (allt konto-relaterat på kartan).
+    // Utloggad → inloggningsmodalen. Ingen lämnar kartan längre.
     const handleProfileClick = () => {
         if (user) {
-            setProfileMenuOpen(o => !o);
-        } else if (onLoginClick) {
-            onLoginClick();
+            onOpenProfile?.();
         } else {
-            router.push('/login');
+            onLoginClick?.();
         }
     };
 
@@ -122,44 +110,19 @@ export default function FloatingNavbar({
                 <div className="flex items-center gap-2 w-full">
 
                     {/* Vänster: profil i hörnet (väskan + funktioner ligger under,
-                        renderade i V2Map). */}
+                        renderade i V2Map). Inloggad → profilpanelen, annars login. */}
                     <div className="flex items-center pointer-events-auto shrink-0">
-                        <div className="relative" ref={profileMenuRef}>
-                            <button
-                                type="button"
-                                onClick={handleProfileClick}
-                                className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
-                                aria-label={user ? 'Profilmeny' : 'Logga in'}
-                            >
-                                <User size={20} className="text-slate-700" />
-                                {user && (
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
-                                )}
-                            </button>
-
-                            {profileMenuOpen && user && (
-                                <div className="absolute left-0 top-full mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 overflow-hidden min-w-[160px]">
-                                    <div className="px-4 py-3 border-b border-slate-100">
-                                        <p className="text-xs text-slate-500">Inloggad som</p>
-                                        <p className="text-sm font-semibold text-slate-800 truncate">{user.displayName || user.email}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => { router.push('/shop'); setProfileMenuOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100"
-                                    >
-                                        <Store size={15} />
-                                        Funktioner & Shop
-                                    </button>
-                                    <button
-                                        onClick={async () => { await logout(); setProfileMenuOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                                    >
-                                        <LogOut size={15} />
-                                        Logga ut
-                                    </button>
-                                </div>
+                        <button
+                            type="button"
+                            onClick={handleProfileClick}
+                            className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                            aria-label={user ? 'Min profil' : 'Logga in'}
+                        >
+                            <User size={20} className="text-slate-700" />
+                            {user && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
                             )}
-                        </div>
+                        </button>
                     </div>
 
                     {/* Höger: sparade event + expanderbar sök + skapa event */}

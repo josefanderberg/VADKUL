@@ -42,6 +42,10 @@ service cloud.firestore {
         )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         
+      // Man får radera sitt eget users-dokument (kontoradering/GDPR) —
+      // Auth-kontot raderas i appen, det här släpper igenom dokumentet.
+      allow delete: if isOwner(userId);
+
       // Admins får göra allt (t.ex. verifiera användare)
       allow write: if isAdmin();
       

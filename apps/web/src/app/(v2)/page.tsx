@@ -9,11 +9,11 @@ import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
+import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
@@ -89,6 +89,8 @@ export default function HomePage() {
     const [searchQuery, setSearchQuery] = useState('');
     // Panel med sparade event (hjärtknappen i navbaren).
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
+    // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
+    const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
@@ -173,13 +175,11 @@ export default function HomePage() {
                 ? prev : flags
         );
     }, []);
-    // Multiplayer aktiveras via en kontoregistrering. Tills vidare routar vi
-    // bara till inloggnings-sidan — när användaren kommer tillbaka kan de manuellt
-    // toggla på multiplayer-badgen i shoppen.
-    const router = useRouter();
+    // Multiplayer aktiveras via en kontoregistrering — i modalen, på kartan
+    // (gamla /login-sidan är skrotad). Efteråt togglar man badgen i väskan.
     const handleActivateMultiplayer = useCallback(() => {
-        router.push('/login');
-    }, [router]);
+        openLogin('Skapa ett konto för att aktivera multiplayer');
+    }, [openLogin]);
 
     // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
     // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
@@ -427,14 +427,26 @@ export default function HomePage() {
         setDayRangeDays(days);
     }, []);
 
-    // Sök och sparat-panelen delar plats under navbaren — bara en i taget.
+    // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
     useEffect(() => {
-        if (searchQuery.trim()) setSavedPanelOpen(false);
+        if (searchQuery.trim()) { setSavedPanelOpen(false); setProfilePanelOpen(false); }
     }, [searchQuery]);
     const handleToggleSaved = useCallback(() => {
         setSavedPanelOpen(o => !o);
+        setProfilePanelOpen(false);
         setSearchQuery('');
     }, []);
+    const handleToggleProfile = useCallback(() => {
+        setProfilePanelOpen(o => !o);
+        setSavedPanelOpen(false);
+        setSearchQuery('');
+    }, []);
+
+    // Användarens egna skapade event — visas i profilpanelen.
+    const myEvents = useMemo(
+        () => (user ? events.filter(e => e.userCreated && e.hostUid === user.uid) : []),
+        [events, user]
+    );
 
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
@@ -450,6 +462,7 @@ export default function HomePage() {
         setSelectedEvent(evt);
         setSearchQuery('');
         setSavedPanelOpen(false);
+        setProfilePanelOpen(false);
     }, []);
 
     // Ta bort från sparade (hjärtat på kortet eller krysset i sparat-listan).
@@ -662,6 +675,7 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onLoginClick={() => openLogin()}
+                onOpenProfile={handleToggleProfile}
                 savedCount={savedEventIds.size}
                 onToggleSaved={handleToggleSaved}
             />
@@ -689,6 +703,17 @@ export default function HomePage() {
                 onPick={jumpToEvent}
                 onRemove={handleUnsaveEvent}
                 onClose={() => setSavedPanelOpen(false)}
+            />
+
+            {/* 1e. Profilen — allt konto-relaterat utan att lämna kartan */}
+            <ProfilePanel
+                open={profilePanelOpen}
+                onClose={() => setProfilePanelOpen(false)}
+                myEvents={myEvents}
+                onPickEvent={jumpToEvent}
+                onDeleteEvent={handleDeleteOwnEvent}
+                savedCount={savedEventIds.size}
+                onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
             />
 
             {/* 2. Fullskärmskarta underst */}

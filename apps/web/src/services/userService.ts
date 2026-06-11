@@ -66,6 +66,18 @@ export const userService = {
     return null;
   },
 
+  // Byt visningsnamn i users-dokumentet (Auth-profilen uppdateras i AuthContext).
+  async updateDisplayName(uid: string, name: string): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { displayName: name.trim() }, { merge: true });
+  },
+
+  // Radera users-dokumentet (vid kontoradering). Kräver att reglerna släpper
+  // igenom owner-delete — misslyckas det fortsätter Auth-raderingen ändå.
+  async deleteUserDoc(uid: string): Promise<void> {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'users', uid));
+  },
+
   // Sparade event (hjärtan): läses vid inloggning och slås ihop med localStorage.
   async getSavedEventIds(uid: string): Promise<string[]> {
     try {
