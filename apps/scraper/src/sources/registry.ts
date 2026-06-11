@@ -4283,6 +4283,28 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-11',
     },
     {
+        id: 'pro',
+        hostName: 'PRO',
+        region: 'national',
+        engine: 'pro',
+        config: {},   // config.maxSites för smoke-test
+        windowDays: 60,
+        updateFrequency: 'daily',
+        status: 'active',
+        expectedMinEvents: 200,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://pro.se/appresource/4.<pageId>/12.4d4eef20190100e8b7a784c7/activities',
+            date: '2026-06-11',
+            notes: 'SiteVision WebApp-portlet (id konstant över alla föreningar — delad mall). ' +
+                'JSESSIONID från valfri sida räcker; pageId per förening ur HTML (pageId: \'4.<hex>\').',
+        },
+        notes: '~970 föreningar via sitemapindex.xml (gzippade sitemaps) → vara-aktiviteter-sidor. ' +
+            'Datum+tid direkt i API-svaret. Serie-dedup i engine (veckoåterkommande Boule/gympa → ' +
+            'första tillfället per förening+namn). Geocoding: location.name → kommun-slug ur URL.',
+        lastVerified: '2026-06-11',
+    },
+    {
         id: 'friluftsframjandet',
         hostName: 'Friluftsfrämjandet',
         region: 'national',

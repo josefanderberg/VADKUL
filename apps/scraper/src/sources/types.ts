@@ -181,7 +181,7 @@ export type EngineName =
     | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap'
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
-    | 'friluftsframjandet';
+    | 'friluftsframjandet' | 'pro';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

@@ -75,17 +75,23 @@ The umbrella-API pattern is now the proven engine for big leaps. Four national n
 
 ## 5. Next Steps (Prioritized)
 
-1. **PRO (Pensionärernas Riksorganisation)** — BUILD-ready, ~1000-1500 events. Per-förening SiteVision WebApp: `POST pro.se/appresource/4.<pageNodeId>/12.4d4eef.../activities` (the `12.…` portlet ID is constant; `4.<pageNodeId>` per-förening from the `vara-aktiviteter` page HTML). Needs a `JSESSIONID` cookie (GET the page first; pair cookie+nodeId from same response). Body `{"startsAfter":"<today>","page":1,"pageSize":100,...}`, paginate via `totalPages`. Discover ~118 structured föreningar from `pro.se/sitemapindex.xml` (grep `…/vara-aktiviteter$`). No coords → geocode kommun from URL path. Sweden-only. **Biggest remaining single leap.**
-2. **Korpen** — BUILD-ready but NOISY. Per-association Zoezi API `GET <assoc>.zoezi.se/api/public/workout/get/all?fromDate=&toDate=` (no auth, coords in `resources[].position`). Discover assoc subdomains by scraping `korpen.se/foreningar/` → ~136 slugs → grep `https://<x>.zoezi.se`. **Caveat: tens of thousands of recurring drop-in gym classes (daily spinning/gympa)** — would flood the feed. Needs heavy de-duplication / series-collapsing before shipping (see [[scraper-deferred-tuning]]).
-3. **Other umbrella networks to probe:** PRO/SPF done-or-skipped; try Friskis&Svettis (likely Zoezi too), Studiefrämjandet/Bilda (Event-only filter), Riksteatern, scouterna.se.
-4. **Studieförbund Event-only filter** (5-10% of 4683 Medborgarskolan = 200-400 real events)
-5. **Biljettplattform organizer enumeration** (Tickster /o/, Billetto if returns, Eventbrite SE-filtered)
-6. **Pensionera redundans:** bespoke tickster.ts vs tickster-sitemap, bespoke eventbrite.ts vs Eventbrite sitemap
-7. **JS-SPA bulk via Puppeteer-render** (995 FAIL list, expect 1-3% yield = 10-30 sources)
-8. **Adaptive frequency** (currently 172/175 daily — tier by horizon)
-9. **Window widening 30d→180d** (currently throws 72% of scraped events)
+1. ~~**PRO**~~ — **DONE 2026-06-11** (`scrapers/pro.ts`, registry id `pro`). Reality vs recon: ~970 föreningssidor (not 118), portlet ID confirmed constant (`12.4d4eef20190100e8b7a784c7`), ONE JSESSIONID works for all POSTs, date+time directly in API response (no detail fetch). Engine does series-dedup (weekly Boule/gympa → first upcoming per förening+name) + admin-meeting filter (styrelsemöte/årsmöte/Samorganisation). Förening name (with åäö) from breadcrumb — page title is just "Våra aktiviteter". Gzipped sitemaps: gunzip only on magic bytes 1f 8b (fetch may pre-inflate).
+2. **Korpen** — BUILD-ready but NOISY. Per-association Zoezi API `GET <assoc>.zoezi.se/api/public/workout/get/all?fromDate=&toDate=` (no auth, coords in `resources[].position`). Discover assoc subdomains by scraping `korpen.se/foreningar/` → ~136 slugs → grep `https://<x>.zoezi.se`. **Caveat: tens of thousands of recurring drop-in gym classes** — apply PRO's series-dedup pattern (`dedupeSeries`) before shipping.
+3. **Recon-runda 3 (2026-06-11, fotboll/guldkorn-spåret) — färska verdicts:**
+   - **Eventor (orientering)** — PROMISING: `eventor.orientering.se/Events` is server-rendered HTML with all Swedish o-competitions (national→club level). Needs "Veckans bana" filtering (permanent training courses, not events). Official XML API exists but needs per-club ApiKey; HTML route works without.
+   - **Marknadskalendern.se** — PROMISING but scrappy: WP with post types `evenemang`/`kommun`/`ort` but REST returns [] (restricted). HTML route: front page tables `<td class='second-inner stad'>Ort</td><td><a href='/marknad/<slug>'>Namn</a>` (single-quoted attrs!); detail pages have dates only as prose → findFirstDateInText. Hundreds of small-town markets = genuine guldkorn.
+   - **Min Fotboll (svenskfotboll.se)** — NEEDS BROWSER RECON: `/matcher/` is 404; minfotboll.svenskfotboll.se is an SPA shell with no API refs in HTML (video CDNs only). Next angle: XHR-sniff via network-scout/browser. Match volume needs senior-series filtering anyway.
+   - **STF (Svenska Turistföreningen)** — svenskaturistforeningen.se/aktiviteter/ (225KB, no __NEXT_DATA__, no /aktiviteter/-links in static HTML → JS-rendered). Next angle: scout XHR.
+   - **FHP/ABF** — central calendars: folketshusochparker.se has no central event listing (per-member sites, low yield per round-1); abf.se/arrangemang/ redirects to start — probe their search XHR next.
+4. **Other umbrella networks to probe:** Friskis&Svettis (likely Zoezi too), Studiefrämjandet/Bilda (Event-only filter), Riksteatern, scouterna.se, Birdlife/SOF regionalföreningar (exkursioner), Svemo TA (motorsport), TDB (ridsport).
+5. **Studieförbund Event-only filter** (5-10% of 4683 Medborgarskolan = 200-400 real events)
+6. **Biljettplattform organizer enumeration** (Tickster /o/, Billetto if returns, Eventbrite SE-filtered)
+7. **Pensionera redundans:** bespoke tickster.ts vs tickster-sitemap, bespoke eventbrite.ts vs Eventbrite sitemap
+8. **JS-SPA bulk via Puppeteer-render** (995 FAIL list, expect 1-3% yield = 10-30 sources)
+9. **Adaptive frequency** (currently 172/175 daily — tier by horizon)
+10. **Window widening 30d→180d** (currently throws 72% of scraped events)
 
-**Skipped this round (don't re-probe without new angle):** Friluftsfrämjandet (HTML fragments), SPF Seniorerna (prose HTML), Lions (fragmented, no API; only a loppis Google Sheet with unparseable recurring schedules), Rädda Barnen (auth-locked Content API).
+**Skipped (don't re-probe without new angle):** SPF Seniorerna (prose HTML), Lions (fragmented, no API; only a loppis Google Sheet with unparseable recurring schedules), Rädda Barnen (auth-locked Content API). ~~Friluftsfrämjandet~~ — WAS on this list, turned out to be a clean JSON API (see §4); lesson: check JS bundles for fetch calls before writing a source off.
 
 ## 6. Tools Reference
 
