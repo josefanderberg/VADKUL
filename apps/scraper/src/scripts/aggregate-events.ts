@@ -11,6 +11,8 @@ interface DestinationLayer {
     lng: number;
     locationName: string;
     category: string;
+    /** Per-event-emoji från AI-audit (🧘/🏃 osv) — webben föredrar denna framför kategori-default. */
+    emoji?: string;
 }
 
 interface CardLayer {
@@ -26,6 +28,8 @@ interface CardLayer {
     isLocationVerified: boolean;
     isHostVerified: boolean;
     url: string;
+    /** Per-event-emoji från AI-audit. */
+    emoji?: string;
 }
 
 export async function runAggregation(opts: { includeUnpublished?: boolean } = {}) {
@@ -67,7 +71,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             lat: Number(row.lat) || 0,
             lng: Number(row.lng) || 0,
             locationName: row.locationName || '',
-            category: row.category || 'other'
+            category: row.category || 'other',
+            emoji: row.emoji || undefined
         });
 
         cards.push({
@@ -82,7 +87,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             price: row.price || '',
             isLocationVerified: row.isLocationVerified === 1,
             isHostVerified: row.isHostVerified === 1,
-            url: row.url
+            url: row.url,
+            emoji: row.emoji || undefined
         });
 
         descriptions[id] = row.description || '';

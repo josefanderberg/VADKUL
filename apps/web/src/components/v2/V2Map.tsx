@@ -1032,7 +1032,7 @@ export default function V2Map({
                 if (md.element.dataset.cycleId === cur.id) continue;
                 md.element.dataset.cycleId = cur.id;
                 const catKey = cur.category && EVENT_CATEGORIES[cur.category] ? cur.category : 'other';
-                const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
+                const emoji = cur.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
                 const emojiEl = md.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== emoji) emojiEl.textContent = emoji;
                 md.element.onclick = (e) => {
@@ -2072,7 +2072,7 @@ export default function V2Map({
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
                 const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
-                const emoji = EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫';
+                const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
 
                 const countBadge = count > 1
                     ? `<div class="badge-count">${count > 99 ? '99+' : count}</div>`
@@ -2168,7 +2168,7 @@ export default function V2Map({
             if (inGroupSelected && count > 1) {
                 const selCatKey = inGroupSelected.category && EVENT_CATEGORIES[inGroupSelected.category]
                     ? inGroupSelected.category : 'other';
-                const selEmoji = EVENT_CATEGORIES[selCatKey as EventCategoryType]?.emoji ?? '🎫';
+                const selEmoji = inGroupSelected.emoji || (EVENT_CATEGORIES[selCatKey as EventCategoryType]?.emoji ?? '🎫');
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
 

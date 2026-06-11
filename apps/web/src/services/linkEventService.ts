@@ -75,7 +75,8 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
         coverImage: '',
         description: '',
         attendees: 0,
-        isLocationVerified: evt.isLocationVerified || false
+        isLocationVerified: evt.isLocationVerified || false,
+        emoji: evt.emoji || undefined
     }));
 }
 
