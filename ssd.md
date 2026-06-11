@@ -6,9 +6,10 @@ This file documents the current state of VADKUL's scraper expansion toward 1000 
 
 ## 1. Current State (snapshot 2026-06-11)
 
-**Effective scrapers running daily: ~303 configs.**
-- Registry sources: 297 (in `apps/scraper/src/sources/registry.ts`), 5 dead, 292 effective
-- Bespoke scrapers: **15** (today-sweden, tickster, ticketmaster, eventbrite, meetup, facebook, vaxjoco, upplev, kollektivetlivet, upplev-stockholm, hembygd, **svenskakyrkan, naturskyddsforeningen, rotary, rodakorset**)
+**Effective scrapers running daily: ~304 configs.**
+- Registry sources: 299 (in `apps/scraper/src/sources/registry.ts`, incl. 5 network engines — 3 duplicate venue-ids removed 2026-06-11), 5 dead
+- Bespoke scrapers: **10** (today-sweden, tickster, ticketmaster, eventbrite, meetup, facebook, vaxjoco, upplev, kollektivetlivet, upplev-stockholm)
+- **Network engines folded into registry 2026-06-11**: hembygd, svenskakyrkan, naturskyddsforeningen, rotary, rodakorset now run as `ENGINES` via the sources runner (scheduling/dry-run/scrape_runs for free; engine code stays in `src/scrapers/<id>.ts`). New umbrella APIs (PRO, Korpen) should follow this shape: mapper + engine fn + one registry row.
 - Disabled: billetto (dead domain), eventim (Akamai WAF)
 - Per-event-producing endpoints: ~527+ (Hembygd umbrella covers 1988 associations, 225 with ≥3 events; Svenska kyrkan adds ~3000+ across all parishes; Naturskydd national; Rotary 3 districts; Röda Korset local chapters)
 - Distance to 1000: 697 configs / 473 endpoints (raw config count unchanged — these umbrella sources are single scrapers covering hundreds of organizers each)
@@ -61,7 +62,7 @@ The umbrella-API pattern is now the proven engine for big leaps. Four national n
 
 | Network | Endpoint pattern | Auth | Volume | Shape |
 |---|---|---|---|---|
-| **Svenska kyrkan** | `POST svk-apim-prod.azure-api.net/calendar/v1/event/search/` | `ocp-apim-subscription-key: f6937363a4d94012a78a32442752cf5c` | ~3000+ (1500+/30d, 577+ parishes) | National-aggregated, continuation-token pagination. Filter `owner.type==='Utlandet'` (SKUT abroad). |
+| **Svenska kyrkan** | `POST svk-apim-prod.azure-api.net/calendar/v1/event/search/` | `ocp-apim-subscription-key: f6937363a4d94012a78a32442752cf5c` | ~19 700/30d RAW → hard-filtered (see below) | National-aggregated, continuation-token pagination. Filter `owner.type==='Utlandet'` (SKUT abroad). **HARD FILTER since 2026-06-11** (`isPublicSvkEvent`): raw feed is ~55 % `gudstjanstOchMassa` (services incl. baptisms/weddings) — dropped along with `stodOchOmsorg`, online-only and opening-hours notices. Incident: an unfiltered nightly published 845 before being stopped + purged. |
 | **Naturskyddsföreningen** | `POST admin.naturskyddsforeningen.se/graphql` `searchContent(context:"calendar")` | none | ~465 | National-aggregated, `filters.page` pagination. Coords + images in payload. ISO date from URL slug. |
 | **Rotary** | `POST rotary<NNNN>.se/<siteId>/Event/GetDistrictEvents` | none | ~370/180d | Per-district loop (6 ClubRunner districts; 3 expose endpoint, 3 use widget iframes). **US date format `MMM d, yyyy` required** (ISO → 0). Runtime siteId discovery from `/events`. |
 | **Röda Korset** | `GET rodakorset.se/api/episerver/v3.0/content?contentUrl=<url>` | none | ~100 | Sitemap → /kalendarium/ event URLs → resolve each. ISO UTC dates, precise street-address geocoding. |
