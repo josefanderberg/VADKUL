@@ -5,10 +5,13 @@ import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
+import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { EVENT_CATEGORIES } from '@/utils/categories';
+import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
@@ -90,6 +93,14 @@ export default function HomePage() {
     mapCenterRef.current = mapCenter;
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
+    const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
+    const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
+    const [creatingEvent, setCreatingEvent] = useState(false);
+
+    // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
+    const { user } = useAuth();
+    const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
+    const openLogin = useCallback((reason?: string) => setAuthModal({ open: true, reason }), []);
 
     // Sun-button effect: brightness flash on the map, followed by a fresh cloud
     // popping up in the middle of the screen. Each click bumps a key so the
@@ -238,6 +249,63 @@ export default function HomePage() {
             document.body.style.overflow = 'auto';
         };
     }, []);
+
+    // Sparade/avfärdade event överlever omladdning (localStorage).
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('vadkul_saved_events') ?? '[]');
+            const discarded = JSON.parse(localStorage.getItem('vadkul_discarded_events') ?? '[]');
+            if (Array.isArray(saved) && saved.length) setSavedEventIds(new Set(saved));
+            if (Array.isArray(discarded) && discarded.length) setDiscardedEventIds(new Set(discarded));
+        } catch { /* korrupt localStorage — börja om tomt */ }
+    }, []);
+    useEffect(() => {
+        localStorage.setItem('vadkul_saved_events', JSON.stringify([...savedEventIds]));
+    }, [savedEventIds]);
+    useEffect(() => {
+        localStorage.setItem('vadkul_discarded_events', JSON.stringify([...discardedEventIds]));
+    }, [discardedEventIds]);
+
+    // Skapa event på riktigt: kräver konto, skrivs till Firestore (reglerna
+    // begränsar formen) och dyker upp direkt på kartan via optimistisk insättning
+    // (pollen plockar sedan upp samma event från Firestore inom 30 s).
+    const handleCreateEvent = useCallback(async () => {
+        if (!pickedLocation || !newEventTitle.trim() || !newEventTime) return;
+        if (!user) { openLogin('Logga in för att skapa event'); return; }
+        setCreatingEvent(true);
+        try {
+            const time = new Date(newEventTime);
+            const docId = await linkEventService.createUserEvent({
+                title: newEventTitle,
+                time,
+                lat: pickedLocation.lat,
+                lng: pickedLocation.lng,
+                category: newEventCategory,
+                hostName: user.displayName || user.email || 'VADKUL-användare',
+                hostUid: user.uid,
+            });
+            const created: LinkEvent = {
+                id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
+                locationName: '', lat: pickedLocation.lat, lng: pickedLocation.lng,
+                hostName: user.displayName || user.email || 'VADKUL-användare',
+                category: newEventCategory, coverImage: '', description: '', attendees: 0,
+                isLocationVerified: true,
+            } as LinkEvent;
+            setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
+            setSelectedEvent(created);
+            toast.success('Eventet är skapat och syns på kartan! 🎉');
+            setCreationMode('idle');
+            setPickedLocation(null);
+            setNewEventTitle('');
+            setNewEventTime('');
+            setNewEventCategory('other');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte skapa eventet. Försök igen.');
+        } finally {
+            setCreatingEvent(false);
+        }
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, user, openLogin]);
 
     const handleSaveEvent = (eventId: string) => {
         setSavedEventIds(prev => {
@@ -473,10 +541,15 @@ export default function HomePage() {
                 onConfirmPlacement={() => {
                     if (!mapCenter) return;
                     setPickedLocation(mapCenter);
+                    // Förifyll nästa hela timme idag — lokal tid i datetime-local-format.
+                    const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
+                    const pad = (n: number) => String(n).padStart(2, '0');
+                    setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
                     setCreationMode('editing');
                 }}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                onLoginClick={() => openLogin()}
             />
 
             {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken */}
@@ -526,13 +599,13 @@ export default function HomePage() {
                 onStopFindGame={clearGame}
             />
 
-            {/* Modal för att skapa event */}
+            {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
             {creationMode === 'editing' && pickedLocation && (
                 <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
                         <h2 className="text-xl font-bold text-slate-800">Skapa event</h2>
                         <p className="text-xs text-slate-500 tabular-nums">
-                            {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
+                            📍 {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
                         </p>
                         <input
                             type="text"
@@ -540,8 +613,35 @@ export default function HomePage() {
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder="Namn på event"
                             autoFocus
+                            maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
+                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                            När?
+                            <input
+                                type="datetime-local"
+                                value={newEventTime}
+                                onChange={e => setNewEventTime(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
+                            />
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                            Kategori
+                            <select
+                                value={newEventCategory}
+                                onChange={e => setNewEventCategory(e.target.value as EventCategoryType)}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
+                            >
+                                {Object.values(EVENT_CATEGORIES).map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.emoji} {cat.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                        {!user && (
+                            <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                                Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
+                            </p>
+                        )}
                         <div className="flex justify-end gap-2 mt-2">
                             <button
                                 type="button"
@@ -549,6 +649,7 @@ export default function HomePage() {
                                     setCreationMode('idle');
                                     setPickedLocation(null);
                                     setNewEventTitle('');
+                                    setNewEventTime('');
                                 }}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
@@ -556,23 +657,23 @@ export default function HomePage() {
                             </button>
                             <button
                                 type="button"
-                                disabled={!newEventTitle.trim()}
-                                onClick={() => {
-                                    // TODO: koppla mot linkEventService.create() när event-schemat är klart
-                                    // eslint-disable-next-line no-console
-                                    console.log('Skapa event', { title: newEventTitle, ...pickedLocation });
-                                    setCreationMode('idle');
-                                    setPickedLocation(null);
-                                    setNewEventTitle('');
-                                }}
+                                disabled={!newEventTitle.trim() || !newEventTime || creatingEvent}
+                                onClick={handleCreateEvent}
                                 className="px-5 py-2 rounded-full bg-green-600 text-white font-bold disabled:opacity-40 hover:bg-green-500 transition-colors"
                             >
-                                Skapa
+                                {creatingEvent ? 'Skapar…' : user ? 'Skapa' : 'Logga in & skapa'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Inloggning/registrering — utan att lämna kartan */}
+            <AuthModal
+                open={authModal.open}
+                reason={authModal.reason}
+                onClose={() => setAuthModal({ open: false })}
+            />
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
@@ -596,6 +697,7 @@ export default function HomePage() {
                 slingshotReady={slingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
+                onRequireLogin={() => openLogin('Logga in för att chatta')}
             />
 
             {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets

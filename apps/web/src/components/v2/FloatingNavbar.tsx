@@ -14,6 +14,8 @@ interface FloatingNavbarProps {
     onConfirmPlacement?: () => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
+    /** Öppna inloggningsmodalen (utan att lämna kartan). Utan prop → gamla /login-routen. */
+    onLoginClick?: () => void;
 }
 
 export default function FloatingNavbar({
@@ -23,6 +25,7 @@ export default function FloatingNavbar({
     onConfirmPlacement,
     searchQuery,
     setSearchQuery,
+    onLoginClick,
 }: FloatingNavbarProps) {
     const router = useRouter();
     const { user, logout } = useAuth();
@@ -93,6 +96,8 @@ export default function FloatingNavbar({
     const handleProfileClick = () => {
         if (user) {
             setProfileMenuOpen(o => !o);
+        } else if (onLoginClick) {
+            onLoginClick();
         } else {
             router.push('/login');
         }

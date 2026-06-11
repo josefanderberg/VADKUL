@@ -201,12 +201,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             >
                                 <Share2 size={14} />
                             </button>
-                            <button
-                                onClick={handleVisitSite}
-                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
-                            >
-                                ANMÄL
-                            </button>
+                            {/* Användarskapade event saknar extern anmälningssida */}
+                            {linkEvent.url && (
+                                <button
+                                    onClick={handleVisitSite}
+                                    className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
+                                >
+                                    ANMÄL
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

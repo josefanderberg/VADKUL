@@ -151,10 +151,47 @@ service cloud.firestore {
     match /linkEvents/{eventId} {
       // Alla kan läsa
       allow read: if true;
-      
-      // Endast admin kan skriva
-      allow create, update, delete: if isAuthenticated() 
+
+      // Inloggade får skapa EGNA event — hårt formbegränsade så de inte kan
+      // låtsas vara scrapade event eller skriva godtyckliga fält.
+      allow create: if isAuthenticated()
+        && request.resource.data.userCreated == true
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.status == 'published'
+        && request.resource.data.keys().hasOnly([
+            'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
+            'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
+            'description', 'createdAt', 'isLocationVerified'
+        ]);
+
+      // Uppdatera/radera: bara sitt eget användarskapade event…
+      allow update, delete: if isAuthenticated()
+        && resource.data.userCreated == true
+        && resource.data.hostUid == request.auth.uid;
+
+      // …eller admin (scrapade event förblir admin-only).
+      allow create, update, delete: if isAuthenticated()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).
+    // Läsning öppen (chatten syns för alla) — skrivning kräver konto och
+    // formbegränsas mot spam/spoofing (senderId måste vara ens eget uid).
+    match /eventChats/{chatId}/messages/{messageId} {
+      allow read: if true;
+      allow create: if isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.keys().hasOnly([
+            'senderId', 'senderName', 'senderImage', 'text', 'createdAt'
+        ]);
     }
 
     // 9. FCM TOKENS

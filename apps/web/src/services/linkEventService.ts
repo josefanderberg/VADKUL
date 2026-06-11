@@ -1,7 +1,48 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
+
+/**
+ * Användarskapade event bor BARA i Firestore (scraper-pipelinens aggregat
+ * byggs från SQLite och känner inte till dem) — de hämtas i samma 30s-poll
+ * som lagren och slås ihop med kartdatat.
+ */
+async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
+    try {
+        if (!db) return [];
+        const q = query(collection(db, 'linkEvents'), where('userCreated', '==', true));
+        const snap = await getDocs(q);
+        const cutoff = new Date(); cutoff.setHours(0, 0, 0, 0);
+        return snap.docs
+            .map((d) => {
+                const v: any = d.data();
+                const time = v.time instanceof Timestamp ? v.time.toDate() : new Date(v.time);
+                return {
+                    id: d.id,
+                    url: v.url || '',
+                    title: v.title || '',
+                    time,
+                    createdAt: new Date(),
+                    locationName: v.locationName || '',
+                    lat: Number(v.lat) || 0,
+                    lng: Number(v.lng) || 0,
+                    hostName: v.hostName || 'VADKUL-användare',
+                    category: v.category || 'other',
+                    emoji: v.emoji || undefined,
+                    coverImage: '',
+                    description: v.description || '',
+                    attendees: 0,
+                    isLocationVerified: true,
+                    userCreated: true,
+                } as LinkEvent;
+            })
+            .filter((e) => e.title && e.time >= cutoff && !(e as any).hidden);
+    } catch (e) {
+        console.warn('Kunde inte hämta användarskapade event:', e);
+        return [];
+    }
+}
 
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. Try Firestore Client SDK first
@@ -156,6 +197,37 @@ export const linkEventService = {
         }
     },
 
+    /**
+     * Skapa ett ANVÄNDAR-event direkt mot Firestore (reglerna kräver
+     * userCreated=true + hostUid=eget uid och begränsar fälten). Returnerar
+     * dokument-id:t — eventet syns på kartan vid nästa poll (≤30 s).
+     */
+    async createUserEvent(input: {
+        title: string; time: Date; lat: number; lng: number;
+        locationName?: string; category?: string; description?: string;
+        hostName: string; hostUid: string;
+    }): Promise<string> {
+        if (!db) throw new Error('Firestore ej initierad');
+        const ref = await addDoc(collection(db, 'linkEvents'), {
+            title: input.title.trim(),
+            time: Timestamp.fromDate(input.time),
+            lat: input.lat,
+            lng: input.lng,
+            locationName: input.locationName?.trim() || '',
+            category: input.category || 'other',
+            description: input.description?.trim() || '',
+            hostName: input.hostName,
+            hostUid: input.hostUid,
+            userCreated: true,
+            status: 'published',
+            hidden: 0,
+            url: '',
+            isLocationVerified: true,
+            createdAt: serverTimestamp(),
+        });
+        return ref.id;
+    },
+
     // Skapa nytt link event
     async create(linkEvent: Omit<LinkEvent, 'id' | 'createdAt'>) {
         const res = await fetch('/api/link-events', {
@@ -269,6 +341,16 @@ export const linkEventService = {
 
                 if (descData && descData.data) {
                     events = mergeDescriptionsWithEvents(events, descData.data);
+                    callback(events);
+                }
+
+                // 4. Användarskapade event (bor bara i Firestore, inte i aggregaten)
+                const userEvents = await fetchUserCreatedEvents();
+                if (!active) return;
+                if (userEvents.length) {
+                    const known = new Set(events.map((e) => e.id));
+                    events = [...events, ...userEvents.filter((e) => !known.has(e.id))]
+                        .sort((a, b) => a.time.getTime() - b.time.getTime());
                     callback(events);
                 }
             } catch (err) {

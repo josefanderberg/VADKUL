@@ -5,6 +5,7 @@ import { LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
+import EventChatPanel from './EventChatPanel';
 import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -319,9 +320,11 @@ interface EventCardProps {
     /** True under "Hitta eventet"-spelet: kortet visar mål-eventet men navigering
      *  (Nästa/Bakåt) och svep åt sidan stängs av så spelaren inte byter mål. */
     gameMode?: boolean;
+    /** Öppna inloggningsmodalen (chatten kräver konto för att skriva). */
+    onRequireLogin?: () => void;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false }: EventCardProps) {
+export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, onCardExpandedChange, dayOffset, setDayOffset, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -920,6 +923,12 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                         showFullAddress
                         alwaysExpanded
                     />
+                    {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
+                    {onRequireLogin && (
+                        <div className="px-4 md:px-6 pb-4">
+                            <EventChatPanel eventId={selectedEvent.id} onRequireLogin={onRequireLogin} />
+                        </div>
+                    )}
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
                             upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
