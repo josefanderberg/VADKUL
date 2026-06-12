@@ -27,8 +27,8 @@ interface DayPickerProps {
 }
 
 /**
- * Popover ovanför dagchippen: snabbval (Idag/Imorgon/I helgen/Hela veckan)
- * plus fritt datum. Helgen och veckan är INTERVALL — kartan och kortleken
+ * Popover ovanför dagchippen: snabbval (Idag/Imorgon/Hela veckan)
+ * plus fritt datum. Veckan är ett INTERVALL — kartan och kortleken
  * visar då alla dagar i spannet.
  */
 export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, onClose }: DayPickerProps) {
@@ -43,21 +43,13 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
         return () => document.removeEventListener('mousedown', onDown);
     }, [onClose, anchorRef]);
 
-    const weekend = weekendRange();
-    const options: { label: string; offset: number; days: number }[] = [
+    // "I helgen" borttaget ur UI:t (kraschade). weekendRange() bevaras som
+    // datalager-logik om vi vill återinföra valet senare.
+    const uniqueOptions: { label: string; offset: number; days: number }[] = [
         { label: 'Idag', offset: 0, days: 1 },
         { label: 'Imorgon', offset: 1, days: 1 },
-        { label: 'I helgen', offset: weekend.offset, days: weekend.days },
         { label: 'Hela veckan', offset: 0, days: 7 },
     ];
-    // På söndagar är "I helgen" samma sak som "Idag" — visa inte dubbletten.
-    const seen = new Set<string>();
-    const uniqueOptions = options.filter(o => {
-        const key = `${o.offset}:${o.days}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
 
     const pad = (n: number) => String(n).padStart(2, '0');
     const toInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
