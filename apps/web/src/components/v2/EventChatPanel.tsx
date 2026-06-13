@@ -106,6 +106,7 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Skriv något…"
+                        aria-label="Skriv ett chattmeddelande"
                         maxLength={500}
                         className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-[#006AA7]/40 text-sm text-slate-800 dark:text-slate-100"
                     />

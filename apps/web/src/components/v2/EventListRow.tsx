@@ -30,13 +30,24 @@ export default function EventListRow({ evt, onPick, right, dimmed = false }: Eve
                 className="flex-1 min-w-0 text-left px-4 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
                 <span
-                    className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg leading-none"
+                    className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
+                        evt.userCreated
+                            ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
+                            : 'bg-slate-100 dark:bg-slate-800'
+                    }`}
                     aria-hidden
                 >
                     {eventEmoji(evt)}
                 </span>
                 <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-sm text-black dark:text-white truncate">{evt.title}</h4>
+                    <div className="flex items-center gap-2">
+                        <h4 className="font-black text-sm text-black dark:text-white truncate min-w-0">{evt.title}</h4>
+                        {evt.userCreated && (
+                            <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
+                                VADKUL
+                            </span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
                             <Clock size={11} className="text-primary" />

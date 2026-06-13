@@ -110,6 +110,23 @@ export default function HomePage() {
     const [newEventDescription, setNewEventDescription] = useState(''); // valfri
     const [creatingEvent, setCreatingEvent] = useState(false);
 
+    // Escape stänger skapa event-modalen (samma städning som Avbryt-knappen) —
+    // standardbeteende för dialoger, viktigt för tangentbordsanvändare.
+    useEffect(() => {
+        if (creationMode !== 'editing') return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            setCreationMode('idle');
+            setPickedLocation(null);
+            setNewEventTitle('');
+            setNewEventTime('');
+            setNewEventPlace('');
+            setNewEventDescription('');
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [creationMode]);
+
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
     const { user } = useAuth();
     const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
@@ -221,9 +238,16 @@ export default function HomePage() {
         const unsubscribe = linkEventService.subscribeToAll(true, (fetched) => {
             const sorted = fetched.sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
-            setEventsLoaded(true);
+            // Laddningen är progressiv (destinationer → kort → beskrivningar) och
+            // första lagret kan komma tomt — räkna bara svar MED data som
+            // "laddat", annars blinkar "Inga event den här dagen" förbi innan
+            // riktiga datan hunnit fram.
+            if (fetched.length > 0) setEventsLoaded(true);
         });
-        return () => unsubscribe();
+        // En äkta tom databas är ändå möjlig: efter 6 s utan data räknas det som
+        // laddat så tom-dagen-meddelandet (och molnet) inte väntar för evigt.
+        const emptyFallback = setTimeout(() => setEventsLoaded(true), 6000);
+        return () => { unsubscribe(); clearTimeout(emptyFallback); };
     }, []);
 
     // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
@@ -757,8 +781,13 @@ export default function HomePage() {
             {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
             {creationMode === 'editing' && pickedLocation && (
                 <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
-                        <h2 className="text-xl font-bold text-slate-800">Skapa event</h2>
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="create-event-title"
+                        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4"
+                    >
+                        <h2 id="create-event-title" className="text-xl font-bold text-slate-800">Skapa event</h2>
                         <p className="text-xs text-slate-500 tabular-nums">
                             📍 {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
                         </p>
@@ -767,6 +796,7 @@ export default function HomePage() {
                             value={newEventTitle}
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder="Namn på event"
+                            aria-label="Namn på event"
                             autoFocus
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
@@ -797,6 +827,7 @@ export default function HomePage() {
                             value={newEventPlace}
                             onChange={e => setNewEventPlace(e.target.value)}
                             placeholder="Plats — t.ex. Vasaparken (valfritt)"
+                            aria-label="Plats (valfritt)"
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
@@ -804,6 +835,7 @@ export default function HomePage() {
                             value={newEventDescription}
                             onChange={e => setNewEventDescription(e.target.value)}
                             placeholder="Beskrivning — vad händer? (valfritt)"
+                            aria-label="Beskrivning (valfritt)"
                             maxLength={1000}
                             rows={3}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
@@ -857,6 +889,7 @@ export default function HomePage() {
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
                 events={visibleEvents}
+                eventsLoaded={eventsLoaded}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}

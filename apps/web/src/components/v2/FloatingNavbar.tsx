@@ -157,6 +157,7 @@ export default function FloatingNavbar({
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Sök event..."
+                                    aria-label="Sök event"
                                     className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 min-w-0"
                                 />
                                 <button
@@ -180,7 +181,13 @@ export default function FloatingNavbar({
                             </button>
                         )}
 
-                        {creationMode !== 'editing' && createEventEnabled && (
+                        {/* +-knappen döljs medan söket är öppet — annars hamnar den
+                            längst till höger exakt där sökknappen nyss satt, och man
+                            råkar trycka på den när man egentligen ville söka.
+                            UNDANTAG: i placerings-läget är plusset bekräfta-knappen
+                            och måste alltid synas, och mitt i drop-animationen får
+                            den inte unmountas (då fastnar plusDropping-låset). */}
+                        {creationMode !== 'editing' && createEventEnabled && (!searchOpen || creationMode === 'placing' || plusDropping) && (
                             <button
                                 ref={plusBtnRef}
                                 type="button"

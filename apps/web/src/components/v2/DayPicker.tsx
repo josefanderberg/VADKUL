@@ -27,9 +27,9 @@ interface DayPickerProps {
 }
 
 /**
- * Popover ovanför dagchippen: snabbval (Idag/Imorgon/Hela veckan)
- * plus fritt datum. Veckan är ett INTERVALL — kartan och kortleken
- * visar då alla dagar i spannet.
+ * Popover ovanför dagchippen: kommande veckan dag för dag (Idag, Imorgon +
+ * veckodagarna med datum), "I helgen" som intervall, plus fritt datum.
+ * Inget "Hela veckan"-val — varje dag visas för sig.
  */
 export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, onClose }: DayPickerProps) {
     const ref = useRef<HTMLDivElement>(null);
@@ -43,13 +43,24 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
         return () => document.removeEventListener('mousedown', onDown);
     }, [onClose, anchorRef]);
 
-    // "I helgen" borttaget ur UI:t (kraschade). weekendRange() bevaras som
-    // datalager-logik om vi vill återinföra valet senare.
-    const uniqueOptions: { label: string; offset: number; days: number }[] = [
-        { label: 'Idag', offset: 0, days: 1 },
-        { label: 'Imorgon', offset: 1, days: 1 },
-        { label: 'Hela veckan', offset: 0, days: 7 },
-    ];
+    const capitalize = (s: string) => s.replace(/^\w/, (c) => c.toUpperCase());
+    // Kommande veckan dag för dag: Idag, Imorgon + de fem följande veckodagarna.
+    // Varje rad får sitt datum till höger så man ser exakt vilken dag det är.
+    const dayOptions: { label: string; sub: string; offset: number; days: number }[] = [];
+    for (let off = 0; off < 7; off++) {
+        const d = new Date();
+        d.setDate(d.getDate() + off);
+        const label = off === 0 ? 'Idag'
+            : off === 1 ? 'Imorgon'
+            : capitalize(d.toLocaleDateString('sv-SE', { weekday: 'long' }));
+        const sub = d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
+        dayOptions.push({ label, sub, offset: off, days: 1 });
+    }
+
+    // "I helgen" som intervall under dagarna. På söndagar är helgen = Idag —
+    // visa inte dubbletten.
+    const weekend = weekendRange();
+    const showWeekend = !(weekend.offset === 0 && weekend.days === 1);
 
     const pad = (n: number) => String(n).padStart(2, '0');
     const toInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -71,22 +82,44 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
             ref={ref}
             className="absolute bottom-full mb-2 left-0 w-60 rounded-2xl bg-white/95 backdrop-blur-md border border-white/60 shadow-2xl p-1.5 z-[1100] animate-in fade-in slide-in-from-bottom-2 duration-150"
         >
-            {uniqueOptions.map(opt => {
+            {dayOptions.map(opt => {
                 const active = dayOffset === opt.offset && dayRangeDays === opt.days;
                 return (
                     <button
-                        key={opt.label}
+                        key={opt.offset}
                         type="button"
                         onClick={() => onPick(opt.offset, opt.days)}
-                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                        className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
                             active ? 'bg-[#006AA7] text-white' : 'text-slate-700 hover:bg-slate-100'
                         }`}
                     >
                         <span>{opt.label}</span>
-                        {active && <Check size={15} className="shrink-0" />}
+                        <span className="flex items-center gap-1.5">
+                            <span className={`text-[11px] font-semibold tabular-nums ${active ? 'text-white/80' : 'text-slate-400'}`}>
+                                {opt.sub}
+                            </span>
+                            {active && <Check size={15} className="shrink-0" />}
+                        </span>
                     </button>
                 );
             })}
+            {showWeekend && (() => {
+                const active = dayOffset === weekend.offset && dayRangeDays === weekend.days;
+                return (
+                    <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+                        <button
+                            type="button"
+                            onClick={() => onPick(weekend.offset, weekend.days)}
+                            className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
+                                active ? 'bg-[#006AA7] text-white' : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                        >
+                            <span>I helgen</span>
+                            {active && <Check size={15} className="shrink-0" />}
+                        </button>
+                    </div>
+                );
+            })()}
             <div className="border-t border-slate-100 mt-1.5 pt-1.5">
                 <label className="flex items-center gap-2 px-3.5 py-2 cursor-pointer">
                     <CalendarDays size={15} className="text-[#006AA7] shrink-0" />

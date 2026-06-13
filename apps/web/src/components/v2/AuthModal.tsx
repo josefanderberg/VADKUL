@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
@@ -35,6 +35,14 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     const [password, setPassword] = useState('');
     const [busy, setBusy] = useState(false);
 
+    // Escape stänger modalen — standardbeteende för dialoger (tangentbord/SR).
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [open, onClose]);
+
     if (!open) return null;
 
     const submit = async (e: React.FormEvent) => {
@@ -55,12 +63,15 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     return (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="auth-modal-title"
                 className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 className="text-xl font-black text-slate-800">
+                        <h2 id="auth-modal-title" className="text-xl font-black text-slate-800">
                             {mode === 'login' ? 'Logga in' : 'Skapa konto'}
                         </h2>
                         {reason && <p className="text-xs font-semibold text-slate-500 mt-0.5">{reason}</p>}
@@ -77,6 +88,8 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Visningsnamn"
+                            aria-label="Visningsnamn"
+                            autoComplete="nickname"
                             required
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
                         />
@@ -86,6 +99,8 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="E-post"
+                        aria-label="E-post"
+                        autoComplete="email"
                         required
                         autoFocus
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
@@ -95,6 +110,8 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Lösenord"
+                        aria-label="Lösenord"
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                         required
                         minLength={6}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"

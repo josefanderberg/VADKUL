@@ -7,7 +7,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import DayPicker from './DayPicker';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, RotateCcw, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -209,7 +209,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                 className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
                 <span
-                    className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg leading-none"
+                    className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
+                        evt.userCreated
+                            ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
+                            : 'bg-slate-100 dark:bg-slate-800'
+                    }`}
                     aria-hidden
                 >
                     {eventEmoji(evt)}
@@ -219,6 +223,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
                             {evt.title}
                         </h4>
+                        {evt.userCreated && (
+                            <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
+                                VADKUL
+                            </span>
+                        )}
                         <StatusBadge status={status} />
                     </div>
                     <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 dark:text-slate-400">
@@ -317,6 +326,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
 
 interface EventCardProps {
     events: LinkEvent[];
+    /** False tills första Firestore-svaret kommit — då visas "Laddar event…"
+     *  i stället för "Inga event den här dagen" (som annars blinkar förbi
+     *  innan datan hunnit fram). */
+    eventsLoaded?: boolean;
     selectedEvent: LinkEvent | null;
     onSelectEvent: (evt: LinkEvent | null) => void;
     onSaveEvent: (eventId: string) => void;
@@ -362,7 +375,7 @@ interface EventCardProps {
     onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
+export default function EventCard({ events, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -374,11 +387,14 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
-    // Minsta höjd kortet kan dras ner till — "peek"-läget längst ner där bara
-    // kortets header (titel, tid, plats) syns. Ett nedåt-drag stannar HÄR; kortet
-    // försvinner aldrig av att man drar ner det. (Stäng kortet genom att klicka
-    // utanför det på kartan — V2Map avmarkerar då eventet.)
+    // "Peek"-läget längst ner där bara kortets header (titel, tid, plats) syns.
+    // Ett nedåt-drag som släpps strax under gränsen snäpper tillbaka hit —
+    // men drar man vidare nedåt glider kortet ner och STÄNGS (samma som att
+    // klicka utanför det på kartan).
     const COLLAPSED_HEIGHT_VH = 22;
+    // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
+    // stängas i stället för att snäppa tillbaka till peek.
+    const DISMISS_BELOW_VH = 6;
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     // Dagväljar-popover ovanför dagchippen (Idag/Imorgon/I helgen/datum).
     const [dayPickerOpen, setDayPickerOpen] = useState(false);
@@ -465,6 +481,50 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
     // botten-gränsen utan att bindas om. Default = konstanten tills vi mätt.
     const collapsedVhRef = useRef(COLLAPSED_HEIGHT_VH);
+    // Timer för stängningsanimationen (drag-ner-förbi-peek → glid ner → stäng).
+    const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }, []);
+
+    // ── Dra-ner-vid-scroll-toppen ────────────────────────────────────────────
+    // Står den inre scrollen på toppen och man drar nedåt ska gesten INTE
+    // rubber-banda scrollen (vitt glapp ovanför innehållet) — den ska tas över
+    // av kortets vertikala drag så kortet självt följer fingret ner (och kan
+    // släppas för att stängas). preventDefault på touchmove hindrar webbläsaren
+    // från att ta gesten för scroll; pointermove fortsätter då till kortets
+    // drag-handlers. Kräver passive:false → native listeners, inte React-props.
+    const hasSelectedEvent = selectedEvent !== null;
+    useEffect(() => {
+        if (!hasSelectedEvent) return;
+        const sc = scrollContainerRef.current;
+        if (!sc) return;
+        let startedAtTop = false;
+        let pulling = false;
+        let touchStartY = 0;
+        const onTouchStart = (e: TouchEvent) => {
+            // Gester som börjar på interaktiva element (chattens input,
+            // knappar, länkar) lämnas helt åt webbläsaren.
+            const target = e.target as HTMLElement;
+            startedAtTop = sc.scrollTop <= 0
+                && !target.closest('button, a, input, textarea, select');
+            touchStartY = e.touches[0].clientY;
+            pulling = false;
+        };
+        const onTouchMove = (e: TouchEvent) => {
+            if (!startedAtTop) return;
+            const dy = e.touches[0].clientY - touchStartY;
+            if (!pulling) {
+                if (dy > 4 && sc.scrollTop <= 0) pulling = true;       // neddrag vid toppen → ta över
+                else if (dy < -4) { startedAtTop = false; return; }    // uppdrag → vanlig innehållsscroll
+            }
+            if (pulling && e.cancelable) e.preventDefault();
+        };
+        sc.addEventListener('touchstart', onTouchStart, { passive: true });
+        sc.addEventListener('touchmove', onTouchMove, { passive: false });
+        return () => {
+            sc.removeEventListener('touchstart', onTouchStart);
+            sc.removeEventListener('touchmove', onTouchMove);
+        };
+    }, [hasSelectedEvent]);
 
     // Föregående valda event-id, så vi kan skilja "öppna från stängt" (null → X)
     // från "byta event medan kortet är öppet" (X → Y). Höjden ska bara nollställas
@@ -477,6 +537,13 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         prevSelectedIdRef.current = selectedEvent?.id ?? null;
         if (!selectedEvent) return;
 
+        // Avbryt en pågående drag-ner-stängning om ett nytt event väljs innan
+        // den hunnit slutföras — annars nollar timern det nya valet.
+        if (dismissTimerRef.current) {
+            clearTimeout(dismissTimerRef.current);
+            dismissTimerRef.current = null;
+        }
+
         const isPickNext = expectedNextIdRef.current === selectedEvent.id;
         if (isPickNext) {
             // Det var pickNext som drev fram detta event — anchorId behålls.
@@ -488,10 +555,12 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         }
 
         setIsAnimating(true);
-        // Default-höjd ENBART när kortet öppnas från stängt läge (prevId === null):
+        // Default-höjd när kortet öppnas från stängt läge (prevId === null):
         // lite högre upp så man ser header + toppen på bilden. Byter man event
         // medan kortet redan är öppet behålls den nuvarande höjden (inget hopp).
-        const freshOpen = prevId === null;
+        // Ett kort som var på väg ner i en stängning (höjd under peek-gränsen)
+        // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
+        const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         const raf = requestAnimationFrame(() => {
             collapsedVhRef.current = measureCollapsedHeight();
             if (freshOpen) updateHeightVh(DEFAULT_OPEN_HEIGHT_VH);
@@ -685,10 +754,10 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
 
         if (dragDirection.current === 'vertical') {
             const deltaVh = (deltaY / window.innerHeight) * 100;
-            // Klampa nedåt till den mätta botten-gränsen (sträcket under tid/plats)
-            // så kortet stannar där när man drar ner det — det kan inte dras
-            // bort/försvinna. Titel + tid/plats syns; Värd/Pris döljs under vikningen.
-            const newHeight = Math.max(collapsedVhRef.current, Math.min(95, startHeightVh.current + deltaVh));
+            // Fritt nedåt: under peek-gränsen fortsätter kortet glida ner mot
+            // botten — släpper man tillräckligt långt ner stängs det (se
+            // onPointerUp). Uppåt klampas vid 95 vh.
+            const newHeight = Math.max(3, Math.min(95, startHeightVh.current + deltaVh));
             updateHeightVh(newHeight);
         } else if (dragDirection.current === 'horizontal') {
             updateDragX(startDragX.current + deltaX);
@@ -706,11 +775,21 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
         setIsAnimating(true);
 
         if (dragDirection.current === 'vertical') {
-            // Stanna på exakt den höjd användaren dragit till (redan klampad till
-            // minst COLLAPSED_HEIGHT_VH i onPointerMove). Inget snäpp, ingen
-            // stängning — ett nedåt-drag kollapsar bara kortet till peek-läget
-            // längst ner. Stäng kortet genom att klicka utanför det på kartan.
-            updateHeightVh(heightVhRef.current);
+            const h = heightVhRef.current;
+            const collapsed = collapsedVhRef.current;
+            if (h < collapsed - DISMISS_BELOW_VH) {
+                // Släppt långt under peek-gränsen → kortet glider ner och
+                // stängs helt (avmarkerar eventet, precis som ett kartklick).
+                updateHeightVh(2);
+                if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+                dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+            } else if (h < collapsed) {
+                // Strax under gränsen → snäpp tillbaka till peek-läget.
+                updateHeightVh(collapsed);
+            } else {
+                // Stanna på exakt den höjd användaren dragit till.
+                updateHeightVh(h);
+            }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
             if (currentDragX > THRESHOLD) {
@@ -824,7 +903,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                             <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
                         </button>
                         <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
-                            {events.length}
+                            {eventsLoaded ? events.length : '…'}
                         </span>
                         {dayPickerOpen && (
                             <DayPicker
@@ -836,62 +915,63 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                             />
                         )}
                     </div>
-                    {(dayOffset !== 0 || dayRangeDays !== 1) && (
-                        <button
-                            onClick={() => onDayRangeChange(0, 1)}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
-                            title="Återställ till idag"
-                        >
-                            <RotateCcw size={15} className="text-slate-700" />
-                        </button>
-                    )}
-                    {onSunClick && (
-                        <button
-                            onClick={onSunClick}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border"
-                            title="Lys upp kartan"
-                        >
-                            <Sun size={16} className="text-amber-500" />
-                        </button>
-                    )}
-                    {onRecenter && (
-                        <button
-                            type="button"
-                            onClick={onRecenter}
-                            className={`relative overflow-hidden p-2 rounded-full shadow-xl border transition-colors h-[38px] w-[38px] flex items-center justify-center box-border ${
-                                recenterBlink && !slingshotReady && !slingshotEngaged ? 'feature-blink-white' : ''
-                            } ${
-                                slingshotEngaged
-                                    ? 'bg-[#006AA7] border-[#006AA7] ring-2 ring-sky-300'
-                                    : slingshotReady
-                                        ? 'bg-white/90 backdrop-blur-md border-sky-400 ring-2 ring-sky-300 animate-pulse'
-                                        : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
-                            }`}
-                            title={slingshotEngaged ? 'Klicka för att avfyra slangbellan' : slingshotReady ? 'Klicka för att arma slangbellan' : 'Visa molnet på kartan'}
-                            aria-label={slingshotEngaged ? 'Avfyra slangbella' : slingshotReady ? 'Arma slangbella' : 'Visa molnet på kartan'}
-                        >
-                            {/* Slangbella-mätare: fylls vit när läget är ready (steg 1).
-                                När armad (engaged) inverteras knappen istället → ikonen blir vit på blå. */}
-                            {slingshotReady && !slingshotEngaged && (
-                                <span className="absolute inset-0 bg-white rounded-full animate-in fade-in zoom-in duration-200 pointer-events-none" />
+                    {/* Ingen separat återställ-knapp — "Idag" ligger ett tryck
+                        bort i dagväljaren och tomma dagar har en "Visa idag"-länk.
+                        Verktygen (sol/fokus/moln-hämtning) bor i EN gemensam pill
+                        i stället för separata flytande knappar — färre element på
+                        raden, samma funktioner. */}
+                    {(onSunClick || onRecenter || (mainCloudOffScreen && onRecallMainCloud)) && (
+                        <div className="flex items-center gap-0.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-white/50 p-1 h-[38px] box-border">
+                            {onSunClick && (
+                                <button
+                                    onClick={onSunClick}
+                                    className="w-[30px] h-[30px] rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                                    title="Lys upp kartan"
+                                    aria-label="Lys upp kartan"
+                                >
+                                    <Sun size={16} className="text-amber-500" />
+                                </button>
                             )}
-                            <LocateFixed size={16} className={`relative ${slingshotEngaged ? 'text-white' : 'text-[#006AA7]'}`} />
-                        </button>
-                    )}
-                    {mainCloudOffScreen && onRecallMainCloud && (
-                        <button
-                            onClick={onRecallMainCloud}
-                            className="relative bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl border border-white/50 hover:bg-white transition-colors h-[38px] w-[38px] flex items-center justify-center box-border animate-in fade-in zoom-in duration-200"
-                            title="Hämta tillbaka molnet"
-                            aria-label="Hämta tillbaka molnet"
-                        >
-                            {recallMainBlink && (
-                                <span className="absolute inset-0 rounded-full animate-recall-pulse pointer-events-none" />
+                            {onRecenter && (
+                                <button
+                                    type="button"
+                                    onClick={onRecenter}
+                                    className={`relative overflow-hidden w-[30px] h-[30px] rounded-full flex items-center justify-center transition-colors ${
+                                        recenterBlink && !slingshotReady && !slingshotEngaged ? 'feature-blink-white' : ''
+                                    } ${
+                                        slingshotEngaged
+                                            ? 'bg-[#006AA7] ring-2 ring-sky-300'
+                                            : slingshotReady
+                                                ? 'ring-2 ring-sky-300 animate-pulse'
+                                                : 'hover:bg-slate-100'
+                                    }`}
+                                    title={slingshotEngaged ? 'Klicka för att avfyra slangbellan' : slingshotReady ? 'Klicka för att arma slangbellan' : 'Visa molnet på kartan'}
+                                    aria-label={slingshotEngaged ? 'Avfyra slangbella' : slingshotReady ? 'Arma slangbella' : 'Visa molnet på kartan'}
+                                >
+                                    {/* Slangbella-mätare: fylls vit när läget är ready (steg 1).
+                                        När armad (engaged) inverteras knappen istället → ikonen blir vit på blå. */}
+                                    {slingshotReady && !slingshotEngaged && (
+                                        <span className="absolute inset-0 bg-white rounded-full animate-in fade-in zoom-in duration-200 pointer-events-none" />
+                                    )}
+                                    <LocateFixed size={16} className={`relative ${slingshotEngaged ? 'text-white' : 'text-[#006AA7]'}`} />
+                                </button>
                             )}
-                            <svg viewBox="0 0 24 24" width="16" height="16" className="relative text-sky-500" fill="currentColor">
-                                <path d="M19.36 10.04a7 7 0 0 0-13.36 1.4A4.5 4.5 0 0 0 6.5 20h12a4 4 0 0 0 .86-7.96Z" />
-                            </svg>
-                        </button>
+                            {mainCloudOffScreen && onRecallMainCloud && (
+                                <button
+                                    onClick={onRecallMainCloud}
+                                    className="relative w-[30px] h-[30px] rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors animate-in fade-in zoom-in duration-200"
+                                    title="Hämta tillbaka molnet"
+                                    aria-label="Hämta tillbaka molnet"
+                                >
+                                    {recallMainBlink && (
+                                        <span className="absolute inset-0 rounded-full animate-recall-pulse pointer-events-none" />
+                                    )}
+                                    <svg viewBox="0 0 24 24" width="16" height="16" className="relative text-sky-500" fill="currentColor">
+                                        <path d="M19.36 10.04a7 7 0 0 0-13.36 1.4A4.5 4.5 0 0 0 6.5 20h12a4 4 0 0 0 .86-7.96Z" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                     )}
                     {/* Sol-molnet har ingen egen recall-knapp — sol-knappen hämtar
                         tillbaka det. Bara EN moln-knapp (för info-molnet). */}
@@ -968,7 +1048,7 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
                 {/* Scrollable content container */}
                 <div
                     ref={scrollContainerRef}
-                    className="flex-1 w-full overflow-y-auto overscroll-contain bg-card custom-scrollbar"
+                    className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar"
                     style={{
                         touchAction: heightVh < 50 ? 'none' : 'pan-y'
                     }}
@@ -1007,10 +1087,17 @@ export default function EventCard({ events, selectedEvent, onSelectEvent, onSave
             </div>
             ) : (
                 /* Håll reglaget på 30% höjd från botten när inget kort visas.
-                   Tom dag/period → liten hint så man inte tror att appen är trasig. */
+                   Innan datan laddats → "Laddar event…" (det vore fel att påstå
+                   att dagen är tom när vi inte vet än). Tom dag/period därefter
+                   → liten hint så man inte tror att appen är trasig. */
                 <div style={{ height: '30vh' }} className="w-full flex-shrink-0 flex items-start justify-center pointer-events-none">
-                    {events.length === 0 && (
-                        <div className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {!eventsLoaded ? (
+                        <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
+                            <p className="text-sm font-bold text-slate-700">Laddar event…</p>
+                        </div>
+                    ) : events.length === 0 && (
+                        <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <p className="text-sm font-bold text-slate-700">
                                 Inga event {dayRangeDays > 1 ? 'den här perioden' : 'den här dagen'} 😴
                             </p>

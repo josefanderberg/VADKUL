@@ -616,6 +616,11 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   // We keep last two samples so a stale velocity from a long pause before
   // release doesn't get inherited.
   const velocitySamples = useRef<{ x: number; y: number; t: number }[]>([]);
+  // Cirkelrörelse-detektor: ackumulerar drag-riktningens vridning. Snurrar man
+  // molnet i en cirkel (~ett varv) fyras en burst med fartränder (actionlinjer)
+  // av, och räknaren börjar om — fortsätter man cirkla kommer fler bursts.
+  const swirlAngleRef = useRef<number | null>(null);
+  const swirlAccumRef = useRef(0);
   const glideRaf = useRef<number | null>(null);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Tap detection: raw pointer-down coords + whether it moved past a small
@@ -715,6 +720,8 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     downClient.current = { x: e.clientX, y: e.clientY };
     dragMoved.current = false;
     velocitySamples.current = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+    swirlAngleRef.current = null;
+    swirlAccumRef.current = 0;
   };
 
   // Compute clamp range for the drag offset. When anchored we limit so the cloud
@@ -753,6 +760,35 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
       const dxDown = currentX - downClient.current.x;
       const dyDown = currentY - downClient.current.y;
       if (dxDown * dxDown + dyDown * dyDown > 36) dragMoved.current = true;
+    }
+
+    // Fartränder vid cirkelrörelse: jämför rörelseriktningen mot förra punkten
+    // och ackumulera vridningen. Ihållande rotation åt samma håll ≈ ett varv →
+    // en burst med actionlinjer; räknaren börjar om så fortsatt cirklande ger
+    // fler bursts. Riktningsbyten (fram-och-tillbaka-skak) nollar räknaren.
+    const lastSample = velocitySamples.current[velocitySamples.current.length - 1];
+    if (lastSample) {
+      const mdx = e.clientX - lastSample.x;
+      const mdy = e.clientY - lastSample.y;
+      // Ignorera mikrorörelser — vinkeln blir bara brus under ~3px.
+      if (mdx * mdx + mdy * mdy > 9) {
+        const ang = Math.atan2(mdy, mdx);
+        if (swirlAngleRef.current !== null) {
+          let d = ang - swirlAngleRef.current;
+          if (d > Math.PI) d -= 2 * Math.PI;
+          if (d < -Math.PI) d += 2 * Math.PI;
+          if (Math.sign(d) !== Math.sign(swirlAccumRef.current) && Math.abs(swirlAccumRef.current) > 0.3) {
+            swirlAccumRef.current = 0; // bytte rotationsriktning → börja om
+          }
+          swirlAccumRef.current += d;
+          if (Math.abs(swirlAccumRef.current) > Math.PI * 1.8) { // ~ett varv
+            swirlAccumRef.current = 0;
+            setGrabBurstBig(false);
+            setGrabBurstKey(k => k + 1);
+          }
+        }
+        swirlAngleRef.current = ang;
+      }
     }
 
     // Keep the most recent samples (~last 80ms) for release-velocity estimation.
@@ -1024,19 +1060,22 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
     // Manuellt valt mood (via klick) låser ansiktet — auto-blinkandet pausas.
     if (manualMood !== null) return;
 
-    // Höga prio: follow tar över direkt. Drag tar INTE över längre — molnet
-    // behåller sitt vanliga uttryck när man greppar, och en grabb-burst-effekt
-    // (actionlinjer) ritas separat utanför ansiktet.
+    // Höga prio: follow tar över direkt. Grepp ger den avslappnade minen
+    // (sleepy — halvslutna ögon, liten lugn mun) så länge man håller i molnet;
+    // grabb-burst-effekten (actionlinjer) ritas separat utanför ansiktet.
     if (following) {
       setExpression('happy');
       return;
     }
-    if (isDragging) return; // ingen ändring — sitt kvar i nuvarande uttryck
+    if (isDragging) {
+      setExpression('sleepy');
+      return;
+    }
 
-    // Just lämnat follow-/kast-läget (utan manuellt valt mood) → rensa det
-    // kvarvarande 'happy'-uttrycket DIREKT, annars fryser ansiktet kvar som
-    // glatt tills nästa blink och det ser ut som att kast-läget inte stängdes av.
-    setExpression(prev => (prev === 'happy' ? 'neutral' : prev));
+    // Just lämnat follow-/kast-läget eller greppet (utan manuellt valt mood) →
+    // rensa det kvarvarande uttrycket DIREKT, annars fryser ansiktet kvar som
+    // glatt/sömnigt tills nästa blink och det ser ut som att läget hängt sig.
+    setExpression(prev => (prev === 'happy' || prev === 'sleepy' ? 'neutral' : prev));
 
     // Schemaläggning av blink/wink/sleepy via timer.
     let timer: NodeJS.Timeout;
@@ -1380,13 +1419,14 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
             </g>
 
             {/* Face: rotation is on the SVG parent now — this group only
-                handles the click pop-in scale. Ansiktet visas BARA när
-                Ansikten-funktionen är på (shoppen) — annars hinner man se det
-                blinka fram när intro-molnet trycks bort. */}
+                handles the click pop-in scale. Grundansiktet (leende + blink)
+                visas ALLTID när molnet är klickat — Ansikten-funktionen i
+                shoppen styr bara de rika uttrycken (mood-bläddring, winks,
+                dizzy), vilka redan gate:as i uttryckslogiken. */}
             <g
               style={{
-                opacity: clicked && facesEnabled ? 1 : 0,
-                transform: clicked && facesEnabled ? `scale(${faceScale})` : `scale(${0.3 * faceScale})`,
+                opacity: clicked ? 1 : 0,
+                transform: clicked ? `scale(${faceScale})` : `scale(${0.3 * faceScale})`,
                 transformOrigin: '150px 135px',
                 transition: 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}

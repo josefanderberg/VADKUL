@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
@@ -15,6 +15,8 @@ import toast from 'react-hot-toast';
 // (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
 // de är DOM-element i container, inte en del av style-spec:en.
 const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+// Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
+const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     version: 8,
     sources: {
@@ -38,6 +40,77 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
         { id: 'labels', type: 'raster', source: 'labels' }
     ]
 };
+
+// "Nöjesfälts"-kartan: hämta Voyager-stilen och måla om den i en mild, naturlig
+// palett (grönt land, blått vatten, dämpade byggnader/vägar) så den fungerar som
+// en lugn bakgrund i stället för en gäll tivoli-look. Hämtas + transformeras en
+// gång och cachas sedan i komponentens themeParkStyleRef.
+async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecification> {
+    const res = await fetch(STREETS_STYLE_URL);
+    const style = await res.json() as maplibregl.StyleSpecification;
+
+    if (style.layers) {
+        style.layers = style.layers.map(layer => {
+            if (!('paint' in layer) || !layer.paint) return layer;
+            // Paint-spec:en är en strikt union per lagertyp men vi sätter
+            // nycklarna dynamiskt utifrån lager-id — jobba mot en löst typad
+            // kopia och casta tillbaka vid retur.
+            const paint: Record<string, unknown> = { ...layer.paint };
+            const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined;
+
+            // Palett: djupare naturliga toner — som satellitkartan fast
+            // minimalistisk. Mörkare grönt land/grönska, mörkare blått vatten,
+            // vita vägar som kontrast.
+            // Land / Background
+            if (layer.id === 'background') {
+                paint['background-color'] = '#b9d49c'; // djupare grönt land
+            }
+            // Water
+            else if (layer.id === 'water' || layer.id === 'water_shadow') {
+                paint['fill-color'] = layer.id === 'water_shadow'
+                    ? '#6fa3c9'
+                    : '#7fb0d4'; // mörkare, mättat blått vatten
+            }
+            else if (layer.id === 'waterway') {
+                paint['line-color'] = '#7fb0d4';
+            }
+            // Parker, skog, naturreservat, grön landuse
+            else if (
+                layer.id === 'landcover' ||
+                layer.id.includes('park') ||
+                layer.id.includes('forest') ||
+                layer.id === 'landuse'
+            ) {
+                if (paint['fill-color']) {
+                    paint['fill-color'] = '#9cbf7f'; // grönska, ett snäpp djupare än landet
+                }
+            }
+            // Bostadsområden
+            else if (layer.id === 'landuse_residential') {
+                paint['fill-color'] = '#c6d8ab'; // något ljusare än landet, fortfarande grönt
+            }
+            // Byggnader
+            else if (layer.id.includes('building')) {
+                if (paint['fill-color']) {
+                    paint['fill-color'] = '#d6d2c0'; // dämpad beige-grå
+                }
+            }
+            // Vägar / transportation. Casing-lagren (kantlinjen runt vägbanan)
+            // får en mjuk sandton så väghierarkin syns mot det vita.
+            else if (sourceLayer === 'transportation') {
+                if (paint['line-color']) {
+                    paint['line-color'] = layer.id.includes('casing')
+                        ? '#c9c3b2'
+                        : '#ffffff'; // rena vita vägar
+                }
+            }
+
+            return { ...layer, paint } as typeof layer;
+        });
+    }
+
+    return style;
+}
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -214,6 +287,22 @@ const GEM_THEMES: Record<string, {
         inactiveShadow: '0 4px 10px rgba(217,119,6,0.05), inset -3px -5px 12px rgba(12,74,110,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
         activeIconColor: '#ffffff',
         inactiveIconColor: '#fde68a'
+    },
+    themepark: { // Candy Pink/Yellow (nöjesfält-knappen)
+        activeBg: 'radial-gradient(circle at 30% 25%, #fdf2f8 0%, #f472b6 25%, #db2777 55%, #be185d 85%, #9d174d 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(253,242,248,0.25) 0%, rgba(244,114,182,0.15) 25%, rgba(219,39,119,0.08) 65%, rgba(157,23,77,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(219,39,119,0.5), 0 0 26px rgba(244,114,182,0.4), inset -3px -6px 14px rgba(157,23,77,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(219,39,119,0.05), inset -3px -5px 12px rgba(157,23,77,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#fbcfe8'
+    },
+    dark: { // Slate/Charcoal (mörkt läge)
+        activeBg: 'radial-gradient(circle at 30% 25%, #94a3b8 0%, #475569 25%, #334155 55%, #1e293b 85%, #0f172a 100%)',
+        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(148,163,184,0.25) 0%, rgba(71,85,105,0.15) 25%, rgba(51,65,85,0.08) 65%, rgba(30,41,59,0.05) 100%)',
+        activeShadow: '0 8px 22px rgba(51,65,85,0.5), 0 0 26px rgba(71,85,105,0.4), inset -3px -6px 14px rgba(15,23,42,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
+        inactiveShadow: '0 4px 10px rgba(51,65,85,0.05), inset -3px -5px 12px rgba(15,23,42,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
+        activeIconColor: '#ffffff',
+        inactiveIconColor: '#cbd5e1'
     }
 };
 
@@ -393,9 +482,26 @@ export default function V2Map({
     // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
     // ett event man navigerat förbi inte faller tillbaka till nål.
     const revealedKeysRef = useRef<Set<string>>(new Set());
+    // Nyckel → tidpunkt då markörens pop-in är klar. Panorerar man bort och
+    // tillbaka ska brickor som redan ploppat visas DIREKT — inte ställa sig i
+    // den utspridda pop-in-kön igen. (Markör-DOM:en rivs när den lämnar bild,
+    // så minnet måste bo här och inte i markerData.)
+    const poppedKeysRef = useRef<Map<string, number>>(new Map());
+    // Minut-tick: "börjar inom 1 timme"-statusen (orange) räknas från Date.now()
+    // i markör-synken — utan tick uppdateras den bara när man råkar flytta
+    // kartan. Ticken låter statusen följa klockan.
+    const [minuteTick, setMinuteTick] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => setMinuteTick(t => t + 1), 60_000);
+        return () => clearInterval(id);
+    }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
+    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark'>('satellite');
+    const mapStyleRef = useRef(mapStyle);
+    mapStyleRef.current = mapStyle;
+    // Cache för den hämtade + mildrade nöjesfälts-stilen (Voyager-transform).
+    const themeParkStyleRef = useRef<maplibregl.StyleSpecification | null>(null);
     // True om WebGL inte gick att initiera (t.ex. blockerad efter en tidigare
     // kontextförlust). Då visar vi en fallback-ruta i stället för att krascha.
     const [mapError, setMapError] = useState(false);
@@ -541,7 +647,7 @@ export default function V2Map({
     // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
     const MAX_ACTIVE_FEATURES = 999;
     const COUNTED_FEATURE_KEYS = [
-        'satellite', 'globe', 'terrain',
+        'satellite', 'themepark', 'dark', 'globe', 'terrain',
         'sun', 'focus', 'throw', 'slingshot', 'faces',
         'bigCloud', 'fastThrow', 'sparkle', 'snowball',
         'createEvent'
@@ -569,6 +675,8 @@ export default function V2Map({
         if (key === 'globe') return isGlobe;
         if (key === 'terrain') return is3DTerrain;
         if (key === 'satellite') return mapStyle === 'satellite';
+        if (key === 'themepark') return mapStyle === 'themepark';
+        if (key === 'dark') return mapStyle === 'dark';
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
     const activeFeatureCount = COUNTED_FEATURE_KEYS.reduce(
@@ -597,6 +705,8 @@ export default function V2Map({
         if (key === 'globe') { setIsGlobe(value); return; }
         if (key === 'terrain') { setIs3DTerrain(value); return; }
         if (key === 'satellite') { setMapStyle(value ? 'satellite' : 'streets'); return; }
+        if (key === 'themepark') { setMapStyle(value ? 'themepark' : 'streets'); return; }
+        if (key === 'dark') { setMapStyle(value ? 'dark' : 'streets'); return; }
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
@@ -1316,15 +1426,50 @@ export default function V2Map({
     // Byt baskartan när användaren togglar satellit-knappen. Markörerna ligger som
     // DOM-element i container och påverkas inte av setStyle.
     useEffect(() => {
+        // Spegla aktiv kartstil som klass på containern så markör-CSS:en kan
+        // anpassa kontrast per stil (se .map-style-dark-reglerna).
+        const container = mapContainerRef.current;
+        if (container) {
+            container.classList.remove('map-style-streets', 'map-style-satellite', 'map-style-themepark', 'map-style-dark');
+            container.classList.add(`map-style-${mapStyle}`);
+        }
         const map = mapRef.current;
         if (!map) return;
-        map.setStyle(mapStyle === 'satellite' ? SATELLITE_STYLE : STREETS_STYLE_URL);
         // setStyle ersätter HELA stilen → projektionen nollställs och custom-källor
         // (DEM) försvinner. Återställ globe + terräng när nya stilen laddat klart.
-        map.once('style.load', () => {
+        const afterLoad = () => {
             applyProjection(map, isGlobeRef.current);
             applyTerrain(map, is3DTerrainRef.current);
-        });
+        };
+        const applyStyle = (style: string | maplibregl.StyleSpecification) => {
+            map.setStyle(style);
+            map.once('style.load', afterLoad);
+        };
+        if (mapStyle === 'satellite') {
+            applyStyle(SATELLITE_STYLE);
+        } else if (mapStyle === 'themepark') {
+            // Nöjesfälts-kartan: Voyager i en mildare, naturlig palett. Hämta +
+            // transformera en gång, cacha sedan i themeParkStyleRef.
+            if (themeParkStyleRef.current) {
+                applyStyle(themeParkStyleRef.current);
+            } else {
+                fetchAndTransformThemeParkStyle()
+                    .then(style => {
+                        themeParkStyleRef.current = style;
+                        // Användaren kan ha hunnit byta stil under hämtningen —
+                        // applicera bara om nöjesfält fortfarande är valt.
+                        if (mapStyleRef.current === 'themepark') applyStyle(style);
+                    })
+                    .catch(() => {
+                        // Faller tillbaka till vanliga Voyager om hämtningen strular.
+                        if (mapStyleRef.current === 'themepark') applyStyle(STREETS_STYLE_URL);
+                    });
+            }
+        } else if (mapStyle === 'dark') {
+            applyStyle(DARK_STYLE_URL);
+        } else {
+            applyStyle(STREETS_STYLE_URL);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mapStyle]);
 
@@ -2035,19 +2180,36 @@ export default function V2Map({
             const isWatered = shopFlags.flowers && wateredKeys.has(key);
             const isWatering = shopFlags.flowers && wateringKey === key;
 
+            // Event skapade direkt på VADKUL lyfts fram med en egen smaragdgrön
+            // bricka (samma gröna som skapa-flödet) — de är sajtens kärna.
+            // Gäller bara enskilda markörer; grupper cyklar genom flera event
+            // och behåller därför standardutseendet.
+            const isUserCreated = count === 1 && !!rep.userCreated;
+
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
             // att stateKey inte ändras varje slideshow-tick (annars rivs brickan
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}:${isUserCreated}`;
 
             let markerData = markersRef.current.get(key);
 
             if (!markerData) {
                 const el = document.createElement('div');
                 el.className = 'v2-custom-marker';
+                // Tillgänglighet: markören är klickbar → gör den nåbar med
+                // tangentbord (Tab + Enter/Mellanslag) och begriplig för
+                // skärmläsare. aria-label sätts/uppdateras i stateKey-blocket.
+                el.setAttribute('role', 'button');
+                el.tabIndex = 0;
+                el.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        el.click();
+                    }
+                });
 
                 const marker = new maplibregl.Marker({
                     element: el,
@@ -2070,9 +2232,15 @@ export default function V2Map({
                 const zIndex = isGold ? 1500
                     : isSelected ? 1000
                     : isSaved ? 500
+                    : isUserCreated ? 300
                     : count > 1 ? 200
                     : isDiscarded ? -100 : 0;
                 markerData.element.style.zIndex = String(zIndex);
+
+                // Skärmläsar-etikett: vad är det här för markör?
+                markerData.element.setAttribute('aria-label', count > 1
+                    ? `${count} event vid ${rep.locationName || 'samma plats'}`
+                    : rep.title);
 
                 // Sätt eventlyssnare på klick. I gissningsläge är klicket en
                 // gissning på hela gruppen i stället för ett vanligt val.
@@ -2083,21 +2251,31 @@ export default function V2Map({
                 };
 
                 // Uppdatera markörens HTML-innehåll direkt i DOM:en.
-                // Prioritet: vald (blå) > sparad (ljusblå) > börjar inom 1 timme (orange) > standard (svart).
+                // Prioritet: vald (blå) > sparad (ljusblå) > börjar inom 1 timme
+                // (orange) > VADKUL-skapad (grön) > standard (svart).
                 const needleDotColor = isSelected
                     ? '#006AA7'
                     : isSaved
                     ? '#5BA3CC'
                     : startsWithinHour
                     ? '#f97316'
+                    : isUserCreated
+                    ? '#059669'
                     : '#1e293b';
-                const needleLineColor = isSelected ? '#006AA7' : isSaved ? '#5BA3CC' : '#475569';
+                const needleLineColor = isSelected ? '#006AA7' : isSaved ? '#5BA3CC' : isUserCreated ? '#059669' : '#475569';
                 const needleDotSize = isSelected ? 10 : isSaved ? 8 : 7;
                 const needleLineH = isSelected ? 28 : 22;
 
+                // Mörkgrå standardbricka (testade frostat glas — gråa var bättre)
+                // med mjuk gradient för djup. VADKUL-skapade event får en
+                // smaragdgrön bricka (samma gröna som skapa-flödet).
                 const pinBg = isGold
                     ? 'linear-gradient(135deg, #fff7d6 0%, #fbbf24 45%, #d97706 100%)'
-                    : isSaved ? '#ffffff' : '#1e293b';
+                    : isUserCreated
+                    ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
+                    : isSaved
+                    ? 'linear-gradient(145deg, #ffffff 0%, #eef2f7 100%)'
+                    : 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
                 const pinBorder = isGold
                     ? '3px solid #fde68a'
                     : isSelected
@@ -2106,13 +2284,21 @@ export default function V2Map({
                     ? '2px solid #5BA3CC'
                     : startsWithinHour
                     ? '2px solid #f97316'
+                    : isUserCreated
+                    ? '2px solid rgba(255,255,255,0.45)'
                     : '2px solid rgba(255,255,255,0.25)';
 
-                // Använd högpresterande CSS box-shadow
+                // Använd högpresterande CSS box-shadow. "Inom 1 timme" får en
+                // varm orange gloria och VADKUL-skapade en mjuk grön — båda ska
+                // synas på avstånd.
                 const pinShadow = isGold
                     ? '0 0 0 4px rgba(251,191,36,0.35), 0 6px 22px rgba(217,119,6,0.55)'
                     : isSelected
                     ? '0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)'
+                    : startsWithinHour
+                    ? '0 0 0 3px rgba(249,115,22,0.28), 0 6px 18px rgba(249,115,22,0.40)'
+                    : isUserCreated
+                    ? '0 0 0 3px rgba(16,185,129,0.25), 0 6px 18px rgba(5,150,105,0.45)'
                     : isSaved
                     ? '0 4px 10px rgba(0,0,0,0.2)'
                     : '0 4px 12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.08)';
@@ -2134,8 +2320,16 @@ export default function V2Map({
                 // Fördela uppdykandet så att alla markörer poppar in under totalt 4 sekunder (4000ms), men visa det valda direkt (0ms delay)
                 const N = visibleGroups.length;
                 const animDelay = isSelected ? 0 : (N > 1 ? (index / (N - 1)) * 4000 : 0);
-                // Valt OCH redan avslöjat event visar brickan direkt utan kö-delay.
-                const showImmediately = isSelected || isRevealed;
+                // Brickor som redan hunnit poppa (nyckelns pop-tid har passerat)
+                // visas direkt när de kommer tillbaka i bild efter panorering —
+                // de ställer sig inte i pop-in-kön igen.
+                const popAt = poppedKeysRef.current.get(key);
+                const alreadyPopped = popAt !== undefined && popAt <= Date.now();
+                if (popAt === undefined) {
+                    poppedKeysRef.current.set(key, Date.now() + Math.round(animDelay) + 450);
+                }
+                // Valt OCH redan avslöjat/poppat event visar brickan direkt utan kö-delay.
+                const showImmediately = isSelected || isRevealed || alreadyPopped;
                 const wrapperStyle = showImmediately ? 'opacity: 1 !important;' : '';
                 const pinAnimationStyle = showImmediately
                     ? 'animation: none !important; opacity: 1 !important; transform: ' + scaleStyle + ' !important;'
@@ -2242,10 +2436,21 @@ export default function V2Map({
                 }
             }
         });
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, gameMode, goldEventId, guessedEventId, wateredKeys, wateringKey, shopFlags, tilted]);
+    // minuteTick håller "börjar inom 1 timme"-orangen i takt med klockan även
+    // när kartan står helt stilla (stateKey ser till att DOM bara byggs om när
+    // statusen faktiskt ändrats).
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, gameMode, goldEventId, guessedEventId, wateredKeys, wateringKey, shopFlags, tilted, minuteTick]);
+
+    // Bakgrunden bakom kartan syns vid snabb panorering (innan tiles laddat)
+    // och som "rymd" bakom klotet — matcha aktiv kartstil så det aldrig
+    // blixtrar ljusgrått på mörka kartor.
+    const containerBg = mapStyle === 'dark' ? '#141414'
+        : mapStyle === 'satellite' ? '#10181f'
+        : mapStyle === 'themepark' ? '#b9d49c'
+        : '#f1f5f9';
 
     return (
-        <div className="absolute inset-0 z-0 bg-slate-100" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0 }}>
+        <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, background: containerBg }}>
             {/* CSS och Keyframes för en mjuk, progressiv animation */}
             <style>{`
                 .v2-custom-marker {
@@ -2254,6 +2459,13 @@ export default function V2Map({
                     cursor: pointer;
                     width: 44px;
                     height: 60px;
+                }
+                /* Tangentbordsfokus ska synas tydligt (markören saknar kant/
+                   bakgrund så webbläsarens default-ring försvinner lätt). */
+                .v2-custom-marker:focus-visible {
+                    outline: 3px solid #006AA7;
+                    outline-offset: 2px;
+                    border-radius: 10px;
                 }
                 
                 @keyframes marker-pop-in {
@@ -2313,6 +2525,18 @@ export default function V2Map({
                     justify-content: center;
                     overflow: hidden;
                     position: relative;
+                    transition: transform 0.18s ease, filter 0.18s ease;
+                }
+                /* Glansig topp-highlight ger brickan en kupad känsla — ligger
+                   under emojin (.pin-emoji har z-index 1) och följer bubblans
+                   rundning via border-radius: inherit. */
+                .pin-bubble::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    border-radius: inherit;
+                    background: radial-gradient(circle at 30% 28%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 48%);
+                    pointer-events: none;
                 }
                 .pin-emoji {
                     transform: rotate(-45deg);
@@ -2320,6 +2544,16 @@ export default function V2Map({
                     line-height: 1;
                     position: relative;
                     z-index: 1;
+                    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.25));
+                }
+                /* Hover-lyft på enheter med riktig pekare (inte touch, annars
+                   fastnar hover-läget efter tryck). Vattnings-pulsen är en
+                   animation och vinner över hover-transformen — ingen krock. */
+                @media (hover: hover) and (pointer: fine) {
+                    .v2-custom-marker:hover .pin-bubble {
+                        transform: rotate(45deg) scale(1.07);
+                        filter: brightness(1.05);
+                    }
                 }
                 /* Guld-markör: skimrar med en pulserande gloria runt brickan så
                    det rätta svaret syns tydligt även från avstånd. */
@@ -2347,6 +2581,7 @@ export default function V2Map({
                     color: #fff;
                     font-size: 10px;
                     font-weight: 700;
+                    font-variant-numeric: tabular-nums;
                     border-radius: 999px;
                     border: 2px solid #fff;
                     box-shadow: 0 1px 4px rgba(0,0,0,0.2);
@@ -2380,6 +2615,7 @@ export default function V2Map({
                     color: #fff;
                     font-size: 8px;
                     font-weight: 700;
+                    font-variant-numeric: tabular-nums;
                     border-radius: 999px;
                     border: 1.5px solid #fff;
                     display: flex;
@@ -2387,6 +2623,22 @@ export default function V2Map({
                     justify-content: center;
                     line-height: 1;
                     box-sizing: border-box;
+                }
+
+                /* ── Kontrast per kartstil ──────────────────────────────────
+                   Mörka kartan: hårfin ljus gloria + djupare skugga så mörka
+                   brickor och nålar inte smälter in i den nästan svarta
+                   bakgrunden. (Klassen sätts på kartcontainern i mapStyle-
+                   effekten.) */
+                .map-style-dark .pin-element {
+                    filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.45)) drop-shadow(0 5px 12px rgba(0,0,0,0.8));
+                }
+                .map-style-dark .needle-dot {
+                    box-shadow: 0 0 0 1px rgba(255,255,255,0.3), 0 1px 4px rgba(0,0,0,0.8);
+                }
+                .map-style-dark .needle-line {
+                    opacity: 1;
+                    filter: brightness(1.7);
                 }
 
                 /* ──────────────────────────────────────────────────────────
@@ -2692,6 +2944,8 @@ export default function V2Map({
                     // Popup-meny: symbol + namn + kort info. Varje funktion har en egen
                     // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
                     { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
+                    { key: 'themepark', label: 'Nöjesfält', desc: 'Naturfärgad karta — som satellit fast minimalistisk', color: '#db2777', icon: <Sparkles size={20} /> },
+                    { key: 'dark', label: 'Mörkt läge', desc: 'Mörk karta — skön i mörker', color: '#475569', icon: <Moon size={20} /> },
                     { key: 'focus', label: 'Fokus', desc: 'Centrera kartan på molnet', color: '#2563eb', icon: <Target size={20} /> },
                     { key: 'throw', label: 'Kasta', desc: 'Dubbelklick: kameran följer molnet när du kastar', color: '#0ea5e9', icon: <Send size={20} /> },
                     { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
@@ -3142,6 +3396,8 @@ export default function V2Map({
                                 const categories: Array<{ title: string; items: ShopCard[] }> = [
                                     { title: 'Karta', items: [
                                         { key: 'satellite', label: 'Satellit', icon: <Layers size={18} /> },
+                                        { key: 'themepark', label: 'Nöjesfält', icon: <Sparkles size={18} /> },
+                                        { key: 'dark', label: 'Mörkt läge', icon: <Moon size={18} /> },
                                         { key: 'tilt', label: 'Lutning', icon: <Box size={18} /> },
                                         { key: 'globe', label: 'Klot', icon: <Globe size={18} /> },
                                         { key: 'terrain', label: 'Terräng', icon: <Mountain size={18} /> }

@@ -4,6 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tillgänglighet: den som bett operativsystemet om minskad rörelse får ett
+   nästan stillastående UI. Animationer/transitions kortas till ~0 ms (i stället
+   för att tas bort helt — slut-tillstånden nås fortfarande och onAnimationEnd-
+   beroende logik fortsätter fungera). animation-delay nollas också, annars
+   skulle t.ex. kartbrickornas köade pop-in lämna dem osynliga under fördröjningen. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Döljer scrollbaren men behåller scrollning — används av funktions-kolumnen
    (väskan) så fade-effekten "scrolla fram ur tomma intet" inte bryts av en list. */
 @layer utilities {

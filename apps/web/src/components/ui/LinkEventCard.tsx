@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
@@ -228,6 +228,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </button>
                 )}
 
+                {/* Event skapade direkt på VADKUL lyfts fram med en grön badge —
+                    de är sajtens kärna och ska kännas igen direkt. */}
+                {linkEvent.userCreated && (
+                    <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
+                        <Sparkles size={11} className="shrink-0" />
+                        Skapat på VADKUL
+                    </span>
+                )}
+
                 <div className="flex justify-between items-center mb-3">
                     {/* Fixed 2-line height — single-line titles center vertically */}
                     <div className="flex-1 min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden">
@@ -235,48 +244,18 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             {linkEvent.title}
                         </h3>
                     </div>
-                    {revealStep >= 1 && (
-                        <div className="shrink-0 flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
-                            {onToggleSave && (
-                                <button
-                                    onClick={handleToggleSave}
-                                    aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
-                                    title={saved ? 'Ta bort från sparade' : 'Spara eventet'}
-                                    className={`border p-1.5 rounded shadow-lg transition-colors ${
-                                        saved
-                                            ? 'bg-rose-500 border-rose-500 text-white hover:bg-rose-400'
-                                            : 'bg-white hover:bg-rose-50 text-rose-500 border-slate-200'
-                                    }`}
-                                >
-                                    <Heart size={14} fill={saved ? 'currentColor' : 'none'} />
-                                </button>
-                            )}
-                            {hasCoords && (
-                                <button
-                                    onClick={handleDirections}
-                                    aria-label="Vägbeskrivning"
-                                    title="Hitta hit (Google Maps)"
-                                    className="bg-white hover:bg-slate-50 text-[#006AA7] border border-slate-200 p-1.5 rounded shadow-lg transition-colors"
-                                >
-                                    <Navigation size={14} />
-                                </button>
-                            )}
+                    {/* Titelraden hålls ren — bara den primära ANMÄL-knappen.
+                        Spara/Hitta hit/Dela ligger samlade under den stora
+                        anmälningsknappen längre ner i kortet. Användarskapade
+                        event saknar extern anmälningssida (ingen url). */}
+                    {revealStep >= 1 && linkEvent.url && (
+                        <div className="shrink-0 animate-in fade-in zoom-in duration-300">
                             <button
-                                onClick={handleShare}
-                                aria-label="Dela eventet"
-                                className="bg-white hover:bg-slate-50 text-[#006AA7] border border-slate-200 p-1.5 rounded shadow-lg transition-colors"
+                                onClick={handleVisitSite}
+                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
                             >
-                                <Share2 size={14} />
+                                ANMÄL
                             </button>
-                            {/* Användarskapade event saknar extern anmälningssida */}
-                            {linkEvent.url && (
-                                <button
-                                    onClick={handleVisitSite}
-                                    className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
-                                >
-                                    ANMÄL
-                                </button>
-                            )}
                         </div>
                     )}
                 </div>
@@ -302,8 +281,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                         <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Värd</span>
                         <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center border border-border overflow-hidden shrink-0">
-                                {faviconUrl ? (
+                            {/* VADKUL-skapade event: grön avatar med värdens initial
+                                (de saknar favicon — ingen extern sajt). */}
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${
+                                linkEvent.userCreated
+                                    ? 'bg-emerald-500 border-emerald-400 text-white'
+                                    : 'bg-white border-border'
+                            }`}>
+                                {!linkEvent.userCreated && faviconUrl ? (
                                     <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
                                 ) : (
                                     <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
@@ -415,15 +400,43 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         <ExternalLink size={24} />
                                     </button>
                                 )}
-                                {hasCoords && (
+                                {/* Spara / Hitta hit / Dela — samlade direkt under
+                                    anmälningsknappen i stället för utspridda
+                                    småknappar uppe vid titeln. */}
+                                <div className="flex gap-3">
+                                    {onToggleSave && (
+                                        <button
+                                            onClick={handleToggleSave}
+                                            aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+                                            className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] ${
+                                                saved
+                                                    ? 'bg-rose-500 border-rose-500 text-white hover:bg-rose-400'
+                                                    : 'border-rose-300 text-rose-500 hover:bg-rose-50'
+                                            }`}
+                                        >
+                                            <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
+                                            {saved ? 'Sparad' : 'Spara'}
+                                        </button>
+                                    )}
+                                    {hasCoords && (
+                                        <button
+                                            onClick={handleDirections}
+                                            aria-label="Vägbeskrivning (Google Maps)"
+                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
+                                        >
+                                            <Navigation size={20} />
+                                            Hitta hit
+                                        </button>
+                                    )}
                                     <button
-                                        onClick={handleDirections}
-                                        className="flex items-center justify-center gap-3 w-full py-3.5 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-base font-black transition-all active:scale-[0.97]"
+                                        onClick={handleShare}
+                                        aria-label="Dela eventet"
+                                        className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
                                     >
-                                        <Navigation size={20} />
-                                        <span>HITTA HIT</span>
+                                        <Share2 size={20} />
+                                        Dela
                                     </button>
-                                )}
+                                </div>
 
                                 {/* Lägg till i kalender — Google-länk + .ics för Apple/Outlook */}
                                 <div className="flex gap-3">
