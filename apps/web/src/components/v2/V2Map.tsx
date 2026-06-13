@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
+import { isValidLatLng } from '../../utils/mapUtils';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import toast from 'react-hot-toast';
 
@@ -1034,7 +1035,10 @@ export default function V2Map({
             if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
 
             const rep = group[0];
-            if (!rep.lng || !rep.lat) return false;
+            // Range-validering (inte bara falsy): en projicerad koordinat som
+            // lat=6129956 får annars LngLatBounds.contains att kasta och
+            // kraschar hela kartan.
+            if (!isValidLatLng(rep.lat, rep.lng)) return false;
             return paddedBounds.contains([rep.lng, rep.lat]);
         });
     }, [groups, mapBounds, selectedEvent, guessedEventId]);

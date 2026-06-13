@@ -10,9 +10,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../utils/dbHelper', () => ({
     addEventToDb: vi.fn(async () => {}),
     eventExistsInDb: vi.fn(async () => false),
+    refreshEventTime: vi.fn(async () => false),
 }));
 vi.mock('../utils/venueCoordinates', () => ({
     geocodeVenueSweden: vi.fn(async () => null),
+    // Nordisk bbox-validering — speglar den riktiga så koord-vakten i runnern
+    // släpper igenom giltiga koords och kastar projicerade.
+    isInNordic: (lat: number, lng: number) =>
+        lat >= 54.5 && lat <= 71.5 && lng >= 4.5 && lng <= 31.5,
 }));
 vi.mock('../utils/classify', () => ({
     classifyEvent: vi.fn(() => 'community'),
@@ -152,6 +157,24 @@ describe('runSource — geocoding', () => {
         expect(written.isLocationVerified).toBe(true);
     });
 
+    it('projicerade koordinater (SWEREF99/RT90) kastas och ersätts av geokodning', async () => {
+        // lat=6129956 spränger WGS84 → ska INTE skrivas; geokodning tar över.
+        geocodeMock.mockResolvedValueOnce([59.0, 18.0]);
+        await run([makeEvent({ coords: [6129956, 1703467], venueName: 'X', city: 'Y' })]);
+        expect(geocodeMock).toHaveBeenCalled();
+        const written = addEventMock.mock.calls[0][0];
+        expect(written.lat).toBe(59.0);
+        expect(written.lng).toBe(18.0);
+    });
+
+    it('giltig koord utanför Norden (utländsk) kastas också', async () => {
+        geocodeMock.mockResolvedValueOnce(null);
+        await run([makeEvent({ coords: [40.7, -74.0], venueName: 'NYC' })]);  // New York
+        expect(geocodeMock).toHaveBeenCalled();   // koorden förkastades → fallback
+        const written = addEventMock.mock.calls[0][0];
+        expect(written.lat).toBe(0);
+    });
+
     it('kandidat-kedjan provas i ordning, första träff vinner', async () => {
         geocodeMock
             .mockResolvedValueOnce(null)              // "Storkyrkan" → miss
@@ -174,9 +197,11 @@ describe('runSource — geocoding', () => {
         expect(geocodeMock).toHaveBeenCalledTimes(1);
     });
 
-    it('default-frågan är "venueName, city" när kandidater saknas', async () => {
-        await run([makeEvent({ venueName: 'Folkets Hus', city: 'Växjö' })]);
-        expect(geocodeMock).toHaveBeenCalledWith('Folkets Hus, Växjö');
+    it('default-kedjan provar adress → venue+stad → stad', async () => {
+        await run([makeEvent({ address: 'Storgatan 1', venueName: 'Folkets Hus', city: 'Växjö' })]);
+        expect(geocodeMock).toHaveBeenNthCalledWith(1, 'Storgatan 1, Växjö');
+        expect(geocodeMock).toHaveBeenNthCalledWith(2, 'Folkets Hus, Växjö');
+        expect(geocodeMock).toHaveBeenNthCalledWith(3, 'Växjö');
     });
 });
 
@@ -264,11 +289,18 @@ describe('geocodeQueriesFor', () => {
         expect(queries).toEqual(['Storkyrkan', 'Stockholm']);
     });
 
-    it('faller tillbaka på "venueName, city"', () => {
+    it('faller tillbaka på "venueName, city" + ren stad', () => {
         expect(geocodeQueriesFor({
             title: 't', url: 'u', startDate: new Date(),
             venueName: 'Folkets Hus', city: 'Växjö',
-        })).toEqual(['Folkets Hus, Växjö']);
+        })).toEqual(['Folkets Hus, Växjö', 'Växjö']);
+    });
+
+    it('gatuadress prioriteras före venue-namn', () => {
+        expect(geocodeQueriesFor({
+            title: 't', url: 'u', startDate: new Date(),
+            address: 'Storgatan 1', venueName: 'Folkets Hus', city: 'Växjö',
+        })).toEqual(['Storgatan 1, Växjö', 'Folkets Hus, Växjö', 'Växjö']);
     });
 
     it('ingen platsinfo alls → inga frågor', () => {

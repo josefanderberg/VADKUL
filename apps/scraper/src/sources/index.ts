@@ -24,6 +24,13 @@ import { rotaryEngine } from '../scrapers/rotary';
 import { rodaKorsetEngine } from '../scrapers/rodakorset';
 import { friluftsframjandetEngine } from '../scrapers/friluftsframjandet';
 import { proEngine } from '../scrapers/pro';
+import { korpenEngine } from '../scrapers/korpen';
+import { riksteaternEngine } from '../scrapers/riksteatern';
+import { bibliotekEngine } from '../scrapers/bibliotek';
+import { raceidEngine } from '../scrapers/raceid';
+import { bildaEngine } from '../scrapers/bilda';
+import { medborgarskolanEngine } from '../scrapers/medborgarskolan';
+import { abfEngine } from '../scrapers/abf';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -70,4 +77,11 @@ export const ENGINES: Record<string, Engine> = {
     'rodakorset': rodaKorsetEngine,
     'friluftsframjandet': friluftsframjandetEngine,
     'pro': proEngine,
+    'korpen': korpenEngine,
+    'riksteatern': riksteaternEngine,
+    'bibliotek': bibliotekEngine,
+    'raceid': raceidEngine,
+    'bilda': bildaEngine,
+    'medborgarskolan': medborgarskolanEngine,
+    'abf': abfEngine,
 };

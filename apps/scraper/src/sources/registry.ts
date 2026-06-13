@@ -1155,7 +1155,11 @@ export const SOURCES: Source[] = [
     // har `<dt>Start</dt><dd>YYYY-MM-DD</dd>` som text-parser plockar via
     // ISO-mönster. 494 arrangemang i sitemap, riktiga datum för framtida event.
     {
-        id: 'bilda',
+        // bilda (sitemap-varianten från 2026-06-04) ERSATT 2026-06-12 av
+        // WP-REST-källan med samma id längre ner — den filtrerar på
+        // Kulturprogram (arr-type=674) och ger exakt adress + klockslag ur
+        // arr-meta-data istället för text-parse av detaljsidor.
+        id: 'bilda-sitemap-ersatt',
         hostName: 'Bilda',
         region: 'national',
         engine: 'sitemap',
@@ -1164,8 +1168,9 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/arr\/\d+\/[^/]+\/?$/i],
             maxUrls: 300,
         },
+        disabled: true,
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-04: 494 arr-URLs. Text-parser ur HTML <dd>YYYY-MM-DD</dd>.',
+        notes: 'ERSATT av wp-rest-källan "bilda" (arr-type=674). Behålls som dokumentation.',
         lastVerified: '2026-06-04',
     },
 
@@ -2804,20 +2809,10 @@ export const SOURCES: Source[] = [
         notes: 'Probe-venues 2026-06-09: 654 event-URLs (forestallning-mönster) — länsteater.',
         lastVerified: '2026-06-09',
     },
-    {
-        id: 'riksteatern',
-        hostName: 'Riksteatern',
-        region: 'national',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: 'https://www.riksteatern.se/sitemap.xml',
-            urlPatterns: [/\/(?:sv\/)?forestallning(?:ar)?\/[^/]+\/?$/i],
-            maxUrls: 300,
-        },
-        updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 2135 event-URLs (forestallning-mönster) — riksteater. maxUrls=300 för rimlig körtid.',
-        lastVerified: '2026-06-09',
-    },
+    // riksteatern (sitemap-varianten från 2026-06-09) ERSATT 2026-06-12 av
+    // API-källan med samma id längre ner — sitemapens produktions-sidor saknar
+    // tillfälles-datum (126/126 hamnade utanför fönstret), API:t ger ISO-datum
+    // per speltillfälle.
     {
         id: 'regionteater-vast',
         hostName: 'Regionteater Väst',
@@ -4309,6 +4304,379 @@ export const SOURCES: Source[] = [
             'Datum+tid direkt i API-svaret. Serie-dedup i engine (veckoåterkommande Boule/gympa → ' +
             'första tillfället per förening+namn). Geocoding: location.name → kommun-slug ur URL.',
         lastVerified: '2026-06-11',
+    },
+    {
+        id: 'korpen',
+        hostName: 'Korpen',
+        region: 'national',
+        engine: 'korpen',
+        config: {},   // config.maxAssociations för smoke-test
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 100,
+        maxSavedPerRun: 2500,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://korpenlund.zoezi.se/api/public/workout/get/all?fromDate=2026-06-12&toDate=2026-07-12',
+            date: '2026-06-12',
+            rediscoverCommand: 'curl -s "https://www.korpen.se/foreningar/" | grep -oE \'href="/[a-z0-9-]+"\'',
+            notes: 'Katalogen korpen.se/foreningar/ är statisk SSR — slug = Zoezi-subdomän (1:1). ' +
+                '~102/136 slugs har live Zoezi-instans. Inget centralt Zoezi-register finns.',
+        },
+        fieldMap: {
+            title: 'workouts[].extra_title (fallback workoutType.name)',
+            startDate: 'workouts[].startTime ("YYYY-MM-DD HH:mm:ss" lokal väggtid)',
+            venueName: 'workouts[].resources[resourceType=location].lastname',
+            city: 'workouts[].resources[].city (ibland VERSALER)',
+            coords: 'workouts[].resources[].position — STRÄNG "lat,lng", LATITUD FÖRST',
+            other: { status: 'workouts[].status — filtrera "Cancelled"' },
+        },
+        sampleEventUrl: 'https://korpenlund.zoezi.se/schema',
+        notes: 'Motionspass i hela landet (småorts-täckning: Orsa, Vadstena, Sveg, Haparanda …). ' +
+            'Datum MÅSTE vara YYYY-MM-DD med bindestreck — fel format ger HTTP 200 med TOM lista. ' +
+            'Serie-dedup i engine (veckopass → första tillfället per förening+namn). ' +
+            'Pris/bild opålitliga i publika endpointet — utelämnas. Tomma instanser är normalt ' +
+            '(säsongsvila) — behåll och låt dem vakna.',
+        troubleshooting: [
+            'Tom workouts-lista överallt? Kolla datumformatet (bindestreck!) före allt annat.',
+            'korpen.se/sitemap.xml ger ASP.NET 500 — använd /foreningar/-HTML:en för enumeration.',
+        ],
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'riksteatern',
+        hostName: 'Riksteatern',
+        region: 'national',
+        engine: 'riksteatern',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 10,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.riksteatern.se/api/performance/filter/all?onlyNationalProductions=false&showSubscribedPerformances=false&startDate=2026-06-12&endDate=2026-07-12&page=1&itemsPerPage=2000',
+            date: '2026-06-12',
+            notes: 'Öppet JSON-API hittat i performances.service.es5.js (AngularJS-bundle). ' +
+                'itemsPerPage ignoreras — page=1 ger ALLT i datumfönstret, page=2 är tom.',
+        },
+        fieldMap: {
+            title: 'title', startDate: 'date (ISO8601 — använd ALDRIG day/month/year, month är svensk text)',
+            venueName: 'locationInfo ("Gräsplanen bakom Flora Biografteater, Sjöbo")',
+            city: 'municipality', organizer: 'orgName (lokalföreningen)', imageUrl: 'imageUrl (relativ)',
+            other: { dubbletter: 'isCrossReference=true skippas', url: 'produktions-URL — unikgörs med #YYYY-MM-DD' },
+        },
+        sampleEventUrl: 'https://www.riksteatern.se/forening/fars-riksteaterforening/bravissimo/',
+        notes: '~220 lokala riksteaterföreningar, ETT anrop för hela rikskalendern (854 tillfällen/12 mån; ' +
+            'sommaren är lågsäsong ~35/30d). Scenkonst i småorter. Inga koordinater — geokodning via ' +
+            'locationInfo+kommun. scenkonstportalen är B2B-Blazor — ingen publik data, skippa den.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'bibliotek',
+        hostName: 'Biblioteken',
+        region: 'national',
+        engine: 'bibliotek',
+        config: {},   // config.tenantIds=['uppsala'] för smoke-test
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 300,
+        maxSavedPerRun: 3000,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://api.axiell.com/event/api/customers/5de8fb519cf47722f2bb9871/search?queryString=*&size=2',
+            date: '2026-06-12',
+            notes: 'Axiell Arena Nova — ETT delat auth-fritt API för alla tenants (api.axiell.com/event/api). ' +
+                'Kontraktet hittat i calendar-impl.service.js. API-roten är 401 men per-tenant-sök öppet. ' +
+                'Nya tenants: hämta sajtens HTML → scopeGroupId via regex return"(\\d{4,})" → ' +
+                'GET <sajt>/api/jsonws/arenacalendar.calendar/get-calendar-config/group-id/<id> → customerId. ' +
+                'Kandidatlista: axiell.com/se/bibliotek-med-arena-nova/ + bibliotek.<kommun>.se-mönstret.',
+        },
+        fieldMap: {
+            title: 'hits[].event.title', startDate: 'event.startDate (ISO UTC)',
+            venueName: 'event.location.value (FILIALEN — konsortier har 18–27 filialer per tenant)',
+            description: 'event.description (HTML — strippas)', imageUrl: 'event.images[primaryImage].imageUrl',
+            other: { status: 'PUBLISHED filtreras i query', audience: 'event.targetAudiences[].value' },
+        },
+        notes: 'Folkbibliotekens evenemang (sagostunder/pyssel/författarkvällar) — 8 verifierade tenants ' +
+            '≈1300 event: Uppsala/Örebro/Göta/Snoka/Familjen Helsingborg/Kalmar/Huddinge/Värmland. ' +
+            '~250/290 kommuner kör Axiell → väx seed-listan i scrapers/bibliotek.ts via discovery-rutinen. ' +
+            'Sthlm/Malmö/Gbg är bespoke-CMS — INTE detta API.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'raceid',
+        hostName: 'RaceID',
+        region: 'national',
+        engine: 'raceid',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 50,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://api.raceid.com/api/v2/web/races?limit=200&page=1',
+            date: '2026-06-12',
+            notes: 'Endpoint ur static.raceid.com/main.*.js. 5583 lopp totalt sedan 2019, id ASC — ' +
+                'INGA server-side datumfilter fungerar; paginera allt + filtrera klient-side. ' +
+                'POST /api/v1/web/search finns (GET=405) om server-filter behövs senare.',
+        },
+        fieldMap: {
+            title: 'name', startDate: 'race_date (YYYY-MM-DD, INGET klockslag → hasSpecificTime=false)',
+            city: 'location.city', address: 'location.street_address (ofta null)',
+            imageUrl: 'image', other: { filter: 'published && !is_secret && is_searchable && country=Sweden' },
+        },
+        sampleEventUrl: 'https://raceid.com/races/11',
+        notes: 'Motionslopp/trail/OCR i hela landet — småorts-tungt. Inga koordinater (stad geokodas). ' +
+            'Lopp utan klockslag visas som datum-utan-tid (starttider skiljer per distans).',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'equmenia',
+        hostName: 'Equmenia',
+        region: 'national',
+        engine: 'wp-rest',
+        config: {
+            baseUrl: 'https://equmenia.se',
+            variant: 'tribe',
+            defaultCity: '',
+        },
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 20,
+        discovery: {
+            method: 'probe-wp',
+            probeUrl: 'https://equmenia.se/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-06-12',
+            date: '2026-06-12',
+            notes: 'The Events Calendar REST, öppen. ~61 kommande (scoutläger, barn/ungdom). ' +
+                'venue är oftast bara ett NAMN utan geo_lat/adress → geokodas.',
+        },
+        notes: 'Kyrklig barn-/ungdomsverksamhet (scoutläger m.m.) i hela landet via Tribe-REST.',
+        lastVerified: '2026-06-12',
+    },
+
+    {
+        id: 'bilda',
+        hostName: 'Bilda',
+        region: 'national',
+        engine: 'bilda',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 30,
+        discovery: {
+            method: 'probe-wp',
+            probeUrl: 'https://www.bilda.nu/wp-json/wp/v2/arr?arr-type=674&per_page=2',
+            date: '2026-06-12',
+            notes: 'CPT arr; arr-type=674 = Kulturprogram (publika kulturarrangemang, skiljer från ' +
+                'studiecirklar 673 / annan folkbildning 672). meta["arr-meta-data"] = JSON-sträng med ' +
+                'HELA interna Gustav-posten: starttid (klockslag), lokaladress+postnr+ort, avgift.',
+        },
+        fieldMap: {
+            title: 'arr-meta-data.webbrubrik', startDate: 'arr-meta-data.starttid (ISO m. klockslag, lokal tid)',
+            venueName: 'arr-meta-data.lokal', address: 'arr-meta-data.lokaladress (+postnr+ort — EXAKT)',
+            city: 'arr-meta-data.lokalort (VERSALER → titleCase)',
+            other: { koordinater: 'longitud/latitud i posten är AVRUNDADE/0 — använd ALDRIG, geokoda adressen' },
+        },
+        notes: 'Studieförbundet Bilda: ~209 kulturprogram med exakt gatuadress + klockslag — bästa ' +
+            'datakvaliteten bland studieförbunden. robots disallow:ar /wp-json/ men REST:en är öppen/cachad.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'abf',
+        hostName: 'ABF',
+        region: 'national',
+        engine: 'abf',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 100,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.abf.se/kurs-sok/?type=event&page=1',
+            date: '2026-06-12',
+            notes: 'WordPress + HTMX — söksidan ÄR API:et (server-renderad HTML, EventCard-BEM-klasser). ' +
+                'type=event skiljer Evenemang (736) från Kurser (1639). /wp-json/abf/v1/* är nonce-401.',
+        },
+        fieldMap: {
+            title: '.EventCard-title a', startDate: '.EventCard-date time[datetime=YYYY-MM-DD] + .EventCard-time time[datetime=HH.MM]',
+            city: '.EventCard-location strong (BARA ort i listan; detaljsidan har gatuadress om det behövs senare)',
+            imageUrl: '.EventCard-image img[src]',
+        },
+        notes: 'Största studieförbundet: ~736 publika evenemang i hela landet. Ort-nivå-geokodning ' +
+            '(godkänd fallback) — detaljsidornas gatuadresser kan hämtas i framtida förbättring.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'medborgarskolan',
+        hostName: 'Medborgarskolan',
+        region: 'national',
+        engine: 'medborgarskolan',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'active',
+        expectedMinEvents: 50,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.medborgarskolan.se/wt/api/v2/eventsearch/?type=10000,10090,10020,30150,10060,10030&sort=date&p=1',
+            date: '2026-06-12',
+            notes: 'Wagtail-API (samma plattform som Sensus men ANNAN route — eventsearch vs search). ' +
+                'type-id:n filtrerar arrangemang ur 4676-kurskatalogen: 10000 Föreläsning, 10090 Konsert, ' +
+                '10020 Workshop, 30150 Prova på, 10060 Utställning, 10030 Föreställning → ~404.',
+        },
+        fieldMap: {
+            title: 'list.items[].title', startDate: 'meta[type=start].text ("30 Sep 2025") + meta[type=time] ("10:00-15:00")',
+            city: 'meta[type=location].text (BARA ort — ingen adress finns)', imageUrl: 'ld_entity.image.url',
+        },
+        notes: 'Föreläsningar/konserter/workshops/prova-på i hela landet. Stad-nivå-geokodning ' +
+            '(ingen adress i API:t — detaljsidan har inte heller). sort=date + paginering med fönster-klipp.',
+        lastVerified: '2026-06-12',
+    },
+
+    // ─── KOMMUNER: bulk-probe-runda 2026-06-12 (8/128 otäckta PASS:ade) ──────
+    // Alla sitemap-text (datum ur sidtext, ej JSON-LD) → EXPERIMENTAL tills
+    // datum-spridningen verifierats (inspect + GROUP BY dag — gaten!).
+    {
+        id: 'haninge-kommun',
+        hostName: 'Haninge Kommun',
+        region: 'haninge',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.haninge.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Haninge',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.haninge.se/sitemap.xml', date: '2026-06-12', rawEventCount: 192 },
+        notes: 'DEAD 2026-06-12: sitemapen saknar event-detalj-URL:er (bara statiska /uppleva-och-gora/-sidor, ' +
+            'tidigare-utstallningar/2019 etc). Probens 192 var substring-träffar på "evenemang", inte kalender. ' +
+            'Kalendern är JS-renderad — kräver scout av XHR-API om kommunen ska täckas.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'sollentuna-kommun',
+        hostName: 'Sollentuna Kommun',
+        region: 'sollentuna',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.sollentuna.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Sollentuna',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.sollentuna.se/sitemap.xml', date: '2026-06-12', rawEventCount: 52 },
+        notes: 'DEAD 2026-06-12: 0 kalender-URL:er i sitemapen (2107 sidor) — kalendern är JS-renderad.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'valdemarsvik-kommun',
+        hostName: 'Valdemarsviks Kommun',
+        region: 'valdemarsvik',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.valdemarsvik.se/post-sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Valdemarsvik',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.valdemarsvik.se/post-sitemap.xml', date: '2026-06-12', rawEventCount: 10 },
+        notes: 'DEAD 2026-06-12: 0 kalender-URL:er i post-sitemapen (921 sidor).',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'svedala-kommun',
+        hostName: 'Svedala Kommun',
+        region: 'svedala',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.svedala.se/sitemap.xml',
+            // /uppleva/kalender/<SKAPELSE-år>/<månad>/<slug>/<datum-kl-tid>/ —
+            // mappens år/månad är PUBLICERINGS-datum; förekomstens datum ligger
+            // i LÖV-segmentet ("9-juni-2026-kl-1700"). urlDateRegex förfiltrerar.
+            urlPatterns: [/\/uppleva\/kalender\/\d{4}\//i],
+            urlDateRegex: /\/(?<day>\d{1,2})-(?<month>[a-zåäö]+)-(?<year>\d{4})(?:-kl-\d{3,4})?\/?$/i,
+            defaultCity: 'Svedala',
+            maxUrls: 250,
+        },
+        updateFrequency: 'every-3d',
+        status: 'active',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.svedala.se/sitemap.xml', date: '2026-06-12', rawEventCount: 545 },
+        notes: 'Verifierad 2026-06-12: 155 sparade över 22 dagar (gate OK) → active. ' +
+            'Nämnd-möten i samma kalender filtreras av default-URL-blacklisten (\\bnamnd\\b).',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'hjo-kommun',
+        hostName: 'Hjo Kommun',
+        region: 'hjo',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.hjo.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Hjo',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.hjo.se/sitemap.xml', date: '2026-06-12', rawEventCount: 5 },
+        notes: 'DEAD 2026-06-12: 0 kalender-URL:er i sitemapen (1311 sidor).',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'skovde-kommun',
+        hostName: 'Skövde Kommun',
+        region: 'skovde',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.skovde.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Skövde',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.skovde.se/sitemap.xml', date: '2026-06-12', rawEventCount: 14 },
+        notes: 'DEAD 2026-06-12: 0 kalender-URL:er i sitemapen (1121 sidor) — JS-kalender (näst-störst otäckt, värd XHR-scout).',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'tibro-kommun',
+        hostName: 'Tibro Kommun',
+        region: 'tibro',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.tibro.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Tibro',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'dead',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tibro.se/sitemap.xml', date: '2026-06-12', rawEventCount: 60 },
+        notes: 'DEAD 2026-06-12: bara 2 kalender-URL:er i sitemapen (kulturskolans sida) — ingen riktig kalender.',
+        lastVerified: '2026-06-12',
+    },
+    {
+        id: 'gavle-kommun',
+        hostName: 'Gävle Kommun',
+        region: 'gavle',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.gavle.se/wp-sitemap-posts-gk_event-1.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            defaultCity: 'Gävle',
+            maxUrls: 250,
+        },
+        updateFrequency: 'every-3d',
+        status: 'active',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.gavle.se/wp-sitemap-posts-gk_event-1.xml', date: '2026-06-12', rawEventCount: 171, notes: 'Dedikerad event-post-type-sitemap (gk_event) — bra signal.' },
+        notes: 'Verifierad 2026-06-12: 96 sparade över 26 distinkta dagar (spridnings-gaten OK) → active.',
+        lastVerified: '2026-06-12',
     },
     {
         id: 'friluftsframjandet',

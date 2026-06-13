@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -72,5 +72,50 @@ describe('scoreOf — bästa kandidaten vinner', () => {
 
     it('geokodning ger poäng', () => {
         expect(scoreOf(base)).toBeGreaterThan(scoreOf({ ...base, lat: 0, lng: 0 }));
+    });
+});
+
+describe('buildDedupGroups — tvilling-fästning', () => {
+    const geocoded = { ...base, url: 'https://kommun.se/e/1' };
+    const naked = { ...base, url: 'https://fb.com/e/2', lat: 0, lng: 0, locationName: '' };
+
+    it('naken tvilling (ingen plats alls) fästs vid det enda geokodade klustret', () => {
+        const { groups, attached } = buildDedupGroups([geocoded, naked] as any);
+        expect(attached).toBe(1);
+        expect(groups).toHaveLength(1);
+        expect(groups[0]).toHaveLength(2);
+    });
+
+    it('namn-tvilling fästs när platsnamnet delar ord ("Babel" ↔ "Babel, Malmö")', () => {
+        const a = { ...base, url: 'u1', locationName: 'Babel, Malmö', lat: 55.6, lng: 13.0 };
+        const b = { ...base, url: 'u2', locationName: 'Babel', lat: 0, lng: 0 };
+        const { groups, attached } = buildDedupGroups([a, b] as any);
+        expect(attached).toBe(1);
+        expect(groups).toHaveLength(1);
+        expect(groups[0]).toHaveLength(2);
+    });
+
+    it('namn-tvilling utan ordöverlapp förblir egen grupp', () => {
+        const a = { ...base, url: 'u1', locationName: 'Folkets Hus', lat: 55.6, lng: 13.0 };
+        const b = { ...base, url: 'u2', locationName: 'Bygdegården Tranemo', lat: 0, lng: 0 };
+        const { groups, attached } = buildDedupGroups([a, b] as any);
+        expect(attached).toBe(0);
+        expect(groups).toHaveLength(2);
+    });
+
+    it('flera geokodade kluster (generisk titel på många orter) → ingen fästning', () => {
+        const horby = { ...base, url: 'u1', title: 'Midsommarfirande', lat: 55.85, lng: 13.66 };
+        const tranemo = { ...base, url: 'u2', title: 'Midsommarfirande', lat: 57.48, lng: 13.35 };
+        const lost = { ...base, url: 'u3', title: 'Midsommarfirande', lat: 0, lng: 0, locationName: '' };
+        const { groups, attached, skippedNoLocation } = buildDedupGroups([horby, tranemo, lost] as any);
+        expect(attached).toBe(0);
+        expect(skippedNoLocation).toBe(1);
+        expect(groups).toHaveLength(2);
+    });
+
+    it('olika dagar fästs aldrig ihop', () => {
+        const other = { ...naked, time: '2026-06-07T12:00:00.000Z' };
+        const { attached } = buildDedupGroups([geocoded, other] as any);
+        expect(attached).toBe(0);
     });
 });

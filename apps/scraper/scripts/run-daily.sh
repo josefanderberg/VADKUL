@@ -113,15 +113,13 @@ else
     echo "⚠️ Hide-junk misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
-# ─── Fixa "kl 02 på natten"-events genom att re-fetcha detail-sidor ─────────
-# sitevision-engine och liknande list-scrapers fångar bara <time datetime=YYYY-MM-DD>,
-# inte HH:MM. Resultat: time=00:00 UTC = 02:00 svensk = "natten". fix-event-times.ts
-# fetchar detail-sidor och plockar "klockan HH:MM" via regex.
-# Begränsat till 100/körning så det inte saktar ner pipelinen för mycket
-# (~5-8 min per natt). Backfill går i steady-state efter ett par dygn.
+# ─── Fixa platshållar-midnatt: re-fetcha detail-sidor efter klockslag ────────
+# Kandidater väljs på hasSpecificTime=0 (runnerns flagga) med max 3 försök per
+# event — sedan ger vi upp (sidan saknar klockslag) och eventet ligger kvar på
+# lokal midnatt, som webben visar som "datum utan tid" (aldrig "00:00"/"02:00").
 echo "" >> "$LOG_FILE"
-echo "── FIX EVENT-TIMES (detail-page för 'kl 02:00'-events) ──" >> "$LOG_FILE"
-if npm run fix-times -- --apply --limit=100 >> "$LOG_FILE" 2>&1; then
+echo "── FIX EVENT-TIMES (klockslag för midnatts-platshållare) ──" >> "$LOG_FILE"
+if npm run fix-times -- --apply --limit=300 >> "$LOG_FILE" 2>&1; then
     FIXED_TIMES="$(grep -oE '✅ Fixade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
     echo "Fix-times OK (fixade=${FIXED_TIMES:-0})" >> "$LOG_FILE"
 else
@@ -139,6 +137,21 @@ if npm run dedupe-cross -- --apply >> "$LOG_FILE" 2>&1; then
     echo "Dedup OK (gömda=${DEDUPED_N:-0})" >> "$LOG_FILE"
 else
     echo "⚠️ Dedup misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
+# ─── Geo-refine: exakta adresser för stadscentrum-klumpade event ────────────
+# Event vars geokodning föll tillbaka på stadens mittpunkt får ett nytt försök:
+# gatuadress ur extractedAddress/description/locationName (strukturerad
+# Nominatim-sökning) eller strikt venue+stad. Bara träffar som flyttar eventet
+# >150 m men <60 km accepteras. Körs EFTER dedup (färre rader att förfina)
+# och FÖRE re-aggregate så nya koordinater publiceras samma natt.
+echo "" >> "$LOG_FILE"
+echo "── GEO-REFINE (exakta adresser för kluster-event) ──" >> "$LOG_FILE"
+if npm run geo-refine -- --apply --limit=150 >> "$LOG_FILE" 2>&1; then
+    REFINED_N="$(grep -oE 'Förfinade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Geo-refine OK (förfinade=${REFINED_N:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Geo-refine misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────

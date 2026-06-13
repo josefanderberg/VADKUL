@@ -126,12 +126,15 @@ export interface Source {
     /**
      * Hur ofta källan behöver scrapas. Används av schemaläggaren för att
      * sprida ut körningar — small kommun-sajter behöver inte köras dagligen.
+     * Källor med kadens > 1 dag fas-sprids per natt via hash(id) i schedule.ts.
      *   - 'hourly'      — högfrekventa (Facebook, Tickster)
      *   - 'daily'       — default, för stora ticketing-platforms
      *   - 'every-3d'    — kommunsajter, måttligt uppdaterade
      *   - 'weekly'      — sällan uppdaterade, små kommuner / turism
+     *   - 'biweekly'    — långhorisont-venues (operahus/konserthus som
+     *                     publicerar hela säsonger månader i förväg)
      */
-    updateFrequency?: 'hourly' | 'daily' | 'every-3d' | 'weekly';
+    updateFrequency?: 'hourly' | 'daily' | 'every-3d' | 'weekly' | 'biweekly';
     /** Engångskoll-flagga: hoppa över denna källa */
     disabled?: boolean;
     /**
@@ -181,7 +184,8 @@ export type EngineName =
     | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap'
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
-    | 'friluftsframjandet' | 'pro';
+    | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
+    | 'bilda' | 'medborgarskolan' | 'abf';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.
@@ -200,6 +204,12 @@ export interface EngineContext {
      * alltid i runnern — detta är enbart en kostnadsoptimering.
      */
     isKnownUrl?: (url: string) => Promise<boolean>;
+    /**
+     * Full-refresh-körning: motorn ska IGNORERA isKnownUrl-optimeringen och
+     * hämta även kända URL:er, så ändrade/flyttade event upptäcks. Sätts av
+     * runnern var 4:e körning per källa (se schedule.isRefreshRun).
+     */
+    refreshKnown?: boolean;
 }
 
 /**
@@ -216,6 +226,8 @@ export interface SourceRunResult {
     durationMs: number;
     found: number;          // hur många RawEvents engine returnerade
     saved: number;          // hur många som faktiskt skrevs till DB
+    /** Kända event vars tid uppdaterades vid full-refresh (flyttat datum / nytt klockslag) */
+    updated: number;
     skipped: {
         duplicate: number;
         outsideWindow: number;

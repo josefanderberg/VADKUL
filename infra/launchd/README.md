@@ -2,6 +2,43 @@
 
 Bakgrundsjobb för VADKUL-scrapern på Mac Mini:n.
 
+## se.vadkul.scraper.nightly
+
+DET ENDA scrape-jobbet (sedan 2026-06-12). Startar 00:30 och kör hela kedjan
+sekventiellt — inga fler fasta tider för delsteg, varje steg startar när
+föregående är klart:
+
+1. **Cleanup** — `cleanup-old` (Firestore) + `prune-old` (SQLite)
+2. **Scrape** (`npm run start` → `index.ts`) — Facebook FÖRST (volatilast),
+   direkt `aggregate` så FB är live, sedan bespoke-scrapers och till sist
+   Sources enligt hash-fas-schemat i `schedule.ts` (~85–95 källor/natt,
+   jämnt fördelat — inga tomma nätter, inga peak-nätter)
+3. **Post-pipeline en gång** — hide-foreign → hide-junk → fix-times (klockslag
+   för midnatts-platshållare) → dedupe-cross → geo-refine (exakta adresser för
+   stadscentrum-klumpade event) → storage-sync → image-migrate → llm-enrich →
+   AI-audit → re-aggregate
+4. **Stats + Teams-rapporter**
+
+Ersätter de gamla jobben `se.vadkul.scraper.today` (00:30) och
+`se.vadkul.scraper.full` (02:30), som körde post-pipelinen dubbelt varje natt
+och överlappade varandras Puppeteer/Ollama-användning. Gamla plists ligger
+kvar som `.bak-*` i `~/Library/LaunchAgents/`.
+
+### Installera
+
+```sh
+cp infra/launchd/se.vadkul.scraper.nightly.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.scraper.nightly.plist
+launchctl list | grep vadkul.scraper
+```
+
+### Köra manuellt / felsöka
+
+```sh
+launchctl kickstart gui/$(id -u)/se.vadkul.scraper.nightly   # kör nu
+tail -f ~/Library/Logs/vadkul-scraper/nightly.log            # kedjans logg
+```
+
 ## se.vadkul.audit-pending
 
 Kontinuerlig daemon som auditerar dagens-och-framåt events som ännu inte

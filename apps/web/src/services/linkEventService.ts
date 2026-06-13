@@ -105,15 +105,29 @@ async function fetchShards(layerName: string, shardCount: number, updatedAt: any
 
 /**
  * Midnatt lokal tid = källan hade bara ett datum, inget klockslag (scraperns
- * egen heuristik speglad) — flaggan saknas i aggregat-lagren så den härleds här.
+ * egen heuristik speglad) — fallback för äldre aggregat-lager som saknar
+ * den exporterade hasSpecificTime-flaggan.
  */
 function deriveHasSpecificTime(t: Date): boolean {
     return !(t.getHours() === 0 && t.getMinutes() === 0);
 }
 
+/** Exporterad flagga vinner; härled bara när lagret är gammalt och saknar den. */
+function hasSpecificTimeOf(evt: any, time: Date): boolean {
+    return typeof evt.hasSpecificTime === 'boolean'
+        ? evt.hasSpecificTime
+        : deriveHasSpecificTime(time);
+}
+
 function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
     return events.map((evt: any) => {
         const time = new Date(evt.time);
+        // Sanera koordinater redan här: en projicerad koord (lat=6129956) som
+        // slinker förbi pipelinens vakt får annars Maplibre att kasta och
+        // släcker hela kartan. Ogiltigt → 0,0 ("oplacerad", döljs på kartan).
+        const validCoord =
+            Number.isFinite(evt.lat) && Number.isFinite(evt.lng) &&
+            evt.lat >= -90 && evt.lat <= 90 && evt.lng >= -180 && evt.lng <= 180;
         return {
             id: evt.id,
             url: evt.id,
@@ -121,8 +135,8 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
             time,
             createdAt: new Date(),
             locationName: evt.locationName,
-            lat: evt.lat,
-            lng: evt.lng,
+            lat: validCoord ? evt.lat : 0,
+            lng: validCoord ? evt.lng : 0,
             hostName: '',
             category: evt.category || 'other',
             coverImage: '',
@@ -130,7 +144,7 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
             attendees: 0,
             isLocationVerified: evt.isLocationVerified || false,
             emoji: evt.emoji || undefined,
-            hasSpecificTime: deriveHasSpecificTime(time),
+            hasSpecificTime: hasSpecificTimeOf(evt, time),
         };
     });
 }

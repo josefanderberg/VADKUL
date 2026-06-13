@@ -175,7 +175,7 @@ export const friluftsframjandetEngine: Engine = async (_config, ctx) => {
     let skippedKnown = 0;
     const mapped = await mapPool(items, CONCURRENCY, async (item): Promise<RawEvent | null> => {
         const url = `${SITE}${item.link}`;
-        if (ctx.isKnownUrl && (await ctx.isKnownUrl(url))) { skippedKnown++; return null; }
+        if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(url))) { skippedKnown++; return null; }
         if (item.forLeaders || item.hasEnded) return null;   // slipp detaljhämtningen helt
         try {
             const r = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(25_000) });

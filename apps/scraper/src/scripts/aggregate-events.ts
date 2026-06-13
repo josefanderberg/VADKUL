@@ -7,6 +7,8 @@ interface DestinationLayer {
     id: string;
     title: string;
     time: string;
+    /** false = källan gav bara datum (midnatt är platshållare) — webben visar då ingen klocktid. */
+    hasSpecificTime: boolean;
     lat: number;
     lng: number;
     locationName: string;
@@ -19,6 +21,8 @@ interface CardLayer {
     id: string;
     title: string;
     time: string;
+    /** false = källan gav bara datum — webben visar då ingen klocktid. */
+    hasSpecificTime: boolean;
     locationName: string;
     category: string;
     coverImage: string;
@@ -61,15 +65,34 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     const cards: CardLayer[] = [];
     const descriptions: Record<string, string> = {};
 
+    // Skyddsvakt: en enda koordinat utanför WGS84-intervallet (projicerade
+    // SWEREF99/RT90-koords från paraply-API:er) kraschar HELA Mapbox-kartan i
+    // dess bounds-filter. Sanera till 0,0 (webben döljer 0,0) så ett dåligt
+    // event aldrig kan släcka kartan för alla andra. Loggas för uppföljning.
+    let droppedCoords = 0;
+    const safeCoord = (lat: number, lng: number): [number, number] => {
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return [lat, lng];
+        droppedCoords++;
+        return [0, 0];
+    };
+
     rows.forEach(row => {
         const id = row.url; // Use url as unique identifier
+        const [safeLat, safeLng] = safeCoord(Number(row.lat) || 0, Number(row.lng) || 0);
+        // NULL (legacy-rad som inte backfillats) tolkas som "har tid" bara om
+        // klockslaget inte är midnatt — samma heuristik som webben använt.
+        const t = new Date(row.time);
+        const hasSpecificTime = row.hasSpecificTime != null
+            ? row.hasSpecificTime === 1
+            : !((t.getHours() === 0 && t.getMinutes() === 0) || (t.getUTCHours() === 0 && t.getUTCMinutes() === 0));
 
         destinations.push({
             id,
             title: row.title || '',
             time: row.time,
-            lat: Number(row.lat) || 0,
-            lng: Number(row.lng) || 0,
+            hasSpecificTime,
+            lat: safeLat,
+            lng: safeLng,
             locationName: row.locationName || '',
             category: row.category || 'other',
             emoji: row.emoji || undefined
@@ -79,6 +102,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             id,
             title: row.title || '',
             time: row.time,
+            hasSpecificTime,
             locationName: row.locationName || '',
             category: row.category || 'other',
             coverImage: row.coverImage || '',
@@ -93,6 +117,10 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
 
         descriptions[id] = row.description || '';
     });
+
+    if (droppedCoords > 0) {
+        console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
+    }
 
     const destinationsPayload = { updatedAt, events: destinations };
     const cardsPayload = { updatedAt, events: cards };
@@ -194,12 +222,28 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             await deleteShards(db, 'descriptions_');
             console.log(`      ✅ Uploaded "descriptions" document (${(descBytes / 1024).toFixed(0)} KB)`);
         } else {
+            // Packa på FAKTISKA bytes, inte antal: beskrivningar varierar vilt i
+            // längd, och klumpar långa texter ihop sig spräcker en antal-baserad
+            // shard 1 MB-taket (descriptions_0 låg på 1024 KB 2026-06-12 — en
+            // hårsmån från write-fail). 700 KB-budget ger marginal för
+            // Firestore-overhead (fältnamn/index) ovanpå JSON-måttet.
+            const SHARD_BYTE_BUDGET = 700_000;
             const entries = Object.entries(descriptions);
-            const SHARD_SIZE = Math.max(50, Math.floor(entries.length / Math.ceil(descBytes / 800_000)));
             const shards: Record<string, string>[] = [];
-            for (let i = 0; i < entries.length; i += SHARD_SIZE) {
-                shards.push(Object.fromEntries(entries.slice(i, i + SHARD_SIZE)));
+            let current: Record<string, string> = {};
+            let currentBytes = 50;   // klammer + updatedAt/shardIndex-overhead
+            for (const [id, desc] of entries) {
+                const entryBytes = Buffer.byteLength(JSON.stringify(id), 'utf8')
+                    + Buffer.byteLength(JSON.stringify(desc ?? ''), 'utf8') + 2;
+                if (currentBytes + entryBytes > SHARD_BYTE_BUDGET && Object.keys(current).length > 0) {
+                    shards.push(current);
+                    current = {};
+                    currentBytes = 50;
+                }
+                current[id] = desc;
+                currentBytes += entryBytes;
             }
+            if (Object.keys(current).length > 0) shards.push(current);
             console.log(`      ℹ️  Descriptions är ${(descBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
             await db.collection('aggregatedEvents').doc('descriptions').set({
                 updatedAt, shardCount: shards.length, totalEntries: entries.length,

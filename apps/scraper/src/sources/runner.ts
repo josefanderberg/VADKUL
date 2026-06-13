@@ -11,8 +11,9 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { addEventToDb, eventExistsInDb, refreshEventTime } from '../utils/dbHelper';
+import { isRefreshRun } from './schedule';
+import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
@@ -61,13 +62,20 @@ export function deriveHasSpecificTime(startDate: Date, explicit?: boolean): bool
 
 /**
  * Geocoding-frågor i prioritetsordning för ett event: källans egna kandidater
- * om de finns (paraply-källors fallback-kedjor), annars "venueName, city".
+ * om de finns (paraply-källors fallback-kedjor). Annars: gatuadress först
+ * (mest precis när källan gav en — JSON-LD streetAddress t.ex.), sedan
+ * "venueName, city", sist bara staden.
  */
 export function geocodeQueriesFor(e: RawEvent): string[] {
     const candidates = e.geocodeCandidates?.length
         ? e.geocodeCandidates
-        : [[e.venueName, e.city].filter(Boolean).join(', ')];
-    return candidates.filter((q) => q && q.trim().length > 2);
+        : [
+            e.address ? [e.address, e.city].filter(Boolean).join(', ') : '',
+            e.venueName ? [e.venueName, e.city].filter(Boolean).join(', ') : '',
+            e.city ?? '',
+        ];
+    // Dedupa (address kan vara identisk med venueName) och släng korta/tomma.
+    return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
 }
 
 export async function runSource(
@@ -81,6 +89,7 @@ export async function runSource(
         durationMs: 0,
         found: 0,
         saved: 0,
+        updated: 0,
         skipped: { duplicate: 0, outsideWindow: 0, invalid: 0 },
         errors: [],
         audited: 0,
@@ -113,6 +122,9 @@ export async function runSource(
     }
 
     const { windowStart, windowEnd } = buildWindow(source.windowDays ?? DEFAULT_WINDOW_DAYS);
+    // Var 4:e körning per källa är en full-refresh: skip-känt-optimeringen
+    // stängs av så ändrade/flyttade event på kända URL:er fångas upp.
+    const refreshKnown = !opts.dryRun && isRefreshRun(source);
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
@@ -120,7 +132,9 @@ export async function runSource(
         // Kostnadsoptimering för engines med dyra per-event-hämtningar.
         // I dry-run svarar vi alltid "okänd" så hela flödet syns i utskriften.
         isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
+        refreshKnown,
     };
+    if (refreshKnown) ctx.log('full-refresh-körning: kända URL:er re-fetchas');
 
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
@@ -163,19 +177,40 @@ export async function runSource(
                 continue;
             }
             if (!opts.dryRun && await eventExistsInDb(e.url)) {
+                // Refresh-körning: uppdatera tiden om källan nu säger något
+                // annat (flyttat datum, eller klockslag publicerat i efterhand).
+                if (refreshKnown) {
+                    const changed = await refreshEventTime(
+                        e.url, e.startDate, deriveHasSpecificTime(e.startDate, e.hasSpecificTime),
+                    );
+                    if (changed) {
+                        result.updated++;
+                        ctx.log(`  🔄 tid uppdaterad: ${e.title.slice(0, 50)} → ${e.startDate.toISOString()}`);
+                    }
+                }
                 result.skipped.duplicate++;
                 continue;
             }
 
             // Geocoding: använd engine-koords om de finns, annars prova källans
-            // kandidat-kedja (eller default "venueName, city") tills träff.
+            // kandidat-kedja (default: adress → venue+stad → stad) tills träff.
+            // geocodedQuery sparas i DB så geo-refine/admin ser provenansen.
             let lat = e.coords?.[0] ?? 0;
             let lng = e.coords?.[1] ?? 0;
+            let geocodedQuery = e.coords ? 'källans egna koordinater' : '';
+            // Validera källans koordinater: paraply-API:er (Naturskydd/Hembygd)
+            // levererar ibland PROJICERADE koordinater (SWEREF99/RT90, t.ex.
+            // lat=6129956) som spränger WGS84-intervallet och kraschar kartan.
+            // Lita bara på koords inom nordiska bounds; annars kasta + geokoda.
+            if ((lat || lng) && !isInNordic(lat, lng)) {
+                ctx.log(`⚠️ ogiltiga koords [${lat},${lng}] från källan för "${e.title.slice(0, 40)}" — geokodar på namn`);
+                lat = 0; lng = 0; geocodedQuery = '';
+            }
             if (!opts.dryRun && !lat && !lng) {
                 for (const q of geocodeQueriesFor(e)) {
                     if (!geoCache.has(q)) geoCache.set(q, await geocodeVenueSweden(q));
                     const coords = geoCache.get(q);
-                    if (coords) { lat = coords[0]; lng = coords[1]; break; }
+                    if (coords) { lat = coords[0]; lng = coords[1]; geocodedQuery = q; break; }
                 }
             }
 
@@ -242,6 +277,8 @@ export async function runSource(
                 time: e.startDate,
                 hasSpecificTime,
                 locationName: e.venueName || e.city || 'Sverige',
+                extractedAddress: e.address || '',
+                geocodedQuery,
                 lat,
                 lng,
                 // Paraply-källor (församling/klubb/krets) sätter värd per event.
@@ -272,8 +309,9 @@ export async function runSource(
     const auditSuffix = result.audited > 0
         ? `, audited ${result.audited}, auto-hidden ${result.autoHidden}`
         : '';
+    const updatedSuffix = result.updated > 0 ? `, updated ${result.updated}` : '';
     ctx.log(
-        `done in ${result.durationMs}ms — saved ${result.saved}, ` +
+        `done in ${result.durationMs}ms — saved ${result.saved}${updatedSuffix}, ` +
         `dup ${result.skipped.duplicate}, outside ${result.skipped.outsideWindow}, ` +
         `invalid ${result.skipped.invalid}, errors ${result.errors.length}${auditSuffix}`,
     );

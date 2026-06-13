@@ -82,6 +82,17 @@ sqlite.exec(`
         created_at TEXT    NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_known_venues_name ON known_venues(name);
+
+    -- Persistent geocoding-cache: Nominatim-svar per normaliserad query.
+    -- ok=1 → lat/lng giltiga; ok=0 → query gav inget (negativ cache, så vi
+    -- inte hamrar Nominatim med samma misslyckade fråga varje natt).
+    CREATE TABLE IF NOT EXISTS geocode_cache (
+        query      TEXT PRIMARY KEY,
+        lat        REAL,
+        lng        REAL,
+        ok         INTEGER NOT NULL,
+        checked_at TEXT    NOT NULL
+    );
 `);
 
 // ─── Additive migrations ────────────────────────────────────────────────────
@@ -104,6 +115,34 @@ addColumnIfMissing('scrape_runs', 'hidden_count',         'INTEGER DEFAULT 0');
 addColumnIfMissing('scrape_runs', 'errors_json',          'TEXT');
 addColumnIfMissing('scrape_runs', 'audited_count',        'INTEGER DEFAULT 0');
 addColumnIfMissing('scrape_runs', 'auto_hidden_count',    'INTEGER DEFAULT 0');
+
+// hasSpecificTime: 1 = källan gav ett riktigt klockslag, 0 = bara datum
+// (midnatt är platshållare). NULL på legacy-rader backfillas nedan.
+// timeFixAttempts: hur många gånger fix-event-times försökt hitta klockslag
+// på detaljsidan — efter 3 försök ger vi upp (sidan saknar tid).
+addColumnIfMissing('link_events', 'hasSpecificTime', 'INTEGER');
+addColumnIfMissing('link_events', 'timeFixAttempts', 'INTEGER DEFAULT 0');
+{
+    // Backfill av NULL-rader (legacy + rader skrivna av äldre processer):
+    // midnatt i ANTINGEN lokal tid eller UTC = "bara datum". Körs i JS (inte
+    // SQL) eftersom lokal midnatt beror på DST (T22/T23 i UTC). Körs vid varje
+    // uppstart — billig no-op när alla rader redan har flaggan.
+    const rows = sqlite.prepare('SELECT url, time FROM link_events WHERE hasSpecificTime IS NULL').all() as Array<{ url: string; time: string | null }>;
+    if (rows.length > 0) {
+        const upd = sqlite.prepare('UPDATE link_events SET hasSpecificTime = ? WHERE url = ?');
+        const backfill = sqlite.transaction((rs: Array<{ url: string; time: string | null }>) => {
+            for (const r of rs) {
+                const d = r.time ? new Date(r.time) : null;
+                const midnightish = !d || isNaN(d.getTime())
+                    || (d.getHours() === 0 && d.getMinutes() === 0)
+                    || (d.getUTCHours() === 0 && d.getUTCMinutes() === 0);
+                upd.run(midnightish ? 0 : 1, r.url);
+            }
+        });
+        backfill(rows);
+        console.log(`  ℹ️  link_events.hasSpecificTime: ${rows.length} NULL-rader backfillade`);
+    }
+}
 
 // status-kolumn: 'raw' | 'audited' | 'published'
 // Backfillas direkt till 'published' för alla befintliga rader — de var redan
@@ -254,12 +293,12 @@ export function setEventAuditWithCategory(url: string, a: EventAuditWrite): void
 
 const upsertStmt = sqlite.prepare(`
     INSERT INTO link_events (
-        url, title, time, locationName, extractedAddress, geocodedQuery,
+        url, title, time, hasSpecificTime, locationName, extractedAddress, geocodedQuery,
         lat, lng, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
         firestoreId, updatedAt, status, price
     ) VALUES (
-        @url, @title, @time, @locationName, @extractedAddress, @geocodedQuery,
+        @url, @title, @time, @hasSpecificTime, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
         @firestoreId, @updatedAt, @status, @price
@@ -267,6 +306,7 @@ const upsertStmt = sqlite.prepare(`
     ON CONFLICT(url) DO UPDATE SET
         title              = excluded.title,
         time               = excluded.time,
+        hasSpecificTime    = COALESCE(excluded.hasSpecificTime, link_events.hasSpecificTime),
         locationName       = excluded.locationName,
         extractedAddress   = excluded.extractedAddress,
         geocodedQuery      = excluded.geocodedQuery,
@@ -308,6 +348,8 @@ export interface SqliteEvent {
     url: string;
     title: string;
     time: Date | string;
+    /** true = riktigt klockslag från källan; false = bara datum (midnatt är platshållare). */
+    hasSpecificTime?: boolean;
     locationName?: string;
     extractedAddress?: string;
     geocodedQuery?: string;
@@ -339,6 +381,7 @@ export function upsertEvent(event: SqliteEvent): void {
         url:                event.url,
         title:              event.title ?? '',
         time:               toIso(event.time),
+        hasSpecificTime:    event.hasSpecificTime === undefined ? null : (event.hasSpecificTime ? 1 : 0),
         locationName:       event.locationName ?? '',
         extractedAddress:   event.extractedAddress ?? '',
         geocodedQuery:      event.geocodedQuery ?? '',
@@ -447,6 +490,65 @@ export function listKnownVenues(city?: string): KnownVenueRow[] {
 
 export function countKnownVenues(): number {
     return (venueCountStmt.get() as { n: number }).n;
+}
+
+// ─── Tids- och koordinat-uppdateringar (fix-times, refresh-körningar, geo-refine) ──
+
+const setTimeStmt = sqlite.prepare(
+    'UPDATE link_events SET time = ?, hasSpecificTime = ?, updatedAt = ? WHERE url = ?',
+);
+
+/** Sätt ny tid + tidskvalitets-flagga för ett event (SQLite-delen). */
+export function setEventTime(url: string, timeIso: string, hasSpecificTime: boolean): void {
+    setTimeStmt.run(timeIso, hasSpecificTime ? 1 : 0, new Date().toISOString(), url);
+}
+
+const bumpAttemptsStmt = sqlite.prepare(
+    'UPDATE link_events SET timeFixAttempts = COALESCE(timeFixAttempts, 0) + 1 WHERE url = ?',
+);
+
+/** Räkna upp antalet misslyckade tids-fix-försök (fix-event-times ger upp efter 3). */
+export function bumpTimeFixAttempts(url: string): void {
+    bumpAttemptsStmt.run(url);
+}
+
+const setCoordsStmt = sqlite.prepare(`
+    UPDATE link_events
+    SET lat = ?, lng = ?, geocodedQuery = ?, isLocationVerified = 1, updatedAt = ?
+    WHERE url = ?
+`);
+
+/** Sätt förfinade koordinater + vilken query som gav träffen (geo-refine). */
+export function setEventCoords(url: string, lat: number, lng: number, geocodedQuery: string): void {
+    setCoordsStmt.run(lat, lng, geocodedQuery, new Date().toISOString(), url);
+}
+
+// ─── Geocode-cache ───────────────────────────────────────────────────────────
+
+export interface GeocodeCacheHit {
+    lat: number;
+    lng: number;
+    ok: boolean;
+    ageDays: number;
+}
+
+const geoCacheGetStmt = sqlite.prepare('SELECT lat, lng, ok, checked_at FROM geocode_cache WHERE query = ?');
+const geoCacheSetStmt = sqlite.prepare(`
+    INSERT INTO geocode_cache (query, lat, lng, ok, checked_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(query) DO UPDATE SET
+        lat = excluded.lat, lng = excluded.lng, ok = excluded.ok, checked_at = excluded.checked_at
+`);
+
+export function geocodeCacheGet(query: string): GeocodeCacheHit | null {
+    const row = geoCacheGetStmt.get(query) as { lat: number; lng: number; ok: number; checked_at: string } | undefined;
+    if (!row) return null;
+    const ageDays = (Date.now() - new Date(row.checked_at).getTime()) / 86_400_000;
+    return { lat: row.lat, lng: row.lng, ok: row.ok === 1, ageDays };
+}
+
+export function geocodeCacheSet(query: string, coords: [number, number] | null): void {
+    geoCacheSetStmt.run(query, coords?.[0] ?? null, coords?.[1] ?? null, coords ? 1 : 0, new Date().toISOString());
 }
 
 export { sqlite };

@@ -2,6 +2,22 @@
 import { EVENT_CATEGORIES } from './categories';
 import type { EventCategoryType } from './categories';
 
+/**
+ * Är koordinaten en giltig WGS84-punkt som Maplibre kan hantera?
+ * En enda punkt med lat utanför [-90,90] (t.ex. projicerade SWEREF99/RT90-
+ * koords som 6129956 från en paraply-källa) får annars `LngLatBounds.contains`
+ * att kasta och kraschar HELA kartan. Vakta varje koordinat-ingång med denna.
+ * (0,0 räknas som ogiltig — det är vår "oplacerad"-markör.)
+ */
+export function isValidLatLng(lat: unknown, lng: unknown): boolean {
+    return (
+        typeof lat === 'number' && typeof lng === 'number' &&
+        Number.isFinite(lat) && Number.isFinite(lng) &&
+        lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
+        !(lat === 0 && lng === 0)
+    );
+}
+
 // --- NYA FUNKTIONER FÖR LOCAL STORAGE ---
 export function saveLocationToLocalStorage(lat: number, lng: number) {
     localStorage.setItem('user_lat', lat.toString());

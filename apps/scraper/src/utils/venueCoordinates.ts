@@ -1,4 +1,4 @@
-import { upsertKnownVenue, lookupVenueExact, getAllKnownVenues, countKnownVenues } from './sqliteHelper';
+import { upsertKnownVenue, lookupVenueExact, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet } from './sqliteHelper';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
 // Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
@@ -391,6 +391,12 @@ export async function geocodeVenue(rawVenueName: string): Promise<[number, numbe
 /**
  * Sverige-bred geocoding — söker i hela Sverige via Nominatim.
  * Används av Tickster-scrapen och andra rikstäckande scrapers.
+ *
+ * Persistent cache (geocode_cache i SQLite): träffar återanvänds i 90 dagar
+ * (venues flyttar inte), missar provas om efter 14 dagar (OSM kompletteras).
+ * Paraply-källorna (SvK 577 församlingar, PRO ~970 föreningar, Hembygd) frågar
+ * efter samma platser varje körning — utan cachen kostar det 1,1s+ per fråga
+ * och natt, med cachen är det en lokal lookup.
  */
 export async function geocodeVenueSweden(rawQuery: string): Promise<[number, number] | null> {
     if (!rawQuery) return null;
@@ -411,6 +417,18 @@ export async function geocodeVenueSweden(rawQuery: string): Promise<[number, num
         .replace(/,\s*,/g, ',');
     if (!cleaned) return null;
 
+    const cached = geocodeCacheGet(cleaned);
+    if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
+        return cached.ok ? [cached.lat, cached.lng] : null;
+    }
+
+    const result = await geocodeVenueSwedenLive(cleaned);
+    geocodeCacheSet(cleaned, result);
+    return result;
+}
+
+/** Själva Nominatim-kedjan, utan cache. Anropa geocodeVenueSweden istället. */
+async function geocodeVenueSwedenLive(cleaned: string): Promise<[number, number] | null> {
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
 
     // Försök 1: full fråga
@@ -461,6 +479,69 @@ export async function geocodeVenueSweden(rawQuery: string): Promise<[number, num
 
     console.log(`[Geocoding/SE] No results for "${cleaned}".`);
     return null;
+}
+
+/**
+ * STRIKT Sverige-geokodning — EN Nominatim-fråga med hela strängen, ingen
+ * komma-tail- eller stads-fallback. För geo-refine: en fallback hade bara
+ * flyttat eventet från ett stadscentrum-kluster till ett annat (kommun-
+ * centroiden). Antingen träffar hela "Venue, Stad"-frågan en POI, eller null.
+ * Cachas med egen nyckel så den inte blandas med fallback-kedjans svar.
+ */
+export async function geocodeVenueSwedenStrict(rawQuery: string): Promise<[number, number] | null> {
+    if (!rawQuery) return null;
+    if (isForeignAddress(rawQuery)) return null;
+    const cleaned = rawQuery.trim().replace(/\s+/g, ' ');
+    if (cleaned.length < 3) return null;
+
+    const key = `strict:${cleaned.toLowerCase()}`;
+    const cached = geocodeCacheGet(key);
+    if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
+        return cached.ok ? [cached.lat, cached.lng] : null;
+    }
+
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    const result = await nominatimSearchSweden(cleaned);
+    geocodeCacheSet(key, result);
+    return result;
+}
+
+/**
+ * Strukturerad gatuadress-geokodning — för geo-refine när vi har en explicit
+ * adress ("Storgatan 12") + stad. Till skillnad från geocodeVenueSweden finns
+ * INGEN stads-fallback här: antingen får vi en adress-precis träff eller null.
+ * Cachas i geocode_cache med strukturerad nyckel.
+ */
+export async function geocodeStreetSweden(street: string, city: string): Promise<[number, number] | null> {
+    if (!street || !city) return null;
+    if (isForeignAddress(`${street}, ${city}`)) return null;
+
+    const key = `street:${street.trim().toLowerCase()}|${city.trim().toLowerCase()}`;
+    const cached = geocodeCacheGet(key);
+    if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
+        return cached.ok ? [cached.lat, cached.lng] : null;
+    }
+
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    let result: [number, number] | null = null;
+    try {
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=se'
+            + `&street=${encodeURIComponent(street)}&city=${encodeURIComponent(city)}`;
+        const res = await fetch(url, {
+            headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' },
+        });
+        if (res.ok) {
+            const data: any = await res.json();
+            for (const hit of data ?? []) {
+                const lat = parseFloat(hit.lat);
+                const lng = parseFloat(hit.lon);
+                if (isInNordic(lat, lng)) { result = [lat, lng]; break; }
+            }
+        }
+    } catch { /* nätfel → behandla som miss */ }
+
+    geocodeCacheSet(key, result);
+    return result;
 }
 
 export interface ReverseGeocodeResult {

@@ -34,6 +34,7 @@ import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { extractStreetAddress } from '../../utils/swedishAddress';
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -532,6 +533,15 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         $('.event-location, .plats, .location, .venue').first().text().trim() ||
         undefined;
 
+    // Gatuadress ur microdata/vanliga adress-element (regex-fallbacken för
+    // båda extraktions-vägarna ligger i fallbackAddress nedan).
+    let address =
+        $('[itemprop="streetAddress"]').first().text().trim() ||
+        ($('[itemprop="streetAddress"]').first().attr('content') || '').trim() ||
+        $('.event-address, .adress, .address, .street-address').first().text().trim() ||
+        undefined;
+    if (address && address.length > 120) address = undefined;  // skräp-skydd
+
     return {
         title,
         startDate,
@@ -539,6 +549,7 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         description: description || undefined,
         imageUrl,
         venueName,
+        address,
         city: defaultCity,
     };
 }
@@ -575,6 +586,19 @@ function applyUrlTime(ev: RawEvent, url: string): void {
     if (t) d.setHours(t.h, t.m, 0, 0);
 }
 
+/**
+ * Regex-fallback för gatuadress över sidans text — körs när varken JSON-LD
+ * eller microdata gav någon. "Adress:/Besöksadress:"-etikett föredras,
+ * annars första svenska gatuadressen i texten. Runnern geokodar adress före
+ * venue-namn, så detta avgör ofta om eventet hamnar på rätt hus eller på
+ * stadens mittpunkt.
+ */
+function fallbackAddress(html: string): string | undefined {
+    const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 8000);
+    const labelled = text.match(/(?:besöksadress|adress)\s*:\s*([^.|]{5,80})/i);
+    return extractStreetAddress(labelled?.[1]) ?? extractStreetAddress(text) ?? undefined;
+}
+
 function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
@@ -596,6 +620,9 @@ function extractFromHtml(html: string, url: string, defaultCity?: string): RawEv
     if (!ev) ev = cheerioFallback(html, url, defaultCity);
     // 3) Tid ur URL-query om sidan inte gav specifik tid (host-agnostiskt).
     if (ev) applyUrlTime(ev, url);
+    // 4) Adress-fallback ur sidtexten — för BÅDA vägarna (JSON-LD utan
+    //    streetAddress är vanligt på kommunsajter).
+    if (ev && !ev.address) ev.address = fallbackAddress(html);
     return ev;
 }
 
@@ -636,6 +663,7 @@ export const sitemapEngine = async (
     let failed = 0;
     let noEvent = 0;
     let fetched = 0;
+    let skippedKnown = 0;
     let consecutiveOutside = 0;
     let aborted = false;
 
@@ -651,6 +679,13 @@ export const sitemapEngine = async (
         while (queue.length > 0 && !aborted) {
             const entry = queue.shift();
             if (!entry) break;
+            // Skip-känt: detaljsidan är dyraste steget (1,5s/domän rate-limit).
+            // URL:er vi redan har i DB hoppas över — utom på full-refresh-
+            // körningar (ctx.refreshKnown), där ändrade event ska fångas.
+            if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(entry.url))) {
+                skippedKnown++;
+                continue;
+            }
             const html = await detailFetch(entry.url);
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
@@ -684,6 +719,7 @@ export const sitemapEngine = async (
     await Promise.all(workers);
 
     const exitNote = aborted ? ` [early-exit ${fetched}/${entries.length}]` : '';
-    ctx.log(`sitemap: ${extracted} events extraherade (${failed} fetch-fel, ${noEvent} utan event-struktur)${exitNote}`);
+    const knownNote = skippedKnown > 0 ? `, ${skippedKnown} kända URL:er skippade före fetch` : '';
+    ctx.log(`sitemap: ${extracted} events extraherade (${failed} fetch-fel, ${noEvent} utan event-struktur${knownNote})${exitNote}`);
     return events.filter((e): e is RawEvent => e !== null);
 };

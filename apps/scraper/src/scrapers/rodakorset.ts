@@ -109,7 +109,7 @@ export const rodaKorsetEngine: Engine = async (_config, ctx) => {
     let skippedKnown = 0;
     const mapped = await mapPool(urls, CONCURRENCY, async (url): Promise<RawEvent | null> => {
         // Hoppa över event vi redan har — slipp content-API-anropet helt.
-        if (ctx.isKnownUrl && (await ctx.isKnownUrl(url))) { skippedKnown++; return null; }
+        if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(url))) { skippedKnown++; return null; }
         const c = await fetchContent(url);
         return mapRkContent(url, c);
     });

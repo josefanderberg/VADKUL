@@ -76,6 +76,92 @@ export function dedupKey(r: Pick<Row, 'title' | 'time' | 'lat' | 'lng' | 'locati
     return `${normalizeTitle(r.title)}|${localDay(r.time)}|${locationKey(r)}`;
 }
 
+/** Ord (>2 tecken) ur normaliserad locationName — för tvilling-matchning. */
+function locationTokens(name: string): Set<string> {
+    return new Set(normalizeTitle(name).split(' ').filter((t) => t.length > 2));
+}
+
+function tokensOverlap(a: string, b: string): boolean {
+    const ta = locationTokens(a);
+    for (const t of locationTokens(b)) if (ta.has(t)) return true;
+    return false;
+}
+
+export interface GroupingResult {
+    /** Slutgiltiga dedup-grupper (alla med ≥1 medlem). */
+    groups: Row[][];
+    /** Rader utan plats-nyckel som INTE kunde fästas vid något kluster. */
+    skippedNoLocation: number;
+    /** Plats-lösa/namn-bara rader som fästes vid ett entydigt geokodat kluster. */
+    attached: number;
+}
+
+/**
+ * Bygg dedup-grupper med tvilling-fästning.
+ *
+ * Grundnyckeln är titel+dag+plats — men när ena tvillingen är geokodad och
+ * den andra "naken" (inga koordinater) skiljer plats-nyckeln och dubbletten
+ * läcker. Fix: inom varje titel+dag, om de geokodade raderna bildar EXAKT
+ * ETT koordinat-kluster fäster vi
+ *   a) rader helt utan plats vid klustret, och
+ *   b) rader med enbart locationName vid klustret OM namnet delar ord med
+ *      någon geokodad medlems platsnamn ("Babel" ↔ "Babel, Malmö").
+ * Vid flera kluster (generiska titlar: "Midsommarfirande" på 60 orter) görs
+ * INGEN fästning — då kan vi inte veta vilken plats den nakna raden avser.
+ */
+export function buildDedupGroups(rows: Row[]): GroupingResult {
+    const byTitleDay = new Map<string, Row[]>();
+    for (const r of rows) {
+        const k = `${normalizeTitle(r.title)}|${localDay(r.time)}`;
+        if (!byTitleDay.has(k)) byTitleDay.set(k, []);
+        byTitleDay.get(k)!.push(r);
+    }
+
+    const groups: Row[][] = [];
+    let skippedNoLocation = 0;
+    let attached = 0;
+
+    for (const members of byTitleDay.values()) {
+        const hasCoords = (r: Row) => r.lat !== 0 && r.lng !== 0;
+        const coordRows = members.filter(hasCoords);
+        const nameRows  = members.filter((r) => !hasCoords(r) && locationKey(r) !== '');
+        const nakedRows = members.filter((r) => !hasCoords(r) && locationKey(r) === '');
+
+        const within = new Map<string, Row[]>();
+        const push = (key: string, r: Row) => {
+            if (!within.has(key)) within.set(key, []);
+            within.get(key)!.push(r);
+        };
+        for (const r of coordRows) push(locationKey(r), r);
+        for (const r of nameRows) push(locationKey(r), r);
+
+        const coordKeys = new Set(coordRows.map(locationKey));
+        if (coordKeys.size === 1) {
+            const clusterKey = [...coordKeys][0];
+            for (const r of nakedRows) {
+                push(clusterKey, r);
+                attached++;
+            }
+            for (const r of nameRows) {
+                if (coordRows.some((c) => tokensOverlap(r.locationName, c.locationName))) {
+                    // Flytta från namn-gruppen till koordinat-klustret
+                    const nameGroup = within.get(locationKey(r))!;
+                    nameGroup.splice(nameGroup.indexOf(r), 1);
+                    if (nameGroup.length === 0) within.delete(locationKey(r));
+                    push(clusterKey, r);
+                    attached++;
+                }
+            }
+        } else {
+            skippedNoLocation += nakedRows.length;
+        }
+
+        groups.push(...within.values());
+    }
+
+    return { groups, skippedNoLocation, attached };
+}
+
 export function scoreOf(r: Row): number {
     let s = 0;
     const hasImage = r.coverImage && r.coverImage.length > 10;
@@ -101,25 +187,19 @@ async function main() {
         WHERE hidden = 0 AND firestoreId IS NOT NULL AND title IS NOT NULL AND time IS NOT NULL
     `).all() as Row[];
 
-    // Gruppera på dedup-nyckel. Events utan platsnyckel (varken koordinater
-    // eller locationName) hoppas över — utan plats kan vi inte skilja
-    // "Sommarfest" i Hörby från "Sommarfest" i Tranemo samma dag.
-    const groups = new Map<string, Row[]>();
-    let skippedNoLocation = 0;
-    for (const r of rows) {
-        if (locationKey(r) === '') { skippedNoLocation++; continue; }
-        const k = dedupKey(r);
-        if (!groups.has(k)) groups.set(k, []);
-        groups.get(k)!.push(r);
-    }
+    // Gruppera med tvilling-fästning (se buildDedupGroups). Events utan
+    // plats-nyckel som inte kan fästas hoppas över — utan plats kan vi inte
+    // skilja "Sommarfest" i Hörby från "Sommarfest" i Tranemo samma dag.
+    const { groups, skippedNoLocation, attached } = buildDedupGroups(rows);
     if (skippedNoLocation) console.log(`(${skippedNoLocation} events utan plats-nyckel hoppade — dedupas ej)`);
+    if (attached) console.log(`(${attached} plats-lösa tvillingar fästa vid sitt geokodade kluster)`);
 
     // Filtrera fram bara grupper med dublett
-    const dupGroups = Array.from(groups.entries()).filter(([, arr]) => arr.length > 1);
-    console.log(`Hittade ${dupGroups.length} dubblett-grupper (${dupGroups.reduce((s, [, a]) => s + a.length, 0)} events totalt, varav ${dupGroups.reduce((s, [, a]) => s + a.length - 1, 0)} ska gömmas)\n`);
+    const dupGroups = groups.filter((arr) => arr.length > 1);
+    console.log(`Hittade ${dupGroups.length} dubblett-grupper (${dupGroups.reduce((s, a) => s + a.length, 0)} events totalt, varav ${dupGroups.reduce((s, a) => s + a.length - 1, 0)} ska gömmas)\n`);
 
     const toHide: Row[] = [];
-    for (const [, arr] of dupGroups) {
+    for (const arr of dupGroups) {
         const scored = arr.map((r) => ({ r, s: scoreOf(r) })).sort((a, b) => b.s - a.s);
         const keeper = scored[0].r;
         const losers = scored.slice(1).map((x) => x.r);

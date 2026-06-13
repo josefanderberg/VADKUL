@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      VADKUL nattkedja — DET ENDA scrape-jobbet. Ersätter de gamla jobben
+      scraper.today (00:30) + scraper.full (02:30), som körde post-pipelinen
+      dubbelt och överlappade varandras Puppeteer/Ollama-användning.
+
+      Kedjan (run-daily.sh nightly start - -with-cleanup) kör sekventiellt:
+        1. cleanup-old + prune-old            (städning)
+        2. npm run start (index.ts):          Facebook FÖRST (volatilast)
+           → aggregate (FB live direkt)       → bespoke-scrapers
+           → Sources enligt hash-fas-schemat  → aggregate
+        3. Post-pipeline EN gång: hide-foreign, hide-junk, fix-times,
+           dedupe-cross, geo-refine, storage-sync, image-migrate,
+           llm-enrich, AI-audit, re-aggregate
+        4. Stats + Teams-rapporter
+
+      Inga fler fasta tider för delsteg — allt startar när föregående steg
+      är klart. Källorna sprids jämnt över nätterna av schedule.ts (hash-fas).
+    -->
+    <key>Label</key>
+    <string>se.vadkul.scraper.nightly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/ai/Repos/VADKUL/apps/scraper/scripts/run-daily.sh</string>
+        <string>nightly</string>
+        <string>start</string>
+        <string>--with-cleanup</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>0</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/launchd-nightly.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/launchd-nightly-err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
