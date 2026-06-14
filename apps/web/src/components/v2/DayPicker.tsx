@@ -80,7 +80,7 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
     return (
         <div
             ref={ref}
-            className="absolute bottom-full mb-2 left-0 w-60 rounded-2xl bg-white/95 backdrop-blur-md border border-white/60 shadow-2xl p-1.5 z-[1100] animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-60 rounded-2xl bg-white/95 backdrop-blur-md border border-white/60 shadow-2xl p-1.5 z-[1100] animate-in fade-in slide-in-from-top-2 duration-150"
         >
             {dayOptions.map(opt => {
                 const active = dayOffset === opt.offset && dayRangeDays === opt.days;

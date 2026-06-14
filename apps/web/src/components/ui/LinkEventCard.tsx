@@ -1,11 +1,12 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
-import { linkEventService } from '../../services/linkEventService';
+import { linkEventService, type RsvpAttendee } from '../../services/linkEventService';
 import { feedbackService } from '../../services/feedbackService';
+import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -72,9 +73,43 @@ interface LinkEventCardProps {
 }
 
 export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn }: LinkEventCardProps) {
+    const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
+
+    // Anmälningar (RSVP) — bara för användarskapade event (de länkar inte ut, allt
+    // sker här på sidan). Live-lyssnare på linkEvents/{id}/attendees.
+    const [attendees, setAttendees] = useState<RsvpAttendee[]>([]);
+    const [rsvpBusy, setRsvpBusy] = useState(false);
+    useEffect(() => {
+        if (!linkEvent.userCreated) { setAttendees([]); return; }
+        const unsub = linkEventService.subscribeAttendees(linkEvent.id, setAttendees);
+        return () => unsub();
+    }, [linkEvent.id, linkEvent.userCreated]);
+    const isAttending = !!user && attendees.some(a => a.uid === user.uid);
+    const handleRsvpToggle = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!user) { toast('Logga in för att anmäla dig.', { icon: '🔑' }); return; }
+        setRsvpBusy(true);
+        try {
+            if (isAttending) {
+                await linkEventService.cancelRsvp(linkEvent.id, user.uid);
+            } else {
+                await linkEventService.rsvp(linkEvent.id, {
+                    uid: user.uid,
+                    name: user.displayName || user.email || 'VADKUL-användare',
+                    photoURL: user.photoURL,
+                });
+            }
+        } catch (err) {
+            console.error('RSVP misslyckades:', err);
+            toast.error('Kunde inte uppdatera anmälan. Försök igen.');
+        } finally {
+            setRsvpBusy(false);
+        }
+    };
     // Sant när den RIKTIGA omslagsbilden inte gick att ladda (t.ex. ett
     // facebook-event utan bild bakom URL:en). Då har vi ingen fallback att visa
     // → rendera INGEN bild i stället för webbläsarens trasiga bild-ikon med
@@ -390,7 +425,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                         {revealStep === 2 && (
                             <div className="mt-6 flex flex-col gap-3">
-                                {/* Användarskapade event saknar extern anmälningssida */}
+                                {/* Skrapade event länkar ut till arrangörens sida. */}
                                 {linkEvent.url && (
                                     <button
                                         onClick={handleVisitSite}
@@ -399,6 +434,56 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         <span>ANMÄL DIG HÄR</span>
                                         <ExternalLink size={24} />
                                     </button>
+                                )}
+
+                                {/* Användarskapade event: anmälan sker HÄR på sidan, ingen
+                                    extern länk. Knappen togglar din anmälan och listan visar
+                                    vilka som kommer. */}
+                                {!linkEvent.url && linkEvent.userCreated && (
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={handleRsvpToggle}
+                                            disabled={rsvpBusy}
+                                            aria-pressed={isAttending}
+                                            className={`flex items-center justify-center gap-3 w-full py-4 text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97] disabled:opacity-60 ${
+                                                isAttending
+                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                    : 'bg-[#006AA7] hover:bg-[#005590] text-white'
+                                            }`}
+                                        >
+                                            {isAttending ? <Check size={24} /> : <Users size={24} />}
+                                            <span>{isAttending ? 'DU ÄR ANMÄLD' : 'ANMÄL DIG'}</span>
+                                        </button>
+
+                                        <div>
+                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                                <Users size={13} />
+                                                {attendees.length === 0
+                                                    ? 'Ingen anmäld än — bli först!'
+                                                    : `${attendees.length} ${attendees.length === 1 ? 'anmäld' : 'anmälda'}`}
+                                            </p>
+                                            {attendees.length > 0 && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {attendees.map(a => (
+                                                        <span
+                                                            key={a.uid}
+                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                                        >
+                                                            {a.photoURL ? (
+                                                                // eslint-disable-next-line @next/next/no-img-element
+                                                                <img src={a.photoURL} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                                            ) : (
+                                                                <span className="w-6 h-6 rounded-full bg-[#006AA7] text-white text-[11px] font-black flex items-center justify-center">
+                                                                    {a.name.charAt(0).toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{a.name}</span>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                                 {/* Spara / Hitta hit / Dela — samlade direkt under
                                     anmälningsknappen i stället för utspridda

@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/Users/josefanderberg/.nvm/versions/node/v22.22.0/bin/node",
+      "runtimeArgs": ["/Users/josefanderberg/.nvm/versions/node/v22.22.0/lib/node_modules/npm/bin/npm-cli.js", "run", "dev"],
       "port": 3000,
       "autoPort": true
     }

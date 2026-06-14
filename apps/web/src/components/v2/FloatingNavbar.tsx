@@ -109,25 +109,26 @@ export default function FloatingNavbar({
                 {/* Top Row */}
                 <div className="flex items-center gap-2 w-full">
 
-                    {/* Vänster: profil i hörnet (väskan + funktioner ligger under,
-                        renderade i V2Map). Inloggad → profilpanelen, annars login. */}
-                    <div className="flex items-center pointer-events-auto shrink-0">
+                    {/* Vänster: profil + hjärtat (sparade) direkt höger om profilen.
+                        Väskan/funktioner ligger under, renderade i V2Map. */}
+                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         <button
                             type="button"
                             onClick={handleProfileClick}
-                            className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                            className={`bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
                             aria-label={user ? 'Min profil' : 'Logga in'}
                         >
-                            <User size={20} className="text-slate-700" />
-                            {user && (
+                            {user?.photoURL ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
+                            ) : (
+                                <User size={20} className="text-slate-700" />
+                            )}
+                            {user && !user.photoURL && (
                                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
                             )}
                         </button>
-                    </div>
-
-                    {/* Höger: sparade event + expanderbar sök + skapa event */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
-                        {/* Sparade event (hjärtan) — panel med allt man sparat */}
+                        {/* Sparade event (hjärtan) — direkt höger om profilen */}
                         {onToggleSaved && (
                             <button
                                 type="button"
@@ -147,6 +148,10 @@ export default function FloatingNavbar({
                                 )}
                             </button>
                         )}
+                    </div>
+
+                    {/* Höger: expanderbar sök + skapa event */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
                         {/* Sök */}
                         {searchOpen ? (
                             <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">

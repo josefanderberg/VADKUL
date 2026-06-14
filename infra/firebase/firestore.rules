@@ -177,7 +177,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
-            'description', 'createdAt', 'isLocationVerified'
+            'description', 'createdAt', 'isLocationVerified', 'coverImage'
         ]);
 
       // Uppdatera/radera: bara sitt eget användarskapade event…
@@ -188,6 +188,20 @@ service cloud.firestore {
       // …eller admin (scrapade event förblir admin-only).
       allow create, update, delete: if isAuthenticated()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+
+      // ANMÄLNINGAR: vem som anmält sig till ett event. Doc-id = användarens uid,
+      // så varje konto kan bara anmäla sig en gång. Publikt läsbart (alla ser vilka
+      // som kommer); man får bara skapa/radera SIN EGEN anmälan, formbegränsad.
+      match /attendees/{attendeeId} {
+        allow read: if true;
+        allow create: if isAuthenticated()
+          && attendeeId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'photoURL', 'createdAt']);
+        allow delete: if isAuthenticated() && attendeeId == request.auth.uid;
+      }
     }
 
     // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).

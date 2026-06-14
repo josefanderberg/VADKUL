@@ -911,37 +911,41 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
 
     return (
         <>
-        {/* Nedre rad — ALLTID synlig (dagväljare + antal till vänster, Nästa till höger om kort finns) */}
+        {/* Dagväljaren — i navbar-raden, i linje med knapparna (enkel pill, antal
+            som badge ovanpå, som tidigare). ALLTID synlig; popovern öppnas nedåt. */}
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
+            <div className="relative">
+                <button
+                    ref={dayChipRef}
+                    onClick={() => setDayPickerOpen(o => !o)}
+                    aria-expanded={dayPickerOpen}
+                    aria-label="Välj dag eller period"
+                    className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-10 box-border"
+                >
+                    <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                    <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
+                    <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
+                    {eventsLoaded ? (dayCount ?? events.length) : '…'}
+                </span>
+                {dayPickerOpen && (
+                    <DayPicker
+                        dayOffset={dayOffset}
+                        dayRangeDays={dayRangeDays}
+                        anchorRef={dayChipRef}
+                        onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
+                        onClose={() => setDayPickerOpen(false)}
+                    />
+                )}
+            </div>
+        </div>
+        {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
-                {/* Vänster: dagväljare med antals-badge ovanpå (sparar plats på raden) */}
+                {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <div className="relative">
-                        <button
-                            ref={dayChipRef}
-                            onClick={() => setDayPickerOpen(o => !o)}
-                            aria-expanded={dayPickerOpen}
-                            aria-label="Välj dag eller period"
-                            className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
-                        >
-                            <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                            <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
-                            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
-                            {eventsLoaded ? (dayCount ?? events.length) : '…'}
-                        </span>
-                        {dayPickerOpen && (
-                            <DayPicker
-                                dayOffset={dayOffset}
-                                dayRangeDays={dayRangeDays}
-                                anchorRef={dayChipRef}
-                                onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
-                                onClose={() => setDayPickerOpen(false)}
-                            />
-                        )}
-                    </div>
                     {/* Ingen separat återställ-knapp — "Idag" ligger ett tryck
                         bort i dagväljaren och tomma dagar har en "Visa idag"-länk.
                         Verktygen (sol/fokus/moln-hämtning) bor i EN gemensam pill

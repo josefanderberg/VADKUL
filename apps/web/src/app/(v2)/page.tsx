@@ -12,7 +12,8 @@ import SavedPanel from '@/components/v2/SavedPanel';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
-import { Target, Trophy, X, Sparkles } from 'lucide-react';
+import { storageService } from '@/services/storageService';
+import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { classifySource, DEFAULT_MUTED_SOURCES, SOURCE_DEFS } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
@@ -112,6 +113,8 @@ export default function HomePage() {
     const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
     const [newEventPlace, setNewEventPlace] = useState('');         // platsnamn, valfritt
     const [newEventDescription, setNewEventDescription] = useState(''); // valfri
+    const [newEventImage, setNewEventImage] = useState<File | null>(null);
+    const [newEventImagePreview, setNewEventImagePreview] = useState('');
     const [creatingEvent, setCreatingEvent] = useState(false);
 
     // Escape stänger skapa event-modalen (samma städning som Avbryt-knappen) —
@@ -237,10 +240,25 @@ export default function HomePage() {
     // Event-id för markören man gissade på — hålls synlig (brickan) efter avslöjet.
     const [guessedEventId, setGuessedEventId] = useState<string | null>(null);
 
+    // Användarskapade event ska ALLTID vara kvar på kartan. Pollen är progressiv:
+    // stegen destinationer → kort → beskrivningar saknar användarevent (bara sista
+    // steget har dem), så utan skydd blinkar egna event bort ~var 30:e sekund.
+    // myCreatedRef = den här sessionens optimistiskt skapade event (syns direkt,
+    // innan pollen hunnit hämta dem). lastUserEventsRef = senast kända DB-set av
+    // användarevent. Båda slås in i varje callback (id-dedup → `fetched` vinner).
+    const myCreatedRef = useRef<LinkEvent[]>([]);
+    const lastUserEventsRef = useRef<LinkEvent[]>([]);
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
         const unsubscribe = linkEventService.subscribeToAll(true, (fetched) => {
-            const sorted = fetched.sort((a, b) => a.time.getTime() - b.time.getTime());
+            const fetchedUser = fetched.filter(e => e.userCreated);
+            if (fetchedUser.length) lastUserEventsRef.current = fetchedUser;
+            const seen = new Set(fetched.map(e => e.id));
+            const extras: LinkEvent[] = [];
+            for (const e of [...myCreatedRef.current, ...lastUserEventsRef.current]) {
+                if (!seen.has(e.id)) { seen.add(e.id); extras.push(e); }
+            }
+            const sorted = [...fetched, ...extras].sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
             // Laddningen är progressiv (destinationer → kort → beskrivningar) och
             // första lagret kan komma tomt — räkna bara svar MED data som
@@ -357,6 +375,15 @@ export default function HomePage() {
         setCreatingEvent(true);
         try {
             const time = new Date(newEventTime);
+            // Ladda upp ev. eventbild först så URL:en kan sparas på eventet.
+            let coverImage = '';
+            if (newEventImage) {
+                try {
+                    coverImage = await storageService.uploadFile(`event-images/${user.uid}/`, newEventImage);
+                } catch (e) {
+                    console.warn('Kunde inte ladda upp eventbilden — skapar utan bild:', e);
+                }
+            }
             const docId = await linkEventService.createUserEvent({
                 title: newEventTitle,
                 time,
@@ -367,15 +394,25 @@ export default function HomePage() {
                 category: newEventCategory,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
                 hostUid: user.uid,
+                coverImage,
             });
             const created: LinkEvent = {
                 id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
                 locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
-                category: newEventCategory, coverImage: '', description: newEventDescription.trim(), attendees: 0,
+                category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
                 isLocationVerified: true, userCreated: true, hostUid: user.uid,
             } as LinkEvent;
+            // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
+            myCreatedRef.current = [...myCreatedRef.current, created];
             setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
+            // Hoppa till eventets dag så det garanterat ligger inom dag-filtret —
+            // annars syns det inte om det skapades för en annan dag än den visade.
+            const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+            const startEvt = new Date(time); startEvt.setHours(0, 0, 0, 0);
+            const dayOffsetForEvent = Math.round((startEvt.getTime() - startToday.getTime()) / 86_400_000);
+            setDayOffset(dayOffsetForEvent);
+            setDayRangeDays(1);
             setSelectedEvent(created);
             toast.success('Eventet är skapat och syns på kartan! 🎉');
             setCreationMode('idle');
@@ -385,19 +422,23 @@ export default function HomePage() {
             setNewEventCategory('other');
             setNewEventPlace('');
             setNewEventDescription('');
+            setNewEventImage(null);
+            setNewEventImagePreview('');
         } catch (err) {
             console.error(err);
             toast.error('Kunde inte skapa eventet. Försök igen.');
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, user, openLogin]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, user, openLogin]);
 
     // Ta bort sitt EGET användarskapade event: Firestore-delete (reglerna
     // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
     const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
         try {
             await linkEventService.deleteUserEvent(eventId);
+            myCreatedRef.current = myCreatedRef.current.filter(e => e.id !== eventId);
+            lastUserEventsRef.current = lastUserEventsRef.current.filter(e => e.id !== eventId);
             setEvents(prev => prev.filter(e => e.id !== eventId));
             setSelectedEvent(prev => (prev?.id === eventId ? null : prev));
             setSavedEventIds(prev => {
@@ -907,6 +948,43 @@ export default function HomePage() {
                             rows={3}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
                         />
+                        {/* Bild på eventet (valfritt) — laddas upp till Storage vid Skapa. */}
+                        <div>
+                            <input
+                                id="new-event-image"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    e.target.value = '';
+                                    if (!file) return;
+                                    if (!file.type.startsWith('image/')) { toast.error('Välj en bildfil.'); return; }
+                                    setNewEventImage(file);
+                                    setNewEventImagePreview(URL.createObjectURL(file));
+                                }}
+                            />
+                            {newEventImagePreview ? (
+                                <div className="relative">
+                                    <img src={newEventImagePreview} alt="Förhandsvisning" className="w-full h-36 object-cover rounded-xl border border-slate-200" />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewEventImage(null); setNewEventImagePreview(''); }}
+                                        aria-label="Ta bort bild"
+                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                                    >
+                                        <X size={15} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label
+                                    htmlFor="new-event-image"
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-semibold cursor-pointer hover:border-green-500 hover:text-green-600 transition-colors"
+                                >
+                                    <ImagePlus size={18} /> Lägg till bild (valfritt)
+                                </label>
+                            )}
+                        </div>
                         {!user && (
                             <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
                                 Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
@@ -922,6 +1000,8 @@ export default function HomePage() {
                                     setNewEventTime('');
                                     setNewEventPlace('');
                                     setNewEventDescription('');
+                                    setNewEventImage(null);
+                                    setNewEventImagePreview('');
                                 }}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
@@ -969,16 +1049,6 @@ export default function HomePage() {
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
                 onDayRangeChange={handleDayRangeChange}
-                onSunClick={shopFlags.sun ? handleSunClick : undefined}
-                mainCloudOffScreen={cloudOffScreen.main}
-                sunCloudOffScreen={cloudOffScreen.sun}
-                recallMainBlink={!mainRecalled}
-                onRecallMainCloud={handleRecallMain}
-                onRecallSunCloud={handleRecallSun}
-                onRecenter={shopFlags.focus ? handleRecenter : undefined}
-                recenterBlink={focusToolBlink}
-                slingshotReady={slingshotActive}
-                slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}

@@ -71,6 +71,12 @@ export const userService = {
     await setDoc(doc(db, 'users', uid), { displayName: name.trim() }, { merge: true });
   },
 
+  // Spegla profilbilds-URL:en till users-dokumentet (Auth-profilen sätts i
+  // AuthContext) så andra ytor som läser users/{uid} ser samma bild.
+  async updatePhotoURL(uid: string, photoURL: string): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { photoURL }, { merge: true });
+  },
+
   // Radera users-dokumentet (vid kontoradering). Kräver att reglerna släpper
   // igenom owner-delete — misslyckas det fortsätter Auth-raderingen ändå.
   async deleteUserDoc(uid: string): Promise<void> {

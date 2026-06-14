@@ -66,8 +66,8 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, so
 
     return (
         <>
-            {/* Rund knapp under profilen (vänsterkolumnen). Badge = antal aktiva filter. */}
-            <div className="fixed top-[72px] left-4 z-[1151] pointer-events-auto">
+            {/* Rund knapp i högerkolumnen (under sök/+). Badge = antal aktiva filter. */}
+            <div className="fixed top-[72px] right-4 z-[1151] pointer-events-auto">
                 <button
                     ref={btnRef}
                     type="button"
@@ -85,11 +85,11 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, so
                 </button>
             </div>
 
-            {/* Panel — samma stil som funktions-väskan, fast i vänsterkolumnen. */}
+            {/* Panel — samma stil som funktions-väskan, fast i högerkolumnen. */}
             {open && (
                 <div
                     ref={panelRef}
-                    className="fixed top-[118px] left-3 z-[1150] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+                    className="fixed top-[118px] right-3 z-[1150] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
                 >
                     <div className="px-2.5 pt-1 pb-1.5 flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
