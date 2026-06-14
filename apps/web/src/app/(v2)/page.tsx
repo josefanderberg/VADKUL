@@ -14,6 +14,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { Target, Trophy, X, Sparkles } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
+import { classifySource, DEFAULT_MUTED_SOURCES, SOURCE_DEFS } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -77,7 +78,7 @@ export default function HomePage() {
     // "X unika event idag") väntar på detta så det inte hinner poppa fram med 0
     // event innan databasen svarat.
     const [eventsLoaded, setEventsLoaded] = useState(false);
-    const [filteredEvents, setFilteredEvents] = useState<LinkEvent[]>([]);
+    // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
@@ -92,6 +93,9 @@ export default function HomePage() {
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+    // Dolda källor: PRO/Korpen/Svenska kyrkan har så många event att de dränker
+    // kartan → dolda som standard, men kan slås på igen. Sparas i localStorage.
+    const [mutedSources, setMutedSources] = useState<Set<string>>(() => new Set(DEFAULT_MUTED_SOURCES));
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -251,7 +255,11 @@ export default function HomePage() {
     }, []);
 
     // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
-    useEffect(() => {
+    // useMemo (inte state-i-effekt) → listan är ALLTID i synk med events inom
+    // samma render. Annars fanns ett mellanläge där eventsLoaded blivit true men
+    // dagens lista ännu var tom → "Inga event" hann blinka förbi innan datan
+    // filtrerats klart.
+    const filteredEvents = useMemo(() => {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayOffset);
 
@@ -262,22 +270,21 @@ export default function HomePage() {
         endOfDay.setDate(endOfDay.getDate() + (dayRangeDays - 1));
         endOfDay.setHours(23, 59, 59, 999);
 
-        const filtered = events.filter(evt => {
-            return evt.time >= startOfDay && evt.time <= endOfDay;
-        });
+        return events.filter(evt => evt.time >= startOfDay && evt.time <= endOfDay);
+    }, [events, dayOffset, dayRangeDays]);
 
-        setFilteredEvents(filtered);
-        // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
-        // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
-        // vyn i stället för att flyga iväg till en annan stad. (Bara vid byte,
-        // inte vid varje Firestore-uppdatering.)
+    // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
+    // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
+    // vyn i stället för att flyga iväg till en annan stad. (Bara vid byte,
+    // inte vid varje Firestore-uppdatering.)
+    useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
-            setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filtered));
+            setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
             prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
         }
-    }, [events, dayOffset, dayRangeDays]);
+    }, [filteredEvents, dayOffset, dayRangeDays]);
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -294,8 +301,17 @@ export default function HomePage() {
             const discarded = JSON.parse(localStorage.getItem('vadkul_discarded_events') ?? '[]');
             if (Array.isArray(saved) && saved.length) setSavedEventIds(new Set(saved));
             if (Array.isArray(discarded) && discarded.length) setDiscardedEventIds(new Set(discarded));
+            // Dolda källor: bara om nyckeln finns (annars behåll default-dolda).
+            const mutedRaw = localStorage.getItem('vadkul_muted_sources');
+            if (mutedRaw) {
+                const muted = JSON.parse(mutedRaw);
+                if (Array.isArray(muted)) setMutedSources(new Set(muted));
+            }
         } catch { /* korrupt localStorage — börja om tomt */ }
     }, []);
+    useEffect(() => {
+        localStorage.setItem('vadkul_muted_sources', JSON.stringify([...mutedSources]));
+    }, [mutedSources]);
     useEffect(() => {
         localStorage.setItem('vadkul_saved_events', JSON.stringify([...savedEventIds]));
     }, [savedEventIds]);
@@ -427,13 +443,53 @@ export default function HomePage() {
         );
     }, [events, filteredEvents, searchQuery]);
 
-    // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
+    // Källfilter: räkna antal per "stor" källa (för togglarna) OCH plocka bort de
+    // dolda källorna i ETT svep. Counts beräknas före gallringen så togglarna kan
+    // visa antalet även för en dold källa.
+    const { sourceFilteredEvents, sourceCounts } = useMemo(() => {
+        const counts: Record<string, number> = {};
+        const kept: LinkEvent[] = [];
+        for (const evt of searchFilteredEvents) {
+            const src = classifySource(evt.url || evt.id);
+            if (src) counts[src] = (counts[src] ?? 0) + 1;
+            if (!src || !mutedSources.has(src)) kept.push(evt);
+        }
+        return { sourceFilteredEvents: kept, sourceCounts: counts };
+    }, [searchFilteredEvents, mutedSources]);
+
+    // Kategorifiltret appliceras sist i kedjan: dag → sök → källa → kategori.
     const visibleEvents = useMemo(() => {
-        if (selectedCategories.size === 0) return searchFilteredEvents;
-        return searchFilteredEvents.filter(evt =>
+        if (selectedCategories.size === 0) return sourceFilteredEvents;
+        return sourceFilteredEvents.filter(evt =>
             selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
         );
+    }, [sourceFilteredEvents, selectedCategories]);
+
+    // Antal event för dagen i dag-väljarens badge: räknas FÖRE källfiltret så det
+    // visar hur många event som faktiskt finns för dagen, även när PRO/Korpen/
+    // Svenska kyrkan är dolda på kartan. (Respekterar dock kategorivalet.)
+    const dayEventCount = useMemo(() => {
+        if (selectedCategories.size === 0) return searchFilteredEvents.length;
+        return searchFilteredEvents.filter(evt =>
+            selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
+        ).length;
     }, [searchFilteredEvents, selectedCategories]);
+
+    // Källornas toggle-info (label + antal + dold?) — endast källor som faktiskt
+    // har event i nuvarande vy visas i listan.
+    const sourceFilters = useMemo(
+        () => SOURCE_DEFS
+            .map(d => ({ key: d.key, label: d.label, count: sourceCounts[d.key] ?? 0, muted: mutedSources.has(d.key) }))
+            .filter(s => s.count > 0 || s.muted),
+        [sourceCounts, mutedSources]
+    );
+    const handleToggleSource = useCallback((key: string) => {
+        setMutedSources(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+        });
+    }, []);
 
     const handleToggleCategory = useCallback((id: string) => {
         setSelectedCategories(prev => {
@@ -534,13 +590,16 @@ export default function HomePage() {
     useEffect(() => {
         if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
         const params = new URLSearchParams();
-        if (selectedEvent) params.set('event', selectedEvent.id);
+        // Skriv INTE valt event till URL:en — då återöppnades det senast valda
+        // eventet vid varje omladdning (oönskat). Delning av ett specifikt event
+        // sker i stället explicit via Dela-knappen (bygger /?event=<id>), och den
+        // inkommande ?event=-läsningen ovan öppnar det hos mottagaren.
         if (dayOffset !== 0) params.set('dag', String(dayOffset));
         if (dayRangeDays > 1) params.set('dagar', String(dayRangeDays));
         if (selectedCategories.size > 0) params.set('kategori', [...selectedCategories].join(','));
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [selectedEvent, dayOffset, dayRangeDays, selectedCategories]);
+    }, [dayOffset, dayRangeDays, selectedCategories]);
 
     // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
     // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
@@ -563,6 +622,10 @@ export default function HomePage() {
         const futureMs: number[] = [];
         for (const evt of events) {
             if (!evt.time) continue;
+            // Dolda källor räknas inte med — annars skulle molnet påstå tusentals
+            // event (t.ex. Svenska kyrkan) som inte ens syns på kartan.
+            const src = classifySource(evt.url || evt.id);
+            if (src && mutedSources.has(src)) continue;
             const t = evt.time.getTime();
             if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
             if (t >= startOfTomorrow.getTime() && t <= endOfTomorrow.getTime()) tomorrow++;
@@ -580,7 +643,7 @@ export default function HomePage() {
             withinHour = futureMs.filter(ms => ms <= limit).length;
         }
         return { today, tomorrow, week, withinHour, withinHours };
-    }, [events, nowTick]);
+    }, [events, nowTick, mutedSources]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
@@ -703,12 +766,16 @@ export default function HomePage() {
                 onToggleSaved={handleToggleSaved}
             />
 
-            {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken */}
+            {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken.
+                Kategoriantal räknas ur det källfiltrerade så de matchar kartan;
+                källtogglarna (PRO/Korpen/Svenska kyrkan) sitter i samma panel. */}
             <CategoryFilter
-                events={searchFilteredEvents}
+                events={sourceFilteredEvents}
                 selected={selectedCategories}
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
+                sources={sourceFilters}
+                onToggleSource={handleToggleSource}
             />
 
             {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}
@@ -889,6 +956,7 @@ export default function HomePage() {
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
                 events={visibleEvents}
+                dayCount={dayEventCount}
                 eventsLoaded={eventsLoaded}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}

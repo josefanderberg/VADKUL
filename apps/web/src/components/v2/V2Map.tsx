@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -111,6 +111,78 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
 
     return style;
 }
+
+// ── GL-markörer (prestanda) ────────────────────────────────────────────────
+// Tusentals event som DOM-element gör att MapLibre måste skriva om transform på
+// varje element varje frame → kartan laggar. Lösning: rendera de VANLIGA eventen
+// som ETT GPU symbol-lager. Varje markör är en bild (bricka + emoji) bakad en
+// gång per unik emoji. DOM-brickor används bara för de få "speciella" (valt/
+// sparat/eget/guld/grupp/inom-timme), som behöver rik interaktion/animation.
+//
+// Bakar samma teardrop som CSS-brickan (rundad kvadrat, tre runda hörn + en
+// spets, roterad 45° så spetsen pekar nedåt) med mörk gradient + ljus kant, och
+// lägger emojin centrerad i kroppen. icon-anchor:'bottom' sätter spetsen på
+// koordinaten — samma ankare som DOM-markörerna.
+function makeBrickaImageData(emoji: string): { data: ImageData; pixelRatio: number } | null {
+    if (typeof document === 'undefined') return null;
+    const DPR = 2.5;
+    const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
+    const pad = 7;         // luft för kant + skugga
+    const diag = S * Math.SQRT2;
+    const W = Math.round(diag + pad * 2);
+    const H = Math.round(diag + pad * 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.scale(DPR, DPR);
+    const cx = W / 2;
+    const cy = H - pad - diag / 2; // kroppens mitt; spetsen hamnar ~pad ovanför nederkant
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4); // 45° medurs → det spetsiga hörnet (br) pekar nedåt
+    const r = S / 2;
+    const anyCtx = ctx as CanvasRenderingContext2D & {
+        roundRect?: (x: number, y: number, w: number, h: number, radii: number[]) => void;
+    };
+    ctx.beginPath();
+    if (typeof anyCtx.roundRect === 'function') {
+        anyCtx.roundRect(-S / 2, -S / 2, S, S, [r, r, 0, r]); // tl, tr, br(=spets), bl
+    } else {
+        ctx.rect(-S / 2, -S / 2, S, S);
+    }
+    const grad = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
+    grad.addColorStop(0, '#344256');
+    grad.addColorStop(0.55, '#1e293b');
+    grad.addColorStop(1, '#16202e');
+    ctx.fillStyle = grad;
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Emoji centrerad i kroppen (oroterad).
+    ctx.font = `${Math.round(S * 0.6)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, cx, cy);
+
+    return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
+}
+
+// En GL-markör-feature: punkt + vilken bakad bild + grupp-nyckel (för klick).
+type PlainFeature = {
+    type: 'Feature';
+    geometry: { type: 'Point'; coordinates: [number, number] };
+    properties: { icon: string; key: string };
+};
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -1126,9 +1198,35 @@ export default function V2Map({
         return map;
     }, [events]);
 
-    // Filtrera grupper så vi bara renderar markörer som faktiskt är inom skärmen (+ 20% marginal), men visa ALLTID det valda eventet direkt
+    // Stabil ref till grupperna så GL-lagrets klick-handler (registreras en gång)
+    // kan slå upp grupp utifrån feature-nyckeln.
+    const groupsRef = useRef(groups);
+    groupsRef.current = groups;
+
+    // En grupp är "speciell" om den behöver den rika DOM-brickan (animationer,
+    // sifferbricka, vattning, highlight). Övriga renderas billigt i GL-lagret.
+    // Samma predikat används både för att VÄLJA DOM-grupper (visibleGroups) och
+    // för att UTESLUTA dem ur GL-lagret — så ingen markör dubbelritas.
+    const isSpecialGroup = useCallback((group: LinkEvent[], key: string, nowMs: number): boolean => {
+        // I spelläget highlightas ALDRIG det valda (skulle avslöja målet) — då
+        // ska målet ligga kvar som vanlig GL-markör.
+        if (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) return true;
+        if (goldEventId && group.some(e => e.id === goldEventId)) return true;
+        if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
+        if (group.some(e => savedEventIds.has(e.id))) return true;
+        if (group.some(e => e.userCreated)) return true;
+        if (group.length > 1) return true; // grupp → sifferbricka + slideshow-cykler
+        if (wateredKeys.has(key) || wateringKey === key) return true;
+        if (group.every(e => discardedEventIds.has(e.id))) return true; // dämpad DOM-bricka
+        if (group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= 60 * 60 * 1000)) return true;
+        return false;
+    }, [gameMode, selectedEvent, goldEventId, guessedEventId, savedEventIds, wateredKeys, wateringKey, discardedEventIds]);
+
+    // DOM-markörer: BARA speciella grupper (få) inom skärmen (+20% marginal).
+    // Valt/gissat/guld visas alltid, även utanför skärmen. Resten ritas i GL.
     const visibleGroups = useMemo(() => {
         if (!mapBounds) return [];
+        const nowMs = Date.now();
 
         const lngSpan = mapBounds.getEast() - mapBounds.getWest();
         const latSpan = mapBounds.getNorth() - mapBounds.getSouth();
@@ -1136,22 +1234,136 @@ export default function V2Map({
             [mapBounds.getWest() - lngSpan * 0.2, mapBounds.getSouth() - latSpan * 0.2],
             [mapBounds.getEast() + lngSpan * 0.2, mapBounds.getNorth() + latSpan * 0.2]
         );
+        const mustShow = (group: LinkEvent[]) =>
+            (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) ||
+            (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
+            (!!goldEventId && group.some(e => e.id === goldEventId));
 
-        return Array.from(groups.entries()).filter(([_, group]) => {
-            // Visa alltid det valda eventet omedelbart, även om det råkar ligga utanför skärmens gränser just nu
-            const containsSelected = group.some(e => e.id === selectedEvent?.id);
-            if (containsSelected) return true;
-            // Visa alltid markören man gissade på (spelet) så brickan syns efter avslöjet.
-            if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
-
+        const out: [string, LinkEvent[]][] = [];
+        for (const entry of groups.entries()) {
+            const [key, group] = entry;
+            if (!isSpecialGroup(group, key, nowMs)) continue;
+            if (mustShow(group)) { out.push(entry); continue; }
             const rep = group[0];
             // Range-validering (inte bara falsy): en projicerad koordinat som
             // lat=6129956 får annars LngLatBounds.contains att kasta och
             // kraschar hela kartan.
-            if (!isValidLatLng(rep.lat, rep.lng)) return false;
-            return paddedBounds.contains([rep.lng, rep.lat]);
-        });
-    }, [groups, mapBounds, selectedEvent, guessedEventId]);
+            if (!isValidLatLng(rep.lat, rep.lng)) continue;
+            if (paddedBounds.contains([rep.lng, rep.lat])) out.push(entry);
+        }
+        return out;
+    }, [groups, mapBounds, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
+
+    // GL-lagret: alla ICKE-speciella grupper (huvuddelen). Byggs som GeoJSON +
+    // den uppsättning emoji som behöver bakas till bilder. Hela världen ligger i
+    // källan — MapLibre kullar och avkrockar själv på GPU:n (icon-allow-overlap
+    // false), så vi behöver ingen egen viewport-/rutnätsgallring här.
+    const plainData = useMemo(() => {
+        const nowMs = Date.now();
+        const features: PlainFeature[] = [];
+        const emojis = new Set<string>();
+        for (const [key, group] of groups) {
+            if (isSpecialGroup(group, key, nowMs)) continue;
+            const rep = group[0];
+            if (!isValidLatLng(rep.lat, rep.lng)) continue;
+            const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
+            const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
+            emojis.add(emoji);
+            features.push({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
+                properties: { icon: `bricka:${emoji}`, key },
+            });
+        }
+        return { features, emojis };
+    }, [groups, isSpecialGroup]);
+    const plainFeaturesRef = useRef<PlainFeature[]>([]);
+    const usedEmojisRef = useRef<Set<string>>(new Set());
+    const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
+
+    // Installerar/uppdaterar GL-markörlagret: källa + bakade emoji-bilder + lager,
+    // och pushar senaste datan. Idempotent — säker att kalla efter varje stilbyte
+    // (setStyle rensar källor/bilder/lager, så de måste återinstalleras).
+    const syncPlainLayer = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !map.isStyleLoaded()) return;
+        try {
+            if (!map.getSource('plain-events')) {
+                map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+            }
+            // Baka (eller återanvänd) bild för varje emoji som behövs.
+            usedEmojisRef.current.forEach(emoji => {
+                const id = `bricka:${emoji}`;
+                if (map.hasImage(id)) return;
+                let baked = bakedIconsRef.current.get(emoji);
+                if (!baked) {
+                    const b = makeBrickaImageData(emoji);
+                    if (b) { bakedIconsRef.current.set(emoji, b); baked = b; }
+                }
+                if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
+            });
+            // Brickorna: ALLA event syns på ALLA zoomnivåer (allow-overlap +
+            // ignore-placement = ingen avkrockning) så man alltid ser var man kan
+            // klicka — även i hela-Sverige-vyn. Det är ett GPU-lager, så även
+            // tusentals brickor är billiga att rita.
+            if (!map.getLayer('plain-events')) {
+                map.addLayer({
+                    id: 'plain-events',
+                    type: 'symbol',
+                    source: 'plain-events',
+                    layout: {
+                        'icon-image': ['get', 'icon'],
+                        'icon-anchor': 'bottom',
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': true,
+                        // Storlek matchad mot DOM-brickorna (~38px kropp) så enskilda
+                        // GL-event och fler-event-grupper (DOM) ser lika stora ut.
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, 0.98],
+                        'symbol-z-order': 'source',
+                    },
+                });
+            }
+            // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
+            // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
+            // kräver inga glyph-/krock-beräkningar, så zoom-animationen blir billig.
+            if (!map.getLayer('plain-events-dots')) {
+                map.addLayer({
+                    id: 'plain-events-dots',
+                    type: 'circle',
+                    source: 'plain-events',
+                    layout: { 'visibility': 'none' },
+                    paint: {
+                        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
+                        'circle-color': '#1e293b',
+                        'circle-stroke-color': '#ffffff',
+                        'circle-stroke-width': 1.5,
+                    },
+                });
+            }
+            const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
+            src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
+        } catch (err) {
+            console.warn('Kunde inte synka GL-markörlagret', err);
+        }
+    }, []);
+    const syncPlainLayerRef = useRef(syncPlainLayer);
+    syncPlainLayerRef.current = syncPlainLayer;
+
+    // Pusha ny GL-data när de icke-speciella grupperna ändras. Väntar på att
+    // stilen är redo (annars finns ingen källa att skriva till).
+    useEffect(() => {
+        plainFeaturesRef.current = plainData.features;
+        usedEmojisRef.current = plainData.emojis;
+        const map = mapRef.current;
+        if (!map) return;
+        if (map.isStyleLoaded()) {
+            syncPlainLayerRef.current();
+        } else {
+            const h = () => syncPlainLayerRef.current();
+            map.once('style.load', h);
+            return () => { map.off('style.load', h); };
+        }
+    }, [plainData]);
 
     // ── Desyncad bildväxling för grupper med flera event på samma plats ───────
     // Tidigare bytte ALLA sådana grupper emoji på exakt samma 1-sekunderstick
@@ -1275,25 +1487,65 @@ export default function V2Map({
         glCanvas.addEventListener('webglcontextlost', onCtxLost as EventListener, false);
         glCanvas.addEventListener('webglcontextrestored', onCtxRestored as EventListener, false);
 
-        // Lägg till zoom/pan klasshantering för att växla mellan brickor och nålar
+        // Zoom-klasshantering: under zoom-gesten fälls allt till nålar/prickar
+        // (billigt), i vila visas brickorna. DOM-brickorna växlar via CSS-klassen;
+        // GL-lagret växlar mellan symbol-lagret (brickor) och cirkel-lagret
+        // (prickar). I vila syns ALLA brickor på alla zoomnivåer.
         const container = mapContainerRef.current;
+        const setGlLayer = (id: string, visible: boolean) => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+        };
         const showNeedles = () => {
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
+            setGlLayer('plain-events', false);
+            setGlLayer('plain-events-dots', true);
         };
         const showBricks = () => {
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
+            setGlLayer('plain-events', true);
+            setGlLayer('plain-events-dots', false);
         };
 
         map.on('zoomstart', showNeedles);
         map.on('zoomend', showBricks);
 
-        map.on('click', () => {
+        // GL-lager som är klickbara: brickorna (inzoomat) + prickarna (utzoomat).
+        const glHitLayers = ['plain-events', 'plain-events-dots'];
+        const glLayersPresent = () => glHitLayers.filter(id => map.getLayer(id));
+
+        map.on('click', (e) => {
             // I gissningsläge ska ett klick på tom karta inte stänga mål-kortet
             // (det skulle avbryta rundan av misstag).
             if (gameModeRef.current) return;
+            // Klick på en GL-markör/prick hanteras av lager-handlern nedan (väljer
+            // eventet) — avmarkera då inte. queryRenderedFeatures kastar om inget
+            // av lagren finns ännu, så vi vaktar.
+            const layers = glLayersPresent();
+            if (layers.length) {
+                const hits = map.queryRenderedFeatures(e.point, { layers });
+                if (hits.length) return;
+            }
             onSelectEventRef.current(null);
+        });
+
+        // GL-markör/prick klickad → välj eventet (eller gissa i spelläget). Handlern
+        // registreras en gång; den matchar lagret så fort det (åter)installerats.
+        const onGlMarkerClick = (e: maplibregl.MapLayerMouseEvent) => {
+            const feat = e.features && e.features[0];
+            const key = feat?.properties?.key as string | undefined;
+            const group = key ? groupsRef.current.get(key) : undefined;
+            if (!group || group.length === 0) return;
+            if (gameModeRef.current) { onGuessRef.current?.(group); return; }
+            onSelectEventRef.current(group[0]);
+        };
+        const setPointer = () => { map.getCanvas().style.cursor = 'pointer'; };
+        const clearPointer = () => { map.getCanvas().style.cursor = ''; };
+        glHitLayers.forEach(id => {
+            map.on('click', id, onGlMarkerClick);
+            map.on('mouseenter', id, setPointer);
+            map.on('mouseleave', id, clearPointer);
         });
 
         map.on('drag', () => {
@@ -1400,6 +1652,8 @@ export default function V2Map({
         map.once('load', () => {
             setMapBounds(map.getBounds());
             updateCloudPosition();
+            // Installera GL-markörlagret + pusha första datan.
+            syncPlainLayerRef.current();
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
@@ -1440,6 +1694,8 @@ export default function V2Map({
         const afterLoad = () => {
             applyProjection(map, isGlobeRef.current);
             applyTerrain(map, is3DTerrainRef.current);
+            // setStyle rensade GL-markörlagret (källa/bilder/lager) — återinstallera.
+            syncPlainLayerRef.current();
         };
         const applyStyle = (style: string | maplibregl.StyleSpecification) => {
             map.setStyle(style);
@@ -1504,9 +1760,14 @@ export default function V2Map({
     // Mjuk idle-drift: när användaren inte rört kartan på en stund driver vi
     // den långsamt i sinus-bana så bilden lever. Pausas direkt vid interaktion
     // OCH under våra egna kamera-flytt (driftSuppressUntilRef).
+    // Idle-driften AVSTÄNGD: användaren vill att kartan står still från start
+    // (ingen intro-puls, ingen grunddrift). Flaggan (typad boolean så TS inte
+    // flaggar resten som död kod) gör det lätt att återaktivera om vi vill.
+    const IDLE_DRIFT_ENABLED: boolean = false;
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
+        if (!IDLE_DRIFT_ENABLED) return;
         // Respektera prefers-reduced-motion OCH spara resurser: hoppa över hela
         // idle-driften om användaren bett om mindre rörelse. Driften kör en RAF
         // i all evighet + setState varje frame för moln-projektionen; i ett
@@ -2486,6 +2747,12 @@ export default function V2Map({
                     position: relative;
                     width: 44px;
                     height: 60px;
+                    /* Krymp hela DOM-brickan en aning så den matchar GL-markörernas
+                       medelstorlek. Skalas från nederkanten så spetsen sitter kvar
+                       exakt på koordinaten (MapLibre-ankaret 'bottom' rör 44×60-
+                       boxen; bara innehållet skalas). */
+                    transform: scale(0.86);
+                    transform-origin: bottom center;
                 }
                 .needle-element, .pin-element {
                     position: absolute;
@@ -2544,7 +2811,10 @@ export default function V2Map({
                     line-height: 1;
                     position: relative;
                     z-index: 1;
-                    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.25));
+                    /* text-shadow i stället för drop-shadow-filter: samma djup men
+                       en vanlig paint i stället för ett eget kompositlager per
+                       markör — märkbart billigare med hundratals markörer. */
+                    text-shadow: 0 1px 1.5px rgba(0,0,0,0.25);
                 }
                 /* Hover-lyft på enheter med riktig pekare (inte touch, annars
                    fastnar hover-läget efter tryck). Vattnings-pulsen är en

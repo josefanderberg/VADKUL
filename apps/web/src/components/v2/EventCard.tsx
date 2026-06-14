@@ -326,6 +326,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
 
 interface EventCardProps {
     events: LinkEvent[];
+    /** Antal event för dagen i dag-väljarens badge — räknas FÖRE källfiltret så
+     *  det visar dagens totala antal även när stora källor (PRO/Korpen/Svenska
+     *  kyrkan) är dolda. Faller tillbaka till events.length om utelämnat. */
+    dayCount?: number;
     /** False tills första Firestore-svaret kommit — då visas "Laddar event…"
      *  i stället för "Inga event den här dagen" (som annars blinkar förbi
      *  innan datan hunnit fram). */
@@ -375,7 +379,7 @@ interface EventCardProps {
     onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -418,9 +422,12 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
     const [nearbyVisibleCount, setNearbyVisibleCount] = useState(NEARBY_PAGE_SIZE);
     const [now, setNow] = useState(() => Date.now());
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-    // Browse-historik: event-id:n vi tittade på innan vi gick vidare. Pushas vid Nästa/swipe/sekventiell-knapp.
+    // Browse-historik (bakåt-stack): event-id:n vi tittade på innan vi gick vidare.
     const [historyStack, setHistoryStack] = useState<string[]>([]);
-    
+    // Framåt-stack: event vi backat ur. Nästa spelar upp dem i samma ordning igen
+    // (som webbläsarens framåt-knapp) i stället för att räkna fram ett nytt event.
+    const [forwardStack, setForwardStack] = useState<string[]>([]);
+
     const [isAnimating, setIsAnimating] = useState(true);
     const isDragging = useRef(false);
     const dragDirection = useRef<'none' | 'horizontal' | 'vertical'>('none');
@@ -546,12 +553,16 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
 
         const isPickNext = expectedNextIdRef.current === selectedEvent.id;
         if (isPickNext) {
-            // Det var pickNext som drev fram detta event — anchorId behålls.
+            // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
+            // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
         } else {
-            // Användaren valde ett nytt event (kartklick / första valet) → ny ankare.
+            // Användaren valde ett nytt event (kartklick / första valet) → ny
+            // ankare och en helt ny browsing-gren: nollställ besökt + historik.
             setAnchorId(selectedEvent.id);
             setVisitedEventIds(new Set());
+            setHistoryStack([]);
+            setForwardStack([]);
         }
 
         setIsAnimating(true);
@@ -835,7 +846,9 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
         setTimeout(() => {
             if (events.length === 0) return;
 
-            // Hoppa till det geografiskt närmaste event som inte är bortkastat eller besökt
+            // Svep = gren-byte: släng ev. framåt-historik och hoppa till det
+            // geografiskt närmaste icke-besökta eventet.
+            setForwardStack([]);
             const next = pickNext(selectedEvent);
             if (next) pushHistory(previousId);
             onSelectEvent(next);
@@ -847,14 +860,19 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
         }, 200); // 200ms matches the CSS transition
     };
 
-    // Bakåt-knapp uppe vid LIVE: gå till det event vi tittade på innan vi gick vidare.
-    // Detta är browse-historik, INTE föregående i nummerordning.
+    // Bakåt-knapp: gå till eventet vi tittade på innan vi gick vidare, och lägg
+    // det nuvarande på framåt-stacken så Nästa kan spela upp samma ordning igen.
     const handleHistoryBack = () => {
-        if (historyStack.length === 0) return;
+        if (historyStack.length === 0 || !selectedEvent) return;
         const prevId = historyStack[historyStack.length - 1];
         const prevEvent = events.find(e => e.id === prevId);
         setHistoryStack(prev => prev.slice(0, -1));
-        if (prevEvent) onSelectEvent(prevEvent);
+        setForwardStack(prev => [...prev, selectedEvent.id]);
+        if (prevEvent) {
+            // Intern navigering → behåll ankare/besökt (markeras som "väntat").
+            expectedNextIdRef.current = prevEvent.id;
+            onSelectEvent(prevEvent);
+        }
         setExitX(null);
         updateDragX(0);
     };
@@ -862,8 +880,17 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
     const handleNextOnly = () => {
         if (!selectedEvent || events.length === 0) return;
 
-        // Hoppa till det geografiskt närmaste event som inte är bortkastat eller besökt
-        const next = pickNext(selectedEvent);
+        // Har vi backat? Spela då upp framåt-stacken i SAMMA ordning igen i
+        // stället för att räkna fram ett nytt närmaste event.
+        let next: LinkEvent | null = null;
+        if (forwardStack.length > 0) {
+            const fwdId = forwardStack[forwardStack.length - 1];
+            next = events.find(e => e.id === fwdId) ?? null;
+            setForwardStack(prev => prev.slice(0, -1));
+            if (next) expectedNextIdRef.current = next.id; // intern navigering — behåll ankare
+        }
+        // Tom framåt-stack (eller eventet finns inte längre) → vanligt pickNext.
+        if (!next) next = pickNext(selectedEvent);
         if (next) pushHistory(selectedEvent.id);
         onSelectEvent(next);
 
@@ -903,7 +930,7 @@ export default function EventCard({ events, eventsLoaded = true, selectedEvent, 
                             <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
                         </button>
                         <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
-                            {eventsLoaded ? events.length : '…'}
+                            {eventsLoaded ? (dayCount ?? events.length) : '…'}
                         </span>
                         {dayPickerOpen && (
                             <DayPicker

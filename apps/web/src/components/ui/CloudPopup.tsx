@@ -591,10 +591,10 @@ const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [skipTransition, setSkipTransition] = useState(false);
   // One-shot pop-in: plays once when the cloud first appears, never re-fires.
   const [hasPoppedIn, setHasPoppedIn] = useState(false);
-  // "Det blåser"-introt (windy-intro) skalar molnet litet→stort i början. Den
-  // ska BARA spelas vid första visningen — inte spelas om varje gång man drar
-  // och stannar molnet. Latchas så fort man greppar molnet.
-  const [windyIntroDone, setWindyIntroDone] = useState(false);
+  // "Det blåser"-introt (windy-intro) svängde molnet stort i början. AVSTÄNGT —
+  // användaren vill att molnet är ganska stilla från start. Initieras som "klar"
+  // så intro-animationen aldrig läggs på (cloud-pop-in räcker som mjuk entré).
+  const [windyIntroDone, setWindyIntroDone] = useState(true);
 
   useEffect(() => {
     if (!skipTransition) return;

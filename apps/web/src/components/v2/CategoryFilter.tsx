@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Tags, X } from 'lucide-react';
+import { Tags, X, Eye, EyeOff } from 'lucide-react';
 import { LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
+
+interface SourceFilter {
+    key: string;
+    label: string;
+    count: number;
+    /** True = källan är dold (filtreras bort). */
+    muted: boolean;
+}
 
 interface CategoryFilterProps {
     /** Dagens (+ sökfiltrerade) events — panelen visar antal per kategori ur dessa. */
@@ -11,6 +19,9 @@ interface CategoryFilterProps {
     selected: Set<string>;
     onToggle: (categoryId: string) => void;
     onClear: () => void;
+    /** "Stora" källor (PRO/Korpen/Svenska kyrkan) som kan döljas/visas. */
+    sources?: SourceFilter[];
+    onToggleSource?: (key: string) => void;
 }
 
 /**
@@ -19,7 +30,7 @@ interface CategoryFilterProps {
  * panel med en rad per kategori — emoji-bricka + namn + antal + PÅ-indikator.
  * Flerval; tom selection = alla kategorier visas.
  */
-export default function CategoryFilter({ events, selected, onToggle, onClear }: CategoryFilterProps) {
+export default function CategoryFilter({ events, selected, onToggle, onClear, sources = [], onToggleSource }: CategoryFilterProps) {
     const [open, setOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
@@ -129,6 +140,54 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                             </button>
                         );
                     })}
+
+                    {/* Källor — stora arrangörer (PRO/Korpen/Svenska kyrkan) som
+                        döljs som standard för att inte dränka kartan. Toggla för
+                        att visa/dölja dem. */}
+                    {sources.length > 0 && onToggleSource && (
+                        <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                            <div className="px-2.5 pt-0.5 pb-1.5">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Stora källor
+                                </span>
+                                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                                    Dolda som standard — slå på för att visa.
+                                </p>
+                            </div>
+                            {sources.map(src => {
+                                const shown = !src.muted;
+                                return (
+                                    <button
+                                        key={src.key}
+                                        type="button"
+                                        onClick={() => onToggleSource(src.key)}
+                                        aria-pressed={shown}
+                                        className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${shown ? 'bg-slate-100' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+                                    >
+                                        <span
+                                            className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center border ${
+                                                shown ? 'bg-[#006AA7] text-white border-transparent' : 'bg-slate-50 text-slate-400 border-slate-200'
+                                            }`}
+                                            aria-hidden
+                                        >
+                                            {shown ? <Eye size={16} /> : <EyeOff size={16} />}
+                                        </span>
+                                        <span className="flex-1 min-w-0">
+                                            <span className={`block text-sm font-bold leading-tight ${shown ? 'text-slate-800' : 'text-slate-500'}`}>
+                                                {src.label}
+                                            </span>
+                                            <span className="block text-[11px] text-slate-500 leading-tight tabular-nums">
+                                                {src.count} event{shown ? '' : ' (dolda)'}
+                                            </span>
+                                        </span>
+                                        <span className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide ${shown ? 'bg-[#006AA7] text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                            {shown ? 'VISAS' : 'DOLD'}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
         </>
