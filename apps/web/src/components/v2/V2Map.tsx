@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3 } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
+import { sourceColor } from '../../utils/sources';
+import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
+import { lngLatToCell, cellCornersLngLat, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import toast from 'react-hot-toast';
 
@@ -124,7 +127,28 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
 // ljus kant, med emojin centrerad i kroppen. Ingen separat nål/streck under —
 // spetsen ÄR nålen. icon-anchor:'bottom' sätter spetsen ~pad ovanför nederkanten,
 // dvs. i praktiken på koordinaten.
-function makeBrickaImageData(emoji: string): { data: ImageData; pixelRatio: number } | null {
+//
+// "Stora" källor (PRO/Korpen/Svenska kyrkan) får en egen brick-färg via bodyColor
+// — annars används den mörka standard-gradienten.
+
+// Hex → [r,g,b]. Stödjer både #rgb och #rrggbb.
+function parseHex(h: string): [number, number, number] {
+    const s = h.replace('#', '');
+    const n = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
+    return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+// Blanda två hex-färger (t = 0 → a, t = 1 → b) och returnera en rgb()-sträng.
+function mixHex(a: string, b: string, t: number): string {
+    const pa = parseHex(a), pb = parseHex(b);
+    const ch = (i: number) => Math.round(pa[i] + (pb[i] - pa[i]) * t);
+    return `rgb(${ch(0)},${ch(1)},${ch(2)})`;
+}
+// En källfärgs brick-gradient (ljus → bas → mörk) som CSS-sträng för DOM-brickan.
+function sourceGradientCss(color: string): string {
+    return `linear-gradient(145deg, ${mixHex(color, '#ffffff', 0.22)} 0%, ${color} 55%, ${mixHex(color, '#000000', 0.32)} 100%)`;
+}
+
+function makeBrickaImageData(emoji: string, bodyColor?: string): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
@@ -155,9 +179,12 @@ function makeBrickaImageData(emoji: string): { data: ImageData; pixelRatio: numb
         ctx.rect(-S / 2, -S / 2, S, S);
     }
     const grad = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
-    grad.addColorStop(0, '#344256');
-    grad.addColorStop(0.55, '#1e293b');
-    grad.addColorStop(1, '#16202e');
+    const stops = bodyColor
+        ? [mixHex(bodyColor, '#ffffff', 0.22), bodyColor, mixHex(bodyColor, '#000000', 0.32)]
+        : ['#344256', '#1e293b', '#16202e'];
+    grad.addColorStop(0, stops[0]);
+    grad.addColorStop(0.55, stops[1]);
+    grad.addColorStop(1, stops[2]);
     ctx.fillStyle = grad;
     ctx.shadowColor = 'rgba(0,0,0,0.35)';
     ctx.shadowBlur = 4;
@@ -425,7 +452,9 @@ const getGemStyles = (key: string, state: OrbState) => {
 const PIN_BASE_R = 18;           // px-radie för en ensam bubbla (fryst zoom)
 const PIN_BUMPER_MAX_R = 46;     // tak så jättegrupper inte täcker halva banan
 const PIN_BALL_R = 12;
-const PIN_WALL = 14;             // banans insteg från container-kanten
+const PIN_WALL = 14;             // banans sido-insteg från container-kanten
+const PIN_TOP_RESERVE = 60;      // håll banan under navbaren/kategorichipsen
+const PIN_BOTTOM_RESERVE = 72;   // håll banan ovanför EventCards verktygs-pill
 const PIN_FRICTION = 1.0;        // /s — lägre än molnens 2.2 så kulan rullar längre
 const PIN_RESTITUTION = 0.84;    // studs mot väggar + studsare
 const PIN_BUMPER_KICK = 0.10;    // extra utåt-knuff (px/ms) vid studsar-träff
@@ -456,13 +485,16 @@ const pinBumperRadius = (n: number) => Math.min(PIN_BUMPER_MAX_R, PIN_BASE_R * M
 
 // Projicera varje grupp till en studsare i skärm-pixlar. Körs en gång per
 // avfyrning (kameran är fryst), så projektionen ligger ALDRIG i hot-loopen.
-function buildPinBumpers(map: maplibregl.Map, groups: Map<string, LinkEvent[]>, W: number, H: number): PinBumper[] {
+// Studsare kullas till spelfältet (+marginal) så inga oträffbara bubblor ritas
+// ovanför/under väggarna (där topp/botten-UI:t ligger).
+function buildPinBumpers(map: maplibregl.Map, groups: Map<string, LinkEvent[]>, board: PinBoard): PinBumper[] {
+    const M = 40; // marginal: bumpers strax utanför väggen får synas (kulan grazar dem vid väggen)
     const out: PinBumper[] = [];
     for (const [key, group] of groups) {
         const rep = group[0];
         if (!rep || !isValidLatLng(rep.lat, rep.lng)) continue;
         const p = map.project([rep.lng!, rep.lat!]);
-        if (p.x < -60 || p.y < -60 || p.x > W + 60 || p.y > H + 60) continue; // utanför banan
+        if (p.x < board.minX - M || p.x > board.maxX + M || p.y < board.minY - M || p.y > board.maxY + M) continue;
         const catKey = (rep.category && EVENT_CATEGORIES[rep.category as EventCategoryType]) ? rep.category : 'other';
         const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
         out.push({ key, group, emoji, cx: p.x, cy: p.y, r: pinBumperRadius(group.length), count: group.length, hitFlash: 0, lastHit: 0 });
@@ -1388,6 +1420,19 @@ export default function V2Map({
     const pinLastTRef = useRef(0);
     const pinFlightStartRef = useRef(0);
 
+    // ── Reviret (territorie-läget ovanpå pinball) ─────────────────────────────
+    // Kulan målar de geografiska hex-rutor den rullar genom. revPaintedRef håller
+    // målade cell-id:n (geografiska, stabila), revScreenRef cachar projicerade
+    // hörn per session (kameran är fryst → projektionen är konstant) och
+    // revPrevRef minns kulans förra position så vi kan måla HELA banan, inte bara
+    // ett stickprov per frame. revStats speglar revir-storleken till HUD:en
+    // (sätts bara när ett skott parkeras → noll setState i hot-loopen).
+    const revActiveRef = useRef(false);
+    const revPaintedRef = useRef<Set<string>>(new Set());
+    const revScreenRef = useRef<Map<string, number[]>>(new Map());
+    const revPrevRef = useRef<{ x: number; y: number } | null>(null);
+    const [revStats, setRevStats] = useState<{ cells: number; events: number } | null>(null);
+
     // Visa/göm ett GL-lager från komponent-scope (livscykel-effekten gömmer de
     // vanliga event-lagren i pinball-läget så eventen inte ritas dubbelt).
     const setGlLayerVisible = useCallback((id: string, visible: boolean) => {
@@ -1427,10 +1472,10 @@ export default function V2Map({
         const speed = Math.min(PIN_MAX_V, pullDist * PIN_LAUNCH_GAIN);
         ball.vx = (dx / len) * speed; ball.vy = (dy / len) * speed;
         ball.x = pad.x; ball.y = pad.y; ball.armed = false; ball.alive = true; ball.lastHitKey = null;
+        revPrevRef.current = { x: pad.x, y: pad.y }; // Reviret: börja måla banan från plungern
         const map = mapRef.current;
-        const { W, H } = pinSizeRef.current;
         if (map) { // frys studsar-positionerna i samma sekund som avfyrning
-            pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, W, H);
+            pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
             pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
         }
         pinFlightStartRef.current = performance.now();
@@ -1493,30 +1538,34 @@ export default function V2Map({
     }, [groups, mapBounds, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
 
     // GL-lagret: alla ICKE-speciella grupper (huvuddelen). Byggs som GeoJSON +
-    // den uppsättning emoji som behöver bakas till bilder. Hela världen ligger i
-    // källan — MapLibre kullar och avkrockar själv på GPU:n (icon-allow-overlap
-    // false), så vi behöver ingen egen viewport-/rutnätsgallring här.
+    // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
+    // världen ligger i källan — MapLibre kullar och avkrockar själv på GPU:n
+    // (icon-allow-overlap false), så vi behöver ingen egen viewport-gallring här.
+    // Event från en "stor" källa (PRO/Korpen/Svenska kyrkan) får en egen brickfärg.
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const emojis = new Set<string>();
+        const icons = new Map<string, { emoji: string; color?: string }>();
         for (const [key, group] of groups) {
             if (isSpecialGroup(group, key, nowMs)) continue;
             const rep = group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
             const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-            emojis.add(emoji);
+            const color = sourceColor(rep.url || rep.id) ?? undefined;
+            const iconId = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color });
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: `bricka:${emoji}`, key },
+                properties: { icon: iconId, key },
             });
         }
-        return { features, emojis };
+        return { features, icons };
     }, [groups, isSpecialGroup]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
-    const usedEmojisRef = useRef<Set<string>>(new Set());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string }>>(new Map());
+    // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
 
     // Installerar/uppdaterar GL-markörlagret: källa + bakade emoji-bilder + lager,
@@ -1529,14 +1578,13 @@ export default function V2Map({
             if (!map.getSource('plain-events')) {
                 map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             }
-            // Baka (eller återanvänd) bild för varje emoji som behövs.
-            usedEmojisRef.current.forEach(emoji => {
-                const id = `bricka:${emoji}`;
+            // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
+            usedIconsRef.current.forEach(({ emoji, color }, id) => {
                 if (map.hasImage(id)) return;
-                let baked = bakedIconsRef.current.get(emoji);
+                let baked = bakedIconsRef.current.get(id);
                 if (!baked) {
-                    const b = makeBrickaImageData(emoji);
-                    if (b) { bakedIconsRef.current.set(emoji, b); baked = b; }
+                    const b = makeBrickaImageData(emoji, color);
+                    if (b) { bakedIconsRef.current.set(id, b); baked = b; }
                 }
                 if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
             });
@@ -1592,7 +1640,7 @@ export default function V2Map({
     // stilen är redo (annars finns ingen källa att skriva till).
     useEffect(() => {
         plainFeaturesRef.current = plainData.features;
-        usedEmojisRef.current = plainData.emojis;
+        usedIconsRef.current = plainData.icons;
         const map = mapRef.current;
         if (!map) return;
         if (map.isStyleLoaded()) {
@@ -2200,8 +2248,11 @@ export default function V2Map({
             canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
             offCanvas.width = Math.max(1, Math.round(W * 0.5)); offCanvas.height = Math.max(1, Math.round(H * 0.5));
             pinSizeRef.current = { W, H, dpr };
-            pinBoardRef.current = { minX: PIN_WALL, minY: PIN_WALL, maxX: W - PIN_WALL, maxY: H - PIN_WALL };
-            pinPadRef.current = { x: W / 2, y: H - PIN_WALL - 34 };
+            // Banan ligger i det synliga mitt-fältet (topp/botten reserverade för UI).
+            const minY = PIN_TOP_RESERVE, maxY = Math.max(PIN_TOP_RESERVE + 120, H - PIN_BOTTOM_RESERVE);
+            pinBoardRef.current = { minX: PIN_WALL, minY, maxX: W - PIN_WALL, maxY };
+            pinPadRef.current = { x: W / 2, y: maxY - 30 };
+            revScreenRef.current.clear(); // projektionen ändras → cachade hörn ogiltiga
         };
         setupCanvas();
         const ctx = canvas.getContext('2d');
@@ -2211,9 +2262,48 @@ export default function V2Map({
         let lowGfx = false, slowFrames = 0;
 
         // 4. Bygg studsare + rutnät, lägg kulan på plungern.
-        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, W, H);
+        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
         pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
         pinSeatBall();
+
+        // 4b. Reviret: nollställ revir + cache för den här sessionen, läs av om
+        // territorie-läget är på, och lyssna på shoppen så på/av slår igenom live.
+        revActiveRef.current = isFeatureOn('reviret');
+        revPaintedRef.current.clear();
+        revScreenRef.current.clear();
+        revPrevRef.current = null;
+        setRevStats(revActiveRef.current ? { cells: 0, events: 0 } : null);
+        const onRevToggle = () => {
+            revActiveRef.current = isFeatureOn('reviret');
+            setRevStats(revActiveRef.current ? { cells: revPaintedRef.current.size, events: 0 } : null);
+        };
+        window.addEventListener(FEATURE_CHANGE_EVENT, onRevToggle);
+
+        // Måla varje hex-ruta längs ett segment (p0→p1) i kulans skärmbana. Vi
+        // interpolerar i ~12px-steg så en snabb kula inte hoppar över smala rutor;
+        // Set.add är idempotent så översampling är gratis.
+        const revPaintSegment = (x0: number, y0: number, x1: number, y1: number) => {
+            if (!revActiveRef.current) return;
+            const dist = Math.hypot(x1 - x0, y1 - y0);
+            const steps = Math.max(1, Math.ceil(dist / 12));
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const ll = map.unproject([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]);
+                revPaintedRef.current.add(lngLatToCell(ll.lng, ll.lat));
+            }
+        };
+        // Hur många distinkta event ligger i målade rutor (för HUD:en).
+        const revCountEvents = (): number => {
+            const painted = revPaintedRef.current;
+            if (!painted.size) return 0;
+            let n = 0;
+            for (const group of groupsRef.current.values()) {
+                for (const ev of group) {
+                    if (isValidLatLng(ev.lat, ev.lng) && painted.has(lngLatToCell(ev.lng!, ev.lat!))) n++;
+                }
+            }
+            return n;
+        };
 
         // ── Rit-helpers ──────────────────────────────────────────────────────
         const roundRectPath = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
@@ -2275,17 +2365,50 @@ export default function V2Map({
             offCtx.globalCompositeOperation = 'source-over';
         };
 
+        // Reviret-lager: fyll varje målad hex-ruta translucent. Kameran är fryst
+        // under hela sessionen → projicerade hörn cachas per cell (revScreenRef).
+        const renderTerritory = () => {
+            if (!revActiveRef.current || revPaintedRef.current.size === 0) return;
+            const cache = revScreenRef.current;
+            ctx.save();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = REVIRET_WET_EDGE;
+            ctx.fillStyle = REVIRET_WET_FILL;
+            for (const cell of revPaintedRef.current) {
+                let pts = cache.get(cell);
+                if (!pts) {
+                    pts = [];
+                    for (const [lng, lat] of cellCornersLngLat(cell)) {
+                        const p = map.project([lng, lat]);
+                        pts.push(p.x, p.y);
+                    }
+                    cache.set(cell, pts);
+                }
+                ctx.beginPath();
+                ctx.moveTo(pts[0], pts[1]);
+                for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        };
+
         const render = () => {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, W, H);
             const bumpers = pinBumpersRef.current;
             const ball = pinBallRef.current;
 
-            // banram (subtil)
+            // banram + lätt tonad spelyta så bubblor/kula syns mot kartan
+            const bd = pinBoardRef.current;
             ctx.save();
-            ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
-            roundRectPath(ctx, PIN_WALL, PIN_WALL, W - 2 * PIN_WALL, H - 2 * PIN_WALL, 18); ctx.stroke();
+            roundRectPath(ctx, bd.minX, bd.minY, bd.maxX - bd.minX, bd.maxY - bd.minY, 18);
+            ctx.fillStyle = 'rgba(15,23,42,0.10)'; ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.40)'; ctx.lineWidth = 2; ctx.stroke();
             ctx.restore();
+
+            renderTerritory(); // under bubblorna → eventen läses fortfarande tydligt
 
             if (bumpers.length) {
                 // gooey-kropp (mjuka ihopflytande halsar mellan närliggande bubblor)
@@ -2327,7 +2450,7 @@ export default function V2Map({
             } else {
                 ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '600 15px system-ui, sans-serif';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText('Inga event i vyn — avsluta och zooma in först', W / 2, H / 2);
+                ctx.fillText('Inga event i vyn — avsluta och zooma in först', W / 2, (bd.minY + bd.maxY) / 2);
             }
 
             if (ball) drawBall(ctx, ball);
@@ -2356,9 +2479,18 @@ export default function V2Map({
                     pinAccRef.current -= PIN_DT_FIX; steps++;
                 }
                 if (pinAccRef.current > PIN_DT_FIX) pinAccRef.current = 0; // släpp backlog om vi kapade
+                // Reviret: måla hela banan sedan förra framen (inte bara en punkt).
+                if (revActiveRef.current) {
+                    const prev = revPrevRef.current;
+                    if (prev) revPaintSegment(prev.x, prev.y, ball.x, ball.y);
+                    revPrevRef.current = { x: ball.x, y: ball.y };
+                }
                 const sp = Math.hypot(ball.vx, ball.vy);
                 if (sp < PIN_STOP_V || now - pinFlightStartRef.current > PIN_MAX_FLIGHT_MS) {
                     pinSeatBall(); // parkera + arma om vid plungern
+                    revPrevRef.current = null;
+                    // Skottet är slut → enda setState i loopen (uppdaterar HUD:en).
+                    if (revActiveRef.current) setRevStats({ cells: revPaintedRef.current.size, events: revCountEvents() });
                 }
             } else {
                 pinAccRef.current = 0;
@@ -2378,7 +2510,7 @@ export default function V2Map({
             if (!ball || !ball.alive) { // rör inte studsare mitt i ett skott
                 const m = mapRef.current;
                 if (m) {
-                    pinBumpersRef.current = buildPinBumpers(m, groupsRef.current, pinSizeRef.current.W, pinSizeRef.current.H);
+                    pinBumpersRef.current = buildPinBumpers(m, groupsRef.current, pinBoardRef.current);
                     pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
                 }
                 pinSeatBall();
@@ -2389,6 +2521,8 @@ export default function V2Map({
         return () => {
             cancelAnimationFrame(pinRafRef.current);
             window.removeEventListener('resize', onResize);
+            window.removeEventListener(FEATURE_CHANGE_EVENT, onRevToggle);
+            setRevStats(null); // göm revir-HUD när läget stängs
             const m = mapRef.current;
             if (m) {
                 m.dragPan.enable(); m.scrollZoom.enable(); m.doubleClickZoom.enable();
@@ -2414,7 +2548,7 @@ export default function V2Map({
         const map = mapRef.current;
         const { W, H } = pinSizeRef.current;
         if (!map || !W || !H) return;
-        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, W, H);
+        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
         pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
     }, [groups, pinballMode]);
 
@@ -3007,17 +3141,24 @@ export default function V2Map({
                     onSelectEventRef.current(rep);
                 };
 
+                // "Stor" källa (PRO/Korpen/Svenska kyrkan)? Då får brickan källans
+                // egen färg i sitt standardläge (matchar GL-brickorna). Speciella
+                // tillstånd nedan (vald/guld/sparad m.fl.) går före.
+                const srcColor = sourceColor(rep.url || rep.id);
+
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
                 // mjuk gradient för djup; VADKUL-skapade event får en smaragdgrön
                 // bricka (samma gröna som skapa-flödet); guld = rätt svar i spelet.
                 // Prioritet: vald (blå) > guld > inom 1 timme (orange) > VADKUL-
-                // skapad (grön) > sparad (ljusblå) > standard (mörk).
+                // skapad (grön) > sparad (ljusblå) > källfärg > standard (mörk).
                 const pinBg = isGold
                     ? 'linear-gradient(135deg, #fff7d6 0%, #fbbf24 45%, #d97706 100%)'
                     : isUserCreated
                     ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
                     : isSaved
                     ? 'linear-gradient(145deg, #ffffff 0%, #eef2f7 100%)'
+                    : srcColor
+                    ? sourceGradientCss(srcColor)
                     : 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
                 const pinBorder = isGold
                     ? '3px solid #fde68a'
@@ -3029,6 +3170,8 @@ export default function V2Map({
                     ? '2px solid #f97316'
                     : isUserCreated
                     ? '2px solid rgba(255,255,255,0.45)'
+                    : srcColor
+                    ? '2px solid rgba(255,255,255,0.55)'
                     : '2px solid rgba(255,255,255,0.25)';
 
                 // Högpresterande CSS box-shadow. "Inom 1 timme" får en varm orange
@@ -3658,6 +3801,27 @@ export default function V2Map({
                 onPointerUp={onPinPointerUp}
                 onPointerCancel={onPinPointerUp}
             />
+
+            {/* Reviret-HUD: visar revirets storlek. Bara i pinball-läget med
+                territorie-funktionen på. pointer-events: none så den aldrig
+                fångar slangbella-dragget på canvasen under. */}
+            {pinballMode && revStats && (
+                <div
+                    className="absolute left-1/2 z-[1601] -translate-x-1/2 select-none pointer-events-none"
+                    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+                >
+                    <div className="flex items-center gap-2 rounded-full bg-slate-900/80 px-3.5 py-1.5 text-white shadow-lg backdrop-blur-sm">
+                        <Hexagon size={15} className="text-[#4da3d6]" />
+                        {revStats.cells === 0 ? (
+                            <span className="text-[13px] font-medium">Skjut kulan — måla ditt revir</span>
+                        ) : (
+                            <span className="text-[13px] font-semibold tabular-nums">
+                                {revStats.cells} {revStats.cells === 1 ? 'ruta' : 'rutor'} · {revStats.events} event
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Fallback om WebGL inte gick att initiera (t.ex. blockerad efter en
                 tidigare kontextförlust) — sidan kraschar inte, man kan ladda om. */}
