@@ -720,7 +720,7 @@ export default function V2Map({
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
-    const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
+    const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string; lastPinballMode: boolean }>>(new Map());
     // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
     // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
     // ett event man navigerat förbi inte faller tillbaka till nål.
@@ -1518,9 +1518,9 @@ export default function V2Map({
     // Samma predikat används både för att VÄLJA DOM-grupper (visibleGroups) och
     // för att UTESLUTA dem ur GL-lagret — så ingen markör dubbelritas.
     const isSpecialGroup = useCallback((group: LinkEvent[], key: string, nowMs: number): boolean => {
-        // Pinball-läget ritar eventen själv på canvas-overlayen → inga DOM- eller
-        // GL-markörer alls (visibleGroups blir tom, GL-lagren göms i livscykeln).
-        if (pinballMode) return false;
+        if (pinballMode) {
+            return !!PIN_GEO_MODE;
+        }
         // I spelläget highlightas ALDRIG det valda (skulle avslöja målet) — då
         // ska målet ligga kvar som vanlig GL-markör.
         if (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) return true;
@@ -1795,19 +1795,23 @@ export default function V2Map({
 
         mapRef.current = map;
 
+
+        let glCanvas: HTMLCanvasElement | null = null;
+        let onCtxLost: ((e: Event) => void) | null = null;
+        let onCtxRestored: (() => void) | null = null;
         try {
-            const glCanvas = map.getCanvas();
+            glCanvas = map.getCanvas();
             if (!glCanvas) {
                 console.error('Kartan kunde inte hämta WebGL-canvas.');
                 setMapError(true);
                 return;
             }
-            const onCtxLost = (e: Event) => {
+            onCtxLost = (e: Event) => {
                 e.preventDefault();
                 console.error('WebGL-kontext förlorad, visar felsida.');
                 setMapError(true);
             };
-            const onCtxRestored = () => { try { map.triggerRepaint(); } catch { /* noop */ } };
+            onCtxRestored = () => { try { map.triggerRepaint(); } catch { /* noop */ } };
             glCanvas.addEventListener('webglcontextlost', onCtxLost as EventListener, false);
             glCanvas.addEventListener('webglcontextrestored', onCtxRestored as EventListener, false);
         } catch (postErr) {
@@ -1999,8 +2003,8 @@ export default function V2Map({
 
         return () => {
             if (moveEndTimer) clearTimeout(moveEndTimer);
-            glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
-            glCanvas.removeEventListener('webglcontextrestored', onCtxRestored as EventListener);
+            if (glCanvas && onCtxLost) glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
+            if (glCanvas && onCtxRestored) glCanvas.removeEventListener('webglcontextrestored', onCtxRestored as EventListener);
             map.remove();
             mapRef.current = null;
         };
@@ -2268,6 +2272,24 @@ export default function V2Map({
         const container = mapContainerRef.current;
         if (!map || !canvas || !container) return;
 
+        // Flagga som sätts i cleanup om läget stängs av under zoom-animationen.
+        let cancelled = false;
+
+        // 0. Zooma in på bollen (min zoom 15) innan kameran fryses.
+        // Vi låter kartan animera till rätt zoom och sedan startar fysikloopen.
+        const currentZoom = map.getZoom();
+        const PIN_TARGET_ZOOM = 15;
+        const needsZoom = currentZoom < PIN_TARGET_ZOOM;
+        const priorZoom = currentZoom;
+
+        // Listeners som måste kunna tas bort av cleanup (deklareras utanför startPinball
+        // så att de är tillgängliga även om läget stängs av under zoom-fasen).
+        let onRevToggle: (() => void) | null = null;
+        let onResize: (() => void) | null = null;
+
+        const startPinball = () => {
+            if (cancelled) return;
+
         // 1. Frys kameran + platta till (fysik i px/ms kräver stabil pixel-ram).
         const prior = { pitch: map.getPitch(), bearing: map.getBearing() };
         map.stop();
@@ -2315,7 +2337,7 @@ export default function V2Map({
         revScreenRef.current.clear();
         revPrevRef.current = null;
         setRevStats(revActiveRef.current ? { cells: 0, events: 0 } : null);
-        const onRevToggle = () => {
+        onRevToggle = () => {
             revActiveRef.current = isFeatureOn('reviret');
             setRevStats(revActiveRef.current ? { cells: revPaintedRef.current.size, events: 0 } : null);
         };
@@ -2546,7 +2568,7 @@ export default function V2Map({
         pinRafRef.current = requestAnimationFrame(loop);
 
         // Banan följer fönsterstorleken (kameran är fryst så inga andra ombyggen).
-        const onResize = () => {
+        onResize = () => {
             setupCanvas();
             const ball = pinBallRef.current;
             if (!ball || !ball.alive) { // rör inte studsare mitt i ett skott
@@ -2559,23 +2581,37 @@ export default function V2Map({
             }
         };
         window.addEventListener('resize', onResize);
+        }; // slut på startPinball()
+
+        // Trigger: om vi redan är inzoomade kör direkt, annars zooma in smooth.
+        if (!needsZoom) {
+            startPinball();
+        } else {
+            map.flyTo({ zoom: PIN_TARGET_ZOOM, duration: 700, easing: (t) => 1 - Math.pow(1 - t, 3) });
+            map.once('moveend', startPinball);
+        }
 
         return () => {
+            cancelled = true;
+            map.off('moveend', startPinball); // avbryt om ännu i zoom-fas
             cancelAnimationFrame(pinRafRef.current);
-            window.removeEventListener('resize', onResize);
-            window.removeEventListener(FEATURE_CHANGE_EVENT, onRevToggle);
+            if (onResize) window.removeEventListener('resize', onResize);
+            if (onRevToggle) window.removeEventListener(FEATURE_CHANGE_EVENT, onRevToggle);
             setRevStats(null); // göm revir-HUD när läget stängs
             const m = mapRef.current;
             if (m) {
                 m.dragPan.enable(); m.scrollZoom.enable(); m.doubleClickZoom.enable();
                 m.touchZoomRotate.enable(); m.dragRotate.enable(); m.keyboard.enable(); m.boxZoom.enable();
                 try { m.touchPitch?.enable(); } catch { /* ignorera */ }
-                m.setPitch(prior.pitch); m.setBearing(prior.bearing);
+                // Återställ till före-pinball-zoom + pitch/bearing
+                m.flyTo({ zoom: priorZoom, pitch: 0, bearing: 0, duration: 400 });
                 driftSuppressUntilRef.current = performance.now();
             }
             setGlLayerVisible('plain-events', true);
             setGlLayerVisible('plain-events-dots', false);
-            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // canvas kan vara oinitierad om vi avbröt i zoom-fasen
+            const ctx2 = canvas.getContext('2d');
+            if (ctx2) { ctx2.setTransform(1, 0, 0, 1, 0, 0); ctx2.clearRect(0, 0, canvas.width, canvas.height); }
             pinBallRef.current = null; pinBumpersRef.current = [];
             pinAimingRef.current = false; pinPullRef.current = null;
         };
@@ -3127,9 +3163,17 @@ export default function V2Map({
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}:${isUserCreated}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}:${isUserCreated}:${pinballMode}`;
 
             let markerData = markersRef.current.get(key);
+
+            // Om pinballMode har växlat måste vi riva ner och återskapa
+            // MapLibre-markören — anchor kan bara sättas vid skapandet.
+            if (markerData && markerData.lastPinballMode !== pinballMode) {
+                markerData.marker.remove();
+                markersRef.current.delete(key);
+                markerData = undefined;
+            }
 
             if (!markerData) {
                 const el = document.createElement('div');
@@ -3146,14 +3190,18 @@ export default function V2Map({
                     }
                 });
 
+                // I pinball-läge använder vi 'center' som anchor så att bollens
+                // kollisionspunkt stämmer exakt med markörens visuella mittpunkt.
+                // I normalt läge: 'bottom' (nålspetsen pekar på koordinaten).
+                const anchor = pinballMode ? 'center' : 'bottom';
                 const marker = new maplibregl.Marker({
                     element: el,
-                    anchor: 'bottom' // brickans spets på koordinaten (samma som GL-lagret)
+                    anchor,
                 })
                 .setLngLat([rep.lng!, rep.lat!])
                 .addTo(map);
 
-                markerData = { marker, element: el, lastStateKey: '' };
+                markerData = { marker, element: el, lastStateKey: '', lastPinballMode: pinballMode };
                 markersRef.current.set(key, markerData);
             }
 
@@ -3305,10 +3353,16 @@ export default function V2Map({
                        </svg>`
                     : '';
 
+                // I pinball-läge: markören är en rund studsare utan nålspets.
+                // .pinball-marker på yttre wrapper styr animationsoverride;
+                // .pin-bubble-round på bubblan tar bort rotation och fixar border-radius.
+                const pinballWrapperClass = pinballMode ? ' pinball-marker' : '';
+                const pinballBubbleClass = pinballMode ? ' pin-bubble-round' : '';
+
                 markerData.element.innerHTML = `
-                    <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
+                    <div class="custom-marker-wrapper${pinballWrapperClass}" style="${opacityStyle}; ${wrapperStyle}">
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble${isGold ? ' pin-bubble-gold' : ''}${isWatering ? (isSparkleActive ? ' pin-bubble-watering-sparkle' : isSnowballActive ? ' pin-bubble-watering-snowball' : ' pin-bubble-watering') : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble${pinballBubbleClass}${isGold ? ' pin-bubble-gold' : ''}${isWatering ? (isSparkleActive ? ' pin-bubble-watering-sparkle' : isSnowballActive ? ' pin-bubble-watering-snowball' : ' pin-bubble-watering') : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji">${emoji}</div>
                             </div>
                             ${countBadge}
