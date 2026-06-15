@@ -2309,6 +2309,7 @@ export default function V2Map({
         }
     }, [daySwitchNonce]);
 
+
     // 2. Hantera kamera-panorering och zoomning vid val av event.
     //    I gissningsläge flyttar vi ALDRIG kameran till det valda eventet — då
     //    skulle spelaren ju få mål-eventets position serverad direkt.
@@ -2331,13 +2332,6 @@ export default function V2Map({
         const container = mapContainerRef.current;
         if (!map || !canvas || !container) return;
 
-        // ═══ GEO-LÄGE (native) ═══ Rund glob över hela Sverige, FRI kamera. Eventen
-        // renderas som geo-förankrade DOM-brickor (isSpecialGroup → true i pinball),
-        // så maplibre placerar & skalar dem rätt — INGEN canvas-ritning. Det löser
-        // "superstora event" + "boll i hörnet" + "event fastfrysta vid panorering".
-        // Bollen är en geo-förankrad markör som åker till din plats. Early-return →
-        // den gamla frysta canvas-koden nedanför körs inte (flippa PIN_GEO_MODE=false
-        // för att återfå den).
         if (PIN_GEO_MODE) {
             let priorProj = 'mercator';
             try { const p = map.getProjection?.() as { type?: string } | undefined; if (p?.type) priorProj = p.type; } catch { /* default mercator */ }
