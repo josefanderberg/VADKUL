@@ -470,6 +470,7 @@ const PIN_BODY_COLOR = '#1e293b'; // samma mörka palett som brickorna
 
 interface PinBumper {
     key: string; group: LinkEvent[]; emoji: string;
+    lat: number; lng: number;          // geo-koordinater för omprojektion när kameran följer bollen
     cx: number; cy: number; r: number; count: number;
     hitFlash: number; lastHit: number;
 }
@@ -484,21 +485,17 @@ interface PinGrid { near: (x: number, y: number) => PinBumper[]; }
 // (area-bevarande): det man ser ihopflutet är precis det kulan kan träffa.
 const pinBumperRadius = (n: number) => Math.min(PIN_BUMPER_MAX_R, PIN_BASE_R * Math.sqrt(n));
 
-// Projicera varje grupp till en studsare i skärm-pixlar. Körs en gång per
-// avfyrning (kameran är fryst), så projektionen ligger ALDRIG i hot-loopen.
-// Studsare kullas till spelfältet (+marginal) så inga oträffbara bubblor ritas
-// ovanför/under väggarna (där topp/botten-UI:t ligger).
+// Projicerar varje grupp till en studsare. Sparar lat/lng så att screen-pos
+// kan beräknas om varje frame när kameran följer bollen.
 function buildPinBumpers(map: maplibregl.Map, groups: Map<string, LinkEvent[]>, board: PinBoard): PinBumper[] {
-    const M = 40; // marginal: bumpers strax utanför väggen får synas (kulan grazar dem vid väggen)
     const out: PinBumper[] = [];
     for (const [key, group] of groups) {
         const rep = group[0];
         if (!rep || !isValidLatLng(rep.lat, rep.lng)) continue;
         const p = map.project([rep.lng!, rep.lat!]);
-        if (p.x < board.minX - M || p.x > board.maxX + M || p.y < board.minY - M || p.y > board.maxY + M) continue;
         const catKey = (rep.category && EVENT_CATEGORIES[rep.category as EventCategoryType]) ? rep.category : 'other';
-        const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-        out.push({ key, group, emoji, cx: p.x, cy: p.y, r: pinBumperRadius(group.length), count: group.length, hitFlash: 0, lastHit: 0 });
+        const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎟️');
+        out.push({ key, group, emoji, lat: rep.lat!, lng: rep.lng!, cx: p.x, cy: p.y, r: pinBumperRadius(group.length), count: group.length, hitFlash: 0, lastHit: 0 });
     }
     return out;
 }
@@ -1472,8 +1469,10 @@ export default function V2Map({
 
     // Lägg kulan på plungern (nederkant, mitten), armad och stilla.
     const pinSeatBall = useCallback(() => {
-        const pad = pinPadRef.current;
-        pinBallRef.current = { x: pad.x, y: pad.y, vx: 0, vy: 0, r: PIN_BALL_R, alive: false, armed: true, lastHitKey: null };
+        const { W, H } = pinSizeRef.current;
+        const cx = W > 0 ? W / 2 : pinPadRef.current.x;
+        const cy = H > 0 ? H / 2 : pinPadRef.current.y;
+        pinBallRef.current = { x: cx, y: cy, vx: 0, vy: 0, r: PIN_BALL_R, alive: false, armed: true, lastHitKey: null };
     }, []);
 
     // Slangbella: dra bort från kulan och släpp → kulan skjuts åt MOTSATT håll
@@ -1503,11 +1502,7 @@ export default function V2Map({
         ball.vx = (dx / len) * speed; ball.vy = (dy / len) * speed;
         ball.x = pad.x; ball.y = pad.y; ball.armed = false; ball.alive = true; ball.lastHitKey = null;
         revPrevRef.current = { x: pad.x, y: pad.y }; // Reviret: börja måla banan från plungern
-        const map = mapRef.current;
-        if (map) { // frys studsar-positionerna i samma sekund som avfyrning
-            pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
-            pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
-        }
+        // Studsarna omprojekteras varje frame i geo-follow-loopen - ingen extra build här
         pinFlightStartRef.current = performance.now();
         pinAccRef.current = 0;
         onPinballLaunchRef.current?.();
@@ -2312,10 +2307,10 @@ export default function V2Map({
             canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
             offCanvas.width = Math.max(1, Math.round(W * 0.5)); offCanvas.height = Math.max(1, Math.round(H * 0.5));
             pinSizeRef.current = { W, H, dpr };
-            // Banan ligger i det synliga mitt-fältet (topp/botten reserverade för UI).
+            // Banan täcker hela skärmen. Plunger (sikte) i mitten — bollen följer kameran.
             const minY = PIN_TOP_RESERVE, maxY = Math.max(PIN_TOP_RESERVE + 120, H - PIN_BOTTOM_RESERVE);
             pinBoardRef.current = { minX: PIN_WALL, minY, maxX: W - PIN_WALL, maxY };
-            pinPadRef.current = { x: W / 2, y: maxY - 30 };
+            pinPadRef.current = { x: W / 2, y: H / 2 }; // mitten = bollens hem i geo-follow-läge
             revScreenRef.current.clear(); // projektionen ändras → cachade hörn ogiltiga
         };
         setupCanvas();
@@ -2325,7 +2320,9 @@ export default function V2Map({
         const supportsFilter = 'filter' in ctx; // gooey-passet kräver canvas-filter
         let lowGfx = false, slowFrames = 0;
 
-        // 4. Bygg studsare + rutnät, lägg kulan på plungern.
+        // 4. Geo-follow: bollen sitter i mitten från start.
+        // Plunger är också i mitten (siktet) så man skjuter från mitten.
+        pinPadRef.current = { x: W / 2, y: H / 2 };
         pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
         pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
         pinSeatBall();
@@ -2543,6 +2540,22 @@ export default function V2Map({
                     pinAccRef.current -= PIN_DT_FIX; steps++;
                 }
                 if (pinAccRef.current > PIN_DT_FIX) pinAccRef.current = 0; // släpp backlog om vi kapade
+
+                // Geo-follow: pan kartan så bollens geo-position hamnar i mitten.
+                // Sedan omprojekteras alla studsare från lat/lng → screen.
+                const ballGeoLL = map.unproject([ball.x, ball.y]);
+                map.setCenter([ballGeoLL.lng, ballGeoLL.lat]);
+                // Efter pannering: bollen ska alltid vara i mitten av skärmen.
+                ball.x = W / 2;
+                ball.y = H / 2;
+                // Omprojektera studsare från geo-koordinater.
+                for (const b of pinBumpersRef.current) {
+                    const p = map.project([b.lng, b.lat]);
+                    b.cx = p.x; b.cy = p.y;
+                }
+                // Bygg om grid med nya skärmkoordinater.
+                pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
+
                 // Reviret: måla hela banan sedan förra framen (inte bara en punkt).
                 if (revActiveRef.current) {
                     const prev = revPrevRef.current;
