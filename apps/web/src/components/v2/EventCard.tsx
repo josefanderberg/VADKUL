@@ -383,10 +383,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
     const PEEK_HEIGHT_VH = 28;
-    // Default-höjd när ett event öppnas FRÅN STÄNGT läge: lite högre upp så man
-    // ser kortets header + toppen på bilden (men inte hela vägen ner). Byter man
-    // event medan kortet redan är öppet behålls den höjd man har (se anchor-effekt).
-    const DEFAULT_OPEN_HEIGHT_VH = 40;
+    // Default-höjd när ett event öppnas FRÅN STÄNGT läge: komprimerat läge med
+    // bara header + bildremsa (ingen full bild). Mäts färskt vid öppning.
+    const DEFAULT_OPEN_HEIGHT_VH = 36;
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
@@ -398,6 +397,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
+    
+    // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
+    const [cardRevealStep, setCardRevealStep] = useState(0);
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
@@ -405,6 +407,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         heightVhRef.current = vh;
         setHeightVh(vh);
     };
+
 
     const [dragX, setDragX] = useState(0);
     const dragXRef = useRef(0);
@@ -554,7 +557,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
         } else {
-            // Användaren valde ett nytt event (kartklick / första valet) → ny
+            // Användaren valde ett nytt event (kartkick / första valet) → ny
             // ankare och en helt ny browsing-gren: nollställ besökt + historik.
             setAnchorId(selectedEvent.id);
             setVisitedEventIds(new Set());
@@ -563,9 +566,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         }
 
         setIsAnimating(true);
-        // Default-höjd när kortet öppnas från stängt läge (prevId === null):
-        // lite högre upp så man ser header + toppen på bilden. Byter man event
-        // medan kortet redan är öppet behålls den nuvarande höjden (inget hopp).
+        setCardRevealStep(0); // Återställ till komprimerat läge vid nytt event
+        // Default-höjd när kortet öppnas från stängt läge: mäts färskt så
+        // bildremsan syns (men inte hela bilden). Byter man event medan kortet
+        // redan är öppet behålls höjden (inget hopp).
         // Ett kort som var på väg ner i en stängning (höjd under peek-gränsen)
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
@@ -584,6 +588,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         updateDragX(0);
         setIsAnimating(true);
+        setCardRevealStep(0); // Återställ bildremsa vid nytt event
     }, [selectedEvent?.id]);
 
     // Uppdatera "nu" var 30:e sekund så statusbadgar håller sig fräscha.
@@ -1056,7 +1061,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         showFullAddress
-                        alwaysExpanded
+                        onRevealStepChange={(step) => {
+                            setCardRevealStep(step);
+                            // Steg 1 (bild + trunkad beskr): öppna till första beskrivningsraden
+                            // Steg 2 (allt): behåll användarens höjd eller öppna fullt
+                            if (step >= 1 && heightVhRef.current < 50) {
+                                setIsAnimating(true);
+                                requestAnimationFrame(() => updateHeightVh(measureOpenHeight()));
+                            }
+                        }}
                         saved={savedEventIds?.has(selectedEvent.id) ?? false}
                         onToggleSave={savedEventIds && onUnsaveEvent
                             ? () => (savedEventIds.has(selectedEvent.id)

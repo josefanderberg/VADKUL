@@ -117,6 +117,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [coverFailed, setCoverFailed] = useState(false);
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
+    // Återställ reveal-steg till 0 (komprimerat: header + bildremsa) när eventet byts.
+    useEffect(() => { setInternalRevealStep(0); }, [linkEvent.id]);
 
     // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
     const [reportOpen, setReportOpen] = useState(false);
