@@ -449,6 +449,7 @@ const getGemStyles = (key: string, state: OrbState) => {
 // med slangbella. Träffar kulan en studsare öppnas det eventet. Kameran fryses
 // medan läget är på, så fysiken kan köras i stabila skärm-pixlar (px/ms) och
 // studsarna projiceras EN gång per avfyrning i stället för varje frame.
+const PIN_GEO_MODE = true;
 const PIN_BASE_R = 18;           // px-radie för en ensam bubbla (fryst zoom)
 const PIN_BUMPER_MAX_R = 46;     // tak så jättegrupper inte täcker halva banan
 const PIN_BALL_R = 12;
@@ -667,6 +668,8 @@ interface V2MapProps {
     onPinballHit?: (group: LinkEvent[]) => void;
     /** Fyrar varje gång kulan avfyras (för skott-räknare/HUD). */
     onPinballLaunch?: () => void;
+    pinShootMode?: boolean;
+    setPinShootMode?: (mode: boolean) => void;
 }
 
 export default function V2Map({
@@ -707,6 +710,8 @@ export default function V2Map({
     onStartFindGame,
     onStopFindGame,
     pinballMode = false,
+    pinShootMode = false,
+    setPinShootMode,
     canStartPinball = false,
     onStartPinball,
     onStopPinball,
@@ -1401,6 +1406,8 @@ export default function V2Map({
     // dessa refs varje frame; pekar-hanterarna här muterar dem.
     const pinballModeRef = useRef(pinballMode);
     pinballModeRef.current = pinballMode;
+    const pinShootModeRef = useRef(pinShootMode);
+    pinShootModeRef.current = pinShootMode;
     const onPinballHitRef = useRef(onPinballHit);
     onPinballHitRef.current = onPinballHit;
     const onPinballLaunchRef = useRef(onPinballLaunch);
