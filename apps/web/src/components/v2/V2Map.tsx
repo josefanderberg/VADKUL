@@ -2357,59 +2357,191 @@ export default function V2Map({
 
             pinGeoBallRef.current = ball; // så skott-handlers kan projicera bollens skärmläge
 
-            // Avstånd punkt→segment (anti-tunneling: snabba skott hoppar inte över studsare).
-            const distPointToSeg = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
-                const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+            // ── DPR + canvas setup för siktlinje-overlay ─────────────────────
+            const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+            const setupGeoCanvas = () => {
+                const W = container.clientWidth, H = container.clientHeight;
+                canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+                pinSizeRef.current = { W, H, dpr };
+            };
+            setupGeoCanvas();
+            const ctx = canvas.getContext('2d');
+
+            // ── Siktlinje-RAF ────────────────────────────────────────────────
+            // Ritar kontinuerligt: siktlinje boll→finger under drag, annars puls.
+            let aimRaf = 0;
+            const aimLoop = () => {
+                if (!ctx) { aimRaf = requestAnimationFrame(aimLoop); return; }
+                const W = container.clientWidth, H = container.clientHeight;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, W, H);
+
+                const ballLL = ball.getLngLat();
+                const bp = map.project([ballLL.lng, ballLL.lat]);
+                const bx = bp.x, by = bp.y;
+
+                const shotStart = pinShotStartRef.current;
+                const shotCur = pinShotCurRef.current;
+
+                if (shotStart && shotCur && !pinMoveModeRef.current) {
+                    // Drag-vektor (fingret mot start = avfyrningsriktning)
+                    const fx = shotCur.x, fy = shotCur.y;
+                    const dx = shotStart.x - fx, dy = shotStart.y - fy;
+                    const len = Math.max(1, Math.hypot(dx, dy));
+                    const ux = dx / len, uy = dy / len;
+                    const power = Math.min(1, len / 180);
+
+                    // Gummiband: finger → boll
+                    const grad = ctx.createLinearGradient(fx, fy, bx, by);
+                    grad.addColorStop(0, `rgba(0,106,167,${0.3 + 0.5 * power})`);
+                    grad.addColorStop(1, `rgba(0,106,167,${0.85 + 0.15 * power})`);
+                    ctx.save();
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = 3 + power * 3; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(bx, by); ctx.stroke();
+
+                    // Förutspådd bana (prickad) från boll i avfyrningsriktning
+                    const reach = 60 + power * 310;
+                    const tx = bx + ux * reach, ty = by + uy * reach;
+                    ctx.setLineDash([7, 9]);
+                    ctx.strokeStyle = `rgba(0,106,167,${0.35 + 0.5 * power})`; ctx.lineWidth = 2.5;
+                    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Pilspets
+                    const a = Math.atan2(uy, ux);
+                    ctx.fillStyle = `rgba(0,106,167,${0.5 + 0.5 * power})`;
+                    ctx.beginPath(); ctx.moveTo(tx, ty);
+                    ctx.lineTo(tx - 13 * Math.cos(a - 0.4), ty - 13 * Math.sin(a - 0.4));
+                    ctx.lineTo(tx - 13 * Math.cos(a + 0.4), ty - 13 * Math.sin(a + 0.4));
+                    ctx.closePath(); ctx.fill();
+
+                    // Ghost-kula vid fingret
+                    ctx.beginPath(); ctx.arc(fx, fy, PIN_BALL_R * 0.75, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+                    ctx.restore();
+                } else if (!pinMoveModeRef.current) {
+                    // Pulserande ring: bollen redo att skjutas
+                    const t = (performance.now() % 1400) / 1400;
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(bx, by, PIN_BALL_R + 5 + t * 12, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(244,63,94,${0.55 * (1 - t)})`; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.restore();
+                }
+                aimRaf = requestAnimationFrame(aimLoop);
+            };
+            aimRaf = requestAnimationFrame(aimLoop);
+
+            // ── Hjälpfunktion: avstånd punkt→segment ─────────────────────────
+            const distPointToSeg2 = (px: number, py: number, ax: number, ay: number, bxp: number, byp: number) => {
+                const dx = bxp - ax, dy = byp - ay, l2 = dx * dx + dy * dy;
                 if (l2 === 0) return Math.hypot(px - ax, py - ay);
                 let t = ((px - ax) * dx + (py - ay) * dy) / l2;
                 t = Math.max(0, Math.min(1, t));
                 return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
             };
 
-            let raf = 0;
-            const travelTo = (target: [number, number]) => {
-                const s = ball.getLngLat();
-                const t0 = performance.now();
-                const dur = 1500;
-                const W = container.clientWidth, H = container.clientHeight;
-                pinHitKeysRef.current = new Set(); // nollställ träffar inför skottet
+            // ── Fysik-skott med studs ─────────────────────────────────────────
+            // Bollen rör sig i skärm-px/ms, studsar mot event-markörer med
+            // reflekterad normalvektor, och stannar av friktion. Kameran panorerar med bollen.
+            type GeoPhysState = { vx: number; vy: number; lng: number; lat: number; hitKeys: Set<string>; lastHitKey: string | null };
+            let geoPhysState: GeoPhysState | null = null;
+            let geoPhysRaf = 0;
+            const PHYS_STOP_V = 0.05; // px/ms — under detta parkeras bollen
+
+            const startGeoPhysLoop = (initVx: number, initVy: number) => {
+                cancelAnimationFrame(geoPhysRaf);
+                const ll = ball.getLngLat();
+                geoPhysState = { vx: initVx, vy: initVy, lng: ll.lng, lat: ll.lat, hitKeys: new Set(), lastHitKey: null };
+                pinHitKeysRef.current = new Set();
                 setPinShotHits(0);
-                let prevBx: number | null = null, prevBy: number | null = null;
-                map.easeTo({ center: target, zoom: Math.max(map.getZoom(), 7.5), duration: dur });
-                const step = (now: number) => {
-                    const k = Math.min(1, (now - t0) / dur);
-                    const e = 1 - Math.pow(1 - k, 3);
-                    const bLng = s.lng + (target[0] - s.lng) * e, bLat = s.lat + (target[1] - s.lat) * e;
-                    ball.setLngLat([bLng, bLat]);
-                    // KOLLISION: projicera boll + markörer till skärm-px (samma rum → ingen
-                    // dpr-fråga, px-radie är zoom-oberoende). Segment-test mot förra punkten
-                    // fångar snabba skott. Räkna varje studsare EN gång (pinHitKeysRef).
-                    const bp = map.project([bLng, bLat]);
-                    for (const [key, md] of markersRef.current) {
-                        if (pinHitKeysRef.current.has(key)) continue;
-                        const mp = md.marker ? md.marker.getLngLat() : null;
-                        if (!mp) continue;
-                        const p = map.project(mp);
-                        if (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) continue; // utanför vyn
-                        const d = prevBx === null
-                            ? Math.hypot(p.x - bp.x, p.y - bp.y)
-                            : distPointToSeg(p.x, p.y, prevBx, prevBy as number, bp.x, bp.y);
-                        if (d < PIN_HIT_RADIUS_PX) {
-                            pinHitKeysRef.current.add(key);
-                            setPinShotHits(pinHitKeysRef.current.size);
-                            const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
-                            if (bubble) {
-                                bubble.classList.remove('pin-hit-flash');
-                                void bubble.offsetWidth; // tvinga om-trigger av animationen
-                                bubble.classList.add('pin-hit-flash');
-                                setTimeout(() => bubble.classList.remove('pin-hit-flash'), 320);
+
+                let prevNow = performance.now();
+                const tick = (now: number) => {
+                    if (!geoPhysState) return;
+                    const state = geoPhysState;
+                    const dt = Math.min(now - prevNow, 50);
+                    prevNow = now;
+
+                    const W = container.clientWidth, H = container.clientHeight;
+                    let bp2 = map.project([state.lng, state.lat]);
+                    let bx2 = bp2.x, by2 = bp2.y;
+
+                    // Substeg för anti-tunneling
+                    const SUBSTEPS = Math.max(1, Math.ceil(dt / 8));
+                    const subDt = dt / SUBSTEPS;
+                    for (let s = 0; s < SUBSTEPS; s++) {
+                        const prevBx2 = bx2, prevBy2 = by2;
+                        bx2 += state.vx * subDt;
+                        by2 += state.vy * subDt;
+                        // Friktion
+                        const f = Math.pow(0.9985, subDt);
+                        state.vx *= f; state.vy *= f;
+
+                        // Kollision mot event-markörer
+                        for (const [key, md] of markersRef.current) {
+                            const mp = md.marker ? md.marker.getLngLat() : null;
+                            if (!mp) continue;
+                            const mp2 = map.project(mp);
+                            const mpx = mp2.x, mpy = mp2.y;
+                            if (mpx < -120 || mpx > W + 120 || mpy < -120 || mpy > H + 120) continue;
+
+                            const d2 = distPointToSeg2(mpx, mpy, prevBx2, prevBy2, bx2, by2);
+                            const hitR2 = PIN_HIT_RADIUS_PX;
+                            if (d2 < hitR2) {
+                                // Studs: reflektera hastigheten mot normalen boll→markör
+                                const nx2 = bx2 - mpx, ny2 = by2 - mpy;
+                                const nlen2 = Math.max(1, Math.hypot(nx2, ny2));
+                                const nux2 = nx2 / nlen2, nuy2 = ny2 / nlen2;
+                                const dot2 = state.vx * nux2 + state.vy * nuy2;
+                                if (dot2 < 0) {
+                                    const REST = 0.75;
+                                    state.vx -= (1 + REST) * dot2 * nux2;
+                                    state.vy -= (1 + REST) * dot2 * nuy2;
+                                    const overlap = hitR2 - d2;
+                                    bx2 += nux2 * overlap; by2 += nuy2 * overlap;
+                                }
+                                // Ny träff: flash + eventkortet öppnas
+                                if (key !== state.lastHitKey && !state.hitKeys.has(key)) {
+                                    state.hitKeys.add(key);
+                                    state.lastHitKey = key;
+                                    const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
+                                    if (bubble) {
+                                        bubble.classList.remove('pin-hit-flash');
+                                        void bubble.offsetWidth;
+                                        bubble.classList.add('pin-hit-flash');
+                                        setTimeout(() => bubble.classList.remove('pin-hit-flash'), 320);
+                                    }
+                                    const grp = groupsRef.current.get(key);
+                                    if (grp) onPinballHitRef.current?.(grp);
+                                    setPinShotHits(state.hitKeys.size);
+                                }
                             }
                         }
                     }
-                    prevBx = bp.x; prevBy = bp.y;
-                    if (k < 1) raf = requestAnimationFrame(step);
+
+                    // Uppdatera geo-position + geo-follow
+                    const newLL2 = map.unproject([bx2, by2]);
+                    state.lng = newLL2.lng; state.lat = newLL2.lat;
+                    ball.setLngLat([state.lng, state.lat]);
+                    map.setCenter([state.lng, state.lat]);
+
+                    const spd = Math.hypot(state.vx, state.vy);
+                    if (spd < PHYS_STOP_V) { geoPhysState = null; return; }
+                    geoPhysRaf = requestAnimationFrame(tick);
                 };
-                raf = requestAnimationFrame(step);
+                geoPhysRaf = requestAnimationFrame(tick);
+            };
+
+            // travelTo: konvertera geo-destination → hastighetsvektor
+            const travelTo = (target: [number, number]) => {
+                const ll = ball.getLngLat();
+                const bp3 = map.project([ll.lng, ll.lat]);
+                const tp3 = map.project(target);
+                const dx3 = tp3.x - bp3.x, dy3 = tp3.y - bp3.y;
+                const dist3 = Math.max(1, Math.hypot(dx3, dy3));
+                const SPEED = 0.65; // px/ms startfart
+                startGeoPhysLoop((dx3 / dist3) * SPEED, (dy3 / dist3) * SPEED);
             };
             pinGeoTravelRef.current = travelTo;
             if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -2421,11 +2553,14 @@ export default function V2Map({
             }
 
             return () => {
-                cancelAnimationFrame(raf);
+                cancelAnimationFrame(aimRaf);
+                cancelAnimationFrame(geoPhysRaf);
+                geoPhysState = null;
                 pinGeoTravelRef.current = null;
                 pinGeoBallRef.current = null;
                 setPinShotHits(0);
                 ball.remove();
+                if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }
                 const m = mapRef.current;
                 if (m) {
                     m.setMinZoom(prior.minZoom);
@@ -2436,6 +2571,7 @@ export default function V2Map({
                 }
             };
         }
+
 
         // Flagga som sätts i cleanup om läget stängs av under zoom-animationen.
         let cancelled = false;
