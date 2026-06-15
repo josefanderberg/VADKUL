@@ -250,6 +250,29 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
+            {/* Bildremsa: visas längst upp på kortet när det är komprimerat (revealStep 0).
+                Klick öppnar till full bild + beskrivning. Göms när bilden visas fullständigt. */}
+            {revealStep === 0 && !alwaysExpanded && (
+                <div
+                    className="w-full h-[72px] relative cursor-pointer overflow-hidden rounded-t-[inherit] flex-shrink-0"
+                    onClick={handleHeaderClick}
+                >
+                    <Image
+                        unoptimized
+                        src={coverSrc}
+                        alt=""
+                        fill
+                        className="object-cover"
+                    />
+                    {/* Gradient nederkant så titeln läser sig mot bakgrunden */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
+                    {/* Subtil puls-hint — signalerar att man kan trycka */}
+                    <div className="absolute bottom-2 right-3 flex items-center gap-1 text-[10px] font-black text-white/80 uppercase tracking-widest drop-shadow">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            )}
+
             {/* 1. Header (Always visible) */}
             <div
                 className={`p-4 md:p-6 pt-2 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
@@ -349,25 +372,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 </div>
             </div>
 
-            {/* Step 0 Peek: Small slice of the image at the bottom when collapsed */}
-            {!alwaysExpanded && revealStep === 0 && (
-                <div
-                    className="w-full h-14 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-18 transition-all duration-500"
-                    onClick={handleHeaderClick}
-                >
-                    <Image unoptimized
-                        src={coverSrc}
-                        alt=""
-                        fill
-                        className="object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-                    <div className="absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <span>Se mer</span>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
-                </div>
-            )}
 
             {/* 2. Revealed Content (Image + Description) */}
             {revealStep >= 1 && (
@@ -377,10 +381,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         48vh) i stället för en beskuren remsa, så man ser hela
                         motivet. Fallback-mönster (utan riktig coverImage) och alla
                         övriga lägen behåller den beskurna h-48/h-64-remsan. */}
-                    {/* Riktig omslagsbild som inte gick att ladda (coverFailed) och
-                        inget fallback-mönster → rendera INGEN bild i stället för
-                        webbläsarens trasiga bild-ikon med titeln bredvid. */}
-                    {hasRealCover && coverFailed ? null : alwaysExpanded && hasRealCover ? (
+                    {/* Bild: alltid object-contain i sheet-läget så man ser hela motivet.
+                        Fallback-mönster behåller den beskurna remsan. */}
+                    {hasRealCover && coverFailed ? null : hasRealCover ? (
                         <div
                             className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={handleContentClick}
@@ -390,7 +393,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 src={coverSrc as string}
                                 alt={linkEvent.title}
                                 onError={() => setCoverFailed(true)}
-                                className="w-full h-auto max-h-[48vh] object-contain"
+                                className="w-full h-auto max-h-[60vh] object-contain"
                             />
                         </div>
                     ) : (
