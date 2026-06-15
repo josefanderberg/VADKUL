@@ -10,7 +10,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { sourceColor } from '../../utils/sources';
 import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
-import { lngLatToCell, cellCornersLngLat, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
+import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, regionsForBounds, lngLatToMerc, mercToLngLat, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import toast from 'react-hot-toast';
 
@@ -1399,6 +1399,29 @@ export default function V2Map({
     // kan slå upp grupp utifrån feature-nyckeln.
     const groupsRef = useRef(groups);
     groupsRef.current = groups;
+
+    const geoGridRef = useRef<Map<string, { key: string; group: LinkEvent[]; mx: number; my: number }[]>>(new Map());
+    const GEO_GRID_CELL_SIZE = 100000; // 100 km celler
+
+    useEffect(() => {
+        const grid = new Map<string, { key: string; group: LinkEvent[]; mx: number; my: number }[]>();
+        for (const [key, group] of groups.entries()) {
+            const rep = group[0];
+            if (rep && typeof rep.lng === 'number' && typeof rep.lat === 'number') {
+                const m = lngLatToMerc(rep.lng, rep.lat);
+                const gx = Math.floor(m.x / GEO_GRID_CELL_SIZE);
+                const gy = Math.floor(m.y / GEO_GRID_CELL_SIZE);
+                const gkey = `${gx},${gy}`;
+                let list = grid.get(gkey);
+                if (!list) {
+                    list = [];
+                    grid.set(gkey, list);
+                }
+                list.push({ key, group, mx: m.x, my: m.y });
+            }
+        }
+        geoGridRef.current = grid;
+    }, [groups]);
 
     // ── Pinball / Flipper-läge: refs, helpers och pekar-hanterare ─────────────
     // All fysik/rendering bor i refs (ingen React-setState i rAF-loopen). Loopen
