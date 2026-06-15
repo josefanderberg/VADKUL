@@ -382,10 +382,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
-    const PEEK_HEIGHT_VH = 28;
-    // Default-höjd när ett event öppnas FRÅN STÄNGT läge: komprimerat läge med
-    // bara header + bildremsa (ingen full bild). Mäts färskt vid öppning.
-    const DEFAULT_OPEN_HEIGHT_VH = 36;
+    const PEEK_HEIGHT_VH = 22;
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
@@ -479,9 +476,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const scRect = sc.getBoundingClientRect();
         const lineRect = line.getBoundingClientRect();
         // Linjens topp relativt scroll-innehållets topp (oberoende av nuvarande
-        // korthöjd/scroll). + grip-zonen ovanför scroll-containern.
+        // korthöjd/scroll).
         const lineTopWithinContent = (lineRect.top - scRect.top) + sc.scrollTop;
-        const targetPx = 24 + lineTopWithinContent;
+        const targetPx = lineTopWithinContent;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(10, Math.min(PEEK_HEIGHT_VH, Math.round(vh)));
     };
@@ -574,8 +571,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         const raf = requestAnimationFrame(() => {
-            collapsedVhRef.current = measureCollapsedHeight();
-            if (freshOpen) updateHeightVh(DEFAULT_OPEN_HEIGHT_VH);
+            const collapsed = measureCollapsedHeight();
+            collapsedVhRef.current = collapsed;
+            if (freshOpen) updateHeightVh(collapsed);
         });
         return () => cancelAnimationFrame(raf);
     }, [selectedEvent]);
@@ -1022,9 +1020,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                 }}
             >
                 {/* Drag-grip-zon — luftig så grip-indikatorn syns tydligt och får
-                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px). */}
+                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px).
+                    Zonen ligger nu absolute överst och är transparent för att låta
+                    bilden i LinkEventCard scrolla hela vägen upp under den. */}
                 <div
-                    className="w-full flex-shrink-0 h-6 cursor-grab active:cursor-grabbing select-none bg-card"
+                    className="absolute top-0 left-0 right-0 h-6 cursor-grab active:cursor-grabbing select-none z-[45] bg-transparent"
                     style={{ touchAction: 'none' }}
                 />
 

@@ -882,10 +882,10 @@ export default function HomePage() {
             {/* Pinball/Flipper-HUD: instruktion + träffräknare + avsluta. Ligger
                 ovanför canvasen (body-nivå) så den alltid går att trycka på. */}
             {pinballActive && (
-                <div className="fixed top-[120px] left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-3 rounded-full bg-slate-900/85 backdrop-blur-md px-4 py-2 text-white shadow-2xl border border-white/15 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed top-[120px] left-1/2 -translate-x-1/2 z-[1700] flex items-center gap-3 rounded-full bg-slate-900/85 backdrop-blur-md px-4 py-2 text-white shadow-2xl border border-white/15 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
                     <span className="text-base" aria-hidden>🎱</span>
                     <span className="text-xs font-semibold leading-tight">
-                        Dra & släpp för att skjuta
+                        Geo-Flipper
                         <span className="ml-2 tabular-nums text-rose-300">Träffar {pinballScore}</span>
                         <span className="ml-1 tabular-nums text-slate-400">· {pinballShots} skott</span>
                     </span>

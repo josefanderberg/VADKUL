@@ -827,13 +827,50 @@ export default function V2Map({
             toast.error('Din webbläsare saknar platstjänster.');
             return;
         }
+
+        const map = mapRef.current;
+        if (!map) return;
+
+        if (pinballMode) {
+            const ballM = pinGeoBallRef.current;
+            if (!ballM) return;
+            const ballLL = ballM.getLngLat();
+            const mapCenter = map.getCenter();
+            // Kolla om kartans centrum redan är nära kulan (inom ~150-200 meter)
+            const isFocused = Math.abs(mapCenter.lng - ballLL.lng) < 0.002 && Math.abs(mapCenter.lat - ballLL.lat) < 0.002;
+
+            if (isFocused) {
+                // Teleportera kulan till användarens GPS-position!
+                setLocating(true);
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserPos(next);
+                        setLocating(false);
+                        ballM.setLngLat([next.lng, next.lat]);
+                        toast.success('Kulan har teleporterats till din position!');
+                        map.flyTo({ center: [next.lng, next.lat], zoom: Math.max(map.getZoom(), 14), duration: 1000 });
+                    },
+                    (err) => {
+                        setLocating(false);
+                        toast.error('Kunde inte hämta din plats för teleportering.');
+                    },
+                    { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
+                );
+            } else {
+                // Fokusera kartan på kulan
+                map.flyTo({ center: [ballLL.lng, ballLL.lat], zoom: Math.max(map.getZoom(), 14), duration: 1000 });
+            }
+            return;
+        }
+
         setLocating(true);
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 setUserPos(next);
                 setLocating(false);
-                mapRef.current?.flyTo({ center: [next.lng, next.lat], zoom: Math.max(mapRef.current.getZoom(), 12), duration: 1200 });
+                map.flyTo({ center: [next.lng, next.lat], zoom: Math.max(map.getZoom(), 12), duration: 1200 });
             },
             (err) => {
                 setLocating(false);
@@ -1500,6 +1537,9 @@ export default function V2Map({
     const pinShotCurRef = useRef<{ x: number; y: number } | null>(null);
     const pinHitKeysRef = useRef<Set<string>>(new Set());
     const [pinShotHits, setPinShotHits] = useState(0);
+    const pinFloatTextsRef = useRef<{ x: number; y: number; text: string; age: number; maxAge: number }[]>([]);
+    const pinRingsRef = useRef<{ x: number; y: number; startR: number; age: number; maxAge: number }[]>([]);
+
 
     // ── Reviret (territorie-läget ovanpå pinball) ─────────────────────────────
     // Kulan målar de geografiska hex-rutor den rullar genom. revPaintedRef håller
@@ -1557,7 +1597,7 @@ export default function V2Map({
         if (Math.hypot(dragX, dragY) < 14) return; // tryck utan drag → inget skott
         const bp = map.project(ballM.getLngLat());
         const GAIN = 2.4;
-        const ll = map.unproject([bp.x + dragX * GAIN, bp.y + dragY * GAIN]);
+        const ll = map.unproject([bp.x - dragX * GAIN, bp.y - dragY * GAIN]);
         travel([ll.lng, ll.lat]);
     }, []);
 
@@ -1619,7 +1659,8 @@ export default function V2Map({
     // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
     // världen ligger i källan — MapLibre kullar och avkrockar själv på GPU:n
     // (icon-allow-overlap false), så vi behöver ingen egen viewport-gallring här.
-    // Event från en "stor" källa (PRO/Korpen/Svenska kyrkan) får en egen brickfärg.
+    // Event från en "stor" källa (PRO/Korpen/Svenska kyrkan) får standard mörk bricka;
+    // alla övriga event färgas efter sin kategori.
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
@@ -1630,7 +1671,12 @@ export default function V2Map({
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
             const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-            const color = sourceColor(rep.url || rep.id) ?? undefined;
+            // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard).
+            // Alla andra → kategori-färg.
+            const isBigSrc = sourceColor(rep.url || rep.id) !== null;
+            const color = isBigSrc
+                ? undefined
+                : ((EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? undefined);
             const iconId = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             if (!icons.has(iconId)) icons.set(iconId, { emoji, color });
             features.push({
@@ -2353,9 +2399,15 @@ export default function V2Map({
 
             const ballEl = document.createElement('div');
             ballEl.className = 'pin-geo-ball';
-            const ball = new maplibregl.Marker({ element: ballEl }).setLngLat(SWEDEN_CENTER).addTo(map);
+            const startLngLat = userPos ? ([userPos.lng, userPos.lat] as [number, number]) : SWEDEN_CENTER;
+            const ball = new maplibregl.Marker({ element: ballEl }).setLngLat(startLngLat).addTo(map);
 
             pinGeoBallRef.current = ball; // så skott-handlers kan projicera bollens skärmläge
+
+            if (userPos) {
+                // Om vi redan har en användarposition, flyg dit direkt så man startar fokuserad
+                map.flyTo({ center: [userPos.lng, userPos.lat], zoom: 14, duration: 800 });
+            }
 
             // ── DPR + canvas setup för siktlinje-overlay ─────────────────────
             const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -2428,6 +2480,60 @@ export default function V2Map({
                     ctx.strokeStyle = `rgba(244,63,94,${0.55 * (1 - t)})`; ctx.lineWidth = 2; ctx.stroke();
                     ctx.restore();
                 }
+
+                // Rita och uppdatera shockwaves/ringar
+                const rings = pinRingsRef.current;
+                if (rings.length > 0) {
+                    ctx.save();
+                    for (let i = rings.length - 1; i >= 0; i--) {
+                        const r = rings[i];
+                        r.age++;
+                        const progress = r.age / r.maxAge;
+                        const radius = r.startR + progress * 40;
+                        const alpha = 1 - progress;
+                        ctx.beginPath();
+                        ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(251, 191, 36, ${alpha})`;
+                        ctx.lineWidth = 3 - progress * 1.5;
+                        ctx.stroke();
+                        if (r.age >= r.maxAge) {
+                            rings.splice(i, 1);
+                        }
+                    }
+                    ctx.restore();
+                }
+
+                // Rita och uppdatera flytande poängtexter (+1, +2...)
+                const floatTexts = pinFloatTextsRef.current;
+                if (floatTexts.length > 0) {
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    for (let i = floatTexts.length - 1; i >= 0; i--) {
+                        const ft = floatTexts[i];
+                        ft.age++;
+                        const progress = ft.age / ft.maxAge;
+                        const curY = ft.y - (progress * 50); // sväva 50px uppåt
+                        const alpha = 1 - progress;
+                        
+                        ctx.font = `900 ${Math.round(20 + progress * 4)}px system-ui, sans-serif`;
+                        
+                        // Textkant (skugga för läsbarhet mot kartan)
+                        ctx.strokeStyle = `rgba(15, 23, 42, ${alpha * 0.8})`;
+                        ctx.lineWidth = 4;
+                        ctx.strokeText(ft.text, ft.x, curY);
+                        
+                        // Fyll text
+                        ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`;
+                        ctx.fillText(ft.text, ft.x, curY);
+                        
+                        if (ft.age >= ft.maxAge) {
+                            floatTexts.splice(i, 1);
+                        }
+                    }
+                    ctx.restore();
+                }
+
                 aimRaf = requestAnimationFrame(aimLoop);
             };
             aimRaf = requestAnimationFrame(aimLoop);
@@ -2444,7 +2550,16 @@ export default function V2Map({
             // ── Fysik-skott med studs ─────────────────────────────────────────
             // Bollen rör sig i skärm-px/ms, studsar mot event-markörer med
             // reflekterad normalvektor, och stannar av friktion. Kameran panorerar med bollen.
-            type GeoPhysState = { vx: number; vy: number; lng: number; lat: number; hitKeys: Set<string>; lastHitKey: string | null };
+            type GeoPhysState = {
+                vx: number;
+                vy: number;
+                lng: number;
+                lat: number;
+                hitKeys: Set<string>;
+                lastHitKey: string | null;
+                hitTimes: Map<string, number>;
+                hitCount: number;
+            };
             let geoPhysState: GeoPhysState | null = null;
             let geoPhysRaf = 0;
             const PHYS_STOP_V = 0.05; // px/ms — under detta parkeras bollen
@@ -2452,9 +2567,23 @@ export default function V2Map({
             const startGeoPhysLoop = (initVx: number, initVy: number) => {
                 cancelAnimationFrame(geoPhysRaf);
                 const ll = ball.getLngLat();
-                geoPhysState = { vx: initVx, vy: initVy, lng: ll.lng, lat: ll.lat, hitKeys: new Set(), lastHitKey: null };
+                geoPhysState = {
+                    vx: initVx,
+                    vy: initVy,
+                    lng: ll.lng,
+                    lat: ll.lat,
+                    hitKeys: new Set(),
+                    lastHitKey: null,
+                    hitTimes: new Map(),
+                    hitCount: 0
+                };
                 pinHitKeysRef.current = new Set();
+                pinFloatTextsRef.current = [];
+                pinRingsRef.current = [];
                 setPinShotHits(0);
+
+                // Increment shot counter in the page HUD
+                onPinballLaunchRef.current?.();
 
                 let prevNow = performance.now();
                 const tick = (now: number) => {
@@ -2501,10 +2630,16 @@ export default function V2Map({
                                     const overlap = hitR2 - d2;
                                     bx2 += nux2 * overlap; by2 += nuy2 * overlap;
                                 }
-                                // Ny träff: flash + eventkortet öppnas
-                                if (key !== state.lastHitKey && !state.hitKeys.has(key)) {
-                                    state.hitKeys.add(key);
+                                
+                                // Cooldown per studsare (400ms) så man kan studsa mot samma bumper igen
+                                const nowMs = performance.now();
+                                const lastHitTime = state.hitTimes.get(key) || 0;
+                                if (nowMs - lastHitTime > 400) {
+                                    state.hitTimes.set(key, nowMs);
                                     state.lastHitKey = key;
+                                    state.hitKeys.add(key);
+                                    state.hitCount++;
+
                                     const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
                                     if (bubble) {
                                         bubble.classList.remove('pin-hit-flash');
@@ -2512,9 +2647,29 @@ export default function V2Map({
                                         bubble.classList.add('pin-hit-flash');
                                         setTimeout(() => bubble.classList.remove('pin-hit-flash'), 320);
                                     }
+
+                                    // Lägg till flytande träffräknare (+1, +2...) ovanpå markören
+                                    const bp = map.project(mp);
+                                    pinFloatTextsRef.current.push({
+                                        x: bp.x,
+                                        y: bp.y,
+                                        text: `+${state.hitCount}`,
+                                        age: 0,
+                                        maxAge: 45
+                                    });
+
+                                    // Lägg till en expanderande shockwave ring
+                                    pinRingsRef.current.push({
+                                        x: bp.x,
+                                        y: bp.y,
+                                        startR: PIN_HIT_RADIUS_PX * 0.5,
+                                        age: 0,
+                                        maxAge: 25
+                                    });
+
                                     const grp = groupsRef.current.get(key);
                                     if (grp) onPinballHitRef.current?.(grp);
-                                    setPinShotHits(state.hitKeys.size);
+                                    setPinShotHits(state.hitCount);
                                 }
                             }
                         }
@@ -2546,9 +2701,14 @@ export default function V2Map({
             pinGeoTravelRef.current = travelTo;
             if (typeof navigator !== 'undefined' && navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => travelTo([pos.coords.longitude, pos.coords.latitude]),
+                    (pos) => {
+                        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserPos(next);
+                        ball.setLngLat([next.lng, next.lat]);
+                        map.flyTo({ center: [next.lng, next.lat], zoom: 14, duration: 1000 });
+                    },
                     () => { /* nekad/timeout → bollen ligger kvar i Sveriges mitt */ },
-                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
                 );
             }
 
@@ -2558,6 +2718,8 @@ export default function V2Map({
                 geoPhysState = null;
                 pinGeoTravelRef.current = null;
                 pinGeoBallRef.current = null;
+                pinFloatTextsRef.current = [];
+                pinRingsRef.current = [];
                 setPinShotHits(0);
                 ball.remove();
                 if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }
@@ -3576,24 +3738,31 @@ export default function V2Map({
                     onSelectEventRef.current(rep);
                 };
 
-                // "Stor" källa (PRO/Korpen/Svenska kyrkan)? Då får brickan källans
-                // egen färg i sitt standardläge (matchar GL-brickorna). Speciella
-                // tillstånd nedan (vald/guld/sparad m.fl.) går före.
-                const srcColor = sourceColor(rep.url || rep.id);
+                // "Stor" källa (PRO/Korpen/Svenska kyrkan) identifieras för att
+                // EXKLUDERA dem från kategorifärgningen — de får standardmörk bricka.
+                // Alla övriga event får sin kategori-färg i standardläge.
+                // Speciella tillstånd (vald/guld/sparad m.fl.) går alltid före.
+                const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
+                const isBigSource = sourceColor(rep.url || rep.id) !== null;
+
+                // Kategori-färg för icke-stora-källors event.
+                const catColorHex = !isBigSource
+                    ? (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null
+                    : null;
 
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
                 // mjuk gradient för djup; VADKUL-skapade event får en smaragdgrön
                 // bricka (samma gröna som skapa-flödet); guld = rätt svar i spelet.
                 // Prioritet: vald (blå) > guld > inom 1 timme (orange) > VADKUL-
-                // skapad (grön) > sparad (ljusblå) > källfärg > standard (mörk).
+                // skapad (grön) > sparad (ljusblå) > kategori-färg > standard (mörk).
                 const pinBg = isGold
                     ? 'linear-gradient(135deg, #fff7d6 0%, #fbbf24 45%, #d97706 100%)'
                     : isUserCreated
                     ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
                     : isSaved
                     ? 'linear-gradient(145deg, #ffffff 0%, #eef2f7 100%)'
-                    : srcColor
-                    ? sourceGradientCss(srcColor)
+                    : catColorHex
+                    ? sourceGradientCss(catColorHex)
                     : 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
                 const pinBorder = isGold
                     ? '3px solid #fde68a'
@@ -3605,7 +3774,7 @@ export default function V2Map({
                     ? '2px solid #f97316'
                     : isUserCreated
                     ? '2px solid rgba(255,255,255,0.45)'
-                    : srcColor
+                    : catColorHex
                     ? '2px solid rgba(255,255,255,0.55)'
                     : '2px solid rgba(255,255,255,0.25)';
 
@@ -3628,7 +3797,6 @@ export default function V2Map({
                 const scaleStyle = (isSelected || isGold) ? 'scale(1.2)' : 'scale(1)';
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
-                const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
                 const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
 
                 // Sifferbricka i hörnet för grupper; en liten prick för sparade enskilda.
@@ -4252,10 +4420,9 @@ export default function V2Map({
                 style={{
                     zIndex: 1600,
                     touchAction: 'none',
-                    // I flytta-läge: canvasen är genomsläpplig så kartan får touch-events
-                    // Geo-flipper: canvasen fångar ALDRIG input — kartan tar alla tryck/
-                    // drag/zoom, och tryck = skjut (map 'click'). Canvasen ritar inget här.
-                    pointerEvents: 'none',
+                    // Fånga drag/skjut-gester bara i skjut-läget (!pinMoveMode);
+                    // annars genomsläpplig (none) så man kan flytta och zooma kartan.
+                    pointerEvents: pinballMode && !pinMoveMode ? 'auto' : 'none',
                     display: pinballMode ? 'block' : 'none',
                 }}
                 onPointerDown={onPinPointerDown}
@@ -4285,23 +4452,59 @@ export default function V2Map({
                 </div>
             )}
 
-            {/* Geo-flipper-HUD: en tydlig instruktion + träffräknare. Skjutandet är
-                nu "tryck på kartan där du vill att bollen ska åka" — ingen läges-knapp. */}
+            {/* Geo-flipper-HUD: en tydlig instruktion + träffräknare + lägesväljare */}
             {pinballMode && (
                 <div
-                    className="absolute left-1/2 z-[1602] flex -translate-x-1/2 flex-col items-center gap-1.5 select-none pointer-events-none"
+                    className="absolute left-1/2 z-[1602] flex -translate-x-1/2 flex-col items-center gap-2 select-none pointer-events-none"
                     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}
                 >
                     {pinShotHits > 0 && (
-                        <div className="rounded-full bg-amber-400 px-3.5 py-1 text-[13px] font-black text-slate-900 shadow-lg tabular-nums">
+                        <div className="rounded-full bg-amber-400 px-3.5 py-1 text-[13px] font-black text-slate-900 shadow-lg tabular-nums animate-bounce">
                             {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}!
                         </div>
                     )}
-                    <div className="flex items-center gap-2 rounded-full bg-slate-900/85 px-4 py-2 text-[13px] font-semibold text-white shadow-xl backdrop-blur-sm">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
-                        </svg>
-                        Tryck på kartan för att skjuta bollen dit
+                    
+                    {/* Läges-knappar för Flytta vs Skjut */}
+                    <div className="flex items-center gap-1 rounded-full bg-slate-950/90 p-1 border border-white/10 shadow-lg pointer-events-auto">
+                        <button
+                            type="button"
+                            onClick={() => setPinMoveMode(true)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${
+                                pinMoveMode
+                                    ? 'bg-slate-800 text-white shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            Flytta & Zooma
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPinMoveMode(false)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${
+                                !pinMoveMode
+                                    ? 'bg-rose-500 text-white shadow-sm animate-pulse'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            Dra & Skjut
+                        </button>
+                    </div>
+
+                    {/* Instruktionstext baserat på aktuellt läge */}
+                    <div className="flex items-center gap-2 rounded-full bg-slate-900/85 px-4 py-2 text-[12px] font-semibold text-white shadow-xl backdrop-blur-sm">
+                        {pinMoveMode ? (
+                            <>
+                                <span className="text-sm" aria-hidden>🧭</span>
+                                Flytta och zooma kartan för att hitta bra lägen
+                            </>
+                        ) : (
+                            <>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
+                                </svg>
+                                Dra bakåt från bollen & släpp för att skjuta!
+                            </>
+                        )}
                     </div>
                 </div>
             )}

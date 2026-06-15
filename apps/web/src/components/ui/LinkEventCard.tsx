@@ -275,7 +275,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
             {/* 1. Header (Always visible) */}
             <div
-                className={`p-4 md:p-6 pt-2 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
+                className={`p-4 md:p-6 flex flex-col w-full relative bg-card ${
+                    alwaysExpanded
+                        ? 'pt-2'
+                        : revealStep === 0
+                        ? 'pt-2'
+                        : 'pt-8'
+                } ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
