@@ -248,5 +248,20 @@ service cloud.firestore {
         && request.resource.data.isVisible is bool;
       allow delete: if isOwner(userId);
     }
+
+    // 12. REVIRET TERRITORY (asynkront territorie-spel ovanpå pinball-läget)
+    // Alla kan läsa (kartan är färglagd för alla). Inloggade får claima/stjäla en
+    // ruta så länge de sätter SIG SJÄLVA som ägare. Steg 3 lägger server-verifierad
+    // befästning (incheckning på riktiga event) ovanpå via en Cloud Function —
+    // tills dess är allt "blött" och fritt stjälbart.
+    match /territory/{cellId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'color', 'region', 'claimedAt'])
+        && request.resource.data.color  is string
+        && request.resource.data.region is string;
+      allow delete: if false;
+    }
   }
 }

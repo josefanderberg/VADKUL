@@ -22,12 +22,52 @@ const RAD3 = Math.sqrt(3);
  *  marknära zoner ~200–300 m breda i svenska latituder. Justerbar. */
 export const HEX_SIZE_MERC = 300;
 
-/** Reviret-färg (svensk blå). Steg 1 har bara "blöt" (obesökt) färg — befästning
- *  via incheckning på riktiga event kommer i ett senare steg. */
+/** Neutral "blöt" färg för icke-inloggad lokal målning (ingen ägare att färga). */
 export const REVIRET_WET_FILL = 'rgba(0, 106, 167, 0.30)';
 export const REVIRET_WET_EDGE = 'rgba(0, 106, 167, 0.85)';
 
-function lngLatToMerc(lng: number, lat: number): { x: number; y: number } {
+/** Grov ruta (i grader) för bbox-prenumeration: varje territory-doc taggas med
+ *  `region` så klienten kan lyssna BARA på de buckets som täcker vyn (Firestore
+ *  `in`, max 30) i stället för hela kollektionen. ~0.04° ≈ 4–4,5 km. */
+export const REGION_DEG = 0.04;
+
+export function regionForLngLat(lng: number, lat: number): string {
+    return `${Math.floor(lat / REGION_DEG)}_${Math.floor(lng / REGION_DEG)}`;
+}
+
+/** Region-buckets som överlappar en bbox. HÅRT tak (default 60) med tidig retur:
+ *  en utzoomad vy kan annars spänna över miljontals buckets och frysa tråden
+ *  innan resultatet hinner kapas. Totalt arbete ≤ `max`. Anroparen varnar +
+ *  Firestore `in` tar ändå bara 30, så en kapad lista betyder "zooma in". */
+export function regionsForBounds(west: number, south: number, east: number, north: number, max = 60): string[] {
+    if (!Number.isFinite(west) || !Number.isFinite(south) || !Number.isFinite(east) || !Number.isFinite(north)) {
+        return [];
+    }
+    const out: string[] = [];
+    const y0 = Math.floor(south / REGION_DEG), y1 = Math.floor(north / REGION_DEG);
+    const x0 = Math.floor(west / REGION_DEG), x1 = Math.floor(east / REGION_DEG);
+    for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+            out.push(`${y}_${x}`);
+            if (out.length >= max) return out;
+        }
+    }
+    return out;
+}
+
+/** Stabil färgton (0–359) per användar-id → varje spelare får sin egen färg. */
+export function hueForUid(uid: string): number {
+    let h = 0;
+    for (let i = 0; i < uid.length; i++) h = (h * 31 + uid.charCodeAt(i)) >>> 0;
+    return h % 360;
+}
+
+/** Fyllnad + kant (canvas) för en given färgton. Lagras som ton-sträng i Firestore. */
+export function palette(hue: number): { fill: string; edge: string } {
+    return { fill: `hsla(${hue}, 72%, 52%, 0.34)`, edge: `hsla(${hue}, 72%, 46%, 0.92)` };
+}
+
+export function lngLatToMerc(lng: number, lat: number): { x: number; y: number } {
     const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
     return {
         x: R * lng * D2R,
@@ -35,7 +75,7 @@ function lngLatToMerc(lng: number, lat: number): { x: number; y: number } {
     };
 }
 
-function mercToLngLat(x: number, y: number): { lng: number; lat: number } {
+export function mercToLngLat(x: number, y: number): { lng: number; lat: number } {
     return {
         lng: (x / R) / D2R,
         lat: (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) / D2R,

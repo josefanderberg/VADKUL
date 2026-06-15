@@ -15,7 +15,6 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
-import { classifySource, DEFAULT_MUTED_SOURCES, SOURCE_DEFS } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -94,9 +93,6 @@ export default function HomePage() {
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    // Dolda källor: PRO/Korpen/Svenska kyrkan har så många event att de dränker
-    // kartan → dolda som standard, men kan slås på igen. Sparas i localStorage.
-    const [mutedSources, setMutedSources] = useState<Set<string>>(() => new Set(DEFAULT_MUTED_SOURCES));
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -243,7 +239,7 @@ export default function HomePage() {
     // ── Pinball/Flipper-läge ──────────────────────────────────────────────────
     // Kartan blir en top-down flipperbana: eventen blir runda studsare och en
     // kula avfyras med slangbella. Träffat event öppnas. (Handlers längre ned.)
-    const [pinballActive, setPinballActive] = useState(false);
+    const [pinballActive, setPinballActive] = useState(true); // geo-flipper på som standard
     const [pinballScore, setPinballScore] = useState(0); // antal träffar denna omgång
     const [pinballShots, setPinballShots] = useState(0); // antal avfyrade kulor
 
@@ -305,7 +301,9 @@ export default function HomePage() {
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
-            if (pinballActive) setPinballActive(false); // byta dag avslutar flipper-rundan
+            if (pinballActive) {
+                setPinballActive(false);
+            } // byta dag avslutar flipper-rundan
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
             prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
@@ -327,17 +325,8 @@ export default function HomePage() {
             const discarded = JSON.parse(localStorage.getItem('vadkul_discarded_events') ?? '[]');
             if (Array.isArray(saved) && saved.length) setSavedEventIds(new Set(saved));
             if (Array.isArray(discarded) && discarded.length) setDiscardedEventIds(new Set(discarded));
-            // Dolda källor: bara om nyckeln finns (annars behåll default-dolda).
-            const mutedRaw = localStorage.getItem('vadkul_muted_sources');
-            if (mutedRaw) {
-                const muted = JSON.parse(mutedRaw);
-                if (Array.isArray(muted)) setMutedSources(new Set(muted));
-            }
         } catch { /* korrupt localStorage — börja om tomt */ }
     }, []);
-    useEffect(() => {
-        localStorage.setItem('vadkul_muted_sources', JSON.stringify([...mutedSources]));
-    }, [mutedSources]);
     useEffect(() => {
         localStorage.setItem('vadkul_saved_events', JSON.stringify([...savedEventIds]));
     }, [savedEventIds]);
@@ -492,53 +481,25 @@ export default function HomePage() {
         );
     }, [events, filteredEvents, searchQuery]);
 
-    // Källfilter: räkna antal per "stor" källa (för togglarna) OCH plocka bort de
-    // dolda källorna i ETT svep. Counts beräknas före gallringen så togglarna kan
-    // visa antalet även för en dold källa.
-    const { sourceFilteredEvents, sourceCounts } = useMemo(() => {
-        const counts: Record<string, number> = {};
-        const kept: LinkEvent[] = [];
-        for (const evt of searchFilteredEvents) {
-            const src = classifySource(evt.url || evt.id);
-            if (src) counts[src] = (counts[src] ?? 0) + 1;
-            if (!src || !mutedSources.has(src)) kept.push(evt);
-        }
-        return { sourceFilteredEvents: kept, sourceCounts: counts };
-    }, [searchFilteredEvents, mutedSources]);
+    // Inget källfilter längre: ALLA event visas alltid. De "stora" källorna
+    // (PRO/Korpen/Svenska kyrkan) döljs inte — de skiljs i stället ut med en egen
+    // markörfärg på kartan (se sourceColor i V2Map).
 
-    // Kategorifiltret appliceras sist i kedjan: dag → sök → källa → kategori.
+    // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(() => {
-        if (selectedCategories.size === 0) return sourceFilteredEvents;
-        return sourceFilteredEvents.filter(evt =>
+        if (selectedCategories.size === 0) return searchFilteredEvents;
+        return searchFilteredEvents.filter(evt =>
             selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
         );
-    }, [sourceFilteredEvents, selectedCategories]);
+    }, [searchFilteredEvents, selectedCategories]);
 
-    // Antal event för dagen i dag-väljarens badge: räknas FÖRE källfiltret så det
-    // visar hur många event som faktiskt finns för dagen, även när PRO/Korpen/
-    // Svenska kyrkan är dolda på kartan. (Respekterar dock kategorivalet.)
+    // Antal event för dagen i dag-väljarens badge (respekterar kategorivalet).
     const dayEventCount = useMemo(() => {
         if (selectedCategories.size === 0) return searchFilteredEvents.length;
         return searchFilteredEvents.filter(evt =>
             selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
         ).length;
     }, [searchFilteredEvents, selectedCategories]);
-
-    // Källornas toggle-info (label + antal + dold?) — endast källor som faktiskt
-    // har event i nuvarande vy visas i listan.
-    const sourceFilters = useMemo(
-        () => SOURCE_DEFS
-            .map(d => ({ key: d.key, label: d.label, count: sourceCounts[d.key] ?? 0, muted: mutedSources.has(d.key) }))
-            .filter(s => s.count > 0 || s.muted),
-        [sourceCounts, mutedSources]
-    );
-    const handleToggleSource = useCallback((key: string) => {
-        setMutedSources(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key); else next.add(key);
-            return next;
-        });
-    }, []);
 
     const handleToggleCategory = useCallback((id: string) => {
         setSelectedCategories(prev => {
@@ -671,10 +632,6 @@ export default function HomePage() {
         const futureMs: number[] = [];
         for (const evt of events) {
             if (!evt.time) continue;
-            // Dolda källor räknas inte med — annars skulle molnet påstå tusentals
-            // event (t.ex. Svenska kyrkan) som inte ens syns på kartan.
-            const src = classifySource(evt.url || evt.id);
-            if (src && mutedSources.has(src)) continue;
             const t = evt.time.getTime();
             if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
             if (t >= startOfTomorrow.getTime() && t <= endOfTomorrow.getTime()) tomorrow++;
@@ -692,7 +649,7 @@ export default function HomePage() {
             withinHour = futureMs.filter(ms => ms <= limit).length;
         }
         return { today, tomorrow, week, withinHour, withinHours };
-    }, [events, nowTick, mutedSources]);
+    }, [events, nowTick]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
@@ -833,18 +790,20 @@ export default function HomePage() {
                 onOpenProfile={handleToggleProfile}
                 savedCount={savedEventIds.size}
                 onToggleSaved={handleToggleSaved}
+                dayOffset={dayOffset}
+                dayRangeDays={dayRangeDays}
+                onDayRangeChange={handleDayRangeChange}
+                dayCount={dayEventCount}
+                eventsLoaded={eventsLoaded}
             />
 
             {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken.
-                Kategoriantal räknas ur det källfiltrerade så de matchar kartan;
-                källtogglarna (PRO/Korpen/Svenska kyrkan) sitter i samma panel. */}
+                Kategoriantal räknas ur de sökfiltrerade eventen så de matchar kartan. */}
             <CategoryFilter
-                events={sourceFilteredEvents}
+                events={searchFilteredEvents}
                 selected={selectedCategories}
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
-                sources={sourceFilters}
-                onToggleSource={handleToggleSource}
             />
 
             {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}

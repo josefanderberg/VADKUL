@@ -385,3 +385,36 @@
 .pinball-canvas:active {
   cursor: grabbing;
 }
+
+/* === Reviret geo-läge: liten men tydlig geo-förankrad boll på Sverige-globen === */
+.pin-geo-ball {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 34% 32%, #ffffff 0%, #38bdf8 55%, #0284c7 100%);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 10px 3px rgba(56, 189, 248, 0.7);
+  cursor: default;
+}
+/* Pulsande ring så den hittas även när hela Sverige syns (kulan är liten). */
+.pin-geo-ball::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid rgba(56, 189, 248, 0.85);
+  transform: translate(-50%, -50%);
+  animation: pinGeoPulse 1.6s ease-out infinite;
+}
+@keyframes pinGeoPulse {
+  0%   { width: 16px; height: 16px; opacity: 0.9; }
+  100% { width: 60px; height: 60px; opacity: 0; }
+}
+
+/* Se till att bollen (kulan) rullar ovanpå alla event-bumprar på kartan */
+.maplibregl-marker:has(.pin-geo-ball) {
+  z-index: 10000 !important;
+}

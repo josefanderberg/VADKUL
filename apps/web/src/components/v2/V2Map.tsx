@@ -244,6 +244,36 @@ function applyTerrain(map: maplibregl.Map, on: boolean) {
     }
 }
 
+// "Orienterings"-kartan: ett platt hillshade-lager ovanpå den ljusa Voyager-
+// basen som ritar ut höjdskillnaderna som skuggad relief — en topografisk
+// "orienterings"-look. Använder samma keylessa DEM som 3D-terrängen, men under
+// en EGEN käll-id så de två lägena inte tar bort varandras källa. Lager + källa
+// läggs till lazy och tas bort när läget stängs av.
+const HILLSHADE_DEM_ID = 'hillshade-dem';
+const HILLSHADE_LAYER_ID = 'hillshade-relief';
+function applyHillshade(map: maplibregl.Map, on: boolean) {
+    if (on) {
+        if (!map.getSource(HILLSHADE_DEM_ID)) map.addSource(HILLSHADE_DEM_ID, TERRAIN_DEM_SOURCE);
+        if (!map.getLayer(HILLSHADE_LAYER_ID)) {
+            map.addLayer({
+                id: HILLSHADE_LAYER_ID,
+                type: 'hillshade',
+                source: HILLSHADE_DEM_ID,
+                paint: {
+                    'hillshade-exaggeration': 0.65,
+                    'hillshade-shadow-color': '#5b4636',
+                    'hillshade-highlight-color': '#fffdf7',
+                    'hillshade-accent-color': '#8a6d4a',
+                    'hillshade-illumination-direction': 315
+                }
+            });
+        }
+    } else {
+        if (map.getLayer(HILLSHADE_LAYER_ID)) map.removeLayer(HILLSHADE_LAYER_ID);
+        if (map.getSource(HILLSHADE_DEM_ID)) map.removeSource(HILLSHADE_DEM_ID);
+    }
+}
+
 const GEM_THEMES: Record<string, {
     activeBg: string;
     inactiveBg: string;
@@ -449,7 +479,15 @@ const getGemStyles = (key: string, state: OrbState) => {
 // med slangbella. Träffar kulan en studsare öppnas det eventet. Kameran fryses
 // medan läget är på, så fysiken kan köras i stabila skärm-pixlar (px/ms) och
 // studsarna projiceras EN gång per avfyrning i stället för varje frame.
-const PIN_GEO_MODE = true;
+const PIN_GEO_MODE: boolean = true;
+// Sveriges ungefärliga bbox (banan visar hela Sverige) + en något större ram
+// som begränsar panorering så man inte glider iväg från landet, samt centrum.
+const SWEDEN_BOUNDS: [[number, number], [number, number]] = [[10.0, 55.0], [24.6, 69.2]];
+const SWEDEN_PAN_LIMIT: [[number, number], [number, number]] = [[2.0, 52.0], [33.0, 71.5]];
+const SWEDEN_CENTER: [number, number] = [15.2, 62.4];
+// Träffradie i SKÄRM-px (DOM-markörer är px-konstanta över zoom → naturligt
+// zoom-oberoende). ~halva brickan (44px) + bollens radie.
+const PIN_HIT_RADIUS_PX = 36;
 const PIN_BASE_R = 18;           // px-radie för en ensam bubbla (fryst zoom)
 const PIN_BUMPER_MAX_R = 46;     // tak så jättegrupper inte täcker halva banan
 const PIN_BALL_R = 12;
@@ -487,15 +525,21 @@ const pinBumperRadius = (n: number) => Math.min(PIN_BUMPER_MAX_R, PIN_BASE_R * M
 
 // Projicerar varje grupp till en studsare. Sparar lat/lng så att screen-pos
 // kan beräknas om varje frame när kameran följer bollen.
-function buildPinBumpers(map: maplibregl.Map, groups: Map<string, LinkEvent[]>, board: PinBoard): PinBumper[] {
+// OBS: MapLibre v5 returnerar canvas-pixlar (DPR-skalade) från map.project().
+// Vi delar med dpr så vi får CSS-pixlar som matchar canvas-koordinaterna.
+function buildPinBumpers(map: maplibregl.Map, groups: Map<string, LinkEvent[]>, board: PinBoard, dpr: number): PinBumper[] {
+    const M = 80; // marginal: ta med studsare nära skärmkanten
     const out: PinBumper[] = [];
     for (const [key, group] of groups) {
         const rep = group[0];
         if (!rep || !isValidLatLng(rep.lat, rep.lng)) continue;
         const p = map.project([rep.lng!, rep.lat!]);
+        // p är i canvas-pixlar (DPR-skalat) → dela med dpr för CSS-pixlar
+        const cx = p.x / dpr, cy = p.y / dpr;
+        if (cx < board.minX - M || cx > board.maxX + M || cy < board.minY - M || cy > board.maxY + M) continue;
         const catKey = (rep.category && EVENT_CATEGORIES[rep.category as EventCategoryType]) ? rep.category : 'other';
         const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎟️');
-        out.push({ key, group, emoji, lat: rep.lat!, lng: rep.lng!, cx: p.x, cy: p.y, r: pinBumperRadius(group.length), count: group.length, hitFlash: 0, lastHit: 0 });
+        out.push({ key, group, emoji, lat: rep.lat!, lng: rep.lng!, cx, cy, r: pinBumperRadius(group.length), count: group.length, hitFlash: 0, lastHit: 0 });
     }
     return out;
 }
@@ -665,8 +709,6 @@ interface V2MapProps {
     onPinballHit?: (group: LinkEvent[]) => void;
     /** Fyrar varje gång kulan avfyras (för skott-räknare/HUD). */
     onPinballLaunch?: () => void;
-    pinShootMode?: boolean;
-    setPinShootMode?: (mode: boolean) => void;
 }
 
 export default function V2Map({
@@ -707,8 +749,6 @@ export default function V2Map({
     onStartFindGame,
     onStopFindGame,
     pinballMode = false,
-    pinShootMode = false,
-    setPinShootMode,
     canStartPinball = false,
     onStartPinball,
     onStopPinball,
@@ -737,7 +777,7 @@ export default function V2Map({
     }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark'>('satellite');
+    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
     const mapStyleRef = useRef(mapStyle);
     mapStyleRef.current = mapStyle;
     // Cache för den hämtade + mildrade nöjesfälts-stilen (Voyager-transform).
@@ -905,7 +945,7 @@ export default function V2Map({
     // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
     const MAX_ACTIVE_FEATURES = 999;
     const COUNTED_FEATURE_KEYS = [
-        'satellite', 'themepark', 'dark', 'globe', 'terrain',
+        'satellite', 'themepark', 'dark', 'orientering', 'globe', 'terrain',
         'sun', 'focus', 'throw', 'slingshot', 'faces',
         'bigCloud', 'fastThrow', 'sparkle', 'snowball',
         'createEvent'
@@ -935,6 +975,7 @@ export default function V2Map({
         if (key === 'satellite') return mapStyle === 'satellite';
         if (key === 'themepark') return mapStyle === 'themepark';
         if (key === 'dark') return mapStyle === 'dark';
+        if (key === 'orientering') return mapStyle === 'orientering';
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
     const activeFeatureCount = COUNTED_FEATURE_KEYS.reduce(
@@ -965,6 +1006,7 @@ export default function V2Map({
         if (key === 'satellite') { setMapStyle(value ? 'satellite' : 'streets'); return; }
         if (key === 'themepark') { setMapStyle(value ? 'themepark' : 'streets'); return; }
         if (key === 'dark') { setMapStyle(value ? 'dark' : 'streets'); return; }
+        if (key === 'orientering') { setMapStyle(value ? 'orientering' : 'streets'); return; }
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
@@ -1426,8 +1468,6 @@ export default function V2Map({
     // dessa refs varje frame; pekar-hanterarna här muterar dem.
     const pinballModeRef = useRef(pinballMode);
     pinballModeRef.current = pinballMode;
-    const pinShootModeRef = useRef(pinShootMode);
-    pinShootModeRef.current = pinShootMode;
     const onPinballHitRef = useRef(onPinballHit);
     onPinballHitRef.current = onPinballHit;
     const onPinballLaunchRef = useRef(onPinballLaunch);
@@ -1446,6 +1486,20 @@ export default function V2Map({
     const pinAccRef = useRef(0);
     const pinLastTRef = useRef(0);
     const pinFlightStartRef = useRef(0);
+    // Flytta/Skjut-läge: true = kartan är fri att panorera/zooma (DEFAULT), false = skjut-läge
+    const [pinMoveMode, setPinMoveMode] = useState(true);
+    const pinMoveModeRef = useRef(true);
+    pinMoveModeRef.current = pinMoveMode;
+    // Geo-läge: livscykel-effekten exponerar "åk till lng/lat" här så HUD-knappen kan trigga om.
+    const pinGeoTravelRef = useRef<((target: [number, number]) => void) | null>(null);
+    // Skott + kollision: boll-markören (för att projicera dess skärmläge vid avfyrning),
+    // drag-start/-aktuell pekarpunkt (skärm-px), unika träffar i pågående skott, och
+    // antalet träffar som visas i HUD:en.
+    const pinGeoBallRef = useRef<maplibregl.Marker | null>(null);
+    const pinShotStartRef = useRef<{ x: number; y: number } | null>(null);
+    const pinShotCurRef = useRef<{ x: number; y: number } | null>(null);
+    const pinHitKeysRef = useRef<Set<string>>(new Set());
+    const [pinShotHits, setPinShotHits] = useState(0);
 
     // ── Reviret (territorie-läget ovanpå pinball) ─────────────────────────────
     // Kulan målar de geografiska hex-rutor den rullar genom. revPaintedRef håller
@@ -1467,45 +1521,44 @@ export default function V2Map({
         if (m && m.getLayer(id)) m.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
     }, []);
 
-    // Lägg kulan på plungern (nederkant, mitten), armad och stilla.
+    // Lägg kulan på plungern (mitten av skärmen), armad och stilla.
     const pinSeatBall = useCallback(() => {
-        const { W, H } = pinSizeRef.current;
-        const cx = W > 0 ? W / 2 : pinPadRef.current.x;
-        const cy = H > 0 ? H / 2 : pinPadRef.current.y;
-        pinBallRef.current = { x: cx, y: cy, vx: 0, vy: 0, r: PIN_BALL_R, alive: false, armed: true, lastHitKey: null };
+        const pad = pinPadRef.current; // pad är alltid W/2, H/2 i geo-follow-läge
+        pinBallRef.current = { x: pad.x, y: pad.y, vx: 0, vy: 0, r: PIN_BALL_R, alive: false, armed: true, lastHitKey: null };
     }, []);
 
-    // Slangbella: dra bort från kulan och släpp → kulan skjuts åt MOTSATT håll
-    // (som att spänna ett gummiband). Samma matt som fireSlingshot (20px död zon).
+    // Skott-input (GEO-läge, Skjut): dra åt ett håll och släpp → bollen flickas dit
+    // (kraft ∝ draget). target-px = bollens skärmläge + drag·GAIN, översätts till
+    // lng/lat via unproject och skjuts via pinGeoTravelRef (som även kör kollisionen).
+    // I Flytta-läge (pinMoveMode) är de no-op så kartan panorerar/zoomar fritt.
     const onPinPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-        const ball = pinBallRef.current;
-        if (!ball || !ball.armed) return;
+        if (pinMoveModeRef.current) return; // flytta-läge: låt kartan hantera touch
         try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* ignorera */ }
         const rect = pinCanvasRef.current!.getBoundingClientRect();
-        pinPullRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        pinAimingRef.current = true;
+        const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        pinShotStartRef.current = p; pinShotCurRef.current = p;
     }, []);
     const onPinPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-        if (!pinAimingRef.current) return;
+        if (pinMoveModeRef.current || !pinShotStartRef.current) return;
         const rect = pinCanvasRef.current!.getBoundingClientRect();
-        pinPullRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        pinShotCurRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }, []);
-    const onPinPointerUp = useCallback(() => {
-        const pull = pinPullRef.current, pad = pinPadRef.current, ball = pinBallRef.current;
-        pinAimingRef.current = false; pinPullRef.current = null;
-        if (!pull || !ball || !ball.armed) return;
-        const pullDist = Math.hypot(pull.x - pad.x, pull.y - pad.y);
-        if (pullDist < 20) return; // för kort drag → avbryt, kulan ligger kvar
-        const dx = pad.x - pull.x, dy = pad.y - pull.y; // avfyra motsatt mot dragget
-        const len = Math.max(1, Math.hypot(dx, dy));
-        const speed = Math.min(PIN_MAX_V, pullDist * PIN_LAUNCH_GAIN);
-        ball.vx = (dx / len) * speed; ball.vy = (dy / len) * speed;
-        ball.x = pad.x; ball.y = pad.y; ball.armed = false; ball.alive = true; ball.lastHitKey = null;
-        revPrevRef.current = { x: pad.x, y: pad.y }; // Reviret: börja måla banan från plungern
-        // Studsarna omprojekteras varje frame i geo-follow-loopen - ingen extra build här
-        pinFlightStartRef.current = performance.now();
-        pinAccRef.current = 0;
-        onPinballLaunchRef.current?.();
+    const onPinPointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (pinMoveModeRef.current) return;
+        const start = pinShotStartRef.current;
+        pinShotStartRef.current = null; pinShotCurRef.current = null;
+        const map = mapRef.current, ballM = pinGeoBallRef.current, travel = pinGeoTravelRef.current;
+        if (!start || !map || !ballM || !travel) return;
+        // Läs släpp-positionen DIREKT från eventet (robust även om pointermove inte
+        // hann uppdatera under draget → annars blev draget 0 och inget skott avfyrades).
+        const rect = pinCanvasRef.current!.getBoundingClientRect();
+        const relX = e.clientX - rect.left, relY = e.clientY - rect.top;
+        const dragX = relX - start.x, dragY = relY - start.y;
+        if (Math.hypot(dragX, dragY) < 14) return; // tryck utan drag → inget skott
+        const bp = map.project(ballM.getLngLat());
+        const GAIN = 2.4;
+        const ll = map.unproject([bp.x + dragX * GAIN, bp.y + dragY * GAIN]);
+        travel([ll.lng, ll.lat]);
     }, []);
 
     // En grupp är "speciell" om den behöver den rika DOM-brickan (animationer,
@@ -1844,8 +1897,13 @@ export default function V2Map({
         const glLayersPresent = () => glHitLayers.filter(id => map.getLayer(id));
 
         map.on('click', (e) => {
-            // Pinball-läget: kartan är fryst och canvasen fångar all input — ignorera.
-            if (pinballModeRef.current) return;
+            // GEO-FLIPPER: tryck på kartan = SKJUT bollen dit du tryckte (+ stäng ev.
+            // öppet kort). Robust — kartans klick fyras alltid (inget canvas/läge krävs).
+            if (pinballModeRef.current) {
+                pinGeoTravelRef.current?.([e.lngLat.lng, e.lngLat.lat]);
+                onSelectEventRef.current(null);
+                return;
+            }
             // I gissningsläge ska ett klick på tom karta inte stänga mål-kortet
             // (det skulle avbryta rundan av misstag).
             if (gameModeRef.current) return;
@@ -2020,7 +2078,7 @@ export default function V2Map({
         // anpassa kontrast per stil (se .map-style-dark-reglerna).
         const container = mapContainerRef.current;
         if (container) {
-            container.classList.remove('map-style-streets', 'map-style-satellite', 'map-style-themepark', 'map-style-dark');
+            container.classList.remove('map-style-streets', 'map-style-satellite', 'map-style-themepark', 'map-style-dark', 'map-style-orientering');
             container.classList.add(`map-style-${mapStyle}`);
         }
         const map = mapRef.current;
@@ -2030,6 +2088,9 @@ export default function V2Map({
         const afterLoad = () => {
             applyProjection(map, isGlobeRef.current);
             applyTerrain(map, is3DTerrainRef.current);
+            // Orienterings-reliefen lever bara i den stilen; setStyle har redan
+            // rensat ett ev. gammalt lager, så vi behöver bara lägga till det igen.
+            applyHillshade(map, mapStyleRef.current === 'orientering');
             // setStyle rensade GL-markörlagret (källa/bilder/lager) — återinstallera.
             syncPlainLayerRef.current();
         };
@@ -2059,6 +2120,9 @@ export default function V2Map({
             }
         } else if (mapStyle === 'dark') {
             applyStyle(DARK_STYLE_URL);
+        } else if (mapStyle === 'orientering') {
+            // Ljus Voyager-bas + hillshade-relief (läggs på i afterLoad).
+            applyStyle(STREETS_STYLE_URL);
         } else {
             applyStyle(STREETS_STYLE_URL);
         }
@@ -2267,6 +2331,118 @@ export default function V2Map({
         const container = mapContainerRef.current;
         if (!map || !canvas || !container) return;
 
+        // ═══ GEO-LÄGE (native) ═══ Rund glob över hela Sverige, FRI kamera. Eventen
+        // renderas som geo-förankrade DOM-brickor (isSpecialGroup → true i pinball),
+        // så maplibre placerar & skalar dem rätt — INGEN canvas-ritning. Det löser
+        // "superstora event" + "boll i hörnet" + "event fastfrysta vid panorering".
+        // Bollen är en geo-förankrad markör som åker till din plats. Early-return →
+        // den gamla frysta canvas-koden nedanför körs inte (flippa PIN_GEO_MODE=false
+        // för att återfå den).
+        if (PIN_GEO_MODE) {
+            let priorProj = 'mercator';
+            try { const p = map.getProjection?.() as { type?: string } | undefined; if (p?.type) priorProj = p.type; } catch { /* default mercator */ }
+            const prior = {
+                pitch: map.getPitch(), bearing: map.getBearing(),
+                center: map.getCenter(), zoom: map.getZoom(),
+                minZoom: map.getMinZoom(), maxBounds: map.getMaxBounds(),
+            };
+            map.stop();
+            // Rensa canvasen (ev. gammal bumper-/boll-ritning) — vi ritar inget på den i geo-läget.
+            const c2 = canvas.getContext('2d');
+            if (c2) { c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, canvas.width, canvas.height); }
+            map.setPitch(0); map.setBearing(0);
+            try { map.setProjection({ type: 'globe' }); } catch { /* äldre maplibre saknar globe */ }
+            map.setMaxBounds(null);
+            map.fitBounds(new maplibregl.LngLatBounds(SWEDEN_BOUNDS[0], SWEDEN_BOUNDS[1]), { padding: 24, animate: false });
+            map.setMinZoom(Math.max(0, map.getZoom() - 0.35)); // får ej zooma ut förbi hela Sverige
+            map.setMaxBounds(new maplibregl.LngLatBounds(SWEDEN_PAN_LIMIT[0], SWEDEN_PAN_LIMIT[1]));
+
+            const ballEl = document.createElement('div');
+            ballEl.className = 'pin-geo-ball';
+            const ball = new maplibregl.Marker({ element: ballEl }).setLngLat(SWEDEN_CENTER).addTo(map);
+
+            pinGeoBallRef.current = ball; // så skott-handlers kan projicera bollens skärmläge
+
+            // Avstånd punkt→segment (anti-tunneling: snabba skott hoppar inte över studsare).
+            const distPointToSeg = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
+                const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+                if (l2 === 0) return Math.hypot(px - ax, py - ay);
+                let t = ((px - ax) * dx + (py - ay) * dy) / l2;
+                t = Math.max(0, Math.min(1, t));
+                return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+            };
+
+            let raf = 0;
+            const travelTo = (target: [number, number]) => {
+                const s = ball.getLngLat();
+                const t0 = performance.now();
+                const dur = 1500;
+                const W = container.clientWidth, H = container.clientHeight;
+                pinHitKeysRef.current = new Set(); // nollställ träffar inför skottet
+                setPinShotHits(0);
+                let prevBx: number | null = null, prevBy: number | null = null;
+                map.easeTo({ center: target, zoom: Math.max(map.getZoom(), 7.5), duration: dur });
+                const step = (now: number) => {
+                    const k = Math.min(1, (now - t0) / dur);
+                    const e = 1 - Math.pow(1 - k, 3);
+                    const bLng = s.lng + (target[0] - s.lng) * e, bLat = s.lat + (target[1] - s.lat) * e;
+                    ball.setLngLat([bLng, bLat]);
+                    // KOLLISION: projicera boll + markörer till skärm-px (samma rum → ingen
+                    // dpr-fråga, px-radie är zoom-oberoende). Segment-test mot förra punkten
+                    // fångar snabba skott. Räkna varje studsare EN gång (pinHitKeysRef).
+                    const bp = map.project([bLng, bLat]);
+                    for (const [key, md] of markersRef.current) {
+                        if (pinHitKeysRef.current.has(key)) continue;
+                        const mp = md.marker ? md.marker.getLngLat() : null;
+                        if (!mp) continue;
+                        const p = map.project(mp);
+                        if (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) continue; // utanför vyn
+                        const d = prevBx === null
+                            ? Math.hypot(p.x - bp.x, p.y - bp.y)
+                            : distPointToSeg(p.x, p.y, prevBx, prevBy as number, bp.x, bp.y);
+                        if (d < PIN_HIT_RADIUS_PX) {
+                            pinHitKeysRef.current.add(key);
+                            setPinShotHits(pinHitKeysRef.current.size);
+                            const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
+                            if (bubble) {
+                                bubble.classList.remove('pin-hit-flash');
+                                void bubble.offsetWidth; // tvinga om-trigger av animationen
+                                bubble.classList.add('pin-hit-flash');
+                                setTimeout(() => bubble.classList.remove('pin-hit-flash'), 320);
+                            }
+                        }
+                    }
+                    prevBx = bp.x; prevBy = bp.y;
+                    if (k < 1) raf = requestAnimationFrame(step);
+                };
+                raf = requestAnimationFrame(step);
+            };
+            pinGeoTravelRef.current = travelTo;
+            if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => travelTo([pos.coords.longitude, pos.coords.latitude]),
+                    () => { /* nekad/timeout → bollen ligger kvar i Sveriges mitt */ },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+                );
+            }
+
+            return () => {
+                cancelAnimationFrame(raf);
+                pinGeoTravelRef.current = null;
+                pinGeoBallRef.current = null;
+                setPinShotHits(0);
+                ball.remove();
+                const m = mapRef.current;
+                if (m) {
+                    m.setMinZoom(prior.minZoom);
+                    m.setMaxBounds(prior.maxBounds ?? null);
+                    try { m.setProjection({ type: priorProj }); } catch { /* ignorera */ }
+                    m.jumpTo({ center: prior.center, zoom: prior.zoom, pitch: prior.pitch, bearing: prior.bearing });
+                    driftSuppressUntilRef.current = performance.now();
+                }
+            };
+        }
+
         // Flagga som sätts i cleanup om läget stängs av under zoom-animationen.
         let cancelled = false;
 
@@ -2323,7 +2499,7 @@ export default function V2Map({
         // 4. Geo-follow: bollen sitter i mitten från start.
         // Plunger är också i mitten (siktet) så man skjuter från mitten.
         pinPadRef.current = { x: W / 2, y: H / 2 };
-        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
+        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current, dpr);
         pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
         pinSeatBall();
 
@@ -2349,7 +2525,10 @@ export default function V2Map({
             const steps = Math.max(1, Math.ceil(dist / 12));
             for (let i = 1; i <= steps; i++) {
                 const t = i / steps;
-                const ll = map.unproject([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]);
+                // x0/y0 är CSS-pixlar → multiplicera med dpr för map.unproject (canvas-pixlar)
+                const px = (x0 + (x1 - x0) * t) * dpr;
+                const py = (y0 + (y1 - y0) * t) * dpr;
+                const ll = map.unproject([px, py]);
                 revPaintedRef.current.add(lngLatToCell(ll.lng, ll.lat));
             }
         };
@@ -2542,16 +2721,17 @@ export default function V2Map({
                 if (pinAccRef.current > PIN_DT_FIX) pinAccRef.current = 0; // släpp backlog om vi kapade
 
                 // Geo-follow: pan kartan så bollens geo-position hamnar i mitten.
-                // Sedan omprojekteras alla studsare från lat/lng → screen.
-                const ballGeoLL = map.unproject([ball.x, ball.y]);
+                // ball.x/y är CSS-pixlar → multiplicera med dpr för map.unproject
+                const ballGeoLL = map.unproject([ball.x * dpr, ball.y * dpr]);
                 map.setCenter([ballGeoLL.lng, ballGeoLL.lat]);
                 // Efter pannering: bollen ska alltid vara i mitten av skärmen.
                 ball.x = W / 2;
                 ball.y = H / 2;
                 // Omprojektera studsare från geo-koordinater.
+                // map.project returnerar canvas-pixlar (DPR-skalat) → dela med dpr
                 for (const b of pinBumpersRef.current) {
                     const p = map.project([b.lng, b.lat]);
-                    b.cx = p.x; b.cy = p.y;
+                    b.cx = p.x / dpr; b.cy = p.y / dpr;
                 }
                 // Bygg om grid med nya skärmkoordinater.
                 pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
@@ -2571,6 +2751,13 @@ export default function V2Map({
                 }
             } else {
                 pinAccRef.current = 0;
+                // Bollen parkerad: om-projicera ÄNDÅ bumprarna från sina geo-koordinater
+                // varje frame, så de följer kartan när ANVÄNDAREN panorerar/zoomar
+                // (annars fryser de fast på skärmen medan kartan glider under dem).
+                for (const b of pinBumpersRef.current) {
+                    const p = map.project([b.lng, b.lat]);
+                    b.cx = p.x / dpr; b.cy = p.y / dpr;
+                }
             }
             for (const b of pinBumpersRef.current) if (b.hitFlash > 0) b.hitFlash = Math.max(0, b.hitFlash - frameDt / 400);
             if (frameDt > 26) { slowFrames++; if (slowFrames > 30) lowGfx = true; } else { slowFrames = Math.max(0, slowFrames - 1); }
@@ -2587,7 +2774,8 @@ export default function V2Map({
             if (!ball || !ball.alive) { // rör inte studsare mitt i ett skott
                 const m = mapRef.current;
                 if (m) {
-                    pinBumpersRef.current = buildPinBumpers(m, groupsRef.current, pinBoardRef.current);
+                    const { dpr: d } = pinSizeRef.current;
+                    pinBumpersRef.current = buildPinBumpers(m, groupsRef.current, pinBoardRef.current, d || 1);
                     pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
                 }
                 pinSeatBall();
@@ -2637,11 +2825,25 @@ export default function V2Map({
         const ball = pinBallRef.current;
         if (ball && ball.alive) return;
         const map = mapRef.current;
-        const { W, H } = pinSizeRef.current;
+        const { W, H, dpr: d } = pinSizeRef.current;
         if (!map || !W || !H) return;
-        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current);
+        pinBumpersRef.current = buildPinBumpers(map, groupsRef.current, pinBoardRef.current, d || 1);
         pinGridRef.current = buildPinGrid(pinBumpersRef.current, PIN_BUMPER_MAX_R * 2);
     }, [groups, pinballMode]);
+
+    // Geo-flipper: kameran är ALLTID fri (panorera/zooma). Skjutandet sker via TRYCK
+    // på kartan (map 'click') där man vill att bollen ska åka — inget skjut-läge som
+    // fryser kameran, inget canvas-drag. Robust eftersom kartans klick alltid fungerar.
+    useEffect(() => {
+        if (!pinballMode) return;
+        const map = mapRef.current;
+        if (!map) return;
+        map.dragPan.enable();
+        map.scrollZoom.enable();
+        map.doubleClickZoom.enable();
+        map.touchZoomRotate.enable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pinballMode]);
 
     // Recenter-knappen flyger kameran TILL ett moln (vi går dit — molnet
     // teleporteras inte till oss). Finns båda molnen framme → toggla till det
@@ -3428,6 +3630,7 @@ export default function V2Map({
     const containerBg = mapStyle === 'dark' ? '#141414'
         : mapStyle === 'satellite' ? '#10181f'
         : mapStyle === 'themepark' ? '#b9d49c'
+        : mapStyle === 'orientering' ? '#efe9dc'
         : '#f1f5f9';
 
     return (
@@ -3538,6 +3741,23 @@ export default function V2Map({
                         transform: rotate(45deg) scale(1.07);
                         filter: brightness(1.05);
                     }
+                }
+                /* Flipper-läge: RUNDA studsare. Klasserna sätts bara i pinball, så
+                   vanliga läget (droppen) är orört. Specificitet (2-3 klasser) vinner
+                   över .pin-bubble utan !important → träff-blinken kan ändå skala. */
+                .pin-bubble.pin-bubble-round { border-radius: 50%; transform: none; }
+                .pin-bubble.pin-bubble-round::before { display: none; }
+                .pin-bubble.pin-bubble-round .pin-emoji { transform: none; }
+                .pinball-marker .pin-element { transform: none; }
+                @media (hover: hover) and (pointer: fine) {
+                    .v2-custom-marker:hover .pin-bubble.pin-bubble-round { transform: scale(1.07); }
+                }
+                /* Träff: studsaren blinkar/poppar när bollen "tar i" den. */
+                .pin-bubble.pin-hit-flash { animation: pinHitPulse 0.3s ease-out; z-index: 5; }
+                @keyframes pinHitPulse {
+                    0%   { transform: scale(1);    filter: brightness(1);   box-shadow: 0 0 0 0 rgba(251,191,36,0.75); }
+                    40%  { transform: scale(1.45); filter: brightness(1.9); box-shadow: 0 0 0 10px rgba(251,191,36,0); }
+                    100% { transform: scale(1);    filter: brightness(1); }
                 }
                 /* Guld-markör: skimrar med en pulserande gloria runt brickan så
                    det rätta svaret syns tydligt även från avstånd. */
@@ -3902,7 +4122,10 @@ export default function V2Map({
                 style={{
                     zIndex: 1600,
                     touchAction: 'none',
-                    pointerEvents: pinballMode ? 'auto' : 'none',
+                    // I flytta-läge: canvasen är genomsläpplig så kartan får touch-events
+                    // Geo-flipper: canvasen fångar ALDRIG input — kartan tar alla tryck/
+                    // drag/zoom, och tryck = skjut (map 'click'). Canvasen ritar inget här.
+                    pointerEvents: 'none',
                     display: pinballMode ? 'block' : 'none',
                 }}
                 onPointerDown={onPinPointerDown}
@@ -3928,6 +4151,27 @@ export default function V2Map({
                                 {revStats.cells} {revStats.cells === 1 ? 'ruta' : 'rutor'} · {revStats.events} event
                             </span>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Geo-flipper-HUD: en tydlig instruktion + träffräknare. Skjutandet är
+                nu "tryck på kartan där du vill att bollen ska åka" — ingen läges-knapp. */}
+            {pinballMode && (
+                <div
+                    className="absolute left-1/2 z-[1602] flex -translate-x-1/2 flex-col items-center gap-1.5 select-none pointer-events-none"
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}
+                >
+                    {pinShotHits > 0 && (
+                        <div className="rounded-full bg-amber-400 px-3.5 py-1 text-[13px] font-black text-slate-900 shadow-lg tabular-nums">
+                            {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}!
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2 rounded-full bg-slate-900/85 px-4 py-2 text-[13px] font-semibold text-white shadow-xl backdrop-blur-sm">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+                        </svg>
+                        Tryck på kartan för att skjuta bollen dit
                     </div>
                 </div>
             )}
@@ -3962,18 +4206,19 @@ export default function V2Map({
                 const crateItems: CrateItem[] = [
                     // Popup-meny: symbol + namn + kort info. Varje funktion har en egen
                     // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
-                    // Bara tre funktioner är upplåsta: Satellit, Skapa event och
-                    // Hitta event (i den ordningen längst upp). Resten är låsta.
+                    // Upplåst överst: Satellit, Skapa event, Hitta event, Flipper +
+                    // kartstilarna Nöjesfält, Orientering & 3D-terräng. Resten är låsta.
                     { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
                     { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
                     { key: 'findgame', label: 'Hitta event', desc: 'Spel: hitta eventet på kartan', color: '#8b5cf6', icon: <Gamepad2 size={20} />, kind: 'game' },
                     { key: 'pinball', label: 'Flipper', desc: 'Rulla en kula — träffa event för att öppna', color: '#f43f5e', icon: <Disc3 size={20} />, kind: 'pinball' },
+                    { key: 'themepark', label: 'Nöjesfält', desc: 'Naturfärgad karta — som satellit fast minimalistisk', color: '#db2777', icon: <Sparkles size={20} /> },
+                    { key: 'orientering', label: 'Orientering', desc: 'Topografisk karta som visar höjdskillnaderna i terrängen', color: '#a16207', icon: <Mountain size={20} /> },
+                    { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
                     // ── Låsta funktioner ────────────────────────────────────────
-                    { key: 'themepark', label: 'Nöjesfält', desc: 'Naturfärgad karta — som satellit fast minimalistisk', color: '#db2777', icon: <Sparkles size={20} />, locked: true },
                     { key: 'dark', label: 'Mörkt läge', desc: 'Mörk karta — skön i mörker', color: '#475569', icon: <Moon size={20} />, locked: true },
                     { key: 'focus', label: 'Fokus', desc: 'Centrera kartan på molnet', color: '#2563eb', icon: <Target size={20} />, locked: true },
                     { key: 'throw', label: 'Kasta', desc: 'Dubbelklick: kameran följer molnet när du kastar', color: '#0ea5e9', icon: <Send size={20} />, locked: true },
-                    { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} />, locked: true },
                     { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} />, locked: true },
                     { key: 'faces', label: 'Ansikten', desc: 'Molnen får ansikten & uttryck', color: '#ec4899', icon: <Smile size={20} />, locked: true },
                     { key: 'flowers', label: 'Blommor', desc: 'Vattna nålar så blommor växer', color: '#db2777', icon: <Flower2 size={20} />, locked: true },
@@ -4427,6 +4672,7 @@ export default function V2Map({
                                         { key: 'dark', label: 'Mörkt läge', icon: <Moon size={18} /> },
                                         { key: 'tilt', label: 'Lutning', icon: <Box size={18} /> },
                                         { key: 'globe', label: 'Klot', icon: <Globe size={18} /> },
+                                        { key: 'orientering', label: 'Orientering', icon: <Mountain size={18} /> },
                                         { key: 'terrain', label: 'Terräng', icon: <Mountain size={18} /> }
                                     ]},
                                     { title: 'Moln', items: [
