@@ -1772,14 +1772,26 @@ export default function V2Map({
 
         mapRef.current = map;
 
-        // WebGL-säkerhetsnät: om GPU:n tappar renderingskontexten (t.ex. vid
-        // minnespress) ska sidan inte dö. preventDefault gör förlusten
-        // återställbar, och vid återställning ritar vi om kartan.
-        const glCanvas = map.getCanvas();
-        const onCtxLost = (e: Event) => { e.preventDefault(); };
-        const onCtxRestored = () => { try { map.triggerRepaint(); } catch { /* noop */ } };
-        glCanvas.addEventListener('webglcontextlost', onCtxLost as EventListener, false);
-        glCanvas.addEventListener('webglcontextrestored', onCtxRestored as EventListener, false);
+        try {
+            const glCanvas = map.getCanvas();
+            if (!glCanvas) {
+                console.error('Kartan kunde inte hämta WebGL-canvas.');
+                setMapError(true);
+                return;
+            }
+            const onCtxLost = (e: Event) => {
+                e.preventDefault();
+                console.error('WebGL-kontext förlorad, visar felsida.');
+                setMapError(true);
+            };
+            const onCtxRestored = () => { try { map.triggerRepaint(); } catch { /* noop */ } };
+            glCanvas.addEventListener('webglcontextlost', onCtxLost as EventListener, false);
+            glCanvas.addEventListener('webglcontextrestored', onCtxRestored as EventListener, false);
+        } catch (postErr) {
+            console.error('Krasch under kartinitiering (WebGL canvas):', postErr);
+            setMapError(true);
+            return;
+        }
 
         // Zoom-klasshantering: under zoom-gesten fälls allt till nålar/prickar
         // (billigt), i vila visas brickorna. DOM-brickorna växlar via CSS-klassen;
@@ -1837,8 +1849,8 @@ export default function V2Map({
             if (gameModeRef.current) { onGuessRef.current?.(group); return; }
             onSelectEventRef.current(group[0]);
         };
-        const setPointer = () => { map.getCanvas().style.cursor = 'pointer'; };
-        const clearPointer = () => { map.getCanvas().style.cursor = ''; };
+        const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
+        const clearPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = ''; };
         glHitLayers.forEach(id => {
             map.on('click', id, onGlMarkerClick);
             map.on('mouseenter', id, setPointer);
@@ -2100,7 +2112,7 @@ export default function V2Map({
         // Pausa direkt vid beröring (innan dragstart hinner fyras), så driften
         // aldrig slåss med att man börjar dra kartan.
         const canvas = map.getCanvasContainer();
-        canvas.addEventListener('pointerdown', pause);
+        if (canvas) canvas.addEventListener('pointerdown', pause);
         const tick = (now: number) => {
             // Pausa driften i 3D-läge (globe/terräng): där tvingar varje panBy en
             // omritning av hela 3D-scenen (terräng-mesh m.m.) → klart dyrare än i
@@ -2153,7 +2165,7 @@ export default function V2Map({
             map.off('zoomstart', pause);
             map.off('rotatestart', pause);
             map.off('pitchstart', pause);
-            canvas.removeEventListener('pointerdown', pause);
+            if (canvas) canvas.removeEventListener('pointerdown', pause);
         };
     }, []);
 
