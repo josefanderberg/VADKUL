@@ -80,6 +80,8 @@ export default function HomePage() {
     const [eventsLoaded, setEventsLoaded] = useState(false);
     // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
+    const selectedEventRef = useRef<LinkEvent | null>(null);
+    selectedEventRef.current = selectedEvent; // läses i hit-callbacken utan att bli dep
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
@@ -144,7 +146,8 @@ export default function HomePage() {
     // nytt sol-klick lutar ALLTID (behåller lutningen om den redan lutar) —
     // det fäller aldrig tillbaka till platt vy. Avlutning sker via tryck på
     // sol-molnet (handleSunCloudTap) eller tilt-knappen (handleToggleTilt).
-    const [mapTilted, setMapTilted] = useState(false);
+    // Lutad kamera (3D-perspektiv) PÅ som standard, så 3D-terrängen syns från start.
+    const [mapTilted, setMapTilted] = useState(true);
     // True när funktions-väskan (uppe till vänster i V2Map) är utfälld — då gömmer
     // vi spel-knapparna (poäng + Hitta event) som delar vänsterkolumn.
     const [funcBagOpen, setFuncBagOpen] = useState(false);
@@ -239,9 +242,15 @@ export default function HomePage() {
     // ── Pinball/Flipper-läge ──────────────────────────────────────────────────
     // Kartan blir en top-down flipperbana: eventen blir runda studsare och en
     // kula avfyras med slangbella. Träffat event öppnas. (Handlers längre ned.)
-    const [pinballActive, setPinballActive] = useState(true); // geo-flipper på som standard
+    // Flipper PÅ som standard (geo-flipper). Terrängen hålls aktiv samtidigt så
+    // kulan kan rulla nerför backarna (terräng-gravitation i fysik-loopen samplar
+    // höjddata). Andra funktioner/kartstilar går att välja medan flippern är på.
+    const [pinballActive, setPinballActive] = useState(true);
     const [pinballScore, setPinballScore] = useState(0); // antal träffar denna omgång
+    // Vilket event i en flerEvent-grupp (samma plats) som visas — varje träff stegar +1.
+    const pinballGroupIdxRef = useRef<Map<string, number>>(new Map());
     const [pinballShots, setPinballShots] = useState(0); // antal avfyrade kulor
+    const [pinShotHits, setPinShotHits] = useState(0);   // träffar i pågående skott (visas bredvid Nästa)
 
     // Användarskapade event ska ALLTID vara kvar på kartan. Pollen är progressiv:
     // stegen destinationer → kort → beskrivningar saknar användarevent (bara sista
@@ -741,21 +750,49 @@ export default function HomePage() {
     const startPinball = useCallback(() => {
         if (gamePool.length === 0) return;
         setSelectedEvent(null);   // ren bana; kort öppnas bara vid en träff
+        pinballGroupIdxRef.current.clear(); // ny omgång → ingen stale grupp-position
         setPinballScore(0);
         setPinballShots(0);
+        setPinShotHits(0);
         setPinballActive(true);
     }, [gamePool.length]);
 
-    const stopPinball = useCallback(() => setPinballActive(false), []);
+    const stopPinball = useCallback(() => {
+        setPinballActive(false);
+        setSelectedEvent(null);
+        setPinShotHits(0);
+        pinballGroupIdxRef.current.clear();
+    }, []);
 
     // Kallas av V2Map när kulan slår in i en studsare → öppna eventet + poäng.
     const handlePinballHit = useCallback((group: LinkEvent[]) => {
         if (!group.length) return;
-        setSelectedEvent(group[0]); // samma val-kanal som ett vanligt markörklick
+        // Flera event på samma plats: varje träff visar NÄSTA levande event i gruppen
+        // (bläddra igenom de stackade eventen genom att studsa på dem).
+        const live = group.filter(e => !discardedEventIds.has(e.id));
+        const pool = live.length ? live : group;
+        const first = pool[0];
+        if (pool.length <= 1 || first.lat == null || first.lng == null) {
+            setSelectedEvent(pool[0]);
+        } else {
+            const key = `${first.lat.toFixed(4)},${first.lng.toFixed(4)}`;
+            const sel = selectedEventRef.current;
+            const selIdx = sel ? pool.findIndex(e => e.id === sel.id) : -1;
+            const idxMap = pinballGroupIdxRef.current;
+            const base = selIdx >= 0 ? selIdx : (idxMap.get(key) ?? -1);
+            const next = (base + 1) % pool.length; // base>=-1 → next 0..n-1
+            idxMap.set(key, next);
+            setSelectedEvent(pool[next]);
+        }
         setPinballScore(s => s + 1);
-    }, []);
+        setPinShotHits(h => h + 1); // räknare för pågående skott → visas bredvid Nästa
+    }, [discardedEventIds]);
 
-    const handlePinballLaunch = useCallback(() => setPinballShots(s => s + 1), []);
+    // Nytt skott/segment startar → nollställ skottets träffräknare (+ räkna avfyrning).
+    const handlePinballLaunch = useCallback(() => {
+        setPinballShots(s => s + 1);
+        setPinShotHits(0);
+    }, []);
 
     // Stänger spelaren kortet (drar ner det) mitt i en runda/resultat → städa spelet.
     useEffect(() => {
@@ -879,25 +916,7 @@ export default function HomePage() {
                 onPinballLaunch={handlePinballLaunch}
             />
 
-            {/* Pinball/Flipper-HUD: instruktion + träffräknare + avsluta. Ligger
-                ovanför canvasen (body-nivå) så den alltid går att trycka på. */}
-            {pinballActive && (
-                <div className="fixed top-[120px] left-1/2 -translate-x-1/2 z-[1700] flex items-center gap-3 rounded-full bg-slate-900/85 backdrop-blur-md px-4 py-2 text-white shadow-2xl border border-white/15 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                    <span className="text-base" aria-hidden>🎱</span>
-                    <span className="text-xs font-semibold leading-tight">
-                        Geo-Flipper
-                        <span className="ml-2 tabular-nums text-rose-300">Träffar {pinballScore}</span>
-                        <span className="ml-1 tabular-nums text-slate-400">· {pinballShots} skott</span>
-                    </span>
-                    <button
-                        type="button"
-                        onClick={stopPinball}
-                        className="ml-1 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/30 px-3 py-1 text-xs font-bold transition-colors"
-                    >
-                        Avsluta
-                    </button>
-                </div>
-            )}
+
 
             {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
             {creationMode === 'editing' && pickedLocation && (
@@ -1059,6 +1078,7 @@ export default function HomePage() {
                 savedEventIds={savedEventIds}
                 onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
+                pinShotHits={pinShotHits}
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
                 onDayRangeChange={handleDayRangeChange}

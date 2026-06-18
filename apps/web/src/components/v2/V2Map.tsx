@@ -10,7 +10,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { sourceColor } from '../../utils/sources';
 import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
-import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, regionsForBounds, lngLatToMerc, mercToLngLat, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
+import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, regionsForBounds, lngLatToMerc, mercToLngLat, HEX_SIZE_MERC, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import toast from 'react-hot-toast';
 
@@ -2419,6 +2419,49 @@ export default function V2Map({
             setupGeoCanvas();
             const ctx = canvas.getContext('2d');
 
+            // ── Reviret: kulan målar hex-rutorna den rullar genom ────────────
+            revActiveRef.current = isFeatureOn('reviret');
+            revPaintedRef.current.clear();
+            revPrevRef.current = null;
+            setRevStats(revActiveRef.current ? { cells: 0, events: 0 } : null);
+            const revCountEvents = (): number => {
+                const painted = revPaintedRef.current;
+                if (!painted.size) return 0;
+                let n = 0;
+                for (const group of groupsRef.current.values()) {
+                    for (const ev of group) {
+                        if (isValidLatLng(ev.lat, ev.lng) && painted.has(lngLatToCell(ev.lng!, ev.lat!))) n++;
+                    }
+                }
+                return n;
+            };
+            // Måla hex-rutorna längs kulans geo-bana. Interpolerar i Web-Mercator-
+            // meter (halv cellbredd) så ingen smal ruta hoppas över oavsett zoom.
+            const revPaintTo = (lng: number, lat: number) => {
+                if (!revActiveRef.current) return;
+                const m = lngLatToMerc(lng, lat);
+                const prev = revPrevRef.current;
+                if (prev) {
+                    const dist = Math.hypot(m.x - prev.x, m.y - prev.y);
+                    const steps = Math.max(1, Math.ceil(dist / (HEX_SIZE_MERC * 0.5)));
+                    for (let i = 1; i <= steps; i++) {
+                        const t = i / steps;
+                        const ss = mercToLngLat(prev.x + (m.x - prev.x) * t, prev.y + (m.y - prev.y) * t);
+                        revPaintedRef.current.add(lngLatToCell(ss.lng, ss.lat));
+                    }
+                } else {
+                    revPaintedRef.current.add(lngLatToCell(lng, lat));
+                }
+                revPrevRef.current = m;
+            };
+            const onRevToggleGeo = () => {
+                revActiveRef.current = isFeatureOn('reviret');
+                setRevStats(revActiveRef.current
+                    ? { cells: revPaintedRef.current.size, events: revCountEvents() }
+                    : null);
+            };
+            window.addEventListener(FEATURE_CHANGE_EVENT, onRevToggleGeo);
+
             // ── Siktlinje-RAF ────────────────────────────────────────────────
             // Ritar kontinuerligt: siktlinje boll→finger under drag, annars puls.
             let aimRaf = 0;
@@ -2427,6 +2470,30 @@ export default function V2Map({
                 const W = container.clientWidth, H = container.clientHeight;
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, W, H);
+
+                // Reviret-lager: måla rutorna kulan rullat genom (under siktlinjen
+                // och bollen). Kameran är fri → projicera om hörnen varje frame,
+                // men kapa mot vyn så kostnaden följer antalet SYNLIGA rutor.
+                if (revActiveRef.current && revPaintedRef.current.size) {
+                    ctx.save();
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = REVIRET_WET_EDGE;
+                    ctx.fillStyle = REVIRET_WET_FILL;
+                    for (const cell of revPaintedRef.current) {
+                        const cc = map.project(cellCenterLngLat(cell));
+                        if (cc.x < -60 || cc.x > W + 60 || cc.y < -60 || cc.y > H + 60) continue;
+                        const corners = cellCornersLngLat(cell);
+                        ctx.beginPath();
+                        for (let i = 0; i < 6; i++) {
+                            const p = map.project(corners[i]);
+                            if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
 
                 const ballLL = ball.getLngLat();
                 const bp = map.project([ballLL.lng, ballLL.lat]);
@@ -2581,6 +2648,7 @@ export default function V2Map({
                 pinFloatTextsRef.current = [];
                 pinRingsRef.current = [];
                 setPinShotHits(0);
+                revPrevRef.current = null; // ny boll-bana → ingen interpolering från förra skottets slut
 
                 // Increment shot counter in the page HUD
                 onPinballLaunchRef.current?.();
@@ -2681,8 +2749,17 @@ export default function V2Map({
                     ball.setLngLat([state.lng, state.lat]);
                     map.setCenter([state.lng, state.lat]);
 
+                    // Reviret: måla hex-rutorna längs bollens bana.
+                    revPaintTo(state.lng, state.lat);
+
                     const spd = Math.hypot(state.vx, state.vy);
-                    if (spd < PHYS_STOP_V) { geoPhysState = null; return; }
+                    if (spd < PHYS_STOP_V) {
+                        geoPhysState = null;
+                        if (revActiveRef.current) {
+                            setRevStats({ cells: revPaintedRef.current.size, events: revCountEvents() });
+                        }
+                        return;
+                    }
                     geoPhysRaf = requestAnimationFrame(tick);
                 };
                 geoPhysRaf = requestAnimationFrame(tick);
@@ -2716,6 +2793,10 @@ export default function V2Map({
                 cancelAnimationFrame(aimRaf);
                 cancelAnimationFrame(geoPhysRaf);
                 geoPhysState = null;
+                window.removeEventListener(FEATURE_CHANGE_EVENT, onRevToggleGeo);
+                revPaintedRef.current.clear();
+                revPrevRef.current = null;
+                setRevStats(null);
                 pinGeoTravelRef.current = null;
                 pinGeoBallRef.current = null;
                 pinFloatTextsRef.current = [];

@@ -263,5 +263,37 @@ service cloud.firestore {
         && request.resource.data.region is string;
       allow delete: if false;
     }
+
+    // 13. EVENT CLAIMS (per-event-ägande ovanpå pinball-läget)
+    // Den spelare som har flest träffar på ett event äger det (ring i ägarens
+    // färg + "ta över"-nummer). Doc-id = event-gruppens geo-nyckel "lat4,lng4".
+    // Alla kan läsa (ringarna syns för alla). Inloggade får skriva — fältet
+    // `hits` (träffar per spelare) är klient-betrott i det här "blöta" steget,
+    // precis som territory ovan. Steg 3 lägger server-verifiering ovanpå.
+    match /eventClaims/{eventKey} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerHue  is number
+        && request.resource.data.ownerHits is number
+        && request.resource.data.region    is string
+        && request.resource.data.hits      is map;
+      allow delete: if false;
+    }
+
+    // 14. TERRITORIER (ackumulerade konvex-hull-revir ovanpå pinball; ENDAST
+    // geometri + medlems-event lagras — "ta över"-numret härleds live ur
+    // eventClaims så det aldrig kan driva isär. "Blött" som territory/eventClaims.)
+    match /territories/{territoryId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerHue   is number
+        && request.resource.data.region     is string
+        && request.resource.data.eventCount is number
+        && request.resource.data.eventKeys  is list
+        && request.resource.data.ring       is list;
+      allow delete: if false;
+    }
   }
 }

@@ -342,6 +342,9 @@ interface EventCardProps {
     savedEventIds?: Set<string>;
     onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
+    /** Flipper-läge: antal träffar i pågående skott — visas som en pill bredvid
+     *  Nästa-knappen i den nedre raden (0 = dölj). */
+    pinShotHits?: number;
     dayOffset: number;
     /** Antal dagar i det visade intervallet (1 = en dag, 3 = t.ex. fre–sön). */
     dayRangeDays?: number;
@@ -378,7 +381,7 @@ interface EventCardProps {
     onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -455,9 +458,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const descRect = desc.getBoundingClientRect();
         const lineHeight = parseFloat(getComputedStyle(desc).lineHeight) || 22;
         // Beskrivningens topp relativt scroll-innehållets topp (oberoende av
-        // nuvarande korthöjd). + grip-zonen (h-6 = 24px) ovanför scroll-containern.
+        // nuvarande korthöjd).
         const descTopWithinContent = (descRect.top - scRect.top) + sc.scrollTop;
-        const targetPx = 24 + descTopWithinContent + lineHeight * 1.4;
+        const targetPx = descTopWithinContent + lineHeight * 1.4;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(90, Math.round(vh)));
     };
@@ -979,29 +982,37 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         tillbaka det. Bara EN moln-knapp (för info-molnet). */}
                 </div>
 
-                {/* Höger: bakåt + Nästa (samma höjd, längst till höger).
-                    Döljs i spelläget — då ska man inte kunna navigera bort målet. */}
-                {selectedEvent && !gameMode && (
-                    <div className="flex items-center gap-2 pointer-events-auto">
-                        {historyStack.length > 0 && (
+                {/* Höger: träff-räknare (flipper) + bakåt + Nästa (samma höjd, längst
+                    till höger). Träffpillen ligger JÄMTE Nästa i samma rad. Bakåt/Nästa
+                    döljs i spelläget — då ska man inte kunna navigera bort målet. */}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    {pinShotHits > 0 && (
+                        <div className="flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
+                            🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
+                        </div>
+                    )}
+                    {selectedEvent && !gameMode && (
+                        <>
+                            {historyStack.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleHistoryBack}
+                                    aria-label="Gå tillbaka till föregående event"
+                                    title="Gå tillbaka"
+                                    className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
+                                >
+                                    <ArrowLeft size={16} />
+                                </button>
+                            )}
                             <button
-                                type="button"
-                                onClick={handleHistoryBack}
-                                aria-label="Gå tillbaka till föregående event"
-                                title="Gå tillbaka"
-                                className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
+                                onClick={handleNextOnly}
+                                className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
                             >
-                                <ArrowLeft size={16} />
+                                Nästa <ArrowRight size={18} />
                             </button>
-                        )}
-                        <button
-                            onClick={handleNextOnly}
-                            className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
-                        >
-                            Nästa <ArrowRight size={18} />
-                        </button>
-                    </div>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Draggable bottom sheet card container — visas bara när ett event är valt */}

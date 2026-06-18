@@ -377,6 +377,13 @@
 
 /* === Pinball/Flipper-läge: canvas-overlay (kula, studsare, sikte ritas i 2D) === */
 .pinball-canvas {
+  /* En <canvas> är ett "replaced element": position:absolute + inset:0 sträcker
+     INTE ut den, så utan explicit CSS-storlek visas den i sin intrinsiska
+     (backing-)storlek = clientWidth*dpr. Då hamnar allt vi ritar (hexrutor,
+     siktlinje) på dpr× rätt skärmläge → förskjutet ned/höger. Tvinga visnings-
+     storleken till containern så backing/visad-kvoten blir exakt dpr. */
+  width: 100%;
+  height: 100%;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: none;
@@ -414,7 +421,11 @@
   100% { width: 60px; height: 60px; opacity: 0; }
 }
 
-/* Se till att bollen (kulan) rullar ovanpå alla event-bumprar på kartan */
-.maplibregl-marker:has(.pin-geo-ball) {
+/* Bollen (kulan) ska ligga ovanpå alla event-bumprar. maplibre lägger INTE klassen
+   .maplibregl-marker på custom-element, och :has() matchade aldrig elementet självt
+   (den letar efter en descendant) → z-indexen sattes aldrig. Sätt den därför direkt
+   på bollelementet, som ÄR markör-elementet (syskon till bumprarnas markörer, vilka
+   får inline z-index ≤ 1500 i V2Map). */
+.pin-geo-ball {
   z-index: 10000 !important;
 }

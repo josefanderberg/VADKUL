@@ -20,10 +20,10 @@ const RAD3 = Math.sqrt(3);
 
 /** Hexens cirkumradie (centrum→hörn) i Web-Mercator-meter. ~300 merc-m ger
  *  marknära zoner ~200–300 m breda i svenska latituder. Justerbar. */
-export const HEX_SIZE_MERC = 300;
+export const HEX_SIZE_MERC = 800;
 
 /** Neutral "blöt" färg för icke-inloggad lokal målning (ingen ägare att färga). */
-export const REVIRET_WET_FILL = 'rgba(0, 106, 167, 0.30)';
+export const REVIRET_WET_FILL = 'rgba(0, 106, 167, 0.42)';
 export const REVIRET_WET_EDGE = 'rgba(0, 106, 167, 0.85)';
 
 /** Grov ruta (i grader) för bbox-prenumeration: varje territory-doc taggas med

@@ -342,6 +342,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
+                {/* 2-line Description Preview (only in collapsed state to avoid duplicate when expanded) */}
+                {revealStep === 0 && linkEvent.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 mt-1 font-medium leading-relaxed">
+                        {linkEvent.description}
+                    </p>
+                )}
+
                 <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">
                     {/* Värd */}
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
