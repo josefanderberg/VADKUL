@@ -1115,9 +1115,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                    → liten hint så man inte tror att appen är trasig. */
                 <div style={{ height: '30vh' }} className="w-full flex-shrink-0 flex items-start justify-center pointer-events-none">
                     {!eventsLoaded ? (
-                        <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
-                            <p className="text-sm font-bold text-slate-700">Laddar event…</p>
+                        /* "Laddar event…" centreras mitt på skärmen (egen fixed-
+                           overlay som bryter sig ur botten-arket) — 30vh-spacern
+                           ovan står kvar så reglagets layout är oförändrad. */
+                        <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+                            <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in zoom-in duration-300">
+                                <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
+                                <p className="text-sm font-bold text-slate-700">Laddar event…</p>
+                            </div>
                         </div>
                     ) : events.length === 0 && (
                         <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">

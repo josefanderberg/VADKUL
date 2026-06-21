@@ -295,5 +295,20 @@ service cloud.firestore {
         && request.resource.data.ring       is list;
       allow delete: if false;
     }
+
+    // 15. LEADERBOARD (dagens topplista för Reviret-spelet)
+    // Alla kan läsa (topplistan visas för alla). Inloggade får skriva ENBART sin
+    // egen rad — doc-id måste vara "{dag}__{uid}" och fältet uid måste matcha. Poäng
+    // är klient-betrott i det här "blöta" steget precis som territory/eventClaims.
+    match /leaderboard/{rowId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && rowId == request.resource.data.day + '__' + request.auth.uid
+        && request.resource.data.day    is string
+        && request.resource.data.points is number
+        && request.resource.data.events is number;
+      allow delete: if false;
+    }
   }
 }

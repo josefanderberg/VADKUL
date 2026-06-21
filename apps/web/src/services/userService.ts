@@ -77,6 +77,12 @@ export const userService = {
     await setDoc(doc(db, 'users', uid), { photoURL }, { merge: true });
   },
 
+  // Spara spelarens valda Reviret-färg (färgton 0–359) på users-dokumentet.
+  async updateReviretHue(uid: string, hue: number): Promise<void> {
+    const h = ((Math.round(hue) % 360) + 360) % 360;
+    await setDoc(doc(db, 'users', uid), { reviretHue: h }, { merge: true });
+  },
+
   // Radera users-dokumentet (vid kontoradering). Kräver att reglerna släpper
   // igenom owner-delete — misslyckas det fortsätter Auth-raderingen ändå.
   async deleteUserDoc(uid: string): Promise<void> {

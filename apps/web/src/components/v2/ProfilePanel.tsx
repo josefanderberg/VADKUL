@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
+import { REVIRET_HUE_CHOICES } from '@/lib/reviret';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
@@ -19,6 +20,10 @@ interface ProfilePanelProps {
     savedCount: number;
     /** Byt till sparat-panelen (stänger profilen). */
     onOpenSaved: () => void;
+    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid). */
+    reviretHue: number | null;
+    /** Anropas när spelaren väljer en ny färg (page sparar + speglar). */
+    onChangeHue: (hue: number) => void;
 }
 
 /**
@@ -26,7 +31,7 @@ interface ProfilePanelProps {
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved, reviretHue, onChangeHue }: ProfilePanelProps) {
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
@@ -227,6 +232,34 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
                             <ChevronRight size={15} className="text-slate-400 shrink-0" />
                         </button>
+
+                        {/* Min spelfärg (Reviret) — färgen på ditt revir + på topplistan */}
+                        <div className="border-t border-slate-100 dark:border-slate-800 px-4 pt-3 pb-3.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Min färg</span>
+                            <p className="mt-0.5 mb-2.5 text-xs text-slate-400 font-semibold">Färgen på ditt revir och din rad i topplistan.</p>
+                            <div className="flex flex-wrap gap-2">
+                                {REVIRET_HUE_CHOICES.map((h) => {
+                                    const selected = reviretHue === h;
+                                    return (
+                                        <button
+                                            key={h}
+                                            type="button"
+                                            onClick={() => onChangeHue(h)}
+                                            aria-label={`Välj färg ${h}`}
+                                            aria-pressed={selected}
+                                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform ${
+                                                selected
+                                                    ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-800 dark:ring-white scale-110'
+                                                    : 'hover:scale-105'
+                                            }`}
+                                            style={{ background: `hsl(${h}, 72%, 52%)` }}
+                                        >
+                                            {selected && <Check size={14} className="text-white" strokeWidth={3} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         {/* Mina event */}
                         <div className="border-t border-slate-100 dark:border-slate-800">

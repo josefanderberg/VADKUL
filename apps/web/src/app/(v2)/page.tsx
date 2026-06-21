@@ -13,6 +13,7 @@ import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
+import { setMyCustomHue } from '@/lib/reviret';
 import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { useAuth } from '@/context/AuthContext';
@@ -93,6 +94,9 @@ export default function HomePage() {
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+    // Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid).
+    // Speglas till reviret-modulens cache så skriv-tjänsterna färgar rätt.
+    const [myReviretHue, setMyReviretHue] = useState<number | null>(null);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
@@ -242,10 +246,10 @@ export default function HomePage() {
     // ── Pinball/Flipper-läge ──────────────────────────────────────────────────
     // Kartan blir en top-down flipperbana: eventen blir runda studsare och en
     // kula avfyras med slangbella. Träffat event öppnas. (Handlers längre ned.)
-    // Flipper PÅ som standard (geo-flipper). Terrängen hålls aktiv samtidigt så
-    // kulan kan rulla nerför backarna (terräng-gravitation i fysik-loopen samplar
-    // höjddata). Andra funktioner/kartstilar går att välja medan flippern är på.
-    const [pinballActive, setPinballActive] = useState(true);
+    // Flipper AV som standard — användaren väljer den själv i väskan. Terräng-
+    // gravitationen i fysik-loopen är ändå redo (samplar höjddata) när flippern
+    // slås på. Andra funktioner/kartstilar går att välja medan flippern är på.
+    const [pinballActive, setPinballActive] = useState(false);
     const [pinballScore, setPinballScore] = useState(0); // antal träffar denna omgång
     // Vilket event i en flerEvent-grupp (samma plats) som visas — varje träff stegar +1.
     const pinballGroupIdxRef = useRef<Map<string, number>>(new Map());
@@ -310,14 +314,13 @@ export default function HomePage() {
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
-            if (pinballActive) {
-                setPinballActive(false);
-            } // byta dag avslutar flipper-rundan
+            // Flippern är default-basläget och stängs INTE av vid dagbyte — den
+            // byggs bara om med den nya dagens event. (Förut: setPinballActive(false).)
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
             prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
         }
-    }, [filteredEvents, dayOffset, dayRangeDays, pinballActive]);
+    }, [filteredEvents, dayOffset, dayRangeDays]);
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -362,6 +365,30 @@ export default function HomePage() {
             setSavedEventIds(merged);
         })();
         return () => { cancelled = true; };
+    }, [user]);
+
+    // Inloggad: ladda spelarens valda Reviret-färg och spegla den till reviret-
+    // modulens cache (setMyCustomHue) så claimCells/saveDailyScore färgar rätt.
+    // Utloggad: nollställ → standardfärg per uid används.
+    useEffect(() => {
+        if (!user) { setMyReviretHue(null); setMyCustomHue(null); return; }
+        let cancelled = false;
+        (async () => {
+            const profile = await userService.getUserProfile(user.uid).catch(() => null);
+            if (cancelled) return;
+            const h = typeof profile?.reviretHue === 'number' ? profile.reviretHue : null;
+            setMyReviretHue(h);
+            setMyCustomHue(h);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+
+    // Spelaren väljer en ny färg i profilen → uppdatera lokalt + cache direkt
+    // (optimistiskt) och spegla till Firestore (bäst-möjligt).
+    const handleChangeReviretHue = useCallback((hue: number) => {
+        setMyReviretHue(hue);
+        setMyCustomHue(hue);
+        if (user) userService.updateReviretHue(user.uid, hue).catch(() => { /* bäst-möjligt */ });
     }, [user]);
     useEffect(() => {
         if (!user || !savedSyncReady.current) return;
@@ -869,6 +896,8 @@ export default function HomePage() {
                 onDeleteEvent={handleDeleteOwnEvent}
                 savedCount={savedEventIds.size}
                 onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
+                reviretHue={myReviretHue}
+                onChangeHue={handleChangeReviretHue}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -914,6 +943,7 @@ export default function HomePage() {
                 onStopPinball={stopPinball}
                 onPinballHit={handlePinballHit}
                 onPinballLaunch={handlePinballLaunch}
+                myReviretHue={myReviretHue}
             />
 
 

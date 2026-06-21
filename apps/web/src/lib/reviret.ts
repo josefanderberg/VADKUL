@@ -62,6 +62,25 @@ export function hueForUid(uid: string): number {
     return h % 360;
 }
 
+/** Förvalda färgtoner att välja mellan i profilen (jämnt spridda, lätt urskiljbara). */
+export const REVIRET_HUE_CHOICES = [0, 24, 45, 90, 140, 168, 190, 210, 255, 285, 320, 345];
+
+/** Den inloggade spelarens VALDA färgton (från profilen). null = använd hueForUid.
+ *  Modul-global så de synkrona skriv-tjänsterna (claimCells/saveDailyScore/…) kan
+ *  läsa den utan att slå upp profilen varje gång. Sätts av page.tsx vid login/ändring. */
+let myCustomHue: number | null = null;
+export function setMyCustomHue(hue: number | null): void {
+    myCustomHue = (hue == null || !Number.isFinite(hue)) ? null : ((Math.round(hue) % 360) + 360) % 360;
+}
+export function getMyCustomHue(): number | null { return myCustomHue; }
+
+/** Den inloggade spelarens EFFEKTIVA färgton: vald om satt, annars deterministisk
+ *  per uid. Anropas bara för den egna spelaren (skriv-tjänsterna skriver sin egen
+ *  data; andra spelares ton läses ur deras sparade docs). */
+export function effectiveHue(uid: string): number {
+    return myCustomHue ?? hueForUid(uid);
+}
+
 /** Fyllnad + kant (canvas) för en given färgton. Lagras som ton-sträng i Firestore. */
 export function palette(hue: number): { fill: string; edge: string } {
     return { fill: `hsla(${hue}, 72%, 52%, 0.34)`, edge: `hsla(${hue}, 72%, 46%, 0.92)` };

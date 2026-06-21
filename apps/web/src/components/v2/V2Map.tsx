@@ -4,13 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon } from 'lucide-react';
+import { Layers, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon, Trophy } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { sourceColor } from '../../utils/sources';
 import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
-import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, regionsForBounds, lngLatToMerc, mercToLngLat, HEX_SIZE_MERC, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
+import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, hueForUid, regionsForBounds, regionForLngLat, lngLatToMerc, mercToLngLat, HEX_SIZE_MERC, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
+import { claimCells, subscribeTerritory, myReviretIdentity, type TerritoryCell } from '../../services/reviretService';
+import { saveDailyScore, subscribeDailyLeaderboard, type LeaderboardEntry } from '../../services/leaderboardService';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import toast from 'react-hot-toast';
 
@@ -491,6 +493,104 @@ const PIN_HIT_RADIUS_PX = 36;
 const PIN_BASE_R = 18;           // px-radie för en ensam bubbla (fryst zoom)
 const PIN_BUMPER_MAX_R = 46;     // tak så jättegrupper inte täcker halva banan
 const PIN_BALL_R = 12;
+// Zoom-skala för flippern: event-markörer, kula OCH kollisionsradie krymper när
+// kartan är långt utzoomad. Annars är de px-konstanta → tätt packade markörer +
+// stor träffradie = bollen studsar kaotiskt ("flippar ur") vid skott. 1.0 inzoomat
+// (z>=10) ned till 0.35 utzoomat (z<=5).
+function pinScaleForZoom(z: number): number {
+    const t = Math.max(0, Math.min(1, (z - 5) / 5));
+    return 0.35 + 0.65 * t;
+}
+// Inneslutna O-rullade rutor (flood-fill): celler i revirets bounding-box som inte
+// är rullade och inte kan nå "utsidan" utan att korsa en rullad ruta. Används för
+// att HELFYLLA hålen inuti ett revir man rullat runt. 6-grannar (pointy-top).
+// Tak på bbox-ytan så en utspridd bana inte fryser tråden.
+function computeInterior(rolled: Set<string>): Set<string> {
+    const interior = new Set<string>();
+    if (rolled.size < 6) return interior;
+    let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
+    for (const cell of rolled) {
+        const c = cell.indexOf(',');
+        const q = Number(cell.slice(0, c)), r = Number(cell.slice(c + 1));
+        if (q < minQ) minQ = q; if (q > maxQ) maxQ = q;
+        if (r < minR) minR = r; if (r > maxR) maxR = r;
+    }
+    minQ -= 1; maxQ += 1; minR -= 1; maxR += 1; // ram av "utsida" runt reviret
+    if ((maxQ - minQ + 1) * (maxR - minR + 1) > 250000) return interior;
+    const NB = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+    const exterior = new Set<string>();
+    const stack: number[][] = [];
+    const seed = (q: number, r: number) => {
+        const k = q + ',' + r;
+        if (!rolled.has(k) && !exterior.has(k)) { exterior.add(k); stack.push([q, r]); }
+    };
+    for (let q = minQ; q <= maxQ; q++) { seed(q, minR); seed(q, maxR); }
+    for (let r = minR; r <= maxR; r++) { seed(minQ, r); seed(maxQ, r); }
+    while (stack.length) {
+        const cur = stack.pop() as number[];
+        const q = cur[0], r = cur[1];
+        for (const nb of NB) {
+            const nq = q + nb[0], nr = r + nb[1];
+            if (nq < minQ || nq > maxQ || nr < minR || nr > maxR) continue;
+            const k = nq + ',' + nr;
+            if (rolled.has(k) || exterior.has(k)) continue;
+            exterior.add(k); stack.push([nq, nr]);
+        }
+    }
+    for (let q = minQ; q <= maxQ; q++) {
+        for (let r = minR; r <= maxR; r++) {
+            const k = q + ',' + r;
+            if (!rolled.has(k) && !exterior.has(k)) interior.add(k);
+        }
+    }
+    return interior;
+}
+// Konvex hull (monoton kedja) av [lng,lat]-punkter → få hörn. Används för att rita
+// reviret som en SOLID MASSA när man är utzoomad: ~få projektioner per frame i
+// stället för tusentals hexagoner.
+function convexHull(pts: [number, number][]): [number, number][] {
+    if (pts.length < 3) return pts.slice();
+    const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lower: [number, number][] = [];
+    for (const pt of p) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pt) <= 0) lower.pop();
+        lower.push(pt);
+    }
+    const upper: [number, number][] = [];
+    for (let i = p.length - 1; i >= 0; i--) {
+        const pt = p[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pt) <= 0) upper.pop();
+        upper.push(pt);
+    }
+    lower.pop(); upper.pop();
+    return lower.concat(upper);
+}
+// "Pionjärsteg": rullade rutor i FRONTLINJEN — < 3 grannar i reviret (rullade ∪
+// inneslutna). Rutor i ett tätt/säkrat område (>= 3 grannar) räknas INTE. Driver
+// "steg ute"-mätaren: bara de framåtsträvande stegen, inte den redan säkrade massan.
+function countPioneer(rolled: Set<string>, interior: Set<string>): number {
+    const NB = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+    let n = 0;
+    for (const cell of rolled) {
+        const c = cell.indexOf(',');
+        const q = Number(cell.slice(0, c)), r = Number(cell.slice(c + 1));
+        let nb = 0;
+        for (const d of NB) {
+            const k = (q + d[0]) + ',' + (r + d[1]);
+            if (rolled.has(k) || interior.has(k)) { nb++; if (nb >= 3) break; }
+        }
+        if (nb < 3) n++;
+    }
+    return n;
+}
+// Under denna zoom ritas reviret som solid hull-massa (inga hexagoner) för fart.
+const REV_DETAIL_ZOOM = 9;
+// Flipperns zoom-gränser: inte zooma ut för långt (tråkigt/laggigt) och inte in
+// så långt att satellit-rutorna tar slut ("map data not yet available").
+const PIN_FLIP_MIN_ZOOM = 6;
+const PIN_FLIP_MAX_ZOOM = 16;
 const PIN_WALL = 14;             // banans sido-insteg från container-kanten
 const PIN_TOP_RESERVE = 60;      // håll banan under navbaren/kategorichipsen
 const PIN_BOTTOM_RESERVE = 72;   // håll banan ovanför EventCards verktygs-pill
@@ -709,6 +809,8 @@ interface V2MapProps {
     onPinballHit?: (group: LinkEvent[]) => void;
     /** Fyrar varje gång kulan avfyras (för skott-räknare/HUD). */
     onPinballLaunch?: () => void;
+    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard per uid. */
+    myReviretHue?: number | null;
 }
 
 export default function V2Map({
@@ -753,7 +855,8 @@ export default function V2Map({
     onStartPinball,
     onStopPinball,
     onPinballHit,
-    onPinballLaunch
+    onPinballLaunch,
+    myReviretHue = null
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1116,12 +1219,11 @@ export default function V2Map({
     onGuessRef.current = onGuess;
 
     // Molnen (info-molnet + sol-molnet) och alla deras effekter — ansikten,
-    // kasta, slangbella, sol-tilt, vattning — är AVSTÄNGDA. Dagens event-info
-    // visas i stället som en enkel statisk pill (se nedan). Flaggan (typad
-    // boolean så TS inte flaggar resten som död kod) gör det lätt att återaktivera.
-    // Molnens state/handlers ligger kvar oanvända; de kostar inget när flaggan
-    // är av (rendering + per-frame-projicering gate:as).
-    const CLOUDS_ENABLED: boolean = false;
+    // kasta, slangbella, sol-tilt, vattning. Välkomstmolnet visar dagens event-
+    // info ("X unika event idag" + "N börjar inom en timme"). De extra effekterna
+    // (ansikten/kasta/slangbella) är fortfarande var för sig gate:ade av
+    // shop-togglarna (isFeatureActive(...)), så de slås inte på automatiskt.
+    const CLOUDS_ENABLED: boolean = true;
 
     // Cloud popup geographic map anchor state and projection variables
     // Solves request: anchor cloud to a position on map, move with map
@@ -1505,6 +1607,10 @@ export default function V2Map({
     // dessa refs varje frame; pekar-hanterarna här muterar dem.
     const pinballModeRef = useRef(pinballMode);
     pinballModeRef.current = pinballMode;
+    // Spelarens valda färgton, läst live i aimLoop (så färgbyte i profilen slår
+    // igenom direkt utan att starta om flipper-effekten).
+    const myReviretHueRef = useRef(myReviretHue);
+    myReviretHueRef.current = myReviretHue;
     const onPinballHitRef = useRef(onPinballHit);
     onPinballHitRef.current = onPinballHit;
     const onPinballLaunchRef = useRef(onPinballLaunch);
@@ -1552,7 +1658,16 @@ export default function V2Map({
     const revPaintedRef = useRef<Set<string>>(new Set());
     const revScreenRef = useRef<Map<string, number[]>>(new Map());
     const revPrevRef = useRef<{ x: number; y: number } | null>(null);
-    const [revStats, setRevStats] = useState<{ cells: number; events: number } | null>(null);
+    const [revStats, setRevStats] = useState<{ cells: number; events: number; enclosed: number; pioneer: number } | null>(null);
+    // Topplista (dagens bästa resultat) + andra spelares territorier från Firestore.
+    // remoteTerrRef = rutor andra (och jag tidigare idag) claimat, cell→{owner,color};
+    // revWrittenRef = rutor jag redan sparat detta session (claimar bara nytillkomna).
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [myUid, setMyUid] = useState<string | null>(null);
+    // Topplistans rankning: 'points' = störst revir, 'events' = flest besökta event.
+    const [lbSort, setLbSort] = useState<'points' | 'events'>('points');
+    const remoteTerrRef = useRef<Map<string, TerritoryCell>>(new Map());
+    const revWrittenRef = useRef<Set<string>>(new Set());
 
     // Visa/göm ett GL-lager från komponent-scope (livscykel-effekten gömmer de
     // vanliga event-lagren i pinball-läget så eventen inte ritas dubbelt).
@@ -1860,7 +1975,7 @@ export default function V2Map({
             // kartan inte måste byta stil direkt efter mount → ingen flicker.
             style: SATELLITE_STYLE,
             center: [14.4664, 58.0257], // Lng, Lat (Gränna, vid Vättern)
-            zoom: 6,
+            zoom: 5,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
@@ -2384,7 +2499,7 @@ export default function V2Map({
             const prior = {
                 pitch: map.getPitch(), bearing: map.getBearing(),
                 center: map.getCenter(), zoom: map.getZoom(),
-                minZoom: map.getMinZoom(), maxBounds: map.getMaxBounds(),
+                minZoom: map.getMinZoom(), maxZoom: map.getMaxZoom(), maxBounds: map.getMaxBounds(),
             };
             map.stop();
             // Rensa canvasen (ev. gammal bumper-/boll-ritning) — vi ritar inget på den i geo-läget.
@@ -2394,7 +2509,8 @@ export default function V2Map({
             try { map.setProjection({ type: 'globe' }); } catch { /* äldre maplibre saknar globe */ }
             map.setMaxBounds(null);
             map.fitBounds(new maplibregl.LngLatBounds(SWEDEN_BOUNDS[0], SWEDEN_BOUNDS[1]), { padding: 24, animate: false });
-            map.setMinZoom(Math.max(0, map.getZoom() - 0.35)); // får ej zooma ut förbi hela Sverige
+            map.setMinZoom(PIN_FLIP_MIN_ZOOM); // inte zooma ut för långt
+            map.setMaxZoom(PIN_FLIP_MAX_ZOOM); // inte zooma in förbi satellit-datan
             map.setMaxBounds(new maplibregl.LngLatBounds(SWEDEN_PAN_LIMIT[0], SWEDEN_PAN_LIMIT[1]));
 
             const ballEl = document.createElement('div');
@@ -2423,7 +2539,11 @@ export default function V2Map({
             revActiveRef.current = isFeatureOn('reviret');
             revPaintedRef.current.clear();
             revPrevRef.current = null;
-            setRevStats(revActiveRef.current ? { cells: 0, events: 0 } : null);
+            setRevStats(revActiveRef.current ? { cells: 0, events: 0, enclosed: 0, pioneer: 0 } : null);
+            let revInterior = new Set<string>(); // inneslutna o-rullade rutor (flood-fill)
+            let revHull: [number, number][] = []; // revirets ytterform (konvex hull) — solid massa utzoomat
+            let revLastStatT = 0;    // throttle för live-statuppdatering (poängen klättrar medan man rullar)
+            let revLastStatSize = -1; // senast rapporterade rut-antal (uppdatera bara när nymark tillkommit)
             const revCountEvents = (): number => {
                 const painted = revPaintedRef.current;
                 if (!painted.size) return 0;
@@ -2457,10 +2577,67 @@ export default function V2Map({
             const onRevToggleGeo = () => {
                 revActiveRef.current = isFeatureOn('reviret');
                 setRevStats(revActiveRef.current
-                    ? { cells: revPaintedRef.current.size, events: revCountEvents() }
+                    ? { cells: revPaintedRef.current.size, events: revCountEvents(), enclosed: revInterior.size, pioneer: countPioneer(revPaintedRef.current, revInterior) }
                     : null);
             };
             window.addEventListener(FEATURE_CHANGE_EVENT, onRevToggleGeo);
+
+            // ── Min färg: rita mitt revir i min spelarfärg (annars neutral blå).
+            // Själva färgtonen läses LIVE i aimLoop (myReviretHueRef) så ett färgbyte
+            // i profilen slår igenom utan att starta om flipper-effekten.
+            const myIdent = myReviretIdentity();
+            setMyUid(myIdent?.uid ?? null);
+
+            // ── Topplista + andra spelares territorier (Firestore, bäst-möjligt) ─
+            // Topplistan är global (dagens bästa); territorierna prenumereras per
+            // vy-region och resubbas vid moveend (kameran är fri i geo-läget).
+            // VIKTIGT: snapshots MERGE:as in i remoteTerrRef (ersätter den ALDRIG).
+            // Annars byts hela kartan ut när 30-regioners-fönstret glider → tidigare
+            // laddad mark töms/laddas om i kanterna = "den flyttas och håller på".
+            // Rutor tas aldrig bort i reglerna (bara om-färgas) → merge är säker.
+            revWrittenRef.current = new Set();
+            remoteTerrRef.current = new Map();
+            const unsubLeaderboard = subscribeDailyLeaderboard(setLeaderboard, 6);
+            let terrUnsub: () => void = () => {};
+            let lastRegionKey = '';
+            let terrResubTimer = 0;
+            const resubTerritory = () => {
+                const b = map.getBounds();
+                const regions = regionsForBounds(b.getWest(), b.getSouth(), b.getEast(), b.getNorth());
+                const key = regions.slice(0, 30).join('|');
+                if (key === lastRegionKey) return; // samma buckets → behåll lyssnaren
+                lastRegionKey = key;
+                terrUnsub();
+                terrUnsub = subscribeTerritory(regions, (cells) => {
+                    const acc = remoteTerrRef.current;
+                    for (const [cell, t] of cells) acc.set(cell, t);
+                    // Mjukt tak: släng äldsta om kartan blir orimligt stor över tid.
+                    if (acc.size > 8000) {
+                        let drop = acc.size - 8000;
+                        for (const k of acc.keys()) { acc.delete(k); if (--drop <= 0) break; }
+                    }
+                });
+            };
+            resubTerritory();
+            const onMoveEndTerr = () => {
+                if (terrResubTimer) window.clearTimeout(terrResubTimer);
+                terrResubTimer = window.setTimeout(resubTerritory, 600);
+            };
+            map.on('moveend', onMoveEndTerr);
+
+            // ── Zoom-skala: krymp event-markörer + kula när man zoomar ut ─────
+            // Markörerna skalas via en CSS-var på containern; kulan via sina mått.
+            // (Kollisionsradien skalas i fysik-loopen med samma faktor.)
+            const applyPinZoomScale = () => {
+                const sc = pinScaleForZoom(map.getZoom());
+                container.style.setProperty('--pin-zoom-scale', String(sc));
+                const d = Math.max(7, Math.round(16 * sc));
+                ballEl.style.width = d + 'px';
+                ballEl.style.height = d + 'px';
+                ballEl.style.boxShadow = `0 0 0 ${Math.max(1, 2 * sc).toFixed(1)}px rgba(255,255,255,0.9), 0 0 ${(10 * sc).toFixed(1)}px ${(3 * sc).toFixed(1)}px rgba(56,189,248,0.7)`;
+            };
+            applyPinZoomScale();
+            map.on('zoom', applyPinZoomScale);
 
             // ── Siktlinje-RAF ────────────────────────────────────────────────
             // Ritar kontinuerligt: siktlinje boll→finger under drag, annars puls.
@@ -2471,28 +2648,127 @@ export default function V2Map({
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, W, H);
 
-                // Reviret-lager: måla rutorna kulan rullat genom (under siktlinjen
-                // och bollen). Kameran är fri → projicera om hörnen varje frame,
-                // men kapa mot vyn så kostnaden följer antalet SYNLIGA rutor.
-                if (revActiveRef.current && revPaintedRef.current.size) {
-                    ctx.save();
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = REVIRET_WET_EDGE;
-                    ctx.fillStyle = REVIRET_WET_FILL;
-                    for (const cell of revPaintedRef.current) {
+                // Min reviret-färg, LIVE: vald ton (profil) → annars deterministisk
+                // per uid → annars neutral blå (utloggad).
+                const liveHue = myReviretHueRef.current ?? (myIdent ? hueForUid(myIdent.uid) : null);
+                const myPalNow = liveHue != null ? palette(liveHue) : null;
+                const myFill = myPalNow ? myPalNow.fill : REVIRET_WET_FILL;
+                const myEdge = myPalNow ? myPalNow.edge : REVIRET_WET_EDGE;
+
+                // Reviret-lager (HYBRID): HELA reviret fylls solitt — rullade
+                // rutor ∪ inneslutna o-rullade (revInterior, flood-fill räknad vid
+                // stopp). Men hexagon-RUTNÄTET ritas BARA på rutorna man faktiskt
+                // rullat → de inneslutna hålen blir helfärgade (utan rutnät). En path
+                // + en fyllning = sömlöst. Kameran är fri → projicera om per frame,
+                // vy-kapat så kostnaden följer SYNLIGA rutor.
+                // Andra spelares territorier (Firestore) — ritas UNDER min egen
+                // målning i ÄGARENS färg, så varje spelare har sin egen färg på
+                // kartan. Bara inzoomat (>= REV_DETAIL_ZOOM) + vy-kapat + ett tak
+                // så per-frame-projiceringen aldrig spårar ur. Mina egna rutor
+                // hoppas över här (de ritas ovanpå i nästa block).
+                if (revActiveRef.current && remoteTerrRef.current.size && map.getZoom() >= REV_DETAIL_ZOOM) {
+                    const byColor = new Map<string, { x: number; y: number }[][]>();
+                    let drawn = 0;
+                    for (const [cell, t] of remoteTerrRef.current) {
+                        if (drawn >= 1500) break;
+                        if (revPaintedRef.current.has(cell)) continue;
+                        const hue = Number(t.color);
+                        if (!Number.isFinite(hue)) continue;
                         const cc = map.project(cellCenterLngLat(cell));
-                        if (cc.x < -60 || cc.x > W + 60 || cc.y < -60 || cc.y > H + 60) continue;
-                        const corners = cellCornersLngLat(cell);
+                        if (cc.x < -90 || cc.x > W + 90 || cc.y < -90 || cc.y > H + 90) continue;
+                        let arr = byColor.get(t.color);
+                        if (!arr) { arr = []; byColor.set(t.color, arr); }
+                        arr.push(cellCornersLngLat(cell).map((ll) => map.project(ll)));
+                        drawn++;
+                    }
+                    if (byColor.size) {
+                        ctx.save();
+                        for (const [colorKey, hexes] of byColor) {
+                            const pal = palette(Number(colorKey));
+                            ctx.beginPath();
+                            for (const pts of hexes) {
+                                ctx.moveTo(pts[0].x, pts[0].y);
+                                for (let i = 1; i < 6; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                                ctx.closePath();
+                            }
+                            ctx.fillStyle = pal.fill; ctx.fill();
+                            ctx.lineJoin = 'round'; ctx.lineWidth = 1; ctx.strokeStyle = pal.edge; ctx.stroke();
+                        }
+                        ctx.restore();
+                    }
+                }
+
+                if (revActiveRef.current && revPaintedRef.current.size) {
+                    if (map.getZoom() < REV_DETAIL_ZOOM && revHull.length >= 3) {
+                        // SOLID MASSA (utzoomat): fyll bara revirets ytterform (konvex
+                        // hull) som EN polygon med få punkter — inga per-cell-projek-
+                        // tioner, inga hexagoner → billigt även med tusentals rutor.
+                        // Hexagon-detaljerna återkommer när man zoomar in (>= REV_DETAIL_ZOOM).
+                        ctx.save();
                         ctx.beginPath();
-                        for (let i = 0; i < 6; i++) {
-                            const p = map.project(corners[i]);
-                            if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                        for (let i = 0; i < revHull.length; i++) {
+                            const hp = map.project(revHull[i]);
+                            if (i === 0) ctx.moveTo(hp.x, hp.y); else ctx.lineTo(hp.x, hp.y);
                         }
                         ctx.closePath();
+                        ctx.fillStyle = myFill;
                         ctx.fill();
+                        ctx.lineJoin = 'round'; ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = myEdge;
+                        ctx.stroke();
+                        ctx.restore();
+                    } else {
+                    const NB = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+                    const projectHex = (cell: string): { x: number; y: number }[] | null => {
+                        const cc = map.project(cellCenterLngLat(cell));
+                        if (cc.x < -90 || cc.x > W + 90 || cc.y < -90 || cc.y > H + 90) return null;
+                        return cellCornersLngLat(cell).map((ll) => map.project(ll));
+                    };
+                    const painted = revPaintedRef.current;
+                    const rolledVis: { q: number; r: number; pts: { x: number; y: number }[] }[] = [];
+                    ctx.save();
+                    // 1) FYLL: rullade + inneslutna rutor i EN path → solid yta.
+                    ctx.beginPath();
+                    for (const cell of painted) {
+                        const pts = projectHex(cell);
+                        if (!pts) continue;
+                        const comma = cell.indexOf(',');
+                        rolledVis.push({ q: Number(cell.slice(0, comma)), r: Number(cell.slice(comma + 1)), pts });
+                        ctx.moveTo(pts[0].x, pts[0].y);
+                        for (let i = 1; i < 6; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                        ctx.closePath();
+                    }
+                    for (const cell of revInterior) {
+                        const pts = projectHex(cell);
+                        if (!pts) continue;
+                        ctx.moveTo(pts[0].x, pts[0].y);
+                        for (let i = 1; i < 6; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                        ctx.closePath();
+                    }
+                    ctx.fillStyle = myFill;
+                    ctx.fill();
+                    // 2) KONTUR: rita BARA ytterkanter (kanter utan reviret-granne) →
+                    //    inga rutnäts-linjer genom den ifyllda massan. Tunn frontlinje
+                    //    syns ändå som hexagoner (dess kanter ÄR ytterkanter).
+                    if (rolledVis.length) {
+                        ctx.beginPath();
+                        for (const { q, r, pts } of rolledVis) {
+                            for (let i = 0; i < 6; i++) {
+                                const nb = NB[i];
+                                const k = (q + nb[0]) + ',' + (r + nb[1]);
+                                if (!painted.has(k) && !revInterior.has(k)) {
+                                    const a = pts[i], b = pts[(i + 1) % 6];
+                                    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+                                }
+                            }
+                        }
+                        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = myEdge;
                         ctx.stroke();
                     }
                     ctx.restore();
+                    }
                 }
 
                 const ballLL = ball.getLngLat();
@@ -2661,6 +2937,9 @@ export default function V2Map({
                     prevNow = now;
 
                     const W = container.clientWidth, H = container.clientHeight;
+                    // Skala kollisionsradien med zoom (samma faktor som markörernas
+                    // visuella storlek) så fysiken inte flippar ur långt utzoomat.
+                    const hitR = PIN_HIT_RADIUS_PX * pinScaleForZoom(map.getZoom());
                     let bp2 = map.project([state.lng, state.lat]);
                     let bx2 = bp2.x, by2 = bp2.y;
 
@@ -2684,7 +2963,7 @@ export default function V2Map({
                             if (mpx < -120 || mpx > W + 120 || mpy < -120 || mpy > H + 120) continue;
 
                             const d2 = distPointToSeg2(mpx, mpy, prevBx2, prevBy2, bx2, by2);
-                            const hitR2 = PIN_HIT_RADIUS_PX;
+                            const hitR2 = hitR;
                             if (d2 < hitR2) {
                                 // Studs: reflektera hastigheten mot normalen boll→markör
                                 const nx2 = bx2 - mpx, ny2 = by2 - mpy;
@@ -2730,7 +3009,7 @@ export default function V2Map({
                                     pinRingsRef.current.push({
                                         x: bp.x,
                                         y: bp.y,
-                                        startR: PIN_HIT_RADIUS_PX * 0.5,
+                                        startR: hitR * 0.5,
                                         age: 0,
                                         maxAge: 25
                                     });
@@ -2751,12 +3030,38 @@ export default function V2Map({
 
                     // Reviret: måla hex-rutorna längs bollens bana.
                     revPaintTo(state.lng, state.lat);
+                    // Live-uppdatera poängen så man SER nymark-stegen växa medan
+                    // bollen rullar (throttlat ~4/s + bara när nya rutor tillkommit;
+                    // inneslutna/pionjär räknas tyngre och uppdateras vid stopp).
+                    if (revActiveRef.current) {
+                        const nowT = performance.now();
+                        const sz = revPaintedRef.current.size;
+                        if (sz !== revLastStatSize && nowT - revLastStatT > 250) {
+                            revLastStatT = nowT; revLastStatSize = sz;
+                            const evs = revCountEvents();
+                            setRevStats((s) => ({ cells: sz, events: evs, enclosed: s ? s.enclosed : 0, pioneer: s ? s.pioneer : 0 }));
+                        }
+                    }
 
                     const spd = Math.hypot(state.vx, state.vy);
                     if (spd < PHYS_STOP_V) {
                         geoPhysState = null;
                         if (revActiveRef.current) {
-                            setRevStats({ cells: revPaintedRef.current.size, events: revCountEvents() });
+                            revInterior = computeInterior(revPaintedRef.current);
+                            revHull = convexHull([...revPaintedRef.current].map((c) => cellCenterLngLat(c)));
+                            const events = revCountEvents();
+                            const points = revPaintedRef.current.size + revInterior.size;
+                            setRevStats({ cells: revPaintedRef.current.size, events, enclosed: revInterior.size, pioneer: countPioneer(revPaintedRef.current, revInterior) });
+                            // Spara (bäst-möjligt): claima de NYA rutorna i min färg så
+                            // ytan + ägaren persisteras → andra spelare ser dem i min
+                            // färg; pusha dagens poäng/event till topplistan.
+                            const fresh: string[] = [];
+                            for (const cell of revPaintedRef.current) {
+                                if (!revWrittenRef.current.has(cell)) { revWrittenRef.current.add(cell); fresh.push(cell); }
+                            }
+                            if (fresh.length) void claimCells(fresh);
+                            const bll = ball.getLngLat();
+                            void saveDailyScore(points, events, regionForLngLat(bll.lng, bll.lat));
                         }
                         return;
                     }
@@ -2794,6 +3099,15 @@ export default function V2Map({
                 cancelAnimationFrame(geoPhysRaf);
                 geoPhysState = null;
                 window.removeEventListener(FEATURE_CHANGE_EVENT, onRevToggleGeo);
+                map.off('zoom', applyPinZoomScale);
+                map.off('moveend', onMoveEndTerr);
+                if (terrResubTimer) window.clearTimeout(terrResubTimer);
+                terrUnsub();
+                unsubLeaderboard();
+                remoteTerrRef.current = new Map();
+                revWrittenRef.current = new Set();
+                setLeaderboard([]);
+                container.style.removeProperty('--pin-zoom-scale');
                 revPaintedRef.current.clear();
                 revPrevRef.current = null;
                 setRevStats(null);
@@ -2807,6 +3121,7 @@ export default function V2Map({
                 const m = mapRef.current;
                 if (m) {
                     m.setMinZoom(prior.minZoom);
+                    m.setMaxZoom(prior.maxZoom);
                     m.setMaxBounds(prior.maxBounds ?? null);
                     try { m.setProjection({ type: priorProj }); } catch { /* ignorera */ }
                     m.jumpTo({ center: prior.center, zoom: prior.zoom, pitch: prior.pitch, bearing: prior.bearing });
@@ -2882,10 +3197,10 @@ export default function V2Map({
         revPaintedRef.current.clear();
         revScreenRef.current.clear();
         revPrevRef.current = null;
-        setRevStats(revActiveRef.current ? { cells: 0, events: 0 } : null);
+        setRevStats(revActiveRef.current ? { cells: 0, events: 0, enclosed: 0, pioneer: 0 } : null);
         onRevToggle = () => {
             revActiveRef.current = isFeatureOn('reviret');
-            setRevStats(revActiveRef.current ? { cells: revPaintedRef.current.size, events: 0 } : null);
+            setRevStats(revActiveRef.current ? { cells: revPaintedRef.current.size, events: 0, enclosed: 0, pioneer: 0 } : null);
         };
         window.addEventListener(FEATURE_CHANGE_EVENT, onRevToggle);
 
@@ -3120,7 +3435,7 @@ export default function V2Map({
                     pinSeatBall(); // parkera + arma om vid plungern
                     revPrevRef.current = null;
                     // Skottet är slut → enda setState i loopen (uppdaterar HUD:en).
-                    if (revActiveRef.current) setRevStats({ cells: revPaintedRef.current.size, events: revCountEvents() });
+                    if (revActiveRef.current) setRevStats({ cells: revPaintedRef.current.size, events: revCountEvents(), enclosed: 0, pioneer: 0 });
                 }
             } else {
                 pinAccRef.current = 0;
@@ -4128,6 +4443,13 @@ export default function V2Map({
                 .pin-bubble.pin-bubble-round::before { display: none; }
                 .pin-bubble.pin-bubble-round .pin-emoji { transform: none; }
                 .pinball-marker .pin-element { transform: none; }
+                /* Zoom-skala: krymp pinball-markörerna när kartan är utzoomad
+                   (--pin-zoom-scale sätts på kartcontainern i geo-flippern). Skalar
+                   runt nederkanten = ankaret, så bumpern stannar på koordinaten. */
+                .custom-marker-wrapper.pinball-marker {
+                    transform: scale(var(--pin-zoom-scale, 1));
+                    transform-origin: bottom center;
+                }
                 @media (hover: hover) and (pointer: fine) {
                     .v2-custom-marker:hover .pin-bubble.pin-bubble-round { transform: scale(1.07); }
                 }
@@ -4525,13 +4847,91 @@ export default function V2Map({
                         {revStats.cells === 0 ? (
                             <span className="text-[13px] font-medium">Skjut kulan — måla ditt revir</span>
                         ) : (
-                            <span className="text-[13px] font-semibold tabular-nums">
-                                {revStats.cells} {revStats.cells === 1 ? 'ruta' : 'rutor'} · {revStats.events} event
+                            <span className="flex items-baseline gap-2 text-[13px] tabular-nums">
+                                <span className="font-bold text-amber-300">{revStats.cells + revStats.enclosed} poäng</span>
+                                <span className="text-white/40">·</span>
+                                <span className="font-semibold text-[#9fd0ec]">{revStats.events} event</span>
                             </span>
                         )}
                     </div>
                 </div>
             )}
+
+            {/* Topplista (dagens bästa resultat). ALLTID synlig i flipper-läget med
+                territorie-funktionen på — jag själv vävs in live (mina rutor +
+                nymark-steg klättrar medan jag rullar) så listan aldrig är tom även
+                innan reglerna deployats / utloggad. Färgad per spelare.
+                pointer-events: none så den aldrig fångar skott-dragget. */}
+            {pinballMode && revStats && (() => {
+                const selfUid = myUid ?? '__me__';
+                const selfPoints = revStats.cells + revStats.enclosed;
+                const selfEvents = revStats.events;
+                const selfHue = myReviretHue ?? (myUid ? hueForUid(myUid) : 205); // neutral blå om utloggad
+                const rows: LeaderboardEntry[] = leaderboard.map((e) => ({ ...e }));
+                const mine = myUid ? rows.find((r) => r.uid === myUid) : undefined;
+                if (mine) {
+                    mine.points = Math.max(mine.points, selfPoints);
+                    mine.events = Math.max(mine.events, selfEvents);
+                    mine.hue = selfHue; // visa min aktuella valda färg direkt
+                } else {
+                    rows.push({ uid: selfUid, name: 'Du', hue: selfHue, points: selfPoints, events: selfEvents });
+                }
+                // Rankning efter valt mått (revir-poäng eller flest besökta event).
+                rows.sort((a, b) => lbSort === 'events'
+                    ? (b.events - a.events || b.points - a.points)
+                    : (b.points - a.points || b.events - a.events));
+                const board = rows.slice(0, 6);
+                const tab = (key: 'points' | 'events', label: string) => (
+                    <button
+                        type="button"
+                        onClick={() => setLbSort(key)}
+                        className={`pointer-events-auto rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                            lbSort === key ? 'bg-amber-400 text-slate-900' : 'text-white/55 hover:text-white'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                );
+                return (
+                    <div
+                        className="absolute right-3 z-[1601] w-[200px] select-none pointer-events-none"
+                        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 104px)' }}
+                    >
+                        <div className="rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2.5 text-white shadow-xl backdrop-blur-sm">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-300">
+                                <Trophy size={13} /> Topplista idag
+                            </div>
+                            <div className="mb-2 flex items-center gap-1 rounded-full bg-white/5 p-0.5">
+                                {tab('points', 'Revir')}
+                                {tab('events', 'Besökta')}
+                            </div>
+                            <ol className="flex flex-col gap-0.5">
+                                {board.map((e, i) => {
+                                    const isMe = e.uid === selfUid;
+                                    const evActive = lbSort === 'events';
+                                    return (
+                                        <li
+                                            key={e.uid}
+                                            className={`flex items-center gap-2 rounded-lg px-1.5 py-1 ${isMe ? 'bg-white/10' : ''}`}
+                                        >
+                                            <span className="w-3 shrink-0 text-center text-[11px] font-bold tabular-nums text-white/40">{i + 1}</span>
+                                            <span
+                                                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                                style={{ background: `hsl(${e.hue}, 72%, 52%)` }}
+                                            />
+                                            <span className={`flex-1 truncate text-[12px] ${isMe ? 'font-bold' : 'font-medium'}`}>
+                                                {isMe ? 'Du' : e.name}
+                                            </span>
+                                            <span className={`tabular-nums ${evActive ? 'text-[10px] text-white/40' : 'text-[12px] font-bold text-amber-300'}`}>{e.points}</span>
+                                            <span className={`tabular-nums ${evActive ? 'text-[12px] font-bold text-emerald-300' : 'text-[10px] text-white/40'}`}>{evActive ? '' : '·'}{e.events}{evActive ? ' ev' : ''}</span>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Geo-flipper-HUD: en tydlig instruktion + träffräknare + lägesväljare */}
             {pinballMode && (
@@ -4693,9 +5093,7 @@ export default function V2Map({
                                     const locked = !!it.locked;
                                     const disabled = locked
                                         || (it.kind === 'game' && !findGameActive && !canStartFindGame)
-                                        || (it.kind === 'pinball' && !pinballMode && !canStartPinball)
-                                        // Medan flippern är på är bara flipper-raden klickbar (inga stilbyten mitt i rundan).
-                                        || (pinballMode && it.kind !== 'pinball');
+                                        || (it.kind === 'pinball' && !pinballMode && !canStartPinball);
                                     // Den nya/tipsade funktionen får en blå glöd-ring i listan.
                                     const blinking = featureHint === it.key;
                                     return (

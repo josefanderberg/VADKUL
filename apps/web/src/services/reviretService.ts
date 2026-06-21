@@ -14,15 +14,15 @@ import {
     collection, doc, onSnapshot, query, where, writeBatch, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { regionForLngLat, cellCenterLngLat, hueForUid } from '@/lib/reviret';
+import { regionForLngLat, cellCenterLngLat, effectiveHue } from '@/lib/reviret';
 
 export interface TerritoryCell { owner: string; color: string; }
 
-/** Inloggad spelares identitet + färgton (null om utloggad → kan inte claima). */
+/** Inloggad spelares identitet + (effektiva) färgton (null om utloggad → kan inte claima). */
 export function myReviretIdentity(): { uid: string; hue: number } | null {
     const user = auth.currentUser;
     if (!user) return null;
-    return { uid: user.uid, hue: hueForUid(user.uid) };
+    return { uid: user.uid, hue: effectiveHue(user.uid) };
 }
 
 /**
@@ -59,7 +59,7 @@ export function subscribeTerritory(
 export async function claimCells(cells: string[]): Promise<void> {
     const user = auth.currentUser;
     if (!user || cells.length === 0) return;
-    const color = String(hueForUid(user.uid));
+    const color = String(effectiveHue(user.uid));
     for (let i = 0; i < cells.length; i += 450) {
         const batch = writeBatch(db);
         for (const cell of cells.slice(i, i + 450)) {

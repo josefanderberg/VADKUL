@@ -18,7 +18,7 @@ import {
     collection, doc, onSnapshot, query, where, runTransaction, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { regionForLngLat, hueForUid } from '@/lib/reviret';
+import { regionForLngLat, effectiveHue } from '@/lib/reviret';
 
 export interface EventClaim {
     ownerUid: string;
@@ -72,7 +72,7 @@ export function subscribeEventClaims(
 export async function recordEventHits(entries: EventHitEntry[]): Promise<void> {
     const user = auth.currentUser;
     if (!user || entries.length === 0) return;
-    const hue = hueForUid(user.uid);
+    const hue = effectiveHue(user.uid);
     const name = user.displayName ?? '';
     for (const e of entries) {
         if (e.hits <= 0) continue;

@@ -16,7 +16,7 @@ import {
     collection, doc, onSnapshot, query, where, setDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { regionForLngLat, hueForUid } from '@/lib/reviret';
+import { regionForLngLat, effectiveHue } from '@/lib/reviret';
 
 export interface Territory {
     ownerUid: string;
@@ -68,7 +68,7 @@ export async function saveTerritory(t: {
         doc(db, 'territories', t.id),
         {
             ownerUid: user.uid,
-            ownerHue: hueForUid(user.uid),
+            ownerHue: effectiveHue(user.uid),
             ownerName: user.displayName ?? '',
             eventKeys: t.eventKeys,
             eventCount: t.eventKeys.length,
