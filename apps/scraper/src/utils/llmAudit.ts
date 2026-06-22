@@ -14,6 +14,8 @@
  * Modell: gemma4:latest (text-only). För bildgranskning behövs llama3.2-vision.
  */
 
+import { normalizeCategory } from './categoryNormalize';
+
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 const TIMEOUT_MS = 30_000;
@@ -184,8 +186,9 @@ export async function auditEvent(e: AuditInput): Promise<AuditResult> {
             return { ...FALLBACK_RESULT, reason: 'Kunde inte parsa LLM-svar', raw };
         }
 
-        const rawCategory = (parsed.category as string | undefined) ?? '';
-        const category = VALID_AUDIT_CATEGORIES.has(rawCategory) ? rawCategory : 'other';
+        // normalizeCategory ger samma kanoniska 11 som scrape-vägen — och räddar
+        // LLM-närträffar (t.ex. "workshop" → course) som annars fallit till 'other'.
+        const category = normalizeCategory((parsed as Record<string, unknown>).category);
 
         return {
             verdict: (['ok', 'suspect', 'junk'].includes(parsed.verdict as string)

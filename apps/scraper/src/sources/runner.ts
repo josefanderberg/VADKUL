@@ -15,6 +15,7 @@ import { addEventToDb, eventExistsInDb, refreshEventTime } from '../utils/dbHelp
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
+import { normalizeCategory } from '../utils/categoryNormalize';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
@@ -214,7 +215,7 @@ export async function runSource(
                 }
             }
 
-            const category = e.category || classifyEvent(e.title, e.description || '');
+            const category = normalizeCategory(e.category || classifyEvent(e.title, e.description || ''));
 
             // ── LLM-audit (opt-in, kräver AUDIT_ENABLED=true + Ollama uppe) ──
             let auditVerdict: string | undefined;
