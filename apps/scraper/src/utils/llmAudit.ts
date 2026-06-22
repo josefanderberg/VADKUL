@@ -131,7 +131,7 @@ Bedöm:
 6. categoryConfidence — "high" om kategorin är uppenbar, annars "medium"/"low".
 7. emoji — EN enda emoji som bäst representerar just detta SPECIFIKA event (fritt val, inte bunden till kategorin). Var PRECIS — använd INTE ⚽ för all sport. Matcha aktiviteten:
    SPORT/RÖRELSE: yoga/meditation/mindfulness → 🧘 · cykling/MTB/spinning → 🚴 · löpning/maraton/terränglopp → 🏃 · simning → 🏊 · vandring/friluftsliv → 🥾 · gym/styrketräning/crossfit → 🏋️ · fotboll → ⚽ · ishockey → 🏒 · tennis/padel → 🎾 · golf → ⛳ · ridning/häst → 🐴 · kampsport/boxning → 🥊 · dans/zumba → 💃 · klättring → 🧗 · skidor → ⛷️
-   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · barnteater → 🧸 · quiz → ❓ · brädspel → 🎲 · föreläsning → 🎓
+   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · barnteater → 🧸 · quiz → 🧠 · brädspel → 🎲 · föreläsning → 🎓
    Välj det mest träffsäkra för EXAKT denna aktivitet. Två events av samma typ (t.ex. två yogapass) ska få samma emoji.
 8. price — entré-/deltagarpris OM det tydligt nämns i texten, som sträng (t.ex. "150 kr", "Fri entré", "50-200 kr"). Annars null. VIKTIGT: bara faktiskt pris för att delta — INTE vinstpotter ("1:a pris 1000 kr"), bordsavgifter eller medlemsavgifter.
 
@@ -153,11 +153,21 @@ const FALLBACK_RESULT: AuditResult = {
     inSweden: true, category: 'other', categoryConfidence: 'low', emoji: '✨', price: null,
 };
 
+/**
+ * Frågetecken-glyfer är giltiga emoji men säger inget om eventet — modellen
+ * tar till dem när den är osäker (och prompten råkade lista quiz → ❓). De
+ * läckte ut på publicerade pinnar; behandla dem som "ingen emoji" så att
+ * kategori-defaulten används i stället.
+ */
+const NON_REPRESENTATIVE_EMOJI = new Set(['❓', '❔', '⁉️', '‼️', '🆖']);
+
 /** Validera/sanera en fritt vald emoji. Tillåt 1–3 codepoints (täcker ZWJ-emoji). */
 function sanitizeEmoji(value: unknown, fallback: string): string {
     if (typeof value !== 'string') return fallback;
     const trimmed = value.trim();
     if (!trimmed) return fallback;
+    // Frågetecken-/platshållar-emoji → kategori-default i stället.
+    if (NON_REPRESENTATIVE_EMOJI.has(trimmed)) return fallback;
     // Räkna grapheme-ish: använd Array.from (codepoints). En emoji som 👨‍👩‍👧 = 5 cp.
     const cps = Array.from(trimmed);
     if (cps.length === 0 || cps.length > 8) return fallback;
