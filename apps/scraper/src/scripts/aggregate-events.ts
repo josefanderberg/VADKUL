@@ -161,12 +161,28 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             await deleteShards(db, 'destinations_');
             console.log(`      ✅ Uploaded "destinations" document (${(destBytes / 1024).toFixed(0)} KB)`);
         } else {
-            const SHARD_SIZE = 2000;   // ~230 B/event → ~450 KB per shard
+            // Packa på FAKTISKA bytes, inte antal: ett antal-baserat tak (2000 st)
+            // spräcker Firestores 1 MB-doc om snitt-eventet växer (längre titlar/
+            // platsnamn eller fler emoji-rika rader klumpas ihop). Byte-budget
+            // garanterar att INGEN shard kan passera taket — samma robusta mönster
+            // som descriptions-lagret nedan. 700 KB ger marginal för Firestore-
+            // overhead (fältnamn/index) ovanpå JSON-måttet.
+            const SHARD_BYTE_BUDGET = 700_000;
             const shards: any[][] = [];
-            for (let i = 0; i < destinations.length; i += SHARD_SIZE) {
-                shards.push(destinations.slice(i, i + SHARD_SIZE));
+            let current: any[] = [];
+            let currentBytes = 50;   // klammer + updatedAt/shardIndex-overhead
+            for (const evt of destinations) {
+                const evtBytes = Buffer.byteLength(JSON.stringify(evt), 'utf8') + 1;   // +komma
+                if (currentBytes + evtBytes > SHARD_BYTE_BUDGET && current.length > 0) {
+                    shards.push(current);
+                    current = [];
+                    currentBytes = 50;
+                }
+                current.push(evt);
+                currentBytes += evtBytes;
             }
-            console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
+            if (current.length > 0) shards.push(current);
+            console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar (byte-budget)`);
             await db.collection('aggregatedEvents').doc('destinations').set({
                 updatedAt, shardCount: shards.length, totalEvents: destinations.length,
             });
