@@ -53,6 +53,16 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
     }
 }
 
+/**
+ * Klient-cache av de sammanslagna aggregat-lagren, nycklat på lagernamn.
+ * Aggregaten byggs om ~1×/dygn (efter scrape) men polldes tidigare var 30 s,
+ * där VARJE poll läste om alla shards (cards ~29, destinations ~11,
+ * descriptions ~8 = ~51 doc-reads/poll). Vi cachar den sammanslagna datan och
+ * läser bara om shards när index-docens updatedAt faktiskt ändrats — en
+ * oförändrad poll kostar då bara 1 read/lager (själva index-docen).
+ */
+const layerCache = new Map<string, { updatedAt: string; data: any }>();
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. Try Firestore Client SDK first
     try {
@@ -65,8 +75,19 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
                     // Shardad: index-doc har shardCount men ingen events/data.
                     // Slå ihop alla shards.
                     if (typeof data.shardCount === 'number' && data.shardCount > 0) {
-                        return await fetchShards(layerName, data.shardCount, data.updatedAt);
+                        // Oförändrat sedan förra pollen → använd cachen, hoppa
+                        // över shard-läsningarna (0 extra reads).
+                        const cached = layerCache.get(layerName);
+                        if (cached && typeof data.updatedAt === 'string' && cached.updatedAt === data.updatedAt) {
+                            return cached.data;
+                        }
+                        const merged = await fetchShards(layerName, data.shardCount, data.updatedAt);
+                        if (merged && typeof data.updatedAt === 'string') {
+                            layerCache.set(layerName, { updatedAt: data.updatedAt, data: merged });
+                        }
+                        return merged;
                     }
+                    // Icke-shardad: hela datat ligger redan i index-docen.
                     return data;
                 }
             }
@@ -401,65 +422,82 @@ export const linkEventService = {
     // Polling-baserad realtidslyssnare för SQLite (ersätter Firestore onSnapshot)
     subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
         let active = true;
+        let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
+        let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
 
-        async function loadProgressively() {
+        // Slå ihop bas-lager + användarevent och skicka till UI:t.
+        function emit() {
+            if (!userEvents.length) { callback(baseEvents); return; }
+            const known = new Set(baseEvents.map((e) => e.id));
+            const merged = [...baseEvents, ...userEvents.filter((e) => !known.has(e.id))]
+                .sort((a, b) => a.time.getTime() - b.time.getTime());
+            callback(merged);
+        }
+
+        // Aggregat-lagren (destinations/cards/descriptions). Tack vare index-doc-
+        // cachen i fetchLayer kostar en OFÖRÄNDRAD poll bara 3 reads (en index-doc
+        // per lager) i stället för ~51 — shards läses bara om vid ny updatedAt.
+        async function loadAggregates() {
             try {
                 // 1. Fetch and render Destinations instantly
                 const destData = await fetchLayer('destinations');
                 if (!active || !destData) return;
 
-                let events = mapDestinationsToLinkEvents(destData.events || []);
-                callback(events);
+                baseEvents = mapDestinationsToLinkEvents(destData.events || []);
+                emit();
 
                 // 2. Fetch and merge Cards
                 const cardsData = await fetchLayer('cards');
                 if (!active) return;
-
                 if (cardsData) {
-                    events = mergeCardsWithDestinations(events, cardsData.events || []);
-                    callback(events);
+                    baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
+                    emit();
                 }
 
                 // 3. Fetch and merge Descriptions
                 const descData = await fetchLayer('descriptions');
                 if (!active) return;
-
                 if (descData && descData.data) {
-                    events = mergeDescriptionsWithEvents(events, descData.data);
-                    callback(events);
-                }
-
-                // 4. Användarskapade event (bor bara i Firestore, inte i aggregaten)
-                const userEvents = await fetchUserCreatedEvents();
-                if (!active) return;
-                if (userEvents.length) {
-                    const known = new Set(events.map((e) => e.id));
-                    events = [...events, ...userEvents.filter((e) => !known.has(e.id))]
-                        .sort((a, b) => a.time.getTime() - b.time.getTime());
-                    callback(events);
+                    baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
+                    emit();
                 }
             } catch (err) {
                 console.error("Error loading events progressively:", err);
                 // Fallback to standard SQLite getAll
                 if (active) {
-                    linkEventService.getAll(onlyFuture).then(evts => {
-                        if (active) callback(evts);
+                    linkEventService.getAll(onlyFuture).then((evts) => {
+                        if (!active) return;
+                        baseEvents = evts;
+                        emit();
                     });
                 }
             }
         }
 
-        loadProgressively();
+        // Användarskapade event bor bara i Firestore (inte i aggregaten) → egen,
+        // tätare poll så att nyskapade event syns snabbt.
+        async function loadUserEvents() {
+            const u = await fetchUserCreatedEvents();
+            if (!active) return;
+            userEvents = u;
+            emit();
+        }
 
-        // Polla var 30:e sekund för progressiva lager
-        const intervalId = setInterval(() => {
-            loadProgressively();
-        }, 30000);
+        // Initial: ladda allt direkt.
+        loadAggregates();
+        loadUserEvents();
 
-        // Returnera avprenumerations-funktion för att stänga polling-intervallet vid unmount
+        // Aggregaten ändras ~1×/dygn (efter scrape) → glesa pollen till 5 min;
+        // index-doc-cachen gör dessutom oförändrade pollar nästan gratis.
+        const aggregateInterval = setInterval(loadAggregates, 5 * 60 * 1000);
+        // Användarevent kan dyka upp när som helst → behåll snabb 30 s-poll.
+        const userInterval = setInterval(loadUserEvents, 30000);
+
+        // Returnera avprenumerations-funktion för att stänga polling-intervallen vid unmount
         return () => {
             active = false;
-            clearInterval(intervalId);
+            clearInterval(aggregateInterval);
+            clearInterval(userInterval);
         };
     }
 };
