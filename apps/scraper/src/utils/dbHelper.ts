@@ -1,5 +1,19 @@
 import { db } from '../config/firebase';
 import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime } from './sqliteHelper';
+import { normalizeDateOnlyTime } from './swedishDate';
+
+/**
+ * "Bara datum"-event (hasSpecificTime=false) lagras annars som lokal midnatt,
+ * vilket serialiseras till 22:00/23:00Z föregående dag. Pinna en neutral
+ * eftermiddag (12:00Z ≈ 14:00 lokal) på rätt kalenderdag i stället. Returnerar
+ * Date oförändrad om tiden saknas eller redan är specifik.
+ */
+function afternoonForDateOnly(time: unknown, hasSpecificTime: unknown): Date | unknown {
+    if (hasSpecificTime !== false || !time) return time;
+    const d = time instanceof Date ? time : new Date(time as string);
+    if (isNaN(d.getTime())) return time;
+    return normalizeDateOnlyTime(d);
+}
 
 console.log(`🗃️  SQLite-spegel: ${getSqlitePath()}`);
 
@@ -39,6 +53,9 @@ export async function refreshEventTime(
     const row = getSqliteEvent(url);
     if (!row?.time) return false;
 
+    // Date-only → neutral eftermiddag (samma som addEventToDb) innan jämförelse.
+    if (!newHasSpecificTime) newTime = afternoonForDateOnly(newTime, false) as Date;
+
     const stored = new Date(row.time);
     if (isNaN(stored.getTime())) return false;
     if (Math.abs(stored.getTime() - newTime.getTime()) < 60_000) return false;
@@ -68,6 +85,10 @@ export async function refreshEventTime(
 }
 
 export async function addEventToDb(eventData: any) {
+    // 0. Normalisera date-only-tid (annars lokal midnatt → 22:00/23:00Z). Görs
+    //    här så BÅDE SQLite och Firestore (som läser eventData.time) får samma.
+    eventData.time = afternoonForDateOnly(eventData.time, eventData.hasSpecificTime);
+
     // 1. Skriv ALLTID till lokal SQLite först — snabbt, offline-säkert.
     try {
         upsertEvent(eventData);

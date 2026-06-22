@@ -37,6 +37,7 @@
     "fix-times": "ts-node src/scripts/fix-event-times.ts",
     "geo-refine": "ts-node src/scripts/geo-refine.ts",
     "backfill-geocode": "ts-node src/scripts/backfill-geocode.ts",
+    "backfill-date-only-times": "ts-node src/scripts/backfill-date-only-times.ts",
     "dedupe-cross": "ts-node src/scripts/dedupe-cross-source.ts",
     "audit-events": "ts-node src/scripts/audit-events.ts",
     "audit-pending": "ts-node src/scripts/audit-all-pending.ts",
