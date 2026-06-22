@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, Heart } from 'lucide-react';
+import { User, Plus, Search, X, Heart, Calendar, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import DayPicker from './DayPicker';
 
 interface FloatingNavbarProps {
     creationMode?: 'idle' | 'placing' | 'editing';
@@ -21,7 +22,33 @@ interface FloatingNavbarProps {
     savedCount?: number;
     /** Öppna/stäng panelen med sparade event. */
     onToggleSaved?: () => void;
+    dayOffset?: number;
+    dayRangeDays?: number;
+    onDayRangeChange?: (offset: number, days: number) => void;
+    dayCount?: number;
+    eventsLoaded?: boolean;
 }
+
+const getDayLabel = (offset: number, days = 1) => {
+    const capitalize = (s: string) => s.replace(/^\w/, (c) => c.toUpperCase());
+    if (days > 1) {
+        const start = new Date(); start.setDate(start.getDate() + offset);
+        const end = new Date(start); end.setDate(end.getDate() + days - 1);
+        if (end.getDay() === 0 && days <= 3) return 'I helgen';
+        if (offset === 0 && days === 7) return 'Hela veckan';
+        const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
+        return `${fmt(start)}–${fmt(end)}`;
+    }
+    if (offset === 0) return 'Idag';
+    if (offset === 1) return 'Imorgon';
+    if (offset === -1) return 'Igår';
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    if (offset > 6 || offset < 0) {
+        return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', ''));
+    }
+    return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'long' }));
+};
 
 export default function FloatingNavbar({
     creationMode = 'idle',
@@ -34,6 +61,11 @@ export default function FloatingNavbar({
     onOpenProfile,
     savedCount = 0,
     onToggleSaved,
+    dayOffset = 0,
+    dayRangeDays = 1,
+    onDayRangeChange,
+    dayCount = 0,
+    eventsLoaded = true,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -41,6 +73,8 @@ export default function FloatingNavbar({
     const plusBtnRef = useRef<HTMLButtonElement>(null);
     const animationRef = useRef<Animation | null>(null);
     const [plusDropping, setPlusDropping] = useState(false);
+    const [dayPickerOpen, setDayPickerOpen] = useState(false);
+    const dayChipRef = useRef<HTMLButtonElement>(null);
 
     // Fokusera sökfältet när det öppnas
     useEffect(() => {
@@ -109,25 +143,26 @@ export default function FloatingNavbar({
                 {/* Top Row */}
                 <div className="flex items-center gap-2 w-full">
 
-                    {/* Vänster: profil i hörnet (väskan + funktioner ligger under,
-                        renderade i V2Map). Inloggad → profilpanelen, annars login. */}
-                    <div className="flex items-center pointer-events-auto shrink-0">
+                    {/* Vänster: profil + hjärtat (sparade) direkt höger om profilen.
+                        Väskan/funktioner ligger under, renderade i V2Map. */}
+                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
                         <button
                             type="button"
                             onClick={handleProfileClick}
-                            className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                            className={`bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
                             aria-label={user ? 'Min profil' : 'Logga in'}
                         >
-                            <User size={20} className="text-slate-700" />
-                            {user && (
+                            {user?.photoURL ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
+                            ) : (
+                                <User size={20} className="text-slate-700" />
+                            )}
+                            {user && !user.photoURL && (
                                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
                             )}
                         </button>
-                    </div>
-
-                    {/* Höger: sparade event + expanderbar sök + skapa event */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
-                        {/* Sparade event (hjärtan) — panel med allt man sparat */}
+                        {/* Sparade event (hjärtan) — direkt höger om profilen */}
                         {onToggleSaved && (
                             <button
                                 type="button"
@@ -147,6 +182,40 @@ export default function FloatingNavbar({
                                 )}
                             </button>
                         )}
+                    </div>
+
+                    {/* Höger: expanderbar sök + skapa event */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
+                        {/* Dagväljaren — direkt jämte skapa event */}
+                        {onDayRangeChange && (
+                            <div className="relative shrink-0">
+                                <button
+                                    ref={dayChipRef}
+                                    type="button"
+                                    onClick={() => setDayPickerOpen(o => !o)}
+                                    aria-expanded={dayPickerOpen}
+                                    aria-label="Välj dag eller period"
+                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border pointer-events-auto"
+                                >
+                                    <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                                    <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
+                                    <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
+                                    {eventsLoaded ? dayCount : '…'}
+                                </span>
+                                {dayPickerOpen && (
+                                    <DayPicker
+                                        dayOffset={dayOffset}
+                                        dayRangeDays={dayRangeDays}
+                                        anchorRef={dayChipRef}
+                                        onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
+                                        onClose={() => setDayPickerOpen(false)}
+                                    />
+                                )}
+                            </div>
+                        )}
+
                         {/* Sök */}
                         {searchOpen ? (
                             <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">

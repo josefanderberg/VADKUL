@@ -1,7 +1,14 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
+
+/** Lättviktig anmälan (RSVP) på ett event — bor i linkEvents/{id}/attendees/{uid}. */
+export interface RsvpAttendee {
+    uid: string;
+    name: string;
+    photoURL?: string | null;
+}
 
 /**
  * Användarskapade event bor BARA i Firestore (scraper-pipelinens aggregat
@@ -233,10 +240,10 @@ export const linkEventService = {
     async createUserEvent(input: {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
-        hostName: string; hostUid: string;
+        hostName: string; hostUid: string; coverImage?: string;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
-        const ref = await addDoc(collection(db, 'linkEvents'), {
+        const payload: Record<string, unknown> = {
             title: input.title.trim(),
             time: Timestamp.fromDate(input.time),
             lat: input.lat,
@@ -252,8 +259,49 @@ export const linkEventService = {
             url: '',
             isLocationVerified: true,
             createdAt: serverTimestamp(),
-        });
+        };
+        // Lägg bara med coverImage när det faktiskt finns en bild — då fungerar
+        // event UTAN bild även innan de uppdaterade Firestore-reglerna deployats.
+        if (input.coverImage) payload.coverImage = input.coverImage;
+        const ref = await addDoc(collection(db, 'linkEvents'), payload);
         return ref.id;
+    },
+
+    // ── Anmälningar (RSVP) ────────────────────────────────────────────────
+    // Anmälan bor i linkEvents/{eventId}/attendees/{uid} → ett konto = en anmälan.
+    async rsvp(eventId: string, attendee: RsvpAttendee): Promise<void> {
+        if (!db) throw new Error('Firestore ej initierad');
+        await setDoc(doc(db, 'linkEvents', eventId, 'attendees', attendee.uid), {
+            uid: attendee.uid,
+            name: attendee.name,
+            photoURL: attendee.photoURL ?? null,
+            createdAt: serverTimestamp(),
+        });
+    },
+    async cancelRsvp(eventId: string, uid: string): Promise<void> {
+        if (!db) throw new Error('Firestore ej initierad');
+        await deleteDoc(doc(db, 'linkEvents', eventId, 'attendees', uid));
+    },
+    /** Live-lyssnare på vilka som anmält sig. Returnerar avprenumerations-funktion. */
+    subscribeAttendees(eventId: string, callback: (attendees: RsvpAttendee[]) => void): () => void {
+        if (!db) { callback([]); return () => {}; }
+        return onSnapshot(
+            collection(db, 'linkEvents', eventId, 'attendees'),
+            (snap) => {
+                const list = snap.docs.map((d) => {
+                    const v = d.data() as { uid?: string; name?: string; photoURL?: string | null; createdAt?: Timestamp };
+                    return {
+                        uid: v.uid || d.id,
+                        name: v.name || 'Anonym',
+                        photoURL: v.photoURL ?? null,
+                        _t: v.createdAt instanceof Timestamp ? v.createdAt.toMillis() : 0,
+                    };
+                });
+                list.sort((a, b) => a._t - b._t);
+                callback(list.map(({ _t, ...rest }) => rest));
+            },
+            (err) => { console.warn('Kunde inte lyssna på anmälningar:', err); callback([]); }
+        );
     },
 
     /**

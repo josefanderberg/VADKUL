@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "export PATH=/Users/josefanderberg/.nvm/versions/node/v22.22.0/bin:$PATH && cd /Users/josefanderberg/source/VADKUL/apps/web && exec /Users/josefanderberg/source/VADKUL/node_modules/.bin/next dev"],
       "port": 3000,
       "autoPort": true
     }

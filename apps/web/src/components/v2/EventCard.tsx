@@ -6,8 +6,7 @@ import { normalizePriceLabel } from '../../utils/priceLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
-import DayPicker from './DayPicker';
-import { ArrowRight, ArrowLeft, Calendar, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -343,6 +342,9 @@ interface EventCardProps {
     savedEventIds?: Set<string>;
     onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
+    /** Flipper-läge: antal träffar i pågående skott — visas som en pill bredvid
+     *  Nästa-knappen i den nedre raden (0 = dölj). */
+    pinShotHits?: number;
     dayOffset: number;
     /** Antal dagar i det visade intervallet (1 = en dag, 3 = t.ex. fre–sön). */
     dayRangeDays?: number;
@@ -379,15 +381,11 @@ interface EventCardProps {
     onDeleteOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
-    const PEEK_HEIGHT_VH = 28;
-    // Default-höjd när ett event öppnas FRÅN STÄNGT läge: lite högre upp så man
-    // ser kortets header + toppen på bilden (men inte hela vägen ner). Byter man
-    // event medan kortet redan är öppet behålls den höjd man har (se anchor-effekt).
-    const DEFAULT_OPEN_HEIGHT_VH = 40;
+    const PEEK_HEIGHT_VH = 22;
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
@@ -399,15 +397,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
+    
+    // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
+    const [cardRevealStep, setCardRevealStep] = useState(0);
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
-    // Dagväljar-popover ovanför dagchippen (Idag/Imorgon/I helgen/datum).
-    const [dayPickerOpen, setDayPickerOpen] = useState(false);
-    const dayChipRef = useRef<HTMLButtonElement>(null);
+    // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
     const updateHeightVh = (vh: number) => {
         heightVhRef.current = vh;
         setHeightVh(vh);
     };
+
 
     const [dragX, setDragX] = useState(0);
     const dragXRef = useRef(0);
@@ -458,9 +458,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const descRect = desc.getBoundingClientRect();
         const lineHeight = parseFloat(getComputedStyle(desc).lineHeight) || 22;
         // Beskrivningens topp relativt scroll-innehållets topp (oberoende av
-        // nuvarande korthöjd). + grip-zonen (h-6 = 24px) ovanför scroll-containern.
+        // nuvarande korthöjd).
         const descTopWithinContent = (descRect.top - scRect.top) + sc.scrollTop;
-        const targetPx = 24 + descTopWithinContent + lineHeight * 1.4;
+        const targetPx = descTopWithinContent + lineHeight * 1.4;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(90, Math.round(vh)));
     };
@@ -479,9 +479,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const scRect = sc.getBoundingClientRect();
         const lineRect = line.getBoundingClientRect();
         // Linjens topp relativt scroll-innehållets topp (oberoende av nuvarande
-        // korthöjd/scroll). + grip-zonen ovanför scroll-containern.
+        // korthöjd/scroll).
         const lineTopWithinContent = (lineRect.top - scRect.top) + sc.scrollTop;
-        const targetPx = 24 + lineTopWithinContent;
+        const targetPx = lineTopWithinContent;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(10, Math.min(PEEK_HEIGHT_VH, Math.round(vh)));
     };
@@ -557,7 +557,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
         } else {
-            // Användaren valde ett nytt event (kartklick / första valet) → ny
+            // Användaren valde ett nytt event (kartkick / första valet) → ny
             // ankare och en helt ny browsing-gren: nollställ besökt + historik.
             setAnchorId(selectedEvent.id);
             setVisitedEventIds(new Set());
@@ -566,15 +566,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         }
 
         setIsAnimating(true);
-        // Default-höjd när kortet öppnas från stängt läge (prevId === null):
-        // lite högre upp så man ser header + toppen på bilden. Byter man event
-        // medan kortet redan är öppet behålls den nuvarande höjden (inget hopp).
+        setCardRevealStep(0); // Återställ till komprimerat läge vid nytt event
+        // Default-höjd när kortet öppnas från stängt läge: mäts färskt så
+        // bildremsan syns (men inte hela bilden). Byter man event medan kortet
+        // redan är öppet behålls höjden (inget hopp).
         // Ett kort som var på väg ner i en stängning (höjd under peek-gränsen)
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         const raf = requestAnimationFrame(() => {
-            collapsedVhRef.current = measureCollapsedHeight();
-            if (freshOpen) updateHeightVh(DEFAULT_OPEN_HEIGHT_VH);
+            const collapsed = measureCollapsedHeight();
+            collapsedVhRef.current = collapsed;
+            if (freshOpen) updateHeightVh(collapsed);
         });
         return () => cancelAnimationFrame(raf);
     }, [selectedEvent]);
@@ -587,6 +589,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         updateDragX(0);
         setIsAnimating(true);
+        setCardRevealStep(0); // Återställ bildremsa vid nytt event
     }, [selectedEvent?.id]);
 
     // Uppdatera "nu" var 30:e sekund så statusbadgar håller sig fräscha.
@@ -911,37 +914,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
 
     return (
         <>
-        {/* Nedre rad — ALLTID synlig (dagväljare + antal till vänster, Nästa till höger om kort finns) */}
+        {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
-                {/* Vänster: dagväljare med antals-badge ovanpå (sparar plats på raden) */}
+                {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <div className="relative">
-                        <button
-                            ref={dayChipRef}
-                            onClick={() => setDayPickerOpen(o => !o)}
-                            aria-expanded={dayPickerOpen}
-                            aria-label="Välj dag eller period"
-                            className="bg-white/90 backdrop-blur-md px-4 rounded-full shadow-xl border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-2 text-slate-700 h-[38px] box-border"
-                        >
-                            <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                            <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
-                            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[10px] font-black tabular-nums px-2 h-[18px] rounded-full shadow-md border-2 border-white flex items-center justify-center leading-none pointer-events-none">
-                            {eventsLoaded ? (dayCount ?? events.length) : '…'}
-                        </span>
-                        {dayPickerOpen && (
-                            <DayPicker
-                                dayOffset={dayOffset}
-                                dayRangeDays={dayRangeDays}
-                                anchorRef={dayChipRef}
-                                onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
-                                onClose={() => setDayPickerOpen(false)}
-                            />
-                        )}
-                    </div>
                     {/* Ingen separat återställ-knapp — "Idag" ligger ett tryck
                         bort i dagväljaren och tomma dagar har en "Visa idag"-länk.
                         Verktygen (sol/fokus/moln-hämtning) bor i EN gemensam pill
@@ -1004,29 +982,37 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         tillbaka det. Bara EN moln-knapp (för info-molnet). */}
                 </div>
 
-                {/* Höger: bakåt + Nästa (samma höjd, längst till höger).
-                    Döljs i spelläget — då ska man inte kunna navigera bort målet. */}
-                {selectedEvent && !gameMode && (
-                    <div className="flex items-center gap-2 pointer-events-auto">
-                        {historyStack.length > 0 && (
+                {/* Höger: träff-räknare (flipper) + bakåt + Nästa (samma höjd, längst
+                    till höger). Träffpillen ligger JÄMTE Nästa i samma rad. Bakåt/Nästa
+                    döljs i spelläget — då ska man inte kunna navigera bort målet. */}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    {pinShotHits > 0 && (
+                        <div className="flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
+                            🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
+                        </div>
+                    )}
+                    {selectedEvent && !gameMode && (
+                        <>
+                            {historyStack.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleHistoryBack}
+                                    aria-label="Gå tillbaka till föregående event"
+                                    title="Gå tillbaka"
+                                    className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
+                                >
+                                    <ArrowLeft size={16} />
+                                </button>
+                            )}
                             <button
-                                type="button"
-                                onClick={handleHistoryBack}
-                                aria-label="Gå tillbaka till föregående event"
-                                title="Gå tillbaka"
-                                className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
+                                onClick={handleNextOnly}
+                                className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
                             >
-                                <ArrowLeft size={16} />
+                                Nästa <ArrowRight size={18} />
                             </button>
-                        )}
-                        <button
-                            onClick={handleNextOnly}
-                            className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
-                        >
-                            Nästa <ArrowRight size={18} />
-                        </button>
-                    </div>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
@@ -1045,9 +1031,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                 }}
             >
                 {/* Drag-grip-zon — luftig så grip-indikatorn syns tydligt och får
-                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px). */}
+                    plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px).
+                    Zonen ligger nu absolute överst och är transparent för att låta
+                    bilden i LinkEventCard scrolla hela vägen upp under den. */}
                 <div
-                    className="w-full flex-shrink-0 h-6 cursor-grab active:cursor-grabbing select-none bg-card"
+                    className="absolute top-0 left-0 right-0 h-6 cursor-grab active:cursor-grabbing select-none z-[45] bg-transparent"
                     style={{ touchAction: 'none' }}
                 />
 
@@ -1084,7 +1072,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         showFullAddress
-                        alwaysExpanded
+                        onRevealStepChange={(step) => {
+                            setCardRevealStep(step);
+                            // Steg 1 (bild + trunkad beskr): öppna till första beskrivningsraden
+                            // Steg 2 (allt): behåll användarens höjd eller öppna fullt
+                            if (step >= 1 && heightVhRef.current < 50) {
+                                setIsAnimating(true);
+                                requestAnimationFrame(() => updateHeightVh(measureOpenHeight()));
+                            }
+                        }}
                         saved={savedEventIds?.has(selectedEvent.id) ?? false}
                         onToggleSave={savedEventIds && onUnsaveEvent
                             ? () => (savedEventIds.has(selectedEvent.id)
@@ -1119,9 +1115,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                    → liten hint så man inte tror att appen är trasig. */
                 <div style={{ height: '30vh' }} className="w-full flex-shrink-0 flex items-start justify-center pointer-events-none">
                     {!eventsLoaded ? (
-                        <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
-                            <p className="text-sm font-bold text-slate-700">Laddar event…</p>
+                        /* "Laddar event…" centreras mitt på skärmen (egen fixed-
+                           overlay som bryter sig ur botten-arket) — 30vh-spacern
+                           ovan står kvar så reglagets layout är oförändrad. */
+                        <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+                            <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in zoom-in duration-300">
+                                <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
+                                <p className="text-sm font-bold text-slate-700">Laddar event…</p>
+                            </div>
                         </div>
                     ) : events.length === 0 && (
                         <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">

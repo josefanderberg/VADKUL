@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
+import { REVIRET_HUE_CHOICES } from '@/lib/reviret';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
+import { storageService } from '@/services/storageService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ShieldCheck } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ShieldCheck, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProfilePanelProps {
@@ -18,6 +20,10 @@ interface ProfilePanelProps {
     savedCount: number;
     /** Byt till sparat-panelen (stänger profilen). */
     onOpenSaved: () => void;
+    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid). */
+    reviretHue: number | null;
+    /** Anropas när spelaren väljer en ny färg (page sparar + speglar). */
+    onChangeHue: (hue: number) => void;
 }
 
 /**
@@ -25,13 +31,37 @@ interface ProfilePanelProps {
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
-    const { user, logout, updateDisplayName, resetPassword, deleteAccount } = useAuth();
+export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved, reviretHue, onChangeHue }: ProfilePanelProps) {
+    const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
     const [savingName, setSavingName] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
+
+    const handlePhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = ''; // tillåt att välja samma fil igen
+        if (!file || !user) return;
+        if (!file.type.startsWith('image/')) { toast.error('Välj en bildfil.'); return; }
+        setUploadingPhoto(true);
+        try {
+            // Skriv över samma sökväg (ingen avslutande /) → en bild per användare.
+            const url = await storageService.uploadFile(`users/${user.uid}/profile_pic`, file);
+            // Cache-bust så <img> hämtar den nya bilden direkt (samma URL annars).
+            const busted = `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+            await updatePhotoURL(busted);
+            await userService.updatePhotoURL(user.uid, busted).catch(() => {});
+            toast.success('Profilbild uppdaterad!');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte ladda upp bilden. Försök igen.');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
 
     // Nollställ delstate när panelen stängs/öppnas så inget "fastnar".
     useEffect(() => {
@@ -116,9 +146,36 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
 
                     {/* Identitet */}
                     <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 shrink-0">
-                        <span className="w-11 h-11 rounded-full bg-[#006AA7] text-white font-black text-lg flex items-center justify-center shrink-0">
-                            {initial}
-                        </span>
+                        <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoPick}
+                            className="hidden"
+                            aria-hidden
+                        />
+                        <button
+                            type="button"
+                            onClick={() => !uploadingPhoto && photoInputRef.current?.click()}
+                            disabled={uploadingPhoto}
+                            aria-label="Byt profilbild"
+                            title="Byt profilbild"
+                            className="relative w-11 h-11 rounded-full shrink-0 group overflow-visible"
+                        >
+                            {user.photoURL ? (
+                                <img src={user.photoURL} alt="" className="w-11 h-11 rounded-full object-cover" />
+                            ) : (
+                                <span className="w-11 h-11 rounded-full bg-[#006AA7] text-white font-black text-lg flex items-center justify-center">
+                                    {initial}
+                                </span>
+                            )}
+                            {/* Kamera-badge i hörnet visar att bilden är klickbar/bytbar. */}
+                            <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center shadow-sm">
+                                {uploadingPhoto
+                                    ? <span className="w-3 h-3 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin" />
+                                    : <Camera size={11} className="text-[#006AA7]" />}
+                            </span>
+                        </button>
                         <div className="flex-1 min-w-0">
                             {editingName ? (
                                 <div className="flex items-center gap-1.5">
@@ -175,6 +232,34 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
                             <ChevronRight size={15} className="text-slate-400 shrink-0" />
                         </button>
+
+                        {/* Min spelfärg (Reviret) — färgen på ditt revir + på topplistan */}
+                        <div className="border-t border-slate-100 dark:border-slate-800 px-4 pt-3 pb-3.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Min färg</span>
+                            <p className="mt-0.5 mb-2.5 text-xs text-slate-400 font-semibold">Färgen på ditt revir och din rad i topplistan.</p>
+                            <div className="flex flex-wrap gap-2">
+                                {REVIRET_HUE_CHOICES.map((h) => {
+                                    const selected = reviretHue === h;
+                                    return (
+                                        <button
+                                            key={h}
+                                            type="button"
+                                            onClick={() => onChangeHue(h)}
+                                            aria-label={`Välj färg ${h}`}
+                                            aria-pressed={selected}
+                                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform ${
+                                                selected
+                                                    ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-800 dark:ring-white scale-110'
+                                                    : 'hover:scale-105'
+                                            }`}
+                                            style={{ background: `hsl(${h}, 72%, 52%)` }}
+                                        >
+                                            {selected && <Check size={14} className="text-white" strokeWidth={3} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         {/* Mina event */}
                         <div className="border-t border-slate-100 dark:border-slate-800">

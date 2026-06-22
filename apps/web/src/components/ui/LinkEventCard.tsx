@@ -1,11 +1,12 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check } from 'lucide-react';
 import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
-import { linkEventService } from '../../services/linkEventService';
+import { linkEventService, type RsvpAttendee } from '../../services/linkEventService';
 import { feedbackService } from '../../services/feedbackService';
+import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -72,9 +73,43 @@ interface LinkEventCardProps {
 }
 
 export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn }: LinkEventCardProps) {
+    const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
+
+    // Anmälningar (RSVP) — bara för användarskapade event (de länkar inte ut, allt
+    // sker här på sidan). Live-lyssnare på linkEvents/{id}/attendees.
+    const [attendees, setAttendees] = useState<RsvpAttendee[]>([]);
+    const [rsvpBusy, setRsvpBusy] = useState(false);
+    useEffect(() => {
+        if (!linkEvent.userCreated) { setAttendees([]); return; }
+        const unsub = linkEventService.subscribeAttendees(linkEvent.id, setAttendees);
+        return () => unsub();
+    }, [linkEvent.id, linkEvent.userCreated]);
+    const isAttending = !!user && attendees.some(a => a.uid === user.uid);
+    const handleRsvpToggle = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!user) { toast('Logga in för att anmäla dig.', { icon: '🔑' }); return; }
+        setRsvpBusy(true);
+        try {
+            if (isAttending) {
+                await linkEventService.cancelRsvp(linkEvent.id, user.uid);
+            } else {
+                await linkEventService.rsvp(linkEvent.id, {
+                    uid: user.uid,
+                    name: user.displayName || user.email || 'VADKUL-användare',
+                    photoURL: user.photoURL,
+                });
+            }
+        } catch (err) {
+            console.error('RSVP misslyckades:', err);
+            toast.error('Kunde inte uppdatera anmälan. Försök igen.');
+        } finally {
+            setRsvpBusy(false);
+        }
+    };
     // Sant när den RIKTIGA omslagsbilden inte gick att ladda (t.ex. ett
     // facebook-event utan bild bakom URL:en). Då har vi ingen fallback att visa
     // → rendera INGEN bild i stället för webbläsarens trasiga bild-ikon med
@@ -82,6 +117,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [coverFailed, setCoverFailed] = useState(false);
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
+    // Återställ reveal-steg till 0 (komprimerat: header + bildremsa) när eventet byts.
+    useEffect(() => { setInternalRevealStep(0); }, [linkEvent.id]);
 
     // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
     const [reportOpen, setReportOpen] = useState(false);
@@ -213,9 +250,38 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
+            {/* Bildremsa: visas längst upp på kortet när det är komprimerat (revealStep 0).
+                Klick öppnar till full bild + beskrivning. Göms när bilden visas fullständigt. */}
+            {revealStep === 0 && !alwaysExpanded && (
+                <div
+                    className="w-full h-[72px] relative cursor-pointer overflow-hidden rounded-t-[inherit] flex-shrink-0"
+                    onClick={handleHeaderClick}
+                >
+                    <Image
+                        unoptimized
+                        src={coverSrc}
+                        alt=""
+                        fill
+                        className="object-cover"
+                    />
+                    {/* Gradient nederkant så titeln läser sig mot bakgrunden */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
+                    {/* Subtil puls-hint — signalerar att man kan trycka */}
+                    <div className="absolute bottom-2 right-3 flex items-center gap-1 text-[10px] font-black text-white/80 uppercase tracking-widest drop-shadow">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                </div>
+            )}
+
             {/* 1. Header (Always visible) */}
             <div
-                className={`p-4 md:p-6 pt-2 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
+                className={`p-4 md:p-6 flex flex-col w-full relative bg-card ${
+                    alwaysExpanded
+                        ? 'pt-2'
+                        : revealStep === 0
+                        ? 'pt-2'
+                        : 'pt-8'
+                } ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
@@ -276,6 +342,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
+                {/* 2-line Description Preview (only in collapsed state to avoid duplicate when expanded) */}
+                {revealStep === 0 && linkEvent.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 mt-1 font-medium leading-relaxed">
+                        {linkEvent.description}
+                    </p>
+                )}
+
                 <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">
                     {/* Värd */}
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -312,25 +385,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 </div>
             </div>
 
-            {/* Step 0 Peek: Small slice of the image at the bottom when collapsed */}
-            {!alwaysExpanded && revealStep === 0 && (
-                <div
-                    className="w-full h-14 relative cursor-pointer overflow-hidden border-t border-border/50 group-hover:h-18 transition-all duration-500"
-                    onClick={handleHeaderClick}
-                >
-                    <Image unoptimized
-                        src={coverSrc}
-                        alt=""
-                        fill
-                        className="object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-                    <div className="absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <span>Se mer</span>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
-                </div>
-            )}
 
             {/* 2. Revealed Content (Image + Description) */}
             {revealStep >= 1 && (
@@ -340,10 +394,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         48vh) i stället för en beskuren remsa, så man ser hela
                         motivet. Fallback-mönster (utan riktig coverImage) och alla
                         övriga lägen behåller den beskurna h-48/h-64-remsan. */}
-                    {/* Riktig omslagsbild som inte gick att ladda (coverFailed) och
-                        inget fallback-mönster → rendera INGEN bild i stället för
-                        webbläsarens trasiga bild-ikon med titeln bredvid. */}
-                    {hasRealCover && coverFailed ? null : alwaysExpanded && hasRealCover ? (
+                    {/* Bild: alltid object-contain i sheet-läget så man ser hela motivet.
+                        Fallback-mönster behåller den beskurna remsan. */}
+                    {hasRealCover && coverFailed ? null : hasRealCover ? (
                         <div
                             className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={handleContentClick}
@@ -353,7 +406,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 src={coverSrc as string}
                                 alt={linkEvent.title}
                                 onError={() => setCoverFailed(true)}
-                                className="w-full h-auto max-h-[48vh] object-contain"
+                                className="w-full h-auto max-h-[60vh] object-contain"
                             />
                         </div>
                     ) : (
@@ -390,7 +443,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                         {revealStep === 2 && (
                             <div className="mt-6 flex flex-col gap-3">
-                                {/* Användarskapade event saknar extern anmälningssida */}
+                                {/* Skrapade event länkar ut till arrangörens sida. */}
                                 {linkEvent.url && (
                                     <button
                                         onClick={handleVisitSite}
@@ -399,6 +452,56 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         <span>ANMÄL DIG HÄR</span>
                                         <ExternalLink size={24} />
                                     </button>
+                                )}
+
+                                {/* Användarskapade event: anmälan sker HÄR på sidan, ingen
+                                    extern länk. Knappen togglar din anmälan och listan visar
+                                    vilka som kommer. */}
+                                {!linkEvent.url && linkEvent.userCreated && (
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={handleRsvpToggle}
+                                            disabled={rsvpBusy}
+                                            aria-pressed={isAttending}
+                                            className={`flex items-center justify-center gap-3 w-full py-4 text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97] disabled:opacity-60 ${
+                                                isAttending
+                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                    : 'bg-[#006AA7] hover:bg-[#005590] text-white'
+                                            }`}
+                                        >
+                                            {isAttending ? <Check size={24} /> : <Users size={24} />}
+                                            <span>{isAttending ? 'DU ÄR ANMÄLD' : 'ANMÄL DIG'}</span>
+                                        </button>
+
+                                        <div>
+                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                                <Users size={13} />
+                                                {attendees.length === 0
+                                                    ? 'Ingen anmäld än — bli först!'
+                                                    : `${attendees.length} ${attendees.length === 1 ? 'anmäld' : 'anmälda'}`}
+                                            </p>
+                                            {attendees.length > 0 && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {attendees.map(a => (
+                                                        <span
+                                                            key={a.uid}
+                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                                        >
+                                                            {a.photoURL ? (
+                                                                // eslint-disable-next-line @next/next/no-img-element
+                                                                <img src={a.photoURL} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                                            ) : (
+                                                                <span className="w-6 h-6 rounded-full bg-[#006AA7] text-white text-[11px] font-black flex items-center justify-center">
+                                                                    {a.name.charAt(0).toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{a.name}</span>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                                 {/* Spara / Hitta hit / Dela — samlade direkt under
                                     anmälningsknappen i stället för utspridda

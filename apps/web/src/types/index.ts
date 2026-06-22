@@ -21,6 +21,7 @@ export interface UserProfile {
   invitedBy?: string;    // <--- NY: Vem bjöd in mig?
   redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
   savedEventIds?: string[]; // Sparade event (hjärtan) — synkas mellan enheter
+  reviretHue?: number; // <--- NY: vald spelfärg (färgton 0–359) för Reviret/topplistan
 }
 
 export interface UserReview {

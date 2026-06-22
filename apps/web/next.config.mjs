@@ -24,6 +24,16 @@ const nextConfig = {
         ignoreBuildErrors: true,
     },
     outputFileTracingRoot: path.join(__dirname, '../../'),
+    // Gamla sidor (/shop, /login) är skrotade — inloggning + funktioner bor på
+    // kartan. Mjuk redirect på routing-nivå så gamla länkar/bokmärken landar på
+    // kartan i stället för 404. (Ersätter redirect-only page-stubbar som kraschade
+    // bygget med "Cannot find module for page" i Next 15.)
+    async redirects() {
+        return [
+            { source: '/shop', destination: '/', permanent: false },
+            { source: '/login', destination: '/', permanent: false },
+        ];
+    },
 };
 
 export default nextConfig;

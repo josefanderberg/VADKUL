@@ -24,6 +24,8 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   /** Byt visningsnamn (profilpanelen). Speglas lokalt direkt. */
   updateDisplayName: (name: string) => Promise<void>;
+  /** Byt profilbild (URL från Storage). Uppdaterar Auth-profilen + speglas lokalt. */
+  updatePhotoURL: (url: string) => Promise<void>;
   /** Skicka lösenordsåterställning till kontots e-post. */
   resetPassword: () => Promise<void>;
   /** Radera kontot i Firebase Auth. Kan kasta auth/requires-recent-login. */
@@ -67,6 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ ...auth.currentUser, displayName: name.trim() } as User);
   };
 
+  const updatePhotoURL = async (url: string) => {
+    if (!auth.currentUser) throw new Error('Inte inloggad');
+    await updateProfile(auth.currentUser, { photoURL: url });
+    setUser({ ...auth.currentUser, photoURL: url } as User);
+  };
+
   const resetPassword = async () => {
     if (!auth.currentUser?.email) throw new Error('Kontot saknar e-post');
     await sendPasswordResetEmail(auth, auth.currentUser.email);
@@ -78,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, signIn, register, updateDisplayName, resetPassword, deleteAccount }}>
+    <AuthContext.Provider value={{ user, loading, logout, signIn, register, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount }}>
       {!loading && children}
     </AuthContext.Provider>
   );

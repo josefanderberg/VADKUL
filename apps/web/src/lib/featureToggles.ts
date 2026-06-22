@@ -66,6 +66,12 @@ export const FEATURE_CATALOG: FeatureDef[] = [
         description: 'Luta kartan för ett 3D-perspektiv.',
         group: 'map', tier: 'free', defaultOn: true, icon: 'Mountain',
     },
+    {
+        id: 'reviret',
+        name: 'Reviret',
+        description: 'I pinball-läget målar kulan rutorna den rullar genom i din färg — eventen i ditt revir blir dina.',
+        group: 'map', tier: 'free', defaultOn: true, icon: 'Hexagon',
+    },
 
     // ── Premium (lås upp med kod / köp) ─────────────────────────────────────
     {

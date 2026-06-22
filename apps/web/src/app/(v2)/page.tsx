@@ -12,9 +12,10 @@ import SavedPanel from '@/components/v2/SavedPanel';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
-import { Target, Trophy, X, Sparkles } from 'lucide-react';
+import { storageService } from '@/services/storageService';
+import { setMyCustomHue } from '@/lib/reviret';
+import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
-import { classifySource, DEFAULT_MUTED_SOURCES, SOURCE_DEFS } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -80,6 +81,8 @@ export default function HomePage() {
     const [eventsLoaded, setEventsLoaded] = useState(false);
     // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
+    const selectedEventRef = useRef<LinkEvent | null>(null);
+    selectedEventRef.current = selectedEvent; // läses i hit-callbacken utan att bli dep
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
@@ -91,11 +94,11 @@ export default function HomePage() {
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+    // Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid).
+    // Speglas till reviret-modulens cache så skriv-tjänsterna färgar rätt.
+    const [myReviretHue, setMyReviretHue] = useState<number | null>(null);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    // Dolda källor: PRO/Korpen/Svenska kyrkan har så många event att de dränker
-    // kartan → dolda som standard, men kan slås på igen. Sparas i localStorage.
-    const [mutedSources, setMutedSources] = useState<Set<string>>(() => new Set(DEFAULT_MUTED_SOURCES));
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -112,6 +115,8 @@ export default function HomePage() {
     const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
     const [newEventPlace, setNewEventPlace] = useState('');         // platsnamn, valfritt
     const [newEventDescription, setNewEventDescription] = useState(''); // valfri
+    const [newEventImage, setNewEventImage] = useState<File | null>(null);
+    const [newEventImagePreview, setNewEventImagePreview] = useState('');
     const [creatingEvent, setCreatingEvent] = useState(false);
 
     // Escape stänger skapa event-modalen (samma städning som Avbryt-knappen) —
@@ -145,7 +150,8 @@ export default function HomePage() {
     // nytt sol-klick lutar ALLTID (behåller lutningen om den redan lutar) —
     // det fäller aldrig tillbaka till platt vy. Avlutning sker via tryck på
     // sol-molnet (handleSunCloudTap) eller tilt-knappen (handleToggleTilt).
-    const [mapTilted, setMapTilted] = useState(false);
+    // Lutad kamera (3D-perspektiv) PÅ som standard, så 3D-terrängen syns från start.
+    const [mapTilted, setMapTilted] = useState(true);
     // True när funktions-väskan (uppe till vänster i V2Map) är utfälld — då gömmer
     // vi spel-knapparna (poäng + Hitta event) som delar vänsterkolumn.
     const [funcBagOpen, setFuncBagOpen] = useState(false);
@@ -237,10 +243,38 @@ export default function HomePage() {
     // Event-id för markören man gissade på — hålls synlig (brickan) efter avslöjet.
     const [guessedEventId, setGuessedEventId] = useState<string | null>(null);
 
+    // ── Pinball/Flipper-läge ──────────────────────────────────────────────────
+    // Kartan blir en top-down flipperbana: eventen blir runda studsare och en
+    // kula avfyras med slangbella. Träffat event öppnas. (Handlers längre ned.)
+    // Flipper AV som standard — användaren väljer den själv i väskan. Terräng-
+    // gravitationen i fysik-loopen är ändå redo (samplar höjddata) när flippern
+    // slås på. Andra funktioner/kartstilar går att välja medan flippern är på.
+    const [pinballActive, setPinballActive] = useState(false);
+    const [pinballScore, setPinballScore] = useState(0); // antal träffar denna omgång
+    // Vilket event i en flerEvent-grupp (samma plats) som visas — varje träff stegar +1.
+    const pinballGroupIdxRef = useRef<Map<string, number>>(new Map());
+    const [pinballShots, setPinballShots] = useState(0); // antal avfyrade kulor
+    const [pinShotHits, setPinShotHits] = useState(0);   // träffar i pågående skott (visas bredvid Nästa)
+
+    // Användarskapade event ska ALLTID vara kvar på kartan. Pollen är progressiv:
+    // stegen destinationer → kort → beskrivningar saknar användarevent (bara sista
+    // steget har dem), så utan skydd blinkar egna event bort ~var 30:e sekund.
+    // myCreatedRef = den här sessionens optimistiskt skapade event (syns direkt,
+    // innan pollen hunnit hämta dem). lastUserEventsRef = senast kända DB-set av
+    // användarevent. Båda slås in i varje callback (id-dedup → `fetched` vinner).
+    const myCreatedRef = useRef<LinkEvent[]>([]);
+    const lastUserEventsRef = useRef<LinkEvent[]>([]);
     // Real-time Firestore listener — uppdaterar kartan direkt när scraper hittar events
     useEffect(() => {
         const unsubscribe = linkEventService.subscribeToAll(true, (fetched) => {
-            const sorted = fetched.sort((a, b) => a.time.getTime() - b.time.getTime());
+            const fetchedUser = fetched.filter(e => e.userCreated);
+            if (fetchedUser.length) lastUserEventsRef.current = fetchedUser;
+            const seen = new Set(fetched.map(e => e.id));
+            const extras: LinkEvent[] = [];
+            for (const e of [...myCreatedRef.current, ...lastUserEventsRef.current]) {
+                if (!seen.has(e.id)) { seen.add(e.id); extras.push(e); }
+            }
+            const sorted = [...fetched, ...extras].sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
             // Laddningen är progressiv (destinationer → kort → beskrivningar) och
             // första lagret kan komma tomt — räkna bara svar MED data som
@@ -280,6 +314,8 @@ export default function HomePage() {
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
+            // Flippern är default-basläget och stängs INTE av vid dagbyte — den
+            // byggs bara om med den nya dagens event. (Förut: setPinballActive(false).)
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
             prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
@@ -301,17 +337,8 @@ export default function HomePage() {
             const discarded = JSON.parse(localStorage.getItem('vadkul_discarded_events') ?? '[]');
             if (Array.isArray(saved) && saved.length) setSavedEventIds(new Set(saved));
             if (Array.isArray(discarded) && discarded.length) setDiscardedEventIds(new Set(discarded));
-            // Dolda källor: bara om nyckeln finns (annars behåll default-dolda).
-            const mutedRaw = localStorage.getItem('vadkul_muted_sources');
-            if (mutedRaw) {
-                const muted = JSON.parse(mutedRaw);
-                if (Array.isArray(muted)) setMutedSources(new Set(muted));
-            }
         } catch { /* korrupt localStorage — börja om tomt */ }
     }, []);
-    useEffect(() => {
-        localStorage.setItem('vadkul_muted_sources', JSON.stringify([...mutedSources]));
-    }, [mutedSources]);
     useEffect(() => {
         localStorage.setItem('vadkul_saved_events', JSON.stringify([...savedEventIds]));
     }, [savedEventIds]);
@@ -339,6 +366,30 @@ export default function HomePage() {
         })();
         return () => { cancelled = true; };
     }, [user]);
+
+    // Inloggad: ladda spelarens valda Reviret-färg och spegla den till reviret-
+    // modulens cache (setMyCustomHue) så claimCells/saveDailyScore färgar rätt.
+    // Utloggad: nollställ → standardfärg per uid används.
+    useEffect(() => {
+        if (!user) { setMyReviretHue(null); setMyCustomHue(null); return; }
+        let cancelled = false;
+        (async () => {
+            const profile = await userService.getUserProfile(user.uid).catch(() => null);
+            if (cancelled) return;
+            const h = typeof profile?.reviretHue === 'number' ? profile.reviretHue : null;
+            setMyReviretHue(h);
+            setMyCustomHue(h);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+
+    // Spelaren väljer en ny färg i profilen → uppdatera lokalt + cache direkt
+    // (optimistiskt) och spegla till Firestore (bäst-möjligt).
+    const handleChangeReviretHue = useCallback((hue: number) => {
+        setMyReviretHue(hue);
+        setMyCustomHue(hue);
+        if (user) userService.updateReviretHue(user.uid, hue).catch(() => { /* bäst-möjligt */ });
+    }, [user]);
     useEffect(() => {
         if (!user || !savedSyncReady.current) return;
         const t = setTimeout(() => {
@@ -357,6 +408,15 @@ export default function HomePage() {
         setCreatingEvent(true);
         try {
             const time = new Date(newEventTime);
+            // Ladda upp ev. eventbild först så URL:en kan sparas på eventet.
+            let coverImage = '';
+            if (newEventImage) {
+                try {
+                    coverImage = await storageService.uploadFile(`event-images/${user.uid}/`, newEventImage);
+                } catch (e) {
+                    console.warn('Kunde inte ladda upp eventbilden — skapar utan bild:', e);
+                }
+            }
             const docId = await linkEventService.createUserEvent({
                 title: newEventTitle,
                 time,
@@ -367,15 +427,25 @@ export default function HomePage() {
                 category: newEventCategory,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
                 hostUid: user.uid,
+                coverImage,
             });
             const created: LinkEvent = {
                 id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
                 locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
                 hostName: user.displayName || user.email || 'VADKUL-användare',
-                category: newEventCategory, coverImage: '', description: newEventDescription.trim(), attendees: 0,
+                category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
                 isLocationVerified: true, userCreated: true, hostUid: user.uid,
             } as LinkEvent;
+            // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
+            myCreatedRef.current = [...myCreatedRef.current, created];
             setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
+            // Hoppa till eventets dag så det garanterat ligger inom dag-filtret —
+            // annars syns det inte om det skapades för en annan dag än den visade.
+            const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+            const startEvt = new Date(time); startEvt.setHours(0, 0, 0, 0);
+            const dayOffsetForEvent = Math.round((startEvt.getTime() - startToday.getTime()) / 86_400_000);
+            setDayOffset(dayOffsetForEvent);
+            setDayRangeDays(1);
             setSelectedEvent(created);
             toast.success('Eventet är skapat och syns på kartan! 🎉');
             setCreationMode('idle');
@@ -385,19 +455,23 @@ export default function HomePage() {
             setNewEventCategory('other');
             setNewEventPlace('');
             setNewEventDescription('');
+            setNewEventImage(null);
+            setNewEventImagePreview('');
         } catch (err) {
             console.error(err);
             toast.error('Kunde inte skapa eventet. Försök igen.');
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, user, openLogin]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, user, openLogin]);
 
     // Ta bort sitt EGET användarskapade event: Firestore-delete (reglerna
     // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
     const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
         try {
             await linkEventService.deleteUserEvent(eventId);
+            myCreatedRef.current = myCreatedRef.current.filter(e => e.id !== eventId);
+            lastUserEventsRef.current = lastUserEventsRef.current.filter(e => e.id !== eventId);
             setEvents(prev => prev.filter(e => e.id !== eventId));
             setSelectedEvent(prev => (prev?.id === eventId ? null : prev));
             setSavedEventIds(prev => {
@@ -443,53 +517,25 @@ export default function HomePage() {
         );
     }, [events, filteredEvents, searchQuery]);
 
-    // Källfilter: räkna antal per "stor" källa (för togglarna) OCH plocka bort de
-    // dolda källorna i ETT svep. Counts beräknas före gallringen så togglarna kan
-    // visa antalet även för en dold källa.
-    const { sourceFilteredEvents, sourceCounts } = useMemo(() => {
-        const counts: Record<string, number> = {};
-        const kept: LinkEvent[] = [];
-        for (const evt of searchFilteredEvents) {
-            const src = classifySource(evt.url || evt.id);
-            if (src) counts[src] = (counts[src] ?? 0) + 1;
-            if (!src || !mutedSources.has(src)) kept.push(evt);
-        }
-        return { sourceFilteredEvents: kept, sourceCounts: counts };
-    }, [searchFilteredEvents, mutedSources]);
+    // Inget källfilter längre: ALLA event visas alltid. De "stora" källorna
+    // (PRO/Korpen/Svenska kyrkan) döljs inte — de skiljs i stället ut med en egen
+    // markörfärg på kartan (se sourceColor i V2Map).
 
-    // Kategorifiltret appliceras sist i kedjan: dag → sök → källa → kategori.
+    // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(() => {
-        if (selectedCategories.size === 0) return sourceFilteredEvents;
-        return sourceFilteredEvents.filter(evt =>
+        if (selectedCategories.size === 0) return searchFilteredEvents;
+        return searchFilteredEvents.filter(evt =>
             selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
         );
-    }, [sourceFilteredEvents, selectedCategories]);
+    }, [searchFilteredEvents, selectedCategories]);
 
-    // Antal event för dagen i dag-väljarens badge: räknas FÖRE källfiltret så det
-    // visar hur många event som faktiskt finns för dagen, även när PRO/Korpen/
-    // Svenska kyrkan är dolda på kartan. (Respekterar dock kategorivalet.)
+    // Antal event för dagen i dag-väljarens badge (respekterar kategorivalet).
     const dayEventCount = useMemo(() => {
         if (selectedCategories.size === 0) return searchFilteredEvents.length;
         return searchFilteredEvents.filter(evt =>
             selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
         ).length;
     }, [searchFilteredEvents, selectedCategories]);
-
-    // Källornas toggle-info (label + antal + dold?) — endast källor som faktiskt
-    // har event i nuvarande vy visas i listan.
-    const sourceFilters = useMemo(
-        () => SOURCE_DEFS
-            .map(d => ({ key: d.key, label: d.label, count: sourceCounts[d.key] ?? 0, muted: mutedSources.has(d.key) }))
-            .filter(s => s.count > 0 || s.muted),
-        [sourceCounts, mutedSources]
-    );
-    const handleToggleSource = useCallback((key: string) => {
-        setMutedSources(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key); else next.add(key);
-            return next;
-        });
-    }, []);
 
     const handleToggleCategory = useCallback((id: string) => {
         setSelectedCategories(prev => {
@@ -622,10 +668,6 @@ export default function HomePage() {
         const futureMs: number[] = [];
         for (const evt of events) {
             if (!evt.time) continue;
-            // Dolda källor räknas inte med — annars skulle molnet påstå tusentals
-            // event (t.ex. Svenska kyrkan) som inte ens syns på kartan.
-            const src = classifySource(evt.url || evt.id);
-            if (src && mutedSources.has(src)) continue;
             const t = evt.time.getTime();
             if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
             if (t >= startOfTomorrow.getTime() && t <= endOfTomorrow.getTime()) tomorrow++;
@@ -643,7 +685,7 @@ export default function HomePage() {
             withinHour = futureMs.filter(ms => ms <= limit).length;
         }
         return { today, tomorrow, week, withinHour, withinHours };
-    }, [events, nowTick, mutedSources]);
+    }, [events, nowTick]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
@@ -731,6 +773,54 @@ export default function HomePage() {
         setSelectedEvent(null);
     }, []);
 
+    // ── Pinball/Flipper-handlers ──────────────────────────────────────────────
+    const startPinball = useCallback(() => {
+        if (gamePool.length === 0) return;
+        setSelectedEvent(null);   // ren bana; kort öppnas bara vid en träff
+        pinballGroupIdxRef.current.clear(); // ny omgång → ingen stale grupp-position
+        setPinballScore(0);
+        setPinballShots(0);
+        setPinShotHits(0);
+        setPinballActive(true);
+    }, [gamePool.length]);
+
+    const stopPinball = useCallback(() => {
+        setPinballActive(false);
+        setSelectedEvent(null);
+        setPinShotHits(0);
+        pinballGroupIdxRef.current.clear();
+    }, []);
+
+    // Kallas av V2Map när kulan slår in i en studsare → öppna eventet + poäng.
+    const handlePinballHit = useCallback((group: LinkEvent[]) => {
+        if (!group.length) return;
+        // Flera event på samma plats: varje träff visar NÄSTA levande event i gruppen
+        // (bläddra igenom de stackade eventen genom att studsa på dem).
+        const live = group.filter(e => !discardedEventIds.has(e.id));
+        const pool = live.length ? live : group;
+        const first = pool[0];
+        if (pool.length <= 1 || first.lat == null || first.lng == null) {
+            setSelectedEvent(pool[0]);
+        } else {
+            const key = `${first.lat.toFixed(4)},${first.lng.toFixed(4)}`;
+            const sel = selectedEventRef.current;
+            const selIdx = sel ? pool.findIndex(e => e.id === sel.id) : -1;
+            const idxMap = pinballGroupIdxRef.current;
+            const base = selIdx >= 0 ? selIdx : (idxMap.get(key) ?? -1);
+            const next = (base + 1) % pool.length; // base>=-1 → next 0..n-1
+            idxMap.set(key, next);
+            setSelectedEvent(pool[next]);
+        }
+        setPinballScore(s => s + 1);
+        setPinShotHits(h => h + 1); // räknare för pågående skott → visas bredvid Nästa
+    }, [discardedEventIds]);
+
+    // Nytt skott/segment startar → nollställ skottets träffräknare (+ räkna avfyrning).
+    const handlePinballLaunch = useCallback(() => {
+        setPinballShots(s => s + 1);
+        setPinShotHits(0);
+    }, []);
+
     // Stänger spelaren kortet (drar ner det) mitt i en runda/resultat → städa spelet.
     useEffect(() => {
         if (selectedEvent === null && (gameActive || gameResult !== null)) {
@@ -764,18 +854,20 @@ export default function HomePage() {
                 onOpenProfile={handleToggleProfile}
                 savedCount={savedEventIds.size}
                 onToggleSaved={handleToggleSaved}
+                dayOffset={dayOffset}
+                dayRangeDays={dayRangeDays}
+                onDayRangeChange={handleDayRangeChange}
+                dayCount={dayEventCount}
+                eventsLoaded={eventsLoaded}
             />
 
             {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken.
-                Kategoriantal räknas ur det källfiltrerade så de matchar kartan;
-                källtogglarna (PRO/Korpen/Svenska kyrkan) sitter i samma panel. */}
+                Kategoriantal räknas ur de sökfiltrerade eventen så de matchar kartan. */}
             <CategoryFilter
-                events={sourceFilteredEvents}
+                events={searchFilteredEvents}
                 selected={selectedCategories}
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
-                sources={sourceFilters}
-                onToggleSource={handleToggleSource}
             />
 
             {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}
@@ -804,6 +896,8 @@ export default function HomePage() {
                 onDeleteEvent={handleDeleteOwnEvent}
                 savedCount={savedEventIds.size}
                 onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
+                reviretHue={myReviretHue}
+                onChangeHue={handleChangeReviretHue}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -840,10 +934,19 @@ export default function HomePage() {
                 onActivateMultiplayer={handleActivateMultiplayer}
                 onFuncBagOpenChange={setFuncBagOpen}
                 findGameActive={gameActive}
-                canStartFindGame={!selectedEvent && !gameActive && gameResult === null && gamePool.length > 0}
+                canStartFindGame={!selectedEvent && !gameActive && gameResult === null && !pinballActive && gamePool.length > 0}
                 onStartFindGame={startRound}
                 onStopFindGame={clearGame}
+                pinballMode={pinballActive}
+                canStartPinball={!selectedEvent && !gameActive && gameResult === null && !pinballActive && gamePool.length > 0}
+                onStartPinball={startPinball}
+                onStopPinball={stopPinball}
+                onPinballHit={handlePinballHit}
+                onPinballLaunch={handlePinballLaunch}
+                myReviretHue={myReviretHue}
             />
+
+
 
             {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
             {creationMode === 'editing' && pickedLocation && (
@@ -907,6 +1010,43 @@ export default function HomePage() {
                             rows={3}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
                         />
+                        {/* Bild på eventet (valfritt) — laddas upp till Storage vid Skapa. */}
+                        <div>
+                            <input
+                                id="new-event-image"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    e.target.value = '';
+                                    if (!file) return;
+                                    if (!file.type.startsWith('image/')) { toast.error('Välj en bildfil.'); return; }
+                                    setNewEventImage(file);
+                                    setNewEventImagePreview(URL.createObjectURL(file));
+                                }}
+                            />
+                            {newEventImagePreview ? (
+                                <div className="relative">
+                                    <img src={newEventImagePreview} alt="Förhandsvisning" className="w-full h-36 object-cover rounded-xl border border-slate-200" />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewEventImage(null); setNewEventImagePreview(''); }}
+                                        aria-label="Ta bort bild"
+                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                                    >
+                                        <X size={15} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label
+                                    htmlFor="new-event-image"
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-semibold cursor-pointer hover:border-green-500 hover:text-green-600 transition-colors"
+                                >
+                                    <ImagePlus size={18} /> Lägg till bild (valfritt)
+                                </label>
+                            )}
+                        </div>
                         {!user && (
                             <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
                                 Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
@@ -922,6 +1062,8 @@ export default function HomePage() {
                                     setNewEventTime('');
                                     setNewEventPlace('');
                                     setNewEventDescription('');
+                                    setNewEventImage(null);
+                                    setNewEventImagePreview('');
                                 }}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
@@ -966,19 +1108,10 @@ export default function HomePage() {
                 savedEventIds={savedEventIds}
                 onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
+                pinShotHits={pinShotHits}
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
                 onDayRangeChange={handleDayRangeChange}
-                onSunClick={shopFlags.sun ? handleSunClick : undefined}
-                mainCloudOffScreen={cloudOffScreen.main}
-                sunCloudOffScreen={cloudOffScreen.sun}
-                recallMainBlink={!mainRecalled}
-                onRecallMainCloud={handleRecallMain}
-                onRecallSunCloud={handleRecallSun}
-                onRecenter={shopFlags.focus ? handleRecenter : undefined}
-                recenterBlink={focusToolBlink}
-                slingshotReady={slingshotActive}
-                slingshotEngaged={slingshotEngaged}
                 gameMode={gameActive || gameResult !== null}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}

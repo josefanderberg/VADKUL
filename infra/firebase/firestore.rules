@@ -177,7 +177,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
-            'description', 'createdAt', 'isLocationVerified'
+            'description', 'createdAt', 'isLocationVerified', 'coverImage'
         ]);
 
       // Uppdatera/radera: bara sitt eget användarskapade event…
@@ -188,6 +188,20 @@ service cloud.firestore {
       // …eller admin (scrapade event förblir admin-only).
       allow create, update, delete: if isAuthenticated()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+
+      // ANMÄLNINGAR: vem som anmält sig till ett event. Doc-id = användarens uid,
+      // så varje konto kan bara anmäla sig en gång. Publikt läsbart (alla ser vilka
+      // som kommer); man får bara skapa/radera SIN EGEN anmälan, formbegränsad.
+      match /attendees/{attendeeId} {
+        allow read: if true;
+        allow create: if isAuthenticated()
+          && attendeeId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'photoURL', 'createdAt']);
+        allow delete: if isAuthenticated() && attendeeId == request.auth.uid;
+      }
     }
 
     // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).
@@ -233,6 +247,68 @@ service cloud.firestore {
         && request.resource.data.lng  is number
         && request.resource.data.isVisible is bool;
       allow delete: if isOwner(userId);
+    }
+
+    // 12. REVIRET TERRITORY (asynkront territorie-spel ovanpå pinball-läget)
+    // Alla kan läsa (kartan är färglagd för alla). Inloggade får claima/stjäla en
+    // ruta så länge de sätter SIG SJÄLVA som ägare. Steg 3 lägger server-verifierad
+    // befästning (incheckning på riktiga event) ovanpå via en Cloud Function —
+    // tills dess är allt "blött" och fritt stjälbart.
+    match /territory/{cellId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'color', 'region', 'claimedAt'])
+        && request.resource.data.color  is string
+        && request.resource.data.region is string;
+      allow delete: if false;
+    }
+
+    // 13. EVENT CLAIMS (per-event-ägande ovanpå pinball-läget)
+    // Den spelare som har flest träffar på ett event äger det (ring i ägarens
+    // färg + "ta över"-nummer). Doc-id = event-gruppens geo-nyckel "lat4,lng4".
+    // Alla kan läsa (ringarna syns för alla). Inloggade får skriva — fältet
+    // `hits` (träffar per spelare) är klient-betrott i det här "blöta" steget,
+    // precis som territory ovan. Steg 3 lägger server-verifiering ovanpå.
+    match /eventClaims/{eventKey} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerHue  is number
+        && request.resource.data.ownerHits is number
+        && request.resource.data.region    is string
+        && request.resource.data.hits      is map;
+      allow delete: if false;
+    }
+
+    // 14. TERRITORIER (ackumulerade konvex-hull-revir ovanpå pinball; ENDAST
+    // geometri + medlems-event lagras — "ta över"-numret härleds live ur
+    // eventClaims så det aldrig kan driva isär. "Blött" som territory/eventClaims.)
+    match /territories/{territoryId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerHue   is number
+        && request.resource.data.region     is string
+        && request.resource.data.eventCount is number
+        && request.resource.data.eventKeys  is list
+        && request.resource.data.ring       is list;
+      allow delete: if false;
+    }
+
+    // 15. LEADERBOARD (dagens topplista för Reviret-spelet)
+    // Alla kan läsa (topplistan visas för alla). Inloggade får skriva ENBART sin
+    // egen rad — doc-id måste vara "{dag}__{uid}" och fältet uid måste matcha. Poäng
+    // är klient-betrott i det här "blöta" steget precis som territory/eventClaims.
+    match /leaderboard/{rowId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && rowId == request.resource.data.day + '__' + request.auth.uid
+        && request.resource.data.day    is string
+        && request.resource.data.points is number
+        && request.resource.data.events is number;
+      allow delete: if false;
     }
   }
 }
