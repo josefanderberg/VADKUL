@@ -38,6 +38,7 @@
     "geo-refine": "ts-node src/scripts/geo-refine.ts",
     "backfill-geocode": "ts-node src/scripts/backfill-geocode.ts",
     "backfill-date-only-times": "ts-node src/scripts/backfill-date-only-times.ts",
+    "backfill-emoji": "ts-node src/scripts/backfill-emoji.ts",
     "dedupe-cross": "ts-node src/scripts/dedupe-cross-source.ts",
     "audit-events": "ts-node src/scripts/audit-events.ts",
     "audit-pending": "ts-node src/scripts/audit-all-pending.ts",
