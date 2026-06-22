@@ -808,6 +808,16 @@ export const SOURCES: Source[] = [
         engine: 'sitevision',
         config: { urls: ['https://www.kalmar.se/evenemang'], defaultCity: 'Kalmar' },
         updateFrequency: 'every-3d',
+        status: 'experimental',
+        // Tyst källa (0 event trots dagliga runs, inga fel). Diagnos 2026-06-22:
+        // kalmar.se/evenemang är numera bara en landningssida som länkar vidare
+        // till kalmar.com/evenemang. Där renderas evenemangen klient-sida av en
+        // SiteVision-"webapp" (vendor.js/webapp-resource) — statiska HTML:en har
+        // 0 <time>-element och ingen JSON-LD, så sitevision-motorn hittar inget.
+        // Fix kräver headless-rendering eller webappens interna data-endpoint —
+        // större jobb. Experimentell tills dess.
+        notes: 'Tyst 2026-06-22: events flyttade till kalmar.com (SiteVision-webapp, JS-renderad). Statisk HTML saknar <time>/JSON-LD. Kräver headless eller webapp-endpoint.',
+        lastVerified: '2026-06-22',
     },
     {
         id: 'gotland-kommun',
@@ -3754,8 +3764,13 @@ export const SOURCES: Source[] = [
         updateFrequency: 'every-3d',
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://visitstockholm.se/sitemap.xml', date: '2026-06-11' },
-        notes: 'Bulk-probe 2026-06-11: sitemap-text, ~8 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov.',
-        lastVerified: '2026-06-11',
+        // Tyst källa (0 event). Diagnos 2026-06-22: sajten är ombyggd till en
+        // ren turist-/POI-katalog. Sitemap (1711 URL:er) saknar daterade event —
+        // /evenemang/ finns inte längre, innehållet ligger under /o/ (restauranger,
+        // barer, sevärdheter, evergreen-artiklar). 0 av 1711 matchar urlPatterns.
+        // Ingen daterad evenemangsfeed kvar att skrapa → inte en selektor-fix.
+        notes: 'Tyst 2026-06-22: visitstockholm.se ombyggd till POI-katalog (/o/...). Sitemap saknar daterade event, 0/1711 matchar. Ingen evenemangsfeed kvar — kandidat för dead.',
+        lastVerified: '2026-06-22',
     },
     {
         id: 'trosa',
