@@ -228,3 +228,26 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
     // Bara "idag"-datum finns — använd det
     return futureDates[0];
 }
+
+/**
+ * Normalisera ett "bara datum"-event (hasSpecificTime=false) till en neutral
+ * eftermiddagstid i stället för lokal midnatt.
+ *
+ * Bakgrund: buildDate() skapar `new Date(y, m, d, 0, 0)` = LOKAL midnatt. När
+ * det serialiseras med toISOString() blir det 22:00Z (sommar/CEST) eller
+ * 23:00Z (vinter/CET) FÖREGÅENDE dag. Det ser ut som ett riktigt klockslag
+ * (00:00 lokalt) OCH kan rulla över dygnsgränsen vid rendering.
+ *
+ * Lösning: pinna 12:00 UTC på eventets STOCKHOLMS-lokala kalenderdag. Stockholm
+ * är UTC+1/+2, så 12:00Z = 13:00 (vinter) / 14:00 (sommar) lokalt — tydligt
+ * dagtid (≈14:00 som önskat) och datumet rullar aldrig. Intl-baserad så den är
+ * oberoende av maskinens tidszon.
+ */
+export function normalizeDateOnlyTime(d: Date): Date {
+    if (isNaN(d.getTime())) return d;
+    const ymd = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Stockholm',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d); // "YYYY-MM-DD"
+    return new Date(`${ymd}T12:00:00.000Z`);
+}
