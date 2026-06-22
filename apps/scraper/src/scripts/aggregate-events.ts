@@ -122,6 +122,17 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
     }
 
+    // "Null island": ogeokodade events på (0,0) och dess närområde. De stannar
+    // kvar i destinations-lagret (och därmed i list-/sökvyn) men webben döljer
+    // dem på kartan (isValidLatLng). Logga omfattningen så vi ser hur stor
+    // geokodnings-skulden är.
+    const nullIslandCount = destinations.filter(
+        d => Math.abs(d.lat) < 0.01 && Math.abs(d.lng) < 0.01
+    ).length;
+    if (nullIslandCount > 0) {
+        console.log(`   🏝️  ${nullIslandCount} av ${destinations.length} event ligger på null island (0,0) — döljs från kartan, kvar i list-/sökvy`);
+    }
+
     const destinationsPayload = { updatedAt, events: destinations };
     const cardsPayload = { updatedAt, events: cards };
     const descriptionsPayload = { updatedAt, data: descriptions };

@@ -7,14 +7,19 @@ import type { EventCategoryType } from './categories';
  * En enda punkt med lat utanför [-90,90] (t.ex. projicerade SWEREF99/RT90-
  * koords som 6129956 från en paraply-källa) får annars `LngLatBounds.contains`
  * att kasta och kraschar HELA kartan. Vakta varje koordinat-ingång med denna.
- * (0,0 räknas som ogiltig — det är vår "oplacerad"-markör.)
+ *
+ * "Null island" (0,0 och dess närområde) räknas som ogiltig — det är vår
+ * "oplacerad"-markör. Tusentals ogeokodade events hamnar där och floodar
+ * annars kartan. Tröskeln |lat|<0.01 && |lng|<0.01 (~1 km kring 0,0, mitt i
+ * Guineabukten) kan aldrig träffa ett riktigt svenskt event (lat ~55–69).
+ * Eventen finns kvar i DB och i list-/sökvyn — de döljs bara på kartan.
  */
 export function isValidLatLng(lat: unknown, lng: unknown): boolean {
     return (
         typeof lat === 'number' && typeof lng === 'number' &&
         Number.isFinite(lat) && Number.isFinite(lng) &&
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
-        !(lat === 0 && lng === 0)
+        !(Math.abs(lat) < 0.01 && Math.abs(lng) < 0.01)
     );
 }
 
