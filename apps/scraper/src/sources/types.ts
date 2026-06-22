@@ -185,7 +185,7 @@ export type EngineName =
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
-    | 'bilda' | 'medborgarskolan' | 'abf';
+    | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

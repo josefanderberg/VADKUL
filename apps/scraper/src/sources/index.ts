@@ -31,6 +31,7 @@ import { raceidEngine } from '../scrapers/raceid';
 import { bildaEngine } from '../scrapers/bilda';
 import { medborgarskolanEngine } from '../scrapers/medborgarskolan';
 import { abfEngine } from '../scrapers/abf';
+import { slagthusetEngine } from '../scrapers/slagthuset';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -84,4 +85,5 @@ export const ENGINES: Record<string, Engine> = {
     'bilda': bildaEngine,
     'medborgarskolan': medborgarskolanEngine,
     'abf': abfEngine,
+    'slagthuset': slagthusetEngine,
 };
