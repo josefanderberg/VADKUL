@@ -21,11 +21,11 @@ import toast from 'react-hot-toast';
 // de är DOM-element i container, inte en del av style-spec:en.
 // Kluster-parametrar (aggressiva: håll ihop event långt in i zoomen så kartan inte
 // laggar av tusentals brickor). CLUSTER_MAX_ZOOM = sista nivån där event klustras;
-// över den ritas de individuellt. DOM_REVEAL_ZOOM = först här avslöjas de rika
-// DOM-brickorna (= en nivå över sista kluster-zoomen), så utzoom = bara bubblor.
+// över den ritas allt individuellt. De rika DOM-brickorna avslöjas inte på en fast
+// zoomnivå utan täthetsstyrt: en grupp blir DOM-bricka så fort dess punkt inte
+// längre är klustrad (se unclusteredKeys), så bubblor och brickor aldrig överlappar.
 const CLUSTER_MAX_ZOOM = 14;
 const CLUSTER_RADIUS = 80;
-const DOM_REVEAL_ZOOM = CLUSTER_MAX_ZOOM; // DOM visas vid zoom > 14 (dvs 15+)
 const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 // Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -224,8 +224,10 @@ type PlainFeature = {
     geometry: { type: 'Point'; coordinates: [number, number] };
     // special=true → punkten matas in i kluster-källan (så den räknas/klustras vid
     // utzoom) men ritas INTE av brick-/prick-lagret; den rika DOM-brickan tar över
-    // vid hög zoom. special=false → vanligt GL-event som ritas direkt.
-    properties: { icon: string; key: string; special: boolean };
+    // när punkten inte längre är klustrad. special=false → vanligt GL-event.
+    // event_count = antal faktiska event punkten representerar (1 för enskilda,
+    // group.length för en multi-event-grupp) → summeras till kluster-bubblans siffra.
+    properties: { icon: string; key: string; special: boolean; event_count: number };
 };
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
@@ -894,9 +896,16 @@ export default function V2Map({
     }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    // Aktuell zoomnivå (uppdateras vid moveend tillsammans med bounds). Styr när de
-    // rika DOM-brickorna avslöjas: vid utzoom samlas ALLT i kluster-bubblor, och
-    // DOM-brickorna dyker upp först när klustren löses upp (zoom > DOM_REVEAL_ZOOM).
+    // Nycklar för de event-punkter som JUST NU inte är klustrade (frågas ur
+    // kluster-källan vid varje moveend/idle). En speciell grupp får sin rika
+    // DOM-bricka först när dess punkt INTE längre ligger i en bubbla — exakt samma
+    // täthets-logik som GL-brickorna följer. Så vid utzoom = bara bubblor, vid
+    // inzoom dyker brickorna upp i takt med att klustren löses upp, utan överlapp.
+    const [unclusteredKeys, setUnclusteredKeys] = useState<Set<string>>(() => new Set());
+    // Aktuell zoom — fungerar som robust fallback: ovanför CLUSTER_MAX_ZOOM finns
+    // inga kluster alls (supercluster slutar klustra där), så då avslöjas ALLA
+    // speciella DOM-brickor oavsett unclusteredKeys. Skulle källfrågan av någon
+    // anledning gå tom degraderar beteendet säkert till den fasta zoom-tröskeln.
     const [mapZoom, setMapZoom] = useState<number>(0);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
     const mapStyleRef = useRef(mapStyle);
@@ -1773,17 +1782,15 @@ export default function V2Map({
             (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
             (!!goldEventId && group.some(e => e.id === goldEventId));
 
-        // Vid utzoom (zoom ≤ DOM_REVEAL_ZOOM) ska BARA kluster-bubblorna synas —
-        // göm då alla rika DOM-brickor utom de som måste visas (valt/gissat/guld).
-        // Deras event räknas ändå med i klustren via kluster-källan.
-        const domRevealed = mapZoom > DOM_REVEAL_ZOOM;
-
         const out: [string, LinkEvent[]][] = [];
         for (const entry of groups.entries()) {
             const [key, group] = entry;
             if (!isSpecialGroup(group, key, nowMs)) continue;
             if (mustShow(group)) { out.push(entry); continue; }
-            if (!domRevealed) continue;
+            // Visa den rika DOM-brickan om punkten inte är klustrad just nu (täthets-
+            // styrt → samexisterar med bubblor utan dubbelritande), ELLER om vi zoomat
+            // förbi kluster-zoomen (då finns inga bubblor kvar → säkert att alltid visa).
+            if (!unclusteredKeys.has(key) && mapZoom <= CLUSTER_MAX_ZOOM) continue;
             const rep = group[0];
             // Range-validering (inte bara falsy): en projicerad koordinat som
             // lat=6129956 får annars LngLatBounds.contains att kasta och
@@ -1792,7 +1799,7 @@ export default function V2Map({
             if (paddedBounds.contains([rep.lng, rep.lat])) out.push(entry);
         }
         return out;
-    }, [groups, mapBounds, mapZoom, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
+    }, [groups, mapBounds, unclusteredKeys, mapZoom, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
 
     // GL-lagret: alla ICKE-speciella grupper (huvuddelen). Byggs som GeoJSON +
     // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
@@ -1834,7 +1841,7 @@ export default function V2Map({
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: iconId, key, special },
+                properties: { icon: iconId, key, special, event_count: group.length },
             });
         }
         return { features, icons };
@@ -1862,6 +1869,12 @@ export default function V2Map({
                     cluster: true,
                     clusterRadius: CLUSTER_RADIUS,
                     clusterMaxZoom: CLUSTER_MAX_ZOOM,
+                    // Bubblans siffra = SUMMAN av faktiska event under den, inte antal
+                    // markörer. En multi-event-grupp bidrar med sitt event_count (t.ex.
+                    // 6), inte 1. eventTotal ackumuleras över alla löv i klustret.
+                    clusterProperties: {
+                        eventTotal: ['+', ['coalesce', ['get', 'event_count'], 1]],
+                    },
                 });
             }
             // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
@@ -1927,9 +1940,11 @@ export default function V2Map({
                     source: 'plain-events',
                     filter: ['has', 'point_count'],
                     paint: {
-                        'circle-color': ['step', ['get', 'point_count'],
+                        // Storlek/färg trappas med eventTotal (faktiska event), inte
+                        // point_count (markörer) — en grupp om 6 väger som 6.
+                        'circle-color': ['step', ['get', 'eventTotal'],
                             '#3b82f6', 10, '#6366f1', 50, '#8b5cf6', 200, '#a855f7'],
-                        'circle-radius': ['step', ['get', 'point_count'],
+                        'circle-radius': ['step', ['get', 'eventTotal'],
                             16, 10, 20, 50, 26, 200, 34],
                         'circle-opacity': 0.9,
                         'circle-stroke-color': '#ffffff',
@@ -1937,7 +1952,7 @@ export default function V2Map({
                     },
                 });
             }
-            // Antalet event inuti klustret, centrerat i bubblan.
+            // Summan av faktiska event inuti klustret, centrerat i bubblan.
             if (!map.getLayer('plain-events-cluster-count')) {
                 map.addLayer({
                     id: 'plain-events-cluster-count',
@@ -1945,9 +1960,9 @@ export default function V2Map({
                     source: 'plain-events',
                     filter: ['has', 'point_count'],
                     layout: {
-                        'text-field': ['get', 'point_count_abbreviated'],
+                        'text-field': ['to-string', ['get', 'eventTotal']],
                         'text-font': ['Open Sans Bold'],
-                        'text-size': ['step', ['get', 'point_count'], 12, 50, 14, 200, 16],
+                        'text-size': ['step', ['get', 'eventTotal'], 12, 50, 14, 200, 16],
                         'text-allow-overlap': true,
                         'text-ignore-placement': true,
                     },
@@ -2292,10 +2307,40 @@ export default function V2Map({
         // kör därför som mest ~var 200ms (≈5x/sek) i stället för varje frame.
         let moveEndTimer: ReturnType<typeof setTimeout> | null = null;
         let moveEndLastAt = 0;
+        // Fråga kluster-källan vilka event-punkter som INTE är klustrade i nuvarande
+        // vy och uppdatera unclusteredKeys (driver vilka speciella grupper som får
+        // DOM-bricka). Skriver bara state när mängden faktiskt ändrats → ingen
+        // onödig omsynk av de tunga DOM-markörerna.
+        const refreshUnclustered = () => {
+            // OBS: gata INTE på isSourceLoaded — en klustrad geojson-källa rapporterar
+            // ofta "ej laddad" (den omklustrar löpande), vilket annars skulle blockera
+            // hela uppdateringen. querySourceFeatures läser de tiles som finns; saknas
+            // de kastar den → try/catch sväljer. Bäst kvalitet på 'idle' (allt målat).
+            if (!map.getSource('plain-events')) return;
+            let feats: maplibregl.GeoJSONFeature[];
+            try { feats = map.querySourceFeatures('plain-events'); } catch { return; }
+            const next = new Set<string>();
+            for (const f of feats) {
+                const p = f.properties;
+                if (p && p.point_count == null && typeof p.key === 'string') next.add(p.key);
+            }
+            // Tomt resultat mitt under en rörelse är oftast transient (tiles laddar) —
+            // behåll förra mängden hellre än att blinka bort brickorna. 'idle' fyller på.
+            if (next.size === 0) return;
+            setUnclusteredKeys(prev => {
+                if (prev.size === next.size) {
+                    let same = true;
+                    for (const k of next) if (!prev.has(k)) { same = false; break; }
+                    if (same) return prev;
+                }
+                return next;
+            });
+        };
         const applyBounds = () => {
             moveEndLastAt = performance.now();
             setMapBounds(map.getBounds());
             setMapZoom(map.getZoom());
+            refreshUnclustered();
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
@@ -2312,11 +2357,15 @@ export default function V2Map({
         };
 
         map.on('moveend', handleMoveEnd);
+        // 'idle' fångar omklustring som sker UTAN en pan (t.ex. när event-datan
+        // laddats in efter första renderingen) så DOM-brickorna hinner uppdateras.
+        map.on('idle', refreshUnclustered);
 
         // Rapportera initialt läge
         map.once('load', () => {
             setMapBounds(map.getBounds());
             setMapZoom(map.getZoom());
+            refreshUnclustered();
             updateCloudPosition();
             // Installera GL-markörlagret + pusha första datan.
             syncPlainLayerRef.current();
