@@ -22,11 +22,17 @@ import toast from 'react-hot-toast';
 const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 // Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-// Multi-event-grupper (flera event på samma koordinat, "sifferbrickan") ritas som
-// lätt svart GL-prick med siffran ovanpå BARA UNDER själva zoom-gesten (transient),
-// så animationen inte laggar av tunga DOM-brickor. När zoomen är still byggs den
-// fulla DOM-brickan med badge som vanligt. Ingen zoom-tröskel, ingen clustering;
-// individuella event och övriga DOM-renderingar är orörda.
+// Multi-event-grupper (flera event på samma koordinat, "sifferbrickan") OCH event
+// som börjar inom 1 timme (orange border) ritas som lätt GL-prick BARA UNDER själva
+// zoom-gesten (transient), så animationen inte laggar av tunga DOM-brickor. När
+// zoomen är still byggs den fulla DOM-brickan som vanligt. Ingen zoom-tröskel, ingen
+// clustering; individuella event och övriga DOM-renderingar är orörda.
+const ONE_HOUR_MS = 60 * 60 * 1000;
+// En grupp "börjar inom 1 timme" om något event startar i framtiden men inom en
+// timme. Samma villkor som ger DOM-brickan dess orange ram.
+function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolean {
+    return group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= ONE_HOUR_MS);
+}
 const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     version: 8,
     // Glyf-endpoint (Cartos, samma som Voyager/Dark-stilarna) så multi-event-
@@ -1777,10 +1783,10 @@ export default function V2Map({
             const [key, group] = entry;
             if (!isSpecialGroup(group, key, nowMs)) continue;
             if (mustShow(group)) { out.push(entry); continue; }
-            // Multi-event-grupp + pågående zoom-gest → hoppa över DOM (ritas som
-            // GL-prick + GL-siffra, se multiEventDotData). I vila byggs DOM-brickan
-            // som vanligt. Valt/gissat/guld fångades redan av mustShow ovan.
-            if (group.length > 1 && isZooming) continue;
+            // Multi-event-grupp ELLER "inom 1 timme" (orange) + pågående zoom-gest →
+            // hoppa över DOM (ritas som GL-prick, se multiEventDotData). I vila byggs
+            // DOM-brickan som vanligt. Valt/gissat/guld fångades redan av mustShow.
+            if (isZooming && (group.length > 1 || groupStartsWithinHour(group, nowMs))) continue;
             const rep = group[0];
             // Range-validering (inte bara falsy): en projicerad koordinat som
             // lat=6129956 får annars LngLatBounds.contains att kasta och
@@ -1835,20 +1841,24 @@ export default function V2Map({
     // DOM (mustShow) så deras rika kort/highlight funkar.
     const multiEventDotData = useMemo(() => {
         if (!isZooming) return [] as GeoJSON.Feature[];
+        const nowMs = Date.now();
         const mustShow = (group: LinkEvent[]) =>
             (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) ||
             (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
             (!!goldEventId && group.some(e => e.id === goldEventId));
         const features: GeoJSON.Feature[] = [];
         for (const [key, group] of groups) {
-            if (group.length <= 1) continue;          // bara multi-event-grupper
+            const imminent = groupStartsWithinHour(group, nowMs);
+            // Multi-event-grupper OCH "inom 1 timme"-event (orange) blir prickar.
+            if (group.length <= 1 && !imminent) continue;
             if (mustShow(group)) continue;            // valt/gissat/guld → alltid DOM
             const rep = group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { key, count: group.length },
+                // imminent → orange prick; count > 1 → siffra ovanpå.
+                properties: { key, count: group.length, imminent },
             });
         }
         return features;
@@ -1917,9 +1927,9 @@ export default function V2Map({
             const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
             src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
 
-            // Multi-event-prickar. Egen lätt cirkel-källa/lager — INGEN clustering.
-            // Svart fyllning, liten radie, vit kant. Siffran ritas av symbol-lagret
-            // nedan (egen GL-text, ingen DOM).
+            // Multi-event- & "inom 1 timme"-prickar. Egen lätt cirkel-källa/lager —
+            // INGEN clustering. Svart fyllning (orange för "inom 1 timme"), liten
+            // radie, vit kant. Siffran ritas av symbol-lagret nedan (egen GL-text).
             if (!map.getSource('multi-event-dots')) {
                 map.addSource('multi-event-dots', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             }
@@ -1932,7 +1942,8 @@ export default function V2Map({
                     layout: { 'visibility': isZoomingRef.current ? 'visible' : 'none' },
                     paint: {
                         'circle-radius': 6,
-                        'circle-color': '#000000',
+                        // "Inom 1 timme" → orange (matchar DOM-brickans ram), annars svart.
+                        'circle-color': ['case', ['get', 'imminent'], '#f97316', '#000000'],
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
                     },
@@ -1948,7 +1959,9 @@ export default function V2Map({
                     source: 'multi-event-dots',
                     layout: {
                         'visibility': isZoomingRef.current ? 'visible' : 'none',
-                        'text-field': ['to-string', ['get', 'count']],
+                        // Siffra bara för fler-event-grupper; enstaka "inom 1 timme"
+                        // (count = 1) får ingen "1"-text, bara den orange pricken.
+                        'text-field': ['case', ['>', ['get', 'count'], 1], ['to-string', ['get', 'count']], ''],
                         'text-font': ['Open Sans Bold'],
                         'text-size': 11,
                         'text-anchor': 'bottom-left',
