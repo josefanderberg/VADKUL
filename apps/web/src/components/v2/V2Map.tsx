@@ -22,13 +22,17 @@ import toast from 'react-hot-toast';
 const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 // Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-// Multi-event-grupper (flera event på samma koordinat, "sifferbrickan") ritas som
-// en lätt GL-prick under den här zoomnivån — den tunga DOM-brickan med slideshow
-// byggs först när man zoomat in förbi den. Håller utzoomade vyer laggfria utan att
-// röra clustering (som togs bort) eller de individuella eventens beteende.
-const MULTI_EVENT_REVEAL_ZOOM = 12;
+// Multi-event-grupper (flera event på samma koordinat, "sifferbrickan") ritas
+// ALLTID som en lätt svart GL-prick + GL-siffra — aldrig som tung DOM-bricka,
+// oavsett zoom. Det är DOM-renderingen av dem som laggar. Ingen clustering, ingen
+// zoom-tröskel; individuella event och övriga DOM-renderingar är orörda.
 const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     version: 8,
+    // Glyf-endpoint (Cartos, samma som Voyager/Dark-stilarna) så multi-event-
+    // prickarnas siffer-text kan renderas i GL även på den annars ren-raster
+    // satellitstilen. Skulle endpointen blockeras (t.ex. corp-proxy) ritas pricken
+    // ändå — bara siffran uteblir, ingen krasch.
+    glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
     sources: {
         satellite: {
             type: 'raster',
@@ -885,9 +889,6 @@ export default function V2Map({
     }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    // Aktuell zoom (uppdateras vid moveend). Styr om multi-event-grupper ritas som
-    // lätt GL-prick (utzoomat) eller full DOM-bricka (inzoomat).
-    const [mapZoom, setMapZoom] = useState<number>(0);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
     const mapStyleRef = useRef(mapStyle);
     mapStyleRef.current = mapStyle;
@@ -1763,17 +1764,14 @@ export default function V2Map({
             (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
             (!!goldEventId && group.some(e => e.id === goldEventId));
 
-        // Vid utzoom ritas multi-event-grupper som lätta GL-prickar (se
-        // multiEventDotData) i stället för tunga DOM-brickor — uteslut dem här.
-        const collapseMultiToDots = mapZoom < MULTI_EVENT_REVEAL_ZOOM;
-
         const out: [string, LinkEvent[]][] = [];
         for (const entry of groups.entries()) {
             const [key, group] = entry;
             if (!isSpecialGroup(group, key, nowMs)) continue;
             if (mustShow(group)) { out.push(entry); continue; }
-            // Multi-event-grupp + utzoomat → hoppa över DOM (ritas som prick).
-            if (collapseMultiToDots && group.length > 1) continue;
+            // Multi-event-grupp → ALDRIG DOM (ritas som GL-prick + GL-siffra), oavsett
+            // zoom. Valt/gissat/guld fångades redan av mustShow ovan.
+            if (group.length > 1) continue;
             const rep = group[0];
             // Range-validering (inte bara falsy): en projicerad koordinat som
             // lat=6129956 får annars LngLatBounds.contains att kasta och
@@ -1782,7 +1780,7 @@ export default function V2Map({
             if (paddedBounds.contains([rep.lng, rep.lat])) out.push(entry);
         }
         return out;
-    }, [groups, mapBounds, mapZoom, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
+    }, [groups, mapBounds, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
 
     // GL-lagret: alla ICKE-speciella grupper (huvuddelen). Byggs som GeoJSON +
     // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
@@ -1821,13 +1819,11 @@ export default function V2Map({
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
 
-    // Lätta GL-prickar för multi-event-grupper vid utzoom. Vid zoom ≥ REVEAL är
-    // listan tom (då ritar DOM-brickorna dem i stället, se visibleGroups). Inte
-    // viewport-gallrad — det är billiga cirklar och hela landet ryms på GPU:n.
-    // Egenskapen `count` = antal event så prickens storlek kan skala med gruppen.
-    const collapseMultiToDots = mapZoom < MULTI_EVENT_REVEAL_ZOOM;
+    // Lätta GL-prickar för ALLA multi-event-grupper (oavsett zoom). Egenskapen
+    // `count` = antal event → ritas som GL-siffra bredvid pricken. Inte viewport-
+    // gallrad — billiga cirklar, hela landet ryms på GPU:n. Valt/gissat/guld hålls
+    // kvar som DOM (mustShow) så deras rika kort/highlight funkar.
     const multiEventDotData = useMemo(() => {
-        if (!collapseMultiToDots) return [] as GeoJSON.Feature[];
         const mustShow = (group: LinkEvent[]) =>
             (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) ||
             (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
@@ -1845,7 +1841,7 @@ export default function V2Map({
             });
         }
         return features;
-    }, [groups, collapseMultiToDots, gameMode, selectedEvent, guessedEventId, goldEventId]);
+    }, [groups, gameMode, selectedEvent, guessedEventId, goldEventId]);
     const multiEventDotFeaturesRef = useRef<GeoJSON.Feature[]>([]);
 
     // Installerar/uppdaterar GL-markörlagret: källa + bakade emoji-bilder + lager,
@@ -1910,8 +1906,9 @@ export default function V2Map({
             const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
             src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
 
-            // Multi-event-prickar (utzoomat). Egen lätt cirkel-källa/lager — INGEN
-            // clustering. Storlek/färg trappas med antal event i gruppen (count).
+            // Multi-event-prickar. Egen lätt cirkel-källa/lager — INGEN clustering.
+            // Svart fyllning, liten radie, vit kant. Siffran ritas av symbol-lagret
+            // nedan (egen GL-text, ingen DOM).
             if (!map.getSource('multi-event-dots')) {
                 map.addSource('multi-event-dots', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             }
@@ -1921,11 +1918,34 @@ export default function V2Map({
                     type: 'circle',
                     source: 'multi-event-dots',
                     paint: {
-                        'circle-radius': ['step', ['get', 'count'], 5, 5, 7, 20, 9],
-                        'circle-color': ['step', ['get', 'count'], '#6366f1', 20, '#8b5cf6'],
-                        'circle-opacity': 0.92,
+                        'circle-radius': 6,
+                        'circle-color': '#000000',
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
+                    },
+                });
+            }
+            // Siffer-badge uppe till höger om pricken (antal event i gruppen). Kräver
+            // glyfer (satellitstilen har fått ett glyf-endpoint). Blockeras fonten
+            // visas pricken ändå, bara utan siffra.
+            if (!map.getLayer('multi-event-dots-count')) {
+                map.addLayer({
+                    id: 'multi-event-dots-count',
+                    type: 'symbol',
+                    source: 'multi-event-dots',
+                    layout: {
+                        'text-field': ['to-string', ['get', 'count']],
+                        'text-font': ['Open Sans Bold'],
+                        'text-size': 11,
+                        'text-anchor': 'bottom-left',
+                        'text-offset': [0.5, -0.5],
+                        'text-allow-overlap': true,
+                        'text-ignore-placement': true,
+                    },
+                    paint: {
+                        'text-color': '#ffffff',
+                        'text-halo-color': '#000000',
+                        'text-halo-width': 1.5,
                     },
                 });
             }
@@ -2252,7 +2272,6 @@ export default function V2Map({
         const applyBounds = () => {
             moveEndLastAt = performance.now();
             setMapBounds(map.getBounds());
-            setMapZoom(map.getZoom());
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
@@ -2273,7 +2292,6 @@ export default function V2Map({
         // Rapportera initialt läge
         map.once('load', () => {
             setMapBounds(map.getBounds());
-            setMapZoom(map.getZoom());
             updateCloudPosition();
             // Installera GL-markörlagret + pusha första datan.
             syncPlainLayerRef.current();
