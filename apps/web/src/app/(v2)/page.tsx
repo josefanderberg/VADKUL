@@ -15,7 +15,8 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { setMyCustomHue } from '@/lib/reviret';
 import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
-import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
+import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
+import { classifySource } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -517,25 +518,33 @@ export default function HomePage() {
         );
     }, [events, filteredEvents, searchQuery]);
 
-    // Inget källfilter längre: ALLA event visas alltid. De "stora" källorna
-    // (PRO/Korpen/Svenska kyrkan) döljs inte — de skiljs i stället ut med en egen
-    // markörfärg på kartan (se sourceColor i V2Map).
+    // Opt-in-källor (Korpen/Svenska kyrkan/PRO) har väldigt många event och är
+    // avstängda som default: deras event GÖMS tills användaren själv kryssar i
+    // källan. Övriga (normala) kategorier behåller "tom = visa alla". Därför
+    // delar vi upp valet — opt-in-källorna ska inte räknas in i normal-valet
+    // (annars skulle en ikryssad källa dölja alla andra event).
+    const selectedNormal = useMemo(
+        () => new Set([...selectedCategories].filter(id => !SPECIAL_CATEGORY_KEYS.has(id))),
+        [selectedCategories],
+    );
+    const matchesFilter = useCallback((evt: LinkEvent) => {
+        const src = classifySource(evt.url || evt.id);
+        // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
+        if (src) return selectedCategories.has(src);
+        // Normalt event: tomt normal-val = visa alla, annars matcha kategori.
+        if (selectedNormal.size === 0) return true;
+        const catKey = evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other';
+        return selectedNormal.has(catKey);
+    }, [selectedCategories, selectedNormal]);
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
-    const visibleEvents = useMemo(() => {
-        if (selectedCategories.size === 0) return searchFilteredEvents;
-        return searchFilteredEvents.filter(evt =>
-            selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
-        );
-    }, [searchFilteredEvents, selectedCategories]);
+    const visibleEvents = useMemo(
+        () => searchFilteredEvents.filter(matchesFilter),
+        [searchFilteredEvents, matchesFilter],
+    );
 
     // Antal event för dagen i dag-väljarens badge (respekterar kategorivalet).
-    const dayEventCount = useMemo(() => {
-        if (selectedCategories.size === 0) return searchFilteredEvents.length;
-        return searchFilteredEvents.filter(evt =>
-            selectedCategories.has(evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other')
-        ).length;
-    }, [searchFilteredEvents, selectedCategories]);
+    const dayEventCount = visibleEvents.length;
 
     const handleToggleCategory = useCallback((id: string) => {
         setSelectedCategories(prev => {
@@ -611,7 +620,7 @@ export default function HomePage() {
         const params = new URLSearchParams(window.location.search);
         const kategori = params.get('kategori');
         if (kategori) {
-            const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES);
+            const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k));
             if (valid.length) setSelectedCategories(new Set(valid));
         }
         const dag = parseInt(params.get('dag') ?? '', 10);

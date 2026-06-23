@@ -2195,6 +2195,11 @@ export default function V2Map({
         map.on('zoomstart', markZooming);
         map.on('zoom', markZooming);
         map.on('zoomend', markZooming);
+        // Extra säkerhetsnät: när ALL rörelse (pan/zoom) lagt sig fyras 'moveend' →
+        // tvinga tillbaka vilo-läget (DOM-brickor). Garanterar att isZooming aldrig
+        // fastnar i true om en zoom-animation byts ut innan 180 ms-timern hann gå.
+        // I vila är detta en no-op (redan false), så ingen flimmer/extra omritning.
+        map.on('moveend', exitZooming);
 
         // GL-lager som är klickbara: brickorna (inzoomat) + prickarna (utzoomat) +
         // multi-event-prickarna. Klick på en multi-prick väljer gruppens första event
