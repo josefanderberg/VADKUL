@@ -14,6 +14,7 @@ import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, hueForUid, 
 import { claimCells, subscribeTerritory, myReviretIdentity, type TerritoryCell } from '../../services/reviretService';
 import { saveDailyScore, subscribeDailyLeaderboard, type LeaderboardEntry } from '../../services/leaderboardService';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
+import WelcomeBox from '../ui/WelcomeBox';
 import toast from 'react-hot-toast';
 
 // Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
@@ -1247,6 +1248,10 @@ export default function V2Map({
     // (ansikten/kasta/slangbella) är fortfarande var för sig gate:ade av
     // shop-togglarna (isFeatureActive(...)), så de slås inte på automatiskt.
     const CLOUDS_ENABLED: boolean = true;
+    // Gamla lekfulla startmolnet (med dagens stats) är ersatt av WelcomeBox.
+    // Behåller mount-koden som backup men renderar den inte (typad boolean så
+    // TS-narrowing inuti blocket fortsatt funkar).
+    const SHOW_LEGACY_CLOUD: boolean = false;
 
     // Cloud popup geographic map anchor state and projection variables
     // Solves request: anchor cloud to a position on map, move with map
@@ -5476,7 +5481,9 @@ export default function V2Map({
                     </>
                 );
             })()}
-            {CLOUDS_ENABLED && showCloud && cloudAnchorPos && eventsLoaded && (
+            {/* Gamla lekfulla startmolnet ersatt av den seriösa WelcomeBox nedan.
+                Mount avstängd (SHOW_LEGACY_CLOUD=false) men koden behållen som backup. */}
+            {SHOW_LEGACY_CLOUD && CLOUDS_ENABLED && showCloud && cloudAnchorPos && eventsLoaded && (
                 <CloudPopup
                     message={
                         isFeatureActive('sparkle') ? (
@@ -5551,6 +5558,15 @@ export default function V2Map({
                     maxScale={CLOUD_MAX_SCALE}
                     getDepthAtPoint={depthAtPointRef.current}
                     zIndex={mainCloudZ}
+                />
+            )}
+            {/* Seriös informationsruta (ersätter startmolnet): dagens nyckeltal. */}
+            {showCloud && cloudStats && eventsLoaded && (
+                <WelcomeBox
+                    today={cloudStats.today}
+                    withinHour={cloudStats.withinHour}
+                    withinHours={cloudStats.withinHours}
+                    onDismiss={() => setShowCloud(false)}
                 />
             )}
             {CLOUDS_ENABLED && sunCloudAnchor && sunCloudAnchorPos && (
