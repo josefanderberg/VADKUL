@@ -4336,7 +4336,11 @@ export default function V2Map({
 
                 // Vald/guld-bricka växer på plats (transform-origin: bottom center →
                 // spetsen stannar på koordinaten, ingen translateY som lyfter av den).
-                const scaleStyle = (isSelected || isGold) ? 'scale(1.2)' : 'scale(1)';
+                // Multi-event-brickan krymps till single-event-storlek: DOM-brickans
+                // kropp är 44px, GL-single-brickans 40px → 40/44 ≈ 0.91. Enda kvar-
+                // varande skillnaden mot en single blir då siffer-badgen.
+                const baseScale = (isSelected || isGold) ? 1.2 : (count > 1 ? 0.91 : 1);
+                const scaleStyle = `scale(${baseScale})`;
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
                 const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
@@ -4360,9 +4364,11 @@ export default function V2Map({
                 // Valt OCH redan avslöjat/poppat event visar brickan direkt utan kö-delay.
                 const showImmediately = isSelected || isRevealed || alreadyPopped;
                 const wrapperStyle = showImmediately ? 'opacity: 1 !important;' : '';
+                // --pop-scale styr animationens slutvärde (se @keyframes marker-pop-in)
+                // så multi-event-brickan landar på rätt storlek även efter pop-in.
                 const pinAnimationStyle = showImmediately
-                    ? 'animation: none !important; opacity: 1 !important; transform: ' + scaleStyle + ' !important;'
-                    : `transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
+                    ? `--pop-scale: ${baseScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
+                    : `--pop-scale: ${baseScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
                 const isWatered = shopFlags.flowers && wateredKeys.has(key);
                 const isWatering = shopFlags.flowers && wateringKey === key;
@@ -4502,7 +4508,10 @@ export default function V2Map({
                     }
                     100% {
                         opacity: 1;
-                        transform: scale(1) translateY(0);
+                        /* --pop-scale (default 1) sätts per markör så multi-event-
+                           brickan kan landa på samma storlek som single-event (annars
+                           skulle animationens slutvärde tvinga tillbaka scale(1)). */
+                        transform: scale(var(--pop-scale, 1)) translateY(0);
                     }
                 }
 
