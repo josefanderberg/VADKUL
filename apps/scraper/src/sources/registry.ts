@@ -3282,6 +3282,50 @@ export const SOURCES: Source[] = [
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.parkenzoo.se/sitemap_index.xml', date: '2026-06-09' },
     },
 
+    // ─── NÖJESFÄLT / FAMILJEPARKER (2026-06-23) ──────────────────────────
+    // Probe 2026-06-23: Liseberg & Universeum redan i registry. Parks & Resorts-
+    // koncernen (Gröna Lund, Kolmården, Furuvik, Skara Sommarland) kör Gatsby SSG
+    // utan fungerande sitemap (robots → /sitemap.xml men den svarar 404-SPA) →
+    // events JS-renderas, ingen statisk källa. High Chaparral: bara 9 odaterade
+    // /shower/-sidor. Junibacken: /upplevelse/ = permanenta upplevelser, WebPage-
+    // JSON-LD utan startDate. Tosselilla: /aktiviteter/ = permanenta attraktioner
+    // (JSON-LD Place, ej Event). ALV är den enda med riktiga daterade Event.
+    {
+        id: 'astrid-lindgrens-varld',
+        hostName: 'Astrid Lindgrens Värld',
+        region: 'kalmar',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://astridlindgrensvarld.se/sitemap_index.xml',
+            // /teatern/forestallning/<slug> — TheaterEvent-JSON-LD med startDate.
+            urlPatterns: [/\/teatern\/forestallning\/[^/]+\/?$/i],
+            defaultCity: 'Vimmerby',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-23: shows-sitemap, /teatern/forestallning/ TheaterEvent-JSON-LD. Datum ligger i eventSchedule[] (veckovisa Schedule-objekt, ingen direkt startDate) — json-ld-engine läser nu närmaste kommande schemadatum. Dry-run 120d: 22 distinkta föreställningar sparade (varje URL 3× i sitemap → dedupas i engine). Nöjespark/teater.',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://astridlindgrensvarld.se/sitemap_index.xml', date: '2026-06-23' },
+        sampleEventUrl: 'https://astridlindgrensvarld.se/teatern/forestallning/min-bror-jonatan-lejonhjarta/',
+        lastVerified: '2026-06-23',
+    },
+    {
+        id: 'skansen',
+        hostName: 'Skansen',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.skansen.se/sitemap_index.xml',
+            // on-stage-activities: /se-och-gora/konsert-dans/<slug> (sommarkonserter).
+            urlPatterns: [/\/se-och-gora\/konsert-dans\/[^/]+\/?$/i],
+            defaultCity: 'Stockholm',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-23: on-stage-activities-sitemap, /se-och-gora/konsert-dans/ (25 URLs, sommarscen — Tomas Ledin, Tommy Körberg, Jazz på Skansen m.fl.). Ingen Event-JSON-LD → datum ur text-fallback; dry-run 120d gav 16 sparade med korrekta 2026-datum (titlar kan ha gammalt år i texten men parsad startDate blev rätt). Nöjespark/sommarscen.',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.skansen.se/sitemap_index.xml', date: '2026-06-23' },
+        lastVerified: '2026-06-23',
+    },
+
     // ─── BATCH 3 (2026-06-09): Stockholm-scener ──────────────────────────
     // Probe-hit; körs + verifieras (datum-spridning) innan promotion till active.
     {
