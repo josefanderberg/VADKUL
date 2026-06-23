@@ -2140,30 +2140,48 @@ export default function V2Map({
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
             setGlLayer('plain-events-dots', true);
-            // Multi-event-grupper → lätta GL-prickar under gesten (se visibleGroups/
-            // multiEventDotData). Endast vid äkta zoom-gest, inte idle-driftens pan.
-            // Synligheten växlas SYNKRONT här (instant, ingen worker-runda) så prick
-            // och DOM aldrig överlappar — DOM tas bort via React när isZooming flippar.
-            isZoomingRef.current = true;
-            setGlLayer('multi-event-dots', true);
-            setGlLayer('multi-event-dots-count', true);
-            setIsZooming(true);
         };
         const showBricks = () => {
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
             setGlLayer('plain-events-dots', false);
-            // Zoomen är still igen → göm prickarna OMEDELBART (innan DOM-brickorna
-            // hinner ritas) så de aldrig syns samtidigt.
+        };
+
+        map.on('zoomstart', showNeedles);
+        map.on('zoomend', showBricks);
+
+        // ── Multi-event: prick UNDER zoom-gesten, DOM-bricka i vila ───────────────
+        // VILO-läget är ALLTID DOM (isZooming=false). Vi förlitar oss INTE på att
+        // 'zoomend' fyras (den kan missas vid avbrutna animationer → tidigare bugg där
+        // brickorna försvann i vila). I stället: varje zoom-aktivitet markerar "zoomar"
+        // + (om)startar en kort vilo-timer. När zoomen tystnat 180 ms → tillbaka till
+        // DOM. Prick-lagrens synlighet växlas SYNKRONT (instant, ingen worker-runda)
+        // så prick och DOM aldrig överlappar. Ren pan (idle-drift) fyrar inga zoom-
+        // events → triggar aldrig prickläget.
+        let zoomIdleTimer: ReturnType<typeof setTimeout> | null = null;
+        const exitZooming = () => {
+            zoomIdleTimer = null;
             isZoomingRef.current = false;
             setGlLayer('multi-event-dots', false);
             setGlLayer('multi-event-dots-count', false);
             setIsZooming(false);
         };
-
-        map.on('zoomstart', showNeedles);
-        map.on('zoomend', showBricks);
+        const markZooming = () => {
+            if (zoomIdleTimer) { clearTimeout(zoomIdleTimer); zoomIdleTimer = null; }
+            if (!isZoomingRef.current) {
+                isZoomingRef.current = true;
+                setGlLayer('multi-event-dots', true);
+                setGlLayer('multi-event-dots-count', true);
+                setIsZooming(true);
+            }
+            // Auto-exit en kort stund efter SISTA zoom-aktiviteten (robust även om
+            // 'zoomend' aldrig kommer) → vilo-läget faller alltid tillbaka till DOM.
+            zoomIdleTimer = setTimeout(exitZooming, 180);
+        };
+        map.on('zoomstart', markZooming);
+        map.on('zoom', markZooming);
+        map.on('zoomend', markZooming);
 
         // GL-lager som är klickbara: brickorna (inzoomat) + prickarna (utzoomat) +
         // multi-event-prickarna. Klick på en multi-prick väljer gruppens första event
@@ -2331,6 +2349,7 @@ export default function V2Map({
 
         return () => {
             if (moveEndTimer) clearTimeout(moveEndTimer);
+            if (zoomIdleTimer) clearTimeout(zoomIdleTimer);
             if (glCanvas && onCtxLost) glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
             if (glCanvas && onCtxRestored) glCanvas.removeEventListener('webglcontextrestored', onCtxRestored as EventListener);
             map.remove();
