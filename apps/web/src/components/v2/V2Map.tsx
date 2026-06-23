@@ -891,8 +891,12 @@ export default function V2Map({
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
     // True medan användaren aktivt zoomar (zoomstart→zoomend). Under gesten ritas
-    // multi-event-grupper som lätta GL-prickar; i vila som fulla DOM-brickor.
+    // multi-event-grupper som lätta GL-prickar; i vila som fulla DOM-brickor. De två
+    // är ÖMSESIDIGT UTESLUTANDE — aldrig bägge synliga. Ref:en speglar staten så att
+    // syncPlainLayer kan sätta rätt initial-synlighet på prick-lagren om stilen
+    // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
+    const isZoomingRef = useRef<boolean>(false);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
     const mapStyleRef = useRef(mapStyle);
     mapStyleRef.current = mapStyle;
@@ -1924,6 +1928,8 @@ export default function V2Map({
                     id: 'multi-event-dots',
                     type: 'circle',
                     source: 'multi-event-dots',
+                    // Synlig BARA under zoom-gesten (i vila ritar DOM-brickorna dem).
+                    layout: { 'visibility': isZoomingRef.current ? 'visible' : 'none' },
                     paint: {
                         'circle-radius': 6,
                         'circle-color': '#000000',
@@ -1941,6 +1947,7 @@ export default function V2Map({
                     type: 'symbol',
                     source: 'multi-event-dots',
                     layout: {
+                        'visibility': isZoomingRef.current ? 'visible' : 'none',
                         'text-field': ['to-string', ['get', 'count']],
                         'text-font': ['Open Sans Bold'],
                         'text-size': 11,
@@ -2135,6 +2142,11 @@ export default function V2Map({
             setGlLayer('plain-events-dots', true);
             // Multi-event-grupper → lätta GL-prickar under gesten (se visibleGroups/
             // multiEventDotData). Endast vid äkta zoom-gest, inte idle-driftens pan.
+            // Synligheten växlas SYNKRONT här (instant, ingen worker-runda) så prick
+            // och DOM aldrig överlappar — DOM tas bort via React när isZooming flippar.
+            isZoomingRef.current = true;
+            setGlLayer('multi-event-dots', true);
+            setGlLayer('multi-event-dots-count', true);
             setIsZooming(true);
         };
         const showBricks = () => {
@@ -2142,7 +2154,11 @@ export default function V2Map({
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
             setGlLayer('plain-events-dots', false);
-            // Zoomen är still igen → multi-event-grupper tillbaka som fulla DOM-brickor.
+            // Zoomen är still igen → göm prickarna OMEDELBART (innan DOM-brickorna
+            // hinner ritas) så de aldrig syns samtidigt.
+            isZoomingRef.current = false;
+            setGlLayer('multi-event-dots', false);
+            setGlLayer('multi-event-dots-count', false);
             setIsZooming(false);
         };
 
