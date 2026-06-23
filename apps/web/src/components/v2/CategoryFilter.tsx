@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Tags, X } from 'lucide-react';
+import { Layers, X } from 'lucide-react';
 import { LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 
@@ -65,7 +65,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     aria-label="Filtrera på kategori"
                     className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
                 >
-                    <Tags size={20} className="text-slate-700" />
+                    <Layers size={20} className="text-slate-700" />
                     {selected.size > 0 && (
                         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
                             {selected.size}
