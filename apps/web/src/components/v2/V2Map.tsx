@@ -5258,6 +5258,8 @@ export default function V2Map({
                             vänsterkolumnen under profilen). Klick öppnar/stänger
                             funktions-popupen. Onboarding: blinkar + visar en "Ny funktion"-
                             pil när det finns en ny funktion att upptäcka (featureHint). */}
+                        {/* HIDDEN per Josef 2026-06-23 - test layout without these. Functions still wired. */}
+                        {false && (
                         <div className="fixed top-[72px] left-4 z-[1151] pointer-events-auto">
                             {featureHint !== null && !funcBagOpen && !hintAcknowledged && (
                                 <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 flex items-center gap-1 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-right-1 duration-300">
@@ -5304,12 +5306,14 @@ export default function V2Map({
                                 )}
                             </button>
                         </div>
+                        )}
 
                         {/* Fokus — direkt UNDER funktions-knappen (vänsterkolumnen,
                             top-[72px] + 40px + 8px = top-[120px]). Centrerar kartan på
                             det valda eventet, annars passas alla dagens event in i vyn.
                             Göms när väskan är öppen (panelen täcker annars knappen). */}
-                        {!funcBagOpen && (
+                        {/* HIDDEN per Josef 2026-06-23 - test layout without these. Functions still wired. */}
+                        {false && !funcBagOpen && (
                             <div className="fixed top-[120px] left-4 z-[1151] pointer-events-auto">
                                 <button
                                     type="button"
@@ -5325,7 +5329,8 @@ export default function V2Map({
 
                         {/* Min plats — under Fokus i vänsterkolumnen (120 + 40 + 8 = 168).
                             Flyger till användarens position och visar en pulserande blå punkt. */}
-                        {!funcBagOpen && (
+                        {/* HIDDEN per Josef 2026-06-23 - test layout without these. Functions still wired. */}
+                        {false && !funcBagOpen && (
                             <div className="fixed top-[168px] left-4 z-[1151] pointer-events-auto">
                                 <button
                                     type="button"
