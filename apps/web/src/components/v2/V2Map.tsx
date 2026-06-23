@@ -24,10 +24,6 @@ const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/sty
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     version: 8,
-    // Satellitstilen är ren rasterbild och har inga glyfer av sig själv. Kluster-
-    // räknaren (text-symbol) behöver ett glyf-endpoint — vi lånar Cartos (samma
-    // som Voyager/Dark-stilarna) så "Open Sans Bold" finns på ALLA stilar.
-    glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
     sources: {
         satellite: {
             type: 'raster',
@@ -1819,17 +1815,7 @@ export default function V2Map({
         if (!map || !map.isStyleLoaded()) return;
         try {
             if (!map.getSource('plain-events')) {
-                map.addSource('plain-events', {
-                    type: 'geojson',
-                    data: { type: 'FeatureCollection', features: [] },
-                    // Native MapLibre-klustring: närliggande event slås ihop till en
-                    // bubbla (med antal) tills man zoomar in förbi clusterMaxZoom.
-                    // clusterRadius i px = hur nära två punkter måste vara för att slås
-                    // ihop. Detaljerna (brickorna) tar över när klustret löses upp.
-                    cluster: true,
-                    clusterRadius: 50,
-                    clusterMaxZoom: 12,
-                });
+                map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             }
             // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
             usedIconsRef.current.forEach(({ emoji, color }, id) => {
@@ -1850,9 +1836,6 @@ export default function V2Map({
                     id: 'plain-events',
                     type: 'symbol',
                     source: 'plain-events',
-                    // Bara icke-klustrade punkter får bricka — klustren ritas av
-                    // cluster-lagren nedan.
-                    filter: ['!', ['has', 'point_count']],
                     layout: {
                         'icon-image': ['get', 'icon'],
                         // Spetsen (nederkanten av bilden) på koordinaten.
@@ -1874,52 +1857,12 @@ export default function V2Map({
                     id: 'plain-events-dots',
                     type: 'circle',
                     source: 'plain-events',
-                    // Endast icke-klustrade punkter blir nålar/prickar.
-                    filter: ['!', ['has', 'point_count']],
                     layout: { 'visibility': 'none' },
                     paint: {
                         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
                         'circle-color': '#1e293b',
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
-                    },
-                });
-            }
-            // Kluster-bubblan: en cirkel vars storlek/färg trappas med antalet event
-            // den döljer. Filtret 'has point_count' matchar bara aggregerade noder.
-            if (!map.getLayer('plain-events-clusters')) {
-                map.addLayer({
-                    id: 'plain-events-clusters',
-                    type: 'circle',
-                    source: 'plain-events',
-                    filter: ['has', 'point_count'],
-                    paint: {
-                        'circle-color': ['step', ['get', 'point_count'],
-                            '#3b82f6', 10, '#6366f1', 50, '#8b5cf6', 200, '#a855f7'],
-                        'circle-radius': ['step', ['get', 'point_count'],
-                            16, 10, 20, 50, 26, 200, 34],
-                        'circle-opacity': 0.9,
-                        'circle-stroke-color': '#ffffff',
-                        'circle-stroke-width': 2,
-                    },
-                });
-            }
-            // Antalet event inuti klustret, centrerat i bubblan.
-            if (!map.getLayer('plain-events-cluster-count')) {
-                map.addLayer({
-                    id: 'plain-events-cluster-count',
-                    type: 'symbol',
-                    source: 'plain-events',
-                    filter: ['has', 'point_count'],
-                    layout: {
-                        'text-field': ['get', 'point_count_abbreviated'],
-                        'text-font': ['Open Sans Bold'],
-                        'text-size': ['step', ['get', 'point_count'], 12, 50, 14, 200, 16],
-                        'text-allow-overlap': true,
-                        'text-ignore-placement': true,
-                    },
-                    paint: {
-                        'text-color': '#ffffff',
                     },
                 });
             }
@@ -2111,9 +2054,7 @@ export default function V2Map({
         map.on('zoomend', showBricks);
 
         // GL-lager som är klickbara: brickorna (inzoomat) + prickarna (utzoomat).
-        // Punkt-lagren väljer ett event; kluster-lagret zoomar in i stället.
-        const glPointLayers = ['plain-events', 'plain-events-dots'];
-        const glHitLayers = [...glPointLayers, 'plain-events-clusters'];
+        const glHitLayers = ['plain-events', 'plain-events-dots'];
         const glLayersPresent = () => glHitLayers.filter(id => map.getLayer(id));
 
         map.on('click', (e) => {
@@ -2149,27 +2090,10 @@ export default function V2Map({
             if (gameModeRef.current) { onGuessRef.current?.(group); return; }
             onSelectEventRef.current(group[0]);
         };
-        // Klick på en kluster-bubbla → zooma in till den nivå där klustret löses upp
-        // (MapLibre räknar ut den åt oss) och centrera på bubblan.
-        const onClusterClick = (e: maplibregl.MapLayerMouseEvent) => {
-            if (pinballModeRef.current || gameModeRef.current) return;
-            const feat = e.features && e.features[0];
-            const clusterId = feat?.properties?.cluster_id;
-            if (clusterId == null) return;
-            const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
-            if (!src) return;
-            const coords = (feat!.geometry as GeoJSON.Point).coordinates as [number, number];
-            src.getClusterExpansionZoom(clusterId)
-                .then(zoom => map.easeTo({ center: coords, zoom }))
-                .catch(() => {});
-        };
         const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
         const clearPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = ''; };
-        glPointLayers.forEach(id => {
-            map.on('click', id, onGlMarkerClick);
-        });
-        map.on('click', 'plain-events-clusters', onClusterClick);
         glHitLayers.forEach(id => {
+            map.on('click', id, onGlMarkerClick);
             map.on('mouseenter', id, setPointer);
             map.on('mouseleave', id, clearPointer);
         });
@@ -3234,11 +3158,9 @@ export default function V2Map({
         try { map.touchPitch?.disable(); } catch { /* äldre maplibre saknar touchPitch */ }
         driftSuppressUntilRef.current = Number.MAX_SAFE_INTEGER; // (idle-drift är redan av)
 
-        // 2. Göm de vanliga event-lagren (inkl. kluster) — banan ritar eventen själv.
+        // 2. Göm de vanliga event-lagren — banan ritar eventen själv.
         setGlLayerVisible('plain-events', false);
         setGlLayerVisible('plain-events-dots', false);
-        setGlLayerVisible('plain-events-clusters', false);
-        setGlLayerVisible('plain-events-cluster-count', false);
 
         // 3. Mät banan + sätt upp canvas (DPR-skalad) + offscreen-fält (halv-res).
         const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -3576,8 +3498,6 @@ export default function V2Map({
             }
             setGlLayerVisible('plain-events', true);
             setGlLayerVisible('plain-events-dots', false);
-            setGlLayerVisible('plain-events-clusters', true);
-            setGlLayerVisible('plain-events-cluster-count', true);
             // canvas kan vara oinitierad om vi avbröt i zoom-fasen
             const ctx2 = canvas.getContext('2d');
             if (ctx2) { ctx2.setTransform(1, 0, 0, 1, 0, 0); ctx2.clearRect(0, 0, canvas.width, canvas.height); }
