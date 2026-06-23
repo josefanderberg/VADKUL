@@ -167,47 +167,6 @@ export const EVENT_CATEGORIES = {
 
 export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
 
-/**
- * Opt-in-"kategorier" som INTE är LLM-kategorier utan KÄLLOR med väldigt många
- * event (Korpen, Svenska kyrkan, PRO). De är avstängda som default och ingår
- * INTE i "visa alla" — deras event syns bara när användaren själv kryssar i dem.
- *
- * Nycklarna måste matcha SOURCE_DEFS i ./sources (klassningen sker på event-
- * URL:ens värdnamn via classifySource, samma logik som markörfärgen på kartan).
- * Färgerna är valda så att 100/700-paret matchar markörens hex i sources.ts.
- */
-export const SPECIAL_CATEGORIES = {
-  korpen: {
-    id: 'korpen',
-    label: 'Korpen',
-    emoji: '🏃',
-    color: 'bg-green-100 text-green-700',
-    description: 'Korpen — motion & breddidrott',
-  },
-  svenskakyrkan: {
-    id: 'svenskakyrkan',
-    label: 'Svenska kyrkan',
-    emoji: '⛪',
-    color: 'bg-violet-100 text-violet-700',
-    description: 'Svenska kyrkans församlingar',
-  },
-  pro: {
-    id: 'pro',
-    label: 'PRO',
-    emoji: '🧓',
-    color: 'bg-pink-100 text-pink-700',
-    description: 'PRO — pensionärernas riksorganisation',
-  },
-} as const;
-
-export type SpecialCategoryType = keyof typeof SPECIAL_CATEGORIES;
-
-/** Ordnad lista (Korpen, Svenska kyrkan, PRO) för opt-in-raderna i filtret. */
-export const SPECIAL_CATEGORY_LIST = Object.values(SPECIAL_CATEGORIES);
-
-/** Snabb uppslagning: är ett filter-id en opt-in-källa (inte en LLM-kategori)? */
-export const SPECIAL_CATEGORY_KEYS = new Set<string>(Object.keys(SPECIAL_CATEGORIES));
-
 // Ålderskategorier för events
 export const AGE_CATEGORIES = [
   { id: 'family', label: 'Familj', min: 0, max: 99 },

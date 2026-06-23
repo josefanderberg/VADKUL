@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layers, X } from 'lucide-react';
 import { LinkEvent } from '@/types';
-import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
-import { classifySource } from '@/utils/sources';
+import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 
 interface CategoryFilterProps {
     /** Dagens (+ sökfiltrerade) events — panelen visar antal per kategori ur dessa. */
@@ -40,11 +39,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
     const counts = useMemo(() => {
         const c = new Map<string, number>();
         for (const evt of events) {
-            // Opt-in-källor (Korpen/Svenska kyrkan/PRO) räknas i sin egen hink,
-            // inte i sin LLM-kategori — så raden visar exakt vad som dyker upp
-            // när man kryssar i den (och normal-kategorierna inte blåses upp).
-            const src = classifySource(evt.url || evt.id);
-            const key = src ?? (evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other');
+            const key = evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other';
             c.set(key, (c.get(key) ?? 0) + 1);
         }
         return c;
@@ -57,49 +52,6 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                 .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0)),
         [counts, selected],
     );
-
-    // Opt-in-rader (avstängda som default, ingår ej i "visa alla"). Visas i fast
-    // ordning högst upp när det finns event idag eller källan redan är ikryssad.
-    const visibleSpecial = useMemo(
-        () => SPECIAL_CATEGORY_LIST.filter((cat) => (counts.get(cat.id) ?? 0) > 0 || selected.has(cat.id)),
-        [counts, selected],
-    );
-
-    // Gemensam rad-rendering för både opt-in-källor och vanliga kategorier.
-    const renderRow = (cat: { id: string; label: string; emoji: string; color: string }) => {
-        const active = selected.has(cat.id);
-        return (
-            <button
-                key={cat.id}
-                type="button"
-                onClick={() => onToggle(cat.id)}
-                aria-pressed={active}
-                className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${active ? 'bg-slate-100' : 'hover:bg-slate-100 active:bg-slate-200'}`}
-            >
-                <span
-                    className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-lg leading-none border ${
-                        active ? `${cat.color} border-transparent ring-2 ring-offset-1 ring-slate-300` : 'bg-slate-50 border-slate-200'
-                    }`}
-                    aria-hidden
-                >
-                    {cat.emoji}
-                </span>
-                <span className="flex-1 min-w-0">
-                    <span className={`block text-sm font-bold leading-tight ${active ? 'text-slate-800' : 'text-slate-500'}`}>
-                        {cat.label}
-                    </span>
-                    <span className="block text-[11px] text-slate-500 leading-tight tabular-nums">
-                        {counts.get(cat.id) ?? 0} event idag
-                    </span>
-                </span>
-                {active && (
-                    <span className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide ${cat.color}`}>
-                        PÅ
-                    </span>
-                )}
-            </button>
-        );
-    };
 
     return (
         <>
@@ -142,14 +94,41 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                             </button>
                         )}
                     </div>
-                    {/* Opt-in-källor överst — avgränsade från de vanliga kategorierna. */}
-                    {visibleSpecial.length > 0 && (
-                        <>
-                            {visibleSpecial.map(renderRow)}
-                            <div className="mx-2 my-1 border-t border-slate-200/70" aria-hidden />
-                        </>
-                    )}
-                    {visible.map((id) => renderRow(EVENT_CATEGORIES[id]))}
+                    {visible.map((id) => {
+                        const cat = EVENT_CATEGORIES[id];
+                        const active = selected.has(id);
+                        return (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => onToggle(id)}
+                                aria-pressed={active}
+                                className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${active ? 'bg-slate-100' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+                            >
+                                <span
+                                    className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-lg leading-none border ${
+                                        active ? `${cat.color} border-transparent ring-2 ring-offset-1 ring-slate-300` : 'bg-slate-50 border-slate-200'
+                                    }`}
+                                    aria-hidden
+                                >
+                                    {cat.emoji}
+                                </span>
+                                <span className="flex-1 min-w-0">
+                                    <span className={`block text-sm font-bold leading-tight ${active ? 'text-slate-800' : 'text-slate-500'}`}>
+                                        {cat.label}
+                                    </span>
+                                    <span className="block text-[11px] text-slate-500 leading-tight tabular-nums">
+                                        {counts.get(id) ?? 0} event idag
+                                    </span>
+                                </span>
+                                {active && (
+                                    <span className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide ${cat.color}`}>
+                                        PÅ
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
         </>
