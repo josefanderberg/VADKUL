@@ -229,8 +229,34 @@ function pickUrl(node: any): string {
     return '';
 }
 
+/**
+ * Härled start/slut ur ett event-node. Föredrar direkt `startDate`. Saknas den
+ * men `eventSchedule` finns (schema.org Schedule, ofta en array av veckovisa
+ * körningar — t.ex. en teaterföreställning som spelas hela sommaren) väljer vi
+ * det närmaste KOMMANDE Schedule-datumet (annars det sista). Ett event per node,
+ * med nästa speltillfälle — samma "en RawEvent per URL"-modell som resten.
+ * Additivt: triggar bara när direkt startDate saknas, så källor med startDate
+ * påverkas inte.
+ */
+function resolveSchedule(node: any): { start?: string; end?: string } {
+    if (node.startDate) return { start: node.startDate, end: node.endDate };
+    const sched = node.eventSchedule;
+    if (!sched) return {};
+    const arr = Array.isArray(sched) ? sched : [sched];
+    const dated = arr
+        .filter((s: any) => s && s.startDate)
+        .map((s: any) => ({ start: String(s.startDate), end: s.endDate ? String(s.endDate) : undefined, t: new Date(s.startDate).getTime() }))
+        .filter((s) => !isNaN(s.t))
+        .sort((a, b) => a.t - b.t);
+    if (dated.length === 0) return {};
+    const now = Date.now();
+    const pick = dated.find((s) => s.t >= now) ?? dated[dated.length - 1];
+    return { start: pick.start, end: pick.end };
+}
+
 export function jsonLdToRawEvent(node: any, baseUrl: string): RawEvent | null {
-    if (!node.name || !node.startDate) return null;
+    const sched = resolveSchedule(node);
+    if (!node.name || !sched.start) return null;
 
     let url = pickUrl(node);
     if (url && url.startsWith('/')) {
@@ -238,10 +264,10 @@ export function jsonLdToRawEvent(node: any, baseUrl: string): RawEvent | null {
     }
     if (!url) url = baseUrl;
 
-    const startDate = new Date(node.startDate);
+    const startDate = new Date(sched.start);
     if (isNaN(startDate.getTime())) return null;
 
-    const endDate = node.endDate ? new Date(node.endDate) : undefined;
+    const endDate = sched.end ? new Date(sched.end) : undefined;
     const loc = Array.isArray(node.location) ? node.location[0] : node.location;
     const address = loc?.address;
 

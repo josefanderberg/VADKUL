@@ -38,8 +38,8 @@ const VENUES: Venue[] = [
     { name: 'Fotografiska',            domain: 'fotografiska.com',      region: 'stockholm', city: 'Stockholm', kind: 'museum' },
     { name: 'Spritmuseum',             domain: 'spritmuseum.se',        region: 'stockholm', city: 'Stockholm', kind: 'museum' },
     { name: 'ABBA The Museum',         domain: 'abbathemuseum.com',     region: 'stockholm', city: 'Stockholm', kind: 'museum' },
-    { name: 'Junibacken',              domain: 'junibacken.se',         region: 'stockholm', city: 'Stockholm', kind: 'museum' },
-    { name: 'Skansen',                 domain: 'skansen.se',            region: 'stockholm', city: 'Stockholm', kind: 'venue' },
+    { name: 'Junibacken',              domain: 'junibacken.se',         region: 'stockholm', city: 'Stockholm', kind: 'amusement' },
+    { name: 'Skansen',                 domain: 'skansen.se',            region: 'stockholm', city: 'Stockholm', kind: 'amusement' },
     { name: 'Bonniers Konsthall',      domain: 'bonnierskonsthall.se',  region: 'stockholm', city: 'Stockholm', kind: 'museum' },
     { name: 'Magasin III',             domain: 'magasin3.com',          region: 'stockholm', city: 'Stockholm', kind: 'museum' },
     { name: 'Millesgården',            domain: 'millesgarden.se',       region: 'stockholm', city: 'Lidingö', kind: 'museum' },
@@ -132,10 +132,10 @@ const VENUES: Venue[] = [
     { name: 'Putte i Parken',          domain: 'putteiparken.se',       region: 'karlstad', city: 'Karlstad', kind: 'festival' },
     { name: 'Storsjöyran',             domain: 'storsjoyran.se',        region: 'ostersund', city: 'Östersund', kind: 'festival' },
     { name: 'Diggiloo',                domain: 'diggiloo.se',           region: 'national', kind: 'festival' },
-    { name: 'Furuviksparken',          domain: 'furuvik.se',            region: 'gavle', city: 'Gävle', kind: 'venue' },
+    { name: 'Furuviksparken',          domain: 'furuvik.se',            region: 'gavle', city: 'Gävle', kind: 'amusement' },
     { name: 'Liseberg',                domain: 'liseberg.se',           region: 'goteborg', city: 'Göteborg', kind: 'venue' },
-    { name: 'Gröna Lund',              domain: 'gronalund.com',         region: 'stockholm', city: 'Stockholm', kind: 'venue' },
-    { name: 'Skara Sommarland',        domain: 'sommarland.se',         region: 'skara', city: 'Skara', kind: 'venue' },
+    { name: 'Gröna Lund',              domain: 'gronalund.com',         region: 'stockholm', city: 'Stockholm', kind: 'amusement' },
+    { name: 'Skara Sommarland',        domain: 'sommarland.se',         region: 'skara', city: 'Skara', kind: 'amusement' },
 
     // ─── Studieförbund (riks) ────────────────────────────────────────────
     { name: 'ABF',                     domain: 'abf.se',                region: 'national', kind: 'studieforbund' },
@@ -198,7 +198,7 @@ const VENUES: Venue[] = [
     { name: 'Hamburger Börs',          domain: 'hamburgerbors.se',      region: 'stockholm', city: 'Stockholm', kind: 'sommarscen' },
     { name: 'Rival',                   domain: 'rival.se',              region: 'stockholm', city: 'Stockholm', kind: 'sommarscen' },
     // ── Nöjespark / familj / science ──
-    { name: 'Kolmården',               domain: 'kolmarden.com',         region: 'ostergotland', city: 'Norrköping', kind: 'familj' },
+    { name: 'Kolmården',               domain: 'kolmarden.com',         region: 'ostergotland', city: 'Norrköping', kind: 'amusement' },
     { name: 'Parken Zoo',              domain: 'parkenzoo.se',          region: 'sodermanland', city: 'Eskilstuna', kind: 'familj' },
     { name: 'Borås Djurpark',          domain: 'boraszoo.se',           region: 'vastra-gotaland', city: 'Borås', kind: 'familj' },
     { name: 'Tom Tits Experiment',     domain: 'tomtit.se',             region: 'stockholm', city: 'Södertälje', kind: 'familj' },
@@ -317,6 +317,15 @@ const VENUES: Venue[] = [
     { name: 'Kraken Live',             domain: 'krakenlive.se',         region: 'skane', city: 'Malmö', kind: 'batch6' },
     { name: 'Folk Göteborg',           domain: 'folkgbg.se',            region: 'goteborg', city: 'Göteborg', kind: 'batch6' },
     { name: 'Gamla Stans Teater',      domain: 'gamlastansteater.se',   region: 'stockholm', city: 'Stockholm', kind: 'batch6' },
+
+    // ─── BATCH 7 (2026-06-23): nöjesfält / familjeparker (kind 'amusement') ──
+    // Sammanför nöjesparkerna under en gemensam kind så --filter=amusement
+    // probar exakt dem. Befintliga (Liseberg, Universeum) utelämnade — redan i
+    // registry. Furuvik/Gröna Lund/Skara Sommarland/Kolmården/Skansen/Junibacken
+    // fick kind='amusement' ovan; här de som saknades helt:
+    { name: 'Tosselilla',              domain: 'tosselilla.se',         region: 'skane', city: 'Tomelilla', kind: 'amusement' },
+    { name: 'Astrid Lindgrens Värld',  domain: 'alv.se',                region: 'kalmar', city: 'Vimmerby', kind: 'amusement' },
+    { name: 'High Chaparral',          domain: 'highchaparral.se',      region: 'jonkoping', city: 'Hillerstorp', kind: 'amusement' },
 ];
 
 const SITEMAP_PATHS = [

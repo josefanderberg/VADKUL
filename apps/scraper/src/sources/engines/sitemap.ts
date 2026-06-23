@@ -378,9 +378,17 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
     }
 
     // Filtrera genom urlPatterns
-    const matching = candidates.filter(e =>
+    const matchingRaw = candidates.filter(e =>
         cfg.urlPatterns.some(re => re.test(e.url))
     );
+    // Dedup identiska loc-URL:er — vissa sitemaps listar samma sida flera ggr
+    // (t.ex. ALV: varje föreställning 3×). Behåll första (med ev. lastmod).
+    const seenUrls = new Set<string>();
+    const matching = matchingRaw.filter(e => {
+        if (seenUrls.has(e.url)) return false;
+        seenUrls.add(e.url);
+        return true;
+    });
 
     // Skippa blacklistade — alltid default-blacklist + ev. custom
     const allBlacklist = [...DEFAULT_URL_BLACKLIST, ...(cfg.urlBlacklist || [])];
