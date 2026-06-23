@@ -904,7 +904,9 @@ export default function V2Map({
     // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
     const isZoomingRef = useRef<boolean>(false);
-    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
+    // Default = 'themepark' ("Nöjesfält"-kartan). Satellit m.fl. går fortfarande att
+    // välja i Funktioner-väskan, men nöjesfält är förvald vid varje sidladdning.
+    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('themepark');
     const mapStyleRef = useRef(mapStyle);
     mapStyleRef.current = mapStyle;
     // Cache för den hämtade + mildrade nöjesfälts-stilen (Voyager-transform).
@@ -1089,7 +1091,8 @@ export default function V2Map({
         // Tilt/globe/terrain/satellit har egen state (inte i flags) — av dem är
         // bara satellit på som default, vilket ger 5 totalt:
         // satellit + sun + focus + throw + createEvent.
-        // Bara Satellit (mapStyle='satellite') är aktiv från start — allt annat av.
+        // Nöjesfält (mapStyle='themepark') är förvald kartstil från start — allt
+        // annat av. Satellit m.fl. kan väljas i Funktioner-väskan.
         sun: false,
         focus: false,
         throw: false,
@@ -2087,8 +2090,9 @@ export default function V2Map({
         try {
         map = new maplibregl.Map({
             container: mapContainerRef.current,
-            // Initial style matchar default-värdet på mapStyle (satellit) så
-            // kartan inte måste byta stil direkt efter mount → ingen flicker.
+            // Bootstrap-stil: satellitens raster-stil är synkron (Nöjesfält hämtas
+            // async). mapStyle-effekten byter sedan till förvald 'themepark' direkt
+            // efter mount. Satellit är en giltig, snabb startbild under tiden.
             style: SATELLITE_STYLE,
             center: [14.4664, 58.0257], // Lng, Lat (Gränna, vid Vättern)
             zoom: 5,
