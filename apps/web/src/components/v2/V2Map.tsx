@@ -19,13 +19,6 @@ import toast from 'react-hot-toast';
 // Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
 // (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
 // de är DOM-element i container, inte en del av style-spec:en.
-// Kluster-parametrar (aggressiva: håll ihop event långt in i zoomen så kartan inte
-// laggar av tusentals brickor). CLUSTER_MAX_ZOOM = sista nivån där event klustras;
-// över den ritas de individuellt. DOM_REVEAL_ZOOM = först här avslöjas de rika
-// DOM-brickorna (= en nivå över sista kluster-zoomen), så utzoom = bara bubblor.
-const CLUSTER_MAX_ZOOM = 14;
-const CLUSTER_RADIUS = 80;
-const DOM_REVEAL_ZOOM = CLUSTER_MAX_ZOOM; // DOM visas vid zoom > 14 (dvs 15+)
 const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 // Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -222,10 +215,7 @@ function makeBrickaImageData(emoji: string, bodyColor?: string): { data: ImageDa
 type PlainFeature = {
     type: 'Feature';
     geometry: { type: 'Point'; coordinates: [number, number] };
-    // special=true → punkten matas in i kluster-källan (så den räknas/klustras vid
-    // utzoom) men ritas INTE av brick-/prick-lagret; den rika DOM-brickan tar över
-    // vid hög zoom. special=false → vanligt GL-event som ritas direkt.
-    properties: { icon: string; key: string; special: boolean };
+    properties: { icon: string; key: string };
 };
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
@@ -894,10 +884,6 @@ export default function V2Map({
     }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    // Aktuell zoomnivå (uppdateras vid moveend tillsammans med bounds). Styr när de
-    // rika DOM-brickorna avslöjas: vid utzoom samlas ALLT i kluster-bubblor, och
-    // DOM-brickorna dyker upp först när klustren löses upp (zoom > DOM_REVEAL_ZOOM).
-    const [mapZoom, setMapZoom] = useState<number>(0);
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('satellite');
     const mapStyleRef = useRef(mapStyle);
     mapStyleRef.current = mapStyle;
@@ -1773,17 +1759,11 @@ export default function V2Map({
             (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
             (!!goldEventId && group.some(e => e.id === goldEventId));
 
-        // Vid utzoom (zoom ≤ DOM_REVEAL_ZOOM) ska BARA kluster-bubblorna synas —
-        // göm då alla rika DOM-brickor utom de som måste visas (valt/gissat/guld).
-        // Deras event räknas ändå med i klustren via kluster-källan.
-        const domRevealed = mapZoom > DOM_REVEAL_ZOOM;
-
         const out: [string, LinkEvent[]][] = [];
         for (const entry of groups.entries()) {
             const [key, group] = entry;
             if (!isSpecialGroup(group, key, nowMs)) continue;
             if (mustShow(group)) { out.push(entry); continue; }
-            if (!domRevealed) continue;
             const rep = group[0];
             // Range-validering (inte bara falsy): en projicerad koordinat som
             // lat=6129956 får annars LngLatBounds.contains att kasta och
@@ -1792,7 +1772,7 @@ export default function V2Map({
             if (paddedBounds.contains([rep.lng, rep.lat])) out.push(entry);
         }
         return out;
-    }, [groups, mapBounds, mapZoom, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
+    }, [groups, mapBounds, selectedEvent, gameMode, guessedEventId, goldEventId, isSpecialGroup]);
 
     // GL-lagret: alla ICKE-speciella grupper (huvuddelen). Byggs som GeoJSON +
     // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
@@ -1804,22 +1784,10 @@ export default function V2Map({
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
         const icons = new Map<string, { emoji: string; color?: string }>();
-        // Alltid-DOM: valt/gissat/guld måste ligga kvar som rik bricka på ALLA
-        // zoomnivåer (annars sväljs t.ex. det valda eventet in i en kluster-bubbla).
-        // Dessa hålls UTE ur kluster-källan helt.
-        const isAlwaysDom = (group: LinkEvent[]) =>
-            (!gameMode && !!selectedEvent && group.some(e => e.id === selectedEvent.id)) ||
-            (!!guessedEventId && group.some(e => e.id === guessedEventId)) ||
-            (!!goldEventId && group.some(e => e.id === goldEventId));
         for (const [key, group] of groups) {
+            if (isSpecialGroup(group, key, nowMs)) continue;
             const rep = group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
-            if (isAlwaysDom(group)) continue;
-            // Speciella grupper (flera event, sparade, egna, inom-timme …) matas in i
-            // kluster-källan så de RÄKNAS och klustras vid utzoom, men markeras
-            // special:true så brick-/prick-lagret hoppar över dem — DOM-brickan ritar
-            // dem vid hög zoom i stället.
-            const special = isSpecialGroup(group, key, nowMs);
             const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
             const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
             // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard).
@@ -1829,16 +1797,15 @@ export default function V2Map({
                 ? undefined
                 : ((EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? undefined);
             const iconId = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
-            // Baka bara bilder för icke-speciella (DOM-brickan har sin egen rendering).
-            if (!special && !icons.has(iconId)) icons.set(iconId, { emoji, color });
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color });
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: iconId, key, special },
+                properties: { icon: iconId, key },
             });
         }
         return { features, icons };
-    }, [groups, isSpecialGroup, gameMode, selectedEvent, guessedEventId, goldEventId]);
+    }, [groups, isSpecialGroup]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string }>>(new Map());
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
@@ -1860,8 +1827,8 @@ export default function V2Map({
                     // clusterRadius i px = hur nära två punkter måste vara för att slås
                     // ihop. Detaljerna (brickorna) tar över när klustret löses upp.
                     cluster: true,
-                    clusterRadius: CLUSTER_RADIUS,
-                    clusterMaxZoom: CLUSTER_MAX_ZOOM,
+                    clusterRadius: 50,
+                    clusterMaxZoom: 12,
                 });
             }
             // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
@@ -1883,9 +1850,9 @@ export default function V2Map({
                     id: 'plain-events',
                     type: 'symbol',
                     source: 'plain-events',
-                    // Bara icke-klustrade, icke-speciella punkter får bricka — klustren
-                    // ritas av cluster-lagren nedan, speciella event av DOM-brickan.
-                    filter: ['all', ['!', ['has', 'point_count']], ['!', ['get', 'special']]],
+                    // Bara icke-klustrade punkter får bricka — klustren ritas av
+                    // cluster-lagren nedan.
+                    filter: ['!', ['has', 'point_count']],
                     layout: {
                         'icon-image': ['get', 'icon'],
                         // Spetsen (nederkanten av bilden) på koordinaten.
@@ -1907,8 +1874,8 @@ export default function V2Map({
                     id: 'plain-events-dots',
                     type: 'circle',
                     source: 'plain-events',
-                    // Endast icke-klustrade, icke-speciella punkter blir nålar/prickar.
-                    filter: ['all', ['!', ['has', 'point_count']], ['!', ['get', 'special']]],
+                    // Endast icke-klustrade punkter blir nålar/prickar.
+                    filter: ['!', ['has', 'point_count']],
                     layout: { 'visibility': 'none' },
                     paint: {
                         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
@@ -2295,7 +2262,6 @@ export default function V2Map({
         const applyBounds = () => {
             moveEndLastAt = performance.now();
             setMapBounds(map.getBounds());
-            setMapZoom(map.getZoom());
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
@@ -2316,7 +2282,6 @@ export default function V2Map({
         // Rapportera initialt läge
         map.once('load', () => {
             setMapBounds(map.getBounds());
-            setMapZoom(map.getZoom());
             updateCloudPosition();
             // Installera GL-markörlagret + pusha första datan.
             syncPlainLayerRef.current();
