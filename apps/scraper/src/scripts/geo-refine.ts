@@ -53,9 +53,28 @@ interface Row {
     locationName: string;
     extractedAddress: string | null;
     description: string | null;
+    hostName: string | null;
     lat: number;
     lng: number;
 }
+
+/**
+ * Kända biljett-/arrangörs-KONTORSADRESSER som läcker in som event-plats. Att
+ * "förbättra" ett event till en sådan placerar det på fel ställe (Ticksters HQ
+ * i stället för den riktiga scenen). Hoppa över dem som adress-kandidat.
+ */
+const KNOWN_OFFICE_ADDRESSES: RegExp[] = [
+    /Magasinsgatan\s*8\b/i,   // Tickster AB, Göteborg
+];
+
+/**
+ * hostName som geokodnings-kandidat? Bara när det troligen är en PLATS
+ * (museum/teater/kyrka/scen), inte en organisation (ABF/Facebook/Korpen).
+ * Många källor lägger venuet i hostName och brus i locationName
+ * ("Göteborgs Stadsmuseum" som host, "Samling i foajén" som plats).
+ */
+const HOST_IS_VENUE = /(museum|museet|teater|konserthus|konsthall|bibliotek|kyrka|kapell|slott|scen|arena|hall|gård|saluhall|stadshus|folkets hus|bygdegård)/i;
+const HOST_IS_ORG = /(facebook|eventbrite|kommun|förening|korpen|abf|studieförbund|riksteatern|rotary|röda korset|naturskydd|hembygd|pro\b|sensus|bilda|medborgarskolan)/i;
 
 // ─── Svensk gatuadress-extraktion ────────────────────────────────────────────
 // Bor i utils/swedishAddress (delas med sitemap-motorn); re-exporteras här
@@ -104,10 +123,23 @@ function findClusters(rows: Row[]): Cluster[] {
     return clusters;
 }
 
-/** "Stockholms kommun" → "Stockholm", "Växjö kommun" → "Växjö". */
+/**
+ * Normalisera kommun-/stadsnamn från reverse-geocoding till orten Nominatim
+ * känner igen som plats. Nominatim svarar ofta med den administrativa
+ * enheten ("Göteborgs Stad", "Stockholms kommun", "Malmö stad") — geokodning
+ * av "Bio Roy, Göteborgs Stad" missar, "Bio Roy, Göteborg" träffar.
+ *   "Göteborgs Stad" → "Göteborg",  "Stockholms kommun" → "Stockholm",
+ *   "Malmö stad" → "Malmö",  "Region Gotland" → "Gotland"
+ */
 export function cleanCityName(raw: string | null): string | null {
     if (!raw) return null;
-    return raw.replace(/s\s+kommun$/i, '').replace(/\s+kommun$/i, '').trim() || null;
+    // Suffix-regexens `s?` slukar genitiv-s:et som bär suffixet
+    // ("Göteborgs Stad" → "Göteborg", "Stockholms kommun" → "Stockholm")
+    // UTAN att röra orter som genuint slutar på s (Borås, Höganäs, Degerfors).
+    const c = raw.trim()
+        .replace(/^region\s+/i, '')
+        .replace(/s?\s+(kommun|stad|municipality|city)$/i, '');
+    return c.trim() || null;
 }
 
 /** Staden i ett kluster — reverse-geokodas EN gång per kluster (cachas i-körning). */
@@ -129,11 +161,13 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
     const locIsJustCity = !!city && loc.toLowerCase() === city.toLowerCase();
 
     // Kandidat 1–3: gatuadress ur extractedAddress → description → locationName.
+    // Hoppa över kända kontorsadresser (Tickster HQ m.fl.) — de leder fel.
     const streets = [
         extractStreetAddress(r.extractedAddress),
         extractStreetAddress(r.description),
         extractStreetAddress(loc),
-    ].filter((s): s is string => !!s);
+    ].filter((s): s is string => !!s)
+     .filter((s) => !KNOWN_OFFICE_ADDRESSES.some((re) => re.test(s)));
 
     for (const street of [...new Set(streets)]) {
         if (!city) break;
@@ -141,13 +175,34 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
         if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `${street}, ${city}`];
     }
 
-    // Kandidat 4: venue-namn + stad via STRIKT geokodning (ingen fallback —
-    // en fallback hade bara gett ett nytt stadscentrum). Inte när platsnamnet
-    // ÄR staden; då finns inget mer precist att fråga efter.
+    // Kandidat 4: venue-namn via STRIKT geokodning (ingen stads-fallback — den
+    // hade bara gett ett nytt stadscentrum). Prova "venue, stad" först, sedan
+    // "venue" ensamt (vissa POI:er matchar bara utan stads-suffix). Inte när
+    // platsnamnet ÄR staden; då finns inget mer precist att fråga efter.
+    // Distansvakten (acceptable: >150 m, <60 km från klustret) skyddar mot att
+    // venue-ensamt-frågan landar i fel stad.
     if (loc && !locIsJustCity) {
-        const q = city && !loc.toLowerCase().includes(city.toLowerCase()) ? `${loc}, ${city}` : loc;
-        const hit = await geocodeVenueSwedenStrict(q);
-        if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], q];
+        const variants = city && !loc.toLowerCase().includes(city.toLowerCase())
+            ? [`${loc}, ${city}`, loc]
+            : [loc];
+        for (const q of [...new Set(variants)]) {
+            const hit = await geocodeVenueSwedenStrict(q);
+            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], q];
+        }
+    }
+
+    // Kandidat 5: hostName som plats — bara när det ser ut som en venue
+    // (museum/teater/kyrka …) och inte en organisation. Fångar fall där den
+    // riktiga platsen ligger i värd-fältet och locationName är instruktionsbrus.
+    const host = (r.hostName || '').trim();
+    if (host && HOST_IS_VENUE.test(host) && !HOST_IS_ORG.test(host)) {
+        const variants = city && !host.toLowerCase().includes(city.toLowerCase())
+            ? [`${host}, ${city}`, host]
+            : [host];
+        for (const q of [...new Set(variants)]) {
+            const hit = await geocodeVenueSwedenStrict(q);
+            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `värd: ${q}`];
+        }
     }
 
     return null;
@@ -173,7 +228,7 @@ async function applyCoords(r: Row, lat: number, lng: number, query: string): Pro
 async function main() {
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
     const rows = sqlite.prepare(`
-        SELECT url, firestoreId, title, locationName, extractedAddress, description, lat, lng
+        SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName, lat, lng
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
     `).all() as Row[];

@@ -8,7 +8,8 @@
  *
  * Kommandon:
  *   /nytt        — Starta ett nytt FB-utkast nu (publish-fb, dagsresa 3 events)
- *   /list10      — Starta 10-event-listan (publish-digest, Telegram-utkast endast)
+ *   /list10      — Starta 10-event-listan (publish-digest); "klar" publicerar
+ *                  karusell till Instagram + Facebook
  *   /stopp       — Avbryt aktiv publicering (skickar SIGTERM)
  *   /status      — Visa läget
  *
@@ -156,7 +157,7 @@ async function handleCommand(msg: string): Promise<void> {
             await sendMessage(
                 `✅ Standby.\n\n` +
                 `<code>/nytt</code>    — starta FB-utkast (dagsresa, 3 events)\n` +
-                `<code>/list10</code>  — 10-event-listan (Telegram-utkast)\n` +
+                `<code>/list10</code>  — 10-event-listan → "klar" postar IG-karusell + FB\n` +
                 `<code>/stopp</code>   — avbryt aktiv\n` +
                 `<code>/status</code>  — visa läget`
             );

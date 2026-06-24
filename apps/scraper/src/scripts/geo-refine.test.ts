@@ -1,5 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { extractStreetAddress } from './geo-refine';
+import { extractStreetAddress, cleanCityName } from './geo-refine';
+
+describe('cleanCityName', () => {
+    it('strippar administrativa suffix', () => {
+        expect(cleanCityName('Göteborgs Stad')).toBe('Göteborg');
+        expect(cleanCityName('Stockholms kommun')).toBe('Stockholm');
+        expect(cleanCityName('Malmö stad')).toBe('Malmö');
+        expect(cleanCityName('Region Gotland')).toBe('Gotland');
+        expect(cleanCityName('Växjö kommun')).toBe('Växjö');
+    });
+
+    it('rör INTE orter som genuint slutar på s', () => {
+        expect(cleanCityName('Borås')).toBe('Borås');
+        expect(cleanCityName('Höganäs')).toBe('Höganäs');
+        expect(cleanCityName('Degerfors')).toBe('Degerfors');
+        expect(cleanCityName('Grums')).toBe('Grums');
+    });
+
+    it('null/tomt → null', () => {
+        expect(cleanCityName(null)).toBeNull();
+        expect(cleanCityName('')).toBeNull();
+    });
+});
 
 describe('extractStreetAddress', () => {
     it('hittar enkel gatuadress', () => {

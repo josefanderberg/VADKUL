@@ -15,6 +15,7 @@
  *   STAT_DAILY_BREAKDOWN=mån 3,tis 7,ons 2,...
  */
 
+import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,39 +23,27 @@ import * as path from 'path';
 async function main() {
     const stats: Record<string, string> = {};
 
-    // ── 1. Firebase: totalt antal linkEvents ─────────────────────────────────
+    // ── 1. Totalt antal linkEvents — Firestore .count()-aggregering ──────────
+    //    Billig (debiteras ~1 read per 1000 dokument) i stället för ett fullt
+    //    collection-svep på ~20k+ dokument varje natt. Behåller "Totalt i
+    //    Firebase"-semantiken exakt (alla dokument, inkl. hidden).
     try {
         if (db) {
-            const snapshot = await db.collection('linkEvents').get();
-            const totalEvents = snapshot.size;
-            stats['STAT_TOTAL_EVENTS'] = String(totalEvents);
+            const agg = await db.collection('linkEvents').count().get();
+            stats['STAT_TOTAL_EVENTS'] = String(agg.data().count);
+        }
+    } catch (err) {
+        stats['STAT_FIREBASE_ERROR'] = String(err);
+    }
 
-            // ── 2. Dubblettkoordinater (>1 event på exakt samma lat/lng) ────────
-            const coordMap = new Map<string, number>();
-            snapshot.docs.forEach(doc => {
-                const d = doc.data();
-                const lat = d.lat;
-                const lng = d.lng;
-                if (lat && lng && lat !== 0 && lng !== 0) {
-                    const key = `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
-                    coordMap.set(key, (coordMap.get(key) || 0) + 1);
-                }
-            });
-
-            // Platser med mer än 1 event
-            const hotspots = [...coordMap.entries()]
-                .filter(([, count]) => count > 1)
-                .sort((a, b) => b[1] - a[1]);
-
-            stats['STAT_DUPLICATE_LOCATIONS'] = String(hotspots.length);
-
-            // Top 5 platser med flest events
-            const top5 = hotspots.slice(0, 5)
-                .map(([coord, count]) => `${coord}(${count}st)`)
-                .join(', ');
-            stats['STAT_TOP_HOTSPOTS'] = top5 || 'inga';
-
-            // ── 3. Daglig fördelning (kommande 7 dagar) ──────────────────────
+    // ── 2. Hotspots + daglig fördelning — ur SQLite-spegeln (gratis) ─────────
+    //    Tidigare lästes lat/lng/time per dokument ur samma Firestore-svep som
+    //    ovan. Spegeln har samma data lokalt. Universat: kommande, synliga events
+    //    (time >= idag, hidden = 0) — det clustringen/fördelningen faktiskt mäter
+    //    (matchar konventionen i post-quality-stats.ts).
+    try {
+        const sqliteDb = new Database(path.resolve(__dirname, '../../events.db'), { readonly: true });
+        try {
             const now = new Date();
             const todayStart = new Date(now);
             todayStart.setHours(0, 0, 0, 0);
@@ -62,31 +51,50 @@ async function main() {
             weekEnd.setDate(weekEnd.getDate() + 7);
             weekEnd.setHours(23, 59, 59, 999);
 
+            const rows = sqliteDb.prepare(`
+                SELECT lat, lng, time FROM link_events
+                WHERE hidden = 0 AND time >= ?
+            `).all(todayStart.toISOString()) as Array<{ lat: number | null; lng: number | null; time: string | null }>;
+
+            // Dubblettkoordinater (>1 event på exakt samma lat/lng, 4 decimaler)
+            const coordMap = new Map<string, number>();
+            for (const r of rows) {
+                if (r.lat && r.lng && r.lat !== 0 && r.lng !== 0) {
+                    const key = `${Number(r.lat).toFixed(4)},${Number(r.lng).toFixed(4)}`;
+                    coordMap.set(key, (coordMap.get(key) || 0) + 1);
+                }
+            }
+            const hotspots = [...coordMap.entries()]
+                .filter(([, count]) => count > 1)
+                .sort((a, b) => b[1] - a[1]);
+            stats['STAT_DUPLICATE_LOCATIONS'] = String(hotspots.length);
+            stats['STAT_TOP_HOTSPOTS'] = hotspots.slice(0, 5)
+                .map(([coord, count]) => `${coord}(${count}st)`)
+                .join(', ') || 'inga';
+
+            // Daglig fördelning (kommande 7 dagar)
             const dailyMap: Record<string, number> = {};
             for (let i = 0; i < 7; i++) {
                 const d = new Date(todayStart);
                 d.setDate(d.getDate() + i);
-                const key = d.toLocaleDateString('sv-SE', { weekday: 'short' });
-                dailyMap[key] = 0;
+                dailyMap[d.toLocaleDateString('sv-SE', { weekday: 'short' })] = 0;
             }
-
-            snapshot.docs.forEach(doc => {
-                const d = doc.data();
-                let t: Date | null = null;
-                if (d.time?.toDate) t = d.time.toDate();
-                else if (d.time) t = new Date(d.time);
-                if (t && t >= todayStart && t <= weekEnd) {
+            for (const r of rows) {
+                if (!r.time) continue;
+                const t = new Date(r.time);
+                if (!isNaN(t.getTime()) && t >= todayStart && t <= weekEnd) {
                     const key = t.toLocaleDateString('sv-SE', { weekday: 'short' });
                     if (key in dailyMap) dailyMap[key]++;
                 }
-            });
-
+            }
             stats['STAT_DAILY_BREAKDOWN'] = Object.entries(dailyMap)
                 .map(([day, count]) => `${day} ${count}`)
                 .join(', ');
+        } finally {
+            sqliteDb.close();
         }
     } catch (err) {
-        stats['STAT_FIREBASE_ERROR'] = String(err);
+        stats['STAT_SQLITE_ERROR'] = String(err);
     }
 
     // ── 4. Facebook keyword_stats.json ────────────────────────────────────────

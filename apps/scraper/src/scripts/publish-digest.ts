@@ -24,6 +24,7 @@ import path from 'path';
 import fs from 'fs';
 import { sendMessage, waitForReply, flushPendingUpdates, isTelegramConfigured } from '../utils/telegram';
 import { setEventImage, isValidImageUrl } from '../utils/setEventImage';
+import { postToInstagram, postToFacebook, isInstagramConfigured, isFacebookConfigured } from '../utils/socialPublish';
 
 // ── Lock-fil ─────────────────────────────────────────────────────────────────
 const LOCK_FILE = '/tmp/vadkul-publish-digest.lock';
@@ -319,13 +320,83 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/**
+ * REN bildtext för Instagram/Facebook (ingen HTML, inga Telegram-bildlänkar).
+ * Numreringen matchar carousel-slidesen 1:1 — så `picks` här ska vara exakt de
+ * event som blir slides (de med publik bild), i samma ordning.
+ */
+function buildCaptionPlain(picks: DigestEvent[], totalToday: number): string {
+    const todayStr = new Date().toLocaleDateString('sv-SE', {
+        weekday: 'long', day: 'numeric', month: 'long',
+    });
+    const header = `📋 ${todayStr}\nIdag händer minst ${totalToday} unika event i Sverige — här är ${picks.length} av dem:`;
+    const lines = picks.map((e, i) => `${i + 1}. ${e.city} — ${e.cleanTitle}`).join('\n');
+    const footer = 'Vilket hade du helst velat gå på? 👇\n\nFler tips → vadkul.se\n#vadkul #sverige #evenemang #görnågot #helgtips';
+    return `${header}\n\n${lines}\n\n${footer}`;
+}
+
+/**
+ * Publicera listan till Instagram (karusell) + Facebook. Bara event med publik
+ * bild kan bli carousel-slides, så vi filtrerar och renumrerar bildtexten så
+ * den matchar slidesen. IG kräver minst 1 bild (≥2 = karusell).
+ */
+async function publishDigest(state: DigestState): Promise<void> {
+    if (!isInstagramConfigured() && !isFacebookConfigured()) {
+        await sendMessage('⚠️ Varken Instagram eller Facebook är konfigurerat (FB_PAGE_TOKEN/IG_USER_ID saknas i ~/.vadkul-secrets/env).');
+        return;
+    }
+
+    // Bara event med en publik bild-URL kan bli slides. Behåll listans ordning.
+    const imaged = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim())).slice(0, 10);
+    const imageUrls = imaged.map(p => p.coverImage!.trim());
+
+    if (imageUrls.length === 0) {
+        await sendMessage(
+            '🚫 Kan inte publicera till Instagram — inget av eventen har en bild.\n' +
+            'Sätt bilder med <code>bild N &lt;URL&gt;</code> och skriv <code>klar</code> igen.'
+        );
+        return;
+    }
+
+    const caption = buildCaptionPlain(imaged, state.totalToday);
+    const skipped = state.picks.length - imaged.length;
+    await sendMessage(
+        `🚀 Publicerar ${imaged.length} event` +
+        (skipped > 0 ? ` (${skipped} hoppas över — saknar bild)` : '') +
+        ` till Instagram${isFacebookConfigured() ? ' + Facebook' : ''}…`
+    );
+
+    // Instagram (karusell ≥2, annars single). Facebook med samma innehåll.
+    let igOk = false;
+    if (isInstagramConfigured()) {
+        try {
+            const igId = await postToInstagram(caption, imageUrls);
+            igOk = true;
+            await sendMessage(`✅ Instagram publicerat! (id ${escapeHtml(igId)})`);
+        } catch (e) {
+            await sendMessage(`⚠️ Instagram misslyckades: ${escapeHtml((e as Error).message)}`);
+        }
+    }
+    if (isFacebookConfigured()) {
+        try {
+            await postToFacebook(caption, imageUrls);
+            await sendMessage('✅ Facebook publicerat!');
+        } catch (e) {
+            await sendMessage(`⚠️ Facebook misslyckades: ${escapeHtml((e as Error).message)}`);
+        }
+    }
+
+    console.log(`[Digest] Publicerat (IG=${igOk}):`);
+    console.log(caption);
+}
+
 const HELP = `
 — Svara:
   <code>byt 5</code>          = byt event #5
   <code>byt 3,7,10</code>     = byt flera
   <code>bild 5 &lt;URL&gt;</code>   = sätt bild för #5 (DB + Firestore)
   <code>nytt</code>           = byt alla 10
-  <code>klar</code>           = bekräfta utkastet
+  <code>klar</code>           = 📲 PUBLICERA till Instagram + Facebook
   <code>stopp</code>          = avbryt`;
 
 // ── Approval-loop ────────────────────────────────────────────────────────────
@@ -416,13 +487,8 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
             continue;
         }
 
-        if (['klar', 'ok', '👍', '✅'].includes(cmd)) {
-            await sendMessage(
-                '✅ <b>Utkastet bekräftat.</b>\n' +
-                '<i>(v1: ingen publicering — Facebook/Instagram-integration kommer separat.)</i>'
-            );
-            console.log('[Digest] Approved (v1: no-op):');
-            console.log(buildDigestText(state.picks, state.totalToday));
+        if (['klar', 'ok', '👍', '✅', 'publicera'].includes(cmd)) {
+            await publishDigest(state);
             return;
         }
 

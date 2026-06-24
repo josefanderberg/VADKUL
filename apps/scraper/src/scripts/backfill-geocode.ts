@@ -55,17 +55,50 @@ const GENERIC_ONLY = new Set([
     'okänd plats', 'okänd', 'tba', 'plats meddelas', 'meddelas senare',
 ]);
 
-/** Distinkta, icke-tomma, icke-generiska geokodnings-kandidater i prioritetsordning. */
+/**
+ * Distinkta, icke-tomma, icke-generiska geokodnings-kandidater i prioritetsordning.
+ *
+ * Kyrk-/PRO-svansen lagrar locationName som "<venue>, <församling>"
+ * ("Äspö kyrka, Källstorps församling"). geocodeVenueSweden provar hela
+ * strängen + SISTA komma-delen (församlingen, ogeokodbar) + stads-skanning
+ * (församlingsorten saknas i stadslistan) → miss. Men FÖRSTA komma-delen är
+ * själva platsen ("Äspö kyrka") och geokodar ofta direkt. Lägg därför till
+ * varje komma-segment som egen kandidat, venue (första) först.
+ */
 function candidates(r: Row): string[] {
     const seen = new Set<string>();
     const out: string[] = [];
+    const add = (v: string) => {
+        const t = v.trim();
+        if (t.length < 3) return;
+        const key = t.toLowerCase();
+        if (seen.has(key) || GENERIC_ONLY.has(key)) return;
+        seen.add(key);
+        out.push(t);
+    };
+    // Härled ortsnamn ur organisations-/församlingsnamn: orten är ofta inbäddad
+    // ("Sigtuna församling" → Sigtuna, "PRO Skultorp" → Skultorp). Stadsskanningen
+    // i geocodeVenueSweden missar dem (suffix/prefix + saknas i stadslistan).
+    const ORG_SUFFIX = /\s+(församling|kyrkoförsamling|pastorat|distrikt|krets|avdelning|hembygdsförening|förening)$/i;
+    const ORG_PREFIX = /^(PRO|SPF|PRO:s)\s+/i;
+    const derivePlace = (seg: string) => {
+        let p = seg.replace(ORG_PREFIX, '').replace(ORG_SUFFIX, '').trim();
+        if (p && p !== seg) {
+            add(p);
+            // Genitiv: "Källstorps" → "Källstorp", "Falköpings" → "Falköping".
+            if (/[a-zåäö]s$/i.test(p)) add(p.slice(0, -1));
+        }
+    };
+
     for (const raw of [r.extractedAddress, r.locationName, r.geocodedQuery]) {
         const v = (raw || '').trim();
-        if (!v || v.length < 3) continue;
-        const key = v.toLowerCase();
-        if (seen.has(key) || GENERIC_ONLY.has(key)) continue;
-        seen.add(key);
-        out.push(v);
+        if (!v) continue;
+        add(v);                                   // hela strängen
+        const segs = v.includes(',') ? v.split(',') : [v];
+        for (const seg of segs) {                 // + varje segment (venue först)
+            add(seg);
+            derivePlace(seg);                     // + härledd ort (sist, lägst prio)
+        }
     }
     return out;
 }

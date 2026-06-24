@@ -147,7 +147,7 @@ fi
 # och FÖRE re-aggregate så nya koordinater publiceras samma natt.
 echo "" >> "$LOG_FILE"
 echo "── GEO-REFINE (exakta adresser för kluster-event) ──" >> "$LOG_FILE"
-if npm run geo-refine -- --apply --limit=150 >> "$LOG_FILE" 2>&1; then
+if npm run geo-refine -- --apply --limit=250 >> "$LOG_FILE" 2>&1; then
     REFINED_N="$(grep -oE 'Förfinade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
     echo "Geo-refine OK (förfinade=${REFINED_N:-0})" >> "$LOG_FILE"
 else

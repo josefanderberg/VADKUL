@@ -72,11 +72,18 @@ async function main() {
 
     console.log(`\nKandidater: ${rows.length}\n`);
 
-    // Plocka redan-auditerade om ONLY_NEW
+    // Plocka redan-auditerade om ONLY_NEW — ur SQLite-spegeln (aiVerdict), inte
+    // ett fullt Firestore-svep (~tiotusentals reads/natt). Spegeln är dessutom
+    // den fullständiga auditloggen: audit-pending-daemon skriver bara aiVerdict
+    // till SQLite — Firestore-dokumentens aiAudit.verdict sätts inte av daemonen,
+    // så ett Firestore-svep missade daemon-auditerade events och re-auditerade dem.
     let alreadyAudited = new Set<string>();
     if (ONLY_NEW) {
-        const snap = await db.collection('linkEvents').where('aiAudit.verdict', 'in', ['ok', 'suspect', 'junk']).get();
-        alreadyAudited = new Set(snap.docs.map(d => d.id));
+        const audited = sqliteDb.prepare(`
+            SELECT firestoreId FROM link_events
+            WHERE aiVerdict IN ('ok', 'suspect', 'junk') AND firestoreId IS NOT NULL
+        `).all() as Array<{ firestoreId: string }>;
+        alreadyAudited = new Set(audited.map(r => r.firestoreId));
         console.log(`Hoppar över ${alreadyAudited.size} redan auditerade.\n`);
     }
 
