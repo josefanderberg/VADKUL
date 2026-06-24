@@ -397,7 +397,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
-    
+    // Kortets TAK: hur högt det får växa. Stannar ~17% från skärmtoppen (83vh)
+    // så det alltid syns en remsa karta + navbaren ovanför.
+    const MAX_HEIGHT_VH = 83;
+
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
@@ -462,7 +465,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const descTopWithinContent = (descRect.top - scRect.top) + sc.scrollTop;
         const targetPx = descTopWithinContent + lineHeight * 1.4;
         const vh = (targetPx / window.innerHeight) * 100;
-        return Math.max(PEEK_HEIGHT_VH, Math.min(90, Math.round(vh)));
+        return Math.max(PEEK_HEIGHT_VH, Math.min(MAX_HEIGHT_VH, Math.round(vh)));
     };
 
     // Minsta höjd kortet kan dras ner till: precis så att kortets nedre kant
@@ -484,6 +487,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const targetPx = lineTopWithinContent;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(10, Math.min(PEEK_HEIGHT_VH, Math.round(vh)));
+    };
+
+    // Default-höjd när ett kort öppnas: visa HELA headern (titel, tid, plats,
+    // värd, pris) + en remsa av bilden — så man direkt ser värden OCH lite av
+    // bilden. Mäts mot Värd/Pris-radens botten (data-peek-boundary) + ~60px ner
+    // i innehållet (bilden ligger direkt under), eftersom header-höjden varierar.
+    const measureDefaultHeight = (): number => {
+        const sc = scrollContainerRef.current;
+        if (!sc) return OPEN_HEIGHT_VH;
+        const peek = sc.querySelector('[data-peek-boundary]') as HTMLElement | null;
+        if (!peek) return measureCollapsedHeight();
+        const scRect = sc.getBoundingClientRect();
+        const peekRect = peek.getBoundingClientRect();
+        const targetPx = (peekRect.bottom - scRect.top) + sc.scrollTop + 60;
+        const vh = (targetPx / window.innerHeight) * 100;
+        return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
     };
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
     // botten-gränsen utan att bindas om. Default = konstanten tills vi mätt.
@@ -533,6 +552,41 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         };
     }, [hasSelectedEvent]);
 
+    // ── Mus-/styrplatte-hjul: scrolla för att VÄXA hela behållaren ───────────
+    // Förut kunde man bara DRA kortet med handtaget för att förstora det — ett
+    // hjul-/tvåfingerscroll gjorde inget (touch-action gäller bara touch, inte
+    // hjul). Nu växer hjulet kortet mot helskärm FÖRST; när det fyllt skärmen
+    // scrollar den nedre delen av innehållet normalt. Scrollar man tillbaka vid
+    // innehållstoppen krymper hela kortet igen (ner mot peek, ej stäng).
+    // Native-lyssnare (passive:false) krävs för preventDefault.
+    useEffect(() => {
+        if (!hasSelectedEvent) return;
+        const sc = scrollContainerRef.current;
+        if (!sc) return;
+        const onWheel = (e: WheelEvent) => {
+            const h = heightVhRef.current;
+            const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY; // rad-läge (mus) → px
+            const deltaVh = (px / window.innerHeight) * 100;
+            // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
+            if (deltaVh > 0 && h < MAX_HEIGHT_VH) {
+                e.preventDefault();
+                setIsAnimating(false);
+                updateHeightVh(Math.min(MAX_HEIGHT_VH, h + deltaVh));
+                return;
+            }
+            // Scrolla tillbaka vid innehållets topp → krymp kortet (ner mot peek).
+            if (deltaVh < 0 && sc.scrollTop <= 0 && h > collapsedVhRef.current) {
+                e.preventDefault();
+                setIsAnimating(false);
+                updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh));
+                return;
+            }
+            // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
+        };
+        sc.addEventListener('wheel', onWheel, { passive: false });
+        return () => sc.removeEventListener('wheel', onWheel);
+    }, [hasSelectedEvent]);
+
     // Föregående valda event-id, så vi kan skilja "öppna från stängt" (null → X)
     // från "byta event medan kortet är öppet" (X → Y). Höjden ska bara nollställas
     // till default vid en ny öppning, inte vid byte.
@@ -576,7 +630,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const raf = requestAnimationFrame(() => {
             const collapsed = measureCollapsedHeight();
             collapsedVhRef.current = collapsed;
-            if (freshOpen) updateHeightVh(collapsed);
+            if (freshOpen) updateHeightVh(measureDefaultHeight());
         });
         return () => cancelAnimationFrame(raf);
     }, [selectedEvent]);
@@ -770,8 +824,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
             const deltaVh = (deltaY / window.innerHeight) * 100;
             // Fritt nedåt: under peek-gränsen fortsätter kortet glida ner mot
             // botten — släpper man tillräckligt långt ner stängs det (se
-            // onPointerUp). Uppåt klampas vid 95 vh.
-            const newHeight = Math.max(3, Math.min(95, startHeightVh.current + deltaVh));
+            // onPointerUp). Uppåt klampas vid MAX_HEIGHT_VH.
+            const newHeight = Math.max(3, Math.min(MAX_HEIGHT_VH, startHeightVh.current + deltaVh));
             updateHeightVh(newHeight);
         } else if (dragDirection.current === 'horizontal') {
             updateDragX(startDragX.current + deltaX);
@@ -993,6 +1047,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                     )}
                     {selectedEvent && !gameMode && (
                         <>
+                            {/* Eventets emoji (samma som kartnålen) som bricka längst
+                                till vänster i navigeringsgruppen — vänster om bakåt/Nästa. */}
+                            <div
+                                aria-hidden
+                                title={selectedEvent.title}
+                                className="bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center text-xl leading-none box-border select-none"
+                            >
+                                {eventEmoji(selectedEvent)}
+                            </div>
                             {historyStack.length > 0 && (
                                 <button
                                     type="button"
@@ -1065,7 +1128,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                     ref={scrollContainerRef}
                     className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar"
                     style={{
-                        touchAction: heightVh < 50 ? 'none' : 'pan-y'
+                        // Innehållet scrollar FÖRST när kortet vuxit till nästan
+                        // helskärm (≥90vh). Under det tar kortets drag-handler
+                        // gesten → hela behållaren åker upp/ner i stället för att
+                        // scrolla innehållet. touch-action låses vid gest-start,
+                        // så ETT svep växer kortet hela vägen upp och NÄSTA svep
+                        // scrollar den nedre delen.
+                        touchAction: heightVh < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
                     }}
                 >
                     <LinkEventCard

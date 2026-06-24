@@ -1,5 +1,4 @@
 import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check } from 'lucide-react';
-import Image from 'next/image';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -19,34 +18,6 @@ function isSpecificAddress(addr: string | undefined | null): boolean {
     if (trimmed.length === 0) return false;
     return !ADDRESS_FALLBACKS.has(trimmed.toLowerCase());
 }
-
-// ─── Category patterns ────────────────────────────────────────────────────────
-import patternBoardgame from '../../assets/categories/patterns/pattern_boardgame.png';
-import patternCampus from '../../assets/categories/patterns/pattern_campus.png';
-import patternCommunity from '../../assets/categories/patterns/pattern_community.png';
-import patternCreative from '../../assets/categories/patterns/pattern_creative.png';
-import patternCulture from '../../assets/categories/patterns/pattern_culture.png';
-import patternFood from '../../assets/categories/patterns/pattern_food.png';
-import patternGame from '../../assets/categories/patterns/pattern_game.png';
-import patternMarket from '../../assets/categories/patterns/pattern_market.png';
-import patternMingle from '../../assets/categories/patterns/pattern_mingle.png';
-import patternMovie from '../../assets/categories/patterns/pattern_movie.png';
-import patternOther from '../../assets/categories/patterns/pattern_other.png';
-import patternOutdoor from '../../assets/categories/patterns/pattern_outdoor.png';
-import patternParty from '../../assets/categories/patterns/pattern_party.png';
-import patternPlay from '../../assets/categories/patterns/pattern_play.png';
-import patternSocial from '../../assets/categories/patterns/pattern_social.png';
-import patternSport from '../../assets/categories/patterns/pattern_sport.png';
-import patternStudy from '../../assets/categories/patterns/pattern_study.png';
-import patternTraining from '../../assets/categories/patterns/pattern_training.png';
-
-const ALL_PATTERNS = [
-    patternBoardgame, patternCampus, patternCommunity, patternCreative,
-    patternCulture, patternFood, patternGame, patternMarket,
-    patternMingle, patternMovie, patternOther, patternOutdoor,
-    patternParty, patternPlay, patternSocial, patternSport,
-    patternStudy, patternTraining
-];
 
 interface LinkEventCardProps {
     linkEvent: LinkEvent;
@@ -117,8 +88,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [coverFailed, setCoverFailed] = useState(false);
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
-    // Återställ reveal-steg till 0 (komprimerat: header + bildremsa) när eventet byts.
-    useEffect(() => { setInternalRevealStep(0); }, [linkEvent.id]);
+    // Byt event (Nästa/Bakåt): var kortet redan uppfällt ska det FÖRBLI uppfällt
+    // så bilden fortsatt syns — men i topp-läget (steg 1). Var det hopfällt börjar
+    // det hopfällt som vanligt. (Sheet-höjden bevaras separat i föräldern.)
+    useEffect(() => { setInternalRevealStep(prev => (prev >= 1 ? 1 : 0)); }, [linkEvent.id]);
 
     // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
     const [reportOpen, setReportOpen] = useState(false);
@@ -222,17 +195,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         setInternalRevealStep(prev => prev === 1 ? 2 : 1);
     };
 
-    const getHash = (str: string) => {
-        let hash = 5381;
-        for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        return Math.abs(hash);
-    };
-
-    const patternIndex = getHash(linkEvent.id || linkEvent.title || '') % ALL_PATTERNS.length;
-    const coverSrc = linkEvent.coverImage || ALL_PATTERNS[patternIndex];
-    // Sant bara när eventet har en riktig omslagsbild. Fallback-mönstren ska
-    // INTE visas i full höjd — de är bara dekorativa platshållare och beskärs
-    // som tidigare.
+    // Bara den riktiga omslagsbilden visas — saknas den visas ingen bild alls
+    // (ingen fallback-platshållare längre).
     const hasRealCover = !!linkEvent.coverImage;
 
     const getFaviconUrl = (url: string) => {
@@ -250,38 +214,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
-            {/* Bildremsa: visas längst upp på kortet när det är komprimerat (revealStep 0).
-                Klick öppnar till full bild + beskrivning. Göms när bilden visas fullständigt. */}
-            {revealStep === 0 && !alwaysExpanded && (
-                <div
-                    className="w-full h-[72px] relative cursor-pointer overflow-hidden rounded-t-[inherit] flex-shrink-0"
-                    onClick={handleHeaderClick}
-                >
-                    <Image
-                        unoptimized
-                        src={coverSrc}
-                        alt=""
-                        fill
-                        className="object-cover"
-                    />
-                    {/* Gradient nederkant så titeln läser sig mot bakgrunden */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
-                    {/* Subtil puls-hint — signalerar att man kan trycka */}
-                    <div className="absolute bottom-2 right-3 flex items-center gap-1 text-[10px] font-black text-white/80 uppercase tracking-widest drop-shadow">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
-                </div>
-            )}
-
             {/* 1. Header (Always visible) */}
             <div
-                className={`p-4 md:p-6 flex flex-col w-full relative bg-card ${
-                    alwaysExpanded
-                        ? 'pt-2'
-                        : revealStep === 0
-                        ? 'pt-2'
-                        : 'pt-8'
-                } ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
+                className={`p-4 md:p-6 pt-10 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
@@ -314,8 +249,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         Spara/Hitta hit/Dela ligger samlade under den stora
                         anmälningsknappen längre ner i kortet. Användarskapade
                         event saknar extern anmälningssida (ingen url). */}
-                    {revealStep >= 1 && linkEvent.url && (
-                        <div className="shrink-0 animate-in fade-in zoom-in duration-300">
+                    {linkEvent.url && (
+                        <div className="shrink-0">
                             <button
                                 onClick={handleVisitSite}
                                 className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
@@ -341,13 +276,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         )}
                     </div>
                 </div>
-
-                {/* 2-line Description Preview (only in collapsed state to avoid duplicate when expanded) */}
-                {revealStep === 0 && linkEvent.description && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 mt-1 font-medium leading-relaxed">
-                        {linkEvent.description}
-                    </p>
-                )}
 
                 <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">
                     {/* Värd */}
@@ -386,41 +314,24 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             </div>
 
 
-            {/* 2. Revealed Content (Image + Description) */}
-            {revealStep >= 1 && (
-                <div className="flex flex-col w-full animate-in fade-in slide-in-from-top-2 duration-300">
-                    {/* Image — i panel-/sheet-läget (alwaysExpanded) visas HELA
-                        den RIKTIGA omslagsbilden (object-contain, höjd-capad till
-                        48vh) i stället för en beskuren remsa, så man ser hela
-                        motivet. Fallback-mönster (utan riktig coverImage) och alla
-                        övriga lägen behåller den beskurna h-48/h-64-remsan. */}
-                    {/* Bild: alltid object-contain i sheet-läget så man ser hela motivet.
-                        Fallback-mönster behåller den beskurna remsan. */}
-                    {hasRealCover && coverFailed ? null : hasRealCover ? (
+            {/* 2. Innehåll (bild + beskrivning + åtgärder) — ALLTID renderat, så
+                hopfällt och uppfällt skiljer sig BARA i sheet-höjd: drar man upp
+                det hopfällda kortet syns samma bild/beskrivning. */}
+            <div className="flex flex-col w-full">
+                    {/* Omslagsbild — visas BARA när eventet har en riktig bild
+                        (ingen fallback). Object-contain så hela motivet syns,
+                        höjd-capad. Ligger under värd/pris-raden i kortet. */}
+                    {hasRealCover && !coverFailed && (
                         <div
                             className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={handleContentClick}
                         >
                             <img
                                 data-cover-img
-                                src={coverSrc as string}
+                                src={linkEvent.coverImage as string}
                                 alt={linkEvent.title}
                                 onError={() => setCoverFailed(true)}
                                 className="w-full h-auto max-h-[60vh] object-contain"
-                            />
-                        </div>
-                    ) : (
-                        <div
-                            className="relative w-full h-48 md:h-64 bg-muted/30 border-t border-border overflow-hidden cursor-pointer"
-                            onClick={handleContentClick}
-                        >
-                            <Image unoptimized
-                                src={coverSrc}
-                                alt={linkEvent.title}
-                                fill
-                                sizes="100vw"
-                                onError={() => { if (hasRealCover) setCoverFailed(true); }}
-                                className="object-cover transition-transform duration-700 hover:scale-105"
                             />
                         </div>
                     )}
@@ -430,19 +341,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         className={`p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
-                        <p data-event-description className={`text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium ${revealStep === 1 ? 'line-clamp-3' : ''}`}>
+                        <p data-event-description className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                             {(linkEvent as any).description || 'Ingen beskrivning tillgänglig.'}
                         </p>
                         
-                        {revealStep === 1 && (linkEvent as any).description && (
-                            <div className="mt-3 text-[#006AA7] font-black flex items-center gap-1 text-[10px] uppercase tracking-widest">
-                                <span>Läs hela beskrivningen</span>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                            </div>
-                        )}
-
-                        {revealStep === 2 && (
-                            <div className="mt-6 flex flex-col gap-3">
+                        <div className="mt-6 flex flex-col gap-3">
                                 {/* Skrapade event länkar ut till arrangörens sida. */}
                                 {linkEvent.url && (
                                     <button
@@ -596,19 +499,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         </button>
                                     )}
                                 </div>
-                                {!alwaysExpanded && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setInternalRevealStep(0); }}
-                                        className="text-[10px] text-slate-400 hover:text-slate-600 font-bold py-2 uppercase tracking-widest text-center"
-                                    >
-                                        Stäng detaljer
-                                    </button>
-                                )}
                             </div>
-                        )}
                     </div>
                 </div>
-            )}
         </div>
     );
 }

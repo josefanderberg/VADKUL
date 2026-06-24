@@ -73,6 +73,15 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
 
     if (style.layers) {
         style.layers = style.layers.map(layer => {
+            // Hav-/ocean-namn (Östersjön m.fl.) ligger som ETT label-lager per
+            // angränsande land i källdatan → samma hav etiketteras på ~10 språk
+            // (Östersjön / Itämeri / Ostsee / Østersøen …). Onödigt brus på en
+            // Sverige-karta, så hav/ocean-namnen göms. Insjönamn (Vänern/Vättern,
+            // eget watername_lake-lager) berörs INTE.
+            if (layer.id === 'watername_ocean' || layer.id === 'watername_sea') {
+                const baseLayout = ('layout' in layer && layer.layout) ? layer.layout : {};
+                return { ...layer, layout: { ...baseLayout, visibility: 'none' as const } } as typeof layer;
+            }
             if (!('paint' in layer) || !layer.paint) return layer;
             // Paint-spec:en är en strikt union per lagertyp men vi sätter
             // nycklarna dynamiskt utifrån lager-id — jobba mot en löst typad
@@ -147,8 +156,9 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
 // spetsen ÄR nålen. icon-anchor:'bottom' sätter spetsen ~pad ovanför nederkanten,
 // dvs. i praktiken på koordinaten.
 //
-// "Stora" källor (PRO/Korpen/Svenska kyrkan) får en egen brick-färg via bodyColor
-// — annars används den mörka standard-gradienten.
+// makeBrickaImageData målar brickan i bodyColor (en kategori-/källfärg) när en
+// sådan ges, annars den mörka standard-gradienten. "Stora" källor (PRO/Korpen/
+// Svenska kyrkan) får numera ingen egen färg — de skiljs ut via opt-in-filtret.
 
 // Hex → [r,g,b]. Stödjer både #rgb och #rrggbb.
 function parseHex(h: string): [number, number, number] {
@@ -222,6 +232,23 @@ function makeBrickaImageData(emoji: string, bodyColor?: string): { data: ImageDa
     ctx.fillText(emoji, cx, cy);
 
     return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
+}
+
+// ── Brick-kroppens kategori-/källfärg ──────────────────────────────────────
+// Bakgrunds-CSS för ETT events bricka i normaltillstånd. Stor källa (PRO/Korpen/
+// Svenska kyrkan) → mörk standardbricka; övriga → sin kategoris markerHex-
+// gradient. Delas av GL-lagret, DOM-synken, slideshow-cyclern och vald-grupp-
+// bläddringen så bakgrunden ALLTID matchar det event som faktiskt visas i en
+// multi-event-bricka (förr frös färgen på gruppens FÖRSTA event).
+const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
+function brickaBodyHex(ev: LinkEvent): string | null {
+    if (sourceColor(ev.url || ev.id) !== null) return null; // stor källa → mörk
+    const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
+    return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
+}
+function brickaBodyBg(ev: LinkEvent): string {
+    const hex = brickaBodyHex(ev);
+    return hex ? sourceGradientCss(hex) : BRICKA_DARK_BG;
 }
 
 // En GL-markör-feature: punkt + vilken bakad bild + grupp-nyckel (för klick).
@@ -1821,12 +1848,10 @@ export default function V2Map({
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
             const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-            // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard).
-            // Alla andra → kategori-färg.
-            const isBigSrc = sourceColor(rep.url || rep.id) !== null;
-            const color = isBigSrc
-                ? undefined
-                : ((EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? undefined);
+            // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard);
+            // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
+            // DOM-färgen aldrig glider isär.
+            const color = brickaBodyHex(rep) ?? undefined;
             const iconId = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             if (!icons.has(iconId)) icons.set(iconId, { emoji, color });
             features.push({
@@ -2051,6 +2076,13 @@ export default function V2Map({
                 const emoji = cur.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
                 const emojiEl = md.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== emoji) emojiEl.textContent = emoji;
+                // Låt brickans kropp följa det event som visas just nu — annars
+                // frös färgen på gruppens första event. Fasta tillstånd (guld/
+                // sparad) äger färgen och markeras med catCycle !== '1'.
+                if (md.element.dataset.catCycle === '1') {
+                    const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
+                    if (bubble) bubble.style.background = brickaBodyBg(cur);
+                }
                 md.element.onclick = (e) => {
                     e.stopPropagation();
                     if (gameModeRef.current) { onGuessRef.current?.(group); return; }
@@ -4294,17 +4326,16 @@ export default function V2Map({
                     onSelectEventRef.current(rep);
                 };
 
-                // "Stor" källa (PRO/Korpen/Svenska kyrkan) identifieras för att
-                // EXKLUDERA dem från kategorifärgningen — de får standardmörk bricka.
-                // Alla övriga event får sin kategori-färg i standardläge.
-                // Speciella tillstånd (vald/guld/sparad m.fl.) går alltid före.
-                const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
-                const isBigSource = sourceColor(rep.url || rep.id) !== null;
+                // Får denna grupps bricka byta kroppsfärg när slideshow-cyclern
+                // växlar event? Ja för normala multi-grupper; nej när ett fast
+                // tillstånd (guld/sparad) äger färgen eller det är en ensam bricka.
+                markerData.element.dataset.catCycle = (count > 1 && !isGold && !isSaved) ? '1' : '';
 
-                // Kategori-färg för icke-stora-källors event.
-                const catColorHex = !isBigSource
-                    ? (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null
-                    : null;
+                // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från
+                // kategorifärgningen → standardmörk bricka; övriga får sin kategori-
+                // färg. Speciella tillstånd (vald/guld/sparad) går alltid före nedan.
+                const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
+                const catColorHex = brickaBodyHex(rep);
 
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
                 // mjuk gradient för djup; VADKUL-skapade event får en smaragdgrön
@@ -4319,7 +4350,7 @@ export default function V2Map({
                     ? 'linear-gradient(145deg, #ffffff 0%, #eef2f7 100%)'
                     : catColorHex
                     ? sourceGradientCss(catColorHex)
-                    : 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
+                    : BRICKA_DARK_BG;
                 const pinBorder = isGold
                     ? '3px solid #fde68a'
                     : isSelected
@@ -4457,6 +4488,12 @@ export default function V2Map({
                 const selEmoji = inGroupSelected.emoji || (EVENT_CATEGORIES[selCatKey as EventCategoryType]?.emoji ?? '🎫');
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
+                // Brickans kropp följer det bläddrade eventet (samma skäl som i
+                // cyclern). Fast tillstånd (guld/sparad) äger färgen och rörs ej.
+                if (!isGold && !isSaved) {
+                    const bubble = markerData.element.querySelector('.pin-bubble') as HTMLElement | null;
+                    if (bubble) bubble.style.background = brickaBodyBg(inGroupSelected);
+                }
 
                 // Siffran = count − position i bläddrings-ordningen. Nästa → index
                 // ökar → siffran minskar; Bakåt → index minskar → siffran ökar.

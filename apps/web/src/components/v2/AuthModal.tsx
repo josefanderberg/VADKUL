@@ -14,8 +14,14 @@ interface AuthModalProps {
 
 /** Översätt Firebase-felkoder till begriplig svenska. */
 function authErrorText(code: string): string {
-    if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found'))
-        return 'Fel e-post eller lösenord.';
+    // Okänd e-post — fås bara när Firebase email-enumeration protection är AV.
+    // Är skyddet PÅ (default på nya projekt) returneras 'invalid-credential' istället,
+    // och då går det inte att skilja okänt konto från fel lösenord på klienten.
+    if (code.includes('user-not-found'))
+        return 'Det finns inget konto med den e-postadressen — skapa ett konto först.';
+    if (code.includes('wrong-password')) return 'Fel lösenord.';
+    if (code.includes('invalid-credential'))
+        return 'Fel e-post eller lösenord. Saknar du konto? Skapa ett nedan.';
     if (code.includes('email-already-in-use')) return 'E-postadressen används redan — logga in istället.';
     if (code.includes('weak-password')) return 'Lösenordet behöver minst 6 tecken.';
     if (code.includes('invalid-email')) return 'Ogiltig e-postadress.';
@@ -34,6 +40,11 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Rensa felet när användaren ändrar input, byter läge eller öppnar modalen på nytt
+    // — så att ett gammalt fel aldrig hänger kvar.
+    useEffect(() => { setError(null); }, [email, password, name, mode, open]);
 
     // Escape stänger modalen — standardbeteende för dialoger (tangentbord/SR).
     useEffect(() => {
@@ -48,13 +59,14 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setBusy(true);
+        setError(null);
         try {
             if (mode === 'login') await signIn(email, password);
             else await register(name, email, password);
             toast.success(mode === 'login' ? 'Inloggad!' : 'Välkommen till VADKUL!');
             onClose();
         } catch (err: any) {
-            toast.error(authErrorText(String(err?.code ?? err)));
+            setError(authErrorText(String(err?.code ?? err)));
         } finally {
             setBusy(false);
         }
@@ -116,6 +128,11 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         minLength={6}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
                     />
+                    {error && (
+                        <p role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700">
+                            {error}
+                        </p>
+                    )}
                     <button
                         type="submit"
                         disabled={busy}

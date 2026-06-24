@@ -10,7 +10,7 @@ import InstallPrompt from './pwa/InstallPrompt';
 import { registerServiceWorker } from '@/utils/registerServiceWorker';
 import { requestNotificationPermission, onForegroundMessage } from '@/utils/fcm';
 import { notificationService } from '@/services/notificationService';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 function FCMHandler() {
     const { user } = useAuth();
@@ -59,6 +59,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         <FCMHandler />
                         {children}
                         <InstallPrompt />
+                        {/* Renderar alla toast.error/success i appen — utan denna syns inga notiser. */}
+                        <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
                     </AdminProvider>
                 </AuthProvider>
             </ThemeProvider>
