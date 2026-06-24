@@ -11,7 +11,7 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventToDb, eventExistsInDb, refreshEventTime } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventTime } from '../utils/dbHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
@@ -160,6 +160,10 @@ export async function runSource(
     // daily-report — inte tyst dränka databasen. Per-källa-override i registryt.
     const saveCap = source.maxSavedPerRun ?? DEFAULT_SAVE_CAP;
 
+    // Firestore-skrivningar samlas och committas batchat efter loopen (i stället
+    // för en `.add()` per event) — skonar Firestore vid stora körningar.
+    const pendingWrites: any[] = [];
+
     for (const e of rawEvents) {
         if (result.saved >= saveCap) {
             const unprocessed = rawEvents.length - result.saved - result.skipped.duplicate
@@ -272,7 +276,7 @@ export async function runSource(
                 // Om upload misslyckas: behåll originalet (kanske funkar ett tag)
             }
 
-            await addEventToDb({
+            pendingWrites.push({
                 title: e.title,
                 url: e.url,
                 time: e.startDate,
@@ -304,6 +308,14 @@ export async function runSource(
         } catch (err) {
             result.errors.push(`event "${e.title}": ${(err as Error).message}`);
         }
+    }
+
+    // Flusha alla nya event i batchade Firestore-skrivningar (SQLite skrivs alltid,
+    // även om en commit fallerar). Dedup mot existerande är redan gjord i loopen.
+    if (!opts.dryRun && pendingWrites.length > 0) {
+        const { written, errors } = await addEventsBatch(pendingWrites);
+        errors.forEach((er) => result.errors.push(er));
+        ctx.log(`batch: ${written}/${pendingWrites.length} event skrivna till Firestore`);
     }
 
     result.durationMs = Date.now() - startedAt;

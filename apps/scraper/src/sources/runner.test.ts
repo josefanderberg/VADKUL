@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../utils/dbHelper', () => ({
-    addEventToDb: vi.fn(async () => {}),
+    addEventsBatch: vi.fn(async (evs: any[]) => ({ written: evs.length, errors: [] })),
     eventExistsInDb: vi.fn(async () => false),
     refreshEventTime: vi.fn(async () => false),
 }));
@@ -37,11 +37,15 @@ vi.mock('../utils/llmAudit', () => ({
 
 import { runSource, deriveHasSpecificTime, geocodeQueriesFor } from './runner';
 import { Source, RawEvent, Engine } from './types';
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { recordScrapeRun } from '../utils/sqliteHelper';
 
-const addEventMock = vi.mocked(addEventToDb);
+const batchMock = vi.mocked(addEventsBatch);
+// Runnern batchar skrivningar: alla event från en körning kommer i ETT
+// addEventsBatch(array)-anrop. Platta ut till "alla skrivna event" så testerna
+// kan asserta på enskilda event oavsett batch-gruppering.
+const writtenEvents = (): any[] => batchMock.mock.calls.flatMap((c) => c[0]);
 const existsMock = vi.mocked(eventExistsInDb);
 const geocodeMock = vi.mocked(geocodeVenueSweden);
 const recordRunMock = vi.mocked(recordScrapeRun);
@@ -95,8 +99,8 @@ describe('runSource — grundpipeline', () => {
         const result = await run([e]);
 
         expect(result.saved).toBe(1);
-        expect(addEventMock).toHaveBeenCalledTimes(1);
-        const written = addEventMock.mock.calls[0][0];
+        expect(writtenEvents()).toHaveLength(1);
+        const written = writtenEvents()[0];
         expect(written.hostName).toBe('Testvärd');
         expect(written.locationName).toBe('Folkets Hus');
         expect(written.status).toBe('published');       // AUDIT_ENABLED ej satt
@@ -107,7 +111,7 @@ describe('runSource — grundpipeline', () => {
 
     it('per-event hostName (paraply-källor) vinner över source.hostName', async () => {
         await run([makeEvent({ hostName: 'Sundbybergs församling' })]);
-        expect(addEventMock.mock.calls[0][0].hostName).toBe('Sundbybergs församling');
+        expect(writtenEvents()[0].hostName).toBe('Sundbybergs församling');
     });
 
     it('skippar ogiltiga event (kort titel, saknad url, trasigt datum)', async () => {
@@ -118,7 +122,7 @@ describe('runSource — grundpipeline', () => {
         ]);
         expect(result.saved).toBe(0);
         expect(result.skipped.invalid).toBe(3);
-        expect(addEventMock).not.toHaveBeenCalled();
+        expect(writtenEvents()).toHaveLength(0);
     });
 
     it('skippar event utanför fönstret (igår + bortom windowDays)', async () => {
@@ -137,13 +141,13 @@ describe('runSource — grundpipeline', () => {
         existsMock.mockResolvedValue(true);
         const result = await run([makeEvent()]);
         expect(result.skipped.duplicate).toBe(1);
-        expect(addEventMock).not.toHaveBeenCalled();
+        expect(writtenEvents()).toHaveLength(0);
     });
 
     it('dry-run skriver ingenting men räknar', async () => {
         const result = await run([makeEvent()], { dryRun: true });
         expect(result.saved).toBe(1);
-        expect(addEventMock).not.toHaveBeenCalled();
+        expect(writtenEvents()).toHaveLength(0);
         expect(geocodeMock).not.toHaveBeenCalled();
     });
 });
@@ -152,7 +156,7 @@ describe('runSource — geocoding', () => {
     it('engine-koordinater används utan geocoding', async () => {
         await run([makeEvent({ coords: [56.88, 14.81] })]);
         expect(geocodeMock).not.toHaveBeenCalled();
-        const written = addEventMock.mock.calls[0][0];
+        const written = writtenEvents()[0];
         expect(written.lat).toBe(56.88);
         expect(written.isLocationVerified).toBe(true);
     });
@@ -162,7 +166,7 @@ describe('runSource — geocoding', () => {
         geocodeMock.mockResolvedValueOnce([59.0, 18.0]);
         await run([makeEvent({ coords: [6129956, 1703467], venueName: 'X', city: 'Y' })]);
         expect(geocodeMock).toHaveBeenCalled();
-        const written = addEventMock.mock.calls[0][0];
+        const written = writtenEvents()[0];
         expect(written.lat).toBe(59.0);
         expect(written.lng).toBe(18.0);
     });
@@ -171,7 +175,7 @@ describe('runSource — geocoding', () => {
         geocodeMock.mockResolvedValueOnce(null);
         await run([makeEvent({ coords: [40.7, -74.0], venueName: 'NYC' })]);  // New York
         expect(geocodeMock).toHaveBeenCalled();   // koorden förkastades → fallback
-        const written = addEventMock.mock.calls[0][0];
+        const written = writtenEvents()[0];
         expect(written.lat).toBe(0);
     });
 
@@ -185,7 +189,7 @@ describe('runSource — geocoding', () => {
         expect(geocodeMock).toHaveBeenCalledTimes(2);  // tredje kandidaten provas aldrig
         expect(geocodeMock.mock.calls.map(c => c[0]))
             .toEqual(['Storkyrkan', 'Stockholms domkyrkoförsamling']);
-        expect(addEventMock.mock.calls[0][0].lat).toBe(59.32);
+        expect(writtenEvents()[0].lat).toBe(59.32);
     });
 
     it('geo-cachen återanvänder svar inom körningen (paraply: samma församling × N event)', async () => {
@@ -253,7 +257,7 @@ describe('runSource — fel & run-historik', () => {
             { maxSavedPerRun: 2 },
         );
         expect(result.saved).toBe(2);
-        expect(addEventMock).toHaveBeenCalledTimes(2);
+        expect(writtenEvents()).toHaveLength(2);
         expect(result.errors[0]).toContain('volym-säkring');
         expect(result.errors[0]).toContain('3 event osparade');
     });

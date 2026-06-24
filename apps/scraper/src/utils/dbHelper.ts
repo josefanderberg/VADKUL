@@ -120,3 +120,80 @@ export async function addEventToDb(eventData: any) {
         console.error('Failed to add event to Firestore (SQLite-versionen är sparad):', error);
     }
 }
+
+/** Firestore tillåter max 500 operationer per writeBatch — håll marginal. */
+const FIRESTORE_BATCH_LIMIT = 450;
+
+/** Dela upp en array i bitar om `size`. Exporterad för test. */
+export function chunkArray<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+}
+
+/**
+ * Batchad variant av addEventToDb — för runnern som annars gör N individuella
+ * `.add()`-anrop (en Firestore-skrivning per event). Här:
+ *   1. SQLite-upsert ALLTID först (snabbt, offline-säkert → ingen dataförlust
+ *      även om Firestore-commit fallerar).
+ *   2. Firestore-skrivningar samlas i writeBatch:ar (förgenererade doc-ID:n),
+ *      committade i bitar om ≤450 ops.
+ *
+ * Dedup mot existerande event görs av ANROPAREN (runnern via eventExistsInDb)
+ * innan event skickas hit — så denna funktion läser inte Firestore per event.
+ * Inom samma batch dedupas dock på url så en källa som råkar lista samma url
+ * två gånger inte skapar dubbletter.
+ */
+export async function addEventsBatch(
+    events: any[],
+): Promise<{ written: number; errors: string[] }> {
+    const errors: string[] = [];
+    if (events.length === 0) return { written: 0, errors };
+
+    // Dedup på url inom batchen (sista vinner) + normalisera date-only-tid.
+    const byUrl = new Map<string, any>();
+    for (const e of events) {
+        byUrl.set(e.url, { ...e, time: afternoonForDateOnly(e.time, e.hasSpecificTime) });
+    }
+    const prepared = [...byUrl.values()];
+
+    // 1. SQLite ALLTID — innan Firestore, så inget tappas vid commit-fel.
+    for (const e of prepared) {
+        try {
+            upsertEvent(e);
+        } catch (err) {
+            console.error('Failed to write event to local SQLite:', err);
+        }
+    }
+
+    if (!db) {
+        console.warn(`Firebase not initialized. ${prepared.length} event sparade endast lokalt.`);
+        return { written: 0, errors };
+    }
+
+    // 2. Firestore i batchar.
+    let written = 0;
+    for (const chunk of chunkArray(prepared, FIRESTORE_BATCH_LIMIT)) {
+        const batch = db.batch();
+        const refs: { id: string; e: any }[] = [];
+        for (const e of chunk) {
+            const ref = db.collection('linkEvents').doc(); // auto-ID, ingen nätverkstrafik
+            batch.set(ref, e);
+            refs.push({ id: ref.id, e });
+        }
+        try {
+            await batch.commit();
+            // Backfilla firestoreId i SQLite så korsreferenser funkar.
+            for (const { id, e } of refs) {
+                try {
+                    upsertEvent({ ...e, firestoreId: id });
+                } catch { /* SQLite redan skriven ovan — id-backfill är best effort */ }
+            }
+            written += refs.length;
+        } catch (err) {
+            errors.push(`batch-commit misslyckades (${refs.length} event): ${(err as Error).message}`);
+            console.error('Firestore batch commit failed (SQLite-versionen är sparad):', err);
+        }
+    }
+    return { written, errors };
+}
