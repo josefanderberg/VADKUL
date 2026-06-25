@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
+import { startEventBoostCheckout } from '@/services/boostService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -485,6 +486,19 @@ export default function HomePage() {
         } catch (err) {
             console.error(err);
             toast.error('Kunde inte ta bort eventet.');
+        }
+    }, []);
+
+    // Boosta sitt EGET event: startar Stripe Checkout (redirect). featuredUntil
+    // sätts först av backend efter genomförd betalning — aldrig härifrån.
+    const handleBoostOwnEvent = useCallback(async (eventId: string) => {
+        try {
+            const t = toast.loading('Öppnar betalning…');
+            await startEventBoostCheckout(eventId); // redirectar vid succé
+            toast.dismiss(t);
+        } catch (err) {
+            console.error(err);
+            toast.error(err instanceof Error ? err.message : 'Kunde inte starta boost.');
         }
     }, []);
 
@@ -1135,6 +1149,7 @@ export default function HomePage() {
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}
+                onBoostOwnEvent={handleBoostOwnEvent}
             />
 
             {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets

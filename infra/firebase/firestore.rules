@@ -180,8 +180,18 @@ service cloud.firestore {
             'description', 'createdAt', 'isLocationVerified', 'coverImage'
         ]);
 
-      // Uppdatera/radera: bara sitt eget användarskapade event…
-      allow update, delete: if isAuthenticated()
+      // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de
+      // server-skyddade boost-fälten. featuredUntil/featuredPaymentId får ENDAST
+      // skrivas av Cloud-funktionen applyEventBoost (admin-SDK, kringgår reglerna)
+      // efter en verifierad Stripe-betalning. Annars kunde en ägare själv-boosta gratis.
+      allow update: if isAuthenticated()
+        && resource.data.userCreated == true
+        && resource.data.hostUid == request.auth.uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['featuredUntil', 'featuredPaymentId']);
+
+      // Radera: bara sitt eget användarskapade event.
+      allow delete: if isAuthenticated()
         && resource.data.userCreated == true
         && resource.data.hostUid == request.auth.uid;
 
@@ -309,6 +319,26 @@ service cloud.firestore {
         && request.resource.data.points is number
         && request.resource.data.events is number;
       allow delete: if false;
+    }
+
+    // 16. STRIPE (firestore-stripe-payments-extensionen)
+    // Användaren får läsa sitt eget kund-dokument och skapa checkout-sessioner.
+    // Status-dokumenten (subscriptions/payments) skrivs av extensionen via webhook
+    // och är bara LÄSBARA för ägaren — klienten kan alltså inte fejka en betalning.
+    // Själva boosten (featuredUntil på eventet) sätts av Cloud-funktionen
+    // applyEventBoost, aldrig härifrån.
+    match /customers/{uid} {
+      allow read: if isOwner(uid);
+
+      match /checkout_sessions/{id} {
+        allow read, write: if isOwner(uid);
+      }
+      match /subscriptions/{id} {
+        allow read: if isOwner(uid);
+      }
+      match /payments/{id} {
+        allow read: if isOwner(uid);
+      }
     }
   }
 }

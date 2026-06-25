@@ -1,9 +1,9 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket } from 'lucide-react';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
-import { linkEventService, type RsvpAttendee } from '../../services/linkEventService';
+import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
@@ -41,9 +41,11 @@ interface LinkEventCardProps {
     /** Ägaren av ett användarskapat event får ta bort det (reglerna verifierar). */
     canDelete?: boolean;
     onDeleteOwn?: () => void;
+    /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort". */
+    onBoost?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
@@ -484,6 +486,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 py-1.5 transition-colors"
                                         >
                                             Rapportera event
+                                        </button>
+                                    )}
+                                    {canDelete && onBoost && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onBoost();
+                                            }}
+                                            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 py-1.5 transition-colors"
+                                        >
+                                            <Rocket size={14} />
+                                            {isEventFeatured(linkEvent) ? 'Förläng boost' : 'Boosta eventet'}
                                         </button>
                                     )}
                                     {canDelete && onDeleteOwn && (

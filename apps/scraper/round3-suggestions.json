@@ -1,0 +1,81 @@
+[
+  {
+    "id": "dunkers-kulturhus",
+    "hostName": "Dunkers Kulturhus",
+    "region": "helsingborg",
+    "engine": "wp-rest",
+    "config": {
+      "baseUrl": "https://dunkerskulturhus.se",
+      "variant": "wp-v2",
+      "defaultCity": "Dunkers Kulturhus",
+      "fetchDetailPage": true,
+      "maxPages": 5
+    },
+    "count": 20,
+    "method": "wp-v2"
+  },
+  {
+    "id": "helsingborg-arena",
+    "hostName": "Helsingborg Arena",
+    "region": "helsingborg",
+    "engine": "sitemap",
+    "config": {
+      "sitemapUrl": "https://www.hbgarena.se/event-sitemap.xml",
+      "urlPatterns": [
+        "/\\/event\\/[a-z0-9][a-z0-9-]{2,}/i"
+      ],
+      "defaultCity": "Helsingborg Arena",
+      "maxUrls": 200
+    },
+    "count": 68,
+    "method": "sitemap-text"
+  },
+  {
+    "id": "conventum",
+    "hostName": "Conventum",
+    "region": "orebro",
+    "engine": "sitemap",
+    "config": {
+      "sitemapUrl": "https://www.conventum.se/wp-sitemap-posts-event-1.xml",
+      "urlPatterns": [
+        "/\\/evenemang\\/[a-z0-9][a-z0-9-]{2,}/i"
+      ],
+      "defaultCity": "Conventum",
+      "maxUrls": 200
+    },
+    "count": 16,
+    "method": "sitemap-text"
+  },
+  {
+    "id": "jamtli",
+    "hostName": "Jamtli",
+    "region": "ostersund",
+    "engine": "sitemap",
+    "config": {
+      "sitemapUrl": "https://www.jamtli.com/ajde_events-sitemap.xml",
+      "urlPatterns": [
+        "/\\/kalendarium\\/[a-z0-9][a-z0-9-]{2,}/i"
+      ],
+      "defaultCity": "Jamtli",
+      "maxUrls": 200
+    },
+    "count": 175,
+    "method": "sitemap-text"
+  },
+  {
+    "id": "stampen",
+    "hostName": "Stampen",
+    "region": "stockholm",
+    "engine": "sitemap",
+    "config": {
+      "sitemapUrl": "https://stampen.se/mec-events-sitemap.xml",
+      "urlPatterns": [
+        "/\\/events\\/[a-z0-9][a-z0-9-]{2,}/i"
+      ],
+      "defaultCity": "Stampen",
+      "maxUrls": 200
+    },
+    "count": 726,
+    "method": "sitemap-json-ld"
+  }
+]

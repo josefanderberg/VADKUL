@@ -43,8 +43,8 @@ export default function RootLayout({
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
-                <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-                <link rel="apple-touch-icon" href="/favicon.svg" />
+                <link rel="icon" type="image/png" href="/favicon.png" />
+                <link rel="apple-touch-icon" href="/favicon.png" />
                 <meta name="theme-color" content="#38bdf8" />
                 <meta name="impact-site-verification" content="17f79b5d-182e-4a80-bff9-634b6d47ebc7" />
             </head>

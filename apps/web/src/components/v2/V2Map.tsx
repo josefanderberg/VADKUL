@@ -13,6 +13,7 @@ import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
 import { lngLatToCell, cellCornersLngLat, cellCenterLngLat, palette, hueForUid, regionsForBounds, regionForLngLat, lngLatToMerc, mercToLngLat, HEX_SIZE_MERC, REVIRET_WET_FILL, REVIRET_WET_EDGE } from '../../lib/reviret';
 import { claimCells, subscribeTerritory, myReviretIdentity, type TerritoryCell } from '../../services/reviretService';
 import { saveDailyScore, subscribeDailyLeaderboard, type LeaderboardEntry } from '../../services/leaderboardService';
+import { isEventFeatured } from '../../services/linkEventService';
 import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
 import WelcomeBox from '../ui/WelcomeBox';
 import toast from 'react-hot-toast';
@@ -60,6 +61,21 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     layers: [
         { id: 'satellite', type: 'raster', source: 'satellite' },
         { id: 'labels', type: 'raster', source: 'labels' }
+    ]
+};
+
+// Bootstrap-stil vid mount: kartan behöver en SYNKRON startstil för att rendera
+// direkt, men förvald 'themepark' hämtas async (fetch + transform) → annars syns
+// en startbild under tiden. Tidigare användes satellitstilen, men då blixtrade en
+// satellitvy förbi innan nöjesfält laddat. Här är i stället bara en enfärgad
+// bakgrund i nöjesfältets land-färg (#b9d49c, samma som themeparkens 'background').
+// Ingen nätverkshämtning → renderar omedelbart, och eftersom färgen matchar den
+// kommande kartan blir bytet sömlöst (vägar/vatten/etiketter tonar bara in).
+const BOOTSTRAP_STYLE: maplibregl.StyleSpecification = {
+    version: 8,
+    sources: {},
+    layers: [
+        { id: 'background', type: 'background', paint: { 'background-color': '#b9d49c' } }
     ]
 };
 
@@ -2122,11 +2138,16 @@ export default function V2Map({
         try {
         map = new maplibregl.Map({
             container: mapContainerRef.current,
-            // Bootstrap-stil: satellitens raster-stil är synkron (Nöjesfält hämtas
-            // async). mapStyle-effekten byter sedan till förvald 'themepark' direkt
-            // efter mount. Satellit är en giltig, snabb startbild under tiden.
-            style: SATELLITE_STYLE,
-            center: [14.4664, 58.0257], // Lng, Lat (Gränna, vid Vättern)
+            // Bootstrap-stil: en synkron enfärgad bakgrund i nöjesfältets land-färg
+            // så kartan renderar direkt. mapStyle-effekten byter sedan till förvald
+            // 'themepark' (async fetch + transform) efter mount. Bakgrundsfärgen
+            // matchar themeparken → bytet syns inte som ett hopp (jfr. tidigare
+            // satellit-bootstrap som blixtrade förbi en satellitvy).
+            style: BOOTSTRAP_STYLE,
+            // Startvy: samma zoom som förr men centrerad ~2° längre norrut, så
+            // hela det befolkade Sverige (Malmö–Göteborg–Stockholm i nedre halvan)
+            // ryms medan kontinenten (Tyskland/Danmark) hålls utanför nederkanten.
+            center: [15.0, 60.0], // Lng, Lat (mitt-Sverige)
             zoom: 5,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
@@ -2144,7 +2165,12 @@ export default function V2Map({
             maxTileCacheZoomLevels: 3,
             // Ladda inte om utgångna tiles i bakgrunden — sparar både nät och
             // minne (gamla texturer hålls inte kvar i väntan på refresh).
-            refreshExpiredTiles: false
+            refreshExpiredTiles: false,
+            // Lägg INTE till default-attributionen automatiskt. På breda skärmar
+            // renderas den som en utfälld textrad ("MapLibre | © CARTO …") längst
+            // ner — vi vill i stället ha en egen i compact-läge (liten ⓘ-knapp) som
+            // läggs till direkt efter init nedan.
+            attributionControl: false
         });
         } catch (err) {
             // WebGL kunde inte initieras (ofta "blocked" efter en tidigare
@@ -2155,6 +2181,32 @@ export default function V2Map({
         }
 
         mapRef.current = map;
+
+        // Egen attribution: alltid compact (en liten ⓘ-knapp i hörnet i stället för
+        // en utfälld textrad). Attributionen MÅSTE finnas kvar — CARTO och
+        // OpenStreetMap kräver den juridiskt — men den behöver inte stå utfälld.
+        map.addControl(new maplibregl.AttributionControl({ compact: true }));
+
+        // MapLibre's compact-attribution öppnar sig SJÄLV ('maplibregl-compact-show'
+        // + <details open>) varje gång compact-läget (åter)etableras under
+        // inladdningen — vid första resizen och vid stilbytet bootstrap→themepark. En
+        // engångs-collapse vinner därför en kapplöpning ibland och förlorar ibland. Vi
+        // håller den hopfälld med en observer tills kartan blivit idle; därefter slutar
+        // MapLibre toggla själv och användarens klick på ikonen får expandera den fritt.
+        const attribEl = mapContainerRef.current?.querySelector('details.maplibregl-ctrl-attrib');
+        let attribObserver: MutationObserver | null = null;
+        if (attribEl instanceof HTMLDetailsElement) {
+            const collapseAttrib = () => {
+                if (attribEl.open || attribEl.classList.contains('maplibregl-compact-show')) {
+                    attribEl.open = false;
+                    attribEl.classList.remove('maplibregl-compact-show');
+                }
+            };
+            collapseAttrib();
+            attribObserver = new MutationObserver(collapseAttrib);
+            attribObserver.observe(attribEl, { attributes: true, attributeFilter: ['open', 'class'] });
+            map.once('idle', () => { attribObserver?.disconnect(); attribObserver = null; });
+        }
 
 
         let glCanvas: HTMLCanvasElement | null = null;
@@ -2407,6 +2459,7 @@ export default function V2Map({
         });
 
         return () => {
+            if (attribObserver) attribObserver.disconnect();
             if (moveEndTimer) clearTimeout(moveEndTimer);
             if (zoomIdleTimer) clearTimeout(zoomIdleTimer);
             if (glCanvas && onCtxLost) glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
@@ -4252,13 +4305,18 @@ export default function V2Map({
             // och behåller därför standardutseendet.
             const isUserCreated = count === 1 && !!rep.userCreated;
 
+            // Boostat ("featured") event: betald framlyftning. Bara enskilda
+            // markörer (grupper cyklar och behåller standardutseende). Featured är
+            // alltid också userCreated, så isSpecialGroup fångar redan brickan.
+            const isFeatured = count === 1 && isEventFeatured(rep);
+
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
             // att stateKey inte ändras varje slideshow-tick (annars rivs brickan
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}:${isUserCreated}:${pinballMode}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isGold}:${isWatered}:${isWatering}:${isUserCreated}:${isFeatured}:${pinballMode}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -4307,6 +4365,7 @@ export default function V2Map({
                 // Uppdatera z-index på elementet. Viktiga tillstånd ligger överst.
                 const zIndex = isGold ? 1500
                     : isSelected ? 1000
+                    : isFeatured ? 800
                     : isSaved ? 500
                     : isUserCreated ? 300
                     : count > 1 ? 200
@@ -4344,6 +4403,8 @@ export default function V2Map({
                 // skapad (grön) > sparad (ljusblå) > kategori-färg > standard (mörk).
                 const pinBg = isGold
                     ? 'linear-gradient(135deg, #fff7d6 0%, #fbbf24 45%, #d97706 100%)'
+                    : isFeatured
+                    ? 'linear-gradient(145deg, #fde68a 0%, #f59e0b 52%, #b45309 100%)'
                     : isUserCreated
                     ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
                     : isSaved
@@ -4355,6 +4416,8 @@ export default function V2Map({
                     ? '3px solid #fde68a'
                     : isSelected
                     ? '3px solid #006AA7'
+                    : isFeatured
+                    ? '3px solid #fbbf24'
                     : isSaved
                     ? '2px solid #5BA3CC'
                     : startsWithinHour
@@ -4371,6 +4434,8 @@ export default function V2Map({
                     ? '0 0 0 4px rgba(251,191,36,0.35), 0 6px 22px rgba(217,119,6,0.55)'
                     : isSelected
                     ? '0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)'
+                    : isFeatured
+                    ? '0 0 0 4px rgba(245,158,11,0.30), 0 6px 20px rgba(180,83,9,0.50)'
                     : startsWithinHour
                     ? '0 0 0 3px rgba(249,115,22,0.28), 0 6px 18px rgba(249,115,22,0.40)'
                     : isUserCreated
@@ -4394,6 +4459,12 @@ export default function V2Map({
                 const countBadge = count > 1
                     ? `<div class="badge-count">${count > 99 ? '99+' : count}</div>`
                     : (isSaved ? '<div class="badge-saved"></div>' : '');
+
+                // Boostat event: liten stjärn-badge i övre vänstra hörnet (undviker
+                // sparad-pricken uppe till höger). Markerar betald framlyftning.
+                const boostBadge = isFeatured
+                    ? '<div style="position:absolute;top:-5px;left:-5px;width:18px;height:18px;border-radius:50%;background:linear-gradient(145deg,#fde68a,#f59e0b);box-shadow:0 1px 4px rgba(180,83,9,0.6);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;z-index:2;">⭐</div>'
+                    : '';
 
                 // Fördela uppdykandet så att alla markörer poppar in under totalt 4 sekunder (4000ms), men visa det valda direkt (0ms delay)
                 const N = visibleGroups.length;
@@ -4472,6 +4543,7 @@ export default function V2Map({
                                 <div class="pin-emoji">${emoji}</div>
                             </div>
                             ${countBadge}
+                            ${boostBadge}
                             ${wateringFeedbackHtml}
                         </div>
                         ${flowersHtml}

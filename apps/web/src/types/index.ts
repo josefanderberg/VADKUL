@@ -160,9 +160,16 @@ export interface LinkEvent {
   /** Användarskapade event: skaparens uid — styr "Ta bort eventet" på kortet. */
   hostUid?: string;
   userCreated?: boolean;
+  /**
+   * Boostat ("featured") event: visas prioriterat på kartan t.o.m. denna tid.
+   * Sätts ENBART av servern (Cloud Function) efter en verifierad Stripe-betalning —
+   * aldrig av klienten. Saknas/passerat datum = vanligt event.
+   */
+  featuredUntil?: Date;
 }
 
-export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt'> {
+export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt' | 'featuredUntil'> {
   time: Timestamp;
   createdAt: Timestamp;
+  featuredUntil?: Timestamp;
 }

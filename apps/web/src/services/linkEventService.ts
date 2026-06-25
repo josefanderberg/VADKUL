@@ -3,6 +3,15 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
 
+/**
+ * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
+ * Delad av kartan (pin-utseende) och sorteringen så att en passerad boost
+ * automatiskt slutar gälla utan någon städning.
+ */
+export function isEventFeatured(e: { featuredUntil?: Date } | null | undefined): boolean {
+    return !!e?.featuredUntil && e.featuredUntil.getTime() > Date.now();
+}
+
 /** Lättviktig anmälan (RSVP) på ett event — bor i linkEvents/{id}/attendees/{uid}. */
 export interface RsvpAttendee {
     uid: string;
@@ -25,6 +34,10 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
             .map((d) => {
                 const v: any = d.data();
                 const time = v.time instanceof Timestamp ? v.time.toDate() : new Date(v.time);
+                // featuredUntil sätts bara av servern (Stripe-betalning). Läs som Date.
+                const featuredUntil = v.featuredUntil instanceof Timestamp
+                    ? v.featuredUntil.toDate()
+                    : (v.featuredUntil ? new Date(v.featuredUntil) : undefined);
                 return {
                     id: d.id,
                     url: v.url || '',
@@ -44,6 +57,7 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     hasSpecificTime: deriveHasSpecificTime(time),
                     userCreated: true,
                     hostUid: v.hostUid || undefined,
+                    featuredUntil,
                 } as LinkEvent;
             })
             .filter((e) => e.title && e.time >= cutoff && !(e as any).hidden);
@@ -430,7 +444,13 @@ export const linkEventService = {
             if (!userEvents.length) { callback(baseEvents); return; }
             const known = new Set(baseEvents.map((e) => e.id));
             const merged = [...baseEvents, ...userEvents.filter((e) => !known.has(e.id))]
-                .sort((a, b) => a.time.getTime() - b.time.getTime());
+                // Boostade event först, därefter kronologiskt som tidigare.
+                .sort((a, b) => {
+                    const fa = isEventFeatured(a) ? 1 : 0;
+                    const fb = isEventFeatured(b) ? 1 : 0;
+                    if (fa !== fb) return fb - fa;
+                    return a.time.getTime() - b.time.getTime();
+                });
             callback(merged);
         }
 

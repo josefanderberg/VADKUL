@@ -212,3 +212,81 @@ export const sendPushNotification = region.firestore
             console.error('Error sending push notification:', error);
         }
     });
+
+// ==============================
+// EVENT-BOOST (Stripe)
+// ==============================
+
+/**
+ * Applicerar en betald "boost" på ett event.
+ *
+ * Förutsätter Firebase-extensionen `firestore-stripe-payments` (Invertase/Stripe),
+ * som vid en lyckad ENGÅNGSbetalning skriver ett dokument under
+ *   customers/{uid}/payments/{paymentId}
+ * (Stripe PaymentIntent: { status, amount, currency, metadata, ... }).
+ *
+ * Klienten startar köpet genom att skapa en checkout-session med
+ * payment_intent_data.metadata.eventId (+ boostDays) — se webb-klienten. Vi läser
+ * tillbaka den metadatan här och sätter featuredUntil på eventet. Detta är ENDA
+ * stället featuredUntil skrivs: klienten kan aldrig boosta sig själv gratis
+ * (Firestore-reglerna tillåter inte fältet), bara en verifierad betalning.
+ */
+export const applyEventBoost = region.firestore
+    .document('customers/{uid}/payments/{paymentId}')
+    .onWrite(async (change: functions.Change<functions.firestore.DocumentSnapshot>, context: functions.EventContext) => {
+        const after = change.after.exists ? change.after.data() : null;
+        if (!after) return null;
+        const before = change.before.exists ? change.before.data() : null;
+
+        // Agera bara på lyckade betalningar, och bara EN gång (status-övergången).
+        if (after.status !== 'succeeded') return null;
+        if (before && before.status === 'succeeded') return null;
+
+        const uid = context.params.uid as string;
+        const paymentId = context.params.paymentId as string;
+        const metadata = (after.metadata || {}) as Record<string, string>;
+        const eventId = metadata.eventId;
+        if (!eventId) {
+            // Inte ett boost-köp (t.ex. framtida prenumeration) → ignorera.
+            // OBS: ser du detta för ETT boost-köp bär inte payment_intent metadatan
+            // eventId — då måste klientens checkout-session sätta
+            // payment_intent_data.metadata (se docs/stripe-event-boost.md).
+            console.log(`[boost] Betalning ${paymentId} (user ${uid}) saknar eventId-metadata — hoppar över.`);
+            return null;
+        }
+
+        // Säkra gränser: 1–90 dagar, default 7.
+        const boostDays = Math.max(1, Math.min(90, parseInt(metadata.boostDays || '7', 10) || 7));
+
+        const eventRef = db.collection('linkEvents').doc(eventId);
+        try {
+            await db.runTransaction(async (tx) => {
+                const snap = await tx.get(eventRef);
+                if (!snap.exists) {
+                    console.error(`[boost] Event ${eventId} saknas — betalning ${paymentId} (user ${uid}) kunde inte appliceras.`);
+                    return;
+                }
+                const data = snap.data() || {};
+                // Försvar på djupet: boosta bara event som betalaren faktiskt äger.
+                // UI:t erbjuder bara boost på egna event, så detta fångar manipulation.
+                if (data.hostUid !== uid) {
+                    console.error(`[boost] ${uid} betalade för event ${eventId} men hostUid=${data.hostUid}. Applicerar EJ.`);
+                    return;
+                }
+                // Förläng från det senare av "nu" och en ev. pågående boost.
+                const now = Date.now();
+                const currentUntilMs =
+                    data.featuredUntil instanceof admin.firestore.Timestamp ? data.featuredUntil.toMillis() : 0;
+                const base = Math.max(now, currentUntilMs);
+                const until = new Date(base + boostDays * 24 * 60 * 60 * 1000);
+                tx.update(eventRef, {
+                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                    featuredPaymentId: paymentId,
+                });
+            });
+            console.log(`[boost] Event ${eventId} boostat ${boostDays} dagar (betalning ${paymentId}, user ${uid}).`);
+        } catch (err) {
+            console.error('[boost] Kunde inte applicera boost:', err);
+        }
+        return null;
+    });

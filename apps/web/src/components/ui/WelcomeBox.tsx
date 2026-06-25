@@ -36,23 +36,30 @@ export default function WelcomeBox({ today, withinHour, withinHours, onDismiss }
                 </button>
 
                 <div className="flex items-stretch justify-center gap-5">
-                    <div className="flex flex-col items-center justify-center px-1">
+                    <div className="flex flex-col items-center justify-start px-1">
                         <span className="text-[32px] font-extrabold leading-none tabular-nums text-slate-800">
                             {today}
                         </span>
-                        <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            event idag
+                        <span className="mt-1.5 text-center text-[11px] font-semibold uppercase tracking-wide leading-tight text-slate-500">
+                            <span className="whitespace-nowrap">event</span>
+                            <br />
+                            idag
                         </span>
                     </div>
 
                     <div className="w-px self-stretch bg-slate-200" />
 
-                    <div className="flex flex-col items-center justify-center px-1">
+                    <div className="flex flex-col items-center justify-start px-1">
                         <span className="text-[32px] font-extrabold leading-none tabular-nums text-orange-500">
                             {withinHour}
                         </span>
-                        <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            inom {withinHours} {withinHours === 1 ? 'timme' : 'timmar'}
+                        {/* "inom N" hålls ihop på egen rad (whitespace-nowrap) så
+                            "inom" och siffran aldrig splittras; tidsenheten bryts
+                            alltid ner till rad två → deterministiskt "inom 1 / timme". */}
+                        <span className="mt-1.5 text-center text-[11px] font-semibold uppercase tracking-wide leading-tight text-slate-500">
+                            <span className="whitespace-nowrap">inom {withinHours}</span>
+                            <br />
+                            {withinHours === 1 ? 'timme' : 'timmar'}
                         </span>
                     </div>
                 </div>

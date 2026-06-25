@@ -379,9 +379,11 @@ interface EventCardProps {
     /** Inloggad användares uid — ägaren av ett användarskapat event får ta bort det. */
     currentUserUid?: string;
     onDeleteOwnEvent?: (eventId: string) => void;
+    /** Boosta (featura) sitt eget event — startar Stripe Checkout. */
+    onBoostOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1158,6 +1160,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                             : undefined}
                         canDelete={!!(currentUserUid && selectedEvent.userCreated && selectedEvent.hostUid === currentUserUid)}
                         onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
+                        onBoost={onBoostOwnEvent ? () => onBoostOwnEvent(selectedEvent.id) : undefined}
                     />
                     {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
                     {onRequireLogin && (

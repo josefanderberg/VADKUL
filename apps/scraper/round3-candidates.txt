@@ -1,0 +1,28 @@
+# Round 3 — nya städer + specialty. Probe 2026-06-24
+Reginateatern|uppsala|https://www.reginateatern.se
+Uppsala Konsert & Kongress|uppsala|https://ukk.se
+Uppsala Stadsteater|uppsala|https://www.uppsalastadsteater.se
+Slussen|uppsala|https://slussen.nu
+Helsingborgs Konserthus|helsingborg|https://www.helsingborgskonserthus.se
+Dunkers Kulturhus|helsingborg|https://dunkerskulturhus.se
+Tropikariet|helsingborg|https://tropikariet.com
+Helsingborg Arena|helsingborg|https://www.hbgarena.se
+Östergötlands Museum|linkoping|https://ostergotlandsmuseum.se
+Tonhallen|sundsvall|https://tonhallen.se
+Kulturmagasinet Sundsvall|sundsvall|https://kulturmagasinet.se
+Conventum|orebro|https://www.conventum.se
+Örebro Konserthus|orebro|https://www.orebrokonserthus.com
+Borås Kongress|boras|https://boraskongress.se
+Borås|boras|https://www.boras.com
+Borås Konstmuseum|boras|https://boraskonstmuseum.se
+Louis De Geer|norrkoping|https://louisdegeer.se
+Norrköpings Stadsmuseum|norrkoping|https://www.norrkopingsstadsmuseum.se
+Karlstad CCC|karlstad|https://ccc.se
+Väven|umea|https://www.vaven.se
+Umeå universitet|umea|https://www.umu.se
+Jamtli|ostersund|https://www.jamtli.com
+Storsjöteatern|ostersund|https://www.storsjoteatern.se
+Norra Brunn|stockholm|https://norrabrunncomedy.se
+Stampen|stockholm|https://stampen.se
+Glenn Miller Café|stockholm|https://www.glennmillercafe.se
+Berwaldhallen|stockholm|https://www.berwaldhallen.se
