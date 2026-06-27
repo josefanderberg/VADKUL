@@ -717,8 +717,11 @@ export default function HomePage() {
             const limit = withinHours * HOUR;
             withinHour = futureMs.filter(ms => ms <= limit).length;
         }
-        return { today, tomorrow, week, withinHour, withinHours };
-    }, [events, nowTick]);
+        // WelcomeBox-rutan visas BARA på idag. När man bläddrat bort (annan dag
+        // eller intervall) döljs den helt — gaten i V2Map läser detta.
+        const isToday = dayOffset === 0 && dayRangeDays === 1;
+        return { today, tomorrow, week, withinHour, withinHours, isToday };
+    }, [events, nowTick, dayOffset, dayRangeDays]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent

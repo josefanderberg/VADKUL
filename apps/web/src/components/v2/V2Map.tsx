@@ -68,14 +68,14 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
 // direkt, men förvald 'themepark' hämtas async (fetch + transform) → annars syns
 // en startbild under tiden. Tidigare användes satellitstilen, men då blixtrade en
 // satellitvy förbi innan nöjesfält laddat. Här är i stället bara en enfärgad
-// bakgrund i nöjesfältets land-färg (#b9d49c, samma som themeparkens 'background').
+// bakgrund i nöjesfältets land-färg (#93c46c, samma som themeparkens 'background').
 // Ingen nätverkshämtning → renderar omedelbart, och eftersom färgen matchar den
 // kommande kartan blir bytet sömlöst (vägar/vatten/etiketter tonar bara in).
 const BOOTSTRAP_STYLE: maplibregl.StyleSpecification = {
     version: 8,
     sources: {},
     layers: [
-        { id: 'background', type: 'background', paint: { 'background-color': '#b9d49c' } }
+        { id: 'background', type: 'background', paint: { 'background-color': '#93c46c' } }
     ]
 };
 
@@ -110,7 +110,7 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
             // vita vägar som kontrast.
             // Land / Background
             if (layer.id === 'background') {
-                paint['background-color'] = '#b9d49c'; // djupare grönt land
+                paint['background-color'] = '#93c46c'; // mättat grästgrönt land (mörkare/grönare än förut) — dominerar utzoomat
             }
             // Water
             else if (layer.id === 'water' || layer.id === 'water_shadow') {
@@ -129,12 +129,12 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
                 layer.id === 'landuse'
             ) {
                 if (paint['fill-color']) {
-                    paint['fill-color'] = '#9cbf7f'; // grönska, ett snäpp djupare än landet
+                    paint['fill-color'] = '#7eb152'; // grönska, ett snäpp djupare än landet
                 }
             }
             // Bostadsområden
             else if (layer.id === 'landuse_residential') {
-                paint['fill-color'] = '#c6d8ab'; // något ljusare än landet, fortfarande grönt
+                paint['fill-color'] = '#abcf84'; // något ljusare än landet, fortfarande grönt
             }
             // Byggnader
             else if (layer.id.includes('building')) {
@@ -273,6 +273,20 @@ type PlainFeature = {
     geometry: { type: 'Point'; coordinates: [number, number] };
     properties: { icon: string; key: string };
 };
+
+// ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
+// Vid laddning börjar GL-brickorna dolda. Bara REVEAL_SEED_COUNT syns från start
+// (närmast kartmitten); i övrigt visas de REVEAL_NEAREST_COUNT grupper som ligger
+// NÄRMAST pekaren — de följer hovern och släcks så fort de inte längre är bland de
+// närmaste (inget blir kvar långt bort). Ingen queryRenderedFeatures (den var det
+// tunga som laggade): vi räknar avståndet själva (O(antal), kvadrerat + cos-lat-
+// skalad longitud) och sätter feature-state direkt via nyckeln (promoteId 'key').
+// Aldrig fler än seed + N synliga samtidigt = ingen lagg.
+const REVEAL_NEAREST_COUNT = 30;      // antal markörer som visas runt pekaren (de N närmaste)
+const REVEAL_SEED_COUNT = 10;         // antal synliga från start / nära mitten (uppdateras vid move)
+// Perf: vi räknar bara om de närmaste medan pekaren faktiskt RÖR sig (annars skulle
+// loopen snurra i evighet) och INTE under zoom (geo-punkten under pekaren hoppar då).
+const REVEAL_MOVE_IDLE_MS = 140;      // pekaren räknas som "stilla" efter så här länge utan rörelse
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -779,7 +793,7 @@ interface V2MapProps {
     sunCloudTrigger?: number;
     /** Räknare som visas i molnet. Skickas in från sidan så molnet ser hela
      *  datasetet, inte bara det dag-/sökfiltrerade. */
-    cloudStats?: { today: number; tomorrow: number; week: number; withinHour: number; withinHours: number };
+    cloudStats?: { today: number; tomorrow: number; week: number; withinHour: number; withinHours: number; isToday: boolean };
     /** True så fort första event-svaret från databasen kommit. Start-molnet
      *  väntar på detta innan det poppar fram, så det inte hinner visa "0 unika
      *  event idag" medan datan fortfarande laddas. Default true (bakåtkompat). */
@@ -1805,7 +1819,9 @@ export default function V2Map({
         if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
         if (group.some(e => savedEventIds.has(e.id))) return true;
         if (group.some(e => e.userCreated)) return true;
-        if (group.length > 1) return true; // grupp → sifferbricka + slideshow-cykler
+        // OBS: rena multi-event-grupper (group.length > 1) är INTE längre speciella
+        // — de ska bete sig precis som enskilda event: dolda i GL-lagret och bara
+        // skrapas fram med penseln (inte alltid synlig sifferbricka).
         if (wateredKeys.has(key) || wateringKey === key) return true;
         if (group.every(e => discardedEventIds.has(e.id))) return true; // dämpad DOM-bricka
         if (group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= 60 * 60 * 1000)) return true;
@@ -1897,6 +1913,12 @@ export default function V2Map({
             (!!goldEventId && group.some(e => e.id === goldEventId));
         const features: GeoJSON.Feature[] = [];
         for (const [key, group] of groups) {
+            // Bara grupper som FAKTISKT är speciella (saved/userCreated/imminent…
+            // = de som ritas som DOM-brickor i vila) ersätts av prickar under zoom.
+            // Vanliga multi-event-grupper ligger numera i plain-events-lagret (dolda
+            // → skrapas fram med penseln, precis som enskilda event) och ska INTE
+            // poppa upp under zoom-gesten.
+            if (!isSpecialGroup(group, key, nowMs)) continue;
             const imminent = groupStartsWithinHour(group, nowMs);
             // Multi-event-grupper OCH "inom 1 timme"-event (orange) blir prickar.
             if (group.length <= 1 && !imminent) continue;
@@ -1911,8 +1933,27 @@ export default function V2Map({
             });
         }
         return features;
-    }, [groups, isZooming, gameMode, selectedEvent, guessedEventId, goldEventId]);
+    }, [groups, isZooming, gameMode, selectedEvent, guessedEventId, goldEventId, isSpecialGroup]);
     const multiEventDotFeaturesRef = useRef<GeoJSON.Feature[]>([]);
+
+    // ── "Skrapa fram"-markörer (de N närmaste pekaren) ────────────────────────
+    // GL-brickorna börjar dolda (icon-opacity 0 via feature-state 'reveal'). Bara
+    // ~REVEAL_SEED_COUNT syns från start (närmast mitten); i övrigt visas de
+    // REVEAL_NEAREST_COUNT grupper som är NÄRMAST pekaren och följer hovern. Vi
+    // räknar avstånden själva (billigt) och sätter feature-state direkt via nyckeln
+    // — ingen queryRenderedFeatures (det var det som laggade).
+    const revealSeedRef = useRef<Set<string>>(new Set());                 // ~10 synliga nära mitten
+    const revealNearestRef = useRef<Set<string>>(new Set());              // nycklarna som visas runt pekaren just nu
+    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number }[]>([]); // platt lista för avståndsberäkning
+    const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
+    const revealPointerRef = useRef<{ x: number; y: number; active: boolean; movedAt: number } | null>(null);
+    const revealRafRef = useRef<number | null>(null);
+    const revealCleanupRef = useRef<null | (() => void)>(null);
+    // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
+    // / map-load utan att hamna i temporal-dead-zone.
+    const ensureRevealPumpRef = useRef<() => void>(() => {});
+    const reapplyAllRevealRef = useRef<() => void>(() => {});
+    const recomputeRevealSeedRef = useRef<() => void>(() => {});
 
     // Installerar/uppdaterar GL-markörlagret: källa + bakade emoji-bilder + lager,
     // och pushar senaste datan. Idempotent — säker att kalla efter varje stilbyte
@@ -1922,7 +1963,9 @@ export default function V2Map({
         if (!map || !map.isStyleLoaded()) return;
         try {
             if (!map.getSource('plain-events')) {
-                map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                // promoteId: 'key' → feature-state kan adresseras via gruppnyckeln
+                // (reveal-systemet sätter icon-opacity per markör).
+                map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'key' });
             }
             // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
             usedIconsRef.current.forEach(({ emoji, color }, id) => {
@@ -1954,7 +1997,17 @@ export default function V2Map({
                         'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, 0.98],
                         'symbol-z-order': 'source',
                     },
+                    paint: {
+                        // Dold tills reveal-systemet tonar in den (feature-state 'reveal').
+                        'icon-opacity': ['coalesce', ['feature-state', 'reveal'], 0],
+                        'icon-opacity-transition': { duration: 0, delay: 0 },
+                    },
                 });
+                // Lagret (om)skapades → feature-state är tomt (setStyle rensar det).
+                // Glöm vad som skrivits och skriv om seed + ev. levande penseldrag.
+                revealWrittenRef.current.clear();
+                reapplyAllRevealRef.current();
+                ensureRevealPumpRef.current();
             }
             // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
             // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
@@ -1970,6 +2023,10 @@ export default function V2Map({
                         'circle-color': '#1e293b',
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
+                        // Samma reveal-state som brickorna → dolda event poppar inte
+                        // fram som nål-prickar under zoom-gesten.
+                        'circle-opacity': ['coalesce', ['feature-state', 'reveal'], 0],
+                        'circle-stroke-opacity': ['coalesce', ['feature-state', 'reveal'], 0],
                     },
                 });
             }
@@ -2027,6 +2084,8 @@ export default function V2Map({
             }
             const multiSrc = map.getSource('multi-event-dots') as maplibregl.GeoJSONSource | undefined;
             multiSrc?.setData({ type: 'FeatureCollection', features: multiEventDotFeaturesRef.current });
+            // Återuppta reveal-loopen så ev. köade/permanenta avslöjningar skrivs.
+            ensureRevealPumpRef.current();
         } catch (err) {
             console.warn('Kunde inte synka GL-markörlagret', err);
         }
@@ -2034,12 +2093,139 @@ export default function V2Map({
     const syncPlainLayerRef = useRef(syncPlainLayer);
     syncPlainLayerRef.current = syncPlainLayer;
 
+    // ── Reveal/pensel-loopen ──────────────────────────────────────────────────
+    // Skriv seed-markörerna (de ~10 alltid synliga) direkt — efter ett stilbyte
+    // rensar setStyle feature-state, så de måste sättas på nytt.
+    const reapplyAllReveal = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !map.getLayer('plain-events')) return;
+        revealSeedRef.current.forEach(key => {
+            try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: 1 }); } catch { /* källan ej redo */ }
+            revealWrittenRef.current.set(key, 1);
+        });
+    }, []);
+    reapplyAllRevealRef.current = reapplyAllReveal;
+
+    // rAF-loop: seed-markörer = alltid 1. I övrigt visas de REVEAL_NEAREST_COUNT
+    // grupper som ligger närmast pekaren (geo-avstånd) — de följer hovern och
+    // släcks när de inte längre är bland de närmaste. Skriver feature-state bara
+    // vid ändring (writeOp diffar mot senast skrivna värde).
+    const pumpReveal = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) { revealRafRef.current = null; return; }
+        const now = performance.now();
+        const ptr = revealPointerRef.current;
+        // "Rör sig" = aktiv pekare som rört sig nyligen → räkna om de närmaste.
+        // En STILLASTÅENDE pekare behåller sin uppsättning (ingen omräkning, ingen
+        // CPU i vila). Under zoom hoppar geo-punkten under pekaren → rör inget då.
+        const active = !!(ptr && ptr.active);
+        const moving = !!(ptr && ptr.active && (now - ptr.movedAt) < REVEAL_MOVE_IDLE_MS);
+        const zooming = isZoomingRef.current;
+        const seed = revealSeedRef.current;
+        const written = revealWrittenRef.current;
+        const shown = revealNearestRef.current;
+
+        const writeOp = (key: string, op: number) => {
+            const prev = written.get(key);
+            if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
+                try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: op }); } catch { /* */ }
+                written.set(key, op);
+            }
+        };
+
+        // Seed = alltid 1 (skrivs en gång, sedan oförändrat).
+        seed.forEach(key => writeOp(key, 1));
+
+        if (active && !zooming && ptr) {
+            // De N närmaste grupperna till pekarens GEO-position. Pekaren → lng/lat
+            // en gång; sedan billig O(antal) avståndsberäkning (kvadrerat, longitud
+            // cos-lat-skalad) + partiellt urval av de N minsta (ingen full sortering,
+            // ingen queryRenderedFeatures). Allokerar bara N-listorna per frame.
+            const ll = map.unproject([ptr.x, ptr.y]);
+            const cl = ll.lng, ca = ll.lat;
+            const kx = Math.cos(ca * Math.PI / 180);
+            const coords = revealCoordsRef.current;
+            const N = REVEAL_NEAREST_COUNT;
+            const bestKey: string[] = [];
+            const bestD2: number[] = [];
+            let worst = -Infinity, worstIdx = -1;
+            for (let i = 0; i < coords.length; i++) {
+                const c = coords[i];
+                const dx = kx * (c.lng - cl), dy = c.lat - ca;
+                const d2 = dx * dx + dy * dy;
+                if (bestKey.length < N) {
+                    bestKey.push(c.key); bestD2.push(d2);
+                    if (d2 > worst) { worst = d2; worstIdx = bestKey.length - 1; }
+                } else if (d2 < worst) {
+                    bestKey[worstIdx] = c.key; bestD2[worstIdx] = d2;
+                    worst = -Infinity;
+                    for (let j = 0; j < N; j++) if (bestD2[j] > worst) { worst = bestD2[j]; worstIdx = j; }
+                }
+            }
+            const next = new Set(bestKey);
+            // Tänd de nya, släck de som lämnat N-närmaste (seed lämnas alltid tända).
+            next.forEach(k => { if (!seed.has(k)) writeOp(k, 1); });
+            shown.forEach(k => { if (!next.has(k) && !seed.has(k)) writeOp(k, 0); });
+            revealNearestRef.current = next;
+        } else if (!active && shown.size) {
+            // Pekaren lämnade kartan → släck hover-uppsättningen, behåll seed.
+            shown.forEach(k => { if (!seed.has(k)) writeOp(k, 0); });
+            revealNearestRef.current = new Set();
+        }
+        // (active && zooming → lämna uppsättningen orörd; nästa move räknar om.)
+
+        // Loopa bara medan pekaren rör sig (spårar nya närmaste). Står den still
+        // ligger uppsättningen kvar oförändrad → ingen CPU i vila.
+        if (moving) revealRafRef.current = requestAnimationFrame(pumpReveal);
+        else revealRafRef.current = null;
+    }, []);
+    const ensureRevealPump = useCallback(() => {
+        if (revealRafRef.current == null) revealRafRef.current = requestAnimationFrame(pumpReveal);
+    }, [pumpReveal]);
+    ensureRevealPumpRef.current = ensureRevealPump;
+
+    // Välj seed = de REVEAL_SEED_COUNT markörerna närmast KARTANS MITT just nu.
+    // Körs vid dataändring OCH efter varje move/zoom (moveend) + på 'load', så det
+    // alltid finns ~10 synliga där man landar (även efter flyg till min-position).
+    // Avståndet skalar longitud med cos(latitud) så det blir rätt på svenska breddgrader.
+    const recomputeRevealSeed = useCallback(() => {
+        const map = mapRef.current;
+        const coords = new Map<string, [number, number]>();
+        for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
+        const allKeys = [...coords.keys()];
+        if (map && allKeys.length > REVEAL_SEED_COUNT) {
+            const c = map.getCenter();
+            const cl = c.lng, ca = c.lat;
+            const kx = Math.cos(ca * Math.PI / 180);
+            const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
+            allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
+        }
+        const newSeed = new Set(allKeys.slice(0, REVEAL_SEED_COUNT));
+        // Göm gamla seed-nycklar som inte längre är seed (och inte visas runt pekaren).
+        if (map && map.getLayer('plain-events')) {
+            revealSeedRef.current.forEach(k => {
+                if (!newSeed.has(k) && !revealNearestRef.current.has(k)) {
+                    try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 0 }); } catch { /* */ }
+                    revealWrittenRef.current.delete(k);
+                }
+            });
+        }
+        revealSeedRef.current = newSeed;
+        reapplyAllRevealRef.current();
+        ensureRevealPumpRef.current();
+    }, []);
+    recomputeRevealSeedRef.current = recomputeRevealSeed;
+
     // Pusha ny GL-data när de icke-speciella grupperna ELLER multi-event-prickarna
     // ändras. Väntar på att stilen är redo (annars finns ingen källa att skriva till).
     useEffect(() => {
         plainFeaturesRef.current = plainData.features;
         usedIconsRef.current = plainData.icons;
         multiEventDotFeaturesRef.current = multiEventDotData;
+        // Platt koord-lista för "de N närmaste pekaren" (slipper bygga om varje frame).
+        revealCoordsRef.current = plainData.features.map(f => ({
+            key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
+        }));
         const map = mapRef.current;
         if (!map) return;
         if (map.isStyleLoaded()) {
@@ -2050,6 +2236,20 @@ export default function V2Map({
             return () => { map.off('style.load', h); };
         }
     }, [plainData, multiEventDotData]);
+
+    // Håll reveal-systemet i synk med datan: rensa bort nycklar som inte längre
+    // finns (inkl. MapLibres interna feature-state, så en återanvänd nyckel börjar
+    // dold) och välj om seed via recomputeRevealSeed.
+    useEffect(() => {
+        const present = new Set(plainData.features.map(f => f.properties.key));
+        const map = mapRef.current;
+        const hasLayer = !!(map && map.getLayer('plain-events'));
+        const drop = (k: string) => { if (hasLayer) { try { map!.removeFeatureState({ source: 'plain-events', id: k }); } catch { /* */ } } };
+        for (const k of [...revealSeedRef.current]) if (!present.has(k)) { revealSeedRef.current.delete(k); drop(k); }
+        for (const k of [...revealNearestRef.current]) if (!present.has(k)) { revealNearestRef.current.delete(k); drop(k); }
+        for (const k of [...revealWrittenRef.current.keys()]) if (!present.has(k)) { revealWrittenRef.current.delete(k); drop(k); }
+        recomputeRevealSeedRef.current();
+    }, [plainData]);
 
     // ── Desyncad bildväxling för grupper med flera event på samma plats ───────
     // Tidigare bytte ALLA sådana grupper emoji på exakt samma 1-sekunderstick
@@ -2456,6 +2656,83 @@ export default function V2Map({
                 const center = map.getCenter();
                 onCenterChangeRef.current(center.lat, center.lng);
             }
+            // Startvy: försök centrera på användarens plats (platstjänst) så att
+            // BÅDE kartan och de närmaste markörerna (seed + hover-spotlight) hamnar
+            // där man faktiskt befinner sig — i stället för att alltid landa mitt i
+            // Sverige med samma ~10 event. Sätter userPos (blå plats-prick) och
+            // flyger dit; moveend räknar sedan om seed runt den nya mitten. Nekad/
+            // timeout → vi ligger kvar på standardvyn. Hoppar över i pinball-läget
+            // (det har egen GPS-logik som flyttar kulan).
+            if (!pinballMode && typeof navigator !== 'undefined' && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const m = mapRef.current;
+                        if (!m) return;
+                        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserPos(next);
+                        m.flyTo({ center: [next.lng, next.lat], zoom: 12, duration: 1200 });
+                    },
+                    () => { /* nekad/timeout → behåll standardvyn (mitt-Sverige) */ },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+                );
+            }
+            // Hover-spotlight: följ fingret/pekaren över kartan och lys fram de
+            // REVEAL_NEAREST_COUNT markörer som är NÄRMAST pekaren. pointermove täcker
+            // både mus (hover) och touch (drag). Listenern påverkar inte panorering —
+            // den läser bara positionen; drar man för att panorera följer spotlighten
+            // med längs vägen (precis det önskade).
+            const cont = map.getContainer();
+            // pointerdown+move stämplar pekarens position + rörelse-tid. De närmaste
+            // räknas bara om medan pekaren RÖR sig (en stillastående mus behåller sin
+            // uppsättning → loopen vilar, se pumpReveal/moving).
+            const onPtrMove = (e: PointerEvent) => {
+                const r = cont.getBoundingClientRect();
+                revealPointerRef.current = { x: e.clientX - r.left, y: e.clientY - r.top, active: true, movedAt: performance.now() };
+                ensureRevealPumpRef.current();
+            };
+            // Lyft finger/penna (touch) → penseln av. Mus IGNORERAS här (ett klick
+            // ska inte släcka medan pekaren är kvar) — den vinner ändå inget på att
+            // stå still tack vare movedAt-gaten ovan; släcks vid pointerleave/blur.
+            const onPtrUp = (e: PointerEvent) => {
+                if (e.pointerType !== 'mouse' && revealPointerRef.current) revealPointerRef.current.active = false;
+                ensureRevealPumpRef.current();
+            };
+            const onPtrLeave = () => {
+                if (revealPointerRef.current) revealPointerRef.current.active = false;
+                ensureRevealPumpRef.current();
+            };
+            // Säkerhetsnät: om pointerleave missas (fönsterbyte, flik döljs) → släck
+            // pekaren så loopen inte spinner kvar och en markör inte fastnar tänd.
+            const onWindowBlur = () => {
+                if (revealPointerRef.current) revealPointerRef.current.active = false;
+                ensureRevealPumpRef.current();
+            };
+            // Välj om seed = ~10 närmast NYA mitten efter varje move/zoom (debounce
+            // sköts av att moveend bara fyras en gång per gest) → aldrig tomt där man
+            // landar, t.ex. efter flyg till min-position.
+            const onRevealMoveEnd = () => recomputeRevealSeedRef.current();
+            cont.addEventListener('pointerdown', onPtrMove, { passive: true });
+            cont.addEventListener('pointermove', onPtrMove, { passive: true });
+            cont.addEventListener('pointerup', onPtrUp, { passive: true });
+            cont.addEventListener('pointercancel', onPtrUp, { passive: true });
+            cont.addEventListener('pointerleave', onPtrLeave, { passive: true });
+            window.addEventListener('blur', onWindowBlur);
+            document.addEventListener('visibilitychange', onWindowBlur);
+            map.on('moveend', onRevealMoveEnd);
+            revealCleanupRef.current = () => {
+                cont.removeEventListener('pointerdown', onPtrMove);
+                cont.removeEventListener('pointermove', onPtrMove);
+                cont.removeEventListener('pointerup', onPtrUp);
+                cont.removeEventListener('pointercancel', onPtrUp);
+                cont.removeEventListener('pointerleave', onPtrLeave);
+                window.removeEventListener('blur', onWindowBlur);
+                document.removeEventListener('visibilitychange', onWindowBlur);
+                map.off('moveend', onRevealMoveEnd);
+            };
+            // Lagret finns nu + kartmitt är giltig → välj center-medveten seed
+            // (reseed-effekten kördes innan mapRef fanns) och dra igång loopen.
+            recomputeRevealSeedRef.current();
+            ensureRevealPumpRef.current();
         });
 
         return () => {
@@ -2464,6 +2741,9 @@ export default function V2Map({
             if (zoomIdleTimer) clearTimeout(zoomIdleTimer);
             if (glCanvas && onCtxLost) glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
             if (glCanvas && onCtxRestored) glCanvas.removeEventListener('webglcontextrestored', onCtxRestored as EventListener);
+            // Reveal/pensel: lyssnare + rAF.
+            if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
+            if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
             map.remove();
             mapRef.current = null;
         };
@@ -4598,7 +4878,7 @@ export default function V2Map({
     // blixtrar ljusgrått på mörka kartor.
     const containerBg = mapStyle === 'dark' ? '#141414'
         : mapStyle === 'satellite' ? '#10181f'
-        : mapStyle === 'themepark' ? '#b9d49c'
+        : mapStyle === 'themepark' ? '#93c46c'
         : mapStyle === 'orientering' ? '#efe9dc'
         : '#f1f5f9';
 
@@ -5674,7 +5954,7 @@ export default function V2Map({
                 />
             )}
             {/* Seriös informationsruta (ersätter startmolnet): dagens nyckeltal. */}
-            {showCloud && cloudStats && eventsLoaded && (
+            {showCloud && cloudStats && cloudStats.isToday && eventsLoaded && (
                 <WelcomeBox
                     today={cloudStats.today}
                     withinHour={cloudStats.withinHour}

@@ -875,8 +875,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
             // klicka var som helst på kortet. Knappar/länkar ignoreras redan i
             // onPointerDown så de fortsätter fungera som vanligt. Öppning mäts så
             // bara första raden av beskrivningen visas (inte ända ner till knappen);
-            // hopfällning går till sträcket under tid/plats (samma som drag-botten).
-            updateHeightVh(heightVhRef.current > 50 ? measureCollapsedHeight() : measureOpenHeight());
+            // hopfällning går tillbaka till DEFAULT-höjden (header + bildremsa,
+            // exakt samma som när kortet öppnas) — inte ända ner till peek-strecket,
+            // som kändes som att kortet åkte för långt ner. Drag-ner-gesten kan
+            // fortfarande gå hela vägen ner till peek/stängning (se ovan).
+            updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
         }
 
         dragDirection.current = 'none';
@@ -1038,10 +1041,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         tillbaka det. Bara EN moln-knapp (för info-molnet). */}
                 </div>
 
-                {/* Höger: träff-räknare (flipper) + bakåt + Nästa (samma höjd, längst
-                    till höger). Träffpillen ligger JÄMTE Nästa i samma rad. Bakåt/Nästa
-                    döljs i spelläget — då ska man inte kunna navigera bort målet. */}
-                <div className="flex items-center gap-2 pointer-events-auto">
+                {/* Höger: träff-räknare (flipper) + emoji + bakåt + Nästa. Emoji/bakåt
+                    sitter längst till vänster i gruppen och Nästa växer (flex-1) så den
+                    blir så bred som möjligt. Gruppen tar hela bredden (flex-1) bredvid
+                    verktygspillen. Bakåt/Nästa döljs i spelläget — då ska man inte kunna
+                    navigera bort målet. */}
+                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-auto">
                     {pinShotHits > 0 && (
                         <div className="flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
                             🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
@@ -1071,9 +1076,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                             )}
                             <button
                                 onClick={handleNextOnly}
-                                className="bg-[#006AA7] hover:bg-[#005590] text-white font-bold px-6 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20 h-[38px] flex items-center justify-center box-border"
+                                aria-label="Nästa event"
+                                className="group relative flex-1 min-w-0 h-[38px] box-border px-6 rounded-full text-white font-black tracking-wide
+                                    bg-gradient-to-b from-[#1b8fd1] to-[#006AA7]
+                                    ring-1 ring-white/40
+                                    shadow-[0_4px_0_0_#004e7a,0_9px_20px_rgba(0,106,167,0.5)]
+                                    hover:from-[#2099db] hover:to-[#0073b5] hover:shadow-[0_4px_0_0_#004e7a,0_12px_26px_rgba(0,106,167,0.6)]
+                                    active:translate-y-[3px] active:shadow-[0_1px_0_0_#004e7a,0_3px_9px_rgba(0,106,167,0.45)]
+                                    transition-all duration-150 flex items-center justify-center gap-2 overflow-hidden"
                             >
-                                Nästa <ArrowRight size={18} />
+                                {/* Övre glansremsa — ger knappen en glansig, lagrad lyster */}
+                                <span aria-hidden className="pointer-events-none absolute inset-x-1 top-px h-1/2 rounded-full bg-gradient-to-b from-white/40 to-transparent" />
+                                <span className="relative">Nästa</span>
+                                {/* Pilen sitter i en egen liten bricka ovanpå knappen (lager-känsla) */}
+                                <span aria-hidden className="relative flex items-center justify-center w-6 h-6 rounded-full bg-white/25 ring-1 ring-white/30 shadow-inner transition-transform group-hover:translate-x-0.5">
+                                    <ArrowRight size={16} />
+                                </span>
                             </button>
                         </>
                     )}

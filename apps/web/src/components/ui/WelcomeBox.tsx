@@ -17,7 +17,8 @@ interface WelcomeBoxProps {
  * Ren, "seriös" informationsruta som ersätter det lekfulla startmolnet
  * (CloudPopup). Visar dagens två nyckeltal: antal event idag + antal som börjar
  * inom en timme. Kompakt kort, neutral grå för "idag" och orange för "inom 1
- * timme" (matchar de imminenta eventens kant på kartan).
+ * timme" (matchar de imminenta eventens kant på kartan). Visas BARA när vald dag
+ * är idag — gaten ligger i V2Map (cloudStats.isToday).
  */
 export default function WelcomeBox({ today, withinHour, withinHours, onDismiss }: WelcomeBoxProps) {
     return (
