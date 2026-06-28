@@ -193,7 +193,7 @@ function sourceGradientCss(color: string): string {
     return `linear-gradient(145deg, ${mixHex(color, '#ffffff', 0.22)} 0%, ${color} 55%, ${mixHex(color, '#000000', 0.32)} 100%)`;
 }
 
-function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false): { data: ImageData; pixelRatio: number } | null {
+function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
@@ -224,7 +224,11 @@ function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false
         ctx.rect(-S / 2, -S / 2, S, S);
     }
     const grad = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
-    const stops = bodyColor
+    // Sparad (gillad) bricka = ljus/vit kropp (matchar DOM-markörens vita bakgrund);
+    // annars källans/kategorins färg eller mörk standard.
+    const stops = saved
+        ? ['#ffffff', '#f3f6fa', '#e3e9f1']
+        : bodyColor
         ? [mixHex(bodyColor, '#ffffff', 0.22), bodyColor, mixHex(bodyColor, '#000000', 0.32)]
         : ['#344256', '#1e293b', '#16202e'];
     grad.addColorStop(0, stops[0]);
@@ -236,10 +240,10 @@ function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false
     ctx.shadowOffsetY = 2;
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    // Vald bricka får en tydlig opak vit ram (markeringen man är "på"); övriga en
-    // svag vit kant för djup.
-    ctx.lineWidth = selected ? 3.5 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : 'rgba(255,255,255,0.28)';
+    // Ram: vald = tydlig opak vit (markeringen man är "på"); sparad = ljusblå
+    // (#5BA3CC, samma som DOM); annars svag vit kant för djup.
+    ctx.lineWidth = selected ? 3.5 : saved ? 2.5 : 2;
+    ctx.strokeStyle = selected ? '#ffffff' : saved ? '#5BA3CC' : 'rgba(255,255,255,0.28)';
     ctx.stroke();
     ctx.restore();
 
@@ -1849,19 +1853,19 @@ export default function V2Map({
     // sifferbricka, vattning, highlight). Övriga renderas billigt i GL-lagret.
     // Samma predikat används både för att VÄLJA DOM-grupper (visibleGroups) och
     // för att UTESLUTA dem ur GL-lagret — så ingen markör dubbelritas.
-    const isSpecialGroup = useCallback((group: LinkEvent[], _key: string, _nowMs: number): boolean => {
+    const isSpecialGroup = useCallback((group: LinkEvent[], _key: string, nowMs: number): boolean => {
         if (pinballMode) {
             return !!PIN_GEO_MODE;
         }
-        // BARA det VALDA (öppnade) eventet är speciellt → ritas som DOM-markör med vit
-        // ram. ALLT annat (vanliga, multi-event, "inom 1 timme"/orange, sparade,
-        // användarskapade, vattnade, slängda) hanteras LIKADANT: vanliga GL-brickor som
-        // bara visas via avslöjningen (de N närmast klicket). Tidigare var imminent/
-        // multi/sparade "alltid synliga" DOM-markörer — det var det användaren ville bort.
+        // Det VALDA (öppnade) eventet är speciellt → DOM-markör med vit ram. Övriga
+        // vanliga/multi/imminent/skapade/slängda hanteras via avslöjningen (GL-brickor).
         // (Guld/gissat behålls i spelläget så mål/svar funkar.)
         if (!gameMode && selectedEvent && group.some(e => e.id === selectedEvent.id)) return true;
         if (goldEventId && group.some(e => e.id === goldEventId)) return true;
         if (guessedEventId && group.some(e => e.id === guessedEventId)) return true;
+        // OBS: gillade (sparade) event är INTE special. De ritas som vanliga GL-brickor
+        // men med VIT kropp + force-tända (alltid reveal=1 via revealStickyRef) → de
+        // förblir synliga vita överallt, oavsett avslöjning/viewport/vad som är valt.
         return false;
     }, [pinballMode, gameMode, selectedEvent, goldEventId, guessedEventId]);
 
@@ -1909,11 +1913,13 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean }>();
-        // Det VALDA eventet behålls i GL-lagret (utöver sin DOM-markör med vit
-        // ram) så att brickan man är "på" ALLTID syns på kartan — även om DOM-
-        // markören av någon anledning inte målas. DOM-markören ligger ovanpå när
-        // den funkar; annars syns åtminstone GL-brickan.
+        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>();
+        // Det VALDA eventet behålls i GL-lagret (utöver sin DOM-markör) så att brickan
+        // man är "på" ALLTID syns. Eftersom det valda ALLTID är "special" ritas just
+        // dess GL-bricka med sin riktiga look INBAKAD (vit ram = vald, vit kropp =
+        // sparad) — annars täckte den kantlösa standard-GL-brickan DOM-markörens look
+        // (anchor-glapp) → "ingen vit ram / ingen vit bakgrund".
+        const savedCutoff = nowMs - 60 * 60 * 1000;
         const selId = !gameMode && !pinballMode ? selectedEvent?.id : undefined;
         for (const [key, group] of groups) {
             const isSel = selId != null && group.some(e => e.id === selId);
@@ -1927,13 +1933,14 @@ export default function V2Map({
             // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
             // DOM-färgen aldrig glider isär.
             const color = brickaBodyHex(rep) ?? undefined;
-            // Vit ram BAKAS in på själva GL-brickan när den är vald OCH saknar DOM-
-            // markör (speciella grupper har en DOM-markör med egen ram → ingen GL-ram,
-            // annars dubbel/förskjuten kant). Egen ikon-id så varianten cachas separat.
-            const drawSel = isSel && !special;
+            // Vald bricka (isSel) → vit ram. ALLA gillade (framtida) event → vit kropp,
+            // oavsett om de är valda — så de FÖRBLIR vita när man bläddrar vidare. Övriga
+            // (reveal-brickorna) = normal look.
+            const drawSel = isSel;
+            const drawSav = group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff);
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
-            const iconId = drawSel ? `${baseIcon}:sel` : baseIcon;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel });
+            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav });
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
@@ -1941,9 +1948,9 @@ export default function V2Map({
             });
         }
         return { features, icons };
-    }, [groups, isSpecialGroup, selectedEvent, gameMode, pinballMode]);
+    }, [groups, isSpecialGroup, selectedEvent, gameMode, pinballMode, savedEventIds]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean }>>(new Map());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>>(new Map());
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
 
@@ -2037,11 +2044,11 @@ export default function V2Map({
                 map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'key' });
             }
             // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
-            usedIconsRef.current.forEach(({ emoji, color, selected }, id) => {
+            usedIconsRef.current.forEach(({ emoji, color, selected, saved }, id) => {
                 if (map.hasImage(id)) return;
                 let baked = bakedIconsRef.current.get(id);
                 if (!baked) {
-                    const b = makeBrickaImageData(emoji, color, selected);
+                    const b = makeBrickaImageData(emoji, color, selected, saved);
                     if (b) { bakedIconsRef.current.set(id, b); baked = b; }
                 }
                 if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -2487,8 +2494,16 @@ export default function V2Map({
                 if (group.some(e => e.id === selectedEvent.id)) { sticky.add(key); break; }
             }
         }
+        // Gillade (framtida) event hålls ALLTID tända (force-reveal) så deras vita GL-
+        // bricka syns överallt — oavsett avslöjning, viewport eller vad som är valt.
+        if (!pinballMode) {
+            const savedCutoff = Date.now() - 60 * 60 * 1000;
+            for (const [key, group] of groupsRef.current) {
+                if (group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)) sticky.add(key);
+            }
+        }
         reapplyAllRevealRef.current();
-    }, [selectedEvent, gameMode, pinballMode]);
+    }, [selectedEvent, gameMode, pinballMode, savedEventIds, groups]);
 
     // ── Desyncad bildväxling för grupper med flera event på samma plats ───────
     // Tidigare bytte ALLA sådana grupper emoji på exakt samma 1-sekunderstick
