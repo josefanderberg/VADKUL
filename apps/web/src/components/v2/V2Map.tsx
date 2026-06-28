@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon, Trophy } from 'lucide-react';
+import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon, Trophy, ChevronRight } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
@@ -272,7 +272,8 @@ type PlainFeature = {
     type: 'Feature';
     geometry: { type: 'Point'; coordinates: [number, number] };
     // count = antal event i gruppen (>1 → "+N"-bricka i hörnet); 1 för enskilda.
-    properties: { icon: string; key: string; count: number };
+    // color = kategorifärg (hex) för nål-pricken; mörk standard för stora källor.
+    properties: { icon: string; key: string; count: number; color: string };
 };
 
 // ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
@@ -285,12 +286,14 @@ type PlainFeature = {
 // + cos-lat-skalad longitud) och sätter feature-state direkt via nyckeln
 // (promoteId 'key'). Aldrig fler än ~N synliga samtidigt = ingen lagg.
 const REVEAL_NEAREST_COUNT = 30;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 10;         // antal synliga från start / nära mitten (tills man tryckt på kartan)
-// När man trycker på en ny plats byts den avslöjade uppsättningen ut med en
-// KUGGHJULS-effekt: brickorna som ska bort (gamla platsen) släcks EN OCH EN och
-// brickorna närmast klicket tänds EN OCH EN — omlott (en ut, en in per kugge).
-// Närmaste eventet öppnas direkt. Ingen spejar-vandring längre.
-const REVEAL_SWAP_STEP_MS = 70;       // tid mellan varje kugge (en bricka ut + en in)
+const REVEAL_SEED_COUNT = 50;         // antal synliga från start / nära min-position (tills man tryckt på kartan)
+// Övergång mellan två klickpunkter = en "BRO": vid ett tryck tänds events LÄNGS linjen
+// från förra punkten till den nya (som en uttänjd gummisnodd som connectar och visar
+// det som ligger MITT EMELLAN), bron HÅLLS stabil en stund (minst 3s), och kollapsar
+// sedan till de N närmast nya punkten. Alltid ~N synliga genom hela förloppet.
+const REVEAL_BRIDGE_MS = 2000;        // fas 1: tänj ut bron (förra→nya punkten) — dubblad tid
+const REVEAL_BRIDGE_HOLD_MS = 3000;   // fas 2: håll bron stabil (minst 3s — användarkrav)
+const REVEAL_SETTLE_MS = 2000;        // fas 3: kollapsa bron → de N närmast nya punkten — dubblad tid
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -969,6 +972,16 @@ export default function V2Map({
     }, []);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
+    // Klick på en MULTI-event-markör (grupp med >1 event) öppnar en lista (emoji +
+    // titel + tid) så man kan välja vilket event i högen man vill öppna. null = ingen.
+    const [groupList, setGroupList] = useState<LinkEvent[] | null>(null);
+    // Geo-ankaret (lng/lat) för den klickade multi-event-brickan + dess projicerade
+    // skärmposition. Listan placeras i brickans ÖVRE HÖGRA hörn och följer punkten
+    // när kartan pannas/zoomas (uppdateras i updateCloudPosition på move/zoom).
+    const [groupListAnchor, setGroupListAnchor] = useState<{ lng: number; lat: number } | null>(null);
+    const groupListAnchorRef = useRef<{ lng: number; lat: number } | null>(null);
+    groupListAnchorRef.current = groupListAnchor;
+    const [groupListPos, setGroupListPos] = useState<{ x: number; y: number } | null>(null);
     // True medan användaren aktivt zoomar (zoomstart→zoomend). Under gesten ritas
     // multi-event-grupper som lätta GL-prickar; i vila som fulla DOM-brickor. De två
     // är ÖMSESIDIGT UTESLUTANDE — aldrig bägge synliga. Ref:en speglar staten så att
@@ -1901,7 +1914,7 @@ export default function V2Map({
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: iconId, key, count: group.length },
+                properties: { icon: iconId, key, count: group.length, color: color ?? '#1e293b' },
             });
         }
         return { features, icons };
@@ -1977,7 +1990,8 @@ export default function V2Map({
     // Startar "vandringen": avslöjningen glider event-för-event från förra trycket
     // till den nya platsen (toLng/toLat). Sätts nedan.
     const startRevealTravelRef = useRef<(toLng: number, toLat: number) => void>(() => {});
-    const revealTweenRef = useRef<number | null>(null); // rAF-id för vandringen
+    const revealTweenRef = useRef<number | null>(null); // rAF-id för vandringen/bron
+    const revealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // bro-håll-timer
     // Tidsfönster (performance.now-ms) då auto-recenter av kameran ska hoppas över.
     // Sätts av dagbyte + kort-navigering (Nästa/Föregående/svep) — INTE av kart-
     // klicket (där ska den valda brickan tvärtom få bli synlig via recenter).
@@ -2076,7 +2090,8 @@ export default function V2Map({
                     layout: { 'visibility': 'none' },
                     paint: {
                         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
-                        'circle-color': '#1e293b',
+                        // Nål-pricken får eventets KATEGORIFÄRG (mörk standard för stora källor).
+                        'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
                         // Samma reveal-state som brickorna → dolda event poppar inte
@@ -2217,23 +2232,49 @@ export default function V2Map({
         return new Set(bestKey);
     }, []);
 
-    // KUGGHJULS-BYTE: vid ett tryck byts den avslöjade uppsättningen ut mot de N
-    // brickorna närmast klicket. De gamla (ej kvar i nya) släcks EN OCH EN och de
-    // nya tänds EN OCH EN — omlott, en kugge i taget (en försvinner på gamla
-    // platsen, en kommer fram närmast klicket). Närmaste eventet öppnas direkt.
-    // Kameran står still (vi rör den inte; recenter undertrycks vid event-öppningen).
+    // De N brickorna LÄNGS linjen från (fromLng,fromLat) till (toLng,toLat) — en "bro":
+    // sampla N punkter längs linjen, ta närmaste event vid var (ordnat förra→nya), pad
+    // med närmast målet. Resultatet är events utspridda MELLAN de två punkterna.
+    const bridgeKeysAlong = useCallback((fromLng: number, fromLat: number, toLng: number, toLat: number, n: number): string[] => {
+        const ordered: string[] = [];
+        const seen = new Set<string>();
+        // EN bricka per sampelpunkt över HELA linjen (t=0..1) — så bron sträcker sig
+        // ända fram till klicket (förut fylldes kvoten av den TÄTA origin-änden och bron
+        // nådde aldrig långt bort → man fick klicka två gånger). Hoppa redan tagna.
+        for (let i = 0; i < n; i++) {
+            const t = n === 1 ? 1 : i / (n - 1);
+            const lng = fromLng + (toLng - fromLng) * t;
+            const lat = fromLat + (toLat - fromLat) * t;
+            for (const k of nearestKeysTo(lng, lat, 6)) {
+                if (!seen.has(k)) { seen.add(k); ordered.push(k); break; }
+            }
+        }
+        // Vissa sampel kan ha dubbletter (gles sträcka) → fyll upp till n med de
+        // närmast MÅLET så vi alltid landar med ~n och tyngdpunkt vid klicket.
+        if (ordered.length < n) {
+            for (const k of nearestKeysTo(toLng, toLat, n * 2)) {
+                if (ordered.length >= n) break;
+                if (!seen.has(k)) { seen.add(k); ordered.push(k); }
+            }
+        }
+        return ordered.slice(0, n);
+    }, [nearestKeysTo]);
+
+    // BRO-ÖVERGÅNG: vid ett tryck "connectar" vi förra punkten med den nya via en bro av
+    // events längs linjen (som en uttänjd gummisnodd), HÅLLER bron stabil ≥3s, och
+    // KOLLAPSAR sedan till de N närmast klicket. Alltid ~N synliga. Ingen auto-öppning
+    // (klicket gör bara synligt; man trycker sedan på en bricka för att öppna).
     const startRevealTravel = useCallback((toLng: number, toLat: number) => {
         const map = mapRef.current;
         if (!map || !map.getLayer('plain-events')) return;
-        // Sätt ankaret DIREKT (inte först vid settle) — annars hinner moln-driftens
-        // moveend fyra mitt i bytet medan ankaret är null → recomputeRevealSeed seedar
-        // om till kartans MITT och släcker de just avslöjade → de 30 blinkade till och
-        // försvann efter ~0.2s. Med ankaret satt re-seedar moveend kring samma punkt.
+        const from = revealAnchorPtRef.current ?? userPosRef.current ?? map.getCenter();
+        const fromLng = from.lng, fromLat = from.lat;
+        // Ankaret sätts DIREKT så moln-driftens moveend inte hinner re-seeda mitt i.
         revealAnchorPtRef.current = { lng: toLng, lat: toLat };
-        // Avbryt ev. pågående byte.
+        // Avbryt ev. pågående bro (rAF + håll-timer).
         if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
+        if (revealHoldTimerRef.current) { clearTimeout(revealHoldTimerRef.current); revealHoldTimerRef.current = null; }
         const written = revealWrittenRef.current;
-        const sticky = revealStickyRef.current;
         const writeOp = (key: string, op: number) => {
             const prev = written.get(key);
             if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
@@ -2242,56 +2283,54 @@ export default function V2Map({
             }
         };
 
-        // Ny uppsättning = de N närmaste klicket; gammal = nuvarande seed.
+        const bridge = bridgeKeysAlong(fromLng, fromLat, toLng, toLat, REVEAL_NEAREST_COUNT);
+        const bridgeSet = new Set(bridge);
         const newSet = nearestKeysTo(toLng, toLat, REVEAL_NEAREST_COUNT);
-        const oldSet = new Set(revealSeedRef.current);
 
-        // INGEN auto-öppning. Klicket gör BARA synligt — man måste sedan trycka på en
-        // (nu synlig) bricka för att öppna den. (Tidigare öppnades närmaste eventet
-        // direkt här, men det (a) var oönskat och (b) onSelectEvent → plainData-ändring
-        // → recomputeRevealSeed kring ett INAKTUELLT ankare mitt i bytet → extra
-        // kluster på andra platser = ~80 brickor samtidigt. Borttaget.) Senast öppnade
-        // eventet hålls synligt av sin egen vit-kantade DOM-markör (selected).
+        // Längre väg (skärmpixlar förra→nya) → längre bro & settle (fler steg) så
+        // övergången hinner gå HELA vägen fram i ETT klick. Kameran står stilla → giltig.
+        const clampMs = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+        const p0 = map.project([fromLng, fromLat]);
+        const p1 = map.project([toLng, toLat]);
+        const pxDist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        const bridgeMs = clampMs(REVEAL_BRIDGE_MS + pxDist * 4.4, REVEAL_BRIDGE_MS, 7000);
+        const settleMs = clampMs(REVEAL_SETTLE_MS + pxDist * 3.0, REVEAL_SETTLE_MS, 5000);
 
-        // Avstånd² till klicket (cos-lat-skalad longitud) för att ordna kuggarna.
-        const coordByKey = new Map(revealCoordsRef.current.map(c => [c.key, c] as const));
-        const kx = Math.cos(toLat * Math.PI / 180);
-        const d2 = (k: string) => {
-            const c = coordByKey.get(k);
-            if (!c) return Infinity;
-            const dx = kx * (c.lng - toLng), dy = c.lat - toLat;
-            return dx * dx + dy * dy;
+        // Byt från nuvarande lysande uppsättning till `target`, tänd `orderedAdd` i ordning
+        // (en in + en ut per kugge) över `totalMs`. Uppdaterar revealSeedRef vid mål.
+        const runSwap = (target: Set<string>, orderedAdd: string[], totalMs: number, onDone: () => void) => {
+            const old = new Set(revealSeedRef.current);
+            const toAdd = orderedAdd.filter(k => !old.has(k));
+            const toRemove = [...old].filter(k => !target.has(k));
+            const steps = Math.max(toAdd.length, toRemove.length);
+            if (steps === 0) { revealSeedRef.current = target; onDone(); return; }
+            const stepMs = Math.max(16, totalMs / steps);
+            const start = performance.now();
+            let done = -1;
+            const tick = () => {
+                const m = mapRef.current;
+                if (!m || !m.getLayer('plain-events')) { revealTweenRef.current = null; return; }
+                const want = Math.min(steps - 1, Math.floor((performance.now() - start) / stepMs));
+                while (done < want) {
+                    done++;
+                    if (done < toRemove.length) writeOp(toRemove[done], 0);
+                    if (done < toAdd.length) writeOp(toAdd[done], 1);
+                }
+                if (done < steps - 1) { revealTweenRef.current = requestAnimationFrame(tick); }
+                else { revealTweenRef.current = null; revealSeedRef.current = target; onDone(); }
+            };
+            revealTweenRef.current = requestAnimationFrame(tick);
         };
-        // IN: nya brickor som inte redan lyser — närmast klicket först.
-        const toAdd = [...newSet].filter(k => !oldSet.has(k) && !sticky.has(k)).sort((a, b) => d2(a) - d2(b));
-        // UT: gamla brickor som inte är kvar i nya — längst från klicket först.
-        const toRemove = [...oldSet].filter(k => !newSet.has(k) && !sticky.has(k)).sort((a, b) => d2(b) - d2(a));
-        const steps = Math.max(toAdd.length, toRemove.length);
 
-        const settle = () => {
-            revealTweenRef.current = null;
-            revealSeedRef.current = newSet;                       // vilo-uppsättningen är nu här
-            revealAnchorPtRef.current = { lng: toLng, lat: toLat };
-        };
-        if (steps === 0) { settle(); return; }
-
-        // Kör kuggarna i takt: var REVEAL_SWAP_STEP_MS släcks en gammal + tänds en ny.
-        const start = performance.now();
-        let done = -1;
-        const tick = () => {
-            const m = mapRef.current;
-            if (!m || !m.getLayer('plain-events')) { revealTweenRef.current = null; return; }
-            const want = Math.min(steps - 1, Math.floor((performance.now() - start) / REVEAL_SWAP_STEP_MS));
-            while (done < want) {
-                done++;
-                if (done < toRemove.length) writeOp(toRemove[done], 0); // en försvinner på gamla platsen
-                if (done < toAdd.length) writeOp(toAdd[done], 1);       // en kommer fram närmast klicket
-            }
-            if (done < steps - 1) revealTweenRef.current = requestAnimationFrame(tick);
-            else settle();
-        };
-        revealTweenRef.current = requestAnimationFrame(tick);
-    }, [nearestKeysTo]);
+        // FAS 1: tänj ut bron (nuvarande → bro, ordnat förra→nya).
+        runSwap(bridgeSet, bridge, bridgeMs, () => {
+            // FAS 2: håll bron stabil ≥3s. FAS 3: kollapsa till de N närmast klicket.
+            revealHoldTimerRef.current = setTimeout(() => {
+                revealHoldTimerRef.current = null;
+                runSwap(newSet, [...newSet], settleMs, () => { /* landat */ });
+            }, REVEAL_BRIDGE_HOLD_MS);
+        });
+    }, [nearestKeysTo, bridgeKeysAlong]);
     startRevealTravelRef.current = startRevealTravel;
 
     // Välj seed = de REVEAL_SEED_COUNT markörerna närmast KARTANS MITT just nu.
@@ -2662,16 +2701,21 @@ export default function V2Map({
                 const hitVisibleMarker = hits.some(h => {
                     if (h.layer.id === 'plain-events' || h.layer.id === 'plain-events-dots') {
                         const key = h.properties?.key as string | undefined;
-                        return !!key && (revealWrittenRef.current.get(key) ?? 0) > 0.5; // bara avslöjade
+                        // Faktiskt renderat tillstånd (ground truth), inte write-cachen —
+                        // annars kunde en SYNLIG bricka råka klassas som dold → klicket
+                        // gick till avslöjning/bro i stället för att öppna (brickan "försvann").
+                        return !!key && ((map.getFeatureState({ source: 'plain-events', id: key }).reveal as number ?? 0) > 0.5);
                     }
                     return true; // andra lager (t.ex. multi-event-dots) — alltid klickbara
                 });
                 if (hitVisibleMarker) return;
             }
             // Tom karta-tap (eller bara dolda brickor under fingret) = ny utgångspunkt:
-            // den avslöjade uppsättningen byts ut mot de N närmast klicket (kugghjuls-
-            // effekt, en ut/en in). INGEN auto-öppning — man trycker sedan på en synlig
-            // bricka för att öppna den. Avmarkerar inte här (öppnat kort ligger kvar).
+            // bron byter ut den avslöjade uppsättningen mot de N närmast klicket. Klick
+            // PÅ tom karta (ej på en markör) STÄNGER också ev. öppet eventkort + listan.
+            setGroupList(null);            // stäng ev. öppen multi-event-lista
+            setGroupListAnchor(null);
+            onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             startRevealTravelRef.current(e.lngLat.lng, e.lngLat.lat);
         });
 
@@ -2682,15 +2726,31 @@ export default function V2Map({
             const feat = e.features && e.features[0];
             const key = feat?.properties?.key as string | undefined;
             // Dold bricka (ej avslöjad) är inte direkt klickbar — då gör det allmänna
-            // klicket en avslöjning i stället. Bara plain-events/-dots styrs av reveal.
+            // klicket en avslöjning i stället. Använd FAKTISKT renderat tillstånd (inte
+            // write-cachen) så en synlig bricka aldrig felaktigt klassas som dold.
             const layerId = feat?.layer?.id;
             if ((layerId === 'plain-events' || layerId === 'plain-events-dots')
-                && key && (revealWrittenRef.current.get(key) ?? 0) <= 0.5) return;
+                && key && ((map.getFeatureState({ source: 'plain-events', id: key }).reveal as number ?? 0) <= 0.5)) return;
             const group = key ? groupsRef.current.get(key) : undefined;
             if (!group || group.length === 0) return;
             if (gameModeRef.current) { onGuessRef.current?.(group); return; }
-            // Ingen sticky — den valda visas via sin vit-kantade DOM-markör. (Sticky
-            // hopade en bricka per klick.)
+            // FLERA event på samma plats → öppna en LISTA (emoji + titel + tid) så man
+            // kan välja vilket. Ett enda event → öppna direkt.
+            if (group.length > 1) {
+                const rep = group[0];
+                // Ankra listan vid brickans geo-punkt (projiceras i updateCloudPosition).
+                if (isValidLatLng(rep.lat, rep.lng)) {
+                    setGroupListAnchor({ lng: rep.lng!, lat: rep.lat! });
+                    setGroupListPos(map.project([rep.lng!, rep.lat!]));
+                } else {
+                    setGroupListAnchor(null);
+                    setGroupListPos(null);
+                }
+                setGroupList(group);
+                return;
+            }
+            setGroupList(null);
+            setGroupListAnchor(null);
             onSelectEventRef.current(group[0]);
         };
         const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
@@ -2776,6 +2836,16 @@ export default function V2Map({
                     return { from: { x: pf.x, y: pf.y }, to: { x: pt.x, y: pt.y } };
                 });
             }
+
+            // Multi-event-listan: håll dess skärmposition fast vid brickans geo-punkt
+            // när kartan pannas/zoomas, så den stannar i brickans övre högra hörn.
+            const ga = groupListAnchorRef.current;
+            if (ga) {
+                const pos = map.project([ga.lng, ga.lat]);
+                setGroupListPos((prev) =>
+                    prev && Math.round(prev.x) === Math.round(pos.x) && Math.round(prev.y) === Math.round(pos.y)
+                        ? prev : { x: pos.x, y: pos.y });
+            }
         };
 
         map.on('move', updateCloudPosition);
@@ -2828,20 +2898,13 @@ export default function V2Map({
                     { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
                 );
             }
-            // Avslöjningen drivs av TRYCK (se map 'click' → startRevealTravel), inte
-            // hover. Före första trycket reseedar vi vilo-uppsättningen till de ~10
-            // närmast NYA mitten efter varje move/zoom så det aldrig är tomt där man
-            // landar (t.ex. efter flyg till min-position). Har man tryckt finns ett
-            // ankare → då ligger urvalet kvar (panorering byter det inte).
-            const onRevealMoveEnd = () => { if (!revealAnchorPtRef.current) recomputeRevealSeedRef.current(); };
-            map.on('moveend', onRevealMoveEnd);
-            revealCleanupRef.current = () => {
-                map.off('moveend', onRevealMoveEnd);
-            };
-            // Lagret finns nu + kartmitt är giltig → välj center-medveten seed
-            // (reseed-effekten kördes innan mapRef fanns) och dra igång loopen.
+            // INGEN reseed på moveend. Avslöjningen drivs BARA av tryck (map 'click' →
+            // startRevealTravel) + ett initialt seed nedan. Förut reseedade moveend till
+            // "~10 närmast mitten" så fort kartan rörde sig — och moln-driften fyrar
+            // moveend hela tiden → de 30 man klickat fram försvann och ersattes av ~10
+            // nära mitten/min-position. Borttaget: panorering/drift ändrar inte urvalet.
+            // Initialt seed (innan man tryckt): de N närmast min-position/kartmitt.
             recomputeRevealSeedRef.current();
-            ensureRevealPumpRef.current();
         });
 
         return () => {
@@ -2854,6 +2917,7 @@ export default function V2Map({
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
+            if (revealHoldTimerRef.current) { clearTimeout(revealHoldTimerRef.current); revealHoldTimerRef.current = null; }
             map.remove();
             mapRef.current = null;
         };
@@ -3106,18 +3170,16 @@ export default function V2Map({
         }
     }, [daySwitchNonce]);
 
-    // Intern kort-navigering (Nästa/Föregående/svep): stå still. Bumpas nonce:t
-    // öppnar vi samma suppress-fönster som vid dagbyte så val-effekten nedan INTE
-    // panorerar/flyger till eventet man bläddrar fram till — kameran står kvar.
-    // Måste deklareras FÖRE val-effekten (samma skäl som dagbyte ovan).
+    // Intern kort-navigering (Nästa/Föregående/svep): VISA markören man bläddrar till.
+    // Vi undertrycker INTE recenter längre — val-effekten nedan kör recenterOnSelected
+    // som panorerar fram det valda eventets bricka SÅ man ser vilket event man är på
+    // (utan att zooma; står still om brickan redan syns ovanför kortet). Vi behåller
+    // bara ref-spårningen så effekten inte loopar. De avslöjade brickorna ligger KVAR
+    // där man klickade — navigering flyttar bara kameran, inte avslöjnings-urvalet.
     const prevNavSelectNonceRef = useRef(navSelectNonce);
     useEffect(() => {
         if (navSelectNonce !== prevNavSelectNonceRef.current) {
             prevNavSelectNonceRef.current = navSelectNonce;
-            suppressAutoRecenterUntilRef.current = performance.now() + 1500;
-            // De avslöjade brickorna ligger KVAR där man klickade — kort-navigering
-            // (Nästa/Föregående) flyttar INTE avslöjningen (urvalet = de N närmast
-            // KLICKET, inte det man bläddrar till). Kameran står still (suppress ovan).
         }
     }, [navSelectNonce]);
 
@@ -5061,6 +5123,76 @@ export default function V2Map({
 
     return (
         <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, background: containerBg }}>
+            {/* Multi-event-lista: ankrad till den klickade brickans ÖVRE HÖGRA hörn på
+                kartan och följer punkten när kartan pannas/zoomas. Saknas projicerad
+                position (ogiltig koordinat) faller den tillbaka till top-center. */}
+            {groupList && groupList.length > 0 && (() => {
+                const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+                const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
+                const W = Math.min(vw * 0.8, 300);          // listbredd (px)
+                // Brickans ungefärliga storlek: nål-tippen sitter PÅ geo-punkten,
+                // kroppen ~BRICK_H px upp och ~BRICK_W px bred (centrerad i x).
+                const BRICK_W = 30, BRICK_H = 46, GAP = 4;
+                const pos = groupListPos;
+                // Brickans övre högra hörn (skärm-px).
+                const cornerX = pos ? pos.x + BRICK_W / 2 + GAP : vw / 2;
+                const cornerY = pos ? pos.y - BRICK_H : 84;
+                // Uppskattad höjd (klampad till 60vh) → får listan plats ovanför hörnet?
+                const estH = Math.min(vh * 0.6, 46 + groupList.length * 56);
+                const left = Math.max(8, Math.min(cornerX, vw - W - 8));
+                const roomAbove = cornerY - estH >= 8;
+                // Default: listans NEDRE vänstra hörn = brickans hörn (växer uppåt-höger).
+                // Får den inte plats ovanför → släpp ner den från brickans topp i stället.
+                const style = pos
+                    ? roomAbove
+                        ? { position: 'absolute' as const, left, top: cornerY, width: W, transform: 'translateY(-100%)' }
+                        : { position: 'absolute' as const, left, top: Math.min(pos.y - BRICK_H, vh - estH - 8), width: W }
+                    : { position: 'fixed' as const, left: '50%', top: 84, width: W, transform: 'translateX(-50%)' };
+                return (
+                <div className="z-[1300] pointer-events-auto" style={style}>
+                    <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200/70">
+                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                                {groupList.length} event här
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => { setGroupList(null); setGroupListAnchor(null); }}
+                                aria-label="Stäng listan"
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <ul className="max-h-[60vh] overflow-y-auto no-scrollbar divide-y divide-slate-100">
+                            {groupList.map((ev) => {
+                                const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
+                                const emoji = ev.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
+                                const tid = ev.time && ev.hasSpecificTime !== false
+                                    ? new Date(ev.time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+                                    : '';
+                                return (
+                                    <li key={ev.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setGroupList(null); setGroupListAnchor(null); onSelectEvent(ev); }}
+                                            className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                                        >
+                                            <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none" aria-hidden>{emoji}</span>
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block font-bold text-sm text-slate-800 truncate">{ev.title}</span>
+                                                {tid && <span className="block text-[11px] font-semibold text-slate-500 tabular-nums">kl {tid}</span>}
+                                            </span>
+                                            <ChevronRight size={16} className="text-slate-400 shrink-0" />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                </div>
+                );
+            })()}
             {/* CSS och Keyframes för en mjuk, progressiv animation */}
             <style>{`
                 .v2-custom-marker {

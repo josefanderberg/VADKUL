@@ -1082,9 +1082,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                                 disabled={!backEvent}
                                 aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
                                 title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
-                                className={`relative shrink-0 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
+                                className={`relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
                                     backEvent
-                                        ? 'hover:bg-white hover:scale-105 active:scale-95 cursor-pointer text-xl'
+                                        ? 'hover:bg-white/50 hover:scale-105 active:scale-95 cursor-pointer text-xl'
                                         : 'opacity-40 cursor-not-allowed'
                                 }`}
                             >
