@@ -186,11 +186,14 @@ export default function FloatingNavbar({
                         )}
                     </div>
 
-                    {/* Höger: expanderbar sök + skapa event */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-auto">
+                    {/* Höger: expanderbar sök + skapa event. Containern är
+                        pointer-events-none (den är flex-1 + justify-end → dess TOMMA
+                        vänsterdel täckte kartbandet under navbaren och slukade klick).
+                        Varje faktisk kontroll nedan sätter pointer-events-auto själv. */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-none">
                         {/* Dagväljaren — direkt jämte skapa event */}
                         {onDayRangeChange && (
-                            <div className="relative shrink-0">
+                            <div className="relative shrink-0 pointer-events-auto">
                                 <button
                                     ref={dayChipRef}
                                     type="button"
@@ -220,7 +223,7 @@ export default function FloatingNavbar({
 
                         {/* Sök */}
                         {searchOpen ? (
-                            <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2">
+                            <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2 pointer-events-auto">
                                 <Search size={15} className="text-slate-400 shrink-0 mr-2" />
                                 <input
                                     ref={searchInputRef}
@@ -245,7 +248,7 @@ export default function FloatingNavbar({
                             // När söket öppnas tas order bort → input fyller som förut.
                             <button
                                 onClick={() => setSearchOpen(true)}
-                                className="order-last bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                className="order-last bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
                                 aria-label="Sök event"
                             >
                                 <Search size={20} className="text-slate-700" />
@@ -265,7 +268,7 @@ export default function FloatingNavbar({
                                 onClick={handlePlusClick}
                                 disabled={plusDropping}
                                 aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
-                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0"
+                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
                             >
                                 <Plus size={22} className="text-white" />
                             </button>
