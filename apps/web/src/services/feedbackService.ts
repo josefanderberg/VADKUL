@@ -20,6 +20,25 @@ export const feedbackService = {
         await addDoc(collection(db, 'feedback'), payload);
     },
 
+    /**
+     * Allmän feedback / problemrapport från profilen. Skriver samma form som
+     * reportEvent ({rating, message, createdAt, userAgent?, userId?}) så
+     * Firestore-reglerna redan tillåter den — ingen regeländring behövs. Admin
+     * läser den i samma flöde som övrig feedback.
+     */
+    async submitFeedback(message: string, userId?: string): Promise<void> {
+        const payload: Record<string, unknown> = {
+            // Regeln kräver rating 1–5 (se firestore.rules). Allmän feedback har ingen
+            // betygsskala → neutralt 3; meddelandet (prefixat [FEEDBACK]) bär innehållet.
+            rating: 3,
+            message: `[FEEDBACK] ${message}`.slice(0, 1900),
+            createdAt: Timestamp.now(),
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 300) : 'okänd',
+        };
+        if (userId) payload.userId = userId;
+        await addDoc(collection(db, 'feedback'), payload);
+    },
+
     async getRecentFeedback(limitCount: number = 5): Promise<FeedbackItem[]> {
         try {
             const feedbackRef = collection(db, 'feedback');

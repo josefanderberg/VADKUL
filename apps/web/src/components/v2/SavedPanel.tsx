@@ -16,8 +16,9 @@ interface SavedPanelProps {
 }
 
 /**
- * Panel med användarens sparade event (hjärtan). Kommande överst, passerade
- * under en hopfällbar flik. Klick på en rad hoppar till eventet på kartan.
+ * Panel med användarens sparade event (hjärtan). Kommande (aktivt sparade)
+ * överst; passerade ligger som HISTORIK under en hopfällbar flik och räknas
+ * inte med i sparat-totalen/badgen. Klick på en rad hoppar till eventet.
  */
 export default function SavedPanel({ open, events, savedEventIds, onPick, onRemove, onClose }: SavedPanelProps) {
     const [showPast, setShowPast] = useState(false);
@@ -55,7 +56,7 @@ export default function SavedPanel({ open, events, savedEventIds, onPick, onRemo
                     <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-between">
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
                             <Heart size={12} className="text-rose-500" fill="currentColor" />
-                            Sparade event · {upcoming.length + past.length}
+                            Sparade event · {upcoming.length}
                         </span>
                         <button
                             type="button"
@@ -91,7 +92,7 @@ export default function SavedPanel({ open, events, savedEventIds, onPick, onRemo
                                         aria-expanded={showPast}
                                     >
                                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                            Har varit · {past.length}
+                                            Historik · {past.length}
                                         </span>
                                         <ChevronDown
                                             size={16}

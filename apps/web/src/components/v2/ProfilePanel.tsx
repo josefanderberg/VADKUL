@@ -5,8 +5,9 @@ import { LinkEvent } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
+import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProfilePanelProps {
@@ -40,6 +41,10 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     const [deleting, setDeleting] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [feedbackBusy, setFeedbackBusy] = useState(false);
+    const [feedbackSent, setFeedbackSent] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     const handlePhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +71,10 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
 
     // Nollställ delstate när panelen stängs/öppnas så inget "fastnar".
     useEffect(() => {
-        if (!open) { setEditingName(false); setConfirmingDelete(false); setSettingsOpen(false); }
+        if (!open) {
+            setEditingName(false); setConfirmingDelete(false); setSettingsOpen(false);
+            setFeedbackOpen(false); setFeedbackText(''); setFeedbackSent(false);
+        }
     }, [open]);
 
     if (!open || !user) return null;
@@ -133,6 +141,22 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
         } finally {
             setDeleting(false);
             setConfirmingDelete(false);
+        }
+    };
+
+    const handleSubmitFeedback = async () => {
+        const msg = feedbackText.trim();
+        if (!msg) return;
+        setFeedbackBusy(true);
+        try {
+            await feedbackService.submitFeedback(msg, user.uid);
+            setFeedbackSent(true);
+            setFeedbackText('');
+        } catch (err) {
+            console.error('Kunde inte skicka feedback:', err);
+            toast.error('Kunde inte skicka. Försök igen.');
+        } finally {
+            setFeedbackBusy(false);
         }
     };
 
@@ -342,6 +366,54 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                 <LogOut size={16} className="text-slate-500 shrink-0" />
                                 <span className="flex-1">Logga ut</span>
                             </button>
+                        </div>
+
+                        {/* Problem eller feedback — utfällbar: klick visar ett textfält
+                            som skriver till samma feedback-collection som admin läser. */}
+                        <div className="border-t border-slate-100 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={() => setFeedbackOpen(o => !o)}
+                                aria-expanded={feedbackOpen}
+                                className={actionRow}
+                            >
+                                <MessageSquare size={16} className="text-[#006AA7] shrink-0" />
+                                <span className="flex-1">Problem eller feedback</span>
+                                <ChevronDown
+                                    size={16}
+                                    className={`text-slate-400 shrink-0 transition-transform duration-200 ${feedbackOpen ? 'rotate-180' : ''}`}
+                                />
+                            </button>
+                            {feedbackOpen && (
+                                <div className="bg-slate-50/70 dark:bg-slate-800/30 px-4 py-3">
+                                    {feedbackSent ? (
+                                        <p className="flex items-center gap-2 text-sm font-bold text-emerald-600 py-1.5">
+                                            <Check size={16} className="shrink-0" />
+                                            Tack! Vi har fått din feedback. 🙏
+                                        </p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            <textarea
+                                                value={feedbackText}
+                                                onChange={(e) => setFeedbackText(e.target.value)}
+                                                rows={3}
+                                                maxLength={1800}
+                                                placeholder="Beskriv problemet eller din idé…"
+                                                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006AA7]/40"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleSubmitFeedback}
+                                                disabled={feedbackBusy || !feedbackText.trim()}
+                                                className="self-end inline-flex items-center gap-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white text-xs font-black uppercase tracking-wide px-4 py-2 disabled:opacity-50 transition-colors active:scale-[0.97]"
+                                            >
+                                                <Send size={14} className="shrink-0" />
+                                                {feedbackBusy ? 'Skickar…' : 'Skicka'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

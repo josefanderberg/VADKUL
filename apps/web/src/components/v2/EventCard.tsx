@@ -453,6 +453,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
     // "användaren klickade på kartan" från "vi tryckte Nästa".
     const expectedNextIdRef = useRef<string | null>(null);
+    const isFreshOpenRef = useRef(false);
 
     // Notify parent about card expansion state for map center offsets
     useEffect(() => {
@@ -638,6 +639,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         // Ett kort som var på väg ner i en stängning (höjd under peek-gränsen)
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
+        isFreshOpenRef.current = freshOpen;
         const raf = requestAnimationFrame(() => {
             const collapsed = measureCollapsedHeight();
             collapsedVhRef.current = collapsed;
@@ -772,7 +774,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         const anchor = events.find(e => e.id === anchorId) ?? current;
 
         const newVisited = new Set(visitedEventIds);
-        newVisited.add(current.id);
+        
+        // Lägg till alla event på samma koordinat till besökta så Nästa-knappen 
+        // hoppar till nästa destination direkt i stället för att stega igenom 
+        // varje enskilt event på samma plats.
+        const currentKey = current.lat && current.lng ? `${current.lat.toFixed(4)},${current.lng.toFixed(4)}` : null;
+        if (currentKey) {
+            for (const e of events) {
+                if (e.lat && e.lng) {
+                    const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
+                    if (k === currentKey) {
+                        newVisited.add(e.id);
+                    }
+                }
+            }
+        } else {
+            newVisited.add(current.id);
+        }
 
         let next = findNearestEvent(anchor, events, discardedEventIds, newVisited);
         if (!next) {
@@ -988,6 +1006,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
     const backEventId = historyStack[historyStack.length - 1];
     const backEvent = backEventId ? events.find(e => e.id === backEventId) : undefined;
 
+    // Antal event i föregående events grupp (om det var en multibricka)
+    const backEventGroupCount = useMemo(() => {
+        if (!backEvent || !backEvent.lat || !backEvent.lng) return 1;
+        const key = `${backEvent.lat.toFixed(4)},${backEvent.lng.toFixed(4)}`;
+        return events.filter(e => {
+            if (!e.lat || !e.lng) return false;
+            const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
+            return k === key;
+        }).length;
+    }, [backEvent, events]);
+
     return (
         <>
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
@@ -1095,6 +1124,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                                         <span aria-hidden className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
                                             <ArrowLeft size={10} />
                                         </span>
+                                        {/* Siffra för hur många event gruppen innehåller */}
+                                        {backEventGroupCount > 1 && (
+                                            <span aria-hidden className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-slate-800 text-white border border-white flex items-center justify-center text-[9px] font-black leading-none">
+                                                {backEventGroupCount}
+                                            </span>
+                                        )}
                                     </>
                                 ) : (
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
@@ -1194,8 +1229,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         onRevealStepChange={(step) => {
                             setCardRevealStep(step);
                             // Steg 1 (bild + trunkad beskr): öppna till första beskrivningsraden
-                            // Steg 2 (allt): behåll användarens höjd eller öppna fullt
-                            if (step >= 1 && heightVhRef.current < 50) {
+                            // Steg 2 (allt): behåll användarens höjd eller öppna fullt.
+                            // Endast vid en färsk öppning (från stängt/dragit ner), inte vid byte av event.
+                            if (step >= 1 && isFreshOpenRef.current && heightVhRef.current < 50) {
                                 setIsAnimating(true);
                                 requestAnimationFrame(() => updateHeightVh(measureOpenHeight()));
                             }

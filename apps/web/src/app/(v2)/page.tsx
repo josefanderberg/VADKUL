@@ -615,6 +615,18 @@ export default function HomePage() {
         [events, user]
     );
 
+    // Aktivt sparade = sparade event som ÄNNU INTE passerat (samma 1 h-gräns som
+    // SavedPanel). Passerade sparade räknas som HISTORIK och ska inte blåsa upp
+    // hjärt-badgen / "Sparade event"-räknaren — de ligger under Historik i panelen.
+    const activeSavedCount = useMemo(() => {
+        const cutoff = Date.now() - 60 * 60 * 1000;
+        let n = 0;
+        for (const e of events) {
+            if (savedEventIds.has(e.id) && e.time.getTime() >= cutoff) n++;
+        }
+        return n;
+    }, [events, savedEventIds]);
+
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
     // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
@@ -897,7 +909,7 @@ export default function HomePage() {
                 setSearchQuery={setSearchQuery}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                savedCount={savedEventIds.size}
+                savedCount={activeSavedCount}
                 onToggleSaved={handleToggleSaved}
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
@@ -939,7 +951,7 @@ export default function HomePage() {
                 myEvents={myEvents}
                 onPickEvent={jumpToEvent}
                 onDeleteEvent={handleDeleteOwnEvent}
-                savedCount={savedEventIds.size}
+                savedCount={activeSavedCount}
                 onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
                 reviretHue={myReviretHue}
                 onChangeHue={handleChangeReviretHue}

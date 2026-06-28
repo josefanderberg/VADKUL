@@ -285,20 +285,20 @@ type PlainFeature = {
 // (den var det tunga som laggade): vi räknar avståndet själva (O(antal), kvadrerat
 // + cos-lat-skalad longitud) och sätter feature-state direkt via nyckeln
 // (promoteId 'key'). Aldrig fler än ~N synliga samtidigt = ingen lagg.
-const REVEAL_NEAREST_COUNT = 20;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 20;         // antal synliga från start / nära min-position (tills man tryckt på kartan)
+const REVEAL_NEAREST_COUNT = 35;      // antal markörer kring ett tap (de N närmaste)
+const REVEAL_SEED_COUNT = 35;         // antal synliga från start / nära min-position (tills man tryckt på kartan)
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
 // alla landar till slut på de N närmast klicket. (Tidigare modeller: rigid marsch /
 // bro som tänjdes ut + kollapsade — bägge kändes som "grova hopp"/"två varv".)
-// GRADVIS STRÖM: destinationen fylls en bricka i taget i jämn takt (1,2,3,…). `STREAM_MS`
-// är total tid att fylla destinationen (skalas upp med avstånd, cap `STREAM_MS_MAX`);
-// tiden mellan två ankomster = STREAM_MS / N. `STREAM_STOPS` = antal mellanstopp en
-// bricka visar medan den "strömmar över" (fler = mjukare rörelse, men risk för flimmer).
-const REVEAL_STREAM_MS = 90;
-const REVEAL_STREAM_MS_MAX = 100;
-const REVEAL_STREAM_STOPS = 1;
+// RESA + INSUG: vid ett klick åker FÖRST en enda bricka mot punkten (RESA), sedan dras
+// destinationens event in mot punkten en-och-en (INSUG). RESANS tid skalar LINJÄRT med
+// hur långt man klickar på skärmen — kort hopp tar den MINDRE av de två tiderna, hopp
+// över hela skärmen den STÖRRE (ordningen spelar ingen roll, koden tar min/max).
+// OBS: vid 50/50 är resan nästan momentan — höj värdena för att se brickan "åka".
+const REVEAL_STREAM_MS = 50;        // restid (ms) för KORT hopp (samma trakt) — lägre = snabbare
+const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärmen) — högre = långsammare
 // Antal samtidigt TÄNDA reveal-markörer ska normalt ligga ≤ seed (50) / ≤ N-kring-tap
 // (30). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
@@ -1883,8 +1883,12 @@ export default function V2Map({
         const out: [string, LinkEvent[]][] = [];
         for (const entry of groups.entries()) {
             const [key, group] = entry;
-            if (!isSpecialGroup(group, key, nowMs)) continue;
+            // Valt/gissat/guld får ALLTID en DOM-markör (det valda med vit ram) — även
+            // om gruppen inte är "special". Måste testas FÖRE special-filtret nedan,
+            // annars hoppades ett valt VANLIGT event över och tappade sin vita kant
+            // (visades bara som kantlös GL-bricka).
             if (mustShow(group)) { out.push(entry); continue; }
+            if (!isSpecialGroup(group, key, nowMs)) continue;
             // Multi-event-grupp ELLER "inom 1 timme" (orange) visas som GL-prickar under zoom
             // men vi håller dem kvar i DOM:en (med klassen 'hide-during-zoom') så att de döljs
             // via CSS under zoom i stället för att unmountas och remountas i React (vilket laggar).
@@ -2056,7 +2060,11 @@ export default function V2Map({
                         // Storlek matchad mot DOM-brickorna (~38px kropp) så enskilda
                         // GL-event och fler-event-grupper (DOM) ser lika stora ut.
                         'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, 0.98],
-                        'symbol-z-order': 'source',
+                        // Fler-event-brickor (count>1) ritas ÖVERST och hamnar först i
+                        // queryRenderedFeatures — sort-key = antal event → ju fler, desto
+                        // högre upp i staplingen (och lättast att träffa).
+                        'symbol-sort-key': ['get', 'count'],
+                        'symbol-z-order': 'auto',
                     },
                     paint: {
                         // Dold tills reveal-systemet tonar in den (feature-state 'reveal').
@@ -2087,7 +2095,9 @@ export default function V2Map({
                         'text-offset': [0.95, -1.5],
                         'text-allow-overlap': true,
                         'text-ignore-placement': true,
-                        'symbol-z-order': 'source',
+                        // Samma stapling som brickan — fler-event-badgen överst.
+                        'symbol-sort-key': ['get', 'count'],
+                        'symbol-z-order': 'auto',
                     },
                     paint: {
                         'text-color': '#ffffff',
@@ -2328,64 +2338,49 @@ export default function V2Map({
             reportRevealCount('migration klar');
         };
 
-        // Bygg KORRIDOREN: sampla tätt längs from→to, ta närmaste event vid varje punkt,
-        // dedup (ordnad origin→dest), exkludera dest-eventen (de läggs sist). `path` =
-        // korridor-huvud + destinationen ⇒ sista N index == destSet (alla landar rätt).
-        const samples = Math.max(2 * N, Math.min(240, Math.round(pxDist / 12)));
-        const head: string[] = [];
-        const seen = new Set<string>();
-        for (let s = 0; s < samples; s++) {
-            const t = samples === 1 ? 0 : s / (samples - 1);
-            const lng = fromLng + (toLng - fromLng) * t;
-            const lat = fromLat + (toLat - fromLat) * t;
-            for (const k of nearestKeysTo(lng, lat, 1)) {
-                if (!seen.has(k) && !destSet.has(k)) { seen.add(k); head.push(k); }
-            }
-        }
-        const path = [...head, ...destArr];
-        const L = path.length;
+        // TVÅ FASER, ingen korridor av mellanliggande event:
+        //   1) RESA — EN bricka glider från origin mot klicket, accelererande (easeIn, som
+        //      ett magnetiskt sug). Bara den brickan är tänd; fältet är annars släckt.
+        //   2) INSUG — vid framme dras destinationens event in mot punkten, närmast först,
+        //      i en snabb accelererande kaskad (en, sen flera) tills alla N står på plats.
+        // Reslängden (TRAVEL_MS) skalar med klick-avståndet på skärmen: kort hopp → den
+        // MINDRE tiden, hela skärmen → den STÖRRE (ordningen på konstanterna spelar ingen roll).
+        const cv = map.getCanvas();
+        const screenPx = Math.hypot(cv.clientWidth, cv.clientHeight) || 1;
+        const distFrac = Math.min(1, pxDist / screenPx);   // 0 = samma punkt, 1 = hela skärmen
 
-        // Kort korridor (samma plats / få event mellan) → tänd destinationen direkt.
-        if (L <= N) { finish(performance.now()); return; }
+        // Samma plats / knappt något avstånd → inget att resa, settla destinationen direkt.
+        if (pxDist < 40) { finish(performance.now()); return; }
 
-        // GRADVIS STRÖM: destinationen fylls EN bricka i taget i jämn takt — först 1, sen 2,
-        // 3, … (INTE en klick-på-en-gång-klump). Varje bricka j "anländer" till destinationen
-        // vid A_j = (j+1)·STEP (jämnt spridda ankomster ⇒ destinationsantalet ökar linjärt).
-        // Innan dess står den vid origin; under ett kort TRANSIT-fönster strömmar den över
-        // (några få kvantiserade mellanstopp = ser rörelsen utan att flimra). Bara ~TRANSIT/STEP
-        // brickor är "på väg" samtidigt. ~N tända hela tiden, men ankomsterna är gradvisa.
-        const spanMs = Math.max(REVEAL_STREAM_MS, Math.min(REVEAL_STREAM_MS_MAX, REVEAL_STREAM_MS + pxDist * 0.8));
-        const STEP = spanMs / N;                 // tid mellan två ankomster (jämn ⇒ 1,2,3,…)
-        const TRANSIT = Math.min(Math.max(STEP * 2.5, 400), 1200); // hur länge en bricka är "på väg"
-        const Q = REVEAL_STREAM_STOPS;           // antal mellanstopp under transit (begränsar flimmer)
+        const lo = Math.min(REVEAL_STREAM_MS, REVEAL_STREAM_MS_MAX);
+        const hi = Math.max(REVEAL_STREAM_MS, REVEAL_STREAM_MS_MAX);
+        const TRAVEL_MS = lo + (hi - lo) * distFrac;   // restid (kort hopp → lo, långt → hi)
+        const SETTLE_MS = 650;                         // magnetisk insugning av destinationen
         const start = performance.now();
         const tick = () => {
             const m = mapRef.current;
             if (!m || !m.getLayer('plain-events')) { revealTweenRef.current = null; return; }
             const now = performance.now();
             const elapsed = now - start;
-            const lit = new Set<string>();
-            let arrived = 0;
-            for (let j = 0; j < N; j++) {
-                const A = (j + 1) * STEP;          // ankomsttid (destinationen fylls 1,2,3,…)
-                const D = Math.max(0, A - TRANSIT); // avgångstid
-                let idx: number;
-                if (elapsed >= A) { idx = L - N + j; arrived++; }      // framme (= destSet[j]) → stannar
-                else if (elapsed <= D) { idx = j; }                    // kvar vid origin
-                else {
-                    // På väg: kvantiserad progress → få mellanstopp (inget flimmer).
-                    const p = (elapsed - D) / (A - D);
-                    const qp = Math.round(p * Q) / Q;
-                    idx = Math.round(j + (L - N) * qp);
-                }
-                lit.add(path[idx]);
+            if (elapsed < TRAVEL_MS) {
+                // FAS 1 — en bricka åker mot målet, accelererande (easeIn = magnetiskt sug).
+                const p = elapsed / TRAVEL_MS;
+                const e2 = p * p;
+                const lng = fromLng + (toLng - fromLng) * e2;
+                const lat = fromLat + (toLat - fromLat) * e2;
+                reconcileLit(new Set(nearestKeysTo(lng, lat, 1)), now, 0, true);
+                revealMarchPtRef.current = { lng, lat };
+                revealTweenRef.current = requestAnimationFrame(tick);
+                return;
             }
-            // Hård reconcile: exakt de N nuvarande positionerna tända, övrigt släckt.
-            reconcileLit(lit, now, 0, true);
-            const prog = arrived / N;
-            revealMarchPtRef.current = { lng: fromLng + (toLng - fromLng) * prog, lat: fromLat + (toLat - fromLat) * prog };
-            if (arrived < N) { revealTweenRef.current = requestAnimationFrame(tick); }
-            else { finish(now); }
+            // FAS 2 — destinationen dras in närmast-klicket-först, accelererande (easeOut).
+            const sp = Math.min(1, (elapsed - TRAVEL_MS) / SETTLE_MS);
+            const eased = 1 - (1 - sp) * (1 - sp);
+            const k = Math.max(1, Math.round(N * eased));
+            reconcileLit(new Set(destArr.slice(0, k)), now, 0, true);
+            revealMarchPtRef.current = { lng: toLng, lat: toLat };
+            if (sp >= 1) { finish(now); }
+            else { revealTweenRef.current = requestAnimationFrame(tick); }
         };
         revealTweenRef.current = requestAnimationFrame(tick);
     }, [nearestKeysTo, reportRevealCount]);
@@ -2556,9 +2551,12 @@ export default function V2Map({
     const visitedOrderRef = useRef<string[]>([]);
     const visitedGroupKeyRef = useRef<string | null>(null);
     useEffect(() => {
+        const map = mapRef.current;
         if (!selectedEvent || selectedEvent.lat == null || selectedEvent.lng == null) {
             visitedOrderRef.current = [];
             visitedGroupKeyRef.current = null;
+            setGroupList(null);
+            setGroupListAnchor(null);
             return;
         }
         const gk = `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}`;
@@ -2568,7 +2566,20 @@ export default function V2Map({
         } else if (!visitedOrderRef.current.includes(selectedEvent.id)) {
             visitedOrderRef.current.push(selectedEvent.id);
         }
-    }, [selectedEvent]);
+
+        // Öppna automatiskt multi-event-listan om det valda eventet ingår i en grupp med flera event
+        const group = groups.get(gk);
+        if (group && group.length > 1) {
+            setGroupList(group);
+            setGroupListAnchor({ lng: selectedEvent.lng, lat: selectedEvent.lat });
+            if (map) {
+                setGroupListPos(map.project([selectedEvent.lng, selectedEvent.lat]));
+            }
+        } else {
+            setGroupList(null);
+            setGroupListAnchor(null);
+        }
+    }, [selectedEvent, groups]);
 
     // 1. Initiera MapLibre kartan en gång
     useEffect(() => {
@@ -2797,14 +2808,41 @@ export default function V2Map({
         // registreras en gång; den matchar lagret så fort det (åter)installerats.
         const onGlMarkerClick = (e: maplibregl.MapLayerMouseEvent) => {
             if (pinballModeRef.current) return;
-            const feat = e.features && e.features[0];
-            const key = feat?.properties?.key as string | undefined;
-            // Dold bricka (ej avslöjad) är inte direkt klickbar — då gör det allmänna
-            // klicket en avslöjning i stället. Använd FAKTISKT renderat tillstånd (inte
-            // write-cachen) så en synlig bricka aldrig felaktigt klassas som dold.
-            const layerId = feat?.layer?.id;
-            if ((layerId === 'plain-events' || layerId === 'plain-events-dots')
-                && key && ((map.getFeatureState({ source: 'plain-events', id: key }).reveal as number ?? 0) <= 0.5)) return;
+            // Plocka rätt bricka bland ALLA träffar under fingret — inte bara
+            // features[0] (då snodde en dold/enskild granne klicket: den "döda
+            // klick"-buggen). Två regler, i ordning:
+            //   1) bara AVSLÖJADE brickor är valbara (dolda ska skrapas fram av det
+            //      allmänna klicket, inte öppnas direkt) — multi-event-dots o.d. är
+            //      alltid valbara.
+            //   2) bland de valbara vinner den med FLEST event (count) — samma
+            //      prioritet som z-staplingen, så en fler-event-bricka aldrig
+            //      förlorar klicket till en enskild bricka som råkar ligga under.
+            const candidates = (e.features ?? []).filter(f => {
+                const lid = f.layer?.id;
+                if (lid === 'plain-events' || lid === 'plain-events-dots') {
+                    const k = f.properties?.key as string | undefined;
+                    return !!k && ((map.getFeatureState({ source: 'plain-events', id: k }).reveal as number ?? 0) > 0.5);
+                }
+                return true;
+            });
+            // Bara dolda brickor under fingret → låt det allmänna klicket avslöja.
+            if (candidates.length === 0) return;
+            // Ikonens träffyta (omslutande kvadrat) är STÖRRE än den synliga romb-brickan,
+            // så tätt packade brickor får överlappande hit-boxar. Välj den vars MITT
+            // ligger närmast där man faktiskt tryckte → varje bricka går att peta på,
+            // även i ett kluster. Brickan är botten-ankrad (kroppen sitter en bit OVANFÖR
+            // geopunkten), så jämför mot en punkt en bit ned från brick-kroppen.
+            const ANCHOR_LIFT_PX = 28;
+            const qx = e.point.x, qy = e.point.y + ANCHOR_LIFT_PX;
+            const ranked = candidates.map(f => {
+                const c = (f.geometry as GeoJSON.Point | undefined)?.coordinates;
+                const pp = c ? map.project([c[0], c[1]]) : null;
+                const d = pp ? Math.hypot(pp.x - qx, pp.y - qy) : 1e9;
+                return { f, d, count: Number(f.properties?.count) || 1 };
+            });
+            // Närmast vinner; ligger två i princip lika nära (≤3px) avgör flest event.
+            ranked.sort((a, b) => (Math.abs(a.d - b.d) > 3 ? a.d - b.d : b.count - a.count));
+            const key = ranked[0].f.properties?.key as string | undefined;
             const group = key ? groupsRef.current.get(key) : undefined;
             if (!group || group.length === 0) return;
             if (gameModeRef.current) { onGuessRef.current?.(group); return; }
@@ -4954,12 +4992,14 @@ export default function V2Map({
                 markerData.element.className = `v2-custom-marker${shouldHideDuringZoom ? ' hide-during-zoom' : ''}`;
 
                 // Uppdatera z-index på elementet. Viktiga tillstånd ligger överst.
+                // Multi-event-grupper (count > 1) prioriteras högt (900) så att deras
+                // siffer-badge inte hamnar under eller blandas ihop med andra enskilda markörer.
                 const zIndex = isGold ? 1500
                     : isSelected ? 1000
+                    : count > 1 ? 900
                     : isFeatured ? 800
                     : isSaved ? 500
                     : isUserCreated ? 300
-                    : count > 1 ? 200
                     : isDiscarded ? -100 : 0;
                 markerData.element.style.zIndex = String(zIndex);
 
@@ -5237,18 +5277,34 @@ export default function V2Map({
                 // (förut kunde toppen hamna utanför vyn → man nådde inte de nedersta).
                 const top = Math.max(TOP_MARGIN, Math.min(cornerY - contentH, vh - contentH - BOTTOM_MARGIN));
                 const style = { position: 'absolute' as const, left, top, width: W };
+                // Platsens namn (alla event i gruppen delar koordinat → samma plats).
+                const placeName = groupList[0]?.locationName?.trim() || 'Den här platsen';
+                // "Nästa" stegar markeringen till nästa event i listan (wrap), listan
+                // hålls öppen precis som vid radval så man kan bläddra vidare.
+                const selIdx = groupList.findIndex(ev => ev.id === selectedEvent?.id);
+                const goNextInList = () => onSelectEvent(groupList[(selIdx + 1) % groupList.length]);
                 return (
                 <div className="z-[1300] pointer-events-auto" style={style}>
                     <div className="flex flex-col rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200" style={{ maxHeight: listMaxH }}>
-                        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200/70">
-                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                                {groupList.length} event här
-                            </span>
+                        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70">
+                            <div className="min-w-0 flex-1">
+                                <span className="block text-sm font-black text-slate-800 truncate leading-tight">{placeName}</span>
+                                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{groupList.length} event</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={goNextInList}
+                                aria-label="Nästa event här"
+                                title="Nästa event här"
+                                className="shrink-0 w-8 h-8 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] active:scale-95 flex items-center justify-center transition-all"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => { setGroupList(null); setGroupListAnchor(null); }}
                                 aria-label="Stäng listan"
-                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                                className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
                             >
                                 <X size={16} />
                             </button>
@@ -5269,14 +5325,17 @@ export default function V2Map({
                                             // på samma plats) — den stängs bara av kart-klicket. Markera
                                             // det valda eventet så man ser vilket man tittar på.
                                             onClick={() => onSelectEvent(ev)}
-                                            className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7]/10' : 'hover:bg-slate-50 active:bg-slate-100'}`}
+                                            // Vald rad = blå med vit kant (ring-inset, ingen layout-shift) —
+                                            // samma "vald = vit-kantad" som markören på kartan, så man ser
+                                            // vilket event man står på medan man bläddrar.
+                                            className={`relative w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 active:bg-slate-100'}`}
                                         >
-                                            <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none" aria-hidden>{emoji}</span>
+                                            <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100'}`} aria-hidden>{emoji}</span>
                                             <span className="flex-1 min-w-0">
-                                                <span className={`block font-bold text-sm truncate ${isSel ? 'text-[#006AA7]' : 'text-slate-800'}`}>{ev.title}</span>
-                                                {tid && <span className="block text-[11px] font-semibold text-slate-500 tabular-nums">kl {tid}</span>}
+                                                <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800'}`}>{ev.title}</span>
+                                                {tid && <span className={`block text-[11px] font-semibold tabular-nums ${isSel ? 'text-white/80' : 'text-slate-500'}`}>kl {tid}</span>}
                                             </span>
-                                            <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-[#006AA7]' : 'text-slate-400'}`} />
+                                            <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                                         </button>
                                     </li>
                                 );
