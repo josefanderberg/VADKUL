@@ -140,8 +140,10 @@ export default function FloatingNavbar({
         <div className="absolute top-6 left-0 right-0 z-[1000] px-4 pointer-events-none">
             <div className="flex flex-col gap-3 w-full max-w-[1400px] mx-auto">
 
-                {/* Top Row */}
-                <div className="flex items-center gap-2 w-full">
+                {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
+                    höger åt kategorifiltret som då hoppar upp på den här raden
+                    (CategoryFilter, samma max-w-[1400px]-container). */}
+                <div className="flex items-center gap-2 w-full 2xl:pr-[56px]">
 
                     {/* Vänster: profil + hjärtat (sparade) direkt höger om profilen.
                         Väskan/funktioner ligger under, renderade i V2Map. */}

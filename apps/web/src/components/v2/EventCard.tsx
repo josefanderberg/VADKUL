@@ -342,6 +342,15 @@ interface EventCardProps {
     savedEventIds?: Set<string>;
     onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
+    /** Signaleras precis innan en INTERN navigering (Nästa/Föregående/svep) byter
+     *  valt event — så kartan kan låta bli att flytta kameran till det event man
+     *  kommer till (vi står kvar; kortet bara öppnas). */
+    onNavigate?: () => void;
+    /** (Avvecklad) Zooma in på valt event. Zoom-knapparna är borttagna ur
+     *  Nästa-pillen — propsen behålls så page-anropet inte behöver ändras. */
+    onZoomToSelected?: () => void;
+    /** (Avvecklad) Zooma ut. Knappen borttagen ur Nästa-pillen. */
+    onZoomOut?: () => void;
     /** Flipper-läge: antal träffar i pågående skott — visas som en pill bredvid
      *  Nästa-knappen i den nedre raden (0 = dölj). */
     pinShotHits?: number;
@@ -383,7 +392,7 @@ interface EventCardProps {
     onBoostOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -913,6 +922,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
             setForwardStack([]);
             const next = pickNext(selectedEvent);
             if (next) pushHistory(previousId);
+            onNavigate?.(); // kameran ska stå kvar — vi fokuserar inte det nya eventet
             onSelectEvent(next);
 
             // Reset position immediately for the new card (height bevaras —
@@ -933,6 +943,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         if (prevEvent) {
             // Intern navigering → behåll ankare/besökt (markeras som "väntat").
             expectedNextIdRef.current = prevEvent.id;
+            onNavigate?.(); // kameran står kvar — vi flyger inte till föregående event
             onSelectEvent(prevEvent);
         }
         setExitX(null);
@@ -954,6 +965,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         // Tom framåt-stack (eller eventet finns inte längre) → vanligt pickNext.
         if (!next) next = pickNext(selectedEvent);
         if (next) pushHistory(selectedEvent.id);
+        onNavigate?.(); // kameran står kvar — vi fokuserar inte det nya eventet
         onSelectEvent(next);
 
         setExitX(null);
@@ -970,6 +982,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
 
     // Calculate opacity (slightly fades out at edges)
     const opacity = 1 - Math.abs(dragX / vw) * 0.5;
+
+    // Föregående event i bakåt-stacken — visas som emoji-bricka (= bakåt-knapp)
+    // till vänster om Nästa, så man ser vilket event man går TILLBAKA till.
+    const backEventId = historyStack[historyStack.length - 1];
+    const backEvent = backEventId ? events.find(e => e.id === backEventId) : undefined;
 
     return (
         <>
@@ -1054,42 +1071,55 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                     )}
                     {selectedEvent && !gameMode && (
                         <>
-                            {/* Eventets emoji (samma som kartnålen) som bricka längst
-                                till vänster i navigeringsgruppen — vänster om bakåt/Nästa. */}
-                            <div
-                                aria-hidden
-                                title={selectedEvent.title}
-                                className="bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center text-xl leading-none box-border select-none"
-                            >
-                                {eventEmoji(selectedEvent)}
-                            </div>
-                            {historyStack.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={handleHistoryBack}
-                                    aria-label="Gå tillbaka till föregående event"
-                                    title="Gå tillbaka"
-                                    className="bg-white/90 backdrop-blur-md text-slate-800 p-2 rounded-full shadow-xl border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer h-[38px] w-[38px] flex items-center justify-center box-border"
-                                >
-                                    <ArrowLeft size={16} />
-                                </button>
-                            )}
+                            {/* Föregående-knapp: ALLTID synlig längst till vänster i
+                                gruppen, som motpol till Nästa. Finns historik visar den
+                                föregående events emoji + bakåt-pil och tar en tillbaka;
+                                är man på första eventet (inget före än) visas en dämpad
+                                bakåt-pil. */}
                             <button
+                                type="button"
+                                onClick={handleHistoryBack}
+                                disabled={!backEvent}
+                                aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
+                                title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
+                                className={`relative shrink-0 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
+                                    backEvent
+                                        ? 'hover:bg-white hover:scale-105 active:scale-95 cursor-pointer text-xl'
+                                        : 'opacity-40 cursor-not-allowed'
+                                }`}
+                            >
+                                {backEvent ? (
+                                    <>
+                                        {eventEmoji(backEvent)}
+                                        {/* Liten bakåt-pil så det syns att brickan tar en tillbaka. */}
+                                        <span aria-hidden className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
+                                            <ArrowLeft size={10} />
+                                        </span>
+                                    </>
+                                ) : (
+                                    <ArrowLeft size={18} className="text-[#006AA7]" />
+                                )}
+                            </button>
+                            {/* Lagrad blå Nästa-pill — gå vidare till nästa event.
+                                Zoom-knapparna är borttagna; pillen är bara Nästa nu. */}
+                            <button
+                                type="button"
                                 onClick={handleNextOnly}
                                 aria-label="Nästa event"
-                                className="group relative flex-1 min-w-0 h-[38px] box-border px-6 rounded-full text-white font-black tracking-wide
-                                    bg-gradient-to-b from-[#1b8fd1] to-[#006AA7]
-                                    ring-1 ring-white/40
-                                    shadow-[0_4px_0_0_#004e7a,0_9px_20px_rgba(0,106,167,0.5)]
-                                    hover:from-[#2099db] hover:to-[#0073b5] hover:shadow-[0_4px_0_0_#004e7a,0_12px_26px_rgba(0,106,167,0.6)]
-                                    active:translate-y-[3px] active:shadow-[0_1px_0_0_#004e7a,0_3px_9px_rgba(0,106,167,0.45)]
-                                    transition-all duration-150 flex items-center justify-center gap-2 overflow-hidden"
+                                className="group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-white font-black tracking-wide
+                                    bg-[#006AA7]/25 backdrop-blur-md
+                                    ring-1 ring-white/60
+                                    shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_6px_18px_rgba(0,0,0,0.28)]
+                                    [text-shadow:0_1px_3px_rgba(0,30,55,0.65)]
+                                    [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)]
+                                    flex items-center justify-center gap-2 px-3 overflow-hidden
+                                    hover:bg-[#006AA7]/35 active:bg-[#006AA7]/45 transition-colors"
                             >
-                                {/* Övre glansremsa — ger knappen en glansig, lagrad lyster */}
-                                <span aria-hidden className="pointer-events-none absolute inset-x-1 top-px h-1/2 rounded-full bg-gradient-to-b from-white/40 to-transparent" />
-                                <span className="relative">Nästa</span>
-                                {/* Pilen sitter i en egen liten bricka ovanpå knappen (lager-känsla) */}
-                                <span aria-hidden className="relative flex items-center justify-center w-6 h-6 rounded-full bg-white/25 ring-1 ring-white/30 shadow-inner transition-transform group-hover:translate-x-0.5">
+                                {/* Övre glansremsa — ger glaset en lagrad, glansig lyster */}
+                                <span aria-hidden className="pointer-events-none absolute inset-x-1 top-px h-1/2 rounded-full bg-gradient-to-b from-white/35 to-transparent z-10" />
+                                <span className="relative z-20">Nästa</span>
+                                {/* Pilen i en egen liten bricka (lager-känsla). */}
+                                <span aria-hidden className="relative z-20 flex items-center justify-center w-6 h-6 rounded-full bg-white/25 ring-1 ring-white/30 shadow-inner transition-transform group-hover:translate-x-0.5">
                                     <ArrowRight size={16} />
                                 </span>
                             </button>

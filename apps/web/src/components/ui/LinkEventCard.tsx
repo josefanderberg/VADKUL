@@ -2,6 +2,7 @@ import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation,
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { feedbackService } from '../../services/feedbackService';
@@ -214,6 +215,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // "30kr"/"160:-"/"40 SEK" → "X kr"; rena siffror/intervall får "kr" påsatt.
     const priceLabel = normalizePriceLabel(linkEvent.price);
 
+    // Eventets emoji (samma logik som kartnålen/EventCard): per-event-emoji, annars
+    // kategori-fallback. Visas i början av titeln.
+    const catKey = (linkEvent.category && linkEvent.category in EVENT_CATEGORIES ? linkEvent.category : 'other') as EventCategoryType;
+    const titleEmoji = linkEvent.emoji || (EVENT_CATEGORIES[catKey]?.emoji ?? '🎫');
+
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
             {/* 1. Header (Always visible) */}
@@ -244,23 +250,33 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     {/* Fixed 2-line height — single-line titles center vertically */}
                     <div className="flex-1 min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden">
                         <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors pr-10 line-clamp-2 w-full">
-                            {linkEvent.title}
+                            <span aria-hidden className="mr-2 text-[1.5em] leading-none align-middle">{titleEmoji}</span>{linkEvent.title}
                         </h3>
                     </div>
-                    {/* Titelraden hålls ren — bara den primära ANMÄL-knappen.
-                        Spara/Hitta hit/Dela ligger samlade under den stora
-                        anmälningsknappen längre ner i kortet. Användarskapade
-                        event saknar extern anmälningssida (ingen url). */}
-                    {linkEvent.url && (
-                        <div className="shrink-0">
+                    {/* Hjärta för att spara samt primär ANMÄL-knapp till höger om titeln. */}
+                    <div className="shrink-0 flex items-center gap-2">
+                        {onToggleSave && (
+                            <button
+                                onClick={handleToggleSave}
+                                aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+                                className={`w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
+                                    saved
+                                        ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50'
+                                        : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
+                                }`}
+                            >
+                                <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
+                            </button>
+                        )}
+                        {linkEvent.url && (
                             <button
                                 onClick={handleVisitSite}
-                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 py-1.5 rounded shadow-lg"
+                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 rounded shadow-lg h-8 flex items-center justify-center"
                             >
                                 ANMÄL
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-x-4 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden">

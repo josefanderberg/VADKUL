@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
-import { REVIRET_HUE_CHOICES } from '@/lib/reviret';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ShieldCheck, Camera } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProfilePanelProps {
@@ -20,9 +19,10 @@ interface ProfilePanelProps {
     savedCount: number;
     /** Byt till sparat-panelen (stänger profilen). */
     onOpenSaved: () => void;
-    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid). */
+    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid).
+     *  Väljaren är gömd just nu, men propsen behålls (page → karta-färg). */
     reviretHue: number | null;
-    /** Anropas när spelaren väljer en ny färg (page sparar + speglar). */
+    /** Anropas när spelaren väljer en ny färg (page sparar + speglar). Gömd just nu. */
     onChangeHue: (hue: number) => void;
 }
 
@@ -31,13 +31,14 @@ interface ProfilePanelProps {
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved, reviretHue, onChangeHue }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
     const [savingName, setSavingName] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +66,7 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
 
     // Nollställ delstate när panelen stängs/öppnas så inget "fastnar".
     useEffect(() => {
-        if (!open) { setEditingName(false); setConfirmingDelete(false); }
+        if (!open) { setEditingName(false); setConfirmingDelete(false); setSettingsOpen(false); }
     }, [open]);
 
     if (!open || !user) return null;
@@ -233,33 +234,8 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             <ChevronRight size={15} className="text-slate-400 shrink-0" />
                         </button>
 
-                        {/* Min spelfärg (Reviret) — färgen på ditt revir + på topplistan */}
-                        <div className="border-t border-slate-100 dark:border-slate-800 px-4 pt-3 pb-3.5">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Min färg</span>
-                            <p className="mt-0.5 mb-2.5 text-xs text-slate-400 font-semibold">Färgen på ditt revir och din rad i topplistan.</p>
-                            <div className="flex flex-wrap gap-2">
-                                {REVIRET_HUE_CHOICES.map((h) => {
-                                    const selected = reviretHue === h;
-                                    return (
-                                        <button
-                                            key={h}
-                                            type="button"
-                                            onClick={() => onChangeHue(h)}
-                                            aria-label={`Välj färg ${h}`}
-                                            aria-pressed={selected}
-                                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform ${
-                                                selected
-                                                    ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-800 dark:ring-white scale-110'
-                                                    : 'hover:scale-105'
-                                            }`}
-                                            style={{ background: `hsl(${h}, 72%, 52%)` }}
-                                        >
-                                            {selected && <Check size={14} className="text-white" strokeWidth={3} />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        {/* Min spelfärg (Reviret) är gömd för tillfället — färg-plumbningen
+                            finns kvar (page → karta), men väljaren visas inte här just nu. */}
 
                         {/* Mina event */}
                         <div className="border-t border-slate-100 dark:border-slate-800">
@@ -296,55 +272,76 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             )}
                         </div>
 
-                        {/* Konto-åtgärder */}
+                        {/* Inställningar — utfällbar mapp: klick visar de 3 alternativen */}
                         <div className="border-t border-slate-100 dark:border-slate-800">
-                            <button type="button" onClick={handleResetPassword} className={actionRow}>
-                                <KeyRound size={16} className="text-[#006AA7] shrink-0" />
-                                <span className="flex-1">Byt lösenord</span>
-                                <span className="text-[10px] font-bold text-slate-400">via e-post</span>
+                            <button
+                                type="button"
+                                onClick={() => setSettingsOpen(o => !o)}
+                                aria-expanded={settingsOpen}
+                                className={actionRow}
+                            >
+                                <Settings size={16} className="text-slate-500 shrink-0" />
+                                <span className="flex-1">Inställningar</span>
+                                <ChevronDown
+                                    size={16}
+                                    className={`text-slate-400 shrink-0 transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`}
+                                />
                             </button>
-                            <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
-                                <ShieldCheck size={16} className="text-slate-500 shrink-0" />
-                                <span className="flex-1">Integritet</span>
-                                <ChevronRight size={15} className="text-slate-400 shrink-0" />
-                            </a>
+                            {settingsOpen && (
+                                <div className="bg-slate-50/70 dark:bg-slate-800/30">
+                                    <button type="button" onClick={handleResetPassword} className={actionRow}>
+                                        <KeyRound size={16} className="text-[#006AA7] shrink-0" />
+                                        <span className="flex-1">Byt lösenord</span>
+                                        <span className="text-[10px] font-bold text-slate-400">via e-post</span>
+                                    </button>
+                                    <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
+                                        <ShieldCheck size={16} className="text-slate-500 shrink-0" />
+                                        <span className="flex-1">Integritet</span>
+                                        <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                                    </a>
+                                    {confirmingDelete ? (
+                                        <div className="px-4 py-3 bg-red-50 dark:bg-red-500/10 flex flex-col gap-2">
+                                            <p className="text-xs font-bold text-red-600">
+                                                Säker? Kontot och din profil raderas permanent.
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDeleteAccount}
+                                                    disabled={deleting}
+                                                    className="px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-black disabled:opacity-50 transition-colors"
+                                                >
+                                                    {deleting ? 'Raderar…' : 'Ja, radera kontot'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setConfirmingDelete(false)}
+                                                    className="px-3.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 text-xs font-bold transition-colors"
+                                                >
+                                                    Avbryt
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmingDelete(true)}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-left"
+                                        >
+                                            <Trash2 size={16} className="shrink-0" />
+                                            <span className="flex-1">Radera konto</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Logga ut — under mappen, egen rad */}
+                        <div className="border-t border-slate-100 dark:border-slate-800">
                             <button type="button" onClick={handleLogout} className={actionRow}>
                                 <LogOut size={16} className="text-slate-500 shrink-0" />
                                 <span className="flex-1">Logga ut</span>
                             </button>
-                            {confirmingDelete ? (
-                                <div className="px-4 py-3 bg-red-50 dark:bg-red-500/10 flex flex-col gap-2">
-                                    <p className="text-xs font-bold text-red-600">
-                                        Säker? Kontot och din profil raderas permanent.
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleDeleteAccount}
-                                            disabled={deleting}
-                                            className="px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-black disabled:opacity-50 transition-colors"
-                                        >
-                                            {deleting ? 'Raderar…' : 'Ja, radera kontot'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setConfirmingDelete(false)}
-                                            className="px-3.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 text-xs font-bold transition-colors"
-                                        >
-                                            Avbryt
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmingDelete(true)}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-left"
-                                >
-                                    <Trash2 size={16} className="shrink-0" />
-                                    <span className="flex-1">Radera konto</span>
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>

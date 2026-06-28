@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "cd /Users/ai/Repos/VADKUL/apps/web && exec /Users/ai/Repos/VADKUL/node_modules/.bin/next dev"],
+      "runtimeArgs": ["-c", "cd /Users/josefanderberg/source/VADKUL/apps/web && exec /Users/josefanderberg/source/VADKUL/node_modules/.bin/next dev"],
       "port": 3000,
       "autoPort": true
     }

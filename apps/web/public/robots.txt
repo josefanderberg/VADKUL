@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/admin/
+
+Host: https://vadkul.se
+Sitemap: https://vadkul.se/sitemap.xml

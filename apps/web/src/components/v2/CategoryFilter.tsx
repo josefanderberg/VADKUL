@@ -102,56 +102,64 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
     };
 
     return (
-        <>
-            {/* Rund knapp i högerkolumnen (under sök/+). Badge = antal aktiva filter. */}
-            <div className="fixed top-[72px] right-4 z-[1151] pointer-events-auto">
-                <button
-                    ref={btnRef}
-                    type="button"
-                    onClick={() => setOpen(o => !o)}
-                    aria-expanded={open}
-                    aria-label="Filtrera på kategori"
-                    className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
-                >
-                    <Layers size={20} className="text-slate-700" />
-                    {selected.size > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
-                            {selected.size}
-                        </span>
-                    )}
-                </button>
-            </div>
-
-            {/* Panel — samma stil som funktions-väskan, fast i högerkolumnen. */}
-            {open && (
-                <div
-                    ref={panelRef}
-                    className="fixed top-[118px] right-3 z-[1150] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
-                >
-                    <div className="px-2.5 pt-1 pb-1.5 flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            Kategorier
-                        </span>
+        // Samma yttre layout som FloatingNavbar (top-6 + max-w-[1400px] mx-auto + px-4)
+        // → knappen följer navbarens HÖGERKANT i stället för att driva ut till
+        // viewportkanten på breda skärmar. Tom container = pointer-events-none.
+        <div className="fixed top-6 left-0 right-0 px-4 z-[1150] pointer-events-none">
+            <div className="relative max-w-[1400px] mx-auto">
+                {/* Högerkolumnen (under sök/+ som standard). På största brytpunkten (2xl)
+                    HOPPAR den upp på navbarens rad, längst åt höger (navbaren får
+                    2xl:pr för att lämna plats — se FloatingNavbar). */}
+                <div className="absolute right-0 top-[46px] 2xl:top-0 pointer-events-auto">
+                    {/* Rund knapp. Badge = antal aktiva filter. */}
+                    <button
+                        ref={btnRef}
+                        type="button"
+                        onClick={() => setOpen(o => !o)}
+                        aria-expanded={open}
+                        aria-label="Filtrera på kategori"
+                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                    >
+                        <Layers size={20} className="text-slate-700" />
                         {selected.size > 0 && (
-                            <button
-                                type="button"
-                                onClick={onClear}
-                                className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#006AA7] hover:text-[#005590] px-1.5 py-0.5"
-                            >
-                                <X size={10} strokeWidth={3} /> Visa alla
-                            </button>
+                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
+                                {selected.size}
+                            </span>
                         )}
-                    </div>
-                    {/* Opt-in-källor överst — avgränsade från de vanliga kategorierna. */}
-                    {visibleSpecial.length > 0 && (
-                        <>
-                            {visibleSpecial.map(renderRow)}
-                            <div className="mx-2 my-1 border-t border-slate-200/70" aria-hidden />
-                        </>
+                    </button>
+
+                    {/* Panel — under knappen, höger-justerad. */}
+                    {open && (
+                        <div
+                            ref={panelRef}
+                            className="absolute right-0 top-[52px] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+                        >
+                            <div className="px-2.5 pt-1 pb-1.5 flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Kategorier
+                                </span>
+                                {selected.size > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={onClear}
+                                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#006AA7] hover:text-[#005590] px-1.5 py-0.5"
+                                    >
+                                        <X size={10} strokeWidth={3} /> Visa alla
+                                    </button>
+                                )}
+                            </div>
+                            {/* Opt-in-källor överst — avgränsade från de vanliga kategorierna. */}
+                            {visibleSpecial.length > 0 && (
+                                <>
+                                    {visibleSpecial.map(renderRow)}
+                                    <div className="mx-2 my-1 border-t border-slate-200/70" aria-hidden />
+                                </>
+                            )}
+                            {visible.map((id) => renderRow(EVENT_CATEGORIES[id]))}
+                        </div>
                     )}
-                    {visible.map((id) => renderRow(EVENT_CATEGORIES[id]))}
                 </div>
-            )}
-        </>
+            </div>
+        </div>
     );
 }

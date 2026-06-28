@@ -240,6 +240,9 @@ export const V2_MAP_MARKER_STYLES = `
                 .map-state-needle .v2-custom-marker .pin-element {
                     display: block;
                 }
+                .map-state-needle .v2-custom-marker.hide-during-zoom {
+                    display: none !important;
+                }
 
                 /* Fäll flipper-studsarna till billiga små prickar under zoom för att undvika lag. */
                 .map-state-needle .v2-custom-marker:has(.pinball-marker) {

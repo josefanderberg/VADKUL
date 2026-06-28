@@ -105,6 +105,9 @@ export default function HomePage() {
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
+    // Bumpas vid intern kort-navigering (Nästa/Föregående/svep) → kameran står kvar
+    // på kartan, vi flyger inte till eventet man bläddrar fram till.
+    const [navSelectNonce, setNavSelectNonce] = useState(0);
     // Create-event-flöde: 'idle' = inget pågår, 'placing' = center-pinne synlig på kartan,
     // 'editing' = modal öppen med formulär. (Drop-animationen körs internt i FloatingNavbar.)
     const [creationMode, setCreationMode] = useState<'idle' | 'placing' | 'editing'>('idle');
@@ -188,6 +191,12 @@ export default function HomePage() {
     // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
     // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
     const [recenterTrigger, setRecenterTrigger] = useState(0);
+    // Zoom-knappen i Nästa-pillen bumpar denna → V2Map zoomar in på det valda
+    // eventet (klicket gör samtidigt "Nästa" i EventCard, så man landar inzoomad
+    // på nästa event).
+    const [zoomToEventTrigger, setZoomToEventTrigger] = useState(0);
+    // Zooma ut-knappen i Nästa-pillen — bumpar denna trigger.
+    const [zoomOutTrigger, setZoomOutTrigger] = useState(0);
 
     // Shop-flaggor från V2Map. När användaren avaktiverar "Sol" eller "Fokus" i
     // funktioner-shoppen försvinner respektive knapp ur EventCard (vi skickar
@@ -951,7 +960,10 @@ export default function HomePage() {
                 recallMainTrigger={recallMainTrigger}
                 recallSunTrigger={recallSunTrigger}
                 recenterTrigger={recenterTrigger}
+                zoomToEventTrigger={zoomToEventTrigger}
+                zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}
+                navSelectNonce={navSelectNonce}
                 onCloudVisibilityChange={setCloudOffScreen}
                 onMainRecalledChange={setMainRecalled}
                 onFocusToolHint={setFocusToolBlink}
@@ -1144,6 +1156,9 @@ export default function HomePage() {
                 savedEventIds={savedEventIds}
                 onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
+                onNavigate={() => setNavSelectNonce(n => n + 1)}
+                onZoomToSelected={() => setZoomToEventTrigger(t => t + 1)}
+                onZoomOut={() => setZoomOutTrigger(t => t + 1)}
                 pinShotHits={pinShotHits}
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
