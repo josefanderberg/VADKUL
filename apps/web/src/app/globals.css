@@ -230,6 +230,117 @@
   animation: welcome-cloud-drift linear infinite;
 }
 
+/* === Welcome overlay v3 ("galet bra"-passet) === */
+
+/* Logga: bokstäver poppar in en och en med studs (delay sätts inline) */
+@keyframes welcome-letter-pop {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.6) rotate(-8deg); }
+  60%  { opacity: 1; transform: translateY(-4px) scale(1.12) rotate(3deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+.welcome-letter {
+  opacity: 0;
+  animation: welcome-letter-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Gult streck under loggan som ritas ut vänster→höger */
+@keyframes welcome-underline-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.welcome-underline {
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: welcome-underline-draw 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Punktrader + knappar stiger in i kaskad */
+@keyframes welcome-row-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.welcome-row {
+  opacity: 0;
+  animation: welcome-row-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Sol som andas med mjuk gul glöd */
+@keyframes welcome-sun-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 26px 8px rgba(254, 204, 2, 0.45); }
+  50%      { transform: scale(1.07); box-shadow: 0 0 40px 14px rgba(254, 204, 2, 0.65); }
+}
+.welcome-sun {
+  animation: welcome-sun-pulse 4.5s ease-in-out infinite;
+}
+
+/* Live-prick vid "börjar inom 1 h" — pulserande ring som en sändningsindikator */
+@keyframes welcome-live-ping {
+  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.welcome-live-dot {
+  animation: welcome-live-ping 1.6s ease-out infinite;
+}
+
+/* Ljusstråk som sveper över primärknappen med jämna mellanrum */
+@keyframes welcome-cta-shimmer {
+  0%       { transform: translateX(-160%) skewX(-18deg); }
+  55%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+.welcome-cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: welcome-cta-shimmer 3.2s ease-in-out 1.4s infinite;
+  pointer-events: none;
+}
+
+/* Exit: kortet zoomar "ner i kartan" medan backdropen tonar bort.
+   Längden styrs av --welcome-exit-ms som komponenten sätter (håller JS-timeouten
+   och animationen i synk från ETT ställe: EXIT_MS i WelcomeOverlay.tsx). */
+@keyframes welcome-card-zoom-out {
+  to { opacity: 0; transform: scale(1.08); filter: blur(3px); }
+}
+.welcome-card-out {
+  animation: welcome-card-zoom-out var(--welcome-exit-ms, 300ms) cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes welcome-fade-out {
+  to { opacity: 0; }
+}
+.welcome-backdrop-out .welcome-backdrop {
+  animation: welcome-fade-out var(--welcome-exit-ms, 300ms) ease-out forwards;
+}
+
+/* Återbesökare (.welcome-fast): hela intro-koreografin hoppas över — allt står
+   framme direkt. Ambient-animationerna (moln, sol, shimmer) rullar som vanligt. */
+.welcome-fast .welcome-letter,
+.welcome-fast .welcome-underline,
+.welcome-fast .welcome-row {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-letter, .welcome-underline, .welcome-row {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .welcome-sun, .welcome-live-dot, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float {
+    animation: none;
+  }
+  /* Exit blir en ren uttoning — ingen zoom/blur. */
+  .welcome-card-out {
+    animation-name: welcome-fade-out;
+  }
+}
+
 
 @keyframes category-ticker-left {
   from { transform: translateX(0); }
