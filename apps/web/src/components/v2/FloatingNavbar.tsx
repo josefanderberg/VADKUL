@@ -143,7 +143,7 @@ export default function FloatingNavbar({
                 {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
                     höger åt kategorifiltret som då hoppar upp på den här raden
                     (CategoryFilter, samma max-w-[1400px]-container). */}
-                <div className="flex items-center gap-2 w-full 2xl:pr-[56px]">
+                <div className="relative flex items-center gap-2 w-full 2xl:pr-[56px]">
 
                     {/* Vänster: profil + hjärtat (sparade) direkt höger om profilen.
                         Väskan/funktioner ligger under, renderade i V2Map. */}
@@ -186,21 +186,18 @@ export default function FloatingNavbar({
                         )}
                     </div>
 
-                    {/* Höger: expanderbar sök + skapa event. Containern är
-                        pointer-events-none (den är flex-1 + justify-end → dess TOMMA
-                        vänsterdel täckte kartbandet under navbaren och slukade klick).
-                        Varje faktisk kontroll nedan sätter pointer-events-auto själv. */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-none">
-                        {/* Dagväljaren — direkt jämte skapa event */}
-                        {onDayRangeChange && (
-                            <div className="relative shrink-0 pointer-events-auto">
+                    {/* Dagväljaren — CENTRERAD högst upp på skärmen (absolut, så den
+                        ligger mitt i vyn oavsett knapparna till vänster/höger). */}
+                    {onDayRangeChange && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-10">
+                            <div className="relative">
                                 <button
                                     ref={dayChipRef}
                                     type="button"
                                     onClick={() => setDayPickerOpen(o => !o)}
                                     aria-expanded={dayPickerOpen}
                                     aria-label="Välj dag eller period"
-                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border pointer-events-auto"
+                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
                                 >
                                     <Calendar size={15} className="text-[#006AA7] shrink-0" />
                                     <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
@@ -219,8 +216,14 @@ export default function FloatingNavbar({
                                     />
                                 )}
                             </div>
-                        )}
+                        </div>
+                    )}
 
+                    {/* Höger: expanderbar sök + skapa event. Containern är
+                        pointer-events-none (den är flex-1 + justify-end → dess TOMMA
+                        vänsterdel täckte kartbandet under navbaren och slukade klick).
+                        Varje faktisk kontroll nedan sätter pointer-events-auto själv. */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-none">
                         {/* Sök */}
                         {searchOpen ? (
                             <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2 pointer-events-auto">

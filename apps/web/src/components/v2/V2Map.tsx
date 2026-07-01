@@ -283,16 +283,18 @@ type PlainFeature = {
 };
 
 // ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
-// Vid laddning börjar GL-brickorna dolda. Bara REVEAL_SEED_COUNT syns från start
-// (närmast kartmitten). Ingen hover längre — man TRYCKER på kartan: de
+// Vid laddning FÖRHANDSVISAS ALLA event (alla GL-brickor tända). Första trycket på
+// kartan kollapsar till de N närmast trycket. Ingen hover längre — man TRYCKER: de
 // REVEAL_NEAREST_COUNT närmaste brickorna kring trycket avslöjas och ligger KVAR
 // (panorering byter inte urvalet) tills man trycker på nytt. Vid ett nytt tryck
 // BYTS urvalet ut med en kugghjuls-effekt (se nedan). Ingen queryRenderedFeatures
 // (den var det tunga som laggade): vi räknar avståndet själva (O(antal), kvadrerat
 // + cos-lat-skalad longitud) och sätter feature-state direkt via nyckeln
 // (promoteId 'key'). Aldrig fler än ~N synliga samtidigt = ingen lagg.
-const REVEAL_NEAREST_COUNT = 35;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 35;         // antal synliga från start / nära min-position (tills man tryckt på kartan)
+const REVEAL_NEAREST_COUNT = 50;      // antal markörer kring ett tap (de N närmaste)
+const REVEAL_SEED_COUNT = 50;         // antal synliga efter första trycket när inget tap-ankare finns
+// Vid start FÖRHANDSVISAS ALLA event (previewAllUntilTapRef). Första trycket på kartan
+// kollapsar till de N närmast trycket — ingen tidsinställd blink längre.
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
@@ -306,9 +308,9 @@ const REVEAL_SEED_COUNT = 35;         // antal synliga från start / nära min-p
 const REVEAL_STREAM_MS = 50;        // restid (ms) för KORT hopp (samma trakt) — lägre = snabbare
 const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärmen) — högre = långsammare
 // Antal samtidigt TÄNDA reveal-markörer ska normalt ligga ≤ seed (50) / ≤ N-kring-tap
-// (30). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
+// (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
-const REVEAL_VISIBLE_WARN = 50;
+const REVEAL_VISIBLE_WARN = 80;
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -583,6 +585,12 @@ const PIN_GEO_MODE: boolean = true;
 const SWEDEN_BOUNDS: [[number, number], [number, number]] = [[10.0, 55.0], [24.6, 69.2]];
 const SWEDEN_PAN_LIMIT: [[number, number], [number, number]] = [[2.0, 52.0], [33.0, 71.5]];
 const SWEDEN_CENTER: [number, number] = [15.2, 62.4];
+// Startvy: centrerad över mellersta Sverige (≈ Dalarna/Gävle) + mer inzoomad än
+// hela landet, så man ser längre UPP i landet direkt (inte bara söder). (GPS flyger
+// sedan dit man faktiskt står när den hunnit fram.) Tunbart: sänk lat = mer söderut,
+// höj lat = längre upp, höj zoom = mer inzoomat.
+const START_CENTER: [number, number] = [14.8, 59.0];
+const START_ZOOM = 5.2;
 // Träffradie i SKÄRM-px (DOM-markörer är px-konstanta över zoom → naturligt
 // zoom-oberoende). ~halva brickan (44px) + bollens radie.
 const PIN_HIT_RADIUS_PX = 36;
@@ -2012,6 +2020,10 @@ export default function V2Map({
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
     const revealCleanupRef = useRef<null | (() => void)>(null);
+    // Förhandsvisning vid start: ALLA event syns på kartan från början (ingen
+    // tidsinställd blink). Vid FÖRSTA trycket på kartan kollapsar det till normal-
+    // läget = de N närmast trycket, resten tonas bort. Sätts false vid det trycket.
+    const previewAllUntilTapRef = useRef(true);
     // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
     // / map-load utan att hamna i temporal-dead-zone.
     const ensureRevealPumpRef = useRef<() => void>(() => {});
@@ -2414,13 +2426,20 @@ export default function V2Map({
         const coords = new Map<string, [number, number]>();
         for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
         const allKeys = [...coords.keys()];
-        if (origin && allKeys.length > count) {
-            const cl = origin.lng, ca = origin.lat;
-            const kx = Math.cos(ca * Math.PI / 180);
-            const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
-            allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
+        // FÖRHANDSVISNING (före första trycket): visa ALLA event, inte bara de N närmast.
+        // Gäller bara i vila (inget tap-ankare); ett tap kollapsar till normal-läget.
+        let newSeed: Set<string>;
+        if (previewAllUntilTapRef.current && !anchor) {
+            newSeed = new Set(allKeys);
+        } else {
+            if (origin && allKeys.length > count) {
+                const cl = origin.lng, ca = origin.lat;
+                const kx = Math.cos(ca * Math.PI / 180);
+                const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
+                allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
+            }
+            newSeed = new Set(allKeys.slice(0, count));
         }
-        const newSeed = new Set(allKeys.slice(0, count));
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
         if (map && map.getLayer('plain-events')) {
             revealSeedRef.current.forEach(k => {
@@ -2614,9 +2633,11 @@ export default function V2Map({
             // matchar themeparken → bytet syns inte som ett hopp (jfr. tidigare
             // satellit-bootstrap som blixtrade förbi en satellitvy).
             style: BOOTSTRAP_STYLE,
-            // Startvy: centrerad mitt i Sverige med lägre zoom så hela landet syns direkt.
-            center: SWEDEN_CENTER,
-            zoom: 4.2,
+            // Startvy: södra Sverige (Skåne syns), mer inzoomad — se START_CENTER/_ZOOM.
+            // Vid start finns ändå inga avslöjade event, så en tightare sydlig vy känns
+            // mindre tom och landar nära där de flesta användarna faktiskt är.
+            center: START_CENTER,
+            zoom: START_ZOOM,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
@@ -2794,6 +2815,17 @@ export default function V2Map({
             // I gissningsläge ska ett klick på tom karta inte stänga mål-kortet
             // (det skulle avbryta rundan av misstag).
             if (gameModeRef.current) return;
+            // FÖRHANDSVISNING → NORMAL: vid FÖRSTA trycket på kartan slutar vi visa
+            // ALLA event och kollapsar till de N närmast trycket (resten tonas bort).
+            // Ankaret sätts till trycket så recompute (och ev. startRevealTravel nedan,
+            // vars from == to då → direkt-settle) ger samma N-uppsättning utan dubbel
+            // animation. Ett tryck på en SYNLIG bricka (nu = valfri) väljer ändå eventet
+            // via lager-handlern; mängden krymper till de närmaste.
+            if (previewAllUntilTapRef.current) {
+                previewAllUntilTapRef.current = false;
+                revealAnchorPtRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+                recomputeRevealSeedRef.current();
+            }
             // Klick på en SYNLIG GL-markör hanteras av lager-handlern nedan (väljer
             // eventet) — avmarkera/avslöja då inte. En DOLD bricka (icon-opacity 0)
             // är fortfarande träffbar i queryRenderedFeatures men ska INTE gå att
@@ -3035,7 +3067,8 @@ export default function V2Map({
             // "~10 närmast mitten" så fort kartan rörde sig — och moln-driften fyrar
             // moveend hela tiden → de 30 man klickat fram försvann och ersattes av ~10
             // nära mitten/min-position. Borttaget: panorering/drift ändrar inte urvalet.
-            // Initialt seed (innan man tryckt): de N närmast min-position/kartmitt.
+            // Initialt: FÖRHANDSVISA alla event (previewAllUntilTapRef=true → seed =
+            // alla nycklar). Vid första trycket kollapsar det till de N närmast trycket.
             recomputeRevealSeedRef.current();
         });
 
@@ -3967,7 +4000,9 @@ export default function V2Map({
                 const tp3 = map.project(target);
                 const dx3 = tp3.x - bp3.x, dy3 = tp3.y - bp3.y;
                 const dist3 = Math.max(1, Math.hypot(dx3, dy3));
-                const SPEED = 0.65; // px/ms startfart
+                // Skala startfarten linjärt med avståndet till målet så att kortare skott rör sig långsammare.
+                // dist3 * 0.0015 + 0.05 matchar fysikloopens stoppgräns på 0.05 och dämpning per frame. Cappa på 0.65.
+                const SPEED = Math.min(0.65, dist3 * 0.0015 + 0.05);
                 startGeoPhysLoop((dx3 / dist3) * SPEED, (dy3 / dist3) * SPEED);
             };
             pinGeoTravelRef.current = travelTo;
@@ -6436,8 +6471,14 @@ export default function V2Map({
                     zIndex={mainCloudZ}
                 />
             )}
-            {/* Seriös informationsruta (ersätter startmolnet): dagens nyckeltal. */}
-            {showCloud && cloudStats && cloudStats.isToday && eventsLoaded && (
+            {/* Seriös informationsruta (ersätter startmolnet): dagens nyckeltal.
+                Visas FÖRST när riktig data finns (today > 0). eventsLoaded flippar
+                redan på första icke-tomma Firestore-lagret, men laddningen är
+                progressiv (destinationer → kort → tider) → utan tider blir
+                today=0 och det adaptiva "inom N timmar"-fönstret skenar (t.ex.
+                "inom 401 timmar: 1"). Kräv today > 0 så rutan aldrig poppar med
+                halvladdad/degenererad data. */}
+            {showCloud && cloudStats && cloudStats.isToday && eventsLoaded && cloudStats.today > 0 && (
                 <WelcomeBox
                     today={cloudStats.today}
                     withinHour={cloudStats.withinHour}

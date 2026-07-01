@@ -434,10 +434,24 @@ export const linkEventService = {
     },
 
     // Polling-baserad realtidslyssnare för SQLite (ersätter Firestore onSnapshot)
-    subscribeToAll(onlyFuture: boolean, callback: (events: LinkEvent[]) => void): () => void {
+    subscribeToAll(
+        onlyFuture: boolean,
+        callback: (events: LinkEvent[]) => void,
+        // Anropas EN gång när den första aggregat-laddningen är klar (destinations-
+        // lagret hämtat, oavsett om det var tomt eller ej). Ger UI:t ett DEFINITIVT
+        // "laddat"-besked i stället för att gissa med timers → "Inga event den här
+        // dagen" kan aldrig blinka förbi innan datan faktiskt hämtats.
+        onInitialLoad?: () => void,
+    ): () => void {
         let active = true;
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
+        let initialLoadSignaled = false;
+        const signalInitialLoad = () => {
+            if (initialLoadSignaled || !active) return;
+            initialLoadSignaled = true;
+            onInitialLoad?.();
+        };
 
         // Slå ihop bas-lager + användarevent och skicka till UI:t.
         function emit() {
@@ -491,6 +505,11 @@ export const linkEventService = {
                         emit();
                     });
                 }
+            } finally {
+                // Destinations-lagret (steg 1) är hämtat här — det innehåller ALLA
+                // event med tider, så dagens lista är komplett. Signalera "laddat"
+                // (en gång) även om lagret var tomt (äkta tom dag/databas).
+                signalInitialLoad();
             }
         }
 

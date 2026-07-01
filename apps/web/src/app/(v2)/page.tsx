@@ -287,16 +287,17 @@ export default function HomePage() {
             }
             const sorted = [...fetched, ...extras].sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
-            // Laddningen är progressiv (destinationer → kort → beskrivningar) och
-            // första lagret kan komma tomt — räkna bara svar MED data som
-            // "laddat", annars blinkar "Inga event den här dagen" förbi innan
-            // riktiga datan hunnit fram.
-            if (fetched.length > 0) setEventsLoaded(true);
+        }, () => {
+            // DEFINITIVT "laddat"-besked: första aggregat-laddningen är klar (datan
+            // finns, eller så är det en äkta tom dag). Först nu får popupar visas —
+            // aldrig medan datan fortfarande hämtas (då blinkade "Inga event den här
+            // dagen" / WelcomeBox förbi med 0/halvladdad data).
+            setEventsLoaded(true);
         });
-        // En äkta tom databas är ändå möjlig: efter 6 s utan data räknas det som
-        // laddat så tom-dagen-meddelandet (och molnet) inte väntar för evigt.
-        const emptyFallback = setTimeout(() => setEventsLoaded(true), 6000);
-        return () => { unsubscribe(); clearTimeout(emptyFallback); };
+        // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
+        // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
+        const hangGuard = setTimeout(() => setEventsLoaded(true), 15000);
+        return () => { unsubscribe(); clearTimeout(hangGuard); };
     }, []);
 
     // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
