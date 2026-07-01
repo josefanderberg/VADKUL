@@ -187,7 +187,7 @@ export default function HomePage() {
             // DEFINITIVT "laddat"-besked: första aggregat-laddningen är klar (datan
             // finns, eller så är det en äkta tom dag). Först nu får popupar visas —
             // aldrig medan datan fortfarande hämtas (då blinkade "Inga event den här
-            // dagen" / WelcomeBox förbi med 0/halvladdad data).
+            // dagen" förbi med 0/halvladdad data).
             setEventsLoaded(true);
         });
         // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
