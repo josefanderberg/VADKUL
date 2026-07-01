@@ -20,11 +20,6 @@ interface ProfilePanelProps {
     savedCount: number;
     /** Byt till sparat-panelen (stänger profilen). */
     onOpenSaved: () => void;
-    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid).
-     *  Väljaren är gömd just nu, men propsen behålls (page → karta-färg). */
-    reviretHue: number | null;
-    /** Anropas när spelaren väljer en ny färg (page sparar + speglar). Gömd just nu. */
-    onChangeHue: (hue: number) => void;
 }
 
 /**
@@ -257,9 +252,6 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
                             <ChevronRight size={15} className="text-slate-400 shrink-0" />
                         </button>
-
-                        {/* Min spelfärg (Reviret) är gömd för tillfället — färg-plumbningen
-                            finns kvar (page → karta), men väljaren visas inte här just nu. */}
 
                         {/* Mina event */}
                         <div className="border-t border-slate-100 dark:border-slate-800">

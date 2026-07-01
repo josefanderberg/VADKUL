@@ -14,7 +14,6 @@ import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
-import { setMyCustomHue } from '@/lib/reviret';
 import { X, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
@@ -87,9 +86,6 @@ export default function HomePage() {
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
-    // Spelarens valda Reviret-färg (färgton 0–359), null = standard (per uid).
-    // Speglas till reviret-modulens cache så skriv-tjänsterna färgar rätt.
-    const [myReviretHue, setMyReviretHue] = useState<number | null>(null);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
@@ -137,51 +133,9 @@ export default function HomePage() {
     const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
     const openLogin = useCallback((reason?: string) => setAuthModal({ open: true, reason }), []);
 
-    // Sun-button effect: brightness flash on the map, followed by a fresh cloud
-    // popping up in the middle of the screen. Each click bumps a key so the
-    // flash overlay (and the resulting cloud) remount cleanly.
-    const [sunFlashKey, setSunFlashKey] = useState(0);
-    const [sunCloudKey, setSunCloudKey] = useState(0);
-    // Solknappen vinklar också kameran till en sidovy (3D-perspektiv). Ett
-    // nytt sol-klick lutar ALLTID (behåller lutningen om den redan lutar) —
-    // det fäller aldrig tillbaka till platt vy. Avlutning sker via tryck på
-    // sol-molnet (handleSunCloudTap) eller tilt-knappen (handleToggleTilt).
-    // Lutad kamera (3D-perspektiv) PÅ som standard, så 3D-terrängen syns från start.
-    const [mapTilted, setMapTilted] = useState(true);
-    // True när funktions-väskan (uppe till vänster i V2Map) är utfälld — då gömmer
-    // vi spel-knapparna (poäng + Hitta event) som delar vänsterkolumn.
+    // True när funktions-väskan (uppe till vänster i V2Map) är utfälld.
     const [funcBagOpen, setFuncBagOpen] = useState(false);
-    const handleSunClick = useCallback(() => {
-        // Flash and cloud both fire simultaneously — cloud appears at the same
-        // instant the screen pops white, then the light fades over the cloud.
-        setSunFlashKey(k => k + 1);
-        setSunCloudKey(k => k + 1);
-        // Luta alltid in 3D-vyn — om kameran redan lutar stannar den kvar lutad
-        // (inget tillbaka-fällande till platt vy när man skapar ett nytt moln).
-        setMapTilted(true);
-    }, []);
-    // Tryck på sol-molnet → fäll tillbaka kartans lutning till platt vy.
-    const handleSunCloudTap = useCallback(() => setMapTilted(false), []);
-    // Tilt-knappen (under satellit-knappen) togglar lutningen snabbt.
-    const handleToggleTilt = useCallback(() => setMapTilted(t => !t), []);
 
-    // Återkallningssystem för molnen: V2Map rapporterar off-screen, sidan
-    // visar en knapp jämte solen som triggar en räknare → V2Map snäpper
-    // molnet tillbaka in i bild.
-    const [cloudOffScreen, setCloudOffScreen] = useState<{ main: boolean; sun: boolean }>({ main: false, sun: false });
-    // True så fort molnet hämtats tillbaka via molnsymbolen minst en gång. Innan
-    // dess (efter första stängningen) blinkar molnsymbol-knappen som ett tips.
-    const [mainRecalled, setMainRecalled] = useState(false);
-    // Onboarding: när true ska Fokus/recenter-knappen på event-kortet blinka (ny funktion).
-    const [focusToolBlink, setFocusToolBlink] = useState(false);
-    const [recallMainTrigger, setRecallMainTrigger] = useState(0);
-    const [recallSunTrigger, setRecallSunTrigger] = useState(0);
-    const handleRecallMain = useCallback(() => setRecallMainTrigger(t => t + 1), []);
-    const handleRecallSun = useCallback(() => setRecallSunTrigger(t => t + 1), []);
-
-    // Recenter: kortets recenter-knapp bumpar en räknare → V2Map flyger kameran
-    // tillbaka till det valda eventet (vi går dit, eventet teleporteras inte hit).
-    const [recenterTrigger, setRecenterTrigger] = useState(0);
     // Zoom-knappen i Nästa-pillen bumpar denna → V2Map zoomar in på det valda
     // eventet (klicket gör samtidigt "Nästa" i EventCard, så man landar inzoomad
     // på nästa event).
@@ -208,29 +162,6 @@ export default function HomePage() {
     const handleActivateMultiplayer = useCallback(() => {
         openLogin('Skapa ett konto för att aktivera multiplayer');
     }, [openLogin]);
-
-    // Slangbella: aktiv när båda molnen ligger på varandra → fokusknappen fylls vit.
-    // "Engaged" sätts av fokusklicket när slangbellan är ready: då visas
-    // gummibanden alltid och nästa release av ett moln blir en slangbella-snärt.
-    // Auto-avarmar när snärten är klar (eller om molnen separeras igen).
-    const [slingshotActive, setSlingshotActive] = useState(false);
-    const [slingshotEngaged, setSlingshotEngaged] = useState(false);
-    const handleRecenter = useCallback(() => {
-        if (slingshotEngaged) {
-            // Klick medan armad → avbryt utan att avfyra. Avfyrning sker när man
-            // släpper ett moln efter att ha dragit isär dem.
-            setSlingshotEngaged(false);
-        } else if (slingshotActive) {
-            // Första klicket när banden är "ready" → arma + visa band.
-            setSlingshotEngaged(true);
-        } else {
-            // Vanligt recenter när slangbellan inte är aktiv.
-            setRecenterTrigger(t => t + 1);
-        }
-    }, [slingshotActive, slingshotEngaged]);
-    // Notera: engaged-läget får INTE auto-avarmas när molnen separeras — det är
-    // ju själva poängen att dra isär dem under armning. Disarming sker antingen
-    // genom klick på den armade knappen, eller automatiskt när V2Map avfyrar.
 
     // Användarskapade event ska ALLTID vara kvar på kartan. Pollen är progressiv:
     // stegen destinationer → kort → beskrivningar saknar användarevent (bara sista
@@ -342,29 +273,6 @@ export default function HomePage() {
         return () => { cancelled = true; };
     }, [user]);
 
-    // Inloggad: ladda spelarens valda Reviret-färg och spegla den till reviret-
-    // modulens cache (setMyCustomHue) så claimCells/saveDailyScore färgar rätt.
-    // Utloggad: nollställ → standardfärg per uid används.
-    useEffect(() => {
-        if (!user) { setMyReviretHue(null); setMyCustomHue(null); return; }
-        let cancelled = false;
-        (async () => {
-            const profile = await userService.getUserProfile(user.uid).catch(() => null);
-            if (cancelled) return;
-            const h = typeof profile?.reviretHue === 'number' ? profile.reviretHue : null;
-            setMyReviretHue(h);
-            setMyCustomHue(h);
-        })();
-        return () => { cancelled = true; };
-    }, [user]);
-
-    // Spelaren väljer en ny färg i profilen → uppdatera lokalt + cache direkt
-    // (optimistiskt) och spegla till Firestore (bäst-möjligt).
-    const handleChangeReviretHue = useCallback((hue: number) => {
-        setMyReviretHue(hue);
-        setMyCustomHue(hue);
-        if (user) userService.updateReviretHue(user.uid, hue).catch(() => { /* bäst-möjligt */ });
-    }, [user]);
     useEffect(() => {
         if (!user || !savedSyncReady.current) return;
         const t = setTimeout(() => {
@@ -665,49 +573,6 @@ export default function HomePage() {
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
     }, [dayOffset, dayRangeDays, selectedCategories]);
 
-    // Statistik som visas i molnet: dagens, veckans, och hur många som börjar
-    // inom 1 timme. Räknas alltid från hela event-listan, oberoende av dayOffset
-    // och söktermen. nowTick uppdateras varje minut så "börjar inom 1 timme" rör
-    // sig i takt med klockan.
-    const [nowTick, setNowTick] = useState(0);
-    useEffect(() => {
-        const id = setInterval(() => setNowTick(t => t + 1), 60_000);
-        return () => clearInterval(id);
-    }, []);
-    const cloudStats = useMemo(() => {
-        const now = new Date();
-        const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
-        const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
-        const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-        const endOfTomorrow = new Date(endOfToday.getTime() + 24 * 60 * 60 * 1000);
-        const endOfWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const HOUR = 60 * 60 * 1000;
-        let today = 0, week = 0, tomorrow = 0;
-        const futureMs: number[] = [];
-        for (const evt of events) {
-            if (!evt.time) continue;
-            const t = evt.time.getTime();
-            if (t >= startOfToday.getTime() && t <= endOfToday.getTime()) today++;
-            if (t >= startOfTomorrow.getTime() && t <= endOfTomorrow.getTime()) tomorrow++;
-            if (t >= startOfToday.getTime() && t < endOfWeek.getTime()) week++;
-            if (t > now.getTime()) futureMs.push(t - now.getTime());
-        }
-        // Adaptivt tidsfönster: börja på 1 timme och vidga (i hela timmar) tills
-        // minst 1 event ryms — annars hade det ofta stått "0 börjar inom 1 timme".
-        let withinHours = 1;
-        let withinHour = futureMs.filter(ms => ms <= HOUR).length;
-        if (withinHour === 0 && futureMs.length > 0) {
-            const nearestMs = futureMs.reduce((m, v) => Math.min(m, v), Infinity);
-            withinHours = Math.max(1, Math.ceil(nearestMs / HOUR));
-            const limit = withinHours * HOUR;
-            withinHour = futureMs.filter(ms => ms <= limit).length;
-        }
-        // WelcomeBox-rutan visas BARA på idag. När man bläddrat bort (annan dag
-        // eller intervall) döljs den helt — gaten i V2Map läser detta.
-        const isToday = dayOffset === 0 && dayRangeDays === 1;
-        return { today, tomorrow, week, withinHour, withinHours, isToday };
-    }, [events, nowTick, dayOffset, dayRangeDays]);
-
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
         ? visibleEvents.findIndex(e => e.id === selectedEvent.id)
@@ -796,8 +661,6 @@ export default function HomePage() {
                 onDeleteEvent={handleDeleteOwnEvent}
                 savedCount={activeSavedCount}
                 onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
-                reviretHue={myReviretHue}
-                onChangeHue={handleChangeReviretHue}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -809,25 +672,11 @@ export default function HomePage() {
                 discardedEventIds={discardedEventIds}
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
-                sunCloudTrigger={sunCloudKey}
-                cloudStats={cloudStats}
                 eventsLoaded={eventsLoaded}
-                recallMainTrigger={recallMainTrigger}
-                recallSunTrigger={recallSunTrigger}
-                recenterTrigger={recenterTrigger}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}
                 navSelectNonce={navSelectNonce}
-                onCloudVisibilityChange={setCloudOffScreen}
-                onMainRecalledChange={setMainRecalled}
-                onFocusToolHint={setFocusToolBlink}
-                onSlingshotChange={setSlingshotActive}
-                slingshotEngaged={slingshotEngaged}
-                onSlingshotFired={() => setSlingshotEngaged(false)}
-                tilted={mapTilted}
-                onSunCloudTap={handleSunCloudTap}
-                onToggleTilt={handleToggleTilt}
                 onFeatureFlagsChange={handleFeatureFlagsChange}
                 onActivateMultiplayer={handleActivateMultiplayer}
                 onFuncBagOpenChange={setFuncBagOpen}
@@ -1007,15 +856,6 @@ export default function HomePage() {
                 onBoostOwnEvent={handleBoostOwnEvent}
             />
 
-            {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.
-                När animationen slutar trigger:as ett nytt moln i V2Map som
-                ankras till nuvarande kartcenter. */}
-            {sunFlashKey > 0 && (
-                <div
-                    key={sunFlashKey}
-                    className="fixed inset-0 pointer-events-none z-[600] sun-flash-overlay"
-                />
-            )}
         </main>
     );
 }
