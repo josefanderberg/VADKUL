@@ -34,7 +34,7 @@ function authErrorText(code: string): string {
  * Samma e-post+lösenord-flöde som gamla /login-sidan.
  */
 export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
-    const { signIn, register } = useAuth();
+    const { signIn, register, resetPassword } = useAuth();
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -55,6 +55,23 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     }, [open, onClose]);
 
     if (!open) return null;
+
+    const forgot = async () => {
+        if (!email.trim()) {
+            setError('Skriv din e-postadress i fältet ovan först.');
+            return;
+        }
+        setBusy(true);
+        setError(null);
+        try {
+            await resetPassword(email);
+            toast.success('Vi har skickat en återställningslänk till din e-post.');
+        } catch (err: any) {
+            setError(authErrorText(String(err?.code ?? err)));
+        } finally {
+            setBusy(false);
+        }
+    };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -141,6 +158,16 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         {mode === 'login' ? <LogIn size={16} /> : <UserPlus size={16} />}
                         {busy ? 'Vänta…' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
                     </button>
+                    {mode === 'login' && (
+                        <button
+                            type="button"
+                            onClick={forgot}
+                            disabled={busy}
+                            className="text-xs font-semibold text-slate-500 hover:text-[#006AA7] transition-colors self-center disabled:opacity-50"
+                        >
+                            Glömt lösenord?
+                        </button>
+                    )}
                 </form>
 
                 <button

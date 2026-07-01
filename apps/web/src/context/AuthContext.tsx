@@ -26,8 +26,12 @@ interface AuthContextType {
   updateDisplayName: (name: string) => Promise<void>;
   /** Byt profilbild (URL från Storage). Uppdaterar Auth-profilen + speglas lokalt. */
   updatePhotoURL: (url: string) => Promise<void>;
-  /** Skicka lösenordsåterställning till kontots e-post. */
-  resetPassword: () => Promise<void>;
+  /**
+   * Skicka lösenordsåterställning. Utan argument: till inloggat kontos e-post
+   * (profilpanelen). Med `email`: till valfri adress — för "glömt lösenord"
+   * när man inte kan logga in.
+   */
+  resetPassword: (email?: string) => Promise<void>;
   /** Radera kontot i Firebase Auth. Kan kasta auth/requires-recent-login. */
   deleteAccount: () => Promise<void>;
 }
@@ -75,9 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ ...auth.currentUser, photoURL: url } as User);
   };
 
-  const resetPassword = async () => {
-    if (!auth.currentUser?.email) throw new Error('Kontot saknar e-post');
-    await sendPasswordResetEmail(auth, auth.currentUser.email);
+  const resetPassword = async (email?: string) => {
+    const target = email?.trim() || auth.currentUser?.email;
+    if (!target) throw new Error('Ingen e-postadress angiven');
+    await sendPasswordResetEmail(auth, target);
   };
 
   const deleteAccount = async () => {

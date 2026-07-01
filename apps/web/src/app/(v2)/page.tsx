@@ -499,6 +499,17 @@ export default function HomePage() {
         return n;
     }, [events, savedEventIds]);
 
+    // Kategorier användaren visat intresse för = kategorierna på de event man
+    // sparat (över alla dagar, därför hela `events` och inte bara dagens vy).
+    // Driver EventCards "Tips för dig". Tom tills man gillat sitt första event.
+    const interestedCategories = useMemo(() => {
+        const cats = new Set<EventCategoryType>();
+        for (const e of events) {
+            if (savedEventIds.has(e.id) && e.category) cats.add(e.category);
+        }
+        return cats;
+    }, [events, savedEventIds]);
+
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
     // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
@@ -842,6 +853,7 @@ export default function HomePage() {
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
                 savedEventIds={savedEventIds}
+                interestedCategories={interestedCategories}
                 onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
                 onNavigate={() => setNavSelectNonce(n => n + 1)}

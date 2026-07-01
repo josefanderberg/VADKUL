@@ -16,6 +16,10 @@ const NEARBY_PAGE_SIZE = 20;
 // Börjar eventet inom 1 timme (Pågår/Snart) hinner man inte längre än så här —
 // då döljer vi event som ligger längre bort (7 mil = 70 km).
 const MAX_IMMINENT_DISTANCE_KM = 70;
+// "I närheten" har en yttre gräns: event längre bort än så visas inte i listan.
+// Fångar också skräp som felgeokodats till fel kontinent (t.ex. Australien) —
+// de skulle annars dyka upp med ett vilt missvisande avstånd. 50 mil = 500 km.
+const MAX_NEARBY_DISTANCE_KM = 500;
 
 type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later';
 
@@ -323,6 +327,31 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
     );
 }
 
+function RecommendedForYou({ items, now, onSelect }: {
+    items: { evt: LinkEvent; distanceKm: number | null }[];
+    now: number;
+    onSelect: (evt: LinkEvent) => void;
+}) {
+    if (items.length === 0) return null;
+    return (
+        <div className="w-full bg-primary/5 dark:bg-primary/10 border-t border-border">
+            <div className="px-4 md:px-6 pt-3 pb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                    ✨ Tips för dig
+                </span>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                    Närliggande event i kategorier du gillat
+                </p>
+            </div>
+            <ul className="divide-y divide-border">
+                {items.map(({ evt, distanceKm }) => (
+                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 interface EventCardProps {
     events: LinkEvent[];
     /** Antal event för dagen i dag-väljarens badge — räknas FÖRE källfiltret så
@@ -340,6 +369,9 @@ interface EventCardProps {
     discardedEventIds: Set<string>;
     /** Sparade event — hjärtat på kortet visar/ändrar status. */
     savedEventIds?: Set<string>;
+    /** Kategorier användaren visat intresse för (härledda ur sparade event).
+     *  Driver "Tips för dig" — närliggande event i samma kategorier tipsas. */
+    interestedCategories?: Set<EventCategoryType>;
     onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
     /** Signaleras precis innan en INTERN navigering (Nästa/Föregående/svep) byter
@@ -392,7 +424,7 @@ interface EventCardProps {
     onBoostOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -676,14 +708,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                     ? haversineKm(selectedEvent.lat, selectedEvent.lng, evt.lat, evt.lng)
                     : null;
                 return { evt, distanceKm };
-            });
-        list.sort((a, b) => {
-            // Saknar koords → längst bak. Annars stigande avstånd.
-            if (a.distanceKm === null && b.distanceKm === null) return 0;
-            if (a.distanceKm === null) return 1;
-            if (b.distanceKm === null) return -1;
-            return a.distanceKm - b.distanceKm;
-        });
+            })
+            // Bara event vi faktiskt kan placera OCH som ligger inom rimligt
+            // avstånd. Okänt avstånd (null) är för missvisande att visa, och
+            // felgeokodat skräp (t.ex. Australien) ska aldrig hamna i "i närheten".
+            .filter(n => n.distanceKm !== null && n.distanceKm <= MAX_NEARBY_DISTANCE_KM);
+        list.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
         return list;
     }, [events, selectedEvent, discardedEventIds]);
 
@@ -716,6 +746,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
         () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
+
+    // "Tips för dig": har man gillat (sparat) event bygger vi upp vilka kategorier
+    // man är intresserad av — och lyfter fram närliggande KOMMANDE event i just de
+    // kategorierna (som man inte redan sparat). Tomt om man inte gillat något än.
+    const RECOMMEND_LIMIT = 6;
+    const recommendedNearby = useMemo(() => {
+        if (!interestedCategories || interestedCategories.size === 0) return [] as typeof upcomingNearby;
+        return upcomingNearby
+            .filter(n =>
+                n.evt.category != null
+                && interestedCategories.has(n.evt.category)
+                && !(savedEventIds?.has(n.evt.id) ?? false))
+            .slice(0, RECOMMEND_LIMIT);
+    }, [upcomingNearby, interestedCategories, savedEventIds]);
 
     // ── Förladda kommande event-bilder ──────────────────────────────────────
     // "Nästa" landar nästan alltid på det geografiskt närmaste icke-besökta
@@ -1251,6 +1295,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         <div className="px-4 md:px-6 pb-4">
                             <EventChatPanel eventId={selectedEvent.id} onRequireLogin={onRequireLogin} />
                         </div>
+                    )}
+                    {recommendedNearby.length > 0 && (
+                        <RecommendedForYou
+                            items={recommendedNearby}
+                            now={now}
+                            onSelect={evt => onSelectEvent(evt)}
+                        />
                     )}
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
