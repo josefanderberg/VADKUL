@@ -358,7 +358,6 @@ async function publishDigest(state: DigestState): Promise<void> {
         return;
     }
 
-    const caption = buildCaptionPlain(imaged, state.totalToday);
     const skipped = state.picks.length - imaged.length;
     await sendMessage(
         `🚀 Publicerar ${imaged.length} event` +
@@ -366,20 +365,41 @@ async function publishDigest(state: DigestState): Promise<void> {
         ` till Instagram${isFacebookConfigured() ? ' + Facebook' : ''}…`
     );
 
-    // Instagram (karusell ≥2, annars single). Facebook med samma innehåll.
+    // Bildtexten byggs FÖRST när IG bekräftat vilka bilder som blev slides, så
+    // numreringen matchar karusellen 1:1 (IG avvisar t.ex. otillåten aspect
+    // ratio). keptIdx pekar in i `imaged`. Vi fångar det bekräftade setet i en
+    // closure så Facebook kan posta exakt samma event + text.
+    let publishedEvents: DigestEvent[] = imaged;
+    let sharedCaption: string | null = null;
+    const buildCaption = (keptIdx: number[]): string => {
+        publishedEvents = keptIdx.map(i => imaged[i]);
+        sharedCaption = buildCaptionPlain(publishedEvents, state.totalToday);
+        return sharedCaption;
+    };
+
+    // Instagram (karusell ≥2, annars single). Facebook med samma bekräftade set.
     let igOk = false;
     if (isInstagramConfigured()) {
         try {
-            const igId = await postToInstagram(caption, imageUrls);
+            const igId = await postToInstagram(buildCaption, imageUrls);
             igOk = true;
-            await sendMessage(`✅ Instagram publicerat! (id ${escapeHtml(igId)})`);
+            const dropped = imaged.length - publishedEvents.length;
+            await sendMessage(
+                `✅ Instagram publicerat! (id ${escapeHtml(igId)})` +
+                (dropped > 0 ? `\n♻️ ${dropped} bild(er) föll bort (fel format/otillåten ratio) — listan renumrerad till ${publishedEvents.length}.` : '')
+            );
         } catch (e) {
             await sendMessage(`⚠️ Instagram misslyckades: ${escapeHtml((e as Error).message)}`);
         }
     }
     if (isFacebookConfigured()) {
+        // Rikta FB mot samma bilder + text som IG faktiskt publicerade. Kördes
+        // inte IG (ej konfigurerat/fel) faller vi tillbaka på hela imaged-listan.
+        const fbEvents = igOk ? publishedEvents : imaged;
+        const fbUrls = fbEvents.map(p => p.coverImage!.trim());
+        const fbCaption = sharedCaption ?? buildCaptionPlain(imaged, state.totalToday);
         try {
-            await postToFacebook(caption, imageUrls);
+            await postToFacebook(fbCaption, fbUrls);
             await sendMessage('✅ Facebook publicerat!');
         } catch (e) {
             await sendMessage(`⚠️ Facebook misslyckades: ${escapeHtml((e as Error).message)}`);
@@ -387,7 +407,7 @@ async function publishDigest(state: DigestState): Promise<void> {
     }
 
     console.log(`[Digest] Publicerat (IG=${igOk}):`);
-    console.log(caption);
+    console.log(sharedCaption ?? buildCaptionPlain(imaged, state.totalToday));
 }
 
 const HELP = `
