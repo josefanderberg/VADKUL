@@ -110,11 +110,11 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
             // Water
             else if (layer.id === 'water' || layer.id === 'water_shadow') {
                 paint['fill-color'] = layer.id === 'water_shadow'
-                    ? '#3f7fa8'
-                    : '#4f8fb8'; // djupt, mättat mörkblått vatten
+                    ? '#5791b8'
+                    : '#679fc6'; // mellanblått — mörkare än original, ljusare än djupblått
             }
             else if (layer.id === 'waterway') {
-                paint['line-color'] = '#4f8fb8';
+                paint['line-color'] = '#679fc6';
             }
             // Parker, skog, naturreservat, grön landuse
             else if (
