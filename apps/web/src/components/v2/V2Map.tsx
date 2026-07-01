@@ -105,13 +105,13 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
             // vita vägar som kontrast.
             // Land / Background
             if (layer.id === 'background') {
-                paint['background-color'] = '#6fa049'; // mörkt mättat grästgrönt land — dominerar utzoomat
+                paint['background-color'] = '#93c46c'; // mättat grästgrönt land (mörkare/grönare än förut) — dominerar utzoomat
             }
             // Water
             else if (layer.id === 'water' || layer.id === 'water_shadow') {
                 paint['fill-color'] = layer.id === 'water_shadow'
                     ? '#3f7fa8'
-                    : '#4f8fb8'; // djupt, mättat blått vatten
+                    : '#4f8fb8'; // djupt, mättat mörkblått vatten
             }
             else if (layer.id === 'waterway') {
                 paint['line-color'] = '#4f8fb8';
@@ -124,12 +124,12 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
                 layer.id === 'landuse'
             ) {
                 if (paint['fill-color']) {
-                    paint['fill-color'] = '#5e9138'; // grönska, ett snäpp djupare än landet
+                    paint['fill-color'] = '#7eb152'; // grönska, ett snäpp djupare än landet
                 }
             }
             // Bostadsområden
             else if (layer.id === 'landuse_residential') {
-                paint['fill-color'] = '#88b862'; // något ljusare än landet, fortfarande grönt
+                paint['fill-color'] = '#abcf84'; // något ljusare än landet, fortfarande grönt
             }
             // Byggnader
             else if (layer.id.includes('building')) {
@@ -317,7 +317,7 @@ const REVEAL_WAVE_SPEED = 0.085;   // vågens hastighet (varv/sek längs axeln) 
 const REVEAL_WAVE_CYCLES = 3.0;    // antal vågkammar synliga samtidigt över kartan
 const REVEAL_WAVE_LIT = 0.35;      // andel som är tänd i en kam (0–1) — lägre = färre samtidigt
 const REVEAL_WAVE_EDGE = 0.16;     // mjuk kant på kammen (in-/uttoning) — högre = suddigare band
-const REVEAL_WAVE_FLOOR = 0.06;    // svag bottenglöd i dalarna så kartan aldrig känns helt tom
+const REVEAL_WAVE_FLOOR = 0;       // dalarna helt mörka → tydliga vågor, inte "allt syns svagt"
 const REVEAL_WAVE_JITTER = 0.22;   // slumpmässig fas per markör (varv) — bryter upp raka ränder
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
@@ -668,6 +668,7 @@ export default function V2Map({
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
     // Klick på en MULTI-event-markör (grupp med >1 event) öppnar en lista (emoji +
     // titel + tid) så man kan välja vilket event i högen man vill öppna. null = ingen.
+    // (Man kan ALTERNATIVT bläddra via pagern "3/7" på kortets platsrad.)
     const [groupList, setGroupList] = useState<LinkEvent[] | null>(null);
     // Geo-ankaret (lng/lat) för den klickade multi-event-brickan + dess projicerade
     // skärmposition. Listan placeras i brickans ÖVRE HÖGRA hörn och följer punkten
@@ -1149,6 +1150,7 @@ export default function V2Map({
     const waveFeatRef = useRef<{ key: string; u: number; jitter: number }[]>([]);
     const ensureWavePumpRef = useRef<() => void>(() => {});
     const stopWaveRef = useRef<() => void>(() => {});
+    const hardClearRevealRef = useRef<() => void>(() => {});
     // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
     // / map-load utan att hamna i temporal-dead-zone.
     const ensureRevealPumpRef = useRef<() => void>(() => {});
@@ -1474,6 +1476,24 @@ export default function V2Map({
         if (waveRafRef.current != null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
     }, []);
     stopWaveRef.current = stopWave;
+    // Nollar OMEDELBART alla tända reveal-brickor (utom valt/sticky) — inkl. vågens
+    // halvljusa mellansteg och bottenglöd, som pumpReveal/reconcileLit (tröskel 0.5)
+    // annars kunde lämna kvar. Kallas vid första trycket så vågen HELT försvinner
+    // innan de 50 närmast klicket tänds.
+    const hardClearReveal = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !map.getLayer('plain-events')) return;
+        const written = revealWrittenRef.current;
+        const sticky = revealStickyRef.current;
+        written.forEach((op, k) => {
+            if (op > 0 && !sticky.has(k)) {
+                try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 0 }); } catch { /* */ }
+                written.set(k, 0);
+            }
+        });
+        revealSeedRef.current = new Set();
+    }, []);
+    hardClearRevealRef.current = hardClearReveal;
 
     // De n närmaste brickorna (nycklar) till en geo-punkt. Billigt partiellt urval
     // (kvadrerat avstånd, longitud cos-lat-skalad) — ingen full sortering, ingen
@@ -2014,6 +2034,10 @@ export default function V2Map({
             // via lager-handlern; mängden krymper till de närmaste.
             if (previewAllUntilTapRef.current) {
                 previewAllUntilTapRef.current = false;
+                // Stäng vågen och NOLLA alla dess brickor direkt → inget spill blir
+                // kvar; sen tänder recompute enbart de N närmast trycket.
+                stopWaveRef.current();
+                hardClearRevealRef.current();
                 revealAnchorPtRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
                 recomputeRevealSeedRef.current();
             }

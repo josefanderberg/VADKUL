@@ -73,6 +73,10 @@ export default function HomePage() {
     // "X unika event idag") väntar på detta så det inte hinner poppa fram med 0
     // event innan databasen svarat.
     const [eventsLoaded, setEventsLoaded] = useState(false);
+    // Skiljt från eventsLoaded: sant först vid det DEFINITIVA aggregat-beskedet.
+    // Styr "Inga event den här dagen" så den inte blinkar förbi i introt medan
+    // event fortfarande strömmar in (loadern är redan borta då).
+    const [eventsSettled, setEventsSettled] = useState(false);
     // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
@@ -183,16 +187,24 @@ export default function HomePage() {
             }
             const sorted = [...fetched, ...extras].sort((a, b) => a.time.getTime() - b.time.getTime());
             setEvents(sorted);
+            // Så fort FÖRSTA batchen med event finns → sluta visa "Laddar event…".
+            // Datan är på kartan (nålarna syns), och det är allt introt behöver — vi
+            // väntar inte på det avslutande aggregat-beskedet nedan (det dröjer och
+            // påverkar inte det man redan ser). Blink-skyddet mot "Inga event" är
+            // kvar: vi tänder bara tidigt när det FAKTISKT finns event (sorted > 0);
+            // en äkta tom dag väntar fortf. på det definitiva beskedet.
+            if (sorted.length > 0) setEventsLoaded(true);
         }, () => {
             // DEFINITIVT "laddat"-besked: första aggregat-laddningen är klar (datan
             // finns, eller så är det en äkta tom dag). Först nu får popupar visas —
             // aldrig medan datan fortfarande hämtas (då blinkade "Inga event den här
             // dagen" förbi med 0/halvladdad data).
             setEventsLoaded(true);
+            setEventsSettled(true);
         });
         // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
         // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
-        const hangGuard = setTimeout(() => setEventsLoaded(true), 15000);
+        const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); }, 15000);
         return () => { unsubscribe(); clearTimeout(hangGuard); };
     }, []);
 
@@ -847,6 +859,7 @@ export default function HomePage() {
                 events={visibleEvents}
                 dayCount={dayEventCount}
                 eventsLoaded={eventsLoaded}
+                eventsSettled={eventsSettled}
                 selectedEvent={selectedEvent}
                 onSelectEvent={setSelectedEvent}
                 onSaveEvent={handleSaveEvent}

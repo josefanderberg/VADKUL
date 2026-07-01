@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight } from 'lucide-react';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -44,9 +44,15 @@ interface LinkEventCardProps {
     onDeleteOwn?: () => void;
     /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort". */
     onBoost?: () => void;
+    /** Fler event på SAMMA plats (multi-event-hög): position + antal → pager på
+     *  platsraden ("3/7"). onGroupNext stegar till nästa i högen. groupTotal ≤ 1
+     *  döljer pagern. */
+    groupIndex?: number;
+    groupTotal?: number;
+    onGroupNext?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, groupIndex = 0, groupTotal = 1, onGroupNext }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
@@ -293,6 +299,20 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             </span>
                         )}
                     </div>
+                    {/* Fler event på samma plats → pager längst till höger på platsraden:
+                        antal ("3/7") + pil som stegar till nästa event i högen. */}
+                    {groupTotal > 1 && onGroupNext && (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onGroupNext(); }}
+                            aria-label={`Nästa av ${groupTotal} event på samma plats`}
+                            title="Fler event på samma plats"
+                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                        >
+                            <span className="text-[11px] font-black tabular-nums leading-none">{groupIndex + 1}/{groupTotal}</span>
+                            <ArrowRight size={13} className="shrink-0" />
+                        </button>
+                    )}
                 </div>
 
                 <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">

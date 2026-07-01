@@ -358,10 +358,13 @@ interface EventCardProps {
      *  det visar dagens totala antal även när stora källor (PRO/Korpen/Svenska
      *  kyrkan) är dolda. Faller tillbaka till events.length om utelämnat. */
     dayCount?: number;
-    /** False tills första Firestore-svaret kommit — då visas "Laddar event…"
-     *  i stället för "Inga event den här dagen" (som annars blinkar förbi
-     *  innan datan hunnit fram). */
+    /** False tills FÖRSTA event-batchen kommit — döljer "Laddar event…". Släpps
+     *  tidigt (så fort nålarna finns på kartan), inte vid det slutliga beskedet. */
     eventsLoaded?: boolean;
+    /** False tills det DEFINITIVA "allt hämtat"-beskedet. Först då får "Inga event
+     *  den här dagen" visas — annars blinkar den förbi i introt medan event
+     *  fortfarande strömmar in (loadern är redan borta då). */
+    eventsSettled?: boolean;
     selectedEvent: LinkEvent | null;
     onSelectEvent: (evt: LinkEvent | null) => void;
     onSaveEvent: (eventId: string) => void;
@@ -424,7 +427,7 @@ interface EventCardProps {
     onBoostOwnEvent?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -760,6 +763,25 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                 && !(savedEventIds?.has(n.evt.id) ?? false))
             .slice(0, RECOMMEND_LIMIT);
     }, [upcomingNearby, interestedCategories, savedEventIds]);
+
+    // Event på EXAKT samma plats (koordinat) som det valda — multi-event-högen.
+    // Driver pagern ("3/7") på kortets platsrad. Ordnad efter tid för stabil numrering.
+    const sameSpotGroup = useMemo(() => {
+        if (!selectedEvent || !hasValidCoords(selectedEvent)) return [] as LinkEvent[];
+        const spotKey = (e: LinkEvent) => `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
+        const k = spotKey(selectedEvent);
+        return events
+            .filter(e => hasValidCoords(e) && spotKey(e) === k && !discardedEventIds.has(e.id))
+            .sort((a, b) => a.time.getTime() - b.time.getTime());
+    }, [events, selectedEvent, discardedEventIds]);
+    const sameSpotIndex = selectedEvent ? sameSpotGroup.findIndex(e => e.id === selectedEvent.id) : -1;
+    // Stega till nästa event i högen (wrap). Kameran står kvar — samma plats ändå.
+    const handleSameSpotNext = () => {
+        if (sameSpotGroup.length < 2) return;
+        const idx = sameSpotIndex < 0 ? 0 : sameSpotIndex;
+        onNavigate?.();
+        onSelectEvent(sameSpotGroup[(idx + 1) % sameSpotGroup.length]);
+    };
 
     // ── Förladda kommande event-bilder ──────────────────────────────────────
     // "Nästa" landar nästan alltid på det geografiskt närmaste icke-besökta
@@ -1270,6 +1292,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         showFullAddress
+                        groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
+                        groupTotal={sameSpotGroup.length}
+                        onGroupNext={handleSameSpotNext}
                         onRevealStepChange={(step) => {
                             setCardRevealStep(step);
                             // Steg 1 (bild + trunkad beskr): öppna till första beskrivningsraden
@@ -1331,7 +1356,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, selec
                                 <p className="text-sm font-bold text-slate-700">Laddar event…</p>
                             </div>
                         </div>
-                    ) : events.length === 0 && (
+                    ) : (eventsSettled && events.length === 0) && (
                         <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <p className="text-sm font-bold text-slate-700">
                                 Inga event {dayRangeDays > 1 ? 'den här perioden' : 'den här dagen'} 😴
