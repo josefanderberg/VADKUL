@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Gamepad2, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, Disc3, Hexagon, Trophy, ChevronRight } from 'lucide-react';
+import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, ChevronRight } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
@@ -602,23 +602,6 @@ interface V2MapProps {
     /** Bumpas vid intern kort-navigering (Nästa/Föregående/svep). Då står kameran
      *  kvar — vi panorerar/flyger INTE till eventet man bläddrar fram till. */
     navSelectNonce?: number;
-    /** "Hitta eventet"-spel: när true är kartan i gissningsläge — markörklick blir
-     *  en gissning (onGuess) i stället för ett vanligt val, det valda mål-eventet
-     *  highlightas INTE (så det inte avslöjas) och kameran flyttas inte dit. */
-    gameMode?: boolean;
-    /** Anropas vid markörklick i gissningsläge med hela gruppen som klickades.
-     *  Sidan avgör om mål-eventet finns i gruppen. */
-    onGuess?: (group: LinkEvent[]) => void;
-    /** Event-id som ska ritas som en guld-skimrande markör (det rätta svaret när
-     *  rundan avslöjats). null = ingen guldmarkör. */
-    goldEventId?: string | null;
-    /** Event-id för markören man gissade på — hålls synlig (brickan visas direkt)
-     *  efter avslöjet så man ser var man klickade. null = ingen. */
-    guessedEventId?: string | null;
-    /** Streck mellan gissningen (from) och rätt svar (to) som ritas efter en
-     *  felgissning. När satt zoomar kartan ut så båda punkterna syns och en
-     *  streckad linje + avståndsetikett ritas mellan dem. null = inget streck. */
-    guessLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null;
     /** Skickar shop-flaggor uppåt så page.tsx kan gömma/visa knappar som inte
      *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard, eller
      *  +-knappen i navbaren för att skapa event). Fyrar varje gång användaren
@@ -632,26 +615,6 @@ interface V2MapProps {
      *  använder det för att tillfälligt gömma poäng-brickan som annars ligger i
      *  samma vänsterkolumn och skulle krocka med utfällningen. */
     onFuncBagOpenChange?: (open: boolean) => void;
-    /** "Hitta event"-spelet ligger numera som en funktion i väskan (inte i root).
-     *  Sidan skickar in spelets tillstånd + start/stopp så väske-brickan kan styra det. */
-    findGameActive?: boolean;
-    canStartFindGame?: boolean;
-    onStartFindGame?: () => void;
-    onStopFindGame?: () => void;
-    /** Pinball/Flipper-läge: kartan blir en top-down flipperbana. Eventen blir
-     *  runda studsare (närliggande flyter ihop), en kula avfyras med slangbella
-     *  och det event kulan träffar öppnas. Kameran fryses medan läget är på.
-     *  Togglas från funktionsväskan (som "Hitta event"). */
-    pinballMode?: boolean;
-    canStartPinball?: boolean;
-    onStartPinball?: () => void;
-    onStopPinball?: () => void;
-    /** Anropas när kulan slår in i en studsare — sidan öppnar då gruppens event. */
-    onPinballHit?: (group: LinkEvent[]) => void;
-    /** Fyrar varje gång kulan avfyras (för skott-räknare/HUD). */
-    onPinballLaunch?: () => void;
-    /** Spelarens valda Reviret-färg (färgton 0–359), null = standard per uid. */
-    myReviretHue?: number | null;
 }
 
 export default function V2Map({
@@ -669,25 +632,9 @@ export default function V2Map({
     zoomOutTrigger = 0,
     daySwitchNonce = 0,
     navSelectNonce = 0,
-    gameMode = false,
-    onGuess,
-    goldEventId = null,
-    guessedEventId = null,
-    guessLine = null,
     onFeatureFlagsChange,
     onActivateMultiplayer,
     onFuncBagOpenChange,
-    findGameActive = false,
-    canStartFindGame = false,
-    onStartFindGame,
-    onStopFindGame,
-    pinballMode = false,
-    canStartPinball = false,
-    onStartPinball,
-    onStopPinball,
-    onPinballHit,
-    onPinballLaunch,
-    myReviretHue = null
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -3534,16 +3481,14 @@ export default function V2Map({
                 renderas via portal till <body> så den garanterat ligger ÖVER allt
                 annat (V2Map-roten är z-0). */}
             {(() => {
-                type CrateItem = { key: string; label: string; desc: string; color: string; icon: React.ReactNode; kind?: 'game' | 'pinball'; locked?: boolean };
+                type CrateItem = { key: string; label: string; desc: string; color: string; icon: React.ReactNode; locked?: boolean };
                 const crateItems: CrateItem[] = [
                     // Popup-meny: symbol + namn + kort info. Varje funktion har en egen
                     // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
-                    // Upplåst överst: Satellit, Skapa event, Hitta event, Flipper +
-                    // kartstilarna Nöjesfält, Orientering & 3D-terräng. Resten är låsta.
+                    // Upplåst överst: Satellit, Skapa event + kartstilarna Nöjesfält,
+                    // Orientering & 3D-terräng. Resten är låsta.
                     { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
                     { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
-                    { key: 'findgame', label: 'Hitta event', desc: 'Spel: hitta eventet på kartan', color: '#8b5cf6', icon: <Gamepad2 size={20} />, kind: 'game' },
-                    { key: 'pinball', label: 'Flipper', desc: 'Rulla en kula — träffa event för att öppna', color: '#f43f5e', icon: <Disc3 size={20} />, kind: 'pinball' },
                     { key: 'themepark', label: 'Nöjesfält', desc: 'Naturfärgad karta — som satellit fast minimalistisk', color: '#db2777', icon: <Sparkles size={20} /> },
                     { key: 'orientering', label: 'Orientering', desc: 'Topografisk karta som visar höjdskillnaderna i terrängen', color: '#a16207', icon: <Mountain size={20} /> },
                     { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
@@ -3565,22 +3510,10 @@ export default function V2Map({
                     { key: 'multiplayer', label: 'Multiplayer', desc: 'Spela med andra (kräver konto)', color: '#6366f1', icon: <Users size={20} />, locked: true },
                     { key: 'record', label: 'Spela in', desc: 'Spela in din skärm', color: '#ef4444', icon: <Video size={20} />, locked: true }
                 ];
-                const isCrateActive = (it: CrateItem) => it.kind === 'pinball' ? pinballMode : it.kind === 'game' ? findGameActive : isFeatureActive(it.key);
+                const isCrateActive = (it: CrateItem) => isFeatureActive(it.key);
                 const activeBagCount = crateItems.reduce((n, it) => n + (isCrateActive(it) ? 1 : 0), 0);
 
                 const handleCrate = (it: CrateItem) => {
-                    if (it.kind === 'pinball') {
-                        if (pinballMode) onStopPinball?.();
-                        else if (canStartPinball) onStartPinball?.();
-                        setFuncBagOpen(false);
-                        return;
-                    }
-                    if (it.kind === 'game') {
-                        if (findGameActive) onStopFindGame?.();
-                        else if (canStartFindGame) onStartFindGame?.();
-                        setFuncBagOpen(false);
-                        return;
-                    }
                     // Klick på en tipsad funktion (t.ex. Fokus) → sluta blinka den.
                     setFeatureHint(h => h === it.key ? null : h);
                     toggleFeature(it.key);
@@ -3603,11 +3536,8 @@ export default function V2Map({
                                 {crateItems.map((it) => {
                                     const active = isCrateActive(it);
                                     // Låst funktion (Golf) → går inte att aktivera (visas med hänglås).
-                                    // "Hitta event" är bara avstängd när ingen runda är möjlig.
                                     const locked = !!it.locked;
-                                    const disabled = locked
-                                        || (it.kind === 'game' && !findGameActive && !canStartFindGame)
-                                        || (it.kind === 'pinball' && !pinballMode && !canStartPinball);
+                                    const disabled = locked;
                                     // Den nya/tipsade funktionen får en blå glöd-ring i listan.
                                     const blinking = featureHint === it.key;
                                     return (
