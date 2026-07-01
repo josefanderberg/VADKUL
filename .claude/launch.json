@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "cd /Users/josefanderberg/source/VADKUL/apps/web && exec /Users/josefanderberg/source/VADKUL/node_modules/.bin/next dev"],
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:$PATH\" && cd /Users/josefanderberg/source/VADKUL/apps/web && exec /Users/josefanderberg/source/VADKUL/node_modules/.bin/next dev"],
       "port": 3000,
       "autoPort": true
     }

@@ -46,7 +46,8 @@ export default function RootLayout({
                 <link rel="icon" type="image/png" href="/favicon.png" />
                 <link rel="apple-touch-icon" href="/favicon.png" />
                 <meta name="theme-color" content="#38bdf8" />
-                <meta name="impact-site-verification" content="17f79b5d-182e-4a80-bff9-634b6d47ebc7" />
+                {/* Impact kräver value-attributet (inte content) — spread eftersom Reacts typer saknar value på meta */}
+                <meta name="impact-site-verification" {...({ value: '17f79b5d-182e-4a80-bff9-634b6d47ebc7' } as Record<string, string>)} />
             </head>
             <body>
                 <Providers>
