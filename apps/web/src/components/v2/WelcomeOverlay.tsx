@@ -8,23 +8,20 @@ const SEEN_KEY = 'vadkul_seen_welcome_v2';
 interface WelcomeOverlayProps {
     /** Öppna kontoskaparen (AuthModal) — anropas från sekundärknappen. */
     onCreateAccount: () => void;
+    /** Antal event idag att visa inbakat i texten */
+    todayEventCount?: number;
+    /** Antal event som börjar inom 1 timme */
+    soonEventCount?: number;
 }
 
 /**
  * Slimmad onboarding vid första besöket: EN skärm som säger vad VADKUL är och
  * släpper ut användaren på kartan. Visas aldrig igen (localStorage-flagga).
  */
-export default function WelcomeOverlay({ onCreateAccount }: WelcomeOverlayProps) {
-    const [open, setOpen] = useState(false);
-
-    useEffect(() => {
-        try {
-            if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
-        } catch { /* localStorage blockerad — visa inget */ }
-    }, []);
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonEventCount }: WelcomeOverlayProps) {
+    const [open, setOpen] = useState(true);
 
     const dismiss = (thenCreateAccount = false) => {
-        try { localStorage.setItem(SEEN_KEY, 'true'); } catch { /* ok */ }
         setOpen(false);
         if (thenCreateAccount) onCreateAccount();
     };
@@ -45,7 +42,15 @@ export default function WelcomeOverlay({ onCreateAccount }: WelcomeOverlayProps)
         {
             chip: 'bg-amber-100',
             icon: <Zap size={19} className="text-amber-500" />,
-            text: <>Se vad som händer <span className="font-bold text-slate-900">just nu</span>, ikväll eller i helgen.</>,
+            text: (
+                <>
+                    Se vad som händer <span className="font-bold text-slate-900">just nu</span>
+                    {soonEventCount && soonEventCount >= 1 ? (
+                        <> (<span className="text-amber-600 font-extrabold">{soonEventCount} st</span> börjar inom 1 timme!)</>
+                    ) : null}
+                    , ikväll eller i helgen.
+                </>
+            ),
         },
         {
             chip: 'bg-rose-100',
@@ -57,15 +62,50 @@ export default function WelcomeOverlay({ onCreateAccount }: WelcomeOverlayProps)
     return (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => dismiss()} />
-            <div className="relative w-full max-w-sm bg-white rounded-[28px] shadow-2xl p-7 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
-                <div className="flex flex-col items-center text-center gap-2.5">
-                    <span className="grid place-items-center w-16 h-16 rounded-2xl bg-[#006AA7]/10 text-[34px] leading-none" aria-hidden>🗺️</span>
-                    <div className="flex flex-col items-center gap-1">
-                        <h2 className="text-[27px] font-black text-[#006AA7] tracking-tight leading-none">VADKUL</h2>
-                        <p className="text-[15px] font-bold text-slate-600 leading-snug px-2">
-                            Allt kul som händer i Sverige — samlat på en karta.
-                        </p>
-                    </div>
+            <div className="relative w-full max-w-sm bg-white rounded-[28px] shadow-2xl p-7 flex flex-col gap-6 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+                {/* Background drifting clouds in different sizes and speeds */}
+                <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src="/favicon.png"
+                        alt=""
+                        className="absolute top-2 w-32 h-32 opacity-[0.07] animate-cloud-drift"
+                        style={{ animationDuration: '24s', animationDelay: '0s' }}
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src="/favicon.png"
+                        alt=""
+                        className="absolute top-16 w-24 h-24 opacity-[0.05] animate-cloud-drift"
+                        style={{ animationDuration: '34s', animationDelay: '-10s' }}
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src="/favicon.png"
+                        alt=""
+                        className="absolute top-32 w-36 h-36 opacity-[0.06] animate-cloud-drift"
+                        style={{ animationDuration: '40s', animationDelay: '-22s' }}
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src="/favicon.png"
+                        alt=""
+                        className="absolute top-8 w-20 h-20 opacity-[0.04] animate-cloud-drift"
+                        style={{ animationDuration: '28s', animationDelay: '-5s' }}
+                    />
+                </div>
+
+                <div className="relative z-10 flex flex-col items-center text-center gap-1.5 mt-2">
+                    <h2 className="text-[34px] font-black italic text-[#006AA7] font-sans tracking-tighter leading-none uppercase select-none">VADKUL</h2>
+                    <p className="text-[15px] font-bold text-slate-600 leading-snug px-2">
+                        {todayEventCount && todayEventCount > 0 ? (
+                            <>
+                                Just nu hittar du <span className="font-extrabold text-[#006AA7]">{todayEventCount.toLocaleString('sv-SE')} event</span> som händer idag — samlat på en karta.
+                            </>
+                        ) : (
+                            <>Allt kul som händer i Sverige — samlat på en karta.</>
+                        )}
+                    </p>
                 </div>
 
                 <ul className="flex flex-col gap-3.5">

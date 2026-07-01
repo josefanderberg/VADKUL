@@ -872,8 +872,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const THRESHOLD = 100; // Pixels to trigger a swipe action
 
+    // Sätts när en press blir en riktig drag (>5px). Används för att INTE
+    // navigera när man dragit i Föregående/Nästa-knappen i stället för klickat.
+    const didDragRef = useRef(false);
+
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (e.button !== 0) return;
+        didDragRef.current = false;
 
         const target = e.target as HTMLElement;
         if (target.closest('button') || target.closest('a') || target.closest('input')) {
@@ -912,6 +917,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     // byta/spara mål-eventet) — bara vertikal drag (storlek/stäng).
                     dragDirection.current = 'horizontal';
                 }
+                if (dragDirection.current !== 'none') didDragRef.current = true;
             }
         }
 
@@ -978,6 +984,36 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         dragDirection.current = 'none';
     };
 
+    // Låt Föregående/Nästa-knapparna OCKSÅ dra kortet (samma vertikal/horisontell
+    // gest) utan att förlora klick-funktionen. Vi återanvänder samma drag-refs och
+    // kort-släpp-logik; ett rent klick (ingen rörelse) går vidare till onClick.
+    const onButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (e.button !== 0) return;
+        didDragRef.current = false;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDragging.current = true;
+        dragDirection.current = 'none';
+        startX.current = e.clientX;
+        startY.current = e.clientY;
+        startHeightVh.current = heightVhRef.current;
+        startDragX.current = dragXRef.current;
+        collapsedVhRef.current = measureCollapsedHeight();
+        setExitX(null);
+        setIsAnimating(false);
+    };
+    const onButtonPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+        onPointerMove(e as unknown as React.PointerEvent<HTMLDivElement>);
+    };
+    const onButtonPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (dragDirection.current === 'none') {
+            // Rent klick — städa bara upp och låt onClick sköta navigeringen.
+            isDragging.current = false;
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+            return;
+        }
+        onPointerUp(e as unknown as React.PointerEvent<HTMLDivElement>);
+    };
+
     const pushHistory = (id: string) => {
         setHistoryStack(prev => [...prev, id]);
     };
@@ -1019,6 +1055,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Bakåt-knapp: gå till eventet vi tittade på innan vi gick vidare, och lägg
     // det nuvarande på framåt-stacken så Nästa kan spela upp samma ordning igen.
     const handleHistoryBack = () => {
+        if (didDragRef.current) { didDragRef.current = false; return; }
         if (historyStack.length === 0 || !selectedEvent) return;
         const prevId = historyStack[historyStack.length - 1];
         const prevEvent = events.find(e => e.id === prevId);
@@ -1035,6 +1072,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     };
 
     const handleNextOnly = () => {
+        if (didDragRef.current) { didDragRef.current = false; return; }
         if (!selectedEvent || events.length === 0) return;
 
         // Har vi backat? Spela då upp framåt-stacken i SAMMA ordning igen i
@@ -1082,6 +1120,47 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             return k === key;
         }).length;
     }, [backEvent, events]);
+
+    // Nästa event — SAMMA val som handleNextOnly gör (framåt-stacken först,
+    // annars närmaste obesökta), men helt ren (inga setState/refs) så den kan
+    // visas som emoji-bricka = en förhandsvisning av vart Nästa tar dig.
+    const nextEvent = useMemo<LinkEvent | null>(() => {
+        if (!selectedEvent || events.length === 0) return null;
+        // Har vi backat? Nästa spelar upp framåt-stacken i samma ordning igen.
+        if (forwardStack.length > 0) {
+            const fwd = events.find(e => e.id === forwardStack[forwardStack.length - 1]);
+            if (fwd) return fwd;
+        }
+        // Annars: samma logik som pickNext, utan sidoeffekter.
+        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        const simVisited = new Set(visitedEventIds);
+        const curKey = selectedEvent.lat && selectedEvent.lng
+            ? `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}` : null;
+        if (curKey) {
+            for (const e of events) {
+                if (e.lat && e.lng && `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === curKey) simVisited.add(e.id);
+            }
+        } else {
+            simVisited.add(selectedEvent.id);
+        }
+        let next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+        if (!next) {
+            simVisited.clear();
+            simVisited.add(anchor.id);
+            next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+        }
+        return next;
+    }, [selectedEvent, events, forwardStack, anchorId, visitedEventIds, discardedEventIds]);
+
+    // Antal event i nästa events grupp (om det är en multibricka)
+    const nextEventGroupCount = useMemo(() => {
+        if (!nextEvent || !nextEvent.lat || !nextEvent.lng) return 1;
+        const key = `${nextEvent.lat.toFixed(4)},${nextEvent.lng.toFixed(4)}`;
+        return events.filter(e => {
+            if (!e.lat || !e.lng) return false;
+            return `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === key;
+        }).length;
+    }, [nextEvent, events]);
 
     return (
         <>
@@ -1174,6 +1253,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             <button
                                 type="button"
                                 onClick={handleHistoryBack}
+                                onPointerDown={onButtonPointerDown}
+                                onPointerMove={onButtonPointerMove}
+                                onPointerUp={onButtonPointerUp}
+                                onPointerCancel={onButtonPointerUp}
                                 disabled={!backEvent}
                                 aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
                                 title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
@@ -1201,28 +1284,46 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
-                            {/* Lagrad blå Nästa-pill — gå vidare till nästa event.
-                                Zoom-knapparna är borttagna; pillen är bara Nästa nu. */}
+                            {/* Nästa — hela ytan är klickbar men luftig: vänster­kanten
+                                är helt transparent och tonar in mot blått åt höger, där
+                                nästa events emoji-bricka sitter. Precis som Föregående-
+                                knappen fungerar den som en förhandsvisning: man ser
+                                vilket event man går VIDARE till (framåt-pil + antal). */}
                             <button
                                 type="button"
                                 onClick={handleNextOnly}
-                                aria-label="Nästa event"
+                                onPointerDown={onButtonPointerDown}
+                                onPointerMove={onButtonPointerMove}
+                                onPointerUp={onButtonPointerUp}
+                                onPointerCancel={onButtonPointerUp}
+                                aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
+                                title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 className="group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-white font-black tracking-wide
-                                    bg-[#006AA7]/25 backdrop-blur-md
-                                    ring-1 ring-white/60
-                                    shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_6px_18px_rgba(0,0,0,0.28)]
-                                    [text-shadow:0_1px_3px_rgba(0,30,55,0.65)]
-                                    [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)]
-                                    flex items-center justify-center gap-2 px-3 overflow-hidden
-                                    hover:bg-[#006AA7]/35 active:bg-[#006AA7]/45 transition-colors"
+                                    bg-gradient-to-r from-transparent via-[#006AA7]/10 to-[#006AA7]/35
+                                    flex items-center justify-end gap-2 pr-1.5
+                                    transition-colors hover:via-[#006AA7]/20 hover:to-[#006AA7]/50"
                             >
-                                {/* Övre glansremsa — ger glaset en lagrad, glansig lyster */}
-                                <span aria-hidden className="pointer-events-none absolute inset-x-1 top-px h-1/2 rounded-full bg-gradient-to-b from-white/35 to-transparent z-10" />
-                                <span className="relative z-20">Nästa</span>
-                                {/* Pilen i en egen liten bricka (lager-känsla). */}
-                                <span aria-hidden className="relative z-20 flex items-center justify-center w-6 h-6 rounded-full bg-white/25 ring-1 ring-white/30 shadow-inner transition-transform group-hover:translate-x-0.5">
-                                    <ArrowRight size={16} />
-                                </span>
+                                {/* Emoji-bricka för nästa event — samma look som
+                                    Föregående-knappens bricka, fast med framåt-pil. */}
+                                {nextEvent ? (
+                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/35 backdrop-blur-md ring-1 ring-white/55 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] text-lg leading-none transition-transform group-hover:translate-x-0.5">
+                                        {eventEmoji(nextEvent)}
+                                        {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
+                                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
+                                            <ArrowRight size={10} />
+                                        </span>
+                                        {/* Siffra för hur många event gruppen innehåller */}
+                                        {nextEventGroupCount > 1 && (
+                                            <span className="absolute -top-1 -left-1 min-w-[16px] h-4 px-1 rounded-full bg-slate-800 text-white border border-white flex items-center justify-center text-[9px] font-black leading-none">
+                                                {nextEventGroupCount}
+                                            </span>
+                                        )}
+                                    </span>
+                                ) : (
+                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-7 h-7 rounded-full bg-[#006AA7]/60 backdrop-blur-md ring-1 ring-white/50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)] transition-transform group-hover:translate-x-0.5">
+                                        <ArrowRight size={16} />
+                                    </span>
+                                )}
                             </button>
                         </>
                     )}

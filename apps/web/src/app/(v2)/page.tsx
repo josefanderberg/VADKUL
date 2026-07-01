@@ -453,6 +453,25 @@ export default function HomePage() {
     // Antal synliga event för dagen (efter kategori-/källfilter). Speglar kartan.
     const dayEventCount = visibleEvents.length;
 
+    // Antal event totalt för idag (oavsett filter) för välkomstmodalen
+    const todayEventCount = useMemo(() => {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+        return events.filter(evt => evt.time >= startOfToday && evt.time <= endOfToday).length;
+    }, [events]);
+
+    // Antal event som börjar inom 1 timme (för välkomstmodalen)
+    const soonEventCount = useMemo(() => {
+        const now = Date.now();
+        const oneHourFromNow = now + 60 * 60 * 1000;
+        return events.filter(evt => {
+            const timeMs = evt.time.getTime();
+            return timeMs > now && timeMs <= oneHourFromNow;
+        }).length;
+    }, [events]);
+
     // Siffran vid dag-väljaren: som DEFAULT en total som INKLUDERAR opt-in-
     // källorna (PRO/Svenska kyrkan/Korpen) så man ser hur mycket som faktiskt
     // händer den dagen — även om de är dolda på kartan. Så fort man filtrerar
@@ -852,6 +871,8 @@ export default function HomePage() {
                 (PWA-installbannern monteras globalt i Providers, inte här.) */}
             <WelcomeOverlay
                 onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+                todayEventCount={todayEventCount}
+                soonEventCount={soonEventCount}
             />
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}

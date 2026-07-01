@@ -1,4 +1,5 @@
 @import 'leaflet/dist/leaflet.css';
+@import url('https://fonts.googleapis.com/css2?family=Satisfy&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -201,6 +202,34 @@
   70% { transform: scale(0.98) translateY(2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+@keyframes welcome-float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.animate-welcome-float {
+  animation: welcome-float-y 4s ease-in-out infinite;
+}
+
+@keyframes welcome-pan-x {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(16px, 4px); }
+}
+
+.animate-welcome-pan-x {
+  animation: welcome-pan-x 8s ease-in-out infinite;
+}
+
+@keyframes welcome-cloud-drift {
+  0% { transform: translateX(-180px); }
+  100% { transform: translateX(420px); }
+}
+
+.animate-cloud-drift {
+  animation: welcome-cloud-drift linear infinite;
+}
+
 
 @keyframes category-ticker-left {
   from { transform: translateX(0); }

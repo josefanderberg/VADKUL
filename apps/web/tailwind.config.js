@@ -51,6 +51,7 @@ export default {
       fontFamily: {
         // Rundad display-font för "lockande" inslag som t.ex. moln-texten.
         rounded: ["var(--font-fredoka)", "ui-rounded", "system-ui", "sans-serif"],
+        satisfy: ["Satisfy", "cursive", "sans-serif"],
       },
     },
   },
