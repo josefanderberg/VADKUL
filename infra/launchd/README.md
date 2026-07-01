@@ -39,6 +39,40 @@ launchctl kickstart gui/$(id -u)/se.vadkul.scraper.nightly   # kör nu
 tail -f ~/Library/Logs/vadkul-scraper/nightly.log            # kedjans logg
 ```
 
+## se.vadkul.digest-daily
+
+Daglig 10-lista → Telegram + auto-publicering. Startar **07:00** och kör
+`publish-digest.ts --auto`: bygger dagens 10-event-lista (IDAG, en per stad,
+kategori-spridning), levererar den till Telegram OCH publicerar direkt till
+Instagram-karusell + Facebook — ingen approval-loop, inget `/list10` behövs.
+
+07:00 (inte natten) så nattkedjan (00:30) hunnit skrapa + efterbehandla +
+geokoda dagens events innan listan byggs. Bara event med publik bild blir
+IG-slides (resten hoppas tyst över); bildtexten renumreras för att matcha.
+
+Det manuella `/list10` (bot-daemon → `npm run digest`) finns kvar för ad
+hoc-listor med `byt`/`bild`/`klar`. Båda tar samma lock
+(`/tmp/vadkul-publish-digest.lock`), så de krockar aldrig.
+
+### Installera
+
+```sh
+cp infra/launchd/se.vadkul.digest-daily.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.digest-daily.plist
+launchctl list | grep vadkul.digest
+```
+
+### Köra manuellt / felsöka
+
+```sh
+# OBS: kickstart av --auto-jobbet publicerar PÅ RIKTIGT till IG + FB.
+launchctl kickstart gui/$(id -u)/se.vadkul.digest-daily   # kör nu (publicerar!)
+tail -f ~/Library/Logs/vadkul-scraper/digest-daily.log
+
+# Torrkörning utan Telegram/IG/FB (bara skriver ut listan):
+cd apps/scraper && npm run digest -- --dry
+```
+
 ## se.vadkul.audit-pending
 
 Kontinuerlig daemon som auditerar dagens-och-framåt events som ännu inte
