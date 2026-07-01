@@ -3075,45 +3075,6 @@ export default function V2Map({
                         filter: brightness(1.05);
                     }
                 }
-                /* Flipper-läge: RUNDA studsare. Klasserna sätts bara i pinball, så
-                   vanliga läget (droppen) är orört. Specificitet (2-3 klasser) vinner
-                   över .pin-bubble utan !important → träff-blinken kan ändå skala. */
-                .pin-bubble.pin-bubble-round { border-radius: 50%; transform: none; }
-                .pin-bubble.pin-bubble-round::before { display: none; }
-                .pin-bubble.pin-bubble-round .pin-emoji { transform: none; }
-                .pinball-marker .pin-element { transform: none; }
-                /* Zoom-skala: krymp pinball-markörerna när kartan är utzoomad
-                   (--pin-zoom-scale sätts på kartcontainern i geo-flippern). Skalar
-                   runt nederkanten = ankaret, så bumpern stannar på koordinaten. */
-                .custom-marker-wrapper.pinball-marker {
-                    transform: scale(var(--pin-zoom-scale, 1));
-                    transform-origin: bottom center;
-                }
-                @media (hover: hover) and (pointer: fine) {
-                    .v2-custom-marker:hover .pin-bubble.pin-bubble-round { transform: scale(1.07); }
-                }
-                /* Träff: studsaren blinkar/poppar när bollen "tar i" den. */
-                .pin-bubble.pin-hit-flash { animation: pinHitPulse 0.3s ease-out; z-index: 5; }
-                @keyframes pinHitPulse {
-                    0%   { transform: scale(1);    filter: brightness(1);   box-shadow: 0 0 0 0 rgba(251,191,36,0.75); }
-                    40%  { transform: scale(1.45); filter: brightness(1.9); box-shadow: 0 0 0 10px rgba(251,191,36,0); }
-                    100% { transform: scale(1);    filter: brightness(1); }
-                }
-                /* Guld-markör: skimrar med en pulserande gloria runt brickan så
-                   det rätta svaret syns tydligt även från avstånd. */
-                @keyframes gold-marker-shimmer {
-                    0%, 100% {
-                        box-shadow: 0 0 0 3px rgba(251,191,36,0.30), 0 6px 22px rgba(217,119,6,0.45);
-                        filter: brightness(1);
-                    }
-                    50% {
-                        box-shadow: 0 0 0 7px rgba(251,191,36,0.12), 0 8px 28px rgba(217,119,6,0.7);
-                        filter: brightness(1.18);
-                    }
-                }
-                .pin-bubble-gold {
-                    animation: gold-marker-shimmer 1.4s ease-in-out infinite;
-                }
                 .badge-count {
                     position: absolute;
                     top: -6px;
