@@ -15,7 +15,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { setMyCustomHue } from '@/lib/reviret';
-import { Target, Trophy, X, Sparkles, ImagePlus } from 'lucide-react';
+import { X, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { useAuth } from '@/context/AuthContext';
@@ -43,13 +43,6 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 const hasValidCoords = (evt: LinkEvent) =>
     typeof evt.lat === 'number' && typeof evt.lng === 'number' &&
     !(evt.lat === 0 && evt.lng === 0);
-
-// Avstånd för spelets "så nära var du"-feedback: meter under 1 km, annars km.
-const formatGuessDistance = (km: number): string => {
-    if (km < 1) return `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m`;
-    if (km < 10) return `${km.toFixed(1)} km`;
-    return `${Math.round(km)} km`;
-};
 
 /**
  * Vid dagbyte: välj eventet som ligger närmast en geo-PUNKT (kartans mitt — det
@@ -83,8 +76,6 @@ export default function HomePage() {
     const [eventsLoaded, setEventsLoaded] = useState(false);
     // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
-    const selectedEventRef = useRef<LinkEvent | null>(null);
-    selectedEventRef.current = selectedEvent; // läses i hit-callbacken utan att bli dep
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
@@ -241,32 +232,6 @@ export default function HomePage() {
     // ju själva poängen att dra isär dem under armning. Disarming sker antingen
     // genom klick på den armade knappen, eller automatiskt när V2Map avfyrar.
 
-    // "Hitta eventet"-spelets tillstånd (logiken längre ner — efter
-    // searchFilteredEvents). gameActive = runda pågår (gissningsläge).
-    const [gameActive, setGameActive] = useState(false);
-    const [gameScore, setGameScore] = useState(0);
-    const [gameResult, setGameResult] = useState<'correct' | 'wrong' | null>(null);
-    const [goldEventId, setGoldEventId] = useState<string | null>(null); // rätt svar (guldmarkör)
-    const [gameDistanceKm, setGameDistanceKm] = useState<number | null>(null); // hur långt fel-gissningen låg
-    // Streck mellan gissningen och rätt svar. När satt zoomar kartan ut så båda
-    // punkterna syns, och V2Map ritar en linje + avståndsetikett mellan dem.
-    const [guessLine, setGuessLine] = useState<{ from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null>(null);
-    // Event-id för markören man gissade på — hålls synlig (brickan) efter avslöjet.
-    const [guessedEventId, setGuessedEventId] = useState<string | null>(null);
-
-    // ── Pinball/Flipper-läge ──────────────────────────────────────────────────
-    // Kartan blir en top-down flipperbana: eventen blir runda studsare och en
-    // kula avfyras med slangbella. Träffat event öppnas. (Handlers längre ned.)
-    // Flipper AV som standard — användaren väljer den själv i väskan. Terräng-
-    // gravitationen i fysik-loopen är ändå redo (samplar höjddata) när flippern
-    // slås på. Andra funktioner/kartstilar går att välja medan flippern är på.
-    const [pinballActive, setPinballActive] = useState(false);
-    const [pinballScore, setPinballScore] = useState(0); // antal träffar denna omgång
-    // Vilket event i en flerEvent-grupp (samma plats) som visas — varje träff stegar +1.
-    const pinballGroupIdxRef = useRef<Map<string, number>>(new Map());
-    const [pinballShots, setPinballShots] = useState(0); // antal avfyrade kulor
-    const [pinShotHits, setPinShotHits] = useState(0);   // träffar i pågående skott (visas bredvid Nästa)
-
     // Användarskapade event ska ALLTID vara kvar på kartan. Pollen är progressiv:
     // stegen destinationer → kort → beskrivningar saknar användarevent (bara sista
     // steget har dem), så utan skydd blinkar egna event bort ~var 30:e sekund.
@@ -326,8 +291,6 @@ export default function HomePage() {
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
-            // Flippern är default-basläget och stängs INTE av vid dagbyte — den
-            // byggs bara om med den nya dagens event. (Förut: setPinballActive(false).)
             setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
             prevDayKey.current = dayKey;
             setDaySwitchNonce(n => n + 1);
@@ -769,127 +732,6 @@ export default function HomePage() {
         });
     };
 
-    // ── "Hitta eventet"-spel ────────────────────────────────────────────────
-    // Ett slumpat event för dagen visas som kort UTAN att kartan flyttas dit.
-    // Spelaren ska hitta och klicka rätt markör på kartan. Rätt → +1 poäng;
-    // fel → rätt markör avslöjas i guld och kameran flyger dit.
-    // (Definieras här nere så gamePool kan läsa searchFilteredEvents ovan.)
-    const gamePool = useMemo(
-        () => visibleEvents.filter(hasValidCoords),
-        [visibleEvents]
-    );
-
-    const startRound = useCallback(() => {
-        if (gamePool.length === 0) return;
-        const target = gamePool[Math.floor(Math.random() * gamePool.length)];
-        setGoldEventId(null);
-        setGameResult(null);
-        setGameDistanceKm(null);
-        setGuessLine(null);
-        setGuessedEventId(null);
-        setGameActive(true);
-        setSelectedEvent(target); // visar mål-kortet; V2Map (gameMode) hindrar recenter/highlight
-    }, [gamePool]);
-
-    const handleGuess = useCallback((group: LinkEvent[]) => {
-        if (!gameActive || !selectedEvent) return;
-        const correct = group.some(e => e.id === selectedEvent.id);
-        if (correct) {
-            setGameScore(s => s + 1);
-            setGameResult('correct');
-            setGameDistanceKm(0);
-            setGuessLine(null);
-            setGuessedEventId(null);
-        } else {
-            // Hur långt ifrån svarade man? Avstånd mellan gissad markör och målet.
-            const guessed = group.find(hasValidCoords) ?? group[0];
-            const dist = (hasValidCoords(guessed) && hasValidCoords(selectedEvent))
-                ? haversineKm(selectedEvent.lat, selectedEvent.lng, guessed.lat, guessed.lng)
-                : null;
-            setGameDistanceKm(dist);
-            setGameResult('wrong');
-            // Streck mellan gissningen och rätt svar; kartan zoomar ut så båda syns.
-            setGuessedEventId(guessed.id);
-            if (hasValidCoords(guessed) && hasValidCoords(selectedEvent)) {
-                setGuessLine({
-                    from: { lat: guessed.lat, lng: guessed.lng },
-                    to: { lat: selectedEvent.lat, lng: selectedEvent.lng },
-                    label: dist !== null ? formatGuessDistance(dist) : ''
-                });
-            }
-        }
-        setGoldEventId(selectedEvent.id);
-        setGameActive(false);
-    }, [gameActive, selectedEvent]);
-
-    const clearGame = useCallback(() => {
-        setGameActive(false);
-        setGameResult(null);
-        setGoldEventId(null);
-        setGuessLine(null);
-        setGuessedEventId(null);
-        setSelectedEvent(null);
-    }, []);
-
-    // ── Pinball/Flipper-handlers ──────────────────────────────────────────────
-    const startPinball = useCallback(() => {
-        if (gamePool.length === 0) return;
-        setSelectedEvent(null);   // ren bana; kort öppnas bara vid en träff
-        pinballGroupIdxRef.current.clear(); // ny omgång → ingen stale grupp-position
-        setPinballScore(0);
-        setPinballShots(0);
-        setPinShotHits(0);
-        setPinballActive(true);
-    }, [gamePool.length]);
-
-    const stopPinball = useCallback(() => {
-        setPinballActive(false);
-        setSelectedEvent(null);
-        setPinShotHits(0);
-        pinballGroupIdxRef.current.clear();
-    }, []);
-
-    // Kallas av V2Map när kulan slår in i en studsare → öppna eventet + poäng.
-    const handlePinballHit = useCallback((group: LinkEvent[]) => {
-        if (!group.length) return;
-        // Flera event på samma plats: varje träff visar NÄSTA levande event i gruppen
-        // (bläddra igenom de stackade eventen genom att studsa på dem).
-        const live = group.filter(e => !discardedEventIds.has(e.id));
-        const pool = live.length ? live : group;
-        const first = pool[0];
-        if (pool.length <= 1 || first.lat == null || first.lng == null) {
-            setSelectedEvent(pool[0]);
-        } else {
-            const key = `${first.lat.toFixed(4)},${first.lng.toFixed(4)}`;
-            const sel = selectedEventRef.current;
-            const selIdx = sel ? pool.findIndex(e => e.id === sel.id) : -1;
-            const idxMap = pinballGroupIdxRef.current;
-            const base = selIdx >= 0 ? selIdx : (idxMap.get(key) ?? -1);
-            const next = (base + 1) % pool.length; // base>=-1 → next 0..n-1
-            idxMap.set(key, next);
-            setSelectedEvent(pool[next]);
-        }
-        setPinballScore(s => s + 1);
-        setPinShotHits(h => h + 1); // räknare för pågående skott → visas bredvid Nästa
-    }, [discardedEventIds]);
-
-    // Nytt skott/segment startar → nollställ skottets träffräknare (+ räkna avfyrning).
-    const handlePinballLaunch = useCallback(() => {
-        setPinballShots(s => s + 1);
-        setPinShotHits(0);
-    }, []);
-
-    // Stänger spelaren kortet (drar ner det) mitt i en runda/resultat → städa spelet.
-    useEffect(() => {
-        if (selectedEvent === null && (gameActive || gameResult !== null)) {
-            setGameActive(false);
-            setGameResult(null);
-            setGoldEventId(null);
-            setGuessLine(null);
-            setGuessedEventId(null);
-        }
-    }, [selectedEvent, gameActive, gameResult]);
-
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-slate-100">
             {/* 1. Svävande transparent Navbar överst */}
@@ -983,28 +825,12 @@ export default function HomePage() {
                 onSlingshotChange={setSlingshotActive}
                 slingshotEngaged={slingshotEngaged}
                 onSlingshotFired={() => setSlingshotEngaged(false)}
-                gameMode={gameActive}
-                onGuess={handleGuess}
-                goldEventId={goldEventId}
-                guessedEventId={guessedEventId}
-                guessLine={guessLine}
                 tilted={mapTilted}
                 onSunCloudTap={handleSunCloudTap}
                 onToggleTilt={handleToggleTilt}
                 onFeatureFlagsChange={handleFeatureFlagsChange}
                 onActivateMultiplayer={handleActivateMultiplayer}
                 onFuncBagOpenChange={setFuncBagOpen}
-                findGameActive={gameActive}
-                canStartFindGame={!selectedEvent && !gameActive && gameResult === null && !pinballActive && gamePool.length > 0}
-                onStartFindGame={startRound}
-                onStopFindGame={clearGame}
-                pinballMode={pinballActive}
-                canStartPinball={!selectedEvent && !gameActive && gameResult === null && !pinballActive && gamePool.length > 0}
-                onStartPinball={startPinball}
-                onStopPinball={stopPinball}
-                onPinballHit={handlePinballHit}
-                onPinballLaunch={handlePinballLaunch}
-                myReviretHue={myReviretHue}
             />
 
 
@@ -1172,98 +998,14 @@ export default function HomePage() {
                 onNavigate={() => setNavSelectNonce(n => n + 1)}
                 onZoomToSelected={() => setZoomToEventTrigger(t => t + 1)}
                 onZoomOut={() => setZoomOutTrigger(t => t + 1)}
-                pinShotHits={pinShotHits}
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
                 onDayRangeChange={handleDayRangeChange}
-                gameMode={gameActive || gameResult !== null}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}
                 onBoostOwnEvent={handleBoostOwnEvent}
             />
-
-            {/* ── "Hitta eventet"-spel: banners. Poängen visas numera INNE i spelets
-                banners (inte som en egen alltid-synlig bricka) — den hör till spelet. */}
-
-            {/* Hint-banner under gissningsläget. */}
-            {gameActive && selectedEvent && (
-                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl border border-white/60 max-w-[92vw] pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Target size={18} className="text-[#006AA7] shrink-0" />
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-black uppercase tracking-wider text-[#006AA7] leading-tight">Hitta på kartan</p>
-                        <p className="text-sm font-bold text-slate-800 truncate max-w-[60vw]">{selectedEvent.title}</p>
-                    </div>
-                    <span className="shrink-0 inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-black tabular-nums">
-                        <Trophy size={12} className="shrink-0" /> {gameScore}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={clearGame}
-                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                        aria-label="Avbryt"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-            )}
-
-            {/* Resultat-banner efter en gissning. */}
-            {gameResult !== null && (
-                <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center gap-2 px-5 py-3 rounded-2xl shadow-xl border max-w-[92vw] pointer-events-auto animate-in fade-in zoom-in duration-300 ${
-                    gameResult === 'correct'
-                        ? 'bg-emerald-500 border-emerald-300 text-white'
-                        : 'bg-white/95 backdrop-blur-md border-amber-300 text-slate-800'
-                }`}>
-                    <div className="flex flex-col items-center gap-0.5">
-                        {gameResult === 'correct' ? (
-                            <span className="flex items-center gap-2 font-black">
-                                <Sparkles size={18} className="shrink-0" />
-                                Rätt! +1 poäng
-                            </span>
-                        ) : (
-                            <>
-                                <span className="flex items-center gap-2 font-black">
-                                    <Target size={18} className="text-amber-500 shrink-0" />
-                                    {gameDistanceKm !== null
-                                        ? `Fel! Du var ${formatGuessDistance(gameDistanceKm)} ifrån.`
-                                        : 'Fel!'}
-                                </span>
-                                <span className="text-[12px] font-semibold text-slate-500">
-                                    Rätt event lyser i guld.
-                                </span>
-                            </>
-                        )}
-                    </div>
-                    <span className={`inline-flex items-center gap-1 text-xs font-black tabular-nums ${gameResult === 'correct' ? 'text-white/90' : 'text-amber-700'}`}>
-                        <Trophy size={13} className="shrink-0" /> {gameScore} poäng totalt
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={startRound}
-                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors whitespace-nowrap ${
-                                gameResult === 'correct'
-                                    ? 'bg-white text-emerald-600 hover:bg-emerald-50'
-                                    : 'bg-[#006AA7] text-white hover:bg-[#005590]'
-                            }`}
-                        >
-                            Spela igen
-                        </button>
-                        <button
-                            type="button"
-                            onClick={clearGame}
-                            className={`font-bold text-sm px-4 py-1.5 rounded-full transition-colors ${
-                                gameResult === 'correct'
-                                    ? 'bg-emerald-400/40 text-white hover:bg-emerald-400/60'
-                                    : 'text-slate-500 hover:bg-slate-100'
-                            }`}
-                        >
-                            Stäng
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Sol-effekt: ljus overlay som fadear in och ut över 3 sekunder.
                 När animationen slutar trigger:as ett nytt moln i V2Map som
