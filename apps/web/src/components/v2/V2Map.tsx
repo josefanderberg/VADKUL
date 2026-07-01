@@ -11,8 +11,6 @@ import { isValidLatLng } from '../../utils/mapUtils';
 import { sourceColor } from '../../utils/sources';
 import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
 import { isEventFeatured } from '../../services/linkEventService';
-import CloudPopup, { CloudExpression } from '../ui/CloudPopup';
-import WelcomeBox from '../ui/WelcomeBox';
 import toast from 'react-hot-toast';
 
 // Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
@@ -586,20 +584,9 @@ interface V2MapProps {
     cardExpanded?: boolean;
     onCenterChange?: (lat: number, lng: number) => void;
     onMapDrag?: () => void;
-    /** Bumps every time the sun button is pressed and the flash ends — V2Map
-     *  spawns a new map-anchored cloud at the current view center. */
-    sunCloudTrigger?: number;
-    /** Räknare som visas i molnet. Skickas in från sidan så molnet ser hela
-     *  datasetet, inte bara det dag-/sökfiltrerade. */
-    cloudStats?: { today: number; tomorrow: number; week: number; withinHour: number; withinHours: number; isToday: boolean };
-    /** True så fort första event-svaret från databasen kommit. Start-molnet
-     *  väntar på detta innan det poppar fram, så det inte hinner visa "0 unika
-     *  event idag" medan datan fortfarande laddas. Default true (bakåtkompat). */
+    /** True så fort första event-svaret från databasen kommit. Default true
+     *  (bakåtkompat). */
     eventsLoaded?: boolean;
-    /** Räknare som triggar att respektive moln snäpper tillbaka in på skärmen
-     *  (används av återkallnings-knapparna jämte solen). Varje ökning = ett anrop. */
-    recallMainTrigger?: number;
-    recallSunTrigger?: number;
     /** Räknare som triggar att kameran flyger tillbaka TILL det valda eventet
      *  (recenter-knappen på eventkortet — vi går till eventet, eventet flyttas
      *  inte till oss). Varje ökning = ett anrop. */
@@ -615,25 +602,6 @@ interface V2MapProps {
     /** Bumpas vid intern kort-navigering (Nästa/Föregående/svep). Då står kameran
      *  kvar — vi panorerar/flyger INTE till eventet man bläddrar fram till. */
     navSelectNonce?: number;
-    /** Skickar status om huruvida respektive molns ankare ligger utanför skärmen.
-     *  Sidan använder det för att visa återkallnings-knappar jämte solen. */
-    onCloudVisibilityChange?: (visibility: { main: boolean; sun: boolean }) => void;
-    /** Fyrar när huvudmolnet hämtats tillbaka via molnsymbolen minst en gång
-     *  (cloudRecalled). Sidan använder det för att sluta blinka molnsymbol-knappen
-     *  efter att den använts. */
-    onMainRecalledChange?: (recalled: boolean) => void;
-    /** Onboarding: true när Fokus-verktyget (recenter-knappen vid "Idag") ska
-     *  blinka för att visa att det är nytt — tills användaren klickat på det. */
-    onFocusToolHint?: (blink: boolean) => void;
-    /** True när båda molnen ligger på varandra → slangbella tillgänglig.
-     *  Sidan fyller fokusknappen vit för att visa att läget är aktivt. */
-    onSlingshotChange?: (active: boolean) => void;
-    /** True när användaren tryckt på fokusknappen i ready-läge → gummibanden
-     *  blir alltid synliga och nästa drag-release av ett moln avfyrar slangbellan
-     *  i motsatt riktning mot dragget. */
-    slingshotEngaged?: boolean;
-    /** Fyrar när snärten avlossats så sidan kan avarma engaged-läget. */
-    onSlingshotFired?: () => void;
     /** "Hitta eventet"-spel: när true är kartan i gissningsläge — markörklick blir
      *  en gissning (onGuess) i stället för ett vanligt val, det valda mål-eventet
      *  highlightas INTE (så det inte avslöjas) och kameran flyttas inte dit. */
@@ -651,13 +619,6 @@ interface V2MapProps {
      *  felgissning. När satt zoomar kartan ut så båda punkterna syns och en
      *  streckad linje + avståndsetikett ritas mellan dem. null = inget streck. */
     guessLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; label: string } | null;
-    /** True = luta kameran till en sidovy (3D-perspektiv); false = platt vy.
-     *  Togglas av solknappen + tilt-knappen. */
-    tilted?: boolean;
-    /** Fyrar när man trycker på sol-molnet — sidan fäller tillbaka lutningen. */
-    onSunCloudTap?: () => void;
-    /** Togglar lutningen via tilt-knappen under satellit-knappen. */
-    onToggleTilt?: () => void;
     /** Skickar shop-flaggor uppåt så page.tsx kan gömma/visa knappar som inte
      *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard, eller
      *  +-knappen i navbaren för att skapa event). Fyrar varje gång användaren
@@ -702,30 +663,17 @@ export default function V2Map({
     cardExpanded = false,
     onCenterChange,
     onMapDrag,
-    sunCloudTrigger = 0,
-    cloudStats,
     eventsLoaded = true,
-    recallMainTrigger = 0,
-    recallSunTrigger = 0,
     recenterTrigger = 0,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
     daySwitchNonce = 0,
     navSelectNonce = 0,
-    onCloudVisibilityChange,
-    onMainRecalledChange,
-    onFocusToolHint,
-    onSlingshotChange,
-    slingshotEngaged = false,
-    onSlingshotFired,
     gameMode = false,
     onGuess,
     goldEventId = null,
     guessedEventId = null,
     guessLine = null,
-    tilted = false,
-    onSunCloudTap,
-    onToggleTilt,
     onFeatureFlagsChange,
     onActivateMultiplayer,
     onFuncBagOpenChange,
@@ -810,16 +758,10 @@ export default function V2Map({
     // kart-funktioner (lutning, kasta, sol, fokus, slangbella). Separat från
     // shopOpen (hela funktioner-shoppen).
     const [funcBagOpen, setFuncBagOpen] = useState(false);
-    // Lutning har TVÅ nivåer:
-    //   tiltEnabled — "funktionen aktiverad" (på i väskan). Styr om snabb-knappen
-    //                 under lager-knappen visas.
-    //   tilted (prop) — själva kamera-lutningen på/av.
-    // Snabb-knappen togglar BARA kameran (tilted) — funktionen förblir aktiverad
-    // och knappen ligger kvar. Bara att stänga av Lutning i väskan döljer knappen
-    // (rensar tiltEnabled). Kamera-lutning via valfri väg (väska/sol/knapp)
-    // markerar funktionen som aktiverad.
+    // Lutning: tiltEnabled = "funktionen aktiverad" (på i väskan). Styr om
+    // snabb-knappen under lager-knappen visas. (Själva kamera-lutningen sköttes
+    // tidigare av en borttagen tilt-prop.)
     const [tiltEnabled, setTiltEnabled] = useState(false);
-    useEffect(() => { if (tilted) setTiltEnabled(true); }, [tilted]);
 
     // "Min plats": geolocation-knapp under lutnings-knappen. Position visas som
     // en pulserande blå punkt (egen maplibre-markör — överlever stilbyten).
@@ -1009,10 +951,8 @@ export default function V2Map({
             return;
         }
         if (key === 'tilt') {
-            // Aktivera/avaktivera funktionen (styr knappens synlighet) och
-            // luta/fäll kameran därefter.
+            // Aktivera/avaktivera funktionen (styr knappens synlighet).
             setTiltEnabled(value);
-            if (tilted !== value) onToggleTilt?.();
             return;
         }
         if (key === 'globe') { setIsGlobe(value); return; }
@@ -1028,7 +968,6 @@ export default function V2Map({
         if (!value) {
             // Avaktivera allting (utom record/multiplayer som har egen logik).
             setTiltEnabled(false);
-            if (tilted) onToggleTilt?.();
             setIsGlobe(false);
             setIs3DTerrain(false);
             setMapStyle('streets');
@@ -1046,7 +985,6 @@ export default function V2Map({
         const toActivate = new Set(COUNTED_FEATURE_KEYS.slice(0, MAX_ACTIVE_FEATURES));
         const want = (k: string) => toActivate.has(k);
         setTiltEnabled(want('tilt'));
-        if (tilted !== want('tilt')) onToggleTilt?.();
         setIsGlobe(want('globe'));
         setIs3DTerrain(want('terrain'));
         setMapStyle(want('satellite') ? 'satellite' : 'streets');
@@ -1085,119 +1023,6 @@ export default function V2Map({
     // Spel-läge + gissnings-callback i refs så markör-klickhanterare kan läsa
     // senaste värdet utan att bindas om.
 
-    // Molnen (info-molnet + sol-molnet) och alla deras effekter — ansikten,
-    // kasta, slangbella, sol-tilt, vattning. Välkomstmolnet visar dagens event-
-    // info ("X unika event idag" + "N börjar inom en timme"). De extra effekterna
-    // (ansikten/kasta/slangbella) är fortfarande var för sig gate:ade av
-    // shop-togglarna (isFeatureActive(...)), så de slås inte på automatiskt.
-    const CLOUDS_ENABLED: boolean = true;
-    // Gamla lekfulla startmolnet (med dagens stats) är ersatt av WelcomeBox.
-    // Behåller mount-koden som backup men renderar den inte (typad boolean så
-    // TS-narrowing inuti blocket fortsatt funkar).
-    const SHOW_LEGACY_CLOUD: boolean = false;
-
-    // Cloud popup geographic map anchor state and projection variables
-    // Solves request: anchor cloud to a position on map, move with map
-    const [cloudAnchor, setCloudAnchor] = useState<{ lat: number; lng: number }>({ lat: 58.0257, lng: 14.4664 });
-    const [cloudAnchorPos, setCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
-    const [showCloud, setShowCloud] = useState(true);
-    // True när molnet hämtats tillbaka via molnsymbolen minst en gång. Då ska det
-    // INTE komma tillbaka som start-molnet med text, utan som det runda molnet med
-    // ett leende (clicked-läget). Start-visningen (false) visar texten.
-    const [cloudRecalled, setCloudRecalled] = useState(false);
-
-    const showCloudRef = useRef(showCloud);
-    showCloudRef.current = showCloud;
-
-    const cloudAnchorRef = useRef(cloudAnchor);
-    cloudAnchorRef.current = cloudAnchor;
-
-    const cloudAnchorPosRef = useRef(cloudAnchorPos);
-    cloudAnchorPosRef.current = cloudAnchorPos;
-
-    // Sun-cloud state — a second cloud that spawns at the current map center
-    // whenever the sun-flash animation finishes. Behaves identically to the
-    // main cloud: anchored to geo coordinates, follows map pan/zoom, persists
-    // off-screen until the user dismisses it.
-    const [sunCloudAnchor, setSunCloudAnchor] = useState<{ lat: number; lng: number } | null>(null);
-    const [sunCloudAnchorPos, setSunCloudAnchorPos] = useState<{ x: number; y: number } | null>(null);
-    const [sunCloudId, setSunCloudId] = useState(0);
-    // Skalan som sun-molnet visas i. Det är förankrat i kartan: när man zoomar
-    // in växer det (2x per zoom-nivå), zoomar man ut krymper det — likt ett
-    // objekt på kartan. Vid skapande sätts skalan utifrån nuvarande zoom.
-    const [sunCloudScale, setSunCloudScale] = useState(1);
-    const sunCloudCreationZoomRef = useRef<number>(8);
-    const SUN_CLOUD_BASE_SCALE = 0.7; // lite mindre än huvudmolnet vid skapande
-    // Gemensamt max-storlekstak för BÅDA molnen: när man zoomar in slutar molnet
-    // växa vid den här skalan, så en stor blur-tung moln-SVG inte får kartan att
-    // lagga. Skickas till CloudPopup (maxScale) och kapar även sol-molnets eget
-    // zoom-skalningsläge nedan. Molnen krymper fortfarande fritt när man zoomar ut.
-    const CLOUD_MAX_SCALE = 2.5;
-
-    const sunCloudAnchorRef = useRef(sunCloudAnchor);
-    sunCloudAnchorRef.current = sunCloudAnchor;
-    const sunCloudAnchorPosRef = useRef(sunCloudAnchorPos);
-    sunCloudAnchorPosRef.current = sunCloudAnchorPos;
-
-    // Tilt-status i ref så hjälpare som depthAtPoint (anropad senare från
-    // CloudPopups glide-tick) kan läsa senaste värdet utan att bindas om.
-    const tiltedRef = useRef(tilted);
-    tiltedRef.current = tilted;
-
-
-
-    // Perspektiv-skalning i lutad vy: ett moln som ligger längre bort från
-    // kameran (högre upp på skärmen i 3D-vyn) ritas mindre och kastas
-    // svagare (mer friktion under glidet) så det inte flyger ut över kanten.
-    // Ratio = skärm-pixlar-per-meter vid molnets nuvarande punkt jämfört med
-    // kartans centrum. Pitch=0 → ratio = 1 överallt (ingen skalning/dämpning).
-    // depthAtPoint får skärmpunkten och projicerar via map.unproject så det
-    // funkar för molnets LIVE-position (ankare + drag/glid-offset), inte
-    // bara dess geografiska ankarpunkt.
-    const depthAtPoint = (screenX: number, screenY: number): number => {
-        if (!tiltedRef.current) return 1;
-        const map = mapRef.current;
-        if (!map) return 1;
-        const center = map.getCenter();
-        const dlat = 0.0008;
-        const c1 = map.project([center.lng, center.lat]);
-        const c2 = map.project([center.lng, center.lat + dlat]);
-        const cScale = Math.hypot(c2.x - c1.x, c2.y - c1.y);
-        if (!isFinite(cScale) || cScale < 1e-4) return 1;
-        const ll = map.unproject([screenX, screenY]);
-        const a1 = map.project([ll.lng, ll.lat]);
-        const a2 = map.project([ll.lng, ll.lat + dlat]);
-        const aScale = Math.hypot(a2.x - a1.x, a2.y - a1.y);
-        if (!isFinite(aScale)) return 1;
-        return Math.min(Math.max(aScale / cScale, 0.3), 1.5);
-    };
-    const depthAtPointRef = useRef(depthAtPoint);
-    depthAtPointRef.current = depthAtPoint;
-
-    // Camera-follow: tapping ett moln pinnar det vid en skärmpunkt. Båda molnen
-    // kan följas samtidigt — och kartan får dras fritt även medan de följs (panna
-    // under molnen). När man kastar ett följt moln glider kameran med, och båda
-    // pinnade moln stannar kvar på sina skärmpunkter hela vägen.
-    const [mainFollowing, setMainFollowing] = useState(false);
-    const [sunFollowing, setSunFollowing] = useState(false);
-    const mainFollowingRef = useRef(mainFollowing);
-    mainFollowingRef.current = mainFollowing;
-    const sunFollowingRef = useRef(sunFollowing);
-    sunFollowingRef.current = sunFollowing;
-    // Skärmpunkten ett följt moln är fastpinnat vid. Geo-ankaret härleds från
-    // den punkten varje frame så molnet stannar vid samma pixel medan kameran rör sig.
-    const mainFollowPtRef = useRef<{ x: number; y: number } | null>(null);
-    const sunFollowPtRef = useRef<{ x: number; y: number } | null>(null);
-
-    // Off-screen-status för respektive moln. När geo-ankaret hamnar utanför
-    // viewporten visar sidan en återkallnings-knapp jämte solen.
-    const [mainOffScreen, setMainOffScreen] = useState(false);
-    const [sunOffScreen, setSunOffScreen] = useState(false);
-    const mainOffScreenRef = useRef(mainOffScreen);
-    mainOffScreenRef.current = mainOffScreen;
-    const sunOffScreenRef = useRef(sunOffScreen);
-    sunOffScreenRef.current = sunOffScreen;
-
     // ── Onboarding/intro ────────────────────────────────────────────────────
     // Knuffa användaren att testa Fokus-funktionen — men FÖRST när hen hämtat
     // tillbaka molnet via molnsymbolen (inte direkt när start-molnet stängs).
@@ -1208,11 +1033,6 @@ export default function V2Map({
     // pilen + lager-blinket (för gott för det tipset). Själva funktionsraden blinkar
     // dock kvar tills man klickat på den. Nollställs när ett NYTT tips dyker upp.
     const [hintAcknowledged, setHintAcknowledged] = useState(false);
-    // Tipsa om Fokus när molnet hämtats tillbaka (cloudRecalled) — inte när man
-    // bara stängt start-molnet. Aktiverar INGET automatiskt; bara ett tips.
-    useEffect(() => {
-        if (cloudRecalled) setFeatureHint('focus');
-    }, [cloudRecalled]);
     // Nytt tips → visa pilen igen.
     useEffect(() => { if (featureHint !== null) setHintAcknowledged(false); }, [featureHint]);
     // Öppnar väskan medan tipset är aktivt → kvittera (pilen/lager-blinket slutar).
@@ -1232,33 +1052,6 @@ export default function V2Map({
             setRecenterToolBlink(false);
         }
     }, [recenterTrigger]);
-    const onFocusToolHintRef = useRef(onFocusToolHint);
-    onFocusToolHintRef.current = onFocusToolHint;
-    useEffect(() => { onFocusToolHintRef.current?.(recenterToolBlink); }, [recenterToolBlink]);
-
-    // Slangbella: aktiv när båda molnen ligger på (nästan) varandra på skärmen.
-    const [slingshotActive, setSlingshotActive] = useState(false);
-    const slingshotActiveRef = useRef(slingshotActive);
-    slingshotActiveRef.current = slingshotActive;
-    // Live drag-offset per moln, så slangbella-gummibanden hänger med molnet
-    // när användaren drar i det. Nollställs när dragget släpps.
-    const [mainLiveOffset, setMainLiveOffset] = useState({ x: 0, y: 0 });
-    const [sunLiveOffset, setSunLiveOffset] = useState({ x: 0, y: 0 });
-
-
-    // Perspektiv-skala per moln, beräknat på molnets LIVE skärmpunkt (ankare +
-    // drag/glid-offset). Pitch=0 → alltid 1. I lutad vy: molnet uppåt på
-    // skärmen (in i horisonten) → ratio < 1 → ritas mindre. Eftersom useMemo
-    // beror på live-offsetten uppdateras skalan automatiskt även mitt under
-    // glidet — molnet krymper smidigt när det glider in i djupet.
-    const mainPerspectiveScale = useMemo(() => {
-        if (!tilted || !cloudAnchorPos) return 1;
-        return depthAtPoint(cloudAnchorPos.x + mainLiveOffset.x, cloudAnchorPos.y + mainLiveOffset.y);
-    }, [tilted, cloudAnchorPos, mainLiveOffset]);
-    const sunPerspectiveScale = useMemo(() => {
-        if (!tilted || !sunCloudAnchorPos) return 1;
-        return depthAtPoint(sunCloudAnchorPos.x + sunLiveOffset.x, sunCloudAnchorPos.y + sunLiveOffset.y);
-    }, [tilted, sunCloudAnchorPos, sunLiveOffset]);
 
     // Vattnade nålar (blommor): laddas från localStorage vid mount, sparas vid förändring.
     const [wateredKeys, setWateredKeys] = useState<Set<string>>(() => {
@@ -1311,121 +1104,15 @@ export default function V2Map({
         };
     }, [wateringKey]);
 
-    // Kollar om något av molnen är i närheten av någon nål (baserat på skärmpixlar!) och sätter igång vattning
+    // Blommor-funktionen: vattning startades tidigare när ett moln höll nära en
+    // nål. Molnsystemet är borttaget → ingen vattning kan längre startas; effekten
+    // avbryter bara ev. pågående vattning om funktionen stängs av.
     useEffect(() => {
-        const map = mapRef.current;
-        if (!map) return;
-
-        // Blommor-funktionen avstängd → ingen vattning startas (avbryt ev. pågående).
         if (!shopFlags.flowers) {
             if (wateringKey !== null) setWateringKey(null);
             return;
         }
-
-        const liveCloudScreenCoords: { x: number; y: number }[] = [];
-
-        // 1. Live position för huvudmolnet
-        if (showCloud && cloudAnchorPos) {
-            liveCloudScreenCoords.push({
-                x: cloudAnchorPos.x + mainLiveOffset.x,
-                y: cloudAnchorPos.y + mainLiveOffset.y
-            });
-        }
-
-        // 2. Live position för solmolnet
-        if (sunCloudAnchor && sunCloudAnchorPos) {
-            liveCloudScreenCoords.push({
-                x: sunCloudAnchorPos.x + sunLiveOffset.x,
-                y: sunCloudAnchorPos.y + sunLiveOffset.y
-            });
-        }
-
-        if (liveCloudScreenCoords.length === 0) {
-            if (wateringKey !== null) {
-                setWateringKey(null);
-            }
-            return;
-        }
-
-        let closestKey: string | null = null;
-        let closestDist = Infinity;
-
-        events.forEach(evt => {
-            if (!evt.lat || !evt.lng) return;
-            const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
-            if (wateredKeys.has(key)) return;
-
-            try {
-                // Projektion till skärmkoordinater för att få samma avståndsbedömning oavsett zoom
-                const pos = map.project([evt.lng, evt.lat]);
-
-                for (const cloudPos of liveCloudScreenCoords) {
-                    const dx = pos.x - cloudPos.x;
-                    const dy = pos.y - cloudPos.y;
-                    const dist = Math.hypot(dx, dy);
-
-                    // Tröskel: 85 skärmpixlar (mycket enklare och mer intuitivt!)
-                    if (dist < 85) {
-                        if (dist < closestDist) {
-                            closestDist = dist;
-                            closestKey = key;
-                        }
-                    }
-                }
-            } catch (e) {
-                // ignorera
-            }
-        });
-
-        if (closestKey !== wateringKey) {
-            setWateringKey(closestKey);
-        }
-    }, [
-        events,
-        showCloud,
-        cloudAnchorPos,
-        mainLiveOffset,
-        sunCloudAnchor,
-        sunCloudAnchorPos,
-        sunLiveOffset,
-        wateredKeys,
-        wateringKey,
-        shopFlags.flowers
-    ]);
-
-    // Molnens nuvarande moods (rapporterade av respektive CloudPopup) + en
-    // "incoming"-stämpel per moln. När man drar ett moln med en min över det
-    // andra molnet får det andra molnet samma min.
-    const [mainMood, setMainMood] = useState<CloudExpression | null>(null);
-    const [sunMood, setSunMood] = useState<CloudExpression | null>(null);
-    const mainMoodRef = useRef(mainMood); mainMoodRef.current = mainMood;
-    const sunMoodRef = useRef(sunMood); sunMoodRef.current = sunMood;
-    const [mainIncomingMood, setMainIncomingMood] = useState<{ mood: CloudExpression | null; nonce: number }>({ mood: null, nonce: 0 });
-    const [sunIncomingMood, setSunIncomingMood] = useState<{ mood: CloudExpression | null; nonce: number }>({ mood: null, nonce: 0 });
-    const slingshotEngagedRef = useRef(slingshotEngaged);
-    slingshotEngagedRef.current = slingshotEngaged;
-    // Snapshot av båda molns skärmpositioner i samma sekund slangbellan armas.
-    // Används vid avfyrning för att räkna ut pull-vektorn (current - origin) och
-    // avgöra vilket moln som är "projektilen" (det som flyttats längst).
-    const engageSnapshotRef = useRef<{ main: { x: number; y: number } | null; sun: { x: number; y: number } | null }>({ main: null, sun: null });
-    useEffect(() => {
-        if (slingshotEngaged) {
-            engageSnapshotRef.current = {
-                main: cloudAnchorPosRef.current ? { ...cloudAnchorPosRef.current } : null,
-                sun: sunCloudAnchorPosRef.current ? { ...sunCloudAnchorPosRef.current } : null,
-            };
-        } else {
-            engageSnapshotRef.current = { main: null, sun: null };
-        }
-    }, [slingshotEngaged]);
-
-    // Live glide-snapshot från respektive moln. CloudPopup skriver hit varje
-    // glid-frame och nollar när molnet stannat. Används av fokus-knappen för
-    // att kunna "jaga" ett moln som fortfarande är i rörelse — utan detta
-    // läser vi det gamla ankaret (där molnet kastades ifrån) eftersom det inte
-    // commitas förrän glidet är slut.
-    const mainGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
-    const sunGlideStateRef = useRef<{ sp: { x: number; y: number }; vx: number; vy: number } | null>(null);
+    }, [shopFlags.flowers, wateringKey]);
 
     // (Bildväxlingen för grupper med flera event på samma plats sköts av en
     //  desyncad cycler längre ner — se effekten efter visibleGroups.)
@@ -2499,62 +2186,9 @@ export default function V2Map({
             }
         });
 
-        // Real-time projection updater for the anchored cloud popups (main +
-        // any sun-clouds that are currently alive).
+        // Real-time projection updater: håller multi-event-listan fastnitad vid
+        // sin brickas geo-punkt när kartan pannas/zoomas.
         const updateCloudPosition = () => {
-          // Molnen är avstängda (CLOUDS_ENABLED=false) → hoppa över all moln-
-          // projicering (per-frame setState). Gissningslinjen längre ner körs
-          // ändå eftersom den hör till "Hitta event"-spelet, inte molnen.
-          if (CLOUDS_ENABLED) {
-            // Följt moln: skärmpunkten är konstant. Vi uppdaterar i stället
-            // geo-ankaret varje frame så det matchar latlng under den pinnen
-            // — molnet vandrar "med" användaren när kartan pannas/zoomas.
-            const mainPt = mainFollowPtRef.current;
-            if (mainFollowingRef.current && mainPt) {
-                const ll = map.unproject([mainPt.x, mainPt.y]);
-                const prevAnchor = cloudAnchorRef.current;
-                if (!prevAnchor || Math.abs(prevAnchor.lat - ll.lat) > 1e-7 || Math.abs(prevAnchor.lng - ll.lng) > 1e-7) {
-                    cloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                    setCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                }
-            } else {
-                // Fritt ankare — projicera geo till skärm.
-                const currentAnchor = cloudAnchorRef.current;
-                if (currentAnchor) {
-                    const pos = map.project([currentAnchor.lng, currentAnchor.lat]);
-                    const prev = cloudAnchorPosRef.current;
-                    if (!prev || Math.round(prev.x) !== Math.round(pos.x) || Math.round(prev.y) !== Math.round(pos.y)) {
-                        setCloudAnchorPos({ x: pos.x, y: pos.y });
-                    }
-                }
-            }
-
-            const sunPt = sunFollowPtRef.current;
-            if (sunFollowingRef.current && sunPt) {
-                const ll = map.unproject([sunPt.x, sunPt.y]);
-                const prevAnchor = sunCloudAnchorRef.current;
-                if (!prevAnchor || Math.abs(prevAnchor.lat - ll.lat) > 1e-7 || Math.abs(prevAnchor.lng - ll.lng) > 1e-7) {
-                    sunCloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                    setSunCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                }
-            } else {
-                const currentSunAnchor = sunCloudAnchorRef.current;
-                if (currentSunAnchor) {
-                    const pos = map.project([currentSunAnchor.lng, currentSunAnchor.lat]);
-                    const prev = sunCloudAnchorPosRef.current;
-                    if (!prev || Math.round(prev.x) !== Math.round(pos.x) || Math.round(prev.y) !== Math.round(pos.y)) {
-                        setSunCloudAnchorPos({ x: pos.x, y: pos.y });
-                    }
-                }
-            }
-            // Skala med zoom: 2x per zoom-nivå relativt skapande-zoomen.
-            if (sunCloudAnchorRef.current) {
-                const zoomDelta = map.getZoom() - sunCloudCreationZoomRef.current;
-                const scaled = Math.min(Math.max(SUN_CLOUD_BASE_SCALE * Math.pow(2, zoomDelta), 0.25), CLOUD_MAX_SCALE);
-                setSunCloudScale((prevScale) => Math.abs(prevScale - scaled) > 0.001 ? scaled : prevScale);
-            }
-          } // slut if (CLOUDS_ENABLED)
-
             // Multi-event-listan: håll dess skärmposition fast vid brickans geo-punkt
             // när kartan pannas/zoomas, så den stannar i brickans övre högra hörn.
             const ga = groupListAnchorRef.current;
@@ -2719,17 +2353,6 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [is3DTerrain]);
 
-    // Luta kameran när solknappen togglar tilt: pitch 60° = sidovy, 0° = platt.
-    // Hoppar över det initiala körningen (då tilt redan matchar kartans 0°).
-    const prevTiltedRef = useRef(tilted);
-    useEffect(() => {
-        if (prevTiltedRef.current === tilted) return;
-        prevTiltedRef.current = tilted;
-        const map = mapRef.current;
-        if (!map) return;
-        driftSuppressUntilRef.current = performance.now() + 1400;
-        map.easeTo({ pitch: tilted ? 60 : 0, duration: 900 });
-    }, [tilted]);
 
     // Tidsstämpel som idle-driften ska hålla sig pausad till. Sätts av våra egna
     // programmatiska kamera-flytt (easeTo) så driften inte slåss mot centreringen.
@@ -2955,444 +2578,6 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
-    // Recenter-knappen flyger kameran TILL ett moln (vi går dit — molnet
-    // teleporteras inte till oss). Finns båda molnen framme → toggla till det
-    // andra för varje klick (minns vilket vi gick till sist). Finns bara ett
-    // moln → alltid det. Inget moln → inget händer.
-    const lastRecenterRef = useRef<'main' | 'sun'>('sun');
-
-    // Jagar ett moln som fortfarande är i luften (mitt i ett glid): räknar ut var
-    // det landar utifrån live-hastighet + friktion, flyger kameran dit och slår
-    // sedan på POV (follow) så vi följer det medan det glider klart. Avsluta med
-    // tryck på molnet igen.
-    const latchOntoGlidingCloud = (
-        kind: 'main' | 'sun',
-        state: { sp: { x: number; y: number }; vx: number; vy: number }
-    ) => {
-        const map = mapRef.current; if (!map) return;
-        setMainFollowing(false);
-        setSunFollowing(false);
-        lastRecenterRef.current = kind;
-
-        const startFollow = () => {
-            if (kind === 'main') { setSunFollowing(false); setMainFollowing(true); }
-            else { setMainFollowing(false); setSunFollowing(true); }
-        };
-
-        const k = 2.2 / 1000;       // matchar CloudPopups GLIDE_FRICTION
-        const stopThreshold = 0.04;
-        const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
-
-        if (speed < stopThreshold) {
-            const ll = map.unproject([state.sp.x, state.sp.y]);
-            driftSuppressUntilRef.current = performance.now() + 900;
-            map.easeTo({ center: [ll.lng, ll.lat], duration: 500 });
-            map.once('moveend', startFollow);
-            return;
-        }
-
-        const landSP = { x: state.sp.x + state.vx / k, y: state.sp.y + state.vy / k };
-        const targetLL = map.unproject([landSP.x, landSP.y]);
-        const duration = Math.min(Math.max(Math.log(speed / stopThreshold) / k, 300), 2600);
-        driftSuppressUntilRef.current = performance.now() + duration + 400;
-        map.easeTo({
-            center: [targetLL.lng, targetLL.lat],
-            duration,
-            easing: (t) => 1 - Math.pow(1 - t, 3)
-        });
-        map.once('moveend', startFollow);
-    };
-
-    const recenterOnClouds = () => {
-        const map = mapRef.current;
-        if (!map) return;
-
-        const hasMain = showCloudRef.current && !!cloudAnchorRef.current;
-        const hasSun = !!sunCloudAnchorRef.current;
-        if (!hasMain && !hasSun) return;
-
-        // Ett moln mitt i ett kast (glid) har inte commitat sitt nya ankare än —
-        // läs live-glidet och JAGA molnet dit det faktiskt är på väg, inte dit det
-        // kastades ifrån.
-        const mainGlide = hasMain ? mainGlideStateRef.current : null;
-        const sunGlide = hasSun ? sunGlideStateRef.current : null;
-        if (mainGlide || sunGlide) {
-            const g: 'main' | 'sun' = (mainGlide && sunGlide)
-                ? (lastRecenterRef.current === 'main' ? 'sun' : 'main')
-                : (mainGlide ? 'main' : 'sun');
-            latchOntoGlidingCloud(g, (g === 'main' ? mainGlide : sunGlide)!);
-            return;
-        }
-
-        // Ett iväg-kastat moln (ligger utanför bild) prioriteras.
-        const mainThrown = hasMain && mainOffScreenRef.current;
-        const sunThrown = hasSun && sunOffScreenRef.current;
-        const thrown = mainThrown || sunThrown;
-
-        let go: 'main' | 'sun';
-        if (thrown) {
-            if (mainThrown && sunThrown) go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
-            else go = mainThrown ? 'main' : 'sun';
-        } else if (hasMain && hasSun) {
-            // Växla till det andra molnet — men om målet redan ligger (nära) mitten
-            // skulle det bli en ~1px-flytt. Hoppa då till det andra molnet.
-            const cx = map.getContainer().clientWidth / 2;
-            const cy = map.getContainer().clientHeight / 2;
-            const distFromCenter = (a: { lat: number; lng: number } | null) => {
-                if (!a) return -1;
-                const p = map.project([a.lng, a.lat]);
-                return Math.hypot(p.x - cx, p.y - cy);
-            };
-            const CENTER_EPS = 60; // px — räknas som "redan centrerat"
-            go = lastRecenterRef.current === 'main' ? 'sun' : 'main';
-            const other: 'main' | 'sun' = go === 'main' ? 'sun' : 'main';
-            const goDist = distFromCenter(go === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current);
-            const otherDist = distFromCenter(other === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current);
-            if (goDist >= 0 && goDist < CENTER_EPS && otherDist >= CENTER_EPS) go = other;
-        } else {
-            go = hasMain ? 'main' : 'sun';
-        }
-        lastRecenterRef.current = go;
-
-        const target = go === 'main' ? cloudAnchorRef.current : sunCloudAnchorRef.current;
-        if (!target) return;
-        // Pausa idle-driften under flytten (annars motas centreringen bort).
-        driftSuppressUntilRef.current = performance.now() + 1600;
-        map.easeTo({ center: [target.lng, target.lat], duration: 600 });
-
-        if (thrown) {
-            // Kastat moln + fokus: flyg dit OCH aktivera POV (follow) så vi följer
-            // det medan det snurrar/glider klart. Avsluta med tryck på molnet igen.
-            map.once('moveend', () => {
-                if (go === 'main') { setSunFollowing(false); setMainFollowing(true); }
-                else { setMainFollowing(false); setSunFollowing(true); }
-            });
-        } else {
-            // Vanlig växling: molnen står still, bara kameran flyttas.
-            setMainFollowing(false);
-            setSunFollowing(false);
-        }
-    };
-
-    useEffect(() => {
-        if (recenterTrigger <= 0) return;
-        recenterOnClouds();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [recenterTrigger]);
-
-    // Spawn a new sun-cloud at the current map center whenever the parent
-    // bumps sunCloudTrigger (which it does after the white-flash animation
-    // completes). Each spawn replaces the previous sun-cloud — keeps it simple
-    // while still feeling responsive on rapid clicks.
-    useEffect(() => {
-        if (sunCloudTrigger <= 0) return;
-        const map = mapRef.current;
-        if (!map) return;
-        const center = map.getCenter();
-        setSunCloudAnchor({ lat: center.lat, lng: center.lng });
-        const screen = map.project([center.lng, center.lat]);
-        setSunCloudAnchorPos({ x: screen.x, y: screen.y });
-        // Nollställ skalan till basstorlek vid nuvarande zoom — molnet "anpassar
-        // sig efter den zoom det skapas på".
-        sunCloudCreationZoomRef.current = map.getZoom();
-        setSunCloudScale(SUN_CLOUD_BASE_SCALE);
-        setSunCloudId(id => id + 1);
-    }, [sunCloudTrigger]);
-
-    // Pinna respektive moln vid sin nuvarande skärmpunkt när follow slås på,
-    // och släpp pinnen (uppdatera geo-ankaret från sista skärmpunkt) när den
-    // slås av. Kart-panorering är alltid på — molnet sitter kvar på skärmen
-    // medan kartan glider under det, geo-ankaret härleds varje frame.
-    const prevMainFollowingRef = useRef(false);
-    useEffect(() => {
-        const map = mapRef.current; if (!map) return;
-        const prev = prevMainFollowingRef.current;
-        prevMainFollowingRef.current = mainFollowing;
-        if (mainFollowing && !prev) {
-            const pos = cloudAnchorPosRef.current;
-            mainFollowPtRef.current = pos ? { x: pos.x, y: pos.y } : null;
-        } else if (!mainFollowing && prev) {
-            const pt = mainFollowPtRef.current;
-            if (pt) {
-                const ll = map.unproject([pt.x, pt.y]);
-                cloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                setCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                setCloudAnchorPos({ x: pt.x, y: pt.y });
-            }
-            mainFollowPtRef.current = null;
-        }
-    }, [mainFollowing]);
-
-    const prevSunFollowingRef = useRef(false);
-    useEffect(() => {
-        const map = mapRef.current; if (!map) return;
-        const prev = prevSunFollowingRef.current;
-        prevSunFollowingRef.current = sunFollowing;
-        if (sunFollowing && !prev) {
-            const pos = sunCloudAnchorPosRef.current;
-            sunFollowPtRef.current = pos ? { x: pos.x, y: pos.y } : null;
-        } else if (!sunFollowing && prev) {
-            const pt = sunFollowPtRef.current;
-            if (pt) {
-                const ll = map.unproject([pt.x, pt.y]);
-                sunCloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                setSunCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                setSunCloudAnchorPos({ x: pt.x, y: pt.y });
-            }
-            sunFollowPtRef.current = null;
-        }
-    }, [sunFollowing]);
-
-    // Kasta iväg ett moln: pinnen flyttas till släpp-punkten och kameran
-    // flyger med matchande momentum/friktion. Eftersom det följs är fastpinnat
-    // vid den skärmpunkten hela kameraflugen tracker det kameran utan slutligt
-    // hopp. Båda molnen får varsin handler så vi vet vilket som flygs.
-    const makeFlingHandler = (kind: 'main' | 'sun') =>
-        (vx: number, vy: number, holdX: number, holdY: number) => {
-            const map = mapRef.current;
-            if (!map) return;
-
-            // Klampa inom skärmen (med marginal) så molnet aldrig blir oåtkomligt.
-            const margin = 48;
-            holdX = Math.min(Math.max(holdX, margin), window.innerWidth - margin);
-            holdY = Math.min(Math.max(holdY, margin), window.innerHeight - margin);
-            const ll = map.unproject([holdX, holdY]);
-            if (kind === 'sun') {
-                sunFollowPtRef.current = { x: holdX, y: holdY };
-                sunCloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                setSunCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                setSunCloudAnchorPos({ x: holdX, y: holdY });
-            } else {
-                mainFollowPtRef.current = { x: holdX, y: holdY };
-                cloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-                setCloudAnchor({ lat: ll.lat, lng: ll.lng });
-                setCloudAnchorPos({ x: holdX, y: holdY });
-            }
-
-            const k = 2.2 / 1000; // friktion per ms (matchar molnets glide)
-            const stopThreshold = 0.04; // px/ms
-            const speed = Math.sqrt(vx * vx + vy * vy);
-            if (speed < stopThreshold) return; // bara släppt, ingen fling
-            const dispX = vx / k;
-            const dispY = vy / k;
-            const duration = Math.min(Math.max(Math.log(speed / stopThreshold) / k, 300), 2600);
-            const cs = map.project(map.getCenter());
-            const target = map.unproject([cs.x + dispX, cs.y + dispY]);
-            driftSuppressUntilRef.current = performance.now() + duration + 400;
-            map.easeTo({ center: target, duration, easing: (t) => 1 - Math.pow(1 - t, 3) });
-        };
-    const handleMainFling = useMemo(() => makeFlingHandler('main'), []);
-    const handleSunFling = useMemo(() => makeFlingHandler('sun'), []);
-
-    // Slangbella-avfyrning: anropas från drag-release-handlers när användaren
-    // släpper ett moln efter att ha dragit det medan slangbellan var armad.
-    // Det dragna molnet är projektilen — vi slungar det åt motsatt håll mot
-    // dragget (origin → current ger pull-vektor; vi skjuter längs current →
-    // origin och vidare ut, som en sten i en riktig slangbella).
-    const fireSlingshot = (kind: 'main' | 'sun', curScreenX: number, curScreenY: number) => {
-        const map = mapRef.current;
-        if (!map) return;
-        const snap = engageSnapshotRef.current;
-        const origin = kind === 'main' ? snap.main : snap.sun;
-        if (!origin) { onSlingshotFired?.(); return; }
-        const cur = { x: curScreenX, y: curScreenY };
-        const pullDist = Math.hypot(cur.x - origin.x, cur.y - origin.y);
-        if (pullDist < 20) { onSlingshotFired?.(); return; } // för kort → avbryt
-        // Vektor från current TILL origin = motsatt mot dragget. Snärten flyger
-        // genom origin och vidare lika långt eller längre på andra sidan.
-        const dx = origin.x - cur.x, dy = origin.y - cur.y;
-        const len = Math.max(1, Math.hypot(dx, dy));
-        const ux = dx / len, uy = dy / len;
-        const shoot = Math.min(1600, Math.max(600, pullDist * 3));
-        const targetX = cur.x + ux * shoot;
-        const targetY = cur.y + uy * shoot;
-        const fromLL = map.unproject([cur.x, cur.y]);
-        const toLL = map.unproject([targetX, targetY]);
-        const startTime = performance.now();
-        const duration = 900;
-        const tick = (now: number) => {
-            const t = Math.min(1, (now - startTime) / duration);
-            const eased = 1 - Math.pow(1 - t, 3);
-            const lat = fromLL.lat + (toLL.lat - fromLL.lat) * eased;
-            const lng = fromLL.lng + (toLL.lng - fromLL.lng) * eased;
-            const sp = map.project([lng, lat]);
-            if (kind === 'main') {
-                cloudAnchorRef.current = { lat, lng };
-                setCloudAnchor({ lat, lng });
-                setCloudAnchorPos({ x: sp.x, y: sp.y });
-            } else {
-                sunCloudAnchorRef.current = { lat, lng };
-                setSunCloudAnchor({ lat, lng });
-                setSunCloudAnchorPos({ x: sp.x, y: sp.y });
-            }
-            if (t < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-        onSlingshotFired?.();
-    };
-
-    // Off-screen-detektering. Ett moln räknas som ute ur bild när dess
-    // skärmpunkt ligger en bra bit utanför viewporten — då visar sidan en
-    // återkallnings-knapp jämte solen.
-    useEffect(() => {
-        const isOff = (p: { x: number; y: number } | null) => {
-            if (!p) return true;
-            const w = window.innerWidth, h = window.innerHeight;
-            const margin = 60;
-            return p.x < -margin || p.x > w + margin || p.y < -margin || p.y > h + margin;
-        };
-        setMainOffScreen(isOff(cloudAnchorPos));
-        setSunOffScreen(sunCloudAnchor !== null && isOff(sunCloudAnchorPos));
-    }, [cloudAnchorPos, sunCloudAnchorPos, sunCloudAnchor]);
-
-    const onCloudVisibilityChangeRef = useRef(onCloudVisibilityChange);
-    onCloudVisibilityChangeRef.current = onCloudVisibilityChange;
-    useEffect(() => {
-        // "main borta" = molnet ligger utanför skärmen ELLER är stängt (showCloud
-        // false) — i båda fallen ska molnsymbolen (återkalla-knappen) visas.
-        onCloudVisibilityChangeRef.current?.({ main: mainOffScreen || !showCloud, sun: sunOffScreen });
-    }, [mainOffScreen, sunOffScreen, showCloud]);
-
-    const onMainRecalledChangeRef = useRef(onMainRecalledChange);
-    onMainRecalledChangeRef.current = onMainRecalledChange;
-    useEffect(() => {
-        onMainRecalledChangeRef.current?.(cloudRecalled);
-    }, [cloudRecalled]);
-
-    // ── Z-ordning mellan molnen: MINSTA molnet alltid överst ─────────────────
-    // Huvudmolnet är fast (~1), sol-molnet växer/krymper med zoomen (sunCloudScale).
-    // Det minsta ska ligga framför → när sol-molnet zoomas större hamnar det bakom.
-    // Ett litet hysteres-band runt jämn storlek (där de "möts" storleksmässigt)
-    // gör att ordningen inte flippar fram och tillbaka precis vid mötespunkten.
-    const MAIN_CLOUD_SCALE = 1; // huvudmolnet skalas inte med zoom
-    const [frontCloud, setFrontCloud] = useState<'main' | 'sun'>('sun');
-    useEffect(() => {
-        const band = 0.08; // halva mötes-spannet (i scale-enheter runt jämn storlek)
-        setFrontCloud(prev => {
-            if (sunCloudScale < MAIN_CLOUD_SCALE - band) return 'sun';  // sol mindre → överst
-            if (sunCloudScale > MAIN_CLOUD_SCALE + band) return 'main'; // sol större → bakom
-            return prev; // inom mötes-spannet: behåll ordningen (de sitter ihop här)
-        });
-    }, [sunCloudScale]);
-    // Det främre molnet får högre z, det bakre lägre — runt det gamla 9999-lagret.
-    const mainCloudZ = frontCloud === 'main' ? 10000 : 9998;
-    const sunCloudZ = frontCloud === 'sun' ? 10000 : 9998;
-
-    // Slangbella aktiv när båda molnen är inom räckhåll av varandra (skärmpunkter
-    // någorlunda nära). Större yta = man behöver inte träffa molnet exakt med det
-    // andra — det räcker att de är i samma område för att fokus-knappen ska kunna
-    // armas. Själva gummibanden visas inte här — bara när användaren armat läget.
-    useEffect(() => {
-        const a = cloudAnchorPos, b = sunCloudAnchorPos;
-        const both = showCloud && sunCloudAnchor !== null && !!a && !!b;
-        const inRange = both && Math.hypot(a!.x - b!.x, a!.y - b!.y) < 240;
-        setSlingshotActive(!!inRange);
-    }, [cloudAnchorPos, sunCloudAnchorPos, showCloud, sunCloudAnchor]);
-
-    // Mood-överföring: drar man ett moln med en min OVANPÅ det andra molnet får
-    // det andra molnet samma min. Vi använder live-drag-offsetterna för att veta
-    // vilket moln som dras och var det är just nu (inkl. pågående drag).
-    useEffect(() => {
-        const a = cloudAnchorPos, b = sunCloudAnchorPos;
-        if (!showCloud || sunCloudAnchor === null || !a || !b) return;
-        const aPos = { x: a.x + mainLiveOffset.x, y: a.y + mainLiveOffset.y };
-        const bPos = { x: b.x + sunLiveOffset.x, y: b.y + sunLiveOffset.y };
-        const overlapping = Math.hypot(aPos.x - bPos.x, aPos.y - bPos.y) < 90;
-        if (!overlapping) return;
-        const mainDragged = mainLiveOffset.x !== 0 || mainLiveOffset.y !== 0;
-        const sunDragged = sunLiveOffset.x !== 0 || sunLiveOffset.y !== 0;
-        // Det DRAGNA molnets min stämplas på det andra (om det dragna har en min
-        // och de inte redan har samma — annars skulle det stämpla om i all evighet).
-        if (mainDragged && mainMoodRef.current != null && sunMoodRef.current !== mainMoodRef.current) {
-            setSunIncomingMood(prev => ({ mood: mainMoodRef.current, nonce: prev.nonce + 1 }));
-        } else if (sunDragged && sunMoodRef.current != null && mainMoodRef.current !== sunMoodRef.current) {
-            setMainIncomingMood(prev => ({ mood: sunMoodRef.current, nonce: prev.nonce + 1 }));
-        }
-    }, [mainLiveOffset, sunLiveOffset, cloudAnchorPos, sunCloudAnchorPos, sunCloudAnchor, showCloud]);
-
-    const onSlingshotChangeRef = useRef(onSlingshotChange);
-    onSlingshotChangeRef.current = onSlingshotChange;
-    useEffect(() => {
-        onSlingshotChangeRef.current?.(slingshotActive);
-    }, [slingshotActive]);
-
-    // Återkalla ett moln till en synlig position. Snäpper både skärm- och
-    // geo-ankaret till en punkt i nedre högra kanten (där sol-knappen sitter),
-    // så molnet är direkt gripbart.
-    const recallCloud = (kind: 'main' | 'sun') => {
-        const map = mapRef.current; if (!map) return;
-        const w = window.innerWidth, h = window.innerHeight;
-        // Huvudmolnet hämtas tillbaka till skärmens MITT; sol-molnet till nedre
-        // högra hörnet (vid sol-knappen).
-        const targetX = kind === 'main' ? w * 0.5 : w * 0.78;
-        const targetY = kind === 'main' ? h * 0.5 : h * 0.55;
-        const ll = map.unproject([targetX, targetY]);
-        if (kind === 'main') {
-            cloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-            setCloudAnchor({ lat: ll.lat, lng: ll.lng });
-            setCloudAnchorPos({ x: targetX, y: targetY });
-            setShowCloud(true);
-            // Återkallat moln kommer fram som det runda leende-molnet, inte texten.
-            setCloudRecalled(true);
-            if (mainFollowingRef.current) mainFollowPtRef.current = { x: targetX, y: targetY };
-        } else {
-            sunCloudAnchorRef.current = { lat: ll.lat, lng: ll.lng };
-            setSunCloudAnchor({ lat: ll.lat, lng: ll.lng });
-            setSunCloudAnchorPos({ x: targetX, y: targetY });
-            if (sunFollowingRef.current) sunFollowPtRef.current = { x: targetX, y: targetY };
-        }
-    };
-    const prevRecallMainRef = useRef(recallMainTrigger);
-    useEffect(() => {
-        if (recallMainTrigger > prevRecallMainRef.current) recallCloud('main');
-        prevRecallMainRef.current = recallMainTrigger;
-    }, [recallMainTrigger]);
-    const prevRecallSunRef = useRef(recallSunTrigger);
-    useEffect(() => {
-        if (recallSunTrigger > prevRecallSunRef.current) recallCloud('sun');
-        prevRecallSunRef.current = recallSunTrigger;
-    }, [recallSunTrigger]);
-
-    const handleSunCloudDragEnd = (ox: number, oy: number) => {
-        const map = mapRef.current;
-        const currentPos = sunCloudAnchorPosRef.current;
-        if (map && currentPos) {
-            const newScreenX = currentPos.x + ox;
-            const newScreenY = currentPos.y + oy;
-            const lngLat = map.unproject([newScreenX, newScreenY]);
-            // Synka geo-ankar-refen direkt (samma fix som huvudmolnet — undviker
-            // att ett 'move' under pan projicerar det gamla ankaret en frame).
-            sunCloudAnchorRef.current = { lat: lngLat.lat, lng: lngLat.lng };
-            setSunCloudAnchorPos({ x: newScreenX, y: newScreenY });
-            setSunCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
-            // Slangbella armad → avfyra åt motsatt håll mot dragget.
-            if (slingshotEngagedRef.current) {
-                fireSlingshot('sun', newScreenX, newScreenY);
-            }
-        }
-    };
-
-    // Update coordinates when dropped
-    const handleCloudDragEnd = (ox: number, oy: number) => {
-        const map = mapRef.current;
-        const currentPos = cloudAnchorPosRef.current;
-        if (map && currentPos) {
-            const newScreenX = currentPos.x + ox;
-            const newScreenY = currentPos.y + oy;
-            const lngLat = map.unproject([newScreenX, newScreenY]);
-            // Synka geo-ANKAR-refen DIREKT (inte bara state). Annars kan ett 'move'-
-            // event som fyrar medan man pannar projicera det GAMLA ankaret innan
-            // refen hunnit uppdateras vid nästa render → molnet blinkar till vid
-            // kast-origin för en frame. (recallCloud gör redan så här.)
-            cloudAnchorRef.current = { lat: lngLat.lat, lng: lngLat.lng };
-            setCloudAnchorPos({ x: newScreenX, y: newScreenY });
-            setCloudAnchor({ lat: lngLat.lat, lng: lngLat.lng });
-            // Slangbella armad → avfyra åt motsatt håll mot dragget.
-            if (slingshotEngagedRef.current) {
-                fireSlingshot('main', newScreenX, newScreenY);
-            }
-        }
-    };
 
     // 3. Uppdatera markörer i DOM:en när data eller synliga gränser förändras
     useEffect(() => {
@@ -3726,7 +2911,7 @@ export default function V2Map({
     // minuteTick håller "börjar inom 1 timme"-orangen i takt med klockan även
     // när kartan står helt stilla (stateKey ser till att DOM bara byggs om när
     // statusen faktiskt ändrats).
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, wateredKeys, wateringKey, shopFlags, tilted, minuteTick]);
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, wateredKeys, wateringKey, shopFlags, minuteTick]);
 
     // Bakgrunden bakom kartan syns vid snabb panorering (innan tiles laddat)
     // och som "rymd" bakom klotet — matcha aktiv kartstil så det aldrig
@@ -4398,10 +3583,6 @@ export default function V2Map({
                     }
                     // Klick på en tipsad funktion (t.ex. Fokus) → sluta blinka den.
                     setFeatureHint(h => h === it.key ? null : h);
-                    // "Kasta" = kamera-följ. Att slå PÅ den ska kännas som ett dubbel-
-                    // klick på molnet: sätt även följ-läget direkt (molnet ler) så man
-                    // kan kasta på en gång och kameran följer med. Slå av → sluta följa.
-                    if (it.key === 'throw') setMainFollowing(!isFeatureActive('throw'));
                     toggleFeature(it.key);
                 };
 
@@ -4569,182 +3750,6 @@ export default function V2Map({
                     document.body
                 );
             })()}
-            {/* Slangbella-gummiband: ritas mellan huvudmolnet och solmolnet.
-                Använder live drag-offsetterna så banden stretchar med molnet i
-                realtid när användaren drar. När slangbellan är "engaged" (armad
-                via fokusknappen) syns banden alltid; annars fadar de in när
-                molnen är nära varandra. */}
-            {showCloud && cloudAnchorPos && sunCloudAnchorPos && slingshotEngaged && (() => {
-                const aRaw = { x: cloudAnchorPos.x + mainLiveOffset.x, y: cloudAnchorPos.y + mainLiveOffset.y };
-                const bRaw = { x: sunCloudAnchorPos.x + sunLiveOffset.x, y: sunCloudAnchorPos.y + sunLiveOffset.y };
-                const distRaw = Math.hypot(aRaw.x - bRaw.x, aRaw.y - bRaw.y);
-                // Banden visas BARA när slangbellan är armad — i ready-läget syns
-                // ingenting, fokusknappen ändras bara så användaren kan godkänna.
-                const opacity = 1;
-                // Degenererat fall: när molnen ligger ovanpå varandra (eller mycket
-                // nära) finns ingen riktning mellan dem → bandberäkningen kollapsar.
-                // Vi tvingar då fram en minsta horisontell separation så banden
-                // syns som ett armat "=" runt molnen, redo att dras isär.
-                const minDist = 36;
-                let a = aRaw, b = bRaw;
-                if (distRaw < minDist) {
-                    const cx0 = (aRaw.x + bRaw.x) / 2, cy0 = (aRaw.y + bRaw.y) / 2;
-                    a = { x: cx0 - minDist / 2, y: cy0 };
-                    b = { x: cx0 + minDist / 2, y: cy0 };
-                }
-                const dist = Math.hypot(a.x - b.x, a.y - b.y);
-                const dx = b.x - a.x, dy = b.y - a.y;
-                const len = Math.max(1, Math.hypot(dx, dy));
-                const nx = -dy / len, ny = dx / len; // perpendikulär
-                const spread = 13; // halva bandbredden i pixlar
-                const sag = 18 + dist * 0.08; // hur mycket banden bågnar utåt
-                const a1 = { x: a.x + nx * spread, y: a.y + ny * spread };
-                const a2 = { x: a.x - nx * spread, y: a.y - ny * spread };
-                const b1 = { x: b.x + nx * spread, y: b.y + ny * spread };
-                const b2 = { x: b.x - nx * spread, y: b.y - ny * spread };
-                const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-                const c1 = { x: cx + nx * (spread + sag), y: cy + ny * (spread + sag) };
-                const c2 = { x: cx - nx * (spread + sag), y: cy - ny * (spread + sag) };
-                return (
-                    <svg
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ width: '100%', height: '100%', opacity, transition: 'opacity 0.2s ease-out' }}
-                    >
-                        <path
-                            d={`M ${a1.x} ${a1.y} Q ${c1.x} ${c1.y} ${b1.x} ${b1.y}`}
-                            stroke="#006AA7" strokeWidth={4} strokeLinecap="round" fill="none"
-                            opacity={0.85}
-                        />
-                        <path
-                            d={`M ${a2.x} ${a2.y} Q ${c2.x} ${c2.y} ${b2.x} ${b2.y}`}
-                            stroke="#006AA7" strokeWidth={4} strokeLinecap="round" fill="none"
-                            opacity={0.85}
-                        />
-                    </svg>
-                );
-            })()}
-            {/* Gamla lekfulla startmolnet ersatt av den seriösa WelcomeBox nedan.
-                Mount avstängd (SHOW_LEGACY_CLOUD=false) men koden behållen som backup. */}
-            {SHOW_LEGACY_CLOUD && CLOUDS_ENABLED && showCloud && cloudAnchorPos && eventsLoaded && (
-                <CloudPopup
-                    message={
-                        isFeatureActive('sparkle') ? (
-                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
-                                <span
-                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
-                                    style={{ color: '#db2777', fontWeight: 700, letterSpacing: '-0.01em' }}
-                                >
-                                    Magiskt glitter! ✨
-                                </span>
-                                <span
-                                    className="block text-[14px] sm:text-[16px] leading-snug my-1 text-pink-600 font-semibold"
-                                >
-                                    Håll mig över en nål för att dränka den i glittrande stjärnfall!
-                                </span>
-                            </span>
-                        ) : isFeatureActive('snowball') ? (
-                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
-                                <span
-                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
-                                    style={{ color: '#1d4ed8', fontWeight: 700, letterSpacing: '-0.01em' }}
-                                >
-                                    Snöbollskrig! ❄️
-                                </span>
-                                <span
-                                    className="block text-[14px] sm:text-[16px] leading-snug my-1 text-blue-600 font-semibold"
-                                >
-                                    Brrr! Håll mig över en nål för att kyla ner den med virvlande snöflingor!
-                                </span>
-                            </span>
-                        ) : cloudStats ? (
-                            <span className="block font-rounded tracking-tight" style={{ transform: 'translateY(-12px)' }}>
-                                <span
-                                    className="block text-[19px] sm:text-[23px] leading-tight whitespace-nowrap"
-                                    style={{ color: '#006AA7', fontWeight: 700, letterSpacing: '-0.01em' }}
-                                >
-                                    {cloudStats.today} unika event idag
-                                </span>
-                                <span
-                                    className="block text-[15px] sm:text-[17px] leading-snug my-1"
-                                    style={{ color: '#006AA7', fontWeight: 600 }}
-                                >
-                                    {cloudStats.withinHour} börjar inom {cloudStats.withinHours} {cloudStats.withinHours === 1 ? 'timme' : 'timmar'}.
-                                </span>
-                                <span
-                                    className="block text-[13px] sm:text-[14px] leading-snug"
-                                    style={{ color: '#006AA7', fontWeight: 500 }}
-                                >
-                                    Alla spontana event i Sverige.
-                                </span>
-                            </span>
-                        ) : `Se alla publika event du kan anmäla dig till idag. Ett nytt kan dyka upp nästa sekund.`
-                    }
-                    anchorPos={cloudAnchorPos}
-                    onDragEnd={handleCloudDragEnd}
-                    onDismiss={() => { setShowCloud(false); setMainFollowing(false); }}
-                    throwEnabled={true}
-                    followEnabled={isFeatureActive('throw')}
-                    facesEnabled={isFeatureActive('faces')}
-                    following={mainFollowing}
-                    onToggleFollow={() => setMainFollowing(f => !f)}
-                    onFollowFling={handleMainFling}
-                    glideStateRef={mainGlideStateRef}
-                    onLiveOffsetChange={(ox, oy) => setMainLiveOffset({ x: ox, y: oy })}
-                    dismissOnTap={!cloudRecalled}
-                    startClicked={cloudRecalled}
-                    onMoodChange={setMainMood}
-                    incomingMood={mainIncomingMood.mood}
-                    incomingMoodNonce={mainIncomingMood.nonce}
-                    tilted={tilted}
-                    scale={mainPerspectiveScale}
-                    maxScale={CLOUD_MAX_SCALE}
-                    getDepthAtPoint={depthAtPointRef.current}
-                    zIndex={mainCloudZ}
-                />
-            )}
-            {/* Seriös informationsruta (ersätter startmolnet): dagens nyckeltal.
-                Visas FÖRST när riktig data finns (today > 0). eventsLoaded flippar
-                redan på första icke-tomma Firestore-lagret, men laddningen är
-                progressiv (destinationer → kort → tider) → utan tider blir
-                today=0 och det adaptiva "inom N timmar"-fönstret skenar (t.ex.
-                "inom 401 timmar: 1"). Kräv today > 0 så rutan aldrig poppar med
-                halvladdad/degenererad data. */}
-            {showCloud && cloudStats && cloudStats.isToday && eventsLoaded && cloudStats.today > 0 && (
-                <WelcomeBox
-                    today={cloudStats.today}
-                    withinHour={cloudStats.withinHour}
-                    withinHours={cloudStats.withinHours}
-                    onDismiss={() => setShowCloud(false)}
-                />
-            )}
-            {CLOUDS_ENABLED && sunCloudAnchor && sunCloudAnchorPos && (
-                <CloudPopup
-                    key={sunCloudId}
-                    message=""
-                    anchorPos={sunCloudAnchorPos}
-                    onDragEnd={handleSunCloudDragEnd}
-                    onDismiss={() => { setSunCloudAnchor(null); setSunFollowing(false); }}
-                    throwEnabled={true}
-                    followEnabled={isFeatureActive('throw')}
-                    facesEnabled={isFeatureActive('faces')}
-                    faceScale={0.6}
-                    showDelayMs={0}
-                    scale={sunCloudScale * sunPerspectiveScale}
-                    maxScale={CLOUD_MAX_SCALE}
-                    getDepthAtPoint={depthAtPointRef.current}
-                    following={sunFollowing}
-                    onToggleFollow={() => setSunFollowing(f => !f)}
-                    onFollowFling={handleSunFling}
-                    glideStateRef={sunGlideStateRef}
-                    onLiveOffsetChange={(ox, oy) => setSunLiveOffset({ x: ox, y: oy })}
-                    onMoodChange={setSunMood}
-                    incomingMood={sunIncomingMood.mood}
-                    incomingMoodNonce={sunIncomingMood.nonce}
-                    onTap={onSunCloudTap}
-                    tilted={tilted}
-                    zIndex={sunCloudZ}
-                />
-            )}
             {/* Funktioner-shop: clean dashboard-panel. Varje funktion ritas
                 som en kristallkula (radial gradient + topp-glint) — aktiverade
                 kulor glöder i brand-blått, övriga är klart glas. Max 5 kan vara
