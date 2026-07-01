@@ -148,12 +148,12 @@ export default function HomePage() {
     // helt enkelt inte ner callbacken — kortet renderar inte knappen utan den).
     // createEvent styr om +-knappen i navbaren renderas; multiplayer används som
     // gate för delade event m.m. (bara visning av status tills vidare).
-    const [shopFlags, setShopFlags] = useState<{ sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }>({
-        sun: true, focus: true, createEvent: true, multiplayer: false
+    const [shopFlags, setShopFlags] = useState<{ createEvent: boolean; multiplayer: boolean }>({
+        createEvent: true, multiplayer: false
     });
-    const handleFeatureFlagsChange = useCallback((flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => {
+    const handleFeatureFlagsChange = useCallback((flags: { createEvent: boolean; multiplayer: boolean }) => {
         setShopFlags(prev =>
-            prev.sun === flags.sun && prev.focus === flags.focus && prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer
+            prev.createEvent === flags.createEvent && prev.multiplayer === flags.multiplayer
                 ? prev : flags
         );
     }, []);

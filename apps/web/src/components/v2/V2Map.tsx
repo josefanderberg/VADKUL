@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Smile, Satellite, Flower2, Flag, Map as MapIcon, Moon, ChevronRight } from 'lucide-react';
+import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Satellite, Flag, Map as MapIcon, Moon, ChevronRight } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
@@ -105,16 +105,16 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
             // vita vägar som kontrast.
             // Land / Background
             if (layer.id === 'background') {
-                paint['background-color'] = '#93c46c'; // mättat grästgrönt land (mörkare/grönare än förut) — dominerar utzoomat
+                paint['background-color'] = '#6fa049'; // mörkt mättat grästgrönt land — dominerar utzoomat
             }
             // Water
             else if (layer.id === 'water' || layer.id === 'water_shadow') {
                 paint['fill-color'] = layer.id === 'water_shadow'
-                    ? '#6fa3c9'
-                    : '#7fb0d4'; // mörkare, mättat blått vatten
+                    ? '#3f7fa8'
+                    : '#4f8fb8'; // djupt, mättat blått vatten
             }
             else if (layer.id === 'waterway') {
-                paint['line-color'] = '#7fb0d4';
+                paint['line-color'] = '#4f8fb8';
             }
             // Parker, skog, naturreservat, grön landuse
             else if (
@@ -124,12 +124,12 @@ async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecif
                 layer.id === 'landuse'
             ) {
                 if (paint['fill-color']) {
-                    paint['fill-color'] = '#7eb152'; // grönska, ett snäpp djupare än landet
+                    paint['fill-color'] = '#5e9138'; // grönska, ett snäpp djupare än landet
                 }
             }
             // Bostadsområden
             else if (layer.id === 'landuse_residential') {
-                paint['fill-color'] = '#abcf84'; // något ljusare än landet, fortfarande grönt
+                paint['fill-color'] = '#88b862'; // något ljusare än landet, fortfarande grönt
             }
             // Byggnader
             else if (layer.id.includes('building')) {
@@ -306,6 +306,19 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
 const REVEAL_VISIBLE_WARN = 80;
+
+// ── Vilo-VÅG (före första trycket) ────────────────────────────────────────────
+// I stället för att tända ALLA event statiskt (för mycket för ögat) låter vi dem
+// tonas in/ut i VÅGOR som sveper över kartan — aldrig alla samtidigt. En långsam
+// diagonal våg med mjuka kammar; markörerna deltar alla men bara de i en kam är
+// tända just då. Slutar vid första trycket (då kollapsar allt till N-närmast).
+const REVEAL_WAVE_STEP_MS = 55;    // uppdaterings-takt (~18 fps) — lägre = mjukare men tyngre
+const REVEAL_WAVE_SPEED = 0.085;   // vågens hastighet (varv/sek längs axeln) — högre = snabbare
+const REVEAL_WAVE_CYCLES = 3.0;    // antal vågkammar synliga samtidigt över kartan
+const REVEAL_WAVE_LIT = 0.35;      // andel som är tänd i en kam (0–1) — lägre = färre samtidigt
+const REVEAL_WAVE_EDGE = 0.16;     // mjuk kant på kammen (in-/uttoning) — högre = suddigare band
+const REVEAL_WAVE_FLOOR = 0.06;    // svag bottenglöd i dalarna så kartan aldrig känns helt tom
+const REVEAL_WAVE_JITTER = 0.22;   // slumpmässig fas per markör (varv) — bryter upp raka ränder
 
 // Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
 // källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
@@ -587,10 +600,6 @@ interface V2MapProps {
     /** True så fort första event-svaret från databasen kommit. Default true
      *  (bakåtkompat). */
     eventsLoaded?: boolean;
-    /** Räknare som triggar att kameran flyger tillbaka TILL det valda eventet
-     *  (recenter-knappen på eventkortet — vi går till eventet, eventet flyttas
-     *  inte till oss). Varje ökning = ett anrop. */
-    recenterTrigger?: number;
     /** Bumpas av zoom-knappen i Nästa-pillen → zooma IN på det valda eventet
      *  (vanliga val står still/zoomar inte; detta är den explicita inzoomningen). */
     zoomToEventTrigger?: number;
@@ -606,7 +615,7 @@ interface V2MapProps {
      *  bor i V2Map (t.ex. sol-knappen + fokus-knappen i EventCard, eller
      *  +-knappen i navbaren för att skapa event). Fyrar varje gång användaren
      *  togglar något relevant i shoppen. */
-    onFeatureFlagsChange?: (flags: { sun: boolean; focus: boolean; createEvent: boolean; multiplayer: boolean }) => void;
+    onFeatureFlagsChange?: (flags: { createEvent: boolean; multiplayer: boolean }) => void;
     /** Triggas när användaren klickar på Multiplayer-badgen i shoppen och inte är
      *  inloggad — föräldern hanterar då navigation till /login så användaren kan
      *  registrera sig / skapa konto. */
@@ -627,7 +636,6 @@ export default function V2Map({
     onCenterChange,
     onMapDrag,
     eventsLoaded = true,
-    recenterTrigger = 0,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
     daySwitchNonce = 0,
@@ -808,49 +816,23 @@ export default function V2Map({
     // inspelning) lever här. Sol/fokus skickas upp till page.tsx som styr
     // knapparnas synlighet i EventCard via onFeatureFlagsChange.
     type ShopFlags = {
-        sun: boolean;
-        focus: boolean;
-        throw: boolean;
-        slingshot: boolean;
-        faces: boolean;
-        bigCloud: boolean;
-        fastThrow: boolean;
-        sparkle: boolean;
-        snowball: boolean;
         createEvent: boolean;
         multiplayer: boolean;
         record: boolean;
-        flowers: boolean;
     };
     const [shopFlags, setShopFlags] = useState<ShopFlags>({
-        // Defaults valda så att 5-aktiva-gränsen är respekterad redan från start.
-        // Tilt/globe/terrain/satellit har egen state (inte i flags) — av dem är
-        // bara satellit på som default, vilket ger 5 totalt:
-        // satellit + sun + focus + throw + createEvent.
         // Nöjesfält (mapStyle='themepark') är förvald kartstil från start — allt
         // annat av. Satellit m.fl. kan väljas i Funktioner-väskan.
-        sun: false,
-        focus: false,
-        throw: false,
-        slingshot: false,
-        faces: false,
-        bigCloud: false,
-        fastThrow: false,
-        sparkle: false,
-        snowball: false,
         createEvent: true,    // PÅ som default — att skapa event är en kärnfunktion
                               // (onboardingen lovar det). Kan stängas av i väskan.
         multiplayer: false,   // kräver konto-registrering
-        record: false,        // låst tills "köpt"
-        flowers: false        // av som default (kan slås på i funktions-popupen)
+        record: false         // låst tills "köpt"
     });
 
     // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
     const MAX_ACTIVE_FEATURES = 999;
     const COUNTED_FEATURE_KEYS = [
         'satellite', 'themepark', 'dark', 'orientering', 'globe', 'terrain',
-        'sun', 'focus', 'throw', 'slingshot', 'faces',
-        'bigCloud', 'fastThrow', 'sparkle', 'snowball',
         'createEvent'
     ];
 
@@ -858,12 +840,10 @@ export default function V2Map({
     onFeatureFlagsChangeRef.current = onFeatureFlagsChange;
     useEffect(() => {
         onFeatureFlagsChangeRef.current?.({
-            sun: shopFlags.sun,
-            focus: shopFlags.focus,
             createEvent: shopFlags.createEvent,
             multiplayer: shopFlags.multiplayer
         });
-    }, [shopFlags.sun, shopFlags.focus, shopFlags.createEvent, shopFlags.multiplayer]);
+    }, [shopFlags.createEvent, shopFlags.multiplayer]);
 
     const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
     onActivateMultiplayerRef.current = onActivateMultiplayer;
@@ -984,82 +964,6 @@ export default function V2Map({
     useEffect(() => { if (featureHint !== null) setHintAcknowledged(false); }, [featureHint]);
     // Öppnar väskan medan tipset är aktivt → kvittera (pilen/lager-blinket slutar).
     useEffect(() => { if (funcBagOpen && featureHint !== null) setHintAcknowledged(true); }, [funcBagOpen, featureHint]);
-    // Recenter-knappen (vid "Idag") blinkar när Fokus AKTIVERATS (av→på), så man
-    // ser vilken knapp man slog på. Slutar blinka när man klickat (centrerat).
-    const [recenterToolBlink, setRecenterToolBlink] = useState(false);
-    const prevFocusForBlinkRef = useRef(shopFlags.focus);
-    useEffect(() => {
-        if (shopFlags.focus && !prevFocusForBlinkRef.current) setRecenterToolBlink(true);
-        prevFocusForBlinkRef.current = shopFlags.focus;
-    }, [shopFlags.focus]);
-    const prevRecenterRef = useRef(recenterTrigger);
-    useEffect(() => {
-        if (recenterTrigger !== prevRecenterRef.current) {
-            prevRecenterRef.current = recenterTrigger;
-            setRecenterToolBlink(false);
-        }
-    }, [recenterTrigger]);
-
-    // Vattnade nålar (blommor): laddas från localStorage vid mount, sparas vid förändring.
-    const [wateredKeys, setWateredKeys] = useState<Set<string>>(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const saved = localStorage.getItem('vadkul_watered_markers');
-                if (saved) return new Set(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to load watered markers', e);
-            }
-        }
-        return new Set();
-    });
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                localStorage.setItem('vadkul_watered_markers', JSON.stringify(Array.from(wateredKeys)));
-            } catch (e) {
-                console.error('Failed to save watered markers', e);
-            }
-        }
-    }, [wateredKeys]);
-
-    const [wateringKey, setWateringKey] = useState<string | null>(null);
-    const wateringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Hanterar 1-sekunds timer för pågående vattning
-    useEffect(() => {
-        if (wateringTimeoutRef.current) {
-            clearTimeout(wateringTimeoutRef.current);
-            wateringTimeoutRef.current = null;
-        }
-
-        if (wateringKey) {
-            wateringTimeoutRef.current = setTimeout(() => {
-                setWateredKeys(prev => {
-                    const next = new Set(prev);
-                    next.add(wateringKey);
-                    return next;
-                });
-                setWateringKey(null);
-            }, 1000); // 1 sekund
-        }
-
-        return () => {
-            if (wateringTimeoutRef.current) {
-                clearTimeout(wateringTimeoutRef.current);
-            }
-        };
-    }, [wateringKey]);
-
-    // Blommor-funktionen: vattning startades tidigare när ett moln höll nära en
-    // nål. Molnsystemet är borttaget → ingen vattning kan längre startas; effekten
-    // avbryter bara ev. pågående vattning om funktionen stängs av.
-    useEffect(() => {
-        if (!shopFlags.flowers) {
-            if (wateringKey !== null) setWateringKey(null);
-            return;
-        }
-    }, [shopFlags.flowers, wateringKey]);
 
     // (Bildväxlingen för grupper med flera event på samma plats sköts av en
     //  desyncad cycler längre ner — se effekten efter visibleGroups.)
@@ -1239,6 +1143,12 @@ export default function V2Map({
     // tidsinställd blink). Vid FÖRSTA trycket på kartan kollapsar det till normal-
     // läget = de N närmast trycket, resten tonas bort. Sätts false vid det trycket.
     const previewAllUntilTapRef = useRef(true);
+    // Vilo-vågen (se REVEAL_WAVE_*): rAF-id, tidsgate och per-markör-fas/axel.
+    const waveRafRef = useRef<number | null>(null);
+    const waveLastTickRef = useRef(0);
+    const waveFeatRef = useRef<{ key: string; u: number; jitter: number }[]>([]);
+    const ensureWavePumpRef = useRef<() => void>(() => {});
+    const stopWaveRef = useRef<() => void>(() => {});
     // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
     // / map-load utan att hamna i temporal-dead-zone.
     const ensureRevealPumpRef = useRef<() => void>(() => {});
@@ -1492,6 +1402,79 @@ export default function V2Map({
     }, [pumpReveal]);
     ensureRevealPumpRef.current = ensureRevealPump;
 
+    // ── Vilo-vågen ────────────────────────────────────────────────────────────
+    // Bygger om per-markör-axeln (u ∈ [0,1] längs en diagonal) + en stabil slump-
+    // fas per nyckel. Körs när vågen (åter)startar eller datan ändras.
+    const rebuildWaveField = useCallback(() => {
+        const coords = revealCoordsRef.current;
+        if (coords.length === 0) { waveFeatRef.current = []; return; }
+        // Diagonal axel (lat tyngre → vågen rullar mest nord/syd över avlånga Sverige).
+        const axis = (lng: number, lat: number) => lat + 0.6 * lng;
+        let min = Infinity, max = -Infinity;
+        for (const c of coords) { const a = axis(c.lng, c.lat); if (a < min) min = a; if (a > max) max = a; }
+        const span = max - min || 1;
+        // Billig, deterministisk hash → fas-jitter i [0,1) per nyckel.
+        const hash01 = (s: string) => {
+            let h = 2166136261;
+            for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+            return ((h >>> 0) % 1000) / 1000;
+        };
+        waveFeatRef.current = coords.map(c => ({
+            key: c.key,
+            u: (axis(c.lng, c.lat) - min) / span,
+            jitter: hash01(c.key) * REVEAL_WAVE_JITTER,
+        }));
+    }, []);
+
+    // Ett vågsteg: räkna opacitet per markör ur en sinusvåg som sveper längs axeln.
+    // Bara kammarna (raw över tröskeln) är riktigt tända; dalarna får en svag glöd.
+    const pumpWave = useCallback(() => {
+        const map = mapRef.current;
+        // Slut på förhandsvisning (tap skett) → stanna vågen helt.
+        if (!previewAllUntilTapRef.current || revealAnchorPtRef.current) {
+            waveRafRef.current = null;
+            return;
+        }
+        // Fortf. i förhandsvisning: håll loopen vid liv. Är kartan/lagret inte redo
+        // än (initial laddning eller mitt i ett stilbyte) väntar vi till nästa frame.
+        waveRafRef.current = requestAnimationFrame(pumpWave);
+        if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) return;
+        const nowMs = performance.now();
+        if (nowMs - waveLastTickRef.current < REVEAL_WAVE_STEP_MS) return; // gate ~18 fps
+        waveLastTickRef.current = nowMs;
+
+        if (waveFeatRef.current.length === 0) rebuildWaveField();
+        const feats = waveFeatRef.current;
+        const sticky = revealStickyRef.current;
+        const written = revealWrittenRef.current;
+        const t = nowMs / 1000;
+        const th = 1 - REVEAL_WAVE_LIT;                 // kam-tröskel på raw (0..1)
+        const lo = th - REVEAL_WAVE_EDGE, hi = th + REVEAL_WAVE_EDGE;
+        const TWO_PI = Math.PI * 2;
+        for (let i = 0; i < feats.length; i++) {
+            const f = feats[i];
+            if (sticky.has(f.key)) continue;            // klickade/valda styrs av reveal-loopen
+            const phase = (f.u * REVEAL_WAVE_CYCLES + f.jitter - t * REVEAL_WAVE_SPEED) * TWO_PI;
+            const raw = (Math.cos(phase) + 1) / 2;      // 0..1
+            const band = raw <= lo ? 0 : raw >= hi ? 1 : (raw - lo) / (hi - lo);
+            const op = REVEAL_WAVE_FLOOR + (1 - REVEAL_WAVE_FLOOR) * band;
+            const prev = written.get(f.key);
+            if (prev === undefined || Math.abs(op - prev) > 0.01) {
+                try { map.setFeatureState({ source: 'plain-events', id: f.key }, { reveal: op }); } catch { /* */ }
+                written.set(f.key, op);
+            }
+        }
+    }, [rebuildWaveField]);
+    const ensureWavePump = useCallback(() => {
+        rebuildWaveField();
+        if (waveRafRef.current == null) waveRafRef.current = requestAnimationFrame(pumpWave);
+    }, [pumpWave, rebuildWaveField]);
+    ensureWavePumpRef.current = ensureWavePump;
+    const stopWave = useCallback(() => {
+        if (waveRafRef.current != null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
+    }, []);
+    stopWaveRef.current = stopWave;
+
     // De n närmaste brickorna (nycklar) till en geo-punkt. Billigt partiellt urval
     // (kvadrerat avstånd, longitud cos-lat-skalad) — ingen full sortering, ingen
     // queryRenderedFeatures. Används av vandringen nedan.
@@ -1641,20 +1624,24 @@ export default function V2Map({
         const coords = new Map<string, [number, number]>();
         for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
         const allKeys = [...coords.keys()];
-        // FÖRHANDSVISNING (före första trycket): visa ALLA event, inte bara de N närmast.
-        // Gäller bara i vila (inget tap-ankare); ett tap kollapsar till normal-läget.
-        let newSeed: Set<string>;
+        // FÖRHANDSVISNING (före första trycket): tänd INTE alla statiskt — låt
+        // vilo-VÅGEN tona brickorna in/ut i kammar (aldrig alla samtidigt). Seedet
+        // hålls tomt så pump-loopen inte fightar med vågen; ett tap kollapsar till
+        // normal-läget (de N närmast trycket) och stänger vågen.
         if (previewAllUntilTapRef.current && !anchor) {
-            newSeed = new Set(allKeys);
-        } else {
-            if (origin && allKeys.length > count) {
-                const cl = origin.lng, ca = origin.lat;
-                const kx = Math.cos(ca * Math.PI / 180);
-                const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
-                allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
-            }
-            newSeed = new Set(allKeys.slice(0, count));
+            revealSeedRef.current = new Set();
+            ensureWavePumpRef.current();
+            return;
         }
+        // Lämnat förhandsvisningen → stäng vågen och gå tillbaka till N-närmast-läget.
+        stopWaveRef.current();
+        if (origin && allKeys.length > count) {
+            const cl = origin.lng, ca = origin.lat;
+            const kx = Math.cos(ca * Math.PI / 180);
+            const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
+            allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
+        }
+        const newSeed = new Set(allKeys.slice(0, count));
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
         if (map && map.getLayer('plain-events')) {
             revealSeedRef.current.forEach(k => {
@@ -2215,6 +2202,7 @@ export default function V2Map({
             // Reveal: lyssnare + rAF (vilo-skrivning + vandring).
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
+            if (waveRafRef.current != null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
             if (revealHoldTimerRef.current) { clearTimeout(revealHoldTimerRef.current); revealHoldTimerRef.current = null; }
             map.remove();
@@ -2567,9 +2555,6 @@ export default function V2Map({
             if (isSelected) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
-            const isWatered = shopFlags.flowers && wateredKeys.has(key);
-            const isWatering = shopFlags.flowers && wateringKey === key;
-
             // Event skapade direkt på VADKUL lyfts fram med en egen smaragdgrön
             // bricka (samma gröna som skapa-flödet) — de är sajtens kärna.
             // Gäller bara enskilda markörer; grupper cyklar genom flera event
@@ -2587,7 +2572,7 @@ export default function V2Map({
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isWatered}:${isWatering}:${isUserCreated}:${isFeatured}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isUserCreated}:${isFeatured}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -2759,61 +2744,15 @@ export default function V2Map({
                     ? `--pop-scale: ${baseScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
                     : `--pop-scale: ${baseScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
-                const isWatered = shopFlags.flowers && wateredKeys.has(key);
-                const isWatering = shopFlags.flowers && wateringKey === key;
-                const flowersHtml = isWatered
-                    ? `<div class="marker-flowers">
-                           <span class="sprouting-flower anim-flower-1">🌸</span>
-                           <span class="sprouting-flower anim-flower-2">🌼</span>
-                           <span class="sprouting-flower anim-flower-3">🌱</span>
-                       </div>`
-                    : '';
-
-                const isSparkleActive = isFeatureActive('sparkle');
-                const isSnowballActive = isFeatureActive('snowball');
-
-                let dropsHtml = '';
-                if (isSparkleActive) {
-                    dropsHtml = `
-                        <span class="sparkle-drop">✨</span>
-                        <span class="sparkle-drop">✨</span>
-                        <span class="sparkle-drop">✨</span>
-                    `;
-                } else if (isSnowballActive) {
-                    dropsHtml = `
-                        <span class="snow-drop">❄️</span>
-                        <span class="snow-drop">❄️</span>
-                        <span class="snow-drop">❄️</span>
-                    `;
-                } else {
-                    dropsHtml = `
-                        <span class="rain-drop"></span>
-                        <span class="rain-drop"></span>
-                        <span class="rain-drop"></span>
-                    `;
-                }
-
-                const wateringFeedbackHtml = isWatering
-                    ? `<div class="watering-rain">
-                           ${dropsHtml}
-                       </div>
-                       <svg class="watering-progress-svg" viewBox="0 0 36 36">
-                           <path class="watering-progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                           <path class="watering-progress-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke: ${isSparkleActive ? '#f472b6' : isSnowballActive ? '#93c5fd' : '#38bdf8'}; filter: drop-shadow(0 0 3px ${isSparkleActive ? 'rgba(244,114,182,0.8)' : isSnowballActive ? 'rgba(147,197,253,0.8)' : 'rgba(56,189,248,0.8)'});" />
-                       </svg>`
-                    : '';
-
                 markerData.element.innerHTML = `
                     <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble${isWatering ? (isSparkleActive ? ' pin-bubble-watering-sparkle' : isSnowballActive ? ' pin-bubble-watering-snowball' : ' pin-bubble-watering') : ''}" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji">${emoji}</div>
                             </div>
                             ${countBadge}
                             ${boostBadge}
-                            ${wateringFeedbackHtml}
                         </div>
-                        ${flowersHtml}
                     </div>
                 `;
             }
@@ -2858,7 +2797,7 @@ export default function V2Map({
     // minuteTick håller "börjar inom 1 timme"-orangen i takt med klockan även
     // när kartan står helt stilla (stateKey ser till att DOM bara byggs om när
     // statusen faktiskt ändrats).
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, wateredKeys, wateringKey, shopFlags, minuteTick]);
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, minuteTick]);
 
     // Bakgrunden bakom kartan syns vid snabb panorering (innan tiles laddat)
     // och som "rymd" bakom klotet — matcha aktiv kartstil så det aldrig
@@ -3166,253 +3105,6 @@ export default function V2Map({
                     animation: marker-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
                 }
 
-                /* Vattnade markörer / blommor */
-                .marker-flowers {
-                    position: absolute;
-                    bottom: -6px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    display: flex;
-                    gap: 1.5px;
-                    justify-content: center;
-                    pointer-events: none;
-                    z-index: 20;
-                    width: max-content;
-                }
-                .sprouting-flower {
-                    font-size: 11px;
-                    display: inline-block;
-                    line-height: 1;
-                    transform-origin: bottom center;
-                    animation: flower-sprout 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both, flower-sway 2.5s ease-in-out infinite alternate;
-                }
-                .anim-flower-1 {
-                    animation-delay: 0ms;
-                }
-                .anim-flower-2 {
-                    animation-delay: 150ms;
-                    font-size: 9px;
-                }
-                .anim-flower-3 {
-                    animation-delay: 300ms;
-                    font-size: 10px;
-                }
-                @keyframes flower-sprout {
-                    0% {
-                        transform: scale(0) translateY(8px);
-                        opacity: 0;
-                    }
-                    100% {
-                        transform: scale(1) translateY(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes flower-sway {
-                    0% {
-                        transform: rotate(-8deg);
-                    }
-                    100% {
-                        transform: rotate(8deg);
-                    }
-                }
-
-                /* Vattnings-feedback (regn, pulserande bubbla + förloppsindikator) */
-                .watering-rain {
-                    position: absolute;
-                    top: -30px;
-                    left: 0;
-                    width: 44px;
-                    height: 30px;
-                    overflow: visible;
-                    pointer-events: none;
-                    z-index: 10;
-                }
-                .rain-drop {
-                    position: absolute;
-                    width: 2px;
-                    height: 8px;
-                    background: linear-gradient(to bottom, rgba(56, 189, 248, 0), rgba(56, 189, 248, 1));
-                    border-radius: 999px;
-                    opacity: 0;
-                    animation: rain-fall-down 0.4s linear infinite;
-                }
-                .rain-drop:nth-child(1) {
-                    left: 10px;
-                    animation-delay: 0s;
-                }
-                .rain-drop:nth-child(2) {
-                    left: 22px;
-                    animation-delay: 0.12s;
-                }
-                .rain-drop:nth-child(3) {
-                    left: 34px;
-                    animation-delay: 0.24s;
-                }
-                @keyframes rain-fall-down {
-                    0% {
-                        transform: translateY(0) scaleY(1);
-                        opacity: 0;
-                    }
-                    15% {
-                        opacity: 0.9;
-                    }
-                    85% {
-                        opacity: 0.9;
-                        transform: translateY(28px) scaleY(1);
-                    }
-                    100% {
-                        transform: translateY(32px) scaleY(0.1);
-                        opacity: 0;
-                    }
-                }
-
-                .watering-progress-svg {
-                    position: absolute;
-                    top: -4px;
-                    left: -4px;
-                    width: 52px;
-                    height: 52px;
-                    z-index: 5;
-                    transform: rotate(-90deg);
-                    pointer-events: none;
-                }
-                .watering-progress-bg {
-                    fill: none;
-                    stroke: rgba(56, 189, 248, 0.2);
-                    stroke-width: 3.5;
-                }
-                .watering-progress-fill {
-                    fill: none;
-                    stroke: #38bdf8;
-                    stroke-width: 3.5;
-                    stroke-linecap: round;
-                    stroke-dasharray: 100 100;
-                    stroke-dashoffset: 100;
-                    filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.8));
-                    animation: fill-watering-progress 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                }
-                @keyframes fill-watering-progress {
-                    to {
-                        stroke-dashoffset: 0;
-                    }
-                }
-
-                @keyframes bubble-watering-pulse {
-                    0%, 100% {
-                        transform: rotate(45deg) scale(1);
-                    }
-                    50% {
-                        transform: rotate(45deg) scale(1.06);
-                        box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
-                    }
-                }
-                .pin-bubble-watering {
-                    animation: bubble-watering-pulse 0.8s ease-in-out infinite;
-                }
-
-                /* Sparkles / Glitter-fall */
-                .sparkle-drop {
-                    position: absolute;
-                    font-size: 14px;
-                    opacity: 0;
-                    pointer-events: none;
-                    animation: sparkle-fall-down 0.5s linear infinite;
-                }
-                .sparkle-drop:nth-child(1) {
-                    left: 6px;
-                    animation-delay: 0s;
-                }
-                .sparkle-drop:nth-child(2) {
-                    left: 20px;
-                    animation-delay: 0.15s;
-                }
-                .sparkle-drop:nth-child(3) {
-                    left: 32px;
-                    animation-delay: 0.3s;
-                }
-                @keyframes sparkle-fall-down {
-                    0% {
-                        transform: translateY(0) scale(0) rotate(0deg);
-                        opacity: 0;
-                    }
-                    15% {
-                        opacity: 1;
-                        transform: translateY(4px) scale(1.1) rotate(45deg);
-                    }
-                    85% {
-                        opacity: 1;
-                        transform: translateY(24px) scale(0.9) rotate(180deg);
-                    }
-                    100% {
-                        transform: translateY(32px) scale(0) rotate(270deg);
-                        opacity: 0;
-                    }
-                }
-
-                /* Snowflakes / Snöfall */
-                .snow-drop {
-                    position: absolute;
-                    font-size: 14px;
-                    opacity: 0;
-                    pointer-events: none;
-                    animation: snow-fall-down 0.6s ease-in-out infinite;
-                }
-                .snow-drop:nth-child(1) {
-                    left: 8px;
-                    animation-delay: 0s;
-                }
-                .snow-drop:nth-child(2) {
-                    left: 20px;
-                    animation-delay: 0.18s;
-                }
-                .snow-drop:nth-child(3) {
-                    left: 32px;
-                    animation-delay: 0.36s;
-                }
-                @keyframes snow-fall-down {
-                    0% {
-                        transform: translateY(0) translateX(0) rotate(0deg);
-                        opacity: 0;
-                    }
-                    15% {
-                        opacity: 0.95;
-                    }
-                    85% {
-                        opacity: 0.95;
-                        transform: translateY(24px) translateX(-4px) rotate(180deg);
-                    }
-                    100% {
-                        transform: translateY(32px) translateX(2px) rotate(360deg);
-                        opacity: 0;
-                    }
-                }
-
-                /* Custom bubble pulses for glitter & snow */
-                @keyframes bubble-watering-sparkle-pulse {
-                    0%, 100% {
-                        transform: rotate(45deg) scale(1);
-                    }
-                    50% {
-                        transform: rotate(45deg) scale(1.06);
-                        box-shadow: 0 0 15px rgba(244, 114, 182, 0.75);
-                    }
-                }
-                .pin-bubble-watering-sparkle {
-                    animation: bubble-watering-sparkle-pulse 0.8s ease-in-out infinite;
-                }
-
-                @keyframes bubble-watering-snowball-pulse {
-                    0%, 100% {
-                        transform: rotate(45deg) scale(1);
-                    }
-                    50% {
-                        transform: rotate(45deg) scale(1.06);
-                        box-shadow: 0 0 15px rgba(147, 197, 253, 0.75);
-                    }
-                }
-                .pin-bubble-watering-snowball {
-                    animation: bubble-watering-snowball-pulse 0.8s ease-in-out infinite;
-                }
             `}</style>
             <div ref={mapContainerRef} className="absolute inset-0 map-state-full" style={{ width: '100%', height: '100%' }} />
 
@@ -3455,18 +3147,8 @@ export default function V2Map({
                     { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
                     // ── Låsta funktioner ────────────────────────────────────────
                     { key: 'dark', label: 'Mörkt läge', desc: 'Mörk karta — skön i mörker', color: '#475569', icon: <Moon size={20} />, locked: true },
-                    { key: 'focus', label: 'Fokus', desc: 'Centrera kartan på molnet', color: '#2563eb', icon: <Target size={20} />, locked: true },
-                    { key: 'throw', label: 'Kasta', desc: 'Dubbelklick: kameran följer molnet när du kastar', color: '#0ea5e9', icon: <Send size={20} />, locked: true },
                     { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} />, locked: true },
-                    { key: 'faces', label: 'Ansikten', desc: 'Molnen får ansikten & uttryck', color: '#ec4899', icon: <Smile size={20} />, locked: true },
-                    { key: 'flowers', label: 'Blommor', desc: 'Vattna nålar så blommor växer', color: '#db2777', icon: <Flower2 size={20} />, locked: true },
-                    { key: 'sun', label: 'Sol', desc: 'Sol-effekt som lyser upp kartan', color: '#f59e0b', icon: <Sun size={20} />, locked: true },
-                    { key: 'slingshot', label: 'Slangbella', desc: 'Skjut iväg molnet med slangbella', color: '#ef4444', icon: <Crosshair size={20} />, locked: true },
                     { key: 'countries', label: 'Länder', desc: 'Visa länder på kartan', color: '#0284c7', icon: <MapIcon size={20} />, locked: true },
-                    { key: 'bigCloud', label: 'Större moln', desc: 'Gör molnen större', color: '#64748b', icon: <Maximize2 size={20} />, locked: true },
-                    { key: 'sparkle', label: 'Glitter', desc: 'Glitter runt molnen', color: '#a855f7', icon: <Sparkles size={20} />, locked: true },
-                    { key: 'snowball', label: 'Snöboll', desc: 'Kasta snöbollar i stället', color: '#38bdf8', icon: <Snowflake size={20} />, locked: true },
-                    { key: 'fastThrow', label: 'Snabbare kast', desc: 'Mer fart när du kastar molnen', color: '#f59e0b', icon: <Zap size={20} />, locked: true },
                     { key: 'golf', label: 'Golf', desc: 'Kommer snart', color: '#65a30d', icon: <Flag size={20} />, locked: true },
                     { key: 'multiplayer', label: 'Multiplayer', desc: 'Spela med andra (kräver konto)', color: '#6366f1', icon: <Users size={20} />, locked: true },
                     { key: 'record', label: 'Spela in', desc: 'Spela in din skärm', color: '#ef4444', icon: <Video size={20} />, locked: true }
