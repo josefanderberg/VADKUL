@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CalendarDays, Heart, MapPinned } from 'lucide-react';
+import { CalendarDays, Hand, Heart, MapPinned } from 'lucide-react';
 
 const SEEN_KEY = 'vadkul_seen_welcome_v2';
 
@@ -33,12 +33,16 @@ export default function WelcomeOverlay({ onCreateAccount }: WelcomeOverlayProps)
 
     const rows = [
         {
+            icon: <Hand size={18} className="text-[#006AA7] shrink-0" />,
+            text: 'Tryck på kartan för att upptäcka event runt omkring dig.',
+        },
+        {
             icon: <CalendarDays size={18} className="text-[#006AA7] shrink-0" />,
             text: 'Tusentals event varje vecka — konserter, marknader, sport och kultur.',
         },
         {
             icon: <MapPinned size={18} className="text-[#006AA7] shrink-0" />,
-            text: 'Se vad som händer nära dig — idag, imorgon eller i helgen.',
+            text: 'Se vad som händer nära dig — idag, ikväll eller i helgen.',
         },
         {
             icon: <Heart size={18} className="text-rose-500 shrink-0" />,
