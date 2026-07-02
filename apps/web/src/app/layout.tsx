@@ -16,8 +16,31 @@ const fredoka = Fredoka({
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://vadkul.se'),
-    title: 'VADKUL - Hitta spontana events',
-    description: 'Upptäck spontana events och aktiviteter i din närhet. Hitta vad som händer just nu på kartan.',
+    title: {
+        default: 'VADKUL – Hitta events och saker att göra nära dig',
+        template: '%s – VADKUL',
+    },
+    description:
+        'Över 20 000 evenemang i hela Sverige på en karta – konserter, marknader, sport och saker att göra med barn. Se vad som händer nära dig idag. Gratis.',
+    applicationName: 'VADKUL',
+    // Delnings-länkar (?event=...) pekar alla på kartan — self-canonical håller
+    // ihop dem i Googles index. /integritet sätter sin egen canonical.
+    alternates: { canonical: '/' },
+    openGraph: {
+        type: 'website',
+        locale: 'sv_SE',
+        url: '/',
+        siteName: 'VADKUL',
+        title: 'VADKUL – Hitta events och saker att göra nära dig',
+        description:
+            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'VADKUL – Hitta events och saker att göra nära dig',
+        description:
+            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
+    },
     manifest: '/manifest.json',
     appleWebApp: {
         capable: true,
@@ -27,6 +50,32 @@ export const metadata: Metadata = {
     other: {
         'mobile-web-app-capable': 'yes',
     },
+};
+
+// Strukturerad data (schema.org) — hjälper Google förstå vad VADKUL är och visa
+// varumärket rätt i sökresultat. Event-markup per event hör hemma på kommande
+// stads-/kategorisidor; på sajtnivå räcker WebSite + Organization.
+const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+        {
+            '@type': 'WebSite',
+            '@id': 'https://vadkul.se/#website',
+            url: 'https://vadkul.se',
+            name: 'VADKUL',
+            description:
+                'Över 20 000 evenemang i hela Sverige på en karta – se vad som händer nära dig idag.',
+            inLanguage: 'sv',
+            publisher: { '@id': 'https://vadkul.se/#organization' },
+        },
+        {
+            '@type': 'Organization',
+            '@id': 'https://vadkul.se/#organization',
+            name: 'VADKUL',
+            url: 'https://vadkul.se',
+            logo: 'https://vadkul.se/pwa-icon-512.png',
+        },
+    ],
 };
 
 export const viewport: Viewport = {
@@ -50,6 +99,10 @@ export default function RootLayout({
                 <meta name="impact-site-verification" {...({ value: '17f79b5d-182e-4a80-bff9-634b6d47ebc7' } as Record<string, string>)} />
             </head>
             <body>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
                 <Providers>
                     {children}
                     <Hotjar />

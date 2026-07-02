@@ -966,8 +966,8 @@ export default function V2Map({
     // Öppnar väskan medan tipset är aktivt → kvittera (pilen/lager-blinket slutar).
     useEffect(() => { if (funcBagOpen && featureHint !== null) setHintAcknowledged(true); }, [funcBagOpen, featureHint]);
 
-    // (Bildväxlingen för grupper med flera event på samma plats sköts av en
-    //  desyncad cycler längre ner — se effekten efter visibleGroups.)
+    // (Emoji-/färgväxlingen för grupper med flera event på samma plats sköts av
+    //  GL-cykelpumpen längre ner — se effekten efter visibleGroups.)
 
     // Gruppera events som ligger på (nästan) samma koord. ~11m precision (4 decimaler).
     const groups = useMemo(() => {
@@ -1044,6 +1044,13 @@ export default function V2Map({
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
         const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>();
+        // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
+        // en DELAD cykel-bild (`cycle:<frame-ids>`) vars PIXLAR cykelpumpen byter
+        // på plats via map.updateImage — ingen setData, ingen feature-state, bara
+        // en liten texturuppdatering per byte. Dedupliceras per emoji — finns
+        // flera event med samma emoji deltar bara det första i växlingen. Nyckel =
+        // cykel-bildens id; värde = frame-beskrivningar (bakas vid behov i pumpen).
+        const rotations = new Map<string, { emoji: string; color?: string; saved?: boolean }[]>();
         // Det VALDA eventet behålls i GL-lagret (utöver sin DOM-markör) så att brickan
         // man är "på" ALLTID syns. Eftersom det valda ALLTID är "special" ritas just
         // dess GL-bricka med sin riktiga look INBAKAD (vit ram = vald, vit kropp =
@@ -1071,18 +1078,48 @@ export default function V2Map({
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}`;
             if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav });
+            // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
+            // Blir den ≥2 frames pekar brickan på den delade cykel-bilden i stället
+            // för rep-ikonen; grupper med identisk rotation delar bild och byter
+            // därmed i perfekt synk utan extra kostnad.
+            let finalIcon = iconId;
+            if (group.length > 1 && !drawSel) {
+                const seenEmoji = new Set<string>();
+                const frames: { emoji: string; color?: string; saved?: boolean }[] = [];
+                const frameIds: string[] = [];
+                for (const ev of group) {
+                    if (discardedEventIds.has(ev.id)) continue;
+                    const ck = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
+                    const em = ev.emoji || (EVENT_CATEGORIES[ck as EventCategoryType]?.emoji ?? '🎫');
+                    if (seenEmoji.has(em)) continue;
+                    seenEmoji.add(em);
+                    const col = brickaBodyHex(ev) ?? undefined;
+                    frames.push({ emoji: em, color: col, saved: drawSav });
+                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}`);
+                }
+                if (frames.length > 1) {
+                    const cycleId = `cycle:${frameIds.join('|')}`;
+                    // Registrera cykel-bilden med frame 0 som utgångsutseende så
+                    // syncPlainLayer bakar + addImage:ar den som alla andra.
+                    if (!icons.has(cycleId)) icons.set(cycleId, { ...frames[0] });
+                    rotations.set(cycleId, frames);
+                    finalIcon = cycleId;
+                }
+            }
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: iconId, key, count: group.length, color: color ?? '#1e293b' },
+                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b' },
             });
         }
-        return { features, icons };
-    }, [groups, isSpecialGroup, selectedEvent, savedEventIds]);
+        return { features, icons, rotations };
+    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>>(new Map());
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
+    // Multi-gruppernas frame-rotationer per cykel-bild-id (byggda i plainData).
+    const cycleRotationsRef = useRef<Map<string, { emoji: string; color?: string; saved?: boolean }[]>>(new Map());
 
     // Lätta GL-prickar för multi-event-grupper UNDER zoom-gesten. I vila är listan
     // tom → DOM-brickorna ritar dem i stället (se visibleGroups). Egenskapen `count`
@@ -1689,6 +1726,7 @@ export default function V2Map({
     useEffect(() => {
         plainFeaturesRef.current = plainData.features;
         usedIconsRef.current = plainData.icons;
+        cycleRotationsRef.current = plainData.rotations;
         multiEventDotFeaturesRef.current = multiEventDotData;
         // Platt koord-lista för "de N närmaste pekaren" (slipper bygga om varje frame).
         revealCoordsRef.current = plainData.features.map(f => ({
@@ -1746,61 +1784,52 @@ export default function V2Map({
         reapplyAllRevealRef.current();
     }, [selectedEvent, savedEventIds, groups]);
 
-    // ── Desyncad bildväxling för grupper med flera event på samma plats ───────
-    // Tidigare bytte ALLA sådana grupper emoji på exakt samma 1-sekunderstick
-    // (en synkad DOM-skur) OCH det triggade en full omsynk av varenda markör.
-    // Nu sprider vi ut det: en sub-tick var 200 ms, och varje grupp får en fast
-    // fas-offset utifrån sin nyckel → varje grupp byter ~1 gång/sekund men vid
-    // olika tidpunkter, och bytet rör BARA den gruppens emoji (ingen omsynk).
-    const visibleGroupsRef = useRef(visibleGroups);
-    visibleGroupsRef.current = visibleGroups;
+    // ── Emoji-/färgväxling för multi-event-BRICKOR (GL) ───────────────────────
+    // Multi-grupperna är GL-brickor numera (DOM-markör finns bara för den VALDA
+    // gruppen). Grupper med ≥2 OLIKA emojis pekar på en DELAD cykel-bild
+    // (`cycle:<frames>`, se plainData) och växlingen är ett RAKT byte av den
+    // bildens pixlar via map.updateImage — minsta möjliga data: en liten
+    // texturuppload per byte, ingen setData/omtiling, ingen fade, ingen
+    // feature-state. Bara bilder som används av minst en TÄND bricka
+    // (reveal > 0.5) byts; är ingen tänd står allt still (noll kostnad i vila).
+    // Count-badgen är ett eget textlager och ligger stilla under bytet.
     const selectedEventValRef = useRef(selectedEvent);
     selectedEventValRef.current = selectedEvent;
-    const discardedEventIdsRef = useRef(discardedEventIds);
-    discardedEventIdsRef.current = discardedEventIds;
     useEffect(() => {
-        const STEPS = 5; // 5 × 200 ms ≈ 1 s per bildbyte och grupp
-        const phaseForKey = (key: string) => {
-            let h = 0;
-            for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-            return h % STEPS;
-        };
-        let sub = 0;
-        const id = setInterval(() => {
-            sub++;
-            const sel = selectedEventValRef.current;
-            const disc = discardedEventIdsRef.current;
-            for (const [key, group] of visibleGroupsRef.current) {
-                if (group.length <= 1) continue;
-                if (sel && group.some(e => e.id === sel.id)) continue; // valt sköts av synken
-                const md = markersRef.current.get(key);
-                if (!md) continue;
-                const nonDiscarded = group.filter(e => !disc.has(e.id));
-                if (nonDiscarded.length === 0) continue;
-                const step = Math.floor((sub + phaseForKey(key)) / STEPS);
-                const cur = nonDiscarded[step % nonDiscarded.length];
-                // Uppdatera bara när den faktiskt visade gruppmedlemmen byts —
-                // billigt, och klickmålet följer den som visas just nu.
-                if (md.element.dataset.cycleId === cur.id) continue;
-                md.element.dataset.cycleId = cur.id;
-                const catKey = cur.category && EVENT_CATEGORIES[cur.category] ? cur.category : 'other';
-                const emoji = cur.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-                const emojiEl = md.element.querySelector('.pin-emoji');
-                if (emojiEl && emojiEl.textContent !== emoji) emojiEl.textContent = emoji;
-                // Låt brickans kropp följa det event som visas just nu — annars
-                // frös färgen på gruppens första event. Fasta tillstånd (guld/
-                // sparad) äger färgen och markeras med catCycle !== '1'.
-                if (md.element.dataset.catCycle === '1') {
-                    const bubble = md.element.querySelector('.pin-bubble') as HTMLElement | null;
-                    if (bubble) bubble.style.background = brickaBodyBg(cur);
-                }
-                md.element.onclick = (e) => {
-                    e.stopPropagation();
-                    onSelectEventRef.current(cur);
-                };
+        const CYCLE_PERIOD_MS = 2600; // visningstid per emoji
+        let step = 0;
+        const interval = setInterval(() => {
+            const map = mapRef.current;
+            if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) return;
+            const rotations = cycleRotationsRef.current;
+            if (rotations.size === 0) return;
+            const written = revealWrittenRef.current;
+            // Cykel-bilder som används av minst en tänd bricka just nu.
+            const visible = new Set<string>();
+            for (const f of plainFeaturesRef.current) {
+                const icon = f.properties.icon;
+                if (!rotations.has(icon)) continue;
+                if ((written.get(f.properties.key) ?? 0) > 0.5) visible.add(icon);
             }
-        }, 200);
-        return () => clearInterval(id);
+            if (visible.size === 0) return;
+            step++;
+            for (const id of visible) {
+                const frames = rotations.get(id)!;
+                const fr = frames[step % frames.length];
+                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}`;
+                let baked = bakedIconsRef.current.get(frameId);
+                if (!baked) {
+                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved);
+                    if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
+                }
+                // Alla brickbilder bakas med samma mått (S/DPR-konstanterna i
+                // makeBrickaImageData) — kravet för updateImage.
+                if (baked && map.hasImage(id)) {
+                    try { map.updateImage(id, baked.data); } catch { /* stilbyte i skarven */ }
+                }
+            }
+        }, CYCLE_PERIOD_MS);
+        return () => clearInterval(interval);
     }, []);
 
     // Spårar ORDNINGEN man bläddrat genom den valda gruppen, så grupp-markörens
@@ -2552,8 +2581,8 @@ export default function V2Map({
             const count = group.length;
             const inGroupSelected = group.find(e => e.id === selectedEvent?.id);
             const nonDiscarded = group.filter(e => !discardedEventIds.has(e.id));
-            // Stabil representant. Själva bildväxlingen för multi-grupper sköts av
-            // den desyncade cyclern ovan (rör bara emoji/klickmål, inte DOM-synken).
+            // Stabil representant. Emoji-växlingen för OVALDA multi-grupper sker i
+            // GL-lagret (cykelpumpen); DOM-markören här finns bara för den valda.
             const rep = inGroupSelected || nonDiscarded[0] || group[0];
 
             // I gissningsläge highlightas ALDRIG mål-eventet — annars skulle dess
@@ -2670,11 +2699,6 @@ export default function V2Map({
                     // Ingen sticky (hopade en bricka per klick) — vald visas via DOM-markör.
                     onSelectEventRef.current(rep);
                 };
-
-                // Får denna grupps bricka byta kroppsfärg när slideshow-cyclern
-                // växlar event? Ja för normala multi-grupper; nej när ett fast
-                // tillstånd (guld/sparad) äger färgen eller det är en ensam bricka.
-                markerData.element.dataset.catCycle = (count > 1 && !isSaved) ? '1' : '';
 
                 // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från
                 // kategorifärgningen → standardmörk bricka; övriga får sin kategori-

@@ -2,8 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Integritet — VADKUL',
+    // Root-layoutens title-template lägger själv till "– VADKUL"
+    title: 'Integritet',
     description: 'Så hanterar VADKUL dina uppgifter: vad som lagras, var, och hur du raderar det.',
+    alternates: { canonical: '/integritet' },
 };
 
 /**
