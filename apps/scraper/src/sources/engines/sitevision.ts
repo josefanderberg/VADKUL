@@ -36,6 +36,12 @@ export interface SiteVisionConfig {
     maxItems?: number;
     userAgent?: string;
     timeoutMs?: number;
+    /**
+     * Hämta detaljsidan för event som saknar beskrivning och ta meta/og-
+     * description. Kostar ett throttlat fetch per desc-löst event — slå bara
+     * på för källor där list-korten är text-tomma (Strömsund, Svenljunga).
+     */
+    fetchDetailDesc?: boolean;
 }
 
 async function fetchHtml(url: string, cfg: SiteVisionConfig): Promise<string | null> {
@@ -160,6 +166,26 @@ export const sitevisionEngine = async (
         }
 
         ctx.log(`  extracted ${cards} events`);
+    }
+
+    // Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
+    // (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
+    // detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
+    // event som SAKNAR desc hämtas → självbegränsande när korten räcker.
+    if (config.fetchDetailDesc) {
+        let filled = 0;
+        for (const ev of events) {
+            if (ev.description || !ev.url) continue;
+            const html = await fetchHtml(ev.url, config);
+            if (!html) continue;
+            const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
+                || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
+            const desc = m?.[1]
+                ?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
+                .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+            if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
+        }
+        if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
     }
 
     return events;

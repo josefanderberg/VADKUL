@@ -199,13 +199,18 @@ export async function scrapeUpplevVaxjo() {
                             let jsonLdDescription = '';
                             let bookingUrl = '';
 
+                            // @type matchas case-INSENSITIVT: Sitevision serverar
+                            // "@type":"event" (gemener) — inte schema.orgs "Event" —
+                            // vilket gjorde att INGEN nod matchade och beskrivningen
+                            // aldrig plockades (30/30 event utan beskrivning).
+                            const isEventNode = (d: any) => String(d?.['@type'] || '').toLowerCase() === 'event';
                             const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
                             for (const script of scripts) {
                                 try {
                                     let data = JSON.parse(script.textContent || '');
                                     // Handle @graph arrays
-                                    if (data['@graph']) data = data['@graph'].find((d: any) => d['@type'] === 'Event') || data;
-                                    if (data['@type'] === 'Event') {
+                                    if (data['@graph']) data = data['@graph'].find(isEventNode) || data;
+                                    if (isEventNode(data)) {
                                         // Price from offers
                                         if (data.offers) {
                                             const offer = Array.isArray(data.offers) ? data.offers[0] : data.offers;
@@ -220,18 +225,38 @@ export async function scrapeUpplevVaxjo() {
                                             if (loc.name) jsonLdLocation = loc.name;
                                             if (loc.address?.streetAddress) jsonLdLocation = jsonLdLocation || loc.address.streetAddress;
                                         }
-                                        // Image
+                                        // Image: schema.org "image" ELLER Sitevisions nästlade
+                                        // image.src.{big|medium|small} (relativa paths).
                                         if (data.image) {
                                             const img = Array.isArray(data.image) ? data.image[0] : data.image;
-                                            jsonLdImg = typeof img === 'string' ? img : (img?.url || '');
+                                            jsonLdImg = typeof img === 'string'
+                                                ? img
+                                                : (img?.url || img?.src?.big || img?.src?.medium || img?.src?.small || '');
                                         }
-                                        // Description
-                                        if (data.description) jsonLdDescription = String(data.description).trim();
+                                        // Description: Sitevision lägger texten i "preamble",
+                                        // schema.org i "description" — ta det som finns.
+                                        const desc = data.preamble || data.description;
+                                        if (desc) jsonLdDescription = String(desc).trim();
                                         // Date
-                                        if (data.startDate) jsonLdDate = data.startDate;
+                                        if (data.startDate && String(data.startDate).includes('-')) jsonLdDate = data.startDate;
                                     }
                                 } catch { /* ignore malformed JSON-LD */ }
                             }
+
+                            // og:/meta-fallback — sidans og:description bär hela
+                            // ingressen (ofta rikare än JSON-LD-preamble) och og:image
+                            // en absolut bild-URL. Robust mot att JSON-LD-formatet ändras.
+                            const meta = (sel: string) =>
+                                (document.querySelector(sel) as HTMLMetaElement | null)?.content?.trim() || '';
+                            const ogDesc = meta('meta[property="og:description"]') || meta('meta[name="description"]');
+                            const ogImg = meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]');
+                            const preambleEl = document.querySelector('.uv-preamble, [class*="preamble"]');
+                            const preambleText = preambleEl?.textContent?.trim() || '';
+                            if (!jsonLdDescription || jsonLdDescription.length < 20) {
+                                const best = [ogDesc, preambleText].find(t => t && t.length >= 20);
+                                if (best) jsonLdDescription = best;
+                            }
+                            if (!jsonLdImg && ogImg) jsonLdImg = ogImg;
 
                             // ── 2. Fallback: CSS selectors ──
                             const mainText = document.querySelector('main')?.textContent?.toLowerCase() || '';
@@ -288,7 +313,14 @@ export async function scrapeUpplevVaxjo() {
                         if (deepData.jsonLdPrice !== undefined) finalPrice = deepData.jsonLdPrice;
                         if (deepData.jsonLdLocation) finalLocation = deepData.jsonLdLocation;
                         if (deepData.jsonLdImg) finalImg = deepData.jsonLdImg;
-                        if (deepData.jsonLdDescription) finalDescription = deepData.jsonLdDescription;
+                        // Sitevisions 404-felsida serverar "Det är inte ditt fel…" som
+                        // og:description — får ALDRIG sparas som event-beskrivning.
+                        const isErrorPageText = /det är inte ditt fel|sidan kan ha tagits bort/i;
+                        if (deepData.jsonLdDescription && !isErrorPageText.test(deepData.jsonLdDescription)) {
+                            finalDescription = deepData.jsonLdDescription;
+                        }
+                        // Sitevisions image.src.big är en relativ path → gör absolut.
+                        if (finalImg && finalImg.startsWith('/')) finalImg = `https://upplev.vaxjo.se${finalImg}`;
 
                         // Apply CSS fallback if JSON-LD didn't provide it
                         if (finalPrice === undefined && deepData.cssPrice !== '') finalPrice = deepData.cssPrice;

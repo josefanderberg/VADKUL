@@ -101,6 +101,47 @@ function findVenueInHtml(html: string): string | undefined {
     return undefined;
 }
 
+/** Första matchande meta-tagg (property ELLER name) ur HTML, oavsett attribut-ordning. */
+function metaContent(html: string, keys: string[]): string | undefined {
+    for (const k of keys) {
+        const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${esc}["'][^>]+content=["']([^"']*)["']`, 'i'))
+            || html.match(new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${esc}["']`, 'i'));
+        if (m && m[1].trim()) return m[1].trim();
+    }
+    return undefined;
+}
+
+const HTML_ENTITIES: Record<string, string> = {
+    '&amp;': '&', '&quot;': '"', '&#039;': "'", '&#39;': "'", '&apos;': "'",
+    '&lt;': '<', '&gt;': '>', '&nbsp;': ' ',
+};
+function decodeEntities(s: string): string {
+    return s.replace(/&(?:amp|quot|#0?39|apos|lt|gt|nbsp);/g, m => HTML_ENTITIES[m] ?? m);
+}
+
+/**
+ * Beskrivning ur detalj-sidans meta-taggar. Kräver ≥20 tecken för att inte
+ * fastna på generiska/tomma snuttar. Faller tillbaka twitter: → name=description.
+ */
+function findMetaDescription(html: string): string | undefined {
+    const v = metaContent(html, ['og:description', 'twitter:description', 'description']);
+    if (!v) return undefined;
+    const d = decodeEntities(v).trim();
+    return d.length >= 20 ? d : undefined;
+}
+
+/**
+ * Bild ur detalj-sidans meta-taggar. VIKTIGT: og:image på DETALJSIDAN är
+ * event-specifik — wp/v2-API:ts yoast-og är ofta en generisk delningsbild.
+ */
+function findMetaImage(html: string): string | undefined {
+    const v = metaContent(html, ['og:image', 'twitter:image', 'twitter:image:src']);
+    if (!v) return undefined;
+    const url = decodeEntities(v).trim();
+    return /share-image|placeholder|default|logo/i.test(url) ? undefined : url;
+}
+
 /** Tolka Tribes datum-format ("2026-06-15 19:00:00" — lokal tid, ingen TZ). */
 function parseTribeDate(s: string | undefined): Date | null {
     if (!s) return null;
@@ -246,9 +287,23 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
             : '');
 
     // Image: prefer _embed featuredmedia (full quality), annars fall tillbaka
-    const imageUrl = e._embedded?.['wp:featuredmedia']?.[0]?.source_url
+    let imageUrl: string | undefined = e._embedded?.['wp:featuredmedia']?.[0]?.source_url
         || e.featured_media_url
         || undefined;
+
+    // Detalj-sida-fallback: vissa wp-v2-källor (t.ex. Destination Uppsala) har
+    // TOMT excerpt/content/featuredmedia i API:t — allt riktigt innehåll ligger
+    // på HTML-sidan. När fetchDetailPage är på och beskrivning/bild saknas,
+    // hämta sidan (återanvänd om redan hämtad för datum ovan) och plocka og:/
+    // twitter:-taggar. Bara träffar för fält som FAKTISKT saknas → självbegränsande
+    // (källor som redan får fälten från API:t gör inga extra HTTP-anrop).
+    if (cfg.fetchDetailPage && e.link && (!description || !imageUrl)) {
+        if (!detailHtml) detailHtml = await fetchDetailHtml(e.link, cfg, signal);
+        if (detailHtml) {
+            if (!description) description = findMetaDescription(detailHtml) ?? '';
+            if (!imageUrl) imageUrl = findMetaImage(detailHtml);
+        }
+    }
 
     // Venue: leta i content → excerpt → HTML detalsida om vi redan hämtat den
     const venueName = findVenueInText(String(e.content?.rendered || ''))
