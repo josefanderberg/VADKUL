@@ -13,9 +13,10 @@
            → aggregate (FB live direkt)       → bespoke-scrapers
            → Sources enligt hash-fas-schemat  → aggregate
         3. Post-pipeline EN gång: hide-foreign, hide-junk, fix-times,
-           dedupe-cross, geo-refine, storage-sync, image-migrate,
-           llm-enrich, AI-audit, re-aggregate
-        4. Stats + Teams-rapporter
+           dedupe-cross, geo-refine, backfill-geocode (null-island),
+           storage-sync, image-migrate, llm-enrich, AI-audit, re-aggregate
+        4. Stats + Teams-rapporter (huvudkort, per-scraper-volym,
+           kvalitet/trend, samt fält-täckning PER scraper → docs/scrapers/coverage/)
 
       Inga fler fasta tider för delsteg — allt startar när föregående steg
       är klart. Källorna sprids jämnt över nätterna av schedule.ts (hash-fas).

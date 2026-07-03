@@ -47,7 +47,7 @@ export interface AxiellTenant {
     cityHint?: string;
 }
 
-/** Verifierade tenants 2026-06-12 (≈1 300 framtida event). Växer via discovery. */
+/** Verifierade tenants: 8 st 2026-06-12 + 30 st 2026-07-02 (≈4 000 framtida event). Växer via discovery. */
 export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'uppsala',      customerId: '5de8fb519cf47722f2bb9871', eventsUrl: 'https://bibliotekuppsala.se/evenemang',       name: 'Bibliotek Uppsala',            cityHint: 'Uppsala' },
     { id: 'orebro',       customerId: '671758c4296c3201a2484671', eventsUrl: 'https://bibliotek.orebro.se/evenemang',       name: 'Bibliotek Örebro',             cityHint: 'Örebro' },
@@ -57,6 +57,47 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'kalmar',       customerId: '5f801bab9cf477217a2912cd', eventsUrl: 'https://bibliotek.kalmar.se/evenemang',       name: 'Biblioteken i Kalmar',         cityHint: 'Kalmar' },
     { id: 'huddinge',     customerId: '5fbfa17e9cf4776ba2b1a711', eventsUrl: 'https://bibliotek.huddinge.se/evenemang',     name: 'Huddinge bibliotek',           cityHint: 'Huddinge' },
     { id: 'varmland',     customerId: '5fda02f69cf4776ba2b1a819', eventsUrl: 'https://www.bibliotekvarmland.se/evenemang',  name: 'Bibliotek Värmland' },
+
+    // ── Discovery-runda 2026-07-02 (≈1 900 framtida event till) ──────────────
+    // customerId fångad ur browserns api.axiell.com-anrop (config-endpointen är
+    // numera 403; se scratchpad/axiell-puppeteer-discover.cjs). cityHint utelämnad
+    // för läns-/regionkonsortier (Umeåregionen) — filialnamnet bär orten då.
+    { id: 'jonkoping',     customerId: '6489becd8094f362d53890d9', eventsUrl: 'https://bibliotek.jonkoping.se/evenemang',    name: 'Biblioteken i Jönköping',      cityHint: 'Jönköping' },
+    { id: 'umea',          customerId: '67efbbec296c3258c8eaf816', eventsUrl: 'https://www.minabibliotek.se/evenemang',      name: 'Umeåregionens bibliotek' },
+    { id: 'vaxjo',         customerId: '62418559ae077e04267beb89', eventsUrl: 'https://bibliotek.vaxjo.se/evenemang',        name: 'Biblioteken i Växjö',          cityHint: 'Växjö' },
+    { id: 'sundsvall',     customerId: '5dceb8c39cf47722f2bb983a', eventsUrl: 'https://bibliotek.sundsvall.se/evenemang',    name: 'Sundsvalls bibliotek',         cityHint: 'Sundsvall' },
+    { id: 'molndal',       customerId: '6638d1d9f9286e318ed74d05', eventsUrl: 'https://bibliotek.molndal.se/evenemang',      name: 'Mölndals bibliotek',           cityHint: 'Mölndal' },
+    { id: 'lidingo',       customerId: '68b69024a2fccd7fbf6612a8', eventsUrl: 'https://bibliotek.lidingo.se/evenemang',      name: 'Lidingö bibliotek',            cityHint: 'Lidingö' },
+    { id: 'solna',         customerId: '6149c6bce9a84303da337dbc', eventsUrl: 'https://bibliotek.solna.se/evenemang',        name: 'Solna bibliotek',              cityHint: 'Solna' },
+    { id: 'jarfalla',      customerId: '63f5de79ca75745f4f4e22e3', eventsUrl: 'https://bibliotek.jarfalla.se/evenemang',     name: 'Järfälla bibliotek',           cityHint: 'Järfälla' },
+    { id: 'botkyrka',      customerId: '62aae50fbbee2204026d77fc', eventsUrl: 'https://bibliotek.botkyrka.se/evenemang',     name: 'Botkyrka bibliotek',           cityHint: 'Botkyrka' },
+    { id: 'haninge',       customerId: '65c5fc645e592b04e0b56544', eventsUrl: 'https://bibliotek.haninge.se/evenemang',      name: 'Haninge bibliotek',            cityHint: 'Haninge' },
+    { id: 'norrtalje',     customerId: '5dceb8969cf47722f2bb9839', eventsUrl: 'https://bibliotek.norrtalje.se/evenemang',    name: 'Norrtälje bibliotek',          cityHint: 'Norrtälje' },
+    { id: 'taby',          customerId: '612de570a5a63e0394389918', eventsUrl: 'https://bibliotek.taby.se/evenemang',         name: 'Täby bibliotek',               cityHint: 'Täby' },
+    { id: 'tyreso',        customerId: '66cd7c2af9286e318ed75a97', eventsUrl: 'https://bibliotek.tyreso.se/evenemang',       name: 'Tyresö bibliotek',             cityHint: 'Tyresö' },
+    { id: 'osteraker',     customerId: '61939a5de9a84303da338712', eventsUrl: 'https://bibliotek.osteraker.se/evenemang',    name: 'Österåkers bibliotek',         cityHint: 'Åkersberga' },
+    { id: 'upplandsvasby', customerId: '672b50ac296c3201a2484d32', eventsUrl: 'https://bibliotek.upplandsvasby.se/evenemang', name: 'Väsby bibliotek',             cityHint: 'Upplands Väsby' },
+    { id: 'sigtuna',       customerId: '692948d5cdc95c5435968696', eventsUrl: 'https://bibliotek.sigtuna.se/evenemang',      name: 'Sigtuna bibliotek',            cityHint: 'Sigtuna' },
+    { id: 'nykoping',      customerId: '67bc4753296c3258c8eae737', eventsUrl: 'https://bibliotek.nykoping.se/evenemang',     name: 'Nyköpings bibliotek',          cityHint: 'Nyköping' },
+    { id: 'kungsbacka',    customerId: '5fc0e7799cf4776ba2b1a71f', eventsUrl: 'https://bibliotek.kungsbacka.se/evenemang',   name: 'Kungsbacka bibliotek',         cityHint: 'Kungsbacka' },
+    { id: 'salem',         customerId: '63737c9f71432976b7d81926', eventsUrl: 'https://bibliotek.salem.se/evenemang',        name: 'Salems bibliotek',             cityHint: 'Salem' },
+    { id: 'ekero',         customerId: '66d6d049f9286e318ed75da9', eventsUrl: 'https://bibliotek.ekero.se/evenemang',        name: 'Ekerö bibliotek',              cityHint: 'Ekerö' },
+    { id: 'katrineholm',   customerId: '675c2772296c323bdabd9479', eventsUrl: 'https://bibliotek.katrineholm.se/evenemang',  name: 'Katrineholms bibliotek',       cityHint: 'Katrineholm' },
+    { id: 'nykvarn',       customerId: '68e4dd92a2fccd7fbf6623f3', eventsUrl: 'https://bibliotek.nykvarn.se/evenemang',      name: 'Nykvarns bibliotek',           cityHint: 'Nykvarn' },
+
+    // ── Discovery-runda 2 samma dag, ur axiell.com/se/bibliotek-med-arena-nova/ ──
+    // Fyrstad (Trollhättan/Uddevalla/Vänersborg/Lysekil) och Dalsland är
+    // konsortier → ingen cityHint, filialnamnet bär orten.
+    { id: 'fyrstad',       customerId: '6392e838d76e6e2eb0e75894', eventsUrl: 'https://bibliotekenifyrstad.se/evenemang',    name: 'Biblioteken i Fyrstad' },
+    { id: 'varnamo',       customerId: '5ed608059cf47776dc7b115a', eventsUrl: 'https://bibliotek.varnamo.se/evenemang',     name: 'Värnamo bibliotek',            cityHint: 'Värnamo' },
+    { id: 'kavlinge',      customerId: '613b2517e9a84303da337bf1', eventsUrl: 'https://bibliotek.kavlinge.se/evenemang',    name: 'Kävlinge bibliotek',           cityHint: 'Kävlinge' },
+    { id: 'laholm',        customerId: '639059cfd76e6e2eb0e75860', eventsUrl: 'https://bibliotek.laholm.se/evenemang',      name: 'Laholms bibliotek',            cityHint: 'Laholm' },
+    { id: 'harnosand',     customerId: '5e37d5ab9cf47722f2bb98aa', eventsUrl: 'https://bibliotek.harnosand.se/evenemang',   name: 'Härnösands bibliotek',         cityHint: 'Härnösand' },
+    { id: 'dalsland',      customerId: '5dceb9039cf47722f2bb983c', eventsUrl: 'https://bibliotekdalsland.se/evenemang',     name: 'Dalslands bibliotek' },
+    { id: 'gislaved',      customerId: '5e25b56b9cf47722f2bb9889', eventsUrl: 'https://bibliotek.gislaved.se/evenemang',    name: 'Gislaveds bibliotek',          cityHint: 'Gislaved' },
+    { id: 'gnesta',        customerId: '5fbfa0e49cf4776ba2b1a710', eventsUrl: 'https://bibliotek.gnesta.se/evenemang',      name: 'Gnesta bibliotek',             cityHint: 'Gnesta' },
+    // V8 = åtta inlandskommuner i Västerbotten (Lycksele/Storuman/Vilhelmina m.fl.) — konsortium, filialen bär orten.
+    { id: 'v8',            customerId: '68f0ea72cdc95c54359674f8', eventsUrl: 'https://v8biblioteken.se/evenemang',         name: 'V8-biblioteken' },
 ];
 
 interface AxiellHit {

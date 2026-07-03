@@ -161,8 +161,99 @@ export const SOURCES: Source[] = [
         updateFrequency: 'weekly',
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tickster.com/sitemap.xml', date: '2026-06-11' },
-        notes: 'Probe 2026-06-11: sitemap har 9104 framtida event-URLs (datum-i-URL). Ingen JSON-LD men og:title + "DD månad"/ISO i text → cheerie-fallback. urlDateRegex förfiltrerar till fönstret.',
-        lastVerified: '2026-06-11',
+        notes: 'Probe 2026-06-11: sitemap har 9104 framtida event-URLs (datum-i-URL). Ingen JSON-LD men og:title + "DD månad"/ISO i text → cheerie-fallback. urlDateRegex förfiltrerar till fönstret. 2026-07-02: exakta koordinater plockas nu ur sidans Google Maps-länk + ort ur location-microdata (backfillPlaceFromHtml i sitemap-motorn) — tidigare var ~46% o-geokodade (venue utan ort) och alla fick footerns kontorsadress "Magasinsgatan 8" som extractedAddress.',
+        lastVerified: '2026-07-02',
+    },
+    {
+        id: 'visitumea',
+        hostName: 'Visit Umeå',
+        region: 'umea',
+        engine: 'cbis',
+        config: {
+            baseUrl: 'https://visitumea.se',
+            nodeId: 1262,
+            defaultCity: 'Umeå',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://visitumea.se/sv/api/cbis-product-list?nodeId=1262&page=0', date: '2026-07-02' },
+        notes: 'Probe 2026-07-02: Visit Group/CBIS-Drupal, öppet JSON-API med server-renderade HTML-kort (183 event). Kort: titel/datum/venue/bild; detaljsida ger meta-desc + klockslag. nodeId sniffad ur listsidans XHR.',
+        lastVerified: '2026-07-02',
+    },
+    {
+        id: 'visitkarlskrona',
+        hostName: 'Visit Karlskrona',
+        region: 'karlskrona',
+        engine: 'cbis',
+        config: {
+            baseUrl: 'https://www.visitkarlskrona.se',
+            nodeId: 318,
+            defaultCity: 'Karlskrona',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.visitkarlskrona.se/sv/api/cbis-product-list?nodeId=318&page=0', date: '2026-07-02' },
+        notes: 'Probe 2026-07-02: samma CBIS-plattform som visitumea men Bootstrap-tema (card-title/cbis-occasions-intervall/card-text-desc), 185 event. /map-endpointen ger EXAKTA koordinater (name-join i motorn). OBS nodeId 960 = boende-listan — 318 är eventen. visitgavle probades men deras nod gav totalCount=0.',
+        lastVerified: '2026-07-02',
+    },
+    {
+        id: 'kulturbiljetter',
+        hostName: 'Kulturbiljetter',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            // 214 event-URLs i sitemapen (/evenemang/<id>/<slug>/). Ingen JSON-LD —
+            // svensk text-datum ("3 juli") + klockslag + pris i brödtexten →
+            // cheerio-fallback. Plats saknar etikett; geokodning via titel/stad-scan.
+            sitemapUrl: 'https://kulturbiljetter.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/\d+\/[^/]+\/?$/i],
+            maxUrls: 250,
+            // Venue/adress/stad ligger på separat kart-sida (JS-popup på
+            // detaljsidan): /evenemang/<id>/ → /evenemang/map/<id>/
+            placeUrlReplace: [/\/evenemang\//, '/evenemang/map/'],
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://kulturbiljetter.se/sitemap.xml', date: '2026-07-02' },
+        notes: 'Probe 2026-07-02: 214 event-URLs, ingen JSON-LD, text-datum/tid/pris i brödtext. Scenkonst-fokus (fria teatergrupper).',
+        lastVerified: '2026-07-02',
+    },
+    {
+        id: 'tickster-sitemap-no',
+        hostName: 'Tickster Norge',
+        region: 'norge',
+        engine: 'sitemap',
+        config: {
+            // Samma sitemap som tickster-sitemap men norska event-URL:erna
+            // (/no/nb/events/<id>/<datum>/<slug>). Datum ur URL:en är språk-
+            // oberoende; ort ur location-scopad microdata ("Drammen"). NO-sidorna
+            // saknar .se-sidornas Google Maps-länk → geokodning via "venue, ort"
+            // (countrycodes=se,dk,no i Nominatim; isForeignAddress släppte NO/DK
+            // 2026-07-02). "På ytan"-täckning av Norge per användarbeslut.
+            sitemapUrl: 'https://www.tickster.com/sitemap.xml',
+            urlPatterns: [/\/no\/nb\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
+            urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
+            maxUrls: 400,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        maxSavedPerRun: 300,
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tickster.com/sitemap.xml', date: '2026-07-02' },
+        notes: 'Probe 2026-07-02: 389 /no/nb/events/-URL:er i samma sitemap som tickster-sitemap (urlDateRegex förfiltrerar fönstret; många är arkiv 2022–2024). Norska grannevent "på ytan".',
+        lastVerified: '2026-07-02',
+    },
+    {
+        id: 'nortic',
+        hostName: 'Nortic',
+        region: 'national',
+        engine: 'nortic',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        maxSavedPerRun: 1200,
+        discovery: { method: 'manual', probeUrl: 'https://www.nortic.se/api/json/shows', date: '2026-07-02' },
+        notes: 'Probe 2026-07-02: DOKUMENTERAT öppet API (nortic.se/api/events) — /api/json/shows ger ~3000 produktioner/~14000 föreställningar i ETT anrop. Smoke: 5497 shows i 30d-fönstret → ~930 event efter serie-dedup per (produktion, arena). 100% pris (minPrice/maxPrice!), 99,9% koordinater — MEN arenaLongitude/arenaLatitude är FÖRVÄXLADE (swappas + bounds-valideras i motorn). Tyngd i sydost (Karlskrona/Kalmar/Visby/Ystad). Egen URL-domän → dedup-säkert mot Tickster.',
+        lastVerified: '2026-07-02',
     },
     {
         id: 'sodra-teatern',
@@ -198,6 +289,25 @@ export const SOURCES: Source[] = [
         discovery: { method: 'probe-sitemap', probeUrl: 'https://visitostersund.se/sitemap_index.xml', date: '2026-06-11' },
         notes: 'Probe 2026-06-11: dedikerade evenemang-sitemap{1,2}.xml (~245 URLs). JSON-LD @type=Event men utan startDate → datum ("14 juni 2026") ur sidtext via cheerie-fallback. Turistbyråns officiella evenemangskalender (Jamtli, biathlon-VM m.m.). Dry-run: 74 i 30d-fönstret.',
         lastVerified: '2026-06-11',
+    },
+    {
+        id: 'jamtli',
+        hostName: 'Jamtli',
+        region: 'ostersund',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.jamtli.com/ajde_events-sitemap.xml',
+            // /kalendarium/<slug>/ på svenska; blacklista engelska /en/-dubbletter.
+            urlPatterns: [/\/kalendarium\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            urlBlacklist: [/\/en\//i],
+            defaultCity: 'Östersund',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-24 (round3): 177 URLs i ajde_events-sitemap.xml (sv + en). Ingen JSON-LD startDate → datum ur sidtext. Friluftsmuseum i Östersund (defaultCity korrigerad från auto-genererade venue-namnet "Jamtli").',
+        lastVerified: '2026-07-02',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.jamtli.com/ajde_events-sitemap.xml', date: '2026-06-24' },
     },
     {
         id: 'cirkus',
@@ -246,6 +356,30 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-08',
     },
     {
+        id: 'stora-teatern-gbg',
+        hostName: 'Stora Teatern',
+        region: 'goteborg',
+        engine: 'wp-rest',
+        config: {
+            // sitemap.xml serverar HTML (trasig) → wp/v2-REST är enda strukturerade
+            // vägen. API:t ger bara publiceringsdatum, så fetchDetailPage skannar
+            // /sv/program/<slug> efter svensk text-datum ("22 aug 2026").
+            baseUrl: 'https://storateatern.se',
+            variant: 'wp-v2',
+            defaultCity: 'Göteborg',
+            fetchDetailPage: true,
+            // 1345 event-poster totalt (mest arkiv). API:t sorterar på publicerings-
+            // datum desc → nyast publicerat = aktuell/kommande säsong. Cap 5 sidor
+            // (250) räcker för det kommande programmet; resten är passerade.
+            maxPages: 5,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-30: /wp-json/wp/v2/event (1345 poster, mest arkiv). Ingen användbar XML-sitemap (sitemap.xml=HTML). API-date=publiceringsdatum → fetchDetailPage extraherar riktigt event-datum ur detaljsidans text ("22 aug 2026"). maxPages=5 (nyast publicerat = kommande säsong). Spelhus i Göteborg.',
+        lastVerified: '2026-06-30',
+        discovery: { method: 'probe-wp', probeUrl: 'https://storateatern.se/wp-json/wp/v2/event', date: '2026-06-30' },
+    },
+    {
         id: 'liljevalchs',
         hostName: 'Liljevalchs Konsthall',
         region: 'stockholm',
@@ -258,6 +392,25 @@ export const SOURCES: Source[] = [
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: Tribe Events Calendar sitemap, svensk text-datum.',
         lastVerified: '2026-06-08',
+    },
+    {
+        id: 'stampen',
+        hostName: 'Stampen',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://stampen.se/mec-events-sitemap.xml',
+            urlPatterns: [/\/events\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Stockholm',
+            // 727 URLs varav merparten arkiv sedan 2017 — lastmod-sortering
+            // + cap plockar de 200 senast ändrade (= aktuellt program).
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-24 (round3): 727 URLs i mec-events-sitemap.xml (Modern Events Calendar), JSON-LD Event + startDate per sida. Jazzpub i Gamla Stan, Stockholm (defaultCity korrigerad från auto-genererade venue-namnet "Stampen").',
+        lastVerified: '2026-07-02',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://stampen.se/mec-events-sitemap.xml', date: '2026-06-24' },
     },
     {
         id: 'tekniskamuseet',
@@ -443,6 +596,28 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-08',
     },
     {
+        id: 'lunds-universitet',
+        hostName: 'Lunds universitet',
+        region: 'lund',
+        engine: 'sitemap',
+        config: {
+            // Drupal-kalendern exponerar event bara via RSS (<link>-element, ej
+            // <loc>/<a href>). isHtmlCatalog + RSS-link-extraktorn plockar de 50
+            // /evenemang/-URL:erna; detaljsidan saknar JSON-LD men har svensk
+            // text-datum ("30 juni 2026" + "kl 10:00") som fältplockas vidare.
+            sitemapUrl: 'https://www.lu.se/calendar/rss',
+            isHtmlCatalog: true,
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]+/i],
+            defaultCity: 'Lund',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-30: /calendar/rss = 50 framtida event (Tid: i description). Ingen XML-sitemap/JSON-LD; RSS <link> → detaljsidans text-datum. Universitet, Lund.',
+        lastVerified: '2026-06-30',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.lu.se/calendar/rss', date: '2026-06-30' },
+    },
+    {
         id: 'livrustkammaren',
         hostName: 'Livrustkammaren',
         region: 'stockholm',
@@ -484,7 +659,7 @@ export const SOURCES: Source[] = [
             maxPages: 6,  // 300 events max — annars tar fetch-loopen 30+ min
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06: 1217 events totalt. fetchDetailPage cap=300 för rimlig körtid.',
+        notes: 'Probe 2026-06: 1217 events totalt. fetchDetailPage cap=300 för rimlig körtid. API:t (wp/v2) har TOMT excerpt/content/featuredmedia — bild hämtas via detalj-sidans og:image (event-specifik). Beskrivning saknas helt på sidorna (ingen og:description/JSON-LD).',
     },
     {
         id: 'helsingborg',
@@ -498,6 +673,25 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'daily',
         notes: 'Probe 2026-06: 369 events. wp/v2 + content-parser + _embed (image + terms).',
+    },
+    {
+        id: 'dunkers-kulturhus',
+        hostName: 'Dunkers Kulturhus',
+        region: 'helsingborg',
+        engine: 'wp-rest',
+        config: {
+            baseUrl: 'https://dunkerskulturhus.se',
+            variant: 'wp-v2',
+            defaultCity: 'Helsingborg',
+            // API-date=publiceringsdatum → detaljsidan skannas efter text-datum.
+            fetchDetailPage: true,
+            maxPages: 5,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-24 (round3): /wp-json/wp/v2/event (99 poster, X-WP-Total). Kulturhus i Helsingborg (defaultCity korrigerad från auto-genererade venue-namnet "Dunkers Kulturhus").',
+        lastVerified: '2026-07-02',
+        discovery: { method: 'probe-wp', probeUrl: 'https://dunkerskulturhus.se/wp-json/wp/v2/event', date: '2026-06-24' },
     },
     {
         id: 'ostersund',
@@ -564,6 +758,25 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'weekly',
         notes: 'Probe 2026-06: 1 event. wp/v2 + content-parser.',
+    },
+    {
+        id: 'conventum',
+        hostName: 'Conventum',
+        region: 'orebro',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.conventum.se/wp-sitemap-posts-event-1.xml',
+            // OBS: event-URLs ligger under /arrangemang/ — INTE /evenemang/
+            // som auto-probens förslag antog (det hade matchat 0).
+            urlPatterns: [/\/arrangemang\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Örebro',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-24 (round3): 410 URLs i wp-sitemap-posts-event-1.xml (mycket arkiv). Ingen JSON-LD startDate → datum ur sidtext. Kongress/arenahus i Örebro (defaultCity korrigerad från auto-genererade venue-namnet "Conventum").',
+        lastVerified: '2026-07-02',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.conventum.se/wp-sitemap-posts-event-1.xml', date: '2026-06-24' },
     },
 
     // ─── ADDITIONAL FROM 290-KOMMUN PROBE (2026-06-02) ───────────────────────
@@ -880,7 +1093,11 @@ export const SOURCES: Source[] = [
         hostName: 'Svenljunga Kommun',
         region: 'svenljunga',
         engine: 'sitevision',
-        config: { urls: ['https://www.svenljunga.se/evenemangskalender'], defaultCity: 'Svenljunga' },
+        // OBS: detaljsidorna ligger på ic-calendar.svenljunga.se (Innocode Best
+        // Event, Next.js-SPA utan meta-desc) → fetchDetailDesc ger inget här.
+        // Öppet JSON-API finns (/api/events, vecko-intervall) men saknar också
+        // description-fält — 30 event motiverar ingen bespoke-motor (2026-07-02).
+        config: { urls: ['https://www.svenljunga.se/evenemangskalender'], defaultCity: 'Svenljunga', fetchDetailDesc: true },
         updateFrequency: 'every-3d',
     },
     {
@@ -968,7 +1185,7 @@ export const SOURCES: Source[] = [
         hostName: 'Strömsund Kommun',
         region: 'stromsund',
         engine: 'sitevision',
-        config: { urls: ['https://www.stromsund.se/evenemang'], defaultCity: 'Strömsund' },
+        config: { urls: ['https://www.stromsund.se/evenemang'], defaultCity: 'Strömsund', fetchDetailDesc: true },
         updateFrequency: 'every-3d',
     },
     {
@@ -1157,7 +1374,7 @@ export const SOURCES: Source[] = [
             maxUrls: 300,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-04: 1545 kalenderhandelser-URLs. urlDateRegex pre-filtrerar veckan FÖRE fetch.',
+        notes: 'Probe 2026-06-04: 1545 kalenderhandelser-URLs. urlDateRegex pre-filtrerar veckan FÖRE fetch. OBS 2026-07-02: sitemap.xml → 301 → /Error (sitemapindex.xml pekar på samma döda fil, robots.txt stale) — sajtens sitemap-infra trasig, källan ger 0 tills vidare. Kräver network-scout av /kurssok-XHR:en för ny väg. Venue-fixen (#placeItem i c-articlemeta) ligger klar i sitemap-motorn när URL:er flödar igen.',
         lastVerified: '2026-06-04',
     },
 
@@ -2943,6 +3160,23 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-09',
     },
     {
+        id: 'helsingborg-arena',
+        hostName: 'Helsingborg Arena',
+        region: 'helsingborg',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.hbgarena.se/event-sitemap.xml',
+            urlPatterns: [/\/event\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Helsingborg',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Probe 2026-06-24 (round3): 69 URLs i event-sitemap.xml (inkl. passerade matcher — 30d-fönstret filtrerar). Ingen JSON-LD startDate → datum ur sidtext. Sport/evenemangsarena i Helsingborg (defaultCity korrigerad från auto-genererade venue-namnet "Helsingborg Arena").',
+        lastVerified: '2026-07-02',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.hbgarena.se/event-sitemap.xml', date: '2026-06-24' },
+    },
+    {
         id: 'vara-konserthus',
         hostName: 'Vara Konserthus',
         region: 'vara',
@@ -4652,6 +4886,32 @@ export const SOURCES: Source[] = [
         notes: 'Föreläsningar/konserter/workshops/prova-på i hela landet. Stad-nivå-geokodning ' +
             '(ingen adress i API:t — detaljsidan har inte heller). sort=date + paginering med fönster-klipp.',
         lastVerified: '2026-06-12',
+    },
+    {
+        id: 'sv-vuxenskolan',
+        hostName: 'Studieförbundet Vuxenskolan',
+        region: 'national',
+        engine: 'sv-vuxenskolan',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        expectedMinEvents: 50,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.sv.se/kurser-och-evenemang?g_EventType=culture&sort_by=startdate&page=1',
+            date: '2026-07-02',
+            rawEventCount: 560,
+            notes: 'Litium-plattform. JSON-API:t (/api/productFilter + litium-request-context-header ur ' +
+                'window.__litium.requestContext) ger BARA facetter — produktkorten är enbart SSR-HTML. ' +
+                'g_EventType=culture skiljer kulturarrangemang (~35 sidor á 16 kort) från kurskatalogen.',
+        },
+        fieldMap: {
+            title: 'article.event-list__event-item .event-list__title', startDate: '.event-list__date ("tis 2026-08-18") + .event-list__time ("19:00")',
+            city: '.event-list__location (BARA ort — ingen gatuadress i listan)', imageUrl: 'img.event-list__image[src] (relativ /storage/-URL)',
+        },
+        notes: 'Studieförbundet Vuxenskolan: ~560 kulturarrangemang i hela landet, mycket småorter. ' +
+            'Ort-nivå-geokodning (godkänd fallback, som ABF). sort_by=startdate + paginering med fönster-klipp.',
+        lastVerified: '2026-07-02',
     },
 
     // ─── KOMMUNER: bulk-probe-runda 2026-06-12 (8/128 otäckta PASS:ade) ──────

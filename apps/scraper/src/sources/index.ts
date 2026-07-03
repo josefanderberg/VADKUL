@@ -30,8 +30,11 @@ import { bibliotekEngine } from '../scrapers/bibliotek';
 import { raceidEngine } from '../scrapers/raceid';
 import { bildaEngine } from '../scrapers/bilda';
 import { medborgarskolanEngine } from '../scrapers/medborgarskolan';
+import { svVuxenskolanEngine } from '../scrapers/sv';
 import { abfEngine } from '../scrapers/abf';
 import { slagthusetEngine } from '../scrapers/slagthuset';
+import { norticEngine } from '../scrapers/nortic';
+import { cbisEngine } from '../scrapers/cbis';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -84,6 +87,9 @@ export const ENGINES: Record<string, Engine> = {
     'raceid': raceidEngine,
     'bilda': bildaEngine,
     'medborgarskolan': medborgarskolanEngine,
+    'sv-vuxenskolan': svVuxenskolanEngine,
     'abf': abfEngine,
     'slagthuset': slagthusetEngine,
+    'nortic': norticEngine,
+    'cbis': cbisEngine,
 };
