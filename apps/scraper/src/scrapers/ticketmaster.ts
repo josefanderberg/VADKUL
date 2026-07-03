@@ -112,10 +112,11 @@ async function fetchPage(
     startDateTime: string,
     endDateTime:   string,
     page:          number,
+    countryCode:   string = 'SE',
 ): Promise<{ events: TmEvent[]; totalPages: number }> {
     const params = new URLSearchParams({
         apikey:        API_KEY,
-        countryCode:   'SE',
+        countryCode,
         size:          '200',
         page:          String(page),
         startDateTime,
@@ -149,25 +150,32 @@ export async function scrapeTicketmaster(): Promise<number> {
     const { start, end } = getDateWindow();
     console.log(`[TicketMaster] Fönster: ${start} → ${end}`);
 
-    // ── Hämta alla sidor ──────────────────────────────────────────────────
+    // ── Hämta alla sidor, per land ──────────────────────────────────────────
+    // NO/DK tillagda 2026-07-03 ("stora eventsidor för Norge och Danmark"):
+    // Discovery-API:t är internationellt och ger stad+koordinater+pris direkt
+    // → ingen geokodning/datumparsning behövs. Smoke 7d: SE ~? / NO 42 / DK 99.
+    const COUNTRIES = ['SE', 'NO', 'DK'];
     const allEvents: TmEvent[] = [];
-    try {
-        const { events: firstPage, totalPages } = await fetchPage(start, end, 0);
-        allEvents.push(...firstPage);
-        console.log(`[TicketMaster] Sida 1/${totalPages} — ${firstPage.length} events`);
+    for (const cc of COUNTRIES) {
+        try {
+            const { events: firstPage, totalPages } = await fetchPage(start, end, 0, cc);
+            allEvents.push(...firstPage);
+            console.log(`[TicketMaster/${cc}] Sida 1/${totalPages} — ${firstPage.length} events`);
 
-        for (let p = 1; p < Math.min(totalPages, 10); p++) {
-            await new Promise(r => setTimeout(r, 300)); // rate-limit-vänlighet
-            const { events } = await fetchPage(start, end, p);
-            allEvents.push(...events);
-            console.log(`[TicketMaster] Sida ${p + 1}/${totalPages} — ${events.length} events`);
+            for (let p = 1; p < Math.min(totalPages, 10); p++) {
+                await new Promise(r => setTimeout(r, 300)); // rate-limit-vänlighet
+                const { events } = await fetchPage(start, end, p, cc);
+                allEvents.push(...events);
+                console.log(`[TicketMaster/${cc}] Sida ${p + 1}/${totalPages} — ${events.length} events`);
+            }
+        } catch (err) {
+            // Ett lands fel stoppar inte de andra (SE är viktigast — körs först)
+            console.error(`[TicketMaster/${cc}] Fel vid hämtning:`, (err as Error).message);
         }
-    } catch (err) {
-        console.error('[TicketMaster] Fel vid hämtning:', (err as Error).message);
-        return 0;
     }
+    if (allEvents.length === 0) return 0;
 
-    console.log(`[TicketMaster] Totalt ${allEvents.length} events hämtade`);
+    console.log(`[TicketMaster] Totalt ${allEvents.length} events hämtade (${COUNTRIES.join('+')})`);
 
     // ── Spara ─────────────────────────────────────────────────────────────
     let savedCount = 0;
