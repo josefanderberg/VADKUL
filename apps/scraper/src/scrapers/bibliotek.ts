@@ -96,6 +96,11 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'dalsland',      customerId: '5dceb9039cf47722f2bb983c', eventsUrl: 'https://bibliotekdalsland.se/evenemang',     name: 'Dalslands bibliotek' },
     { id: 'gislaved',      customerId: '5e25b56b9cf47722f2bb9889', eventsUrl: 'https://bibliotek.gislaved.se/evenemang',    name: 'Gislaveds bibliotek',          cityHint: 'Gislaved' },
     { id: 'gnesta',        customerId: '5fbfa0e49cf4776ba2b1a710', eventsUrl: 'https://bibliotek.gnesta.se/evenemang',      name: 'Gnesta bibliotek',             cityHint: 'Gnesta' },
+    // Runda 3 (2026-07-03): Skellefteå hade 0 event vid proben (sommardvala) —
+    // giltig tenant, fylls på till hösten.
+    { id: 'ornskoldsvik',  customerId: '60af2bf84cfcfc2892c16572', eventsUrl: 'https://bibliotek.ornskoldsvik.se/evenemang', name: 'Örnsköldsviks bibliotek',     cityHint: 'Örnsköldsvik' },
+    { id: 'gnosjo',        customerId: '615c380fe9a84303da33805a', eventsUrl: 'https://bibliotek.gnosjo.se/evenemang',      name: 'Gnosjö bibliotek',             cityHint: 'Gnosjö' },
+    { id: 'skelleftea',    customerId: '6087d3134cfcfc2892c15af1', eventsUrl: 'https://bibliotek.skelleftea.se/evenemang',  name: 'Skellefteå bibliotek',         cityHint: 'Skellefteå' },
     // V8 = åtta inlandskommuner i Västerbotten (Lycksele/Storuman/Vilhelmina m.fl.) — konsortium, filialen bär orten.
     { id: 'v8',            customerId: '68f0ea72cdc95c54359674f8', eventsUrl: 'https://v8biblioteken.se/evenemang',         name: 'V8-biblioteken' },
 ];

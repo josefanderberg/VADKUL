@@ -1368,14 +1368,20 @@ export const SOURCES: Source[] = [
         region: 'national',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.studieframjandet.se/sitemap.xml',
+            // Sajtens sitemap-infra dog (301→/Error) — kurssök-JSON:et är nya
+            // vägen: samma URL content-förhandlar på X-Requested-With och
+            // page=N är KUMULATIV (page=100 → första 1000 träffarna i ETT
+            // anrop; page>~150 ger 500). 1972 event-träffar totalt, varav
+            // ~200/mån i fönstret. urlDateRegex pre-filtrerar som förut.
+            sitemapUrl: 'https://www.studieframjandet.se/kurssok/?type=event&page=100',
+            isJsonCatalog: true,
             urlPatterns: [/\/kalenderhandelser\/\d{4}\/\w+\/[^/]+\/?$/i],
             urlDateRegex: /\/(?<year>\d{4})\/(?<month>\w+)\//,
             maxUrls: 300,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-04: 1545 kalenderhandelser-URLs. urlDateRegex pre-filtrerar veckan FÖRE fetch. OBS 2026-07-02: sitemap.xml → 301 → /Error (sitemapindex.xml pekar på samma döda fil, robots.txt stale) — sajtens sitemap-infra trasig, källan ger 0 tills vidare. Kräver network-scout av /kurssok-XHR:en för ny väg. Venue-fixen (#placeItem i c-articlemeta) ligger klar i sitemap-motorn när URL:er flödar igen.',
-        lastVerified: '2026-06-04',
+        notes: 'Probe 2026-06-04: sitemap (död 2026-07-02, 301→/Error). OMLAGD 2026-07-03 till kurssök-JSON via isJsonCatalog (X-Requested-With-negotiation, kumulativ page-param). Venue via #placeItem i c-articlemeta (fix 2026-07-02).',
+        lastVerified: '2026-07-03',
     },
 
     // Bilda — studieförbund med kursdatabas på /arr/<id>/<slug>/. Detaljsidan

@@ -68,6 +68,12 @@ export interface SitemapConfig {
     sitemapUrl: string;
     /** Om true: behandla sitemapUrl som HTML-katalog, inte XML-sitemap. */
     isHtmlCatalog?: boolean;
+    /**
+     * Om true: sitemapUrl är ett JSON-svar (sök-API) — alla citerade URL-
+     * strängar i svaret blir kandidater (urlPatterns filtrerar). Katalog-
+     * fetchen skickar X-Requested-With: XMLHttpRequest (content-negotiation).
+     */
+    isJsonCatalog?: boolean;
     urlPatterns: RegExp[];
     urlBlacklist?: RegExp[];
     defaultCity?: string;
@@ -257,6 +263,11 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
                 // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
                 'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip,*/*;q=0.1',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+                // JSON-kataloger (Studiefrämjandets kurssök) content-förhandlar
+                // på XHR-headern: med den svarar samma URL med JSON i stället
+                // för HTML-skalet. Sätts bara för själva katalog-fetchen.
+                ...(cfg.isJsonCatalog && url === cfg.sitemapUrl
+                    ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
             },
             redirect: 'follow',
         }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT, label: url });
@@ -368,7 +379,18 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
 
     let candidates: SitemapEntry[] = [];
 
-    if (cfg.isHtmlCatalog) {
+    if (cfg.isJsonCatalog) {
+        // JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
+        // citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-
+        // filtret nedströms avgör vilka som är event-sidor.
+        const seen = new Set<string>();
+        for (const m of root.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
+            let href = m[1];
+            try { href = new URL(href, cfg.sitemapUrl).toString(); } catch { continue; }
+            if (!seen.has(href)) { seen.add(href); candidates.push({ url: href }); }
+        }
+        ctx.log(`json-katalog: ${candidates.length} URL-kandidater hittade`);
+    } else if (cfg.isHtmlCatalog) {
         candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
         ctx.log(`html-katalog: ${candidates.length} länkar hittade`);
     } else if (isSitemapIndex(root)) {
