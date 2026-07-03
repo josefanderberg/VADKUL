@@ -103,6 +103,11 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'skelleftea',    customerId: '6087d3134cfcfc2892c15af1', eventsUrl: 'https://bibliotek.skelleftea.se/evenemang',  name: 'Skellefteå bibliotek',         cityHint: 'Skellefteå' },
     // V8 = åtta inlandskommuner i Västerbotten (Lycksele/Storuman/Vilhelmina m.fl.) — konsortium, filialen bär orten.
     { id: 'v8',            customerId: '68f0ea72cdc95c54359674f8', eventsUrl: 'https://v8biblioteken.se/evenemang',         name: 'V8-biblioteken' },
+    // Runda 4 (2026-07-03, agent-probe): Varberg fyller topp-40-luckan (OBS
+    // eventsidan är /kalender, inte /evenemang). Blekinge = delad tenant
+    // (karlshamn+ronneby CNAME:ar dit) — konsortium, filialen bär orten.
+    { id: 'varberg',       customerId: '62431e61ae077e04267bebc4', eventsUrl: 'https://bibliotek.varberg.se/kalender',      name: 'Varbergs bibliotek',           cityHint: 'Varberg' },
+    { id: 'blekinge',      customerId: '61447a53e9a84303da337d16', eventsUrl: 'https://blekingebiblioteken.se/evenemang',   name: 'Blekingebiblioteken' },
 ];
 
 interface AxiellHit {
