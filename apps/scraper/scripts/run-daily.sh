@@ -154,6 +154,35 @@ else
     echo "⚠️ Geo-refine misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Backfill-geocode: geokoda null-island-event (lat≈0) ────────────────────
+# geo-refine ovan FÖRFINAR redan-geokodade event men avvisar null-island
+# (flytten >60 km). Event som aldrig fick koordinater (lat≈0,lng≈0) fångas här:
+# soonest-first, Nominatim-budget via --limit. Skriver SQLite + Firestore.
+# Körs FÖRE K4/re-aggregate så nya koordinater publiceras samma natt. K4 nedan
+# tar FB-specifika fall via Ollama; detta täcker icke-FB-källorna.
+echo "" >> "$LOG_FILE"
+echo "── BACKFILL-GEOCODE (null-island lat≈0) ──" >> "$LOG_FILE"
+if npm run backfill-geocode -- --apply --limit=300 >> "$LOG_FILE" 2>&1; then
+    GEOCODED_N="$(grep -oE '📍 Geokodade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Backfill-geocode OK (geokodade=${GEOCODED_N:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Backfill-geocode misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
+# ─── Repair-geo: flytta hem event i FEL STAD (Örebro-buggen-klassen) ────────
+# backfill-geocode ovan tar event UTAN koordinater; detta tar event med FEL
+# koordinater: förväntad stad härleds ur församlings-/ortsnamn (bara otvetydiga
+# städer, kompound- + reverse-tvetydighetsvakter) och event >60 km bort
+# re-geokodas stads-ankrat. Liten nattbudget → drift självläker gradvis.
+echo "" >> "$LOG_FILE"
+echo "── REPAIR-GEO (felplacerade event) ──" >> "$LOG_FILE"
+if npm run repair-geo -- --apply --limit=60 >> "$LOG_FILE" 2>&1; then
+    REPAIRED_N="$(grep -oE '✅ Reparerade:[[:space:]]+[0-9]+' "$LOG_FILE" | tail -1 | grep -oE '[0-9]+')"
+    echo "Repair-geo OK (reparerade=${REPAIRED_N:-0})" >> "$LOG_FILE"
+else
+    echo "⚠️ Repair-geo misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
@@ -440,6 +469,20 @@ echo "── QUALITY-STATS (postas om 60s) ──" >> "$LOG_FILE"
 ) &
 QUALITY_PID=$!
 echo "Quality-stats schemalagd (PID $QUALITY_PID, postas ~$(date -v+1M '+%H:%M' 2>/dev/null || date -d '+1 minute' '+%H:%M'))" >> "$LOG_FILE"
+
+# ─── Tredje Teams-kort: fält-täckning PER scraper + trend (90s efter huvudkortet) ──
+# quality-coverage --md skriver docs/scrapers/coverage/ÅÅÅÅ-MM-DD.md (full per-scraper-
+# tabell) + lägger en rad i TREND.md (TOTAL-procenten, en rad/natt) → "koll på
+# strukturen" över tid. --teams postar ett kort med TOTAL + källor under kvalitets-
+# baren. Detacheras + staggras 90s så den inte krockar med de två tidigare korten.
+echo "" >> "$LOG_FILE"
+echo "── FÄLT-TÄCKNING PER SCRAPER (postas om 90s) ──" >> "$LOG_FILE"
+(
+    sleep 90
+    cd "$SCRAPER_DIR" && npm run quality-coverage -- --md --teams >> "$LOG_FILE" 2>&1
+) &
+COVERAGE_PID=$!
+echo "Fält-täckning schemalagd (PID $COVERAGE_PID)" >> "$LOG_FILE"
 
 echo "" >> "$LOG_FILE"
 echo "Klart: $(date '+%Y-%m-%d %H:%M:%S') (exit=$EXIT_CODE, duration=${DURATION}s)" >> "$LOG_FILE"

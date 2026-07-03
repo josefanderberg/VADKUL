@@ -50,8 +50,10 @@ const FOREIGN_MARKERS = [
     /\broma\b/i, /\brome\b/i, /\bmilano\b/i, /\bmilan\b/i, /\bvenezia\b/i,
     /\bbarcelona\b/i, /\bmadrid\b/i, /\bvalencia\b/i, /\bsevilla\b/i,
     /\blisboa\b/i, /\blisbon\b/i,
-    // Övriga
-    /\bcopenhagen\b/i, /\bhelsinki\b/i, /\boslo\b/i,
+    // Övriga (Oslo/Copenhagen BORTTAGNA 2026-07-02 — nordiska grannevent ingår
+    // nu "på ytan" via tickster-sitemap-no m.fl.; NO/DK-koordinater är legitima
+    // och får inte auto-döljas)
+    /\bhelsinki\b/i,
     /\bamsterdam\b/i, /\brotterdam\b/i, /\bantwerp/i,
     /\bsydney\b/i, /\bmelbourne\b/i, /\bdubai\b/i, /\bbangkok\b/i,
     /\bsingapore\b/i, /\btokyo\b/i, /\bbeijing\b/i,

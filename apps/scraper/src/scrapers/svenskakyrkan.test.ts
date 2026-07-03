@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapSvkEvent, isPublicSvkEvent } from './svenskakyrkan';
+import { mapSvkEvent, isPublicSvkEvent, deriveTown } from './svenskakyrkan';
 
 const baseEvent = {
     id: 'abc123',
@@ -26,17 +26,62 @@ describe('mapSvkEvent', () => {
         expect(e.startDate.toISOString()).toBe('2026-06-23T09:00:00.000Z'); // +02:00 → UTC
     });
 
-    it('geocode-kedjan: kyrkonamn → församling → ortnamn (suffix + genitiv-s strippat)', () => {
+    it('geocode-kedjan: ankrat först, bare kyrkonamn sist', () => {
         const e = mapSvkEvent({
             ...baseEvent,
             owner: { name: 'Sundbybergs församling', type: 'Församling' },
             place: { name: 'Sundbybergs kyrka' },
         })!;
+        // Kyrkonamnet innehåller redan "Sundbyberg" → ingen separat ", ort"-ankring,
+        // men bare kyrkonamn hamnar SIST (inte först som förr).
         expect(e.geocodeCandidates).toEqual([
-            'Sundbybergs kyrka',
+            'Sundbybergs kyrka, Sundbybergs församling',
             'Sundbybergs församling',
             'Sundbyberg',
+            'Sundbybergs kyrka',
         ]);
+        expect(e.city).toBe('Sundbyberg');
+    });
+
+    it('Örebro-buggen: kyrka i annan stad ankras med orten FÖRST', () => {
+        // "S:t Nikolai kyrka" ensamt gav Örebros Nikolai-koordinater för Halmstad-event.
+        const e = mapSvkEvent({
+            ...baseEvent,
+            owner: { name: 'Halmstads församling', type: 'Församling' },
+            place: { name: 'S:t Nikolai kyrka' },
+        })!;
+        const cands = e.geocodeCandidates!;
+        expect(cands[0]).toBe('S:t Nikolai kyrka, Halmstad');
+        expect(cands[cands.length - 1]).toBe('S:t Nikolai kyrka');
+        expect(e.city).toBe('Halmstad');
+    });
+
+    it('äkta -s-ort korrumperas inte av genitiv-strip (Västerås)', () => {
+        const e = mapSvkEvent({
+            ...baseEvent,
+            owner: { name: 'Västerås domkyrkoförsamling', type: 'Församling' },
+            place: { name: 'Västerås domkyrka' },
+        })!;
+        expect(e.city).toBe('Västerås');   // INTE "Västerå"
+    });
+
+    it('flerords-församling faller tillbaka på staden (Göteborgs Vasa)', () => {
+        const e = mapSvkEvent({
+            ...baseEvent,
+            owner: { name: 'Göteborgs Vasa församling', type: 'Församling' },
+            place: { name: 'Vasa kyrka' },
+        })!;
+        expect(e.city).toBe('Göteborg');
+        expect(e.geocodeCandidates![0]).toBe('Vasa kyrka, Göteborg');
+    });
+
+    it('deriveTown normaliserar genitiv men skyddar kända -s-orter', () => {
+        expect(deriveTown('Halmstads')).toBe('Halmstad');
+        expect(deriveTown('Sundbybergs')).toBe('Sundbyberg');
+        expect(deriveTown('Västerås')).toBe('Västerås');
+        expect(deriveTown('Borås')).toBe('Borås');
+        expect(deriveTown('Höganäs')).toBe('Höganäs');
+        expect(deriveTown('Göteborgs Vasa')).toBe('Göteborg');
     });
 
     it('SKUT-församlingar utomlands hoppas över (Sverige-only)', () => {

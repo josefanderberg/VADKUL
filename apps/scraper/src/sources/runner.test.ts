@@ -201,11 +201,19 @@ describe('runSource — geocoding', () => {
         expect(geocodeMock).toHaveBeenCalledTimes(1);
     });
 
-    it('default-kedjan provar adress → venue+stad → stad', async () => {
-        await run([makeEvent({ address: 'Storgatan 1', venueName: 'Folkets Hus', city: 'Växjö' })]);
-        expect(geocodeMock).toHaveBeenNthCalledWith(1, 'Storgatan 1, Växjö');
-        expect(geocodeMock).toHaveBeenNthCalledWith(2, 'Folkets Hus, Växjö');
-        expect(geocodeMock).toHaveBeenNthCalledWith(3, 'Växjö');
+    it('default-kedjan provar adress → venue+stad → stad, med nearCity-validering', () => {
+        return run([makeEvent({ address: 'Storgatan 1', venueName: 'Folkets Hus', city: 'Växjö' })]).then(() => {
+            // Känner källan staden skickas den som nearCity så Nominatim inte får
+            // returnera en namne i fel stad (Örebro-buggen).
+            expect(geocodeMock).toHaveBeenNthCalledWith(1, 'Storgatan 1, Växjö', { nearCity: 'Växjö' });
+            expect(geocodeMock).toHaveBeenNthCalledWith(2, 'Folkets Hus, Växjö', { nearCity: 'Växjö' });
+            expect(geocodeMock).toHaveBeenNthCalledWith(3, 'Växjö', { nearCity: 'Växjö' });
+        });
+    });
+
+    it('utan stad skickas ingen nearCity (bakåtkompatibelt)', async () => {
+        await run([makeEvent({ geocodeCandidates: ['Storkyrkan'] })]);
+        expect(geocodeMock).toHaveBeenNthCalledWith(1, 'Storkyrkan', undefined);
     });
 });
 

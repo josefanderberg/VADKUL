@@ -154,25 +154,72 @@ if (countKnownVenues() === 0) {
 }
 
 /**
+ * Generiska venue-ord som finns i nästan varje svensk stad. Substring-matchning
+ * på dessa ger cross-city-fel: "Stora Teatern" (Göteborg) får INTE matcha
+ * "Teatern" (Växjö), och bare "Domkyrkan" i Lund-kontext ska inte ge Växjö-koords.
+ * Exakta träffar tillåts fortfarande — alla nuvarande anropare är Växjö-kontext
+ * (create-event.ts interaktivt + geocodeVenue som söker inom ~80 km från Växjö).
+ */
+const GENERIC_VENUE_TERMS = new Set([
+    'teatern', 'stadsteatern', 'konserthuset', 'domkyrkan', 'stadsbiblioteket',
+    'biblioteket', 'folkets park', 'folkets hus', 'stadsparken', 'stortorget',
+    'rådhuset', 'rådhustorget', 'kårhuset', 'kulturhuset', 'residenset',
+    'stadshuset', 'filmstaden', 'hemvärnsgården', 'församlingshemmet',
+]);
+
+/** Är termen specifik nog för substring-matchning mot known_venues? */
+function isSpecificVenueTerm(nameLower: string): boolean {
+    return nameLower.length >= 6 && !GENERIC_VENUE_TERMS.has(nameLower.trim());
+}
+
+/**
+ * Hitta en känd stad inbäddad i en textsträng (t.ex. "Stadsbiblioteket, Stockholm").
+ * Ord-gräns via separator-normalisering — JS \b är opålitligt intill åäö.
+ */
+function findEmbeddedCity(text: string): string | null {
+    const padded = ' ' + text.toLowerCase().replace(/[^a-zåäöéü0-9]+/gi, ' ').trim() + ' ';
+    return SWEDISH_GEO_CITIES.find((c) => padded.includes(` ${c.toLowerCase()} `)) ?? null;
+}
+
+/** Case-okänslig kontroll mot SWEDISH_GEO_CITIES. Returnerar kanonisk stavning eller null. */
+export function knownGeoCity(name: string): string | null {
+    const t = (name || '').trim().toLowerCase();
+    if (!t) return null;
+    return SWEDISH_GEO_CITIES.find((c) => c.toLowerCase() === t) ?? null;
+}
+
+/**
  * Get coordinates for a venue name.
  * Queries the known_venues SQLite table (exact, then case-insensitive substring).
+ *
+ * Cross-city-skydd: nämner frågan en annan stad än radens city-kolumn hoppas
+ * raden över, och substring-matchning kräver att den kortare termen är specifik
+ * (≥6 tecken och inte ett generiskt venue-ord som "Teatern"/"Stadsbiblioteket").
  */
 export function getVenueCoordinates(venueName: string): [number, number] | null {
     if (!venueName) return null;
     const trimmed = venueName.trim();
+    const lower = trimmed.toLowerCase();
 
-    // 1. Exact match (fastest path — relies on UNIQUE index)
-    const exact = lookupVenueExact(trimmed);
-    if (exact) return exact;
+    // Stad inbäddad i frågan? Då får bara rader från SAMMA stad matcha.
+    const queryCity = findEmbeddedCity(trimmed)?.toLowerCase() ?? null;
+
+    // 1. Exact match (fastest path — relies on UNIQUE index).
+    //    Bara när frågan inte pekar ut en stad — annars måste city-kolumnen jämföras.
+    if (!queryCity) {
+        const exact = lookupVenueExact(trimmed);
+        if (exact) return exact;
+    }
 
     // 2. Case-insensitive + partial match in JS (table is small, ~70 rows)
-    const lower = trimmed.toLowerCase();
     for (const row of getAllKnownVenues()) {
         const rowLower = row.name.toLowerCase();
+        const rowCity = (row.city || '').toLowerCase();
+        if (queryCity && rowCity && rowCity !== queryCity) continue;   // annan stad → aldrig match
         if (rowLower === lower) return [row.lat, row.lng];
-        if (lower.includes(rowLower) || rowLower.includes(lower)) {
-            return [row.lat, row.lng];
-        }
+        // Substring bara när den KORTARE (inneslutna) termen är specifik nog
+        if (lower.includes(rowLower) && isSpecificVenueTerm(rowLower)) return [row.lat, row.lng];
+        if (rowLower.includes(lower) && isSpecificVenueTerm(lower)) return [row.lat, row.lng];
     }
 
     return null;
@@ -239,12 +286,11 @@ export function isForeignAddress(address: string): boolean {
         'australia', 'canada', 'germany', 'deutschland', 'france', 'spain', 'italy',
         'new york', 'london', 'auckland', 'california', 'florida', 'texas',
         'switzerland', 'belgium', 'austria', 'netherlands',
-        // Danska städer/ord (ø/æ är falsk-positiv-risk i svenska, använd ordfragment)
-        'københavn', 'aarhus', 'odense', 'aalborg', 'esbjerg', 'randers',
-        'søndag', 'lørdag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag',
-        // Norska städer
-        'oslo', 'bergen', 'trondheim', 'stavanger', 'drammen', 'tromsø', 'tromsoe',
-        'kristiansand', 'fredrikstad',
+        // OBS 2026-07-02: danska/norska städer BORTTAGNA — grannländerna ingår
+        // nu "på ytan" (NORDIC_BOUNDS + countrycodes=se,dk,no fanns redan;
+        // tickster-sitemap-no m.fl. behöver kunna geokoda "venue, Drammen").
+        // Veckodagarna togs också bort: onsdag/torsdag/fredag är IDENTISKA på
+        // svenska och flaggade svenska strängar som utländska (latent bugg).
         // Finska städer (ej del av nordiska bbox)
         'helsinki', 'helsingfors', 'tampere', 'turku', 'oulu',
         // Moldavien/Östeuropa (Cyrillic filtreras ovan, men latin-varianter)
@@ -258,7 +304,18 @@ export function isForeignAddress(address: string): boolean {
     });
 }
 
-const NOMINATIM_DELAY_MS = 1100; // respect 1 req/sec
+// respect 1 req/sec (env-override finns för att testerna inte ska sova på riktigt)
+const NOMINATIM_DELAY_MS = parseInt(process.env.NOMINATIM_DELAY_MS || '1100', 10);
+
+/**
+ * HTTP-fel (429 rate-limit, 5xx) får ALDRIG tolkas som "platsen finns inte" —
+ * en 429-miss som cachas ligger kvar i 14 dagar och förgiftar geokodningen
+ * (incident 2026-07-02: parallella skript → 429 → 306 falska cache-misses).
+ * Kasta istället; cache-lagren fångar och returnerar null UTAN att skriva cache.
+ */
+class NominatimHttpError extends Error {
+    constructor(public status: number) { super(`Nominatim HTTP ${status}`); }
+}
 
 // Lokalt (Växjö-region, ~80 km)
 async function nominatimSearch(query: string): Promise<[number, number] | null> {
@@ -266,7 +323,7 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
     const response = await fetch(url, {
         headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
     });
-    if (!response.ok) return null;
+    if (!response.ok) throw new NominatimHttpError(response.status);
 
     const data = await response.json();
     for (const result of data ?? []) {
@@ -280,13 +337,18 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
     return null;
 }
 
-// Nordic-bred (Sverige, Danmark, Norge)
-async function nominatimSearchSweden(query: string): Promise<[number, number] | null> {
+// Nordic-bred (Sverige, Danmark, Norge). Valfritt accept-predikat filtrerar
+// träffarna (limit=3) — används av nearCity-valideringen för att välja träffen
+// nära rätt stad istället för Nominatims mest "prominenta" (Örebro-buggen).
+async function nominatimSearchSweden(
+    query: string,
+    accept?: (lat: number, lng: number) => boolean,
+): Promise<[number, number] | null> {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se,dk,no`;
     const response = await fetch(url, {
         headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
     });
-    if (!response.ok) return null;
+    if (!response.ok) throw new NominatimHttpError(response.status);
 
     const data = await response.json();
     for (const result of data ?? []) {
@@ -294,6 +356,7 @@ async function nominatimSearchSweden(query: string): Promise<[number, number] | 
         const lng = parseFloat(result.lon);
         // Sanity check: must be within Nordic bounding box (SE/DK/NO)
         if (lat >= 54.5 && lat <= 71.5 && lng >= 4.0 && lng <= 31.5) {
+            if (accept && !accept(lat, lng)) continue;
             return [lat, lng];
         }
     }
@@ -342,50 +405,114 @@ export async function geocodeVenue(rawVenueName: string): Promise<[number, numbe
 
     console.log(`[Geocoding] Querying Nominatim for: "${venueName}" (original: "${rawVenueName}")`);
 
-    // Strategy 1: full name + Växjö
-    let result = await nominatimSearch(`${venueName}, Växjö, Sverige`);
-    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-    if (result) {
-        console.log(`[Geocoding] Found (strategy 1) "${venueName}": [${result[0]}, ${result[1]}]`);
-        return result;
-    }
-
-    // Strategy 2: just name + Växjö (without "Sverige" to widen search)
-    result = await nominatimSearch(`${venueName}, Växjö`);
-    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-    if (result) {
-        console.log(`[Geocoding] Found (strategy 2) "${venueName}": [${result[0]}, ${result[1]}]`);
-        return result;
-    }
-
-    // Strategy 3: strip common prefix words and retry
-    const simplified = venueName.replace(/^(scenen på|i |på |vid )/gi, '').trim();
-    if (simplified !== venueName) {
-        result = await nominatimSearch(`${simplified}, Växjö, Sverige`);
+    try {
+        // Strategy 1: full name + Växjö
+        let result = await nominatimSearch(`${venueName}, Växjö, Sverige`);
         await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
         if (result) {
-            console.log(`[Geocoding] Found (strategy 3) "${simplified}": [${result[0]}, ${result[1]}]`);
+            console.log(`[Geocoding] Found (strategy 1) "${venueName}": [${result[0]}, ${result[1]}]`);
             return result;
         }
-    }
 
-    // Strategy 4: If there is a comma, try only the part after the first comma (often the address)
-    if (venueName.includes(',')) {
-        const parts = venueName.split(',');
-        const addressOnly = parts.slice(1).join(',').trim();
-        if (addressOnly.length > 5) {
-            console.log(`[Geocoding] Trying strategy 4 (address only): "${addressOnly}"`);
-            result = await nominatimSearch(addressOnly);
+        // Strategy 2: just name + Växjö (without "Sverige" to widen search)
+        result = await nominatimSearch(`${venueName}, Växjö`);
+        await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+        if (result) {
+            console.log(`[Geocoding] Found (strategy 2) "${venueName}": [${result[0]}, ${result[1]}]`);
+            return result;
+        }
+
+        // Strategy 3: strip common prefix words and retry
+        const simplified = venueName.replace(/^(scenen på|i |på |vid )/gi, '').trim();
+        if (simplified !== venueName) {
+            result = await nominatimSearch(`${simplified}, Växjö, Sverige`);
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
             if (result) {
-                console.log(`[Geocoding] Found (strategy 4) "${addressOnly}": [${result[0]}, ${result[1]}]`);
+                console.log(`[Geocoding] Found (strategy 3) "${simplified}": [${result[0]}, ${result[1]}]`);
                 return result;
             }
         }
+
+        // Strategy 4: If there is a comma, try only the part after the first comma (often the address)
+        if (venueName.includes(',')) {
+            const parts = venueName.split(',');
+            const addressOnly = parts.slice(1).join(',').trim();
+            if (addressOnly.length > 5) {
+                console.log(`[Geocoding] Trying strategy 4 (address only): "${addressOnly}"`);
+                result = await nominatimSearch(addressOnly);
+                await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+                if (result) {
+                    console.log(`[Geocoding] Found (strategy 4) "${addressOnly}": [${result[0]}, ${result[1]}]`);
+                    return result;
+                }
+            }
+        }
+    } catch (e) {
+        // 429/5xx: avbryt hela kedjan — fler strategier bränner bara mer kvot.
+        if (e instanceof NominatimHttpError) {
+            console.warn(`[Geocoding] Nominatim ${e.status} för "${venueName}" — avbryter (ej cachat)`);
+            return null;
+        }
+        throw e;
     }
 
     console.log(`[Geocoding] No results for "${venueName}".`);
     return null;
+}
+
+/** Haversine-avstånd i km mellan två WGS84-punkter. */
+export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/** Max-avstånd från stadscentroiden för att en nearCity-validerad träff ska godkännas. */
+export const NEAR_CITY_MAX_KM = 60;
+
+/**
+ * Geokoda en STAD (stadsnivå-precision). Cachas i geocode_cache med egen
+ * "city:"-nyckel så centroiderna aldrig blandas med venue-svar. Används av
+ * nearCity-valideringen — en centroid per stad, sedan lokala lookups.
+ * Exporterad för repair-misplaced-geo (batch-validering av gamla event).
+ */
+export async function geocodeCityCentroid(city: string): Promise<[number, number] | null> {
+    const name = (city || '').trim();
+    if (!name) return null;
+
+    const key = `city:${name.toLowerCase()}`;
+    const cached = geocodeCacheGet(key);
+    if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
+        return cached.ok ? [cached.lat, cached.lng] : null;
+    }
+
+    await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+    try {
+        const result = await nominatimSearchSweden(`${name}, Sverige`);
+        geocodeCacheSet(key, result);
+        return result;
+    } catch (e) {
+        if (e instanceof NominatimHttpError) {
+            console.warn(`[Geocoding/SE] Nominatim ${e.status} för centroid "${name}" — ej cachat`);
+            return null;
+        }
+        throw e;
+    }
+}
+
+export interface GeocodeSwedenOpts {
+    /**
+     * Förväntad stad/ort. Sätts den valideras ALLA svar (även cachade) mot
+     * stadscentroiden: träffar längre bort än NEAR_CITY_MAX_KM underkänns och
+     * frågan provas igen som "<query>, <nearCity>". Skyddet mot att Nominatim
+     * tappar termer och returnerar Sveriges mest prominenta namne — t.ex.
+     * "S:t Nikolai kyrka" (Halmstad) → Örebro-koordinater.
+     */
+    nearCity?: string;
 }
 
 /**
@@ -397,8 +524,13 @@ export async function geocodeVenue(rawVenueName: string): Promise<[number, numbe
  * Paraply-källorna (SvK 577 församlingar, PRO ~970 föreningar, Hembygd) frågar
  * efter samma platser varje körning — utan cachen kostar det 1,1s+ per fråga
  * och natt, med cachen är det en lokal lookup.
+ *
+ * Utan opts.nearCity: exakt samma beteende som tidigare (bakåtkompatibelt).
  */
-export async function geocodeVenueSweden(rawQuery: string): Promise<[number, number] | null> {
+export async function geocodeVenueSweden(
+    rawQuery: string,
+    opts: GeocodeSwedenOpts = {},
+): Promise<[number, number] | null> {
     if (!rawQuery) return null;
 
     if (isForeignAddress(rawQuery)) {
@@ -417,22 +549,86 @@ export async function geocodeVenueSweden(rawQuery: string): Promise<[number, num
         .replace(/,\s*,/g, ',');
     if (!cleaned) return null;
 
-    const cached = geocodeCacheGet(cleaned);
-    if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
-        return cached.ok ? [cached.lat, cached.lng] : null;
+    // nearCity-validering: geokoda stadens centroid (cachad) och bygg predikatet.
+    // Kan centroiden inte lösas (okänd småort) → kör oskyddat som tidigare.
+    const nearCity = (opts.nearCity || '').trim();
+    const cityCenter = nearCity ? await geocodeCityCentroid(nearCity) : null;
+    const accept = cityCenter
+        ? (lat: number, lng: number) => distanceKm(lat, lng, cityCenter[0], cityCenter[1]) <= NEAR_CITY_MAX_KM
+        : undefined;
+
+    if (!accept) {
+        // Bakåtkompatibla vägen — exakt gamla beteendet.
+        const cached = geocodeCacheGet(cleaned);
+        if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
+            return cached.ok ? [cached.lat, cached.lng] : null;
+        }
+        try {
+            const result = await geocodeVenueSwedenLive(cleaned);
+            geocodeCacheSet(cleaned, result);
+            return result;
+        } catch (e) {
+            if (e instanceof NominatimHttpError) {
+                console.warn(`[Geocoding/SE] Nominatim ${e.status} för "${cleaned}" — ej cachat`);
+                return null;
+            }
+            throw e;
+        }
     }
 
-    const result = await geocodeVenueSwedenLive(cleaned);
-    geocodeCacheSet(cleaned, result);
-    return result;
+    // 1. Bas-cachens svar återanvänds BARA om det klarar stadsvalideringen.
+    //    Cachen är förgiftad med 90-dagars felträffar (bare "S:t Nikolai kyrka"
+    //    → Örebro) — sådana släpps inte igenom, men bas-nyckeln lämnas orörd
+    //    (den kan vara "rätt" för anropare utan nearCity-kontext).
+    const cached = geocodeCacheGet(cleaned);
+    if (cached && cached.ok && cached.ageDays < 90 && accept(cached.lat, cached.lng)) {
+        return [cached.lat, cached.lng];
+    }
+
+    // 2. Stads-ankrad variant med egen cache-nyckel (svaret gäller PER stad).
+    const anchored = cleaned.toLowerCase().includes(nearCity.toLowerCase())
+        ? cleaned
+        : `${cleaned}, ${nearCity}`;
+    const nearKey = `near:${nearCity.toLowerCase()}|${anchored.toLowerCase()}`;
+    const nearCached = geocodeCacheGet(nearKey);
+    if (nearCached && (nearCached.ok ? nearCached.ageDays < 90 : nearCached.ageDays < 14)) {
+        // Validera även denna — nycklar skrivna före valideringen kan vara fel.
+        if (nearCached.ok && accept(nearCached.lat, nearCached.lng)) {
+            return [nearCached.lat, nearCached.lng];
+        }
+        if (!nearCached.ok) return null;
+        // ok men fel stad → fall igenom till live-omkörning (skriver om nyckeln)
+    }
+
+    try {
+        const result = await geocodeVenueSwedenLive(anchored, accept);
+        geocodeCacheSet(nearKey, result);
+        if (!result) {
+            console.log(`[Geocoding/SE] "${anchored}" underkänd av nearCity-validering (${nearCity}, max ${NEAR_CITY_MAX_KM} km)`);
+        }
+        return result;
+    } catch (e) {
+        if (e instanceof NominatimHttpError) {
+            console.warn(`[Geocoding/SE] Nominatim ${e.status} för "${anchored}" — ej cachat`);
+            return null;
+        }
+        throw e;
+    }
 }
 
-/** Själva Nominatim-kedjan, utan cache. Anropa geocodeVenueSweden istället. */
-async function geocodeVenueSwedenLive(cleaned: string): Promise<[number, number] | null> {
+/**
+ * Själva Nominatim-kedjan, utan cache. Anropa geocodeVenueSweden istället.
+ * accept-predikatet (nearCity-validering) appliceras på ALLA steg — även
+ * komma-tail- och stads-skanningsfallbacken får inte returnera fel stad.
+ */
+async function geocodeVenueSwedenLive(
+    cleaned: string,
+    accept?: (lat: number, lng: number) => boolean,
+): Promise<[number, number] | null> {
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
 
     // Försök 1: full fråga
-    let result = await nominatimSearchSweden(cleaned);
+    let result = await nominatimSearchSweden(cleaned, accept);
     if (result) {
         console.log(`[Geocoding/SE] Found "${cleaned}": [${result[0]}, ${result[1]}]`);
         return result;
@@ -443,7 +639,7 @@ async function geocodeVenueSwedenLive(cleaned: string): Promise<[number, number]
         const city = cleaned.split(',').map(s => s.trim()).filter(Boolean).pop() || '';
         if (city && city !== cleaned) {
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-            result = await nominatimSearchSweden(city);
+            result = await nominatimSearchSweden(city, accept);
             if (result) {
                 console.log(`[Geocoding/SE] Found city "${city}": [${result[0]}, ${result[1]}]`);
                 return result;
@@ -462,7 +658,7 @@ async function geocodeVenueSwedenLive(cleaned: string): Promise<[number, number]
             : `${cleaned}, ${foundCity}`;
         if (withCity !== cleaned) {
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-            result = await nominatimSearchSweden(withCity);
+            result = await nominatimSearchSweden(withCity, accept);
             if (result) {
                 console.log(`[Geocoding/SE] Found via city-scan "${withCity}": [${result[0]}, ${result[1]}]`);
                 return result;
@@ -470,7 +666,7 @@ async function geocodeVenueSwedenLive(cleaned: string): Promise<[number, number]
         }
         // Sista chansen: bara stadsnamnet (stad-nivå precision)
         await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-        result = await nominatimSearchSweden(`${foundCity}, Sverige`);
+        result = await nominatimSearchSweden(`${foundCity}, Sverige`, accept);
         if (result) {
             console.log(`[Geocoding/SE] City-level fallback "${foundCity}": [${result[0]}, ${result[1]}]`);
             return result;
@@ -501,9 +697,17 @@ export async function geocodeVenueSwedenStrict(rawQuery: string): Promise<[numbe
     }
 
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-    const result = await nominatimSearchSweden(cleaned);
-    geocodeCacheSet(key, result);
-    return result;
+    try {
+        const result = await nominatimSearchSweden(cleaned);
+        geocodeCacheSet(key, result);
+        return result;
+    } catch (e) {
+        if (e instanceof NominatimHttpError) {
+            console.warn(`[Geocoding/SE] Nominatim ${e.status} för strict "${cleaned}" — ej cachat`);
+            return null;
+        }
+        throw e;
+    }
 }
 
 /**
@@ -530,15 +734,21 @@ export async function geocodeStreetSweden(street: string, city: string): Promise
         const res = await fetch(url, {
             headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' },
         });
-        if (res.ok) {
-            const data: any = await res.json();
-            for (const hit of data ?? []) {
-                const lat = parseFloat(hit.lat);
-                const lng = parseFloat(hit.lon);
-                if (isInNordic(lat, lng)) { result = [lat, lng]; break; }
-            }
+        // HTTP-fel (429/5xx) = transient — returnera null UTAN att cacha miss
+        if (!res.ok) {
+            console.warn(`[Geocoding/SE] Nominatim ${res.status} för street "${street}, ${city}" — ej cachat`);
+            return null;
         }
-    } catch { /* nätfel → behandla som miss */ }
+        const data: any = await res.json();
+        for (const hit of data ?? []) {
+            const lat = parseFloat(hit.lat);
+            const lng = parseFloat(hit.lon);
+            if (isInNordic(lat, lng)) { result = [lat, lng]; break; }
+        }
+    } catch {
+        // nätfel = transient → ej cachat
+        return null;
+    }
 
     geocodeCacheSet(key, result);
     return result;

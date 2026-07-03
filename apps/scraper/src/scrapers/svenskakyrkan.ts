@@ -16,8 +16,10 @@
  * Varje event har `start` som ISO med offset → tolkas direkt som korrekt UTC.
  * isFullDayEvent / time "00:00:00" → ingen specifik tid (heldagsmarkering).
  * owner.type === 'Utlandet' = SKUT-församlingar utomlands → hoppas över (Sverige-only).
- * Inga bild-fält i API:t. Geocoding: kandidat-kedja kyrkonamn → församling → ortnamn
- * (suffixet "pastorat/församling" strippat) — runnern provar i ordning.
+ * Inga bild-fält i API:t. Geocoding: kyrkonamnet ankras ALLTID med ort/församling
+ * ("<kyrka>, <ort>" → "<kyrka>, <församling>" → församling → ort) — bare kyrkonamn
+ * ("S:t Nikolai kyrka") lät Nominatim returnera namnen i FEL stad (Örebro-buggen).
+ * city sätts på RawEvent så runnern kan nearCity-validera Nominatim-svaren.
  *
  * URL: www.svenskakyrkan.se/kalender?event=<id> (unik per event, klickbar — SPA:n
  * öppnar eventet via query-paramet). Används som dedup-nyckel.
@@ -27,6 +29,47 @@
 
 import { Engine, RawEvent } from '../sources/types';
 import { cleanDescription } from '../utils/text';
+import { knownGeoCity } from '../utils/venueCoordinates';
+
+/**
+ * Äkta -s-orter som INTE ligger i SWEDISH_GEO_CITIES men vars namn slutar på
+ * native -s (genitiv lägger inte till ett extra s). Utan skydd skulle steg 4
+ * kapa det: "Höganäs"→"Höganä", "Degerfors"→"Degerfor". De stora (Borås,
+ * Västerås, Alingsås, Sölvesborg, Nässjö) fångas redan av knownGeoCity.
+ */
+const NATIVE_S_TOWNS = new Set([
+    'höganäs', 'degerfors', 'grums', 'mönsterås', 'vännäs', 'hagfors', 'surahammar',
+    'grästorp', 'åtvidaberg', 'hofors', 'storfors', 'robertsfors', 'markaryd',
+]);
+
+/**
+ * Härled orten ur ett församlings-/pastoratsnamn med suffixet redan strippat.
+ * Genitiv-s tas bort BARA när det inte förstör en äkta -s-ort: Västerås/Borås/
+ * Höganäs/Alingsås bevaras (kända orter eller NATIVE_S_TOWNS), medan
+ * "Halmstads"→Halmstad, "Sundbybergs"→Sundbyberg normaliseras. Flerords-namn
+ * ("Göteborgs Vasa") faller tillbaka på första ordet om det är en känd ort.
+ */
+export function deriveTown(parishBase: string): string {
+    const base = (parishBase || '').trim();
+    if (!base) return '';
+    // 1. Redan en känd ort (skyddar Västerås/Borås m.fl. mot genitiv-strip)
+    const direct = knownGeoCity(base);
+    if (direct) return direct;
+    if (NATIVE_S_TOWNS.has(base.toLowerCase())) return base;
+    // 2. Genitiv-s bort → känd ort ("Halmstads"→Halmstad, "Sundbybergs"→Sundbyberg)
+    if (base.endsWith('s')) {
+        const noGen = knownGeoCity(base.slice(0, -1));
+        if (noGen) return noGen;
+    }
+    // 3. Flerord: första ordet en känd ort ("Göteborgs Vasa"→Göteborg)
+    const first = base.split(/\s+/)[0];
+    if (first !== base) {
+        const fw = knownGeoCity(first) || (first.endsWith('s') ? knownGeoCity(first.slice(0, -1)) : null);
+        if (fw) return fw;
+    }
+    // 4. Okänd småort: strippa avslutande genitiv-s bäst-effort (gammalt beteende)
+    return base.endsWith('s') && base.length > 4 ? base.slice(0, -1) : base;
+}
 
 const API = 'https://svk-apim-prod.azure-api.net/calendar/v1/event/search/';
 const SUB_KEY = process.env.SVK_SUB_KEY || 'f6937363a4d94012a78a32442752cf5c';
@@ -123,11 +166,26 @@ export function mapSvkEvent(e: any): RawEvent | null {
     const parish = (owner.name || '').toString().trim();
     const placeName = ((e.place || {}).name || '').toString().trim();
     const venueLabel = placeName || parish || 'Svenska kyrkan';
-    // Ortnamn: "Örkelljunga pastorat" → "Örkelljunga" (genitiv-s strippas också)
-    const town = parish
+    // Ort: strippa församlings-suffixet, sedan genitiv-normalisera säkert (deriveTown
+    // skyddar äkta -s-orter som Västerås mot att bli "Västerå").
+    const parishBase = parish
         .replace(/\s+(pastorat|församling|distrikt|domkyrkoförsamling|kyrkliga samfällighet)$/i, '')
-        .replace(/s$/i, '')
         .trim();
+    const town = deriveTown(parishBase);
+
+    // Geocoding-kandidater: ALLTID ankrat med ort/församling först. Bare kyrkonamn
+    // ("S:t Nikolai kyrka") lät Nominatim välja namnen i mest prominenta staden
+    // (Örebro-buggen) → placeName ensamt provas SIST, och bara som nödutgång
+    // (runnerns nearCity-validering skyddar det ytterligare via city-fältet).
+    const cand: string[] = [];
+    if (placeName && town && !placeName.toLowerCase().includes(town.toLowerCase())) {
+        cand.push(`${placeName}, ${town}`);
+    }
+    if (placeName && parish && placeName !== parish) cand.push(`${placeName}, ${parish}`);
+    if (parish) cand.push(parish);
+    if (town) cand.push(town);
+    if (placeName) cand.push(placeName);
+    const geocodeCandidates = [...new Set(cand)].filter((c) => c.length > 2);
 
     return {
         title,
@@ -135,7 +193,8 @@ export function mapSvkEvent(e: any): RawEvent | null {
         startDate,
         hasSpecificTime,
         venueName: placeName && parish ? `${placeName}, ${parish}` : venueLabel,
-        geocodeCandidates: [placeName, parish, town].filter((c) => c && c.length > 2),
+        city: town || undefined,
+        geocodeCandidates,
         hostName: parish || 'Svenska kyrkan',
         description: cleanDescription(e.description),
     };
