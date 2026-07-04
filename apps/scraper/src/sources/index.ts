@@ -35,6 +35,7 @@ import { abfEngine } from '../scrapers/abf';
 import { slagthusetEngine } from '../scrapers/slagthuset';
 import { norticEngine } from '../scrapers/nortic';
 import { cbisEngine } from '../scrapers/cbis';
+import { fhpEngine } from '../scrapers/fhp';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -92,4 +93,5 @@ export const ENGINES: Record<string, Engine> = {
     'slagthuset': slagthusetEngine,
     'nortic': norticEngine,
     'cbis': cbisEngine,
+    'fhp': fhpEngine,
 };
