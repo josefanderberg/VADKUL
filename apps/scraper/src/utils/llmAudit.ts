@@ -101,7 +101,11 @@ export async function ollamaIsAvailable(): Promise<boolean> {
     }
 }
 
-const PROMPT_TEMPLATE = (e: AuditInput) => `Du granskar event för en svensk eventaggregator. Den här veckan i Sverige.
+// OBS 2026-07-04: scopet är NORDEN (Sverige + Norge + Danmark) sedan NO/DK-
+// källorna (TicketMaster NO/DK, Tickster Norge) lades till 2026-07-02/03.
+// Gamla Sverige-prompten junk-dömde 200+ legitima norska/danska event
+// ("8-delsfinale på Heimebane" = junk/high) som auto-gömdes.
+const PROMPT_TEMPLATE = (e: AuditInput) => `Du granskar event för en nordisk eventaggregator (Sverige, Norge, Danmark). Den här veckan i Norden.
 
 EVENT:
 - Titel: "${e.title}"
@@ -112,9 +116,9 @@ EVENT:
 - URL: ${e.url}
 
 Bedöm:
-1. verdict — "ok" om det är ett riktigt evenemang i Sverige som folk kan gå på. "suspect" om det är oklart (t.ex. ofullständig info, men kunde vara legit). "junk" om det INTE är ett evenemang (cookie-banner, sökresultatsida, "Startsida", trafikinfo, kommunsida, eller event i annat land som felaktigt markerats som svenskt).
+1. verdict — "ok" om det är ett riktigt evenemang i Sverige, Norge eller Danmark som folk kan gå på (norsk/dansk text är helt normalt). "suspect" om det är oklart (t.ex. ofullständig info, men kunde vara legit). "junk" om det INTE är ett evenemang (cookie-banner, sökresultatsida, "Startsida", trafikinfo, kommunsida, eller event utanför Norden som felaktigt markerats som nordiskt).
 2. confidence — "high" om du är säker. "medium"/"low" annars.
-3. inSweden — true/false. Är platsen i Sverige? Var noggrann med platsindikatorer i adress/beskrivning. Om text säger "Berlin", "Copenhagen", "Polska", "Manchester" etc → false.
+3. inSweden — true/false. Är platsen i Sverige, Norge eller Danmark? (Fältnamnet är historiskt — svara true för hela SE/NO/DK.) Om text säger "Berlin", "Helsinki", "Polska", "Manchester" etc → false.
 4. reason — kort förklaring (max 15 ord, svenska).
 5. category — EN av dessa 11 (för filter/färg, välj den som passar bäst):
    - music: konsert, spelning, festival, DJ, klubbmusik
