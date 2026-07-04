@@ -262,7 +262,7 @@ function norm(s: string | undefined): string {
     return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-const GPS_PROMPT = (i: GpsAuditInput, reverse: { displayName: string; city: string | null }) => `Du verifierar GPS-koordinater för svenska event.
+const GPS_PROMPT = (i: GpsAuditInput, reverse: { displayName: string; city: string | null }) => `Du verifierar GPS-koordinater för nordiska event (Sverige, Norge, Danmark).
 
 Eventet säger sig vara på:
 - Plats: "${i.locationName || '(saknas)'}"
@@ -276,7 +276,7 @@ GPS-koordinaten ${i.lat}, ${i.lng} ligger enligt OpenStreetMap här:
 Fråga: Matchar GPS:en eventets uppgivna plats?
 - "ok": samma stad/område, sannolikt rätt punkt.
 - "suspect": kan vara rätt men oklart (t.ex. event säger "Stockholm" och GPS pekar på en förort).
-- "wrong": fel stad eller fel del av Sverige.
+- "wrong": fel stad eller fel del av Norden.
 
 Svara BARA med JSON: {"verdict":"ok|suspect|wrong","reason":"kort förklaring max 12 ord"}`;
 

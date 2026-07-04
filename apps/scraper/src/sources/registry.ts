@@ -191,7 +191,7 @@ export const SOURCES: Source[] = [
             defaultCity: 'Karlskrona',
         },
         updateFrequency: 'every-3d',
-        status: 'experimental',
+        status: 'active',
         discovery: { method: 'probe-xhr', probeUrl: 'https://www.visitkarlskrona.se/sv/api/cbis-product-list?nodeId=318&page=0', date: '2026-07-02' },
         notes: 'Probe 2026-07-02: samma CBIS-plattform som visitumea men Bootstrap-tema (card-title/cbis-occasions-intervall/card-text-desc), 185 event. /map-endpointen ger EXAKTA koordinater (name-join i motorn). OBS nodeId 960 = boende-listan — 318 är eventen. visitgavle probades men deras nod gav totalCount=0.',
         lastVerified: '2026-07-02',
@@ -213,7 +213,7 @@ export const SOURCES: Source[] = [
             placeUrlReplace: [/\/evenemang\//, '/evenemang/map/'],
         },
         updateFrequency: 'every-3d',
-        status: 'experimental',
+        status: 'active',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://kulturbiljetter.se/sitemap.xml', date: '2026-07-02' },
         notes: 'Probe 2026-07-02: 214 event-URLs, ingen JSON-LD, text-datum/tid/pris i brödtext. Scenkonst-fokus (fria teatergrupper).',
         lastVerified: '2026-07-02',
@@ -251,7 +251,7 @@ export const SOURCES: Source[] = [
         engine: 'wp-rest',
         config: { baseUrl: 'https://kulturparkensmaland.se', variant: 'tribe', defaultCity: 'Växjö' },
         updateFrequency: 'every-3d',
-        status: 'experimental',
+        status: 'active',
         discovery: { method: 'probe-wp', probeUrl: 'https://kulturparkensmaland.se/wp-json/tribe/events/v1/events', date: '2026-07-03' },
         notes: 'Agent-probe 2026-07-03: tribe-REST, 40 event i juli-aug; flera venues (Utvandrarnas hus, Sveriges glasmuseum).',
         lastVerified: '2026-07-03',
@@ -308,7 +308,7 @@ export const SOURCES: Source[] = [
             maxPages: 3,
         },
         updateFrequency: 'every-3d',
-        status: 'experimental',
+        status: 'active',
         discovery: { method: 'probe-wp', probeUrl: 'https://olm.se/wp-json/wp/v2/kalenderhandelse', date: '2026-07-03' },
         notes: 'Agent-probe 2026-07-03: ~15 unika juli/aug-datum via detaljsidor. Venues i hela länet (Bofors/Kopparberg) — geokodas per event.',
         lastVerified: '2026-07-03',
@@ -366,7 +366,7 @@ export const SOURCES: Source[] = [
         engine: 'nortic',
         config: {},
         updateFrequency: 'every-3d',
-        status: 'experimental',
+        status: 'active',
         maxSavedPerRun: 1200,
         discovery: { method: 'manual', probeUrl: 'https://www.nortic.se/api/json/shows', date: '2026-07-02' },
         notes: 'Probe 2026-07-02: DOKUMENTERAT öppet API (nortic.se/api/events) — /api/json/shows ger ~3000 produktioner/~14000 föreställningar i ETT anrop. Smoke: 5497 shows i 30d-fönstret → ~930 event efter serie-dedup per (produktion, arena). 100% pris (minPrice/maxPrice!), 99,9% koordinater — MEN arenaLongitude/arenaLatitude är FÖRVÄXLADE (swappas + bounds-valideras i motorn). Tyngd i sydost (Karlskrona/Kalmar/Visby/Ystad). Egen URL-domän → dedup-säkert mot Tickster.',
@@ -619,10 +619,8 @@ export const SOURCES: Source[] = [
         hostName: 'Kalmar Läns Museum',
         region: 'kalmar',
         engine: 'sitemap',
-        // INAKTIVERAD 2026-07-03: og:title på detaljsidorna är SAJTNAMNET →
-        // alla event får titeln "Kalmar Läns Museum". Kräver h1-baserad
-        // titel-extraktion i cheerioFallback innan återaktivering.
-        disabled: true,
+        // Återaktiverad 2026-07-04: multi-h1-fixen i cheerioFallback tar nu
+        // eventtitelns h1 (den som matchar og:title) istället för sajtloggan.
         config: {
             sitemapUrl: 'https://kalmarlansmuseum.se/events-sitemap.xml',
             urlPatterns: [/\/evenemang\/[^/]+\/?$/i],

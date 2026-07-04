@@ -478,14 +478,27 @@ function titleFromUrl(url: string): string {
 
 function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
-    // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet)
-    let title = ($('h1').first().text() || '').trim();
-    if (!title) title = ($('meta[property="og:title"]').attr('content') || '').trim();
-    if (!title) {
-        const docTitle = ($('title').first().text() || '').trim();
-        // Strippa " | Sajtnamn" / " - Kommun" från <title>
-        title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
-    }
+    // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet).
+    // Multi-h1-sidor (Kalmar läns museum: h1#1 = sajtloggan, h1#2 = eventtiteln)
+    // gjorde att .first() gav SAJTNAMNET på alla event — därför vinner den h1
+    // som matchar sidtitelns första segment (og:title/<title> före " - Sajt").
+    const ogTitle = ($('meta[property="og:title"]').attr('content') || '').trim();
+    const docTitle = ($('title').first().text() || '').trim();
+    const titleParts = (ogTitle || docTitle).split(/\s+[|–-]\s+/).map(s => s.trim());
+    const pageName = (titleParts[0] || '').toLowerCase();
+    // Sajtnamnet = svans-segmentet ("Eventtitel - Kalmar läns museum") — en h1
+    // som ÄR sajtnamnet (logga-h1) får aldrig vinna som fallback.
+    const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
+    let title = '';
+    $('h1').each((_i, el) => {
+        const t = $(el).text().replace(/\s+/g, ' ').trim();
+        if (!t) return;
+        const tl = t.toLowerCase();
+        if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
+        if (pageName && tl === pageName) { title = t; return false; }
+    });
+    if (!title) title = ogTitle;
+    if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
     if (!title) title = titleFromUrl(url);
     if (!title) return null;
 
