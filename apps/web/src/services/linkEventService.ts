@@ -78,7 +78,28 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
 const layerCache = new Map<string, { updatedAt: string; data: any }>();
 
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
-    // 1. Try Firestore Client SDK first
+    // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
+    // besökare via Hosting-CDN:en). Direktläsningen ur Firestore (väg 2) drog
+    // ~26 MB okomprimerad egress per ny besökare = den stora GCP-kostnaden.
+    // 30s-pollen är också gratis här: max-age=300 → webbläsaren svarar ur egen
+    // HTTP-cache utan nätverk (och utan Firestore-reads) i 5 min.
+    try {
+        const res = await fetch(`/api/events/${layerName}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data) {
+                if (typeof data.updatedAt === 'string') {
+                    layerCache.set(layerName, { updatedAt: data.updatedAt, data });
+                }
+                return data;
+            }
+        }
+    } catch (e) {
+        console.warn(`API-route för lagret "${layerName}" svarade inte, provar Firestore direkt:`, e);
+    }
+
+    // 2. Firestore Client SDK — färskt men dyrt (okomprimerad egress);
+    // används bara när API-routen inte svarar.
     try {
         if (db) {
             const docRef = doc(db, 'aggregatedEvents', layerName);
@@ -110,7 +131,8 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
         console.warn(`Firestore read failed for layer "${layerName}". Falling back to static JSON:`, e);
     }
 
-    // 2. Fallback to fetching static JSON from the public directory
+    // 3. Sista utväg: statisk JSON från public-mappen (ögonblicksbild från
+    // senaste deployen — kan vara dagar gammal, men kartan är aldrig tom).
     try {
         const res = await fetch(`/events-${layerName}.json`);
         if (res.ok) {
@@ -226,10 +248,12 @@ export const linkEventService = {
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            // First load destinations and cards in parallel
-            const [destData, cardsData] = await Promise.all([
+            // Alla tre lagren parallellt — descriptions hämtades tidigare SERIELLT
+            // efter de andra två, vilket bara adderade väntetid före första kartritningen.
+            const [destData, cardsData, descData] = await Promise.all([
                 fetchLayer('destinations'),
-                fetchLayer('cards')
+                fetchLayer('cards'),
+                fetchLayer('descriptions'),
             ]);
 
             if (!destData) return [];
@@ -240,8 +264,6 @@ export const linkEventService = {
                 events = mergeCardsWithDestinations(events, cardsData.events || []);
             }
 
-            // Fetch descriptions in background or in parallel if needed
-            const descData = await fetchLayer('descriptions');
             if (descData && descData.data) {
                 events = mergeDescriptionsWithEvents(events, descData.data);
             }

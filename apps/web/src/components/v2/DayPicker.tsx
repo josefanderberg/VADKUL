@@ -80,7 +80,7 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
     return (
         <div
             ref={ref}
-            className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-60 rounded-2xl bg-white/95 backdrop-blur-md border border-white/60 shadow-2xl p-1.5 z-[1100] animate-in fade-in slide-in-from-top-2 duration-150"
+            className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-60 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl p-1.5 z-[1100] animate-in fade-in slide-in-from-top-2 duration-150"
         >
             {dayOptions.map(opt => {
                 const active = dayOffset === opt.offset && dayRangeDays === opt.days;
@@ -90,7 +90,7 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
                         type="button"
                         onClick={() => onPick(opt.offset, opt.days)}
                         className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
-                            active ? 'bg-[#006AA7] text-white' : 'text-slate-700 hover:bg-slate-100'
+                            active ? 'bg-[#006AA7] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                     >
                         <span>{opt.label}</span>
@@ -106,12 +106,12 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
             {showWeekend && (() => {
                 const active = dayOffset === weekend.offset && dayRangeDays === weekend.days;
                 return (
-                    <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+                    <div className="border-t border-slate-100 dark:border-slate-800 mt-1.5 pt-1.5">
                         <button
                             type="button"
                             onClick={() => onPick(weekend.offset, weekend.days)}
                             className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
-                                active ? 'bg-[#006AA7] text-white' : 'text-slate-700 hover:bg-slate-100'
+                                active ? 'bg-[#006AA7] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                             }`}
                         >
                             <span>I helgen</span>
@@ -120,7 +120,7 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
                     </div>
                 );
             })()}
-            <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+            <div className="border-t border-slate-100 dark:border-slate-800 mt-1.5 pt-1.5">
                 <label className="flex items-center gap-2 px-3.5 py-2 cursor-pointer">
                     <CalendarDays size={15} className="text-[#006AA7] shrink-0" />
                     <input
@@ -128,7 +128,7 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
                         min={toInput(new Date())}
                         value={toInput(startDate)}
                         onChange={e => handleDate(e.target.value)}
-                        className="flex-1 min-w-0 bg-transparent outline-none text-sm font-semibold text-slate-700 cursor-pointer"
+                        className="flex-1 min-w-0 bg-transparent outline-none text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
                         aria-label="Välj datum"
                     />
                 </label>

@@ -92,7 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, logout, signIn, register, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount }}>
-      {!loading && children}
+      {/* Rendera ALLTID children. `!loading && children` dolde hela appen under
+          SSR (loading är alltid true på servern) → varje sida serverades som
+          TOMT HTML-skal, osynligt för Google. Konsumenter som behöver vänta på
+          auth läser `loading` ur contexten i stället. */}
+      {children}
     </AuthContext.Provider>
   );
 }

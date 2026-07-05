@@ -4,269 +4,45 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, Tags, Box, Globe, Mountain, Plus, X, Video, Send, Sun, Target, Crosshair, Maximize2, Zap, Sparkles, Snowflake, Lock, Users, Satellite, Flag, Map as MapIcon, Moon, ChevronRight } from 'lucide-react';
+import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
 import { LinkEvent } from '../../types';
-import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
-import { sourceColor } from '../../utils/sources';
-import { isFeatureOn, FEATURE_CHANGE_EVENT } from '../../lib/featureToggles';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
+// Baskartstilar (Voyager/satellit/mörk/nöjesfält) + klot/terräng/relief-hjälpare.
+import {
+    BOOTSTRAP_STYLE, DARK_STYLE_URL, SATELLITE_STYLE, STREETS_STYLE_URL,
+    THEMEPARK_LAND_COLOR, fetchAndTransformThemeParkStyle,
+    applyHillshade, applyProjection, applyTerrain,
+} from './v2MapBaseStyles';
+// Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
+import {
+    ONE_HOUR_MS, BRICKA_DARK_BG,
+    brickaBodyBg, brickaBodyHex, eventEmoji, groupKeyOf, groupStartsWithinHour,
+    makeBrickaImageData, sourceGradientCss,
+} from './v2MapBricka';
+// Multi-event-listan (panelen som öppnas vid brickor med flera event).
+import V2MapGroupList from './V2MapGroupList';
 
-// Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
-// (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
-// de är DOM-element i container, inte en del av style-spec:en.
-const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-// Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
-const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-// Multi-event-grupper (flera event på samma koordinat, "sifferbrickan") OCH event
-// som börjar inom 1 timme (orange border) ritas som lätt GL-prick BARA UNDER själva
-// zoom-gesten (transient), så animationen inte laggar av tunga DOM-brickor. När
-// zoomen är still byggs den fulla DOM-brickan som vanligt. Ingen zoom-tröskel, ingen
-// clustering; individuella event och övriga DOM-renderingar är orörda.
-const ONE_HOUR_MS = 60 * 60 * 1000;
-// En grupp "börjar inom 1 timme" om något event startar i framtiden men inom en
-// timme. Samma villkor som ger DOM-brickan dess orange ram.
-function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolean {
-    return group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= ONE_HOUR_MS);
-}
-const SATELLITE_STYLE: maplibregl.StyleSpecification = {
-    version: 8,
-    // Glyf-endpoint (Cartos, samma som Voyager/Dark-stilarna) så multi-event-
-    // prickarnas siffer-text kan renderas i GL även på den annars ren-raster
-    // satellitstilen. Skulle endpointen blockeras (t.ex. corp-proxy) ritas pricken
-    // ändå — bara siffran uteblir, ingen krasch.
-    glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
-    sources: {
-        satellite: {
-            type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
-        },
-        // Transparent etikett-overlay med ort- och landsnamn ovanpå satellit-bilden,
-        // så man fortfarande ser var man är även när basbilden är fotorealistisk.
-        labels: {
-            type: 'raster',
-            tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            attribution: 'Labels &copy; Esri'
-        }
-    },
-    layers: [
-        { id: 'satellite', type: 'raster', source: 'satellite' },
-        { id: 'labels', type: 'raster', source: 'labels' }
-    ]
-};
-
-// Bootstrap-stil vid mount: kartan behöver en SYNKRON startstil för att rendera
-// direkt, men förvald 'themepark' hämtas async (fetch + transform) → annars syns
-// en startbild under tiden. Tidigare användes satellitstilen, men då blixtrade en
-// satellitvy förbi innan nöjesfält laddat. Här är i stället bara en enfärgad
-// bakgrund i nöjesfältets land-färg (#93c46c, samma som themeparkens 'background').
-// Ingen nätverkshämtning → renderar omedelbart, och eftersom färgen matchar den
-// kommande kartan blir bytet sömlöst (vägar/vatten/etiketter tonar bara in).
-const BOOTSTRAP_STYLE: maplibregl.StyleSpecification = {
-    version: 8,
-    sources: {},
-    layers: [
-        { id: 'background', type: 'background', paint: { 'background-color': '#93c46c' } }
-    ]
-};
-
-// "Nöjesfälts"-kartan: hämta Voyager-stilen och måla om den i en mild, naturlig
-// palett (grönt land, blått vatten, dämpade byggnader/vägar) så den fungerar som
-// en lugn bakgrund i stället för en gäll tivoli-look. Hämtas + transformeras en
-// gång och cachas sedan i komponentens themeParkStyleRef.
-async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.StyleSpecification> {
-    const res = await fetch(STREETS_STYLE_URL);
-    const style = await res.json() as maplibregl.StyleSpecification;
-
-    if (style.layers) {
-        style.layers = style.layers.map(layer => {
-            // Hav-/ocean-namn (Östersjön m.fl.) ligger som ETT label-lager per
-            // angränsande land i källdatan → samma hav etiketteras på ~10 språk
-            // (Östersjön / Itämeri / Ostsee / Østersøen …). Onödigt brus på en
-            // Sverige-karta, så hav/ocean-namnen göms. Insjönamn (Vänern/Vättern,
-            // eget watername_lake-lager) berörs INTE.
-            if (layer.id === 'watername_ocean' || layer.id === 'watername_sea') {
-                const baseLayout = ('layout' in layer && layer.layout) ? layer.layout : {};
-                return { ...layer, layout: { ...baseLayout, visibility: 'none' as const } } as typeof layer;
-            }
-            if (!('paint' in layer) || !layer.paint) return layer;
-            // Paint-spec:en är en strikt union per lagertyp men vi sätter
-            // nycklarna dynamiskt utifrån lager-id — jobba mot en löst typad
-            // kopia och casta tillbaka vid retur.
-            const paint: Record<string, unknown> = { ...layer.paint };
-            const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : undefined;
-
-            // Palett: djupare naturliga toner — som satellitkartan fast
-            // minimalistisk. Mörkare grönt land/grönska, mörkare blått vatten,
-            // vita vägar som kontrast.
-            // Land / Background
-            if (layer.id === 'background') {
-                paint['background-color'] = '#93c46c'; // mättat grästgrönt land (mörkare/grönare än förut) — dominerar utzoomat
-            }
-            // Water
-            else if (layer.id === 'water' || layer.id === 'water_shadow') {
-                paint['fill-color'] = layer.id === 'water_shadow'
-                    ? '#5791b8'
-                    : '#679fc6'; // mellanblått — mörkare än original, ljusare än djupblått
-            }
-            else if (layer.id === 'waterway') {
-                paint['line-color'] = '#679fc6';
-            }
-            // Parker, skog, naturreservat, grön landuse
-            else if (
-                layer.id === 'landcover' ||
-                layer.id.includes('park') ||
-                layer.id.includes('forest') ||
-                layer.id === 'landuse'
-            ) {
-                if (paint['fill-color']) {
-                    paint['fill-color'] = '#7eb152'; // grönska, ett snäpp djupare än landet
-                }
-            }
-            // Bostadsområden
-            else if (layer.id === 'landuse_residential') {
-                paint['fill-color'] = '#abcf84'; // något ljusare än landet, fortfarande grönt
-            }
-            // Byggnader
-            else if (layer.id.includes('building')) {
-                if (paint['fill-color']) {
-                    paint['fill-color'] = '#d6d2c0'; // dämpad beige-grå
-                }
-            }
-            // Vägar / transportation. Casing-lagren (kantlinjen runt vägbanan)
-            // får en mjuk sandton så väghierarkin syns mot det vita.
-            else if (sourceLayer === 'transportation') {
-                if (paint['line-color']) {
-                    paint['line-color'] = layer.id.includes('casing')
-                        ? '#c9c3b2'
-                        : '#ffffff'; // rena vita vägar
-                }
-            }
-
-            return { ...layer, paint } as typeof layer;
-        });
-    }
-
-    return style;
-}
-
-// ── GL-markörer (prestanda) ────────────────────────────────────────────────
-// Tusentals event som DOM-element gör att MapLibre måste skriva om transform på
-// varje element varje frame → kartan laggar. Lösning: rendera de VANLIGA eventen
-// som ETT GPU symbol-lager. Varje markör är en bild (nål-bricka + emoji) bakad en
-// gång per unik emoji. DOM-brickor används bara för de få "speciella" (valt/
-// sparat/eget/guld/grupp/inom-timme), som behöver rik interaktion/animation.
+// ════════════════════════════════════════════════════════════════════════════
+// V2Map — kartan är appens hjärta. Grov karta över filen:
 //
-// Brickan är en enkel nål-droppe: en rundad kvadrat med tre runda hörn + en spets
-// (roterad 45° så spetsen pekar rakt nedåt mot koordinaten). Mörk gradient + tunn
-// ljus kant, med emojin centrerad i kroppen. Ingen separat nål/streck under —
-// spetsen ÄR nålen. icon-anchor:'bottom' sätter spetsen ~pad ovanför nederkanten,
-// dvs. i praktiken på koordinaten.
+//   1. Modul-konstanter: reveal-/tinder-tuning + startvy.
+//   2. Data-pipeline (memos): events → groups (per koordinat) → visibleGroups
+//      (de få "speciella" DOM-brickorna) + plainData (allt annat som ETT
+//      GPU-symbol-lager, "plain-events").
+//   3. Reveal-systemet: GL-brickorna börjar dolda; vilo-TINDER före första
+//      trycket, sen "resa + insug" (startRevealTravel) till de N närmast tappet.
+//   4. Kart-init (effekt, körs en gång): MapLibre-instans, zoom-lägen
+//      (brickor ↔ prickar), klick-hantering, bounds-rapportering.
+//   5. Stil-/läges-effekter: mapStyle, klot, 3D-terräng, kamera (recenter/zoom).
+//   6. DOM-markör-synken: de speciella grupperna som riktiga DOM-element.
+//   7. Render: kartcontainer + inline markör-CSS + overlays (multi-event-lista,
+//      WebGL-fallback, funktions-väskan).
 //
-// makeBrickaImageData målar brickan i bodyColor (en kategori-/källfärg) när en
-// sådan ges, annars den mörka standard-gradienten. "Stora" källor (PRO/Korpen/
-// Svenska kyrkan) får numera ingen egen färg — de skiljs ut via opt-in-filtret.
-
-// Hex → [r,g,b]. Stödjer både #rgb och #rrggbb.
-function parseHex(h: string): [number, number, number] {
-    const s = h.replace('#', '');
-    const n = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
-    return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
-}
-// Blanda två hex-färger (t = 0 → a, t = 1 → b) och returnera en rgb()-sträng.
-function mixHex(a: string, b: string, t: number): string {
-    const pa = parseHex(a), pb = parseHex(b);
-    const ch = (i: number) => Math.round(pa[i] + (pb[i] - pa[i]) * t);
-    return `rgb(${ch(0)},${ch(1)},${ch(2)})`;
-}
-// En källfärgs brick-gradient (ljus → bas → mörk) som CSS-sträng för DOM-brickan.
-function sourceGradientCss(color: string): string {
-    return `linear-gradient(145deg, ${mixHex(color, '#ffffff', 0.22)} 0%, ${color} 55%, ${mixHex(color, '#000000', 0.32)} 100%)`;
-}
-
-function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false): { data: ImageData; pixelRatio: number } | null {
-    if (typeof document === 'undefined') return null;
-    const DPR = 2.5;
-    const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
-    const pad = 7;         // luft för kant + skugga
-    const diag = S * Math.SQRT2;
-    const W = Math.round(diag + pad * 2);
-    const H = Math.round(diag + pad * 2);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(W * DPR);
-    canvas.height = Math.round(H * DPR);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.scale(DPR, DPR);
-    const cx = W / 2;
-    const cy = H - pad - diag / 2; // kroppens mitt; spetsen hamnar ~pad ovanför nederkant
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(Math.PI / 4); // 45° medurs → det spetsiga hörnet (br) pekar nedåt
-    const r = S / 2;
-    const anyCtx = ctx as CanvasRenderingContext2D & {
-        roundRect?: (x: number, y: number, w: number, h: number, radii: number[]) => void;
-    };
-    ctx.beginPath();
-    if (typeof anyCtx.roundRect === 'function') {
-        anyCtx.roundRect(-S / 2, -S / 2, S, S, [r, r, 0, r]); // tl, tr, br(=spets), bl
-    } else {
-        ctx.rect(-S / 2, -S / 2, S, S);
-    }
-    const grad = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
-    // Sparad (gillad) bricka = ljus/vit kropp (matchar DOM-markörens vita bakgrund);
-    // annars källans/kategorins färg eller mörk standard.
-    const stops = saved
-        ? ['#ffffff', '#f3f6fa', '#e3e9f1']
-        : bodyColor
-        ? [mixHex(bodyColor, '#ffffff', 0.22), bodyColor, mixHex(bodyColor, '#000000', 0.32)]
-        : ['#344256', '#1e293b', '#16202e'];
-    grad.addColorStop(0, stops[0]);
-    grad.addColorStop(0.55, stops[1]);
-    grad.addColorStop(1, stops[2]);
-    ctx.fillStyle = grad;
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 2;
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    // Ram: vald = tydlig opak vit (markeringen man är "på"); sparad = ljusblå
-    // (#5BA3CC, samma som DOM); annars svag vit kant för djup.
-    ctx.lineWidth = selected ? 3.5 : saved ? 2.5 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : saved ? '#5BA3CC' : 'rgba(255,255,255,0.28)';
-    ctx.stroke();
-    ctx.restore();
-
-    // Emoji centrerad i kroppen (oroterad).
-    ctx.font = `${Math.round(S * 0.6)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, cx, cy);
-
-    return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
-}
-
-// ── Brick-kroppens kategori-/källfärg ──────────────────────────────────────
-// Bakgrunds-CSS för ETT events bricka i normaltillstånd. Stor källa (PRO/Korpen/
-// Svenska kyrkan) → mörk standardbricka; övriga → sin kategoris markerHex-
-// gradient. Delas av GL-lagret, DOM-synken, slideshow-cyclern och vald-grupp-
-// bläddringen så bakgrunden ALLTID matchar det event som faktiskt visas i en
-// multi-event-bricka (förr frös färgen på gruppens FÖRSTA event).
-const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
-function brickaBodyHex(ev: LinkEvent): string | null {
-    if (sourceColor(ev.url || ev.id) !== null) return null; // stor källa → mörk
-    const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
-    return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
-}
-function brickaBodyBg(ev: LinkEvent): string {
-    const hex = brickaBodyHex(ev);
-    return hex ? sourceGradientCss(hex) : BRICKA_DARK_BG;
-}
+// Rena hjälpare bor i ./v2MapBaseStyles (kartstilar) och ./v2MapBricka
+// (markörernas utseende) — den här filen äger allt som rör kart-INSTANSEN.
+// ════════════════════════════════════════════════════════════════════════════
 
 // En GL-markör-feature: punkt + vilken bakad bild + grupp-nyckel (för klick).
 type PlainFeature = {
@@ -274,11 +50,13 @@ type PlainFeature = {
     geometry: { type: 'Point'; coordinates: [number, number] };
     // count = antal event i gruppen (>1 → "+N"-bricka i hörnet); 1 för enskilda.
     // color = kategorifärg (hex) för nål-pricken; mörk standard för stora källor.
-    properties: { icon: string; key: string; count: number; color: string };
+    // sortKey = count + stor boost för den VALDA gruppen → den valda brickan
+    // ritas ALLTID överst i GL-lagret (gäller både multi-event och enskilda).
+    properties: { icon: string; key: string; count: number; color: string; sortKey: number };
 };
 
 // ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
-// Vid laddning FÖRHANDSVISAS ALLA event (alla GL-brickor tända). Första trycket på
+// Vid laddning FÖRHANDSVISAS eventen tindrande (se REVEAL_TWINKLE_*). Första trycket på
 // kartan kollapsar till de N närmast trycket. Ingen hover längre — man TRYCKER: de
 // REVEAL_NEAREST_COUNT närmaste brickorna kring trycket avslöjas och ligger KVAR
 // (panorering byter inte urvalet) tills man trycker på nytt. Vid ett nytt tryck
@@ -307,279 +85,33 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
 const REVEAL_VISIBLE_WARN = 80;
 
-// ── Vilo-VÅG (före första trycket) ────────────────────────────────────────────
-// I stället för att tända ALLA event statiskt (för mycket för ögat) låter vi dem
-// tonas in/ut i VÅGOR som sveper över kartan — aldrig alla samtidigt. En långsam
-// diagonal våg med mjuka kammar; markörerna deltar alla men bara de i en kam är
-// tända just då. Slutar vid första trycket (då kollapsar allt till N-närmast).
-const REVEAL_WAVE_STEP_MS = 55;    // uppdaterings-takt (~18 fps) — lägre = mjukare men tyngre
-const REVEAL_WAVE_SPEED = 0.085;   // vågens hastighet (varv/sek längs axeln) — högre = snabbare
-const REVEAL_WAVE_CYCLES = 3.0;    // antal vågkammar synliga samtidigt över kartan
-const REVEAL_WAVE_LIT = 0.35;      // andel som är tänd i en kam (0–1) — lägre = färre samtidigt
-const REVEAL_WAVE_EDGE = 0.16;     // mjuk kant på kammen (in-/uttoning) — högre = suddigare band
-const REVEAL_WAVE_FLOOR = 0;       // dalarna helt mörka → tydliga vågor, inte "allt syns svagt"
-const REVEAL_WAVE_JITTER = 0.22;   // slumpmässig fas per markör (varv) — bryter upp raka ränder
-
-// Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
-// källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
-// tas bort igen när det stängs av, så DEM-tiles inte ligger och tar minne i onödan.
-// Tile-cachen (maxTileCacheSize på kartan) gäller även den här källan.
-const TERRAIN_DEM_ID = 'terrain-dem';
-const TERRAIN_DEM_SOURCE: maplibregl.RasterDEMSourceSpecification = {
-    type: 'raster-dem',
-    tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
-    encoding: 'terrarium',
-    tileSize: 256,
-    maxzoom: 13,
-    attribution: 'Elevation: Mapzen / AWS Terrain Tiles'
+// ── WebGL-livräddare ──────────────────────────────────────────────────────────
+// Efter en WebGL-kontextförlust (eller mitt i teardown) är map.style borta och
+// BÅDE getLayer() och isStyleLoaded() KASTAR — rAF-loopar och effekter som
+// pollar kartan ska då svara "inte redo", inte krascha React-trädet (sågs live:
+// "Cannot read properties of null (reading 'getLayer')" efter 5h öppen flik).
+const styleReady = (map: maplibregl.Map): boolean => {
+    try { return !!map.isStyleLoaded(); } catch { return false; }
 };
-const TERRAIN_EXAGGERATION = 1.4;
-
-// Skifta klot-projektionen på/av. Nästan gratis — samma tiles, annan projektion.
-function applyProjection(map: maplibregl.Map, globe: boolean) {
-    map.setProjection({ type: globe ? 'globe' : 'mercator' });
-}
-
-// Slå på/av 3D-terräng. DEM-källan läggs till lazy och tas bort när läget stängs
-// av, så höjddatan inte ligger och äter minne när man kör platt.
-function applyTerrain(map: maplibregl.Map, on: boolean) {
-    if (on) {
-        if (!map.getSource(TERRAIN_DEM_ID)) map.addSource(TERRAIN_DEM_ID, TERRAIN_DEM_SOURCE);
-        map.setTerrain({ source: TERRAIN_DEM_ID, exaggeration: TERRAIN_EXAGGERATION });
-    } else {
-        map.setTerrain(null);
-        if (map.getSource(TERRAIN_DEM_ID)) map.removeSource(TERRAIN_DEM_ID);
-    }
-}
-
-// "Orienterings"-kartan: ett platt hillshade-lager ovanpå den ljusa Voyager-
-// basen som ritar ut höjdskillnaderna som skuggad relief — en topografisk
-// "orienterings"-look. Använder samma keylessa DEM som 3D-terrängen, men under
-// en EGEN käll-id så de två lägena inte tar bort varandras källa. Lager + källa
-// läggs till lazy och tas bort när läget stängs av.
-const HILLSHADE_DEM_ID = 'hillshade-dem';
-const HILLSHADE_LAYER_ID = 'hillshade-relief';
-function applyHillshade(map: maplibregl.Map, on: boolean) {
-    if (on) {
-        if (!map.getSource(HILLSHADE_DEM_ID)) map.addSource(HILLSHADE_DEM_ID, TERRAIN_DEM_SOURCE);
-        if (!map.getLayer(HILLSHADE_LAYER_ID)) {
-            map.addLayer({
-                id: HILLSHADE_LAYER_ID,
-                type: 'hillshade',
-                source: HILLSHADE_DEM_ID,
-                paint: {
-                    'hillshade-exaggeration': 0.65,
-                    'hillshade-shadow-color': '#5b4636',
-                    'hillshade-highlight-color': '#fffdf7',
-                    'hillshade-accent-color': '#8a6d4a',
-                    'hillshade-illumination-direction': 315
-                }
-            });
-        }
-    } else {
-        if (map.getLayer(HILLSHADE_LAYER_ID)) map.removeLayer(HILLSHADE_LAYER_ID);
-        if (map.getSource(HILLSHADE_DEM_ID)) map.removeSource(HILLSHADE_DEM_ID);
-    }
-}
-
-const GEM_THEMES: Record<string, {
-    activeBg: string;
-    inactiveBg: string;
-    activeShadow: string;
-    inactiveShadow: string;
-    activeIconColor: string;
-    inactiveIconColor: string;
-}> = {
-    findgame: { // Purple Amethyst
-        activeBg: 'radial-gradient(circle at 30% 25%, #f3e8ff 0%, #c084fc 25%, #8b5cf6 55%, #6d28d9 85%, #4c1d95 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(243,232,255,0.25) 0%, rgba(192,132,252,0.15) 25%, rgba(139,92,246,0.08) 65%, rgba(109,40,217,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(139,92,246,0.5), 0 0 26px rgba(192,132,252,0.4), inset -3px -6px 14px rgba(76,29,149,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(139,92,246,0.05), inset -3px -5px 12px rgba(76,29,149,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#d8b4fe'
-    },
-    tilt: { // Cyan Topaz
-        activeBg: 'radial-gradient(circle at 30% 25%, #e0f2fe 0%, #38bdf8 25%, #0284c7 55%, #0369a1 85%, #0c4a6e 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(224,242,254,0.25) 0%, rgba(56,189,248,0.15) 25%, rgba(2,132,199,0.08) 65%, rgba(3,105,161,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(2,132,199,0.5), 0 0 26px rgba(56,189,248,0.4), inset -3px -6px 14px rgba(12,74,110,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(2,132,199,0.05), inset -3px -5px 12px rgba(12,74,110,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#7dd3fc'
-    },
-    throw: { // Fire Opal (Orange)
-        activeBg: 'radial-gradient(circle at 30% 25%, #ffedd5 0%, #fb923c 25%, #ea580c 55%, #c2410c 85%, #7c2d12 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,237,213,0.25) 0%, rgba(251,146,60,0.15) 25%, rgba(234,88,12,0.08) 65%, rgba(194,65,12,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(234,88,12,0.5), 0 0 26px rgba(251,146,60,0.4), inset -3px -6px 14px rgba(124,45,18,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(234,88,12,0.05), inset -3px -5px 12px rgba(124,45,18,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#ffb07c'
-    },
-    sun: { // Citrine/Sun Yellow
-        activeBg: 'radial-gradient(circle at 30% 25%, #fef9c3 0%, #facc15 25%, #ca8a04 55%, #a16207 85%, #713f12 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,249,195,0.25) 0%, rgba(250,204,21,0.15) 25%, rgba(202,138,4,0.08) 65%, rgba(161,98,7,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(202,138,4,0.5), 0 0 26px rgba(250,204,21,0.4), inset -3px -6px 14px rgba(113,63,18,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(202,138,4,0.05), inset -3px -5px 12px rgba(113,63,18,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fef08a'
-    },
-    focus: { // Ruby Red
-        activeBg: 'radial-gradient(circle at 30% 25%, #fee2e2 0%, #f87171 25%, #dc2626 55%, #b91c1c 85%, #7f1d1d 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,226,226,0.25) 0%, rgba(248,113,113,0.15) 25%, rgba(220,38,38,0.08) 65%, rgba(185,28,28,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(220,38,38,0.5), 0 0 26px rgba(248,113,113,0.4), inset -3px -6px 14px rgba(127,29,29,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(220,38,38,0.05), inset -3px -5px 12px rgba(127,29,29,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fca5a5'
-    },
-    slingshot: { // Emerald Green
-        activeBg: 'radial-gradient(circle at 30% 25%, #dcfce7 0%, #4ade80 25%, #16a34a 55%, #15803d 85%, #14532d 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(220,252,231,0.25) 0%, rgba(74,222,128,0.15) 25%, rgba(22,163,74,0.08) 65%, rgba(21,128,61,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(22,163,74,0.5), 0 0 26px rgba(74,222,128,0.4), inset -3px -6px 14px rgba(20,83,45,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(22,163,74,0.05), inset -3px -5px 12px rgba(20,83,45,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#86efac'
-    },
-    faces: { // Rose Quartz (Pink)
-        activeBg: 'radial-gradient(circle at 30% 25%, #fce7f3 0%, #f472b6 25%, #db2777 55%, #be185d 85%, #831843 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(252,231,243,0.25) 0%, rgba(244,114,182,0.15) 25%, rgba(219,39,119,0.08) 65%, rgba(190,24,93,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(219,39,119,0.5), 0 0 26px rgba(244,114,182,0.4), inset -3px -6px 14px rgba(131,24,67,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(219,39,119,0.05), inset -3px -5px 12px rgba(131,24,67,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fbcfe8'
-    },
-    bigCloud: { // Sapphire Blue
-        activeBg: 'radial-gradient(circle at 30% 25%, #e0e7ff 0%, #818cf8 25%, #4f46e5 55%, #3730a3 85%, #1e1b4b 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(224,231,255,0.25) 0%, rgba(129,140,248,0.15) 25%, rgba(79,70,229,0.08) 65%, rgba(55,48,163,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(79,70,229,0.5), 0 0 26px rgba(129,140,248,0.4), inset -3px -6px 14px rgba(30,27,75,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(79,70,229,0.05), inset -3px -5px 12px rgba(30,27,75,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#c7d2fe'
-    },
-    fastThrow: { // Orange/Lightning Yellow
-        activeBg: 'radial-gradient(circle at 30% 25%, #fffbeb 0%, #fbbf24 25%, #d97706 55%, #b45309 85%, #78350f 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,251,235,0.25) 0%, rgba(251,191,36,0.15) 25%, rgba(217,119,6,0.08) 65%, rgba(180,83,9,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(217,119,6,0.5), 0 0 26px rgba(251,191,36,0.4), inset -3px -6px 14px rgba(120,53,15,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(217,119,6,0.05), inset -3px -5px 12px rgba(120,53,15,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fde68a'
-    },
-    sparkle: { // Magenta/Purple Star
-        activeBg: 'radial-gradient(circle at 30% 25%, #fae8ff 0%, #e879f9 25%, #c084fc 55%, #8b5cf6 85%, #4c1d95 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(250,232,255,0.25) 0%, rgba(232,121,249,0.15) 25%, rgba(192,132,252,0.08) 65%, rgba(139,92,246,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(139,92,246,0.5), 0 0 26px rgba(232,121,249,0.4), inset -3px -6px 14px rgba(76,29,149,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(139,92,246,0.05), inset -3px -5px 12px rgba(76,29,149,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#f5d0fe'
-    },
-    snowball: { // Frost/Light Blue
-        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdfa 0%, #2dd4bf 25%, #0d9488 55%, #0f766e 85%, #115e59 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,250,0.25) 0%, rgba(45,212,191,0.15) 25%, rgba(13,148,136,0.08) 65%, rgba(15,118,110,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(13,148,136,0.5), 0 0 26px rgba(45,212,191,0.4), inset -3px -6px 14px rgba(17,94,89,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(13,148,136,0.05), inset -3px -5px 12px rgba(17,94,89,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#99f6e4'
-    },
-    createEvent: { // Emerald/Jade Green
-        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdf4 0%, #4ade80 25%, #16a34a 55%, #15803d 85%, #14532d 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,244,0.25) 0%, rgba(74,222,128,0.15) 25%, rgba(22,163,74,0.08) 65%, rgba(21,128,61,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(22,163,74,0.5), 0 0 26px rgba(74,222,128,0.4), inset -3px -6px 14px rgba(20,83,45,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(22,163,74,0.05), inset -3px -5px 12px rgba(20,83,45,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#bbf7d0'
-    },
-    multiplayer: { // Electric Purple/Blue
-        activeBg: 'radial-gradient(circle at 30% 25%, #eff6ff 0%, #60a5fa 25%, #2563eb 55%, #1d4ed8 85%, #1e3a8a 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(239,246,255,0.25) 0%, rgba(96,165,250,0.15) 25%, rgba(37,99,235,0.08) 65%, rgba(29,78,216,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(37,99,235,0.5), 0 0 26px rgba(96,165,250,0.4), inset -3px -6px 14px rgba(29,78,216,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(37,99,235,0.05), inset -3px -5px 12px rgba(29,78,216,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#93c5fd'
-    },
-    record: { // Deep Crimson/Ruby
-        activeBg: 'radial-gradient(circle at 30% 25%, #fff1f2 0%, #fb7185 25%, #e11d48 55%, #be123c 85%, #881337 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(255,241,242,0.25) 0%, rgba(251,113,133,0.15) 25%, rgba(225,29,72,0.08) 65%, rgba(190,18,60,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(225,29,72,0.5), 0 0 26px rgba(251,113,133,0.4), inset -3px -6px 14px rgba(136,19,55,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(225,29,72,0.05), inset -3px -5px 12px rgba(136,19,55,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fecdd3'
-    },
-    satellite: { // Blue/Sky Pearl
-        activeBg: 'radial-gradient(circle at 30% 25%, #f0f9ff 0%, #38bdf8 25%, #0284c7 55%, #0369a1 85%, #075985 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,249,255,0.25) 0%, rgba(56,189,248,0.15) 25%, rgba(2,132,199,0.08) 65%, rgba(3,105,161,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(2,132,199,0.5), 0 0 26px rgba(56,189,248,0.4), inset -3px -6px 14px rgba(7,89,133,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(2,132,199,0.05), inset -3px -5px 12px rgba(7,89,133,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#bae6fd'
-    },
-    globe: { // Ocean Teal
-        activeBg: 'radial-gradient(circle at 30% 25%, #f0fdfa 0%, #2dd4bf 25%, #0d9488 55%, #0f766e 85%, #115e59 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(240,253,250,0.25) 0%, rgba(45,212,191,0.15) 25%, rgba(13,148,136,0.08) 65%, rgba(15,118,110,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(13,148,136,0.5), 0 0 26px rgba(45,212,191,0.4), inset -3px -6px 14px rgba(17,94,89,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(13,148,136,0.05), inset -3px -5px 12px rgba(17,94,89,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#99f6e4'
-    },
-    terrain: { // Mountain Gold/Bronze
-        activeBg: 'radial-gradient(circle at 30% 25%, #fef3c7 0%, #fbbf24 25%, #d97706 55%, #b45309 85%, #78350f 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(254,243,199,0.25) 0%, rgba(251,191,36,0.15) 25%, rgba(217,119,6,0.08) 65%, rgba(180,83,9,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(217,119,6,0.5), 0 0 26px rgba(251,191,36,0.4), inset -3px -6px 14px rgba(12,74,110,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(217,119,6,0.05), inset -3px -5px 12px rgba(12,74,110,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fde68a'
-    },
-    themepark: { // Candy Pink/Yellow (nöjesfält-knappen)
-        activeBg: 'radial-gradient(circle at 30% 25%, #fdf2f8 0%, #f472b6 25%, #db2777 55%, #be185d 85%, #9d174d 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(253,242,248,0.25) 0%, rgba(244,114,182,0.15) 25%, rgba(219,39,119,0.08) 65%, rgba(157,23,77,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(219,39,119,0.5), 0 0 26px rgba(244,114,182,0.4), inset -3px -6px 14px rgba(157,23,77,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(219,39,119,0.05), inset -3px -5px 12px rgba(157,23,77,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#fbcfe8'
-    },
-    dark: { // Slate/Charcoal (mörkt läge)
-        activeBg: 'radial-gradient(circle at 30% 25%, #94a3b8 0%, #475569 25%, #334155 55%, #1e293b 85%, #0f172a 100%)',
-        inactiveBg: 'radial-gradient(circle at 30% 25%, rgba(148,163,184,0.25) 0%, rgba(71,85,105,0.15) 25%, rgba(51,65,85,0.08) 65%, rgba(30,41,59,0.05) 100%)',
-        activeShadow: '0 8px 22px rgba(51,65,85,0.5), 0 0 26px rgba(71,85,105,0.4), inset -3px -6px 14px rgba(15,23,42,0.55), inset 0 4px 8px rgba(255,255,255,0.6)',
-        inactiveShadow: '0 4px 10px rgba(51,65,85,0.05), inset -3px -5px 12px rgba(15,23,42,0.15), inset 0 3px 6px rgba(255,255,255,0.2)',
-        activeIconColor: '#ffffff',
-        inactiveIconColor: '#cbd5e1'
-    }
+const layerExists = (map: maplibregl.Map, id: string): boolean => {
+    try { return !!map.getLayer(id); } catch { return false; }
 };
 
-type OrbState = 'active' | 'inactive' | 'locked' | 'capped';
+// ── Vilo-TINDER (före första trycket) ─────────────────────────────────────────
+// I stället för att tända ALLA event statiskt (för mycket för ögat) TINDRAR de
+// som stjärnor: varje markör blinkar oberoende i sin egen slumpade cykel (fas +
+// period per nyckel) — tonas in, lyser, tonas ut, mörk resten av varvet. Andelen
+// av cykeln en markör är tänd (REVEAL_TWINKLE_LIT) blir med slumpade faser också
+// andelen synliga vid varje ögonblick — 0.25 ⇒ max ~1/4 av eventen åt gången.
+// Slutar vid första trycket (då kollapsar allt till N-närmast).
+const REVEAL_TWINKLE_STEP_MS = 50;       // uppdaterings-takt (~18 fps) — lägre = mjukare men tyngre
+const REVEAL_TWINKLE_LIT = 0.09;         // andel av cykeln en markör är tänd ⇒ ~andel synliga samtidigt
+const REVEAL_TWINKLE_PERIOD_MIN_S = 20.2; // kortaste blink-cykeln (s, mörk+tänd totalt)
+const REVEAL_TWINKLE_PERIOD_MAX_S = 24.5; // längsta blink-cykeln (s) — spridningen håller tindret osynkat
+const REVEAL_TWINKLE_EDGE = 0.2;        // andel av tänd-fönstret som är in-/uttoning (0–0.5) — högre = mjukare puls
+const REVEAL_TWINKLE_FLOOR = 0;          // opacitet mellan blinkarna — 0 = helt mörk
 
-const getGemStyles = (key: string, state: OrbState) => {
-    const theme = GEM_THEMES[key];
-    if (!theme) {
-        const active = state === 'active';
-        return {
-            bg: active
-                ? 'radial-gradient(circle at 32% 28%, #e6f4ff 0%, #7dc4ec 20%, #1d8ec9 55%, #006AA7 85%, #003d65 100%)'
-                : 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.98) 0%, rgba(225,238,250,0.85) 25%, rgba(170,205,235,0.55) 65%, rgba(110,160,210,0.55) 100%)',
-            shadow: active
-                ? '0 8px 18px rgba(0,90,160,0.50), inset -3px -6px 14px rgba(0,40,80,0.55)'
-                : '0 6px 14px rgba(60,90,140,0.30), inset -3px -5px 12px rgba(60,90,140,0.30)',
-            iconColor: active ? '#ffffff' : '#006AA7',
-            border: active ? '1px solid rgba(255,255,255,0.40)' : '1px solid rgba(255,255,255,0.75)'
-        };
-    }
 
-    if (state === 'locked') {
-        const recordTheme = GEM_THEMES['record'];
-        return {
-            bg: recordTheme.inactiveBg,
-            shadow: recordTheme.inactiveShadow,
-            iconColor: '#7c2d12',
-            border: '1px solid rgba(255,235,180,0.65)'
-        };
-    }
-
-    const active = state === 'active';
-    return {
-        bg: active ? theme.activeBg : theme.inactiveBg,
-        shadow: active ? theme.activeShadow : theme.inactiveShadow,
-        iconColor: active ? theme.activeIconColor : theme.inactiveIconColor,
-        border: active ? '1px solid rgba(255,255,255,0.40)' : '1px solid rgba(255,255,255,0.25)'
-    };
-};
 
 // Startvy: centrerad över mellersta Sverige (≈ Dalarna/Gävle) + mer inzoomad än
 // hela landet, så man ser längre UPP i landet direkt (inte bara söder). (GPS flyger
@@ -706,18 +238,11 @@ export default function V2Map({
     const is3DTerrainRef = useRef(is3DTerrain);
     is3DTerrainRef.current = is3DTerrain;
 
-    // Funktioner-shop: centrerad modal med ett grid av kort över befintliga
-    // (och framtida) funktioner. Öppnas via +-knappen i höger-stacken. För
-    // tillfället är "köp" mockat — klicket aktiverar funktionen direkt.
-    const [shopOpen, setShopOpen] = useState(false);
     // Funktions-"väskan" uppe till vänster: fäller ut en inline-lista med
-    // kart-funktioner (lutning, kasta, sol, fokus, slangbella). Separat från
-    // shopOpen (hela funktioner-shoppen).
+    // kart-funktioner (kartstilar, skapa event m.m.). OBS: knappen som öppnar
+    // den är just nu bortkopplad i renderingen (layout-test, se "HIDDEN per
+    // Josef"-blocken längst ner) — logiken behålls tills testet är avgjort.
     const [funcBagOpen, setFuncBagOpen] = useState(false);
-    // Lutning: tiltEnabled = "funktionen aktiverad" (på i väskan). Styr om
-    // snabb-knappen under lager-knappen visas. (Själva kamera-lutningen sköttes
-    // tidigare av en borttagen tilt-prop.)
-    const [tiltEnabled, setTiltEnabled] = useState(false);
 
     // "Min plats": geolocation-knapp under lutnings-knappen. Position visas som
     // en pulserande blå punkt (egen maplibre-markör — överlever stilbyten).
@@ -810,12 +335,11 @@ export default function V2Map({
         onFuncBagOpenChangeRef.current?.(funcBagOpen);
     }, [funcBagOpen]);
 
-    // Shop-flaggor: vilka funktioner som är "påslagna". Vissa funktioner har
-    // egen state i V2Map (tilt/globe/terräng) — de hanteras separat nedan i
-    // toggleFeature, för att shoppen ska ha en enda gemensam UI-modell. Övriga
-    // (sol-knapp, fokus-knapp, kasta, slangbella, individuella ansikten,
-    // inspelning) lever här. Sol/fokus skickas upp till page.tsx som styr
-    // knapparnas synlighet i EventCard via onFeatureFlagsChange.
+    // Shop-flaggor: vilka funktioner som är "påslagna". Funktioner med egen
+    // state i V2Map (globe/terräng/kartstil) hanteras separat i setFeatureActive
+    // så väskan har en enda gemensam UI-modell; resten (createEvent/multiplayer/
+    // record) lever här. createEvent/multiplayer skickas upp till page.tsx som
+    // styr knappars synlighet utanför V2Map via onFeatureFlagsChange.
     type ShopFlags = {
         createEvent: boolean;
         multiplayer: boolean;
@@ -830,13 +354,6 @@ export default function V2Map({
         record: false         // låst tills "köpt"
     });
 
-    // Begränsningen borttagen: man kan aktivera hur många funktioner som helst samtidigt.
-    const MAX_ACTIVE_FEATURES = 999;
-    const COUNTED_FEATURE_KEYS = [
-        'satellite', 'themepark', 'dark', 'orientering', 'globe', 'terrain',
-        'createEvent'
-    ];
-
     const onFeatureFlagsChangeRef = useRef(onFeatureFlagsChange);
     onFeatureFlagsChangeRef.current = onFeatureFlagsChange;
     useEffect(() => {
@@ -849,11 +366,10 @@ export default function V2Map({
     const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
     onActivateMultiplayerRef.current = onActivateMultiplayer;
 
-    // Inkluderar tilt/globe/terräng/satellit i samma "is this feature active?"-
-    // modell som övriga shop-flaggor, så master-toggle och kort-rendering kan
-    // hanteras likadant. mapStyle är inte boolean → satellit-mappas via lik.
+    // Inkluderar globe/terräng/kartstilarna i samma "is this feature active?"-
+    // modell som övriga shop-flaggor, så väskans rader kan hanteras likadant.
+    // mapStyle är inte boolean → varje stil mappas via likhet.
     const isFeatureActive = (key: string): boolean => {
-        if (key === 'tilt') return tiltEnabled;
         if (key === 'globe') return isGlobe;
         if (key === 'terrain') return is3DTerrain;
         if (key === 'satellite') return mapStyle === 'satellite';
@@ -862,10 +378,6 @@ export default function V2Map({
         if (key === 'orientering') return mapStyle === 'orientering';
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
-    const activeFeatureCount = COUNTED_FEATURE_KEYS.reduce(
-        (n, k) => n + (isFeatureActive(k) ? 1 : 0),
-        0
-    );
 
     const setFeatureActive = (key: string, value: boolean) => {
         // 'record' är inte längre låst — den togglas som vilken annan flagga (faller
@@ -878,11 +390,6 @@ export default function V2Map({
             setShopFlags(prev => ({ ...prev, multiplayer: value }));
             return;
         }
-        if (key === 'tilt') {
-            // Aktivera/avaktivera funktionen (styr knappens synlighet).
-            setTiltEnabled(value);
-            return;
-        }
         if (key === 'globe') { setIsGlobe(value); return; }
         if (key === 'terrain') { setIs3DTerrain(value); return; }
         if (key === 'satellite') { setMapStyle(value ? 'satellite' : 'streets'); return; }
@@ -892,39 +399,6 @@ export default function V2Map({
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
-    const setAllFeatures = (value: boolean) => {
-        if (!value) {
-            // Avaktivera allting (utom record/multiplayer som har egen logik).
-            setTiltEnabled(false);
-            setIsGlobe(false);
-            setIs3DTerrain(false);
-            setMapStyle('streets');
-            setShopFlags(prev => {
-                const next = { ...prev };
-                (Object.keys(next) as Array<keyof ShopFlags>).forEach(k => {
-                    if (k !== 'record' && k !== 'multiplayer') next[k] = false;
-                });
-                return next;
-            });
-            return;
-        }
-        // Aktivera bara de första MAX_ACTIVE_FEATURES i COUNTED_FEATURE_KEYS-ordningen,
-        // resten lämnas avaktiverade. (Användaren får sin "loadout" automatiskt.)
-        const toActivate = new Set(COUNTED_FEATURE_KEYS.slice(0, MAX_ACTIVE_FEATURES));
-        const want = (k: string) => toActivate.has(k);
-        setTiltEnabled(want('tilt'));
-        setIsGlobe(want('globe'));
-        setIs3DTerrain(want('terrain'));
-        setMapStyle(want('satellite') ? 'satellite' : 'streets');
-        setShopFlags(prev => {
-            const next = { ...prev };
-            (Object.keys(next) as Array<keyof ShopFlags>).forEach(k => {
-                if (k === 'record' || k === 'multiplayer') return;
-                next[k] = want(k);
-            });
-            return next;
-        });
-    };
 
     // Två oberoende 3D-lägen som kan skiftas var för sig (och kombineras):
     //   isGlobe      — projicera kartan på ett klot (mercator ↔ globe). ~0 minne.
@@ -933,10 +407,6 @@ export default function V2Map({
     // Refs så att stil-omladdningen (setStyle nollställer projektion + custom-källor)
     // kan återställa rätt läge utan att bindas om.
     // (state + refs är deklarerade högre upp så shop-flaggorna kan läsa dem.)
-
-    // Gissnings-streck (spelet): geo-ankaret i en ref + de projicerade skärm-
-    // positionerna i state. Skärmpositionerna uppdateras varje kart-frame så
-    // strecket sitter fast mellan gissningen och rätt svar medan kartan rör sig.
 
     // Spara undan callbacks i refs så map-event-handlers inte ständigt behöver bindas om
     const onSelectEventRef = useRef(onSelectEvent);
@@ -948,24 +418,6 @@ export default function V2Map({
     const onMapDragRef = useRef(onMapDrag);
     onMapDragRef.current = onMapDrag;
 
-    // Spel-läge + gissnings-callback i refs så markör-klickhanterare kan läsa
-    // senaste värdet utan att bindas om.
-
-    // ── Onboarding/intro ────────────────────────────────────────────────────
-    // Knuffa användaren att testa Fokus-funktionen — men FÖRST när hen hämtat
-    // tillbaka molnet via molnsymbolen (inte direkt när start-molnet stängs).
-    // INGA lås — bara en "Ny funktion"-pil + blinkning som visar att det finns
-    // nytt att prova.
-    const [featureHint, setFeatureHint] = useState<'focus' | null>(null);
-    // True när väskan öppnats medan ett tips var aktivt → då slutar "Ny funktion"-
-    // pilen + lager-blinket (för gott för det tipset). Själva funktionsraden blinkar
-    // dock kvar tills man klickat på den. Nollställs när ett NYTT tips dyker upp.
-    const [hintAcknowledged, setHintAcknowledged] = useState(false);
-    // Nytt tips → visa pilen igen.
-    useEffect(() => { if (featureHint !== null) setHintAcknowledged(false); }, [featureHint]);
-    // Öppnar väskan medan tipset är aktivt → kvittera (pilen/lager-blinket slutar).
-    useEffect(() => { if (funcBagOpen && featureHint !== null) setHintAcknowledged(true); }, [funcBagOpen, featureHint]);
-
     // (Emoji-/färgväxlingen för grupper med flera event på samma plats sköts av
     //  GL-cykelpumpen längre ner — se effekten efter visibleGroups.)
 
@@ -974,7 +426,7 @@ export default function V2Map({
         const map = new Map<string, LinkEvent[]>();
         for (const evt of events) {
             if (!evt.lat || !evt.lng) continue;
-            const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+            const key = groupKeyOf(evt.lat, evt.lng);
             const bucket = map.get(key);
             if (bucket) bucket.push(evt); else map.set(key, [evt]);
         }
@@ -1056,7 +508,7 @@ export default function V2Map({
         // dess GL-bricka med sin riktiga look INBAKAD (vit ram = vald, vit kropp =
         // sparad) — annars täckte den kantlösa standard-GL-brickan DOM-markörens look
         // (anchor-glapp) → "ingen vit ram / ingen vit bakgrund".
-        const savedCutoff = nowMs - 60 * 60 * 1000;
+        const savedCutoff = nowMs - ONE_HOUR_MS;
         const selId = selectedEvent?.id;
         for (const [key, group] of groups) {
             const isSel = selId != null && group.some(e => e.id === selId);
@@ -1064,8 +516,7 @@ export default function V2Map({
             if (!isSel && special) continue;
             const rep = group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
-            const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
-            const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
+            const emoji = eventEmoji(rep);
             // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard);
             // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
             // DOM-färgen aldrig glider isär.
@@ -1089,8 +540,7 @@ export default function V2Map({
                 const frameIds: string[] = [];
                 for (const ev of group) {
                     if (discardedEventIds.has(ev.id)) continue;
-                    const ck = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
-                    const em = ev.emoji || (EVENT_CATEGORIES[ck as EventCategoryType]?.emoji ?? '🎫');
+                    const em = eventEmoji(ev);
                     if (seenEmoji.has(em)) continue;
                     seenEmoji.add(em);
                     const col = brickaBodyHex(ev) ?? undefined;
@@ -1109,9 +559,15 @@ export default function V2Map({
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
-                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b' },
+                // Vald grupp → jättestor sortKey så brickan (och dess "+N"-siffra)
+                // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
+                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (isSel ? 1_000_000 : 0) },
             });
         }
+        // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
+        // flytta den valda featuren sist så dess prick också hamnar överst.
+        const selIdx = features.findIndex(f => f.properties.sortKey >= 1_000_000);
+        if (selIdx >= 0 && selIdx < features.length - 1) features.push(...features.splice(selIdx, 1));
         return { features, icons, rotations };
     }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
@@ -1181,12 +637,12 @@ export default function V2Map({
     // tidsinställd blink). Vid FÖRSTA trycket på kartan kollapsar det till normal-
     // läget = de N närmast trycket, resten tonas bort. Sätts false vid det trycket.
     const previewAllUntilTapRef = useRef(true);
-    // Vilo-vågen (se REVEAL_WAVE_*): rAF-id, tidsgate och per-markör-fas/axel.
-    const waveRafRef = useRef<number | null>(null);
-    const waveLastTickRef = useRef(0);
-    const waveFeatRef = useRef<{ key: string; u: number; jitter: number }[]>([]);
-    const ensureWavePumpRef = useRef<() => void>(() => {});
-    const stopWaveRef = useRef<() => void>(() => {});
+    // Vilo-tindret (se REVEAL_TWINKLE_*): rAF-id, tidsgate och per-markör-fas/period.
+    const twinkleRafRef = useRef<number | null>(null);
+    const twinkleLastTickRef = useRef(0);
+    const twinkleFeatRef = useRef<{ key: string; phase: number; period: number }[]>([]);
+    const ensureTwinklePumpRef = useRef<() => void>(() => {});
+    const stopTwinkleRef = useRef<() => void>(() => {});
     const hardClearRevealRef = useRef<() => void>(() => {});
     // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
     // / map-load utan att hamna i temporal-dead-zone.
@@ -1197,7 +653,6 @@ export default function V2Map({
     // till den nya platsen (toLng/toLat). Sätts nedan.
     const startRevealTravelRef = useRef<(toLng: number, toLat: number) => void>(() => {});
     const revealTweenRef = useRef<number | null>(null); // rAF-id för marschen
-    const revealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // (oanvänd nu; behålls för cleanup)
     // Klustrets FAKTISKA position just nu (geo). Uppdateras varje marsch-cykel. Vid
     // ett nytt klick startar marschen härifrån (inte från destinationen) så avbrutna
     // marscher fortsätter smidigt från där brickorna faktiskt står.
@@ -1212,7 +667,7 @@ export default function V2Map({
     // (setStyle rensar källor/bilder/lager, så de måste återinstalleras).
     const syncPlainLayer = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !map.isStyleLoaded()) return;
+        if (!map || !styleReady(map)) return;
         try {
             if (!map.getSource('plain-events')) {
                 // promoteId: 'key' → feature-state kan adresseras via gruppnyckeln
@@ -1233,7 +688,7 @@ export default function V2Map({
             // ignore-placement = ingen avkrockning) så man alltid ser var man kan
             // klicka — även i hela-Sverige-vyn. Det är ett GPU-lager, så även
             // tusentals brickor är billiga att rita.
-            if (!map.getLayer('plain-events')) {
+            if (!layerExists(map, 'plain-events')) {
                 map.addLayer({
                     id: 'plain-events',
                     type: 'symbol',
@@ -1249,8 +704,9 @@ export default function V2Map({
                         'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, 0.98],
                         // Fler-event-brickor (count>1) ritas ÖVERST och hamnar först i
                         // queryRenderedFeatures — sort-key = antal event → ju fler, desto
-                        // högre upp i staplingen (och lättast att träffa).
-                        'symbol-sort-key': ['get', 'count'],
+                        // högre upp i staplingen (och lättast att träffa). Den VALDA
+                        // gruppens sortKey är count + 1e6 → alltid allra överst.
+                        'symbol-sort-key': ['coalesce', ['get', 'sortKey'], ['get', 'count']],
                         'symbol-z-order': 'auto',
                     },
                     paint: {
@@ -1282,8 +738,9 @@ export default function V2Map({
                         'text-offset': [0.95, -1.5],
                         'text-allow-overlap': true,
                         'text-ignore-placement': true,
-                        // Samma stapling som brickan — fler-event-badgen överst.
-                        'symbol-sort-key': ['get', 'count'],
+                        // Samma stapling som brickan — fler-event-badgen överst,
+                        // och den valda gruppens siffra allra överst (sortKey-boost).
+                        'symbol-sort-key': ['coalesce', ['get', 'sortKey'], ['get', 'count']],
                         'symbol-z-order': 'auto',
                     },
                     paint: {
@@ -1398,11 +855,28 @@ export default function V2Map({
     }, []);
 
     // ── Reveal/pensel-loopen ──────────────────────────────────────────────────
+    // Skriv ETT reveal-opacitetsvärde till GL-lagret — men bara när värdet
+    // faktiskt ändrats (write-cachen revealWrittenRef skippar redundanta
+    // setFeatureState-anrop). Delas av vilo-loopen (pumpReveal) och migrationen
+    // (startRevealTravel). OBS: reapplyAllReveal och hardClearReveal skriver
+    // medvetet med egna, hårdare regler (force-tänd resp. force-släck även små
+    // restvärden) och ska INTE gå via den här helpern.
+    const writeReveal = useCallback((key: string, op: number) => {
+        const map = mapRef.current;
+        if (!map) return;
+        const written = revealWrittenRef.current;
+        const prev = written.get(key);
+        if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
+            try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: op }); } catch { /* källan ej redo */ }
+            written.set(key, op);
+        }
+    }, []);
+
     // Skriv seed-markörerna (de ~10 alltid synliga) direkt — efter ett stilbyte
     // rensar setStyle feature-state, så de måste sättas på nytt.
     const reapplyAllReveal = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !map.getLayer('plain-events')) return;
+        if (!map || !layerExists(map, 'plain-events')) return;
         const light = (key: string) => {
             try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: 1 }); } catch { /* källan ej redo */ }
             revealWrittenRef.current.set(key, 1);
@@ -1418,108 +892,101 @@ export default function V2Map({
     // ligger kvar. Engångsskrivning per recompute/tap (ingen rAF-loop i vila).
     const pumpReveal = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) { revealRafRef.current = null; return; }
+        if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) { revealRafRef.current = null; return; }
         const seed = revealSeedRef.current;
         const sticky = revealStickyRef.current;
-        const written = revealWrittenRef.current;
-        const writeOp = (key: string, op: number) => {
-            const prev = written.get(key);
-            if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
-                try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: op }); } catch { /* */ }
-                written.set(key, op);
-            }
-        };
         // Tänd vilo-uppsättningen + klickade (sticky) brickor, släck allt annat.
-        seed.forEach(k => writeOp(k, 1));
-        sticky.forEach(k => writeOp(k, 1));
-        written.forEach((op, k) => { if (op > 0 && !seed.has(k) && !sticky.has(k)) writeOp(k, 0); });
+        seed.forEach(k => writeReveal(k, 1));
+        sticky.forEach(k => writeReveal(k, 1));
+        revealWrittenRef.current.forEach((op, k) => { if (op > 0 && !seed.has(k) && !sticky.has(k)) writeReveal(k, 0); });
         revealRafRef.current = null;
         reportRevealCount('vila');
-    }, [reportRevealCount]);
+    }, [reportRevealCount, writeReveal]);
     const ensureRevealPump = useCallback(() => {
         if (revealRafRef.current == null) revealRafRef.current = requestAnimationFrame(pumpReveal);
     }, [pumpReveal]);
     ensureRevealPumpRef.current = ensureRevealPump;
 
-    // ── Vilo-vågen ────────────────────────────────────────────────────────────
-    // Bygger om per-markör-axeln (u ∈ [0,1] längs en diagonal) + en stabil slump-
-    // fas per nyckel. Körs när vågen (åter)startar eller datan ändras.
-    const rebuildWaveField = useCallback(() => {
+    // ── Vilo-tindret ──────────────────────────────────────────────────────────
+    // Ger varje markör en stabil slump-fas (var i cykeln den startar) och en egen
+    // period. Körs när tindret (åter)startar eller datan ändras.
+    const rebuildTwinkleField = useCallback(() => {
         const coords = revealCoordsRef.current;
-        if (coords.length === 0) { waveFeatRef.current = []; return; }
-        // Diagonal axel (lat tyngre → vågen rullar mest nord/syd över avlånga Sverige).
-        const axis = (lng: number, lat: number) => lat + 0.6 * lng;
-        let min = Infinity, max = -Infinity;
-        for (const c of coords) { const a = axis(c.lng, c.lat); if (a < min) min = a; if (a > max) max = a; }
-        const span = max - min || 1;
-        // Billig, deterministisk hash → fas-jitter i [0,1) per nyckel.
+        if (coords.length === 0) { twinkleFeatRef.current = []; return; }
+        // Billig, deterministisk hash → stabil slump i [0,1) per nyckel (+salt för
+        // en andra oberoende slump till perioden).
         const hash01 = (s: string) => {
             let h = 2166136261;
             for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
             return ((h >>> 0) % 1000) / 1000;
         };
-        waveFeatRef.current = coords.map(c => ({
+        twinkleFeatRef.current = coords.map(c => ({
             key: c.key,
-            u: (axis(c.lng, c.lat) - min) / span,
-            jitter: hash01(c.key) * REVEAL_WAVE_JITTER,
+            phase: hash01(c.key),
+            period: REVEAL_TWINKLE_PERIOD_MIN_S
+                + hash01(c.key + '¤') * (REVEAL_TWINKLE_PERIOD_MAX_S - REVEAL_TWINKLE_PERIOD_MIN_S),
         }));
     }, []);
 
-    // Ett vågsteg: räkna opacitet per markör ur en sinusvåg som sveper längs axeln.
-    // Bara kammarna (raw över tröskeln) är riktigt tända; dalarna får en svag glöd.
-    const pumpWave = useCallback(() => {
+    // Ett tinder-steg: position i markörens egen cykel p ∈ [0,1). Tänd-fönstret är
+    // [0, LIT) som en mjuk trapets-puls (tona in → lys → tona ut, smoothstep på
+    // ramperna); resten av cykeln mörk. Slumpade faser ⇒ ~LIT av markörerna synliga
+    // vid varje given tidpunkt.
+    const pumpTwinkle = useCallback(() => {
         const map = mapRef.current;
-        // Slut på förhandsvisning (tap skett) → stanna vågen helt.
+        // Slut på förhandsvisning (tap skett) → stanna tindret helt.
         if (!previewAllUntilTapRef.current || revealAnchorPtRef.current) {
-            waveRafRef.current = null;
+            twinkleRafRef.current = null;
             return;
         }
         // Fortf. i förhandsvisning: håll loopen vid liv. Är kartan/lagret inte redo
         // än (initial laddning eller mitt i ett stilbyte) väntar vi till nästa frame.
-        waveRafRef.current = requestAnimationFrame(pumpWave);
-        if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) return;
+        twinkleRafRef.current = requestAnimationFrame(pumpTwinkle);
+        if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) return;
         const nowMs = performance.now();
-        if (nowMs - waveLastTickRef.current < REVEAL_WAVE_STEP_MS) return; // gate ~18 fps
-        waveLastTickRef.current = nowMs;
+        if (nowMs - twinkleLastTickRef.current < REVEAL_TWINKLE_STEP_MS) return; // gate ~18 fps
+        twinkleLastTickRef.current = nowMs;
 
-        if (waveFeatRef.current.length === 0) rebuildWaveField();
-        const feats = waveFeatRef.current;
+        if (twinkleFeatRef.current.length === 0) rebuildTwinkleField();
+        const feats = twinkleFeatRef.current;
         const sticky = revealStickyRef.current;
         const written = revealWrittenRef.current;
         const t = nowMs / 1000;
-        const th = 1 - REVEAL_WAVE_LIT;                 // kam-tröskel på raw (0..1)
-        const lo = th - REVEAL_WAVE_EDGE, hi = th + REVEAL_WAVE_EDGE;
-        const TWO_PI = Math.PI * 2;
+        const w = REVEAL_TWINKLE_LIT;          // tänd-fönstrets längd (andel av cykeln)
+        const r = w * REVEAL_TWINKLE_EDGE;     // in-/uttoningens längd
         for (let i = 0; i < feats.length; i++) {
             const f = feats[i];
-            if (sticky.has(f.key)) continue;            // klickade/valda styrs av reveal-loopen
-            const phase = (f.u * REVEAL_WAVE_CYCLES + f.jitter - t * REVEAL_WAVE_SPEED) * TWO_PI;
-            const raw = (Math.cos(phase) + 1) / 2;      // 0..1
-            const band = raw <= lo ? 0 : raw >= hi ? 1 : (raw - lo) / (hi - lo);
-            const op = REVEAL_WAVE_FLOOR + (1 - REVEAL_WAVE_FLOOR) * band;
+            if (sticky.has(f.key)) continue;   // klickade/valda styrs av reveal-loopen
+            const p = (f.phase + t / f.period) % 1;
+            let op = 0;
+            if (p < w) {
+                const ramp = p < r ? p / r : p > w - r ? (w - p) / r : 1;
+                op = ramp * ramp * (3 - 2 * ramp); // smoothstep → mjuk andning
+            }
+            op = REVEAL_TWINKLE_FLOOR + (1 - REVEAL_TWINKLE_FLOOR) * op;
             const prev = written.get(f.key);
             if (prev === undefined || Math.abs(op - prev) > 0.01) {
                 try { map.setFeatureState({ source: 'plain-events', id: f.key }, { reveal: op }); } catch { /* */ }
                 written.set(f.key, op);
             }
         }
-    }, [rebuildWaveField]);
-    const ensureWavePump = useCallback(() => {
-        rebuildWaveField();
-        if (waveRafRef.current == null) waveRafRef.current = requestAnimationFrame(pumpWave);
-    }, [pumpWave, rebuildWaveField]);
-    ensureWavePumpRef.current = ensureWavePump;
-    const stopWave = useCallback(() => {
-        if (waveRafRef.current != null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
+    }, [rebuildTwinkleField]);
+    const ensureTwinklePump = useCallback(() => {
+        rebuildTwinkleField();
+        if (twinkleRafRef.current == null) twinkleRafRef.current = requestAnimationFrame(pumpTwinkle);
+    }, [pumpTwinkle, rebuildTwinkleField]);
+    ensureTwinklePumpRef.current = ensureTwinklePump;
+    const stopTwinkle = useCallback(() => {
+        if (twinkleRafRef.current != null) { cancelAnimationFrame(twinkleRafRef.current); twinkleRafRef.current = null; }
     }, []);
-    stopWaveRef.current = stopWave;
-    // Nollar OMEDELBART alla tända reveal-brickor (utom valt/sticky) — inkl. vågens
-    // halvljusa mellansteg och bottenglöd, som pumpReveal/reconcileLit (tröskel 0.5)
-    // annars kunde lämna kvar. Kallas vid första trycket så vågen HELT försvinner
-    // innan de 50 närmast klicket tänds.
+    stopTwinkleRef.current = stopTwinkle;
+    // Nollar OMEDELBART alla tända reveal-brickor (utom valt/sticky) — inkl. tindrets
+    // halvljusa mellansteg, som pumpReveal/reconcileLit (tröskel 0.5) annars kunde
+    // lämna kvar. Kallas vid första trycket så tindret HELT försvinner innan de 50
+    // närmast klicket tänds.
     const hardClearReveal = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !map.getLayer('plain-events')) return;
+        if (!map || !layerExists(map, 'plain-events')) return;
         const written = revealWrittenRef.current;
         const sticky = revealStickyRef.current;
         written.forEach((op, k) => {
@@ -1566,7 +1033,7 @@ export default function V2Map({
     // med olika hastighet, och tänder eventet vid sitt index.
     const startRevealTravel = useCallback((toLng: number, toLat: number) => {
         const map = mapRef.current;
-        if (!map || !map.getLayer('plain-events')) return;
+        if (!map || !layerExists(map, 'plain-events')) return;
         // Starta där klustret FAKTISKT står (smidigt vid avbrott), annars förra
         // destinationen / min-position / kartmitt.
         const from = revealMarchPtRef.current ?? revealAnchorPtRef.current ?? userPosRef.current ?? map.getCenter();
@@ -1575,16 +1042,9 @@ export default function V2Map({
         revealAnchorPtRef.current = { lng: toLng, lat: toLat };
         // Avbryt ev. pågående migration.
         if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
-        if (revealHoldTimerRef.current) { clearTimeout(revealHoldTimerRef.current); revealHoldTimerRef.current = null; }
         const written = revealWrittenRef.current;
         const sticky = revealStickyRef.current;
-        const writeOp = (key: string, op: number) => {
-            const prev = written.get(key);
-            if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
-                try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: op }); } catch { /* */ }
-                written.set(key, op);
-            }
-        };
+        const writeOp = writeReveal;
         // Skriver fram exakt `keep`-mängden. Strömmen anropar den med `forceAll` varje frame:
         // tänd de N nuvarande positionerna, släck övriga DIREKT. Det blir ändå lugnt eftersom
         // varje bricka antingen står still vid origin, redan landat på destinationen (stannar),
@@ -1637,7 +1097,7 @@ export default function V2Map({
         const start = performance.now();
         const tick = () => {
             const m = mapRef.current;
-            if (!m || !m.getLayer('plain-events')) { revealTweenRef.current = null; return; }
+            if (!m || !layerExists(m, 'plain-events')) { revealTweenRef.current = null; return; }
             const now = performance.now();
             const elapsed = now - start;
             if (elapsed < TRAVEL_MS) {
@@ -1661,7 +1121,7 @@ export default function V2Map({
             else { revealTweenRef.current = requestAnimationFrame(tick); }
         };
         revealTweenRef.current = requestAnimationFrame(tick);
-    }, [nearestKeysTo, reportRevealCount]);
+    }, [nearestKeysTo, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
     // Välj seed = de REVEAL_SEED_COUNT markörerna närmast KARTANS MITT just nu.
@@ -1682,16 +1142,16 @@ export default function V2Map({
         for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
         const allKeys = [...coords.keys()];
         // FÖRHANDSVISNING (före första trycket): tänd INTE alla statiskt — låt
-        // vilo-VÅGEN tona brickorna in/ut i kammar (aldrig alla samtidigt). Seedet
-        // hålls tomt så pump-loopen inte fightar med vågen; ett tap kollapsar till
-        // normal-läget (de N närmast trycket) och stänger vågen.
+        // vilo-TINDRET blinka brickorna in/ut oberoende (max ~1/4 samtidigt). Seedet
+        // hålls tomt så pump-loopen inte fightar med tindret; ett tap kollapsar till
+        // normal-läget (de N närmast trycket) och stänger tindret.
         if (previewAllUntilTapRef.current && !anchor) {
             revealSeedRef.current = new Set();
-            ensureWavePumpRef.current();
+            ensureTwinklePumpRef.current();
             return;
         }
-        // Lämnat förhandsvisningen → stäng vågen och gå tillbaka till N-närmast-läget.
-        stopWaveRef.current();
+        // Lämnat förhandsvisningen → stäng tindret och gå tillbaka till N-närmast-läget.
+        stopTwinkleRef.current();
         if (origin && allKeys.length > count) {
             const cl = origin.lng, ca = origin.lat;
             const kx = Math.cos(ca * Math.PI / 180);
@@ -1700,7 +1160,7 @@ export default function V2Map({
         }
         const newSeed = new Set(allKeys.slice(0, count));
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
-        if (map && map.getLayer('plain-events')) {
+        if (map && layerExists(map, 'plain-events')) {
             revealSeedRef.current.forEach(k => {
                 if (!newSeed.has(k) && !revealStickyRef.current.has(k)) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 0 }); } catch { /* */ }
@@ -1749,7 +1209,7 @@ export default function V2Map({
     useEffect(() => {
         const present = new Set(plainData.features.map(f => f.properties.key));
         const map = mapRef.current;
-        const hasLayer = !!(map && map.getLayer('plain-events'));
+        const hasLayer = !!(map && layerExists(map, 'plain-events'));
         const drop = (k: string) => { if (hasLayer) { try { map!.removeFeatureState({ source: 'plain-events', id: k }); } catch { /* */ } } };
         for (const k of [...revealSeedRef.current]) if (!present.has(k)) { revealSeedRef.current.delete(k); drop(k); }
         // Sticky-nycklar vars event helt försvunnit ur datan rensas; en VALD bricka
@@ -1776,7 +1236,7 @@ export default function V2Map({
         // Gillade (framtida) event hålls ALLTID tända (force-reveal) så deras vita GL-
         // bricka syns överallt — oavsett avslöjning, viewport eller vad som är valt.
         {
-            const savedCutoff = Date.now() - 60 * 60 * 1000;
+            const savedCutoff = Date.now() - ONE_HOUR_MS;
             for (const [key, group] of groupsRef.current) {
                 if (group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)) sticky.add(key);
             }
@@ -1800,7 +1260,7 @@ export default function V2Map({
         let step = 0;
         const interval = setInterval(() => {
             const map = mapRef.current;
-            if (!map || !map.isStyleLoaded() || !map.getLayer('plain-events')) return;
+            if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) return;
             const rotations = cycleRotationsRef.current;
             if (rotations.size === 0) return;
             const written = revealWrittenRef.current;
@@ -1847,7 +1307,7 @@ export default function V2Map({
             setGroupListAnchor(null);
             return;
         }
-        const gk = `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}`;
+        const gk = groupKeyOf(selectedEvent.lat, selectedEvent.lng);
         if (gk !== visitedGroupKeyRef.current) {
             visitedGroupKeyRef.current = gk;
             visitedOrderRef.current = [selectedEvent.id];
@@ -1978,7 +1438,7 @@ export default function V2Map({
         // (prickar). I vila syns ALLA brickor på alla zoomnivåer.
         const container = mapContainerRef.current;
         const setGlLayer = (id: string, visible: boolean) => {
-            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
         };
         const showNeedles = () => {
             container.classList.remove('map-state-full');
@@ -2052,7 +1512,7 @@ export default function V2Map({
         // multi-event-prickarna. Klick på en multi-prick väljer gruppens första event
         // (onGlMarkerClick slår upp gruppen via feature-properties.key).
         const glHitLayers = ['plain-events', 'plain-events-dots', 'multi-event-dots'];
-        const glLayersPresent = () => glHitLayers.filter(id => map.getLayer(id));
+        const glLayersPresent = () => glHitLayers.filter(id => layerExists(map, id));
 
         map.on('click', (e) => {
             // FÖRHANDSVISNING → NORMAL: vid FÖRSTA trycket på kartan slutar vi visa
@@ -2063,9 +1523,9 @@ export default function V2Map({
             // via lager-handlern; mängden krymper till de närmaste.
             if (previewAllUntilTapRef.current) {
                 previewAllUntilTapRef.current = false;
-                // Stäng vågen och NOLLA alla dess brickor direkt → inget spill blir
+                // Stäng tindret och NOLLA alla dess brickor direkt → inget spill blir
                 // kvar; sen tänder recompute enbart de N närmast trycket.
-                stopWaveRef.current();
+                stopTwinkleRef.current();
                 hardClearRevealRef.current();
                 revealAnchorPtRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
                 recomputeRevealSeedRef.current();
@@ -2255,9 +1715,8 @@ export default function V2Map({
             // Reveal: lyssnare + rAF (vilo-skrivning + vandring).
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
-            if (waveRafRef.current != null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
+            if (twinkleRafRef.current != null) { cancelAnimationFrame(twinkleRafRef.current); twinkleRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
-            if (revealHoldTimerRef.current) { clearTimeout(revealHoldTimerRef.current); revealHoldTimerRef.current = null; }
             map.remove();
             mapRef.current = null;
         };
@@ -2342,108 +1801,6 @@ export default function V2Map({
     }, [is3DTerrain]);
 
 
-    // Tidsstämpel som idle-driften ska hålla sig pausad till. Sätts av våra egna
-    // programmatiska kamera-flytt (easeTo) så driften inte slåss mot centreringen.
-    const driftSuppressUntilRef = useRef(0);
-
-    // Mjuk idle-drift: när användaren inte rört kartan på en stund driver vi
-    // den långsamt i sinus-bana så bilden lever. Pausas direkt vid interaktion
-    // OCH under våra egna kamera-flytt (driftSuppressUntilRef).
-    // Idle-driften AVSTÄNGD: användaren vill att kartan står still från start
-    // (ingen intro-puls, ingen grunddrift). Flaggan (typad boolean så TS inte
-    // flaggar resten som död kod) gör det lätt att återaktivera om vi vill.
-    const IDLE_DRIFT_ENABLED: boolean = false;
-    useEffect(() => {
-        const map = mapRef.current;
-        if (!map) return;
-        if (!IDLE_DRIFT_ENABLED) return;
-        // Respektera prefers-reduced-motion OCH spara resurser: hoppa över hela
-        // idle-driften om användaren bett om mindre rörelse. Driften kör en RAF
-        // i all evighet + setState varje frame för moln-projektionen; i ett
-        // framtida 3D-läge (globe/terräng) blir varje frame dessutom en omritning
-        // av hela scenen, så det här är billig huvudvärk att slippa.
-        if (typeof window !== 'undefined'
-            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-            return;
-        }
-        let raf = 0;
-        let interactingUntil = 0;
-        // startedAt nollställs ALDRIG efter init — vågens fas är kontinuerlig
-        // över pauser så driften aldrig "snäpper" till en ny startposition när
-        // den återupptas. Boost-envelopen löper bara på den initiala starten.
-        const startedAt = performance.now();
-        let last = { x: 0, y: 0 };
-        // Tidpunkt då aktuell paus slutade. Används för att fade-ina drift-
-        // amplituden över ~1s istället för att klippa in direkt — så man inte
-        // ser ett "hack" precis efter att man släppt kartan.
-        let resumeAt = startedAt;
-        let wasPaused = false;
-        const pause = () => { interactingUntil = performance.now() + 2500; };
-        map.on('dragstart', pause);
-        map.on('drag', pause);        // förläng pausen under HELA draget (annars motas långa drag av driften)
-        map.on('zoomstart', pause);
-        map.on('rotatestart', pause);
-        map.on('pitchstart', pause);
-        // Pausa direkt vid beröring (innan dragstart hinner fyras), så driften
-        // aldrig slåss med att man börjar dra kartan.
-        const canvas = map.getCanvasContainer();
-        if (canvas) canvas.addEventListener('pointerdown', pause);
-        const tick = (now: number) => {
-            // Pausa driften i 3D-läge (globe/terräng): där tvingar varje panBy en
-            // omritning av hela 3D-scenen (terräng-mesh m.m.) → klart dyrare än i
-            // platt vy. 3D känns dessutom levande ändå. Den lilla grunddriften är
-            // bara värd sin kostnad i den platta vyn.
-            const isPaused = now < interactingUntil || now < driftSuppressUntilRef.current
-                || document.hidden || isGlobeRef.current || is3DTerrainRef.current;
-            if (!isPaused) {
-                const t = (now - startedAt) / 1000;
-                // Driften = ENBART en stor dämpad initial puls (intro-rörelsen i
-                // början). Pulsen använder sin() → startar och oscillerar runt 0
-                // (ingen kumulativ förskjutning) och dör ut på ~6s (τ=2.5).
-                // DÄREFTER står kartan HELT STILLA — ingen konstant grunddrift mer.
-                const pulse = Math.exp(-t / 2.5);
-                // Initial puls — stora svep i tre frekvenser för chaotisk vind.
-                const pulseX = (Math.sin(t * 0.85) * 70 + Math.sin(t * 0.42) * 50 + Math.sin(t * 1.30) * 30) * pulse;
-                const pulseY = (Math.sin(t * 0.71) * 45 + Math.sin(t * 0.33) * 32 + Math.sin(t * 1.10) * 18) * pulse;
-                const targetX = pulseX;
-                const targetY = pulseY;
-                // Första frame efter paus: synka last till vågens nuvarande
-                // position så dx=0 → ingen abrupt panBy. Fasen löper vidare
-                // under pausen, så vi tar bara vid där vi "skulle ha varit".
-                if (wasPaused) {
-                    last = { x: targetX, y: targetY };
-                    resumeAt = now;
-                    wasPaused = false;
-                }
-                // Fade-in efter återupptagning: 0 → 1 över 1s, ease-out.
-                const sinceResume = (now - resumeAt) / 1000;
-                const fade = Math.min(1, sinceResume / 1.0);
-                const eased = 1 - Math.pow(1 - fade, 3);
-                const dx = (targetX - last.x) * eased;
-                const dy = (targetY - last.y) * eased;
-                if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
-                    map.panBy([dx, dy], { duration: 0, animate: false });
-                }
-                // last följer vågen i fullt belopp så fasen är intakt; bara
-                // applicerad delta dämpas under fade-in.
-                last = { x: targetX, y: targetY };
-            } else {
-                wasPaused = true;
-            }
-            raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => {
-            cancelAnimationFrame(raf);
-            map.off('dragstart', pause);
-            map.off('drag', pause);
-            map.off('zoomstart', pause);
-            map.off('rotatestart', pause);
-            map.off('pitchstart', pause);
-            if (canvas) canvas.removeEventListener('pointerdown', pause);
-        };
-    }, []);
-
     // Vid val av event: stå kvar där användaren är. Klickar man på en markör som
     // redan syns i vyn flyttar vi INTE kameran alls (och zoomar definitivt inte in).
     // Bara om det valda eventet ligger UTANFÖR vyn (t.ex. valt via sök/sparat/delad
@@ -2476,7 +1833,6 @@ export default function V2Map({
         // (behåll nuvarande zoom, ingen inzoomning).
         const targetYRatio = cardExpanded ? 0.30 : 0.40;
         const yOffset = h * (targetYRatio - 0.5);
-        driftSuppressUntilRef.current = performance.now() + 1500;
         map.easeTo({
             center: [selectedEvent.lng, selectedEvent.lat],
             zoom: map.getZoom(),
@@ -2536,7 +1892,6 @@ export default function V2Map({
         const h = map.getContainer().clientHeight;
         const targetYRatio = cardExpanded ? 0.30 : 0.40;
         const yOffset = h * (targetYRatio - 0.5);
-        driftSuppressUntilRef.current = performance.now() + 1500;
         // Zooma in LITE åt gången (+2 nivåer per klick) i stället för att hoppa
         // hela vägen in — klicka flera gånger för att komma närmare. Klampas vid
         // kartans maxzoom.
@@ -2558,7 +1913,6 @@ export default function V2Map({
         prevZoomOutRef.current = zoomOutTrigger;
         const map = mapRef.current;
         if (!map) return;
-        driftSuppressUntilRef.current = performance.now() + 1500;
         map.easeTo({
             zoom: Math.max(map.getMinZoom(), map.getZoom() - 2),
             duration: 600,
@@ -2585,22 +1939,14 @@ export default function V2Map({
             // GL-lagret (cykelpumpen); DOM-markören här finns bara för den valda.
             const rep = inGroupSelected || nonDiscarded[0] || group[0];
 
-            // I gissningsläge highlightas ALDRIG mål-eventet — annars skulle dess
-            // markör lysa upp blå och avslöja var spelaren ska klicka.
             const isSelected = !!inGroupSelected;
             const isSaved = group.some(e => savedEventIds.has(e.id));
             const isDiscarded = group.every(e => discardedEventIds.has(e.id));
 
-            // Något event i gruppen börjar inom 1 timme → nålhuvudet + pin-ramen
-            // blir orange, så man enkelt ser vilka som är på gång nu.
-            // (hasSpecificTime finns inte i webbdatan, så det villkoret nollade
-            //  alltid detta — därför borttaget.)
-            const nowMs = Date.now();
-            const startsWithinHour = group.some(e =>
-                e.time
-                && e.time.getTime() > nowMs
-                && e.time.getTime() - nowMs <= 60 * 60 * 1000
-            );
+            // Något event i gruppen börjar inom 1 timme → pin-ramen blir orange,
+            // så man enkelt ser vilka som är på gång nu. Samma helper som GL-
+            // prickarna använder, så DOM och GL aldrig bedömer olika.
+            const startsWithinHour = groupStartsWithinHour(group, Date.now());
 
             // Markera gruppen som "avslöjad" så fort den varit vald. Avslöjade
             // grupper visar brickan direkt även när de inte längre är valda.
@@ -2679,8 +2025,7 @@ export default function V2Map({
                     ? `${count} event vid ${rep.locationName || 'samma plats'}`
                     : rep.title);
 
-                // Sätt eventlyssnare på klick. I gissningsläge är klicket en
-                // gissning på hela gruppen i stället för ett vanligt val.
+                // Klick: multi-grupp → öppna listan; annars välj eventet direkt.
                 markerData.element.onclick = (e) => {
                     e.stopPropagation();
                     if (count > 1) {
@@ -2702,8 +2047,7 @@ export default function V2Map({
 
                 // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från
                 // kategorifärgningen → standardmörk bricka; övriga får sin kategori-
-                // färg. Speciella tillstånd (vald/guld/sparad) går alltid före nedan.
-                const catKey = rep.category && EVENT_CATEGORIES[rep.category] ? rep.category : 'other';
+                // färg. Speciella tillstånd (vald/featured/sparad) går alltid före nedan.
                 const catColorHex = brickaBodyHex(rep);
 
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
@@ -2759,7 +2103,7 @@ export default function V2Map({
                 const scaleStyle = `scale(${baseScale})`;
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
-                const emoji = rep.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
+                const emoji = eventEmoji(rep);
 
                 // Sifferbricka i hörnet för grupper; en liten prick för sparade enskilda.
                 const countBadge = count > 1
@@ -2809,9 +2153,7 @@ export default function V2Map({
             // och räkna ner siffran (kvar att bläddra till) medan man trycker
             // Nästa — kirurgiskt, utan att riva ner symbolen.
             if (inGroupSelected && count > 1) {
-                const selCatKey = inGroupSelected.category && EVENT_CATEGORIES[inGroupSelected.category]
-                    ? inGroupSelected.category : 'other';
-                const selEmoji = inGroupSelected.emoji || (EVENT_CATEGORIES[selCatKey as EventCategoryType]?.emoji ?? '🎫');
+                const selEmoji = eventEmoji(inGroupSelected);
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
                 // Brickans kropp följer det bläddrade eventet (samma skäl som i
@@ -2852,106 +2194,24 @@ export default function V2Map({
     // blixtrar ljusgrått på mörka kartor.
     const containerBg = mapStyle === 'dark' ? '#141414'
         : mapStyle === 'satellite' ? '#10181f'
-        : mapStyle === 'themepark' ? '#93c46c'
+        : mapStyle === 'themepark' ? THEMEPARK_LAND_COLOR
         : mapStyle === 'orientering' ? '#efe9dc'
         : '#f1f5f9';
 
     return (
         <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, background: containerBg }}>
-            {/* Multi-event-lista: ankrad till den klickade brickans ÖVRE HÖGRA hörn på
-                kartan och följer punkten när kartan pannas/zoomas. Saknas projicerad
-                position (ogiltig koordinat) faller den tillbaka till top-center. */}
-            {groupList && groupList.length > 0 && (() => {
-                const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-                const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
-                const W = Math.min(vw * 0.8, 300);          // listbredd (px)
-                // Brickans ungefärliga storlek: nål-tippen sitter PÅ geo-punkten,
-                // kroppen ~BRICK_H px upp och ~BRICK_W px bred (centrerad i x).
-                const BRICK_W = 30, BRICK_H = 46, GAP = 6;
-                const TOP_MARGIN = 70, BOTTOM_MARGIN = 12;     // håll listan under navbaren resp. ovan nederkanten
-                const HEADER_H = 42, ROW_H = 52, MAX_ROWS = 5; // "inte så lång" → max ~5 rader synliga, resten scrollas
-                const pos = groupListPos;
-                // KORTARE maxhöjd + ungefärlig faktisk höjd (för klamp på skärmen).
-                const listMaxH = Math.min(vh * 0.5, HEADER_H + MAX_ROWS * ROW_H);
-                const contentH = Math.min(listMaxH, HEADER_H + groupList.length * ROW_H);
-                // Listan relaterar HORISONTELLT till brickans övre högra hörn.
-                const cornerX = pos ? pos.x + BRICK_W / 2 + GAP : vw / 2 - W / 2;
-                const cornerY = pos ? pos.y - BRICK_H : TOP_MARGIN + contentH;
-                const left = Math.max(8, Math.min(cornerX, vw - W - 8));
-                // Vertikalt: helst OVANFÖR brickan (växer uppåt → "högre upp"), men klampa
-                // så HELA boxen alltid syns (top ≥ TOP_MARGIN, bottom ≤ vh − margin). Då
-                // ligger scrollporten på skärmen och in-container-scrollen blir användbar
-                // (förut kunde toppen hamna utanför vyn → man nådde inte de nedersta).
-                const top = Math.max(TOP_MARGIN, Math.min(cornerY - contentH, vh - contentH - BOTTOM_MARGIN));
-                const style = { position: 'absolute' as const, left, top, width: W };
-                // Platsens namn (alla event i gruppen delar koordinat → samma plats).
-                const placeName = groupList[0]?.locationName?.trim() || 'Den här platsen';
-                // "Nästa" stegar markeringen till nästa event i listan (wrap), listan
-                // hålls öppen precis som vid radval så man kan bläddra vidare.
-                const selIdx = groupList.findIndex(ev => ev.id === selectedEvent?.id);
-                const goNextInList = () => onSelectEvent(groupList[(selIdx + 1) % groupList.length]);
-                return (
-                <div className="z-[1300] pointer-events-auto" style={style}>
-                    <div className="flex flex-col rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200" style={{ maxHeight: listMaxH }}>
-                        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70">
-                            <div className="min-w-0 flex-1">
-                                <span className="block text-sm font-black text-slate-800 truncate leading-tight">{placeName}</span>
-                                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{groupList.length} event</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={goNextInList}
-                                aria-label="Nästa event här"
-                                title="Nästa event här"
-                                className="shrink-0 w-8 h-8 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] active:scale-95 flex items-center justify-center transition-all"
-                            >
-                                <ChevronRight size={18} />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setGroupList(null); setGroupListAnchor(null); }}
-                                aria-label="Stäng listan"
-                                className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100">
-                            {groupList.map((ev) => {
-                                const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
-                                const emoji = ev.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
-                                const tid = ev.time && ev.hasSpecificTime !== false
-                                    ? new Date(ev.time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
-                                    : '';
-                                const isSel = selectedEvent?.id === ev.id;
-                                return (
-                                    <li key={ev.id}>
-                                        <button
-                                            type="button"
-                                            // Radval STÄNGER INTE listan (man ska kunna bläddra flera event
-                                            // på samma plats) — den stängs bara av kart-klicket. Markera
-                                            // det valda eventet så man ser vilket man tittar på.
-                                            onClick={() => onSelectEvent(ev)}
-                                            // Vald rad = blå med vit kant (ring-inset, ingen layout-shift) —
-                                            // samma "vald = vit-kantad" som markören på kartan, så man ser
-                                            // vilket event man står på medan man bläddrar.
-                                            className={`relative w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 active:bg-slate-100'}`}
-                                        >
-                                            <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100'}`} aria-hidden>{emoji}</span>
-                                            <span className="flex-1 min-w-0">
-                                                <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800'}`}>{ev.title}</span>
-                                                {tid && <span className={`block text-[11px] font-semibold tabular-nums ${isSel ? 'text-white/80' : 'text-slate-500'}`}>kl {tid}</span>}
-                                            </span>
-                                            <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                </div>
-                );
-            })()}
+            {/* Multi-event-lista: egen komponent (V2MapGroupList). Ankras vid den
+                klickade brickans övre högra hörn; groupListPos projiceras om på
+                move/zoom (updateCloudPosition) så den följer kartan. */}
+            {groupList && groupList.length > 0 && (
+                <V2MapGroupList
+                    events={groupList}
+                    anchorPos={groupListPos}
+                    selectedEvent={selectedEvent}
+                    onSelect={onSelectEvent}
+                    onClose={() => { setGroupList(null); setGroupListAnchor(null); }}
+                />
+            )}
             {/* CSS och Keyframes för en mjuk, progressiv animation */}
             <style>{`
                 .v2-custom-marker {
@@ -2991,33 +2251,13 @@ export default function V2Map({
                     width: 44px;
                     height: 52px;
                 }
-                .needle-element, .pin-element {
+                .pin-element {
                     position: absolute;
                     transform-origin: bottom center;
-                }
-                .needle-element {
-                    bottom: 5px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .pin-element {
                     top: 0;
                     left: 0;
                     width: 44px;
                     height: 52px;
-                }
-                .needle-dot {
-                    border-radius: 50%;
-                    border: 2px solid #fff;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-                }
-                .needle-line {
-                    width: 2px;
-                    border-radius: 1px;
-                    opacity: 0.8;
                 }
                 .pin-bubble {
                     width: 44px;
@@ -3095,42 +2335,12 @@ export default function V2Map({
                     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
                     z-index: 10;
                 }
-                .badge-needle-count {
-                    position: absolute;
-                    top: -6px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    min-width: 14px;
-                    height: 14px;
-                    padding: 0 2px;
-                    background: #006AA7;
-                    color: #fff;
-                    font-size: 8px;
-                    font-weight: 700;
-                    font-variant-numeric: tabular-nums;
-                    border-radius: 999px;
-                    border: 1.5px solid #fff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    line-height: 1;
-                    box-sizing: border-box;
-                }
-
                 /* ── Kontrast per kartstil ──────────────────────────────────
                    Mörka kartan: hårfin ljus gloria + djupare skugga så mörka
-                   brickor och nålar inte smälter in i den nästan svarta
-                   bakgrunden. (Klassen sätts på kartcontainern i mapStyle-
-                   effekten.) */
+                   brickor inte smälter in i den nästan svarta bakgrunden.
+                   (Klassen sätts på kartcontainern i mapStyle-effekten.) */
                 .map-style-dark .pin-element {
                     filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.45)) drop-shadow(0 5px 12px rgba(0,0,0,0.8));
-                }
-                .map-style-dark .needle-dot {
-                    box-shadow: 0 0 0 1px rgba(255,255,255,0.3), 0 1px 4px rgba(0,0,0,0.8);
-                }
-                .map-style-dark .needle-line {
-                    opacity: 1;
-                    filter: brightness(1.7);
                 }
 
                 /* ──────────────────────────────────────────────────────────
@@ -3204,11 +2414,7 @@ export default function V2Map({
                 const isCrateActive = (it: CrateItem) => isFeatureActive(it.key);
                 const activeBagCount = crateItems.reduce((n, it) => n + (isCrateActive(it) ? 1 : 0), 0);
 
-                const handleCrate = (it: CrateItem) => {
-                    // Klick på en tipsad funktion (t.ex. Fokus) → sluta blinka den.
-                    setFeatureHint(h => h === it.key ? null : h);
-                    toggleFeature(it.key);
-                };
+                const handleCrate = (it: CrateItem) => toggleFeature(it.key);
 
                 return typeof document === 'undefined' ? null : createPortal(
                     <>
@@ -3229,15 +2435,13 @@ export default function V2Map({
                                     // Låst funktion (Golf) → går inte att aktivera (visas med hänglås).
                                     const locked = !!it.locked;
                                     const disabled = locked;
-                                    // Den nya/tipsade funktionen får en blå glöd-ring i listan.
-                                    const blinking = featureHint === it.key;
                                     return (
                                         <button
                                             key={it.key}
                                             type="button"
                                             onClick={disabled ? undefined : () => handleCrate(it)}
                                             disabled={disabled}
-                                            className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${blinking ? 'feature-blink-blue' : ''} ${disabled ? 'opacity-40 cursor-not-allowed' : active ? '' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+                                            className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : active ? '' : 'hover:bg-slate-100 active:bg-slate-200'}`}
                                             style={active ? { background: `${it.color}14` } : undefined}
                                         >
                                             {/* Symbol-bricka — neutral/blek bakgrund, symbolen i sin egen
@@ -3275,37 +2479,11 @@ export default function V2Map({
                             </div>
                         )}
 
-                        {/* Lager-knappen (Funktioner) — ALLTID synlig (top-[72px] left-4,
-                            vänsterkolumnen under profilen). Klick öppnar/stänger
-                            funktions-popupen. Onboarding: blinkar + visar en "Ny funktion"-
-                            pil när det finns en ny funktion att upptäcka (featureHint). */}
+                        {/* Lager-knappen (Funktioner) — vänsterkolumnen under profilen
+                            (top-[72px] left-4). Klick öppnar/stänger funktions-popupen. */}
                         {/* HIDDEN per Josef 2026-06-23 - test layout without these. Functions still wired. */}
                         {false && (
                         <div className="fixed top-[72px] left-4 z-[1151] pointer-events-auto">
-                            {featureHint !== null && !funcBagOpen && !hintAcknowledged && (
-                                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 flex items-center gap-1 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-right-1 duration-300">
-                                    {/* "Ny funktion": VIT pärla där själva texten är urklippt
-                                        (knockout via mask) → kartan bakom syns genom bokstäverna. */}
-                                    {/* Blinket (box-shadow-ringen) ligger på en wrapper-<span>, INTE
-                                        på <svg>: box-shadow på <svg> renderas buggigt i iOS Safari
-                                        (ringen blir rektangulär och syns bara upp/ner, inte på
-                                        sidorna). På ett HTML-element funkar den överallt — precis som
-                                        de andra knapp-blinken. inline-flex gör att spanen sluter tätt
-                                        runt SVG:n så ringen hugger pillerformen. */}
-                                    <span className="feature-blink-white shrink-0 inline-flex rounded-[12px]">
-                                        <svg width="118" height="24" viewBox="0 0 118 24" className="block" style={{ borderRadius: 12 }} aria-label="Ny funktion">
-                                            <defs>
-                                                <mask id="nyFunktionKnockout">
-                                                    <rect width="118" height="24" rx="12" fill="white" />
-                                                    <text x="59" y="12" textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="900" letterSpacing="0.6" fill="black" style={{ fontFamily: 'var(--font-fredoka), system-ui, sans-serif' }}>NY FUNKTION</text>
-                                                </mask>
-                                            </defs>
-                                            <rect width="118" height="24" rx="12" fill="#ffffff" mask="url(#nyFunktionKnockout)" />
-                                        </svg>
-                                    </span>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' }}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                                </div>
-                            )}
                             <button
                                 ref={funcBagBtnRef}
                                 type="button"
@@ -3314,8 +2492,6 @@ export default function V2Map({
                                 title="Funktioner"
                                 aria-expanded={funcBagOpen}
                                 className={`relative h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors ${
-                                    featureHint !== null && !funcBagOpen && !hintAcknowledged ? 'feature-blink-white' : ''
-                                } ${
                                     funcBagOpen ? 'bg-[#006AA7] text-white border-white/30' : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
                                 }`}
                             >
@@ -3371,220 +2547,6 @@ export default function V2Map({
                     document.body
                 );
             })()}
-            {/* Funktioner-shop: clean dashboard-panel. Varje funktion ritas
-                som en kristallkula (radial gradient + topp-glint) — aktiverade
-                kulor glöder i brand-blått, övriga är klart glas. Max 5 kan vara
-                aktiva samtidigt (räknare överst). Klick på backdrop eller X stänger. */}
-            {shopOpen && (
-                <div
-                    className="absolute inset-0 z-[10500] flex items-center justify-center bg-slate-950/50 backdrop-blur-md p-4"
-                    onClick={() => setShopOpen(false)}
-                >
-                    <div
-                        className="rounded-3xl w-[min(88vw,440px)] max-h-[82vh] overflow-y-auto"
-                        style={{
-                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(240, 246, 252, 0.5) 100%)',
-                            border: '1px solid rgba(255, 255, 255, 0.45)',
-                            backdropFilter: 'blur(24px)',
-                            WebkitBackdropFilter: 'blur(24px)',
-                            boxShadow: '0 30px 60px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.06)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex flex-col gap-0.5">
-                                    <h2 className="text-[11px] font-bold text-slate-500 tracking-[0.20em] uppercase">Funktioner</h2>
-                                    <div className="text-[10px] font-bold tracking-wide text-slate-400">
-                                        Aktiva: <span className="text-[#006AA7]">{activeFeatureCount}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShopOpen(false)}
-                                    aria-label="Stäng"
-                                    className="h-7 w-7 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            {/* Master-toggle: snabbt sätta alla på / av. */}
-                            <div className="flex gap-1.5 mb-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setAllFeatures(true)}
-                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] transition-colors"
-                                    style={{ boxShadow: '0 2px 6px rgba(0,106,167,0.4)' }}
-                                >
-                                    Aktivera alla
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAllFeatures(false)}
-                                    className="flex-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
-                                    style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}
-                                >
-                                    Töm
-                                </button>
-                            </div>
-                            {/* Kategorier — varje funktion ritas som en kristallkula.
-                                Småskala translateY + rotate-jitter per index så de
-                                känns levande (lätt vinklat ljus, inte stelt rad). */}
-                            {(() => {
-                                type ShopCard = { key: string; label: string; icon?: React.ReactNode; isFaceBadge?: boolean; locked?: boolean };
-                                const categories: Array<{ title: string; items: ShopCard[] }> = [
-                                    { title: 'Karta', items: [
-                                        { key: 'satellite', label: 'Satellit', icon: <Layers size={18} /> },
-                                        { key: 'themepark', label: 'Nöjesfält', icon: <Sparkles size={18} /> },
-                                        { key: 'dark', label: 'Mörkt läge', icon: <Moon size={18} /> },
-                                        { key: 'tilt', label: 'Lutning', icon: <Box size={18} /> },
-                                        { key: 'globe', label: 'Klot', icon: <Globe size={18} /> },
-                                        { key: 'orientering', label: 'Orientering', icon: <Mountain size={18} /> },
-                                        { key: 'terrain', label: 'Terräng', icon: <Mountain size={18} /> }
-                                    ]},
-                                    { title: 'Moln', items: [
-                                        { key: 'sun', label: 'Sol', icon: <Sun size={18} /> },
-                                        { key: 'focus', label: 'Fokus', icon: <Target size={18} /> },
-                                        { key: 'throw', label: 'Kasta', icon: <Send size={18} /> },
-                                        { key: 'slingshot', label: 'Slangbella', icon: <Crosshair size={18} /> },
-                                        { key: 'faces', label: 'Ansikten', isFaceBadge: true }
-                                    ]},
-                                    { title: 'Moln-hyllan', items: [
-                                        { key: 'bigCloud', label: 'Större moln', icon: <Maximize2 size={18} /> },
-                                        { key: 'fastThrow', label: 'Snabbare kast', icon: <Zap size={18} /> },
-                                        { key: 'sparkle', label: 'Glitter', icon: <Sparkles size={18} /> },
-                                        { key: 'snowball', label: 'Snöboll', icon: <Snowflake size={18} /> }
-                                    ]},
-                                    { title: 'Kommunikation', items: [
-                                        { key: 'createEvent', label: 'Skapa event', icon: <Plus size={20} strokeWidth={2.5} /> },
-                                        { key: 'multiplayer', label: 'Multiplayer (kräver konto)', icon: <Users size={18} /> }
-                                    ]},
-                                    { title: 'Inspelning', items: [
-                                        { key: 'record', label: 'Spela in', icon: <Video size={18} />, locked: true }
-                                    ]}
-                                ];
-                                // Scattered-mönster: små offsets per index. Bryts i
-                                // sektion så varje grupp har sin egen "korg-bädd".
-                                const STAGGER_Y = [0, 5, -3, 4, -2, 6, -4, 3];
-                                const ROTATE_DEG = [-3, 2, -1, 3, 0, -2, 1, -3];
-                                return categories.map(cat => (
-                                    <div key={cat.title} className="mb-4 last:mb-0">
-                                        <div className="text-[9px] font-bold text-slate-400 tracking-[0.22em] uppercase mb-2.5 text-center">
-                                            {cat.title}
-                                        </div>
-                                        <div className="flex flex-wrap justify-center gap-3 px-2 py-1">
-                                            {cat.items.map((item, i) => {
-                                                const active = isFeatureActive(item.key);
-                                                const locked = !!item.locked;
-                                                const state: OrbState = locked ? 'locked' : active ? 'active' : 'inactive';
-                                                const offY = STAGGER_Y[i % STAGGER_Y.length];
-                                                const rot = ROTATE_DEG[i % ROTATE_DEG.length];
-                                                const styles = getGemStyles(item.key, state);
-                                                const faceColor = styles.iconColor;
-                                                return (
-                                                    <button
-                                                        key={item.key}
-                                                        type="button"
-                                                        onClick={locked ? undefined : () => toggleFeature(item.key)}
-                                                        title={
-                                                            state === 'locked' ? `${item.label} — Köp`
-                                                            : state === 'active' ? `${item.label} — Aktiv, klicka för att stänga av`
-                                                            : `${item.label} — Klicka för att aktivera`
-                                                        }
-                                                        aria-label={item.label}
-                                                        className={`relative rounded-full flex items-center justify-center transition-all duration-200 ${
-                                                            state === 'active' ? 'text-white hover:scale-110'
-                                                            : state === 'locked' ? 'text-amber-900/70 cursor-pointer hover:scale-105'
-                                                            : 'hover:scale-110 active:scale-95'
-                                                        }`}
-                                                        style={{
-                                                            width: 56,
-                                                            height: 56,
-                                                            transform: `translateY(${offY}px) rotate(${rot}deg)`,
-                                                            background: styles.bg,
-                                                            border: styles.border,
-                                                            boxShadow: styles.shadow,
-                                                            color: styles.iconColor
-                                                        }}
-                                                    >
-                                                        {/* Inre ikon */}
-                                                        <div className="relative z-[2] flex items-center justify-center" style={{ transform: `rotate(${-rot}deg)` }}>
-                                                            {item.isFaceBadge ? (
-                                                                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                                                                    <circle cx="9" cy="10" r="1.7" fill={faceColor} />
-                                                                    <circle cx="15" cy="10" r="1.7" fill={faceColor} />
-                                                                    <path
-                                                                        d="M 8 14.5 Q 12 17.5 16 14.5"
-                                                                        stroke={faceColor}
-                                                                        strokeWidth="1.7"
-                                                                        strokeLinecap="round"
-                                                                        fill="none"
-                                                                    />
-                                                                </svg>
-                                                            ) : item.icon}
-                                                        </div>
-                                                        {/* Topp-glint — den klassiska glas-reflektionen
-                                                            i övre vänstra hörnet som ger kulan karaktär. */}
-                                                        <div
-                                                            aria-hidden="true"
-                                                            className="absolute pointer-events-none"
-                                                            style={{
-                                                                top: '11%',
-                                                                left: '17%',
-                                                                width: '40%',
-                                                                height: '24%',
-                                                                borderRadius: '50%',
-                                                                background: 'radial-gradient(ellipse, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.55) 35%, rgba(255,255,255,0) 75%)',
-                                                                transform: 'rotate(-22deg)',
-                                                                filter: 'blur(0.3px)'
-                                                            }}
-                                                        />
-                                                        {/* Sub-glint nere höger — en svag andra
-                                                            reflektion för djup. */}
-                                                        <div
-                                                            aria-hidden="true"
-                                                            className="absolute pointer-events-none"
-                                                            style={{
-                                                                bottom: '14%',
-                                                                right: '20%',
-                                                                width: '16%',
-                                                                height: '10%',
-                                                                borderRadius: '50%',
-                                                                background: 'radial-gradient(ellipse, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%)'
-                                                            }}
-                                                        />
-                                                        {state === 'locked' && (
-                                                            <div
-                                                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center z-[3]"
-                                                                style={{
-                                                                    background: '#d97706',
-                                                                    border: '1.5px solid #fff7ed',
-                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                                                    transform: `rotate(${-rot}deg)`
-                                                                }}
-                                                            >
-                                                                <Lock size={8} className="text-white" strokeWidth={3} />
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ));
-                            })()}
-                            <div className="mt-4 pt-3 border-t border-slate-200 text-center">
-                                <button
-                                    type="button"
-                                    className="text-[11px] font-semibold text-[#006AA7] hover:underline tracking-wide"
-                                >
-                                    Uppgradera konto
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

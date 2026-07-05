@@ -95,12 +95,12 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="auth-modal-title"
-                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 id="auth-modal-title" className="text-xl font-black text-slate-800">
+                        <h2 id="auth-modal-title" className="text-xl font-black text-slate-800 dark:text-slate-100">
                             {mode === 'login' ? 'Logga in' : 'Skapa konto'}
                         </h2>
                         {reason && <p className="text-xs font-semibold text-slate-500 mt-0.5">{reason}</p>}
@@ -120,7 +120,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                             aria-label="Visningsnamn"
                             autoComplete="nickname"
                             required
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
                         />
                     )}
                     <input
@@ -132,7 +132,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         autoComplete="email"
                         required
                         autoFocus
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
                     />
                     <input
                         type="password"
@@ -143,7 +143,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                         required
                         minLength={6}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
                     />
                     {error && (
                         <p role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700">

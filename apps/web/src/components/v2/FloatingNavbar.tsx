@@ -197,7 +197,7 @@ export default function FloatingNavbar({
                                     onClick={() => setDayPickerOpen(o => !o)}
                                     aria-expanded={dayPickerOpen}
                                     aria-label="Välj dag eller period"
-                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border border-white/50 hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
+                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
                                 >
                                     <Calendar size={15} className="text-[#006AA7] shrink-0" />
                                     <span>{getDayLabel(dayOffset, dayRangeDays)}</span>

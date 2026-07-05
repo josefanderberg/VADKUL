@@ -74,18 +74,18 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                 type="button"
                 onClick={() => onToggle(cat.id)}
                 aria-pressed={active}
-                className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${active ? 'bg-slate-100' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+                className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${active ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700'}`}
             >
                 <span
                     className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-lg leading-none border ${
-                        active ? `${cat.color} border-transparent ring-2 ring-offset-1 ring-slate-300` : 'bg-slate-50 border-slate-200'
+                        active ? `${cat.color} border-transparent ring-2 ring-offset-1 ring-slate-300` : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                     }`}
                     aria-hidden
                 >
                     {cat.emoji}
                 </span>
                 <span className="flex-1 min-w-0">
-                    <span className={`block text-sm font-bold leading-tight ${active ? 'text-slate-800' : 'text-slate-500'}`}>
+                    <span className={`block text-sm font-bold leading-tight ${active ? 'text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
                         {cat.label}
                     </span>
                     <span className="block text-[11px] text-slate-500 leading-tight tabular-nums">
@@ -118,9 +118,9 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                         onClick={() => setOpen(o => !o)}
                         aria-expanded={open}
                         aria-label="Filtrera på kategori"
-                        className="bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                        className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors relative"
                     >
-                        <Layers size={20} className="text-slate-700" />
+                        <Layers size={20} className="text-slate-700 dark:text-slate-200" />
                         {selected.size > 0 && (
                             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
                                 {selected.size}
@@ -132,7 +132,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     {open && (
                         <div
                             ref={panelRef}
-                            className="absolute right-0 top-[52px] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/60 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+                            className="absolute right-0 top-[52px] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border border-white/60 dark:border-slate-700 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
                         >
                             <div className="px-2.5 pt-1 pb-1.5 flex items-center justify-between">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -152,7 +152,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                             {visibleSpecial.length > 0 && (
                                 <>
                                     {visibleSpecial.map(renderRow)}
-                                    <div className="mx-2 my-1 border-t border-slate-200/70" aria-hidden />
+                                    <div className="mx-2 my-1 border-t border-slate-200/70 dark:border-slate-700/70" aria-hidden />
                                 </>
                             )}
                             {visible.map((id) => renderRow(EVENT_CATEGORIES[id]))}

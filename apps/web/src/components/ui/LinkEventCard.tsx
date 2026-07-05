@@ -4,6 +4,7 @@ import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
+import { eventShareSlug } from '../../utils/eventShareSlug';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
@@ -175,12 +176,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         onToggleSave?.();
     };
 
-    // Dela eventet: native share-dialog på mobil, annars kopiera deep-länken
-    // (?event=<id> återställer exakt detta event på kartan hos mottagaren).
+    // Dela eventet: native share-dialog på mobil, annars kopiera länken.
+    // Skrapade event delas som /e/<slug> — den sidan serverar eventets EGEN
+    // delningsbild (titel/emoji/plats) till FB/Messenger och skickar människor
+    // vidare till kartan. User-skapade event finns inte i aggregat-datat som
+    // /e/-uppslaget läser, så de behåller den direkta ?event=-länken.
     const handleShare = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const shareUrl = `${window.location.origin}/?event=${encodeURIComponent(linkEvent.id)}`;
+        const shareUrl = linkEvent.userCreated
+            ? `${window.location.origin}/?event=${encodeURIComponent(linkEvent.id)}`
+            : `${window.location.origin}/e/${eventShareSlug(linkEvent.id)}`;
         try {
             if (navigator.share) {
                 await navigator.share({ title: linkEvent.title, url: shareUrl });

@@ -32,6 +32,8 @@ const nextConfig = {
         return [
             { source: '/shop', destination: '/', permanent: false },
             { source: '/login', destination: '/', permanent: false },
+            // Webbläsare frågar alltid efter /favicon.ico — den finns bara som PNG.
+            { source: '/favicon.ico', destination: '/favicon.png', permanent: true },
         ];
     },
 };

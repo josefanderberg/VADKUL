@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { Fredoka } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
@@ -106,7 +107,11 @@ export default function RootLayout({
                 <Providers>
                     {children}
                     <Hotjar />
-                    <FirebaseAnalytics />
+                    {/* useSearchParams() i FirebaseAnalytics kräver en Suspense-gräns —
+                        annars kan sidor tvingas ur statisk rendering. */}
+                    <Suspense fallback={null}>
+                        <FirebaseAnalytics />
+                    </Suspense>
                 </Providers>
             </body>
         </html>

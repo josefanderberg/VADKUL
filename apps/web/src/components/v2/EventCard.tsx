@@ -194,6 +194,48 @@ function eventEmoji(evt: LinkEvent): string {
     return evt.emoji || (EVENT_CATEGORIES[catKey]?.emoji ?? '🎫');
 }
 
+/** Omslagsbild i närhetslistan — börjar som tom platshållare och laddar bilden
+ *  FÖRST när raden scrollats fram (IntersectionObserver). Kortet öppnar alltså
+ *  lika snabbt som utan bilder; bara det man faktiskt tittar på hämtas.
+ *  Fast höjd via className så inget hoppar när bilden dyker upp; trasig
+ *  bildlänk rapporteras uppåt via onFailed (raden faller då tillbaka till
+ *  sin bildlösa layout). */
+function LazyRowImage({ src, alt, className, onFailed }: {
+    src: string;
+    alt: string;
+    className?: string;
+    onFailed?: () => void;
+}) {
+    const holderRef = useRef<HTMLDivElement>(null);
+    const [inView, setInView] = useState(false);
+    useEffect(() => {
+        const el = holderRef.current;
+        if (!el || typeof IntersectionObserver === 'undefined') return;
+        const io = new IntersectionObserver(entries => {
+            if (entries.some(e => e.isIntersecting)) {
+                setInView(true);
+                io.disconnect();
+            }
+        }, { rootMargin: '150px' });
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+    return (
+        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-slate-800 ${className ?? ''}`}>
+            {inView && (
+                <img
+                    src={src}
+                    alt={alt}
+                    loading="lazy"
+                    decoding="async"
+                    onError={onFailed}
+                    className="w-full h-full object-cover animate-in fade-in duration-300"
+                />
+            )}
+        </div>
+    );
+}
+
 function NearbyRow({ evt, distanceKm, now, onSelect }: {
     evt: LinkEvent;
     distanceKm: number | null;
@@ -204,12 +246,91 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
     const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
+    // Trasig bildlänk → rendera den kompakta bildlösa raden i stället.
+    const [imgFailed, setImgFailed] = useState(false);
+    const hasImage = !!evt.coverImage && !imgFailed;
+
+    // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
+    // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
+    const infoRow = (
+        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 overflow-hidden">
+            <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
+                <MapPin size={11} className="text-primary" />
+                {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
+            </span>
+            <span className="truncate min-w-0">{evt.locationName}</span>
+            {timeHint && (
+                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
+                    <Clock size={11} className="text-primary" />
+                    {timeHint}
+                </span>
+            )}
+            {priceLabel && (
+                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
+                    <Ticket size={11} className="text-primary" />
+                    {priceLabel}
+                </span>
+            )}
+            {attendees > 0 && (
+                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
+                    <Users size={11} className="text-primary" />
+                    {attendees} kommer
+                </span>
+            )}
+        </div>
+    );
+
+    // Rad MED bild: bilden kant till kant överst. Titeln ligger OVANPÅ bilden
+    // (emojin till vänster på samma rad) och status-badgen i bildens höger-
+    // kant — allt på en mörk gradient så texten alltid är läsbar, även på
+    // ljusa bilder/platshållaren. Inforaden ligger under bilden.
+    if (hasImage) {
+        return (
+            <li>
+                <button
+                    type="button"
+                    onClick={() => onSelect(evt)}
+                    className="w-full text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                >
+                    <div className="relative">
+                        <LazyRowImage
+                            src={evt.coverImage!}
+                            alt=""
+                            className="h-28"
+                            onFailed={() => setImgFailed(true)}
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 md:px-6 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+                            <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>
+                                {eventEmoji(evt)}
+                            </span>
+                            <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                {evt.title}
+                            </h4>
+                            {evt.userCreated && (
+                                <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
+                                    VADKUL
+                                </span>
+                            )}
+                            <StatusBadge status={status} />
+                        </div>
+                    </div>
+                    <div className="px-4 md:px-6 py-2 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">{infoRow}</div>
+                        <ChevronRight size={16} className="text-slate-400 shrink-0" />
+                    </div>
+                </button>
+            </li>
+        );
+    }
+
+    // Rad UTAN bild: kompakt som förut — emoji-bricka till vänster, titel +
+    // badges, inforaden under.
     return (
         <li>
             <button
                 type="button"
                 onClick={() => onSelect(evt)}
-                className="w-full text-left px-4 md:px-6 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
@@ -222,7 +343,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                     {eventEmoji(evt)}
                 </span>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-0.5">
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
                             {evt.title}
                         </h4>
@@ -233,35 +354,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                         )}
                         <StatusBadge status={status} />
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1 shrink-0">
-                            <MapPin size={11} className="text-primary" />
-                            {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
-                        </span>
-                        <span className="truncate">{evt.locationName}</span>
-                    </div>
-                    {(timeHint || priceLabel || attendees > 0) && (
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                            {timeHint && (
-                                <span className="inline-flex items-center gap-1 shrink-0">
-                                    <Clock size={11} className="text-primary" />
-                                    {timeHint}
-                                </span>
-                            )}
-                            {priceLabel && (
-                                <span className="inline-flex items-center gap-1 shrink-0">
-                                    <Ticket size={11} className="text-primary" />
-                                    {priceLabel}
-                                </span>
-                            )}
-                            {attendees > 0 && (
-                                <span className="inline-flex items-center gap-1 shrink-0">
-                                    <Users size={11} className="text-primary" />
-                                    {attendees} kommer
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {infoRow}
                 </div>
                 <ChevronRight size={16} className="text-slate-400 shrink-0" />
             </button>
@@ -478,6 +571,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [forwardStack, setForwardStack] = useState<string[]>([]);
 
     const [isAnimating, setIsAnimating] = useState(true);
+    // "Nästa"-etiketten i nästa-knappen visas tills användaren navigerat framåt
+    // första gången (klick eller svep) — därefter räcker emoji-brickan + pilen.
+    const [nextHintDismissed, setNextHintDismissed] = useState(false);
     const isDragging = useRef(false);
     const dragDirection = useRef<'none' | 'horizontal' | 'vertical'>('none');
     const startX = useRef(0);
@@ -1020,6 +1116,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const handleSwipeOut = (direction: 'left' | 'right') => {
         if (!selectedEvent) return;
+        // Ett svep är också framåt-navigering — då behövs inte "Nästa"-hinten längre.
+        setNextHintDismissed(true);
 
         // Animate off screen
         setExitX(direction === 'right' ? window.innerWidth : -window.innerWidth);
@@ -1074,6 +1172,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const handleNextOnly = () => {
         if (didDragRef.current) { didDragRef.current = false; return; }
         if (!selectedEvent || events.length === 0) return;
+        setNextHintDismissed(true);
 
         // Har vi backat? Spela då upp framåt-stacken i SAMMA ordning igen i
         // stället för att räkna fram ett nytt närmaste event.
@@ -1298,11 +1397,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                className="group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-white font-black tracking-wide
-                                    bg-gradient-to-r from-transparent via-[#006AA7]/10 to-[#006AA7]/35
+                                className="group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
+                                    bg-gradient-to-r from-transparent via-white/30 to-white/80
                                     flex items-center justify-end gap-2 pr-1.5
-                                    transition-colors hover:via-[#006AA7]/20 hover:to-[#006AA7]/50"
+                                    transition-colors hover:via-white/40 hover:to-white/90"
                             >
+                                {/* "Nästa"-etikett tills första framåt-navigeringen —
+                                    gör det tydligt vad knappen gör innan man klickat. */}
+                                {!nextHintDismissed && (
+                                    <span aria-hidden className="relative z-20 text-[13px] uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap">
+                                        Nästa
+                                    </span>
+                                )}
                                 {/* Emoji-bricka för nästa event — samma look som
                                     Föregående-knappens bricka, fast med framåt-pil. */}
                                 {nextEvent ? (

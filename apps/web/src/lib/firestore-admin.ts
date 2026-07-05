@@ -19,7 +19,11 @@ let _db: Firestore | null = null;
 
 /** Initiera Admin-appen en gång (ADC i prod, service-account lokalt). */
 function ensureAdminApp(): boolean {
-    if (getApps().length > 0) return true;
+    // Kolla efter DEFAULT-appen specifikt: i prod skapar firebase-frameworks
+    // (Hosting-wrappern) en NAMNGIVEN admin-app ('firebase-frameworks') vid
+    // uppstart. Ett `getApps().length > 0` hoppade då över init av
+    // default-appen → getFirestore() kastade → naken 500 på alla admin-routes.
+    if (getApps().some(a => a.name === '[DEFAULT]')) return true;
 
     try {
         // Lokal dev: leta efter service-account.json i scraper-mappen
@@ -30,8 +34,9 @@ function ensureAdminApp(): boolean {
 
         for (const p of candidates) {
             if (fs.existsSync(p)) {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                initializeApp({ credential: cert(require(p)) });
+                // fs + JSON.parse i st.f. require(): webpack skriver om dynamiska
+                // require-anrop så de kraschar i runtime i Next-bundlad kod.
+                initializeApp({ credential: cert(JSON.parse(fs.readFileSync(p, 'utf8'))) });
                 return true;
             }
         }
@@ -48,13 +53,25 @@ function ensureAdminApp(): boolean {
 export function getAdminDb(): Firestore | null {
     if (_db) return _db;
     if (!ensureAdminApp()) return null;
-    _db = getFirestore();
+    // try/catch: ett kast här bubblar annars ut UR anropande routes utan egen
+    // vakt → naken 500. null → routes svarar 503 och klienter tar reservvägen.
+    try {
+        _db = getFirestore();
+    } catch (e) {
+        console.error('[firestore-admin] getFirestore:', e);
+        return null;
+    }
     return _db;
 }
 
 export function getAdminAuth(): Auth | null {
     if (!ensureAdminApp()) return null;
-    return getAuth();
+    try {
+        return getAuth();
+    } catch (e) {
+        console.error('[firestore-admin] getAuth:', e);
+        return null;
+    }
 }
 
 /**
