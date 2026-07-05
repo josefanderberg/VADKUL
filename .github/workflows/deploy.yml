@@ -1,12 +1,28 @@
-name: Deploy to Firebase Hosting
+name: Deploy till Firebase
 
+# Deployar vid push till main OCH varje morgon efter skraperns 06:00-körning
+# (svensk tid) — stadssidorna bakas vid build, så den dagliga deployen ger
+# Google dagsfärska sidor utan handpåläggning. Kan även triggas manuellt
+# under Actions-fliken (Run workflow).
+#
+# Kräver två repo-secrets (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT — hela JSON-nyckeln från Firebase Console →
+#       Projektinställningar → Tjänstkonton → Generera ny privat nyckel
+#   WEB_ENV — hela innehållet i apps/web/.env (NEXT_PUBLIC_*-raderna)
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy (Firebase Hosting)
+    name: Bygg + deploya (Firebase frameworks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,19 +33,54 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # Firebase Hosting with Next.js Frameworks support builds the app itself
-      # during deploy — no separate build step needed.
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VADKUL_F2CB2 }}
-          channelId: live
-          projectId: vadkul-f2cb2
+      # Klientkonfigen (NEXT_PUBLIC_*) ligger inte i git — hela .env-filen
+      # förvaras som EN secret.
+      - name: Skriv apps/web/.env
+        run: printf '%s\n' "$WEB_ENV" > apps/web/.env
         env:
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: vadkul-f2cb2
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          WEB_ENV: ${{ secrets.WEB_ENV }}
+
+      # Färskt eventdata: hämtas via sajtens egen CDN-route (exakt samma form
+      # som de statiska filerna). Misslyckas något lager behålls repo-versionen
+      # — deployen får aldrig stupa på datahämtningen.
+      - name: Uppdatera eventdata från produktion
+        run: |
+          for layer in destinations cards descriptions; do
+            f="apps/web/public/events-$layer.json"
+            if curl -fsS --compressed --max-time 180 "https://vadkul.se/api/events/$layer" -o "$f.new" \
+               && [ "$(wc -c < "$f.new")" -gt 500000 ] \
+               && node -e "JSON.parse(require('fs').readFileSync('$f.new','utf8'))"; then
+              mv "$f.new" "$f"
+              echo "$layer: uppdaterad till $(wc -c < "$f") byte"
+            else
+              rm -f "$f.new"
+              echo "$layer: hämtningen misslyckades — behåller repo-versionen"
+            fi
+          done
+
+      - name: Installera beroenden
+        run: npm ci
+
+      # Frameworks-deployen bygger Next-appen själv och deployar hosting +
+      # SSR-funktionen i ett svep. --only hosting rör INTE firestore-regler
+      # eller övriga functions.
+      - name: Deploya
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          npx firebase-tools@14 deploy --only hosting --project vadkul-f2cb2 --force
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
+
+      # Direkt efterkontroll — misslyckas den blir körningen röd och GitHub
+      # mejlar. Samma kontroller som SEO-kanarien, fast direkt efter deploy.
+      - name: Efterkontroll
+        run: |
+          sleep 20
+          fail=0
+          h1=$(curl -fsS --max-time 30 https://vadkul.se/evenemang/malmo | grep -c '<h1' || true)
+          [ "${h1:-0}" -ge 1 ] || { echo '::error::Stadssidan saknar <h1> efter deploy — SSR trasig?'; fail=1; }
+          curl -fsS -o /dev/null --max-time 30 https://vadkul.se/sitemap.xml || { echo '::error::sitemap.xml svarar inte'; fail=1; }
+          curl -fsS -o /dev/null --compressed --max-time 60 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte'; fail=1; }
+          exit $fail

@@ -1,0 +1,34 @@
+name: SEO-kanarie
+
+# Övervakar att produktionen serverar RIKTIGT innehåll — inte bara att den
+# svarar. Fångar tysta haverier av AuthContext-typen (5 juli 2026: alla sidor
+# serverade tomma HTML-skal till Google i över ett dygn utan att någon mätare
+# slog larm). Rött kör = GitHub mejlar dig. Inga secrets behövs.
+on:
+  schedule:
+    - cron: '15 4,10,16,22 * * *' # fyra ggr/dygn (UTC)
+  workflow_dispatch:
+
+jobs:
+  canary:
+    name: Hälsokoll mot vadkul.se
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kontrollera innehåll, sitemap och event-API
+        run: |
+          fail=0
+
+          html=$(curl -fsS --max-time 30 https://vadkul.se/evenemang/malmo) || { echo '::error::/evenemang/malmo svarar inte'; exit 1; }
+          echo "$html" | grep -q '<h1' || { echo '::error::Stadssidan saknar <h1> — Google får tomma skal!'; fail=1; }
+          echo "$html" | grep -q 'href="/?event=' || { echo '::error::Stadssidan saknar eventlänkar'; fail=1; }
+
+          start=$(curl -fsS --max-time 30 https://vadkul.se/) || { echo '::error::Startsidan svarar inte'; fail=1; start=''; }
+          echo "$start" | grep -q 'og:image' || { echo '::error::Startsidan saknar og:image-taggen'; fail=1; }
+
+          locs=$(curl -fsS --max-time 30 https://vadkul.se/sitemap.xml | grep -c '<loc>' || true)
+          [ "${locs:-0}" -ge 30 ] || { echo "::error::Sitemapen har bara ${locs:-0} URL:er (väntat 200+)"; fail=1; }
+
+          curl -fsS -o /dev/null --compressed --max-time 60 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte — kartklienter faller tillbaka till dyr Firestore-läsning'; fail=1; }
+
+          [ "$fail" -eq 0 ] && echo 'Allt friskt: innehåll, sitemap och event-API svarar som de ska.'
+          exit $fail
