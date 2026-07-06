@@ -67,7 +67,14 @@ export const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, 
 // kategoris markerHex. Delas av GL-lagret, DOM-synken, slideshow-cyclern och
 // vald-grupp-bläddringen så bakgrunden ALLTID matchar det event som faktiskt
 // visas i en multi-event-bricka (förr frös färgen på gruppens FÖRSTA event).
+// Smaragdgrön bas för användarskapade event (samma gröna som skapa-flödet och
+// DOM-markörens gradient). Delas av GL- och DOM-brickan så eget-eventfärgen
+// aldrig glider isär.
+export const USER_EVENT_HEX = '#059669';
 export function brickaBodyHex(ev: LinkEvent): string | null {
+    // Användarskapade event: alltid smaragdgröna, oavsett kategori — de lyfts
+    // fram som sajtens kärna (samma emfas som deras alltid-synliga bricka).
+    if (ev.userCreated) return USER_EVENT_HEX;
     if (sourceColor(ev.url || ev.id) !== null) return null; // stor källa → mörk
     const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
     return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
