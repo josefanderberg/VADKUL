@@ -495,24 +495,26 @@ export const linkEventService = {
         // per lager) i stället för ~51 — shards läses bara om vid ny updatedAt.
         async function loadAggregates() {
             try {
-                // 1. Fetch and render Destinations instantly
+                // 1. Destinations FÖRST och ENSAMT — markörerna behöver bara det
+                // här lagret, och på smala mobilnät ska det inte konkurrera om
+                // bandbredd med de två större lagren. Ritas direkt när det landat.
                 const destData = await fetchLayer('destinations');
                 if (!active || !destData) return;
 
                 baseEvents = mapDestinationsToLinkEvents(destData.events || []);
                 emit();
 
-                // 2. Fetch and merge Cards
-                const cardsData = await fetchLayer('cards');
+                // 2+3. Cards + descriptions PARALLELLT (laddades förr i serie =
+                // onödigt lång svans innan bilder/arrangörer/beskrivningar fanns).
+                const [cardsData, descData] = await Promise.all([
+                    fetchLayer('cards'),
+                    fetchLayer('descriptions'),
+                ]);
                 if (!active) return;
                 if (cardsData) {
                     baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
                     emit();
                 }
-
-                // 3. Fetch and merge Descriptions
-                const descData = await fetchLayer('descriptions');
-                if (!active) return;
                 if (descData && descData.data) {
                     baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
                     emit();
