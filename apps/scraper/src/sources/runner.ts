@@ -213,8 +213,15 @@ export async function runSource(
             }
             if (!opts.dryRun && !lat && !lng) {
                 for (const q of geocodeQueriesFor(e)) {
-                    if (!geoCache.has(q)) geoCache.set(q, await geocodeVenueSweden(q));
-                    const coords = geoCache.get(q);
+                    // nearCity-validering: känner källan till staden får Nominatim
+                    // inte returnera en namne i fel stad ("S:t Nikolai kyrka" →
+                    // Örebro för Halmstad-event). Cache-nyckeln MÅSTE inkludera
+                    // staden — samma fråga kan ge olika svar för olika städer.
+                    const cacheKey = e.city ? `${q}|near:${e.city}` : q;
+                    if (!geoCache.has(cacheKey)) {
+                        geoCache.set(cacheKey, await geocodeVenueSweden(q, e.city ? { nearCity: e.city } : undefined));
+                    }
+                    const coords = geoCache.get(cacheKey);
                     if (coords) { lat = coords[0]; lng = coords[1]; geocodedQuery = q; break; }
                 }
             }

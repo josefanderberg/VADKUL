@@ -1,81 +1,17 @@
-[
-  {
-    "id": "dunkers-kulturhus",
-    "hostName": "Dunkers Kulturhus",
-    "region": "helsingborg",
-    "engine": "wp-rest",
-    "config": {
-      "baseUrl": "https://dunkerskulturhus.se",
-      "variant": "wp-v2",
-      "defaultCity": "Dunkers Kulturhus",
-      "fetchDetailPage": true,
-      "maxPages": 5
-    },
-    "count": 20,
-    "method": "wp-v2"
+{
+  "_verdict_2026-07-02": "ALLA 5 avfärdade vid motorverifiering. bulk-probe räknade sitemap-URL:er, inte event i fönstret. Proba INTE om utan ny vinkel.",
+  "_details": {
+    "stampen": "FÄLLA. 726 URL:er men JSON-LD startDate = 2017 (MEC-arkiv, återkommande event vars serie-start ligger 2017). Sitemap-vägen ger ~0 i fönstret. Kräver MEC:s egna API/kalender-endpoint. Stad=Stockholm (Gamla Stan jazzklubb), bekräftad.",
+    "jamtli": "FÄLLA. 177 URL:er men ingen JSON-LD Event; text-datum = feb 2024 (arkiv-tunga sitemap, ej datumsorterad). Stad=Östersund.",
+    "helsingborg-arena": "FÄLLA. 69 URL:er men ingen strukturerad data alls (ingen JSON-LD, inga text-datum). Handbollsmatcher — datum troligen JS-renderade. Stad=Helsingborg.",
+    "conventum": "TRASIG. wp-sitemap-posts-event-1.xml har bara 1 loc; riktiga event under /arrangemang/ men den sitemap:en tom. Exempel-URL:er = 2023. Stad=Örebro.",
+    "dunkers-kulturhus": "FÄLLA. wp/v2/event date = PUBLICERINGSdatum (färskt 2026-07), men detaljsidan saknar JSON-LD/text-datum för eventet självt. Kräver djupare fältjakt. Stad=Helsingborg."
   },
-  {
-    "id": "helsingborg-arena",
-    "hostName": "Helsingborg Arena",
-    "region": "helsingborg",
-    "engine": "sitemap",
-    "config": {
-      "sitemapUrl": "https://www.hbgarena.se/event-sitemap.xml",
-      "urlPatterns": [
-        "/\\/event\\/[a-z0-9][a-z0-9-]{2,}/i"
-      ],
-      "defaultCity": "Helsingborg Arena",
-      "maxUrls": 200
-    },
-    "count": 68,
-    "method": "sitemap-text"
-  },
-  {
-    "id": "conventum",
-    "hostName": "Conventum",
-    "region": "orebro",
-    "engine": "sitemap",
-    "config": {
-      "sitemapUrl": "https://www.conventum.se/wp-sitemap-posts-event-1.xml",
-      "urlPatterns": [
-        "/\\/evenemang\\/[a-z0-9][a-z0-9-]{2,}/i"
-      ],
-      "defaultCity": "Conventum",
-      "maxUrls": 200
-    },
-    "count": 16,
-    "method": "sitemap-text"
-  },
-  {
-    "id": "jamtli",
-    "hostName": "Jamtli",
-    "region": "ostersund",
-    "engine": "sitemap",
-    "config": {
-      "sitemapUrl": "https://www.jamtli.com/ajde_events-sitemap.xml",
-      "urlPatterns": [
-        "/\\/kalendarium\\/[a-z0-9][a-z0-9-]{2,}/i"
-      ],
-      "defaultCity": "Jamtli",
-      "maxUrls": 200
-    },
-    "count": 175,
-    "method": "sitemap-text"
-  },
-  {
-    "id": "stampen",
-    "hostName": "Stampen",
-    "region": "stockholm",
-    "engine": "sitemap",
-    "config": {
-      "sitemapUrl": "https://stampen.se/mec-events-sitemap.xml",
-      "urlPatterns": [
-        "/\\/events\\/[a-z0-9][a-z0-9-]{2,}/i"
-      ],
-      "defaultCity": "Stampen",
-      "maxUrls": 200
-    },
-    "count": 726,
-    "method": "sitemap-json-ld"
-  }
-]
+  "_original_suggestions": [
+    { "id": "dunkers-kulturhus", "hostName": "Dunkers Kulturhus", "region": "helsingborg", "engine": "wp-rest", "config": { "baseUrl": "https://dunkerskulturhus.se", "variant": "wp-v2", "defaultCity": "Helsingborg", "fetchDetailPage": true, "maxPages": 5 }, "count": 20, "method": "wp-v2" },
+    { "id": "helsingborg-arena", "hostName": "Helsingborg Arena", "region": "helsingborg", "engine": "sitemap", "config": { "sitemapUrl": "https://www.hbgarena.se/event-sitemap.xml", "defaultCity": "Helsingborg", "maxUrls": 200 }, "count": 68, "method": "sitemap-text" },
+    { "id": "conventum", "hostName": "Conventum", "region": "orebro", "engine": "sitemap", "config": { "sitemapUrl": "https://www.conventum.se/wp-sitemap-posts-event-1.xml", "defaultCity": "Örebro", "maxUrls": 200 }, "count": 16, "method": "sitemap-text" },
+    { "id": "jamtli", "hostName": "Jamtli", "region": "ostersund", "engine": "sitemap", "config": { "sitemapUrl": "https://www.jamtli.com/ajde_events-sitemap.xml", "defaultCity": "Östersund", "maxUrls": 200 }, "count": 175, "method": "sitemap-text" },
+    { "id": "stampen", "hostName": "Stampen", "region": "stockholm", "engine": "sitemap", "config": { "sitemapUrl": "https://stampen.se/mec-events-sitemap.xml", "defaultCity": "Stockholm", "maxUrls": 200 }, "count": 726, "method": "sitemap-json-ld" }
+  ]
+}

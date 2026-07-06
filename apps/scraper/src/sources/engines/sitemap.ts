@@ -35,6 +35,7 @@ import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
 import { extractStreetAddress } from '../../utils/swedishAddress';
+import { isInNordic } from '../../utils/venueCoordinates';
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -67,6 +68,12 @@ export interface SitemapConfig {
     sitemapUrl: string;
     /** Om true: behandla sitemapUrl som HTML-katalog, inte XML-sitemap. */
     isHtmlCatalog?: boolean;
+    /**
+     * Om true: sitemapUrl är ett JSON-svar (sök-API) — alla citerade URL-
+     * strängar i svaret blir kandidater (urlPatterns filtrerar). Katalog-
+     * fetchen skickar X-Requested-With: XMLHttpRequest (content-negotiation).
+     */
+    isJsonCatalog?: boolean;
     urlPatterns: RegExp[];
     urlBlacklist?: RegExp[];
     defaultCity?: string;
@@ -80,6 +87,13 @@ export interface SitemapConfig {
      * Sätt true på stora sajter där lastmod är pålitlig signal för event-datum.
      */
     aggressiveEarlyExit?: boolean;
+    /**
+     * Plats-endpoint: [sökmönster, ersättning] som mappar event-URL → en
+     * separat plats-sida (Kulturbiljetter: /evenemang/<id>/ → /evenemang/map/<id>/).
+     * Hämtas BARA när eventet saknar venue efter ordinarie extraktion; parsas
+     * efter <h3>Venue / Stad</h3> + adress-<p> (svensk postnummer-signatur).
+     */
+    placeUrlReplace?: [RegExp, string];
     /**
      * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
      * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
@@ -249,6 +263,11 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
                 // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
                 'Accept': 'text/html,application/xml,application/xhtml+xml,application/gzip,*/*;q=0.1',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+                // JSON-kataloger (Studiefrämjandets kurssök) content-förhandlar
+                // på XHR-headern: med den svarar samma URL med JSON i stället
+                // för HTML-skalet. Sätts bara för själva katalog-fetchen.
+                ...(cfg.isJsonCatalog && url === cfg.sitemapUrl
+                    ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
             },
             redirect: 'follow',
         }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT, label: url });
@@ -321,23 +340,29 @@ function isSitemapIndex(xml: string): boolean {
 /**
  * Plocka ut <a href>-länkar ur en HTML-katalog-sida som ofta listar event-
  * detaljsidor som länkar (utan att exponera dem i sitemap.xml).
+ *
+ * Fångar även RSS-flöden: `<link>https://…/evenemang/foo</link>` (länken ligger
+ * i element-innehållet, inte i href). Lunds universitets kalender exponerar bara
+ * sina event så här — detaljsidan har sen svensk text-datum som plockas vidare.
+ * RSS-mönstret kräver innehåll MELLAN taggarna, så HTML:ens self-closing
+ * `<link rel=stylesheet href=…>` matchas aldrig av misstag.
  */
 function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
     const out: SitemapEntry[] = [];
-    const re = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
-    let m: RegExpExecArray | null;
     const seen = new Set<string>();
-    while ((m = re.exec(html)) !== null) {
-        let href = m[1].trim();
-        if (!href || href.startsWith('#') || href.startsWith('javascript:')) continue;
-        // Resolva mot baseUrl
-        try {
-            href = new URL(href, baseUrl).toString();
-        } catch { continue; }
-        if (seen.has(href)) continue;
+    const push = (raw: string) => {
+        let href = raw.trim();
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+        try { href = new URL(href, baseUrl).toString(); } catch { return; }
+        if (seen.has(href)) return;
         seen.add(href);
         out.push({ url: href });
-    }
+    };
+    const aRe = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = aRe.exec(html)) !== null) push(m[1]);
+    const rssRe = /<link>\s*(https?:\/\/[^<\s]+)\s*<\/link>/gi;
+    while ((m = rssRe.exec(html)) !== null) push(m[1]);
     return out;
 }
 
@@ -354,7 +379,18 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
 
     let candidates: SitemapEntry[] = [];
 
-    if (cfg.isHtmlCatalog) {
+    if (cfg.isJsonCatalog) {
+        // JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
+        // citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-
+        // filtret nedströms avgör vilka som är event-sidor.
+        const seen = new Set<string>();
+        for (const m of root.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
+            let href = m[1];
+            try { href = new URL(href, cfg.sitemapUrl).toString(); } catch { continue; }
+            if (!seen.has(href)) { seen.add(href); candidates.push({ url: href }); }
+        }
+        ctx.log(`json-katalog: ${candidates.length} URL-kandidater hittade`);
+    } else if (cfg.isHtmlCatalog) {
         candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
         ctx.log(`html-katalog: ${candidates.length} länkar hittade`);
     } else if (isSitemapIndex(root)) {
@@ -442,14 +478,27 @@ function titleFromUrl(url: string): string {
 
 function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
-    // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet)
-    let title = ($('h1').first().text() || '').trim();
-    if (!title) title = ($('meta[property="og:title"]').attr('content') || '').trim();
-    if (!title) {
-        const docTitle = ($('title').first().text() || '').trim();
-        // Strippa " | Sajtnamn" / " - Kommun" från <title>
-        title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
-    }
+    // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet).
+    // Multi-h1-sidor (Kalmar läns museum: h1#1 = sajtloggan, h1#2 = eventtiteln)
+    // gjorde att .first() gav SAJTNAMNET på alla event — därför vinner den h1
+    // som matchar sidtitelns första segment (og:title/<title> före " - Sajt").
+    const ogTitle = ($('meta[property="og:title"]').attr('content') || '').trim();
+    const docTitle = ($('title').first().text() || '').trim();
+    const titleParts = (ogTitle || docTitle).split(/\s+[|–-]\s+/).map(s => s.trim());
+    const pageName = (titleParts[0] || '').toLowerCase();
+    // Sajtnamnet = svans-segmentet ("Eventtitel - Kalmar läns museum") — en h1
+    // som ÄR sajtnamnet (logga-h1) får aldrig vinna som fallback.
+    const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
+    let title = '';
+    $('h1').each((_i, el) => {
+        const t = $(el).text().replace(/\s+/g, ' ').trim();
+        if (!t) return;
+        const tl = t.toLowerCase();
+        if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
+        if (pageName && tl === pageName) { title = t; return false; }
+    });
+    if (!title) title = ogTitle;
+    if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
     if (!title) title = titleFromUrl(url);
     if (!title) return null;
 
@@ -536,16 +585,37 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         ($('meta[property="og:description"]').attr('content') ||
             $('meta[name="description"]').attr('content') || '').trim();
     const imageUrl = $('meta[property="og:image"]').attr('content') || undefined;
+    // Key/value-metadata ("Plats" → värde) — Episerver-sajter (Studiefrämjandet
+    // m.fl.) lägger platsen i c-articlemeta-par utan microdata. #placeItem är
+    // Studiefrämjandets id; key-matchningen tar generiska nyckel/värde-listor.
+    let kvPlats = $('#placeItem').first().text().trim();
+    if (!kvPlats) {
+        $('[class*="__key"], dt').each((_i, el) => {
+            if ($(el).text().trim().toLowerCase() === 'plats') {
+                kvPlats = $(el).next('[class*="__value"], dd').first().text().trim();
+                return false;
+            }
+        });
+    }
     const venueName =
         $('[itemprop="location"] [itemprop="name"]').first().text().trim() ||
+        (kvPlats && kvPlats.toLowerCase() !== 'sverige' ? kvPlats : '') ||
         $('.event-location, .plats, .location, .venue').first().text().trim() ||
         undefined;
 
     // Gatuadress ur microdata/vanliga adress-element (regex-fallbacken för
     // båda extraktions-vägarna ligger i fallbackAddress nedan).
+    // OBS: har sidan ett [itemprop="location"]-scope måste streetAddress läsas
+    // DÄRIFRÅN — oscopad .first() träffar annars footer-microdata (Ticksters
+    // LocalBusiness "Magasinsgatan 8" förgiftade 695 events extractedAddress).
+    const locScope = $('[itemprop="location"]');
     let address =
-        $('[itemprop="streetAddress"]').first().text().trim() ||
-        ($('[itemprop="streetAddress"]').first().attr('content') || '').trim() ||
+        locScope.find('[itemprop="streetAddress"]').first().text().trim() ||
+        (locScope.find('[itemprop="streetAddress"]').first().attr('content') || '').trim() ||
+        (locScope.length === 0
+            ? ($('[itemprop="streetAddress"]').first().text().trim() ||
+                ($('[itemprop="streetAddress"]').first().attr('content') || '').trim())
+            : '') ||
         $('.event-address, .adress, .address, .street-address').first().text().trim() ||
         undefined;
     if (address && address.length > 120) address = undefined;  // skräp-skydd
@@ -607,6 +677,130 @@ function fallbackAddress(html: string): string | undefined {
     return extractStreetAddress(labelled?.[1]) ?? extractStreetAddress(text) ?? undefined;
 }
 
+/**
+ * Fyll TOMMA fält ur sidans HTML — additivt komplement till JSON-LD/cheerio.
+ * Körs för BÅDA extraktions-vägarna men BARA när ett fält saknas, så friska
+ * events aldrig skrivs över och cheerio-parsen hoppas helt när allt redan finns.
+ *
+ * Täcker källor där strukturerad data är ofullständig:
+ *   - Malmö Pride: JSON-LD Event utan description → og:description
+ *   - Ale (SiteVision): ingen og alls → första rejäla <p> + content-<img>
+ *   - Västervik: hero ligger i CSS background-image, ingen og:image
+ */
+function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
+    const needsDesc = !ev.description || ev.description.trim().length < 20;
+    const needsImg = !ev.imageUrl;
+    if (!needsDesc && !needsImg) return;
+
+    const $ = cheerio.load(html);
+
+    if (needsDesc) {
+        let d = ($('meta[property="og:description"]').attr('content') ||
+            $('meta[name="description"]').attr('content') ||
+            $('meta[name="twitter:description"]').attr('content') || '')
+            .replace(/\s+/g, ' ').trim();
+        // Squarespace-platshållare ("Date: Time: Place: …") är ingen beskrivning
+        if (/^date:\s*time:/i.test(d)) d = '';
+        if (d.length < 20) {
+            // Ale m.fl. utan og: ta första rejäla brödtext-stycket i huvudinnehållet.
+            // OBS: sök över ALLA innehålls-containrar — .first() på container-listan
+            // fastnade på en tom .content/portlet före <main> (Katrineholm) och
+            // gav upp trots att brödtexten fanns längre ner i dokumentet.
+            $('main p, article p, .content p, .sv-text-portlet p').each((_i, el) => {
+                const t = $(el).text().replace(/\s+/g, ' ').trim();
+                if (t.length >= 40) { d = t; return false; }
+            });
+        }
+        if (d.length >= 20) ev.description = d.slice(0, 600);
+    }
+
+    if (needsImg) {
+        let img = ($('meta[property="og:image"]').attr('content') ||
+            $('meta[name="twitter:image"]').attr('content') || '').trim();
+        if (!img) {
+            // Västervik m.fl.: hero i inline style="background-image:url('…')"
+            $('[style*="background-image"]').each((_i, el) => {
+                const m = ($(el).attr('style') || '').match(/background-image\s*:\s*url\((['"]?)([^'")]+)\1\)/i);
+                if (m) { img = m[2]; return false; }
+            });
+        }
+        if (!img) {
+            // Ale (SiteVision): content-<img> i main/article — ej logo/ikon/emoji/svg
+            $('main img, article img').each((_i, el) => {
+                const src = ($(el).attr('src') || $(el).attr('data-src') || '').trim();
+                if (src && !/logo|icon|emoji|sprite|placeholder|pixel|avatar|\.svg(\?|$)/i.test(src)) { img = src; return false; }
+            });
+        }
+        if (img) {
+            try { img = new URL(img, pageUrl).href; } catch { /* behåll som-är */ }
+            if (!/emoji\.php|static\.xx\.fbcdn/i.test(img)) ev.imageUrl = img;  // skippa FB-emoji-pixlar
+        }
+    }
+}
+
+/**
+ * Koordinater + ort ur kart-länkar och microdata — additivt komplement som
+ * BARA fyller tomma fält (samma kontrakt som backfillFromHtml).
+ *
+ * Tickster (1400+ framtida event) saknar JSON-LD men exponerar EXAKTA
+ * koordinater i en Google Maps-länk på varje detaljsida:
+ *   https://www.google.com/maps/search/?api=1&query=57.657,12.5106
+ * samt samma koordinater i en staticmap-URL (…?center=57.657,12.5106…).
+ * Utan detta föll ~46% av Tickster-eventen bort ur kartan: venue-namn utan
+ * ort ("Sängfabriken", "Teatergläntan") geokodar inte i Nominatim.
+ *
+ * Orten ligger som schema.org-microdata. OBS: selektorn MÅSTE vara scopad
+ * till [itemprop="location"] — Ticksters footer har egen LocalBusiness-
+ * microdata med kontorsorter (Arvika/Göteborg) som annars läcker in.
+ */
+export function backfillPlaceFromHtml(html: string, ev: RawEvent): void {
+    // 1) Koordinater ur kart-URL:er. Konservativ: kräver "map" i URL:en och
+    //    ett lat,lng-par i query/center/q/ll/destination. Nordics-bounds-
+    //    valideras så slumptal aldrig blir koordinater.
+    if (!ev.coords) {
+        const m = html.match(
+            /https?:\/\/[^"'\s<>]*map[^"'\s<>]*?[?&](?:amp;)?(?:query|center|q|ll|destination)=(-?\d{1,2}\.\d+)(?:,|%2[cC])(-?\d{1,3}\.\d+)/i,
+        );
+        if (m) {
+            const lat = parseFloat(m[1]);
+            const lng = parseFloat(m[2]);
+            if (isInNordic(lat, lng)) ev.coords = [lat, lng];
+        }
+    }
+    // 2) Ort ur microdata (Tickster skriver den ibland gement: "karlstad").
+    if (!ev.city) {
+        const $ = cheerio.load(html);
+        const raw = $('[itemprop="location"] [itemprop="addressLocality"]').first().text().trim();
+        if (raw && raw.length <= 40 && !/\d/.test(raw)) {
+            ev.city = raw.charAt(0).toUpperCase() + raw.slice(1);
+        }
+    }
+}
+
+/**
+ * Parsa en separat PLATS-sida (se SitemapConfig.placeUrlReplace) och fyll
+ * venue/adress/stad på eventet. Format (Kulturbiljetter):
+ *   <h3>Mossbo fäbodar / Ovanåker</h3><p>Mossbo Fäbodar, Långhed, 822 92, Ovanåker</p>
+ * Flera spelplatser → första behålls (serie-sidan listar alla datum ändå).
+ * Exporterad för test.
+ */
+export function applyPlacePage(html: string, ev: RawEvent): void {
+    const $ = cheerio.load(html);
+    const h3 = $('h3').first().text().trim();
+    if (h3) {
+        const [venue, city] = h3.split('/').map(s => s.trim());
+        if (venue && !ev.venueName) ev.venueName = venue;
+        if (city && !ev.city) ev.city = city;
+    }
+    if (!ev.address) {
+        // Första <p> med svensk postnummer-signatur ("822 92") är adressen.
+        $('p').each((_i, el) => {
+            const t = $(el).text().replace(/\s+/g, ' ').trim();
+            if (/\b\d{3} ?\d{2}\b/.test(t) && t.length <= 120) { ev.address = t; return false; }
+        });
+    }
+}
+
 function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
@@ -626,11 +820,22 @@ function extractFromHtml(html: string, url: string, defaultCity?: string): RawEv
     }
     // 2) Cheerio-fallback
     if (!ev) ev = cheerioFallback(html, url, defaultCity);
+    // 2b) Backfilla TOMMA desc/bild ur HTML — gäller BÅDA vägarna (JSON-LD med
+    //     ofullständiga noder + cheerio-sidor utan og). Additivt, no-op när fullt.
+    if (ev) backfillFromHtml(html, ev, url);
     // 3) Tid ur URL-query om sidan inte gav specifik tid (host-agnostiskt).
     if (ev) applyUrlTime(ev, url);
+    // 3b) Koordinater + ort ur kart-länkar/microdata — BARA tomma fält fylls.
+    //     Körs FÖRE adress-fallbacken så att sidor med exakta koordinater
+    //     slipper regex-gissad adress (se gate nedan).
+    if (ev) backfillPlaceFromHtml(html, ev);
     // 4) Adress-fallback ur sidtexten — för BÅDA vägarna (JSON-LD utan
-    //    streetAddress är vanligt på kommunsajter).
-    if (ev && !ev.address) ev.address = fallbackAddress(html);
+    //    streetAddress är vanligt på kommunsajter). Skippas när sidan gav
+    //    exakta koordinater: regexen tar första gatuadressen i sidtexten,
+    //    vilket på t.ex. Tickster är footerns kontorsadress ("Magasinsgatan 8",
+    //    Arvika) — fel adress som visas för användaren i eventkortet, utan
+    //    att behövas för geokodning (coords vinner alltid i runnern).
+    if (ev && !ev.address && !ev.coords) ev.address = fallbackAddress(html);
     return ev;
 }
 
@@ -699,6 +904,16 @@ export const sitemapEngine = async (
             if (!html) { failed++; events.push(null); continue; }
             const ev = extractFromHtml(html, entry.url, config.defaultCity);
             if (!ev) { noEvent++; events.push(null); continue; }
+            // Plats-endpoint (Kulturbiljetter-mönstret): separat kart-sida bär
+            // venue/adress/stad som detaljsidan saknar. Bara vid venue-miss.
+            if (config.placeUrlReplace && !ev.venueName && !ev.coords) {
+                const [re, repl] = config.placeUrlReplace;
+                const placeUrl = entry.url.replace(re, repl);
+                if (placeUrl !== entry.url) {
+                    const placeHtml = await detailFetch(placeUrl);
+                    if (placeHtml) applyPlacePage(placeHtml, ev);
+                }
+            }
             extracted++;
             events.push(ev);
 

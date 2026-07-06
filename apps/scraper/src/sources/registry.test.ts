@@ -21,7 +21,9 @@ describe('source-registryt', () => {
 
     it('status och updateFrequency håller sig till taxonomin', () => {
         const statuses = new Set(['active', 'experimental', 'dead', undefined]);
-        const freqs = new Set(['hourly', 'daily', 'every-3d', 'weekly', undefined]);
+        // biweekly = 14-dagarskadensen i schedule.ts (nya källor 2026-07-02 på
+        // användarens önskan: "vartannan vecka" så DB:n inte översvämmas)
+        const freqs = new Set(['hourly', 'daily', 'every-3d', 'weekly', 'biweekly', undefined]);
         const badStatus = SOURCES.filter((s) => !statuses.has(s.status)).map((s) => s.id);
         const badFreq = SOURCES.filter((s) => !freqs.has(s.updateFrequency)).map((s) => s.id);
         expect(badStatus).toEqual([]);
