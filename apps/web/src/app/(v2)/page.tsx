@@ -435,6 +435,11 @@ export default function HomePage() {
         [selectedCategories],
     );
     const matchesFilter = useCallback((evt: LinkEvent) => {
+        // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
+        // hela kategori-/källfiltret: de göms aldrig av ett aktivt kategori-val
+        // och ligger aldrig i opt-in-källorna (Korpen/Svenska kyrkan/PRO), så
+        // deras opt-in-beteende påverkas inte.
+        if (evt.userCreated) return true;
         const src = classifySource(evt.url || evt.id);
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);

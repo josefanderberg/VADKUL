@@ -1241,6 +1241,14 @@ export default function V2Map({
                 if (group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)) sticky.add(key);
             }
         }
+        // Användarskapade event (sajtens kärna) hålls ALLTID tända — samma force-
+        // reveal som gillade event. Så deras (smaragdgröna) bricka syns överallt,
+        // oavsett avslöjning/närhet, viewport-panorering, zoomnivå eller kategori-
+        // val. De ligger aldrig i opt-in-källorna, så de tre opt-in-kategorierna
+        // (Korpen/Svenska kyrkan/PRO) behåller sitt opt-in-beteende oförändrat.
+        for (const [key, group] of groupsRef.current) {
+            if (group.some(e => e.userCreated)) sticky.add(key);
+        }
         reapplyAllRevealRef.current();
     }, [selectedEvent, savedEventIds, groups]);
 
