@@ -19,7 +19,6 @@
 
 import { LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
-import { sourceColor } from '../../utils/sources';
 
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -62,20 +61,21 @@ export function sourceGradientCss(color: string): string {
 // Standardbrickans mörka gradient (händelser utan kategorifärg / stora källor).
 export const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
 
-// Brick-kroppens kategori-/källfärg för ETT event i normaltillstånd. Stor källa
-// (PRO/Korpen/Svenska kyrkan) → mörk standardbricka (null); övriga → sin
-// kategoris markerHex. Delas av GL-lagret, DOM-synken, slideshow-cyclern och
-// vald-grupp-bläddringen så bakgrunden ALLTID matchar det event som faktiskt
-// visas i en multi-event-bricka (förr frös färgen på gruppens FÖRSTA event).
-// Smaragdgrön bas för användarskapade event (samma gröna som skapa-flödet och
-// DOM-markörens gradient). Delas av GL- och DOM-brickan så eget-eventfärgen
+// Brick-kroppens kategori-/källfärg för ETT event i normaltillstånd → sin
+// kategoris markerHex (okänd kategori → mörk standardbricka via null). Opt-in-
+// källorna (PRO/Korpen/Svenska kyrkan) följer samma regel som allt annat: när
+// användaren aktiverat dem integreras de visuellt med sin vanliga kategorifärg
+// (ingen egen mörk källbricka längre). Delas av GL-lagret, DOM-synken, slideshow-
+// cyclern och vald-grupp-bläddringen så bakgrunden ALLTID matchar det event som
+// faktiskt visas i en multi-event-bricka (förr frös färgen på gruppens FÖRSTA
+// event). Smaragdgrön bas för användarskapade event (samma gröna som skapa-flödet
+// och DOM-markörens gradient). Delas av GL- och DOM-brickan så eget-eventfärgen
 // aldrig glider isär.
 export const USER_EVENT_HEX = '#059669';
 export function brickaBodyHex(ev: LinkEvent): string | null {
     // Användarskapade event: alltid smaragdgröna, oavsett kategori — de lyfts
     // fram som sajtens kärna (samma emfas som deras alltid-synliga bricka).
     if (ev.userCreated) return USER_EVENT_HEX;
-    if (sourceColor(ev.url || ev.id) !== null) return null; // stor källa → mörk
     const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
     return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
 }
