@@ -83,19 +83,28 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
     // ~26 MB okomprimerad egress per ny besökare = den stora GCP-kostnaden.
     // 30s-pollen är också gratis här: max-age=300 → webbläsaren svarar ur egen
     // HTTP-cache utan nätverk (och utan Firestore-reads) i 5 min.
-    try {
-        const res = await fetch(`/api/events/${layerName}`);
-        if (res.ok) {
-            const data = await res.json();
-            if (data) {
-                if (typeof data.updatedAt === 'string') {
-                    layerCache.set(layerName, { updatedAt: data.updatedAt, data });
+    // Vid kallstart direkt efter en deploy kan svaret komma trunkerat
+    // (funktions-timeouten klipper strömmen mitt i → res.json() kastar
+    // "Unterminated string"). Ett omtag träffar då nästan alltid ett komplett,
+    // CDN-cachat svar — långt billigare än att ramla ner i väg 2.
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(`/api/events/${layerName}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data) {
+                    if (typeof data.updatedAt === 'string') {
+                        layerCache.set(layerName, { updatedAt: data.updatedAt, data });
+                    }
+                    return data;
                 }
-                return data;
+            }
+        } catch (e) {
+            if (attempt === 1) {
+                console.warn(`API-route för lagret "${layerName}" svarade inte (2 försök), provar Firestore direkt:`, e);
             }
         }
-    } catch (e) {
-        console.warn(`API-route för lagret "${layerName}" svarade inte, provar Firestore direkt:`, e);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
 
     // 2. Firestore Client SDK — färskt men dyrt (okomprimerad egress);
