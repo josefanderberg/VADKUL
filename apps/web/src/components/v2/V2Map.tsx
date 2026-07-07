@@ -118,6 +118,10 @@ interface V2MapProps {
     /** True så fort första event-svaret från databasen kommit. Default true
      *  (bakåtkompat). */
     eventsLoaded?: boolean;
+    /** True först när ALLA aggregat-lager (destinations+cards+descriptions)
+     *  landat. Mellan eventsLoaded och eventsSettled visar kartan en diskret
+     *  "Laddar fler event…"-pill. Default true (bakåtkompat). */
+    eventsSettled?: boolean;
     /** Bumpas av zoom-knappen i Nästa-pillen → zooma IN på det valda eventet
      *  (vanliga val står still/zoomar inte; detta är den explicita inzoomningen). */
     zoomToEventTrigger?: number;
@@ -154,6 +158,7 @@ export default function V2Map({
     onCenterChange,
     onMapDrag,
     eventsLoaded = true,
+    eventsSettled = true,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
     daySwitchNonce = 0,
@@ -2116,6 +2121,19 @@ export default function V2Map({
                     onSelect={onSelectEvent}
                     onClose={() => { setGroupList(null); setGroupListAnchor(null); }}
                 />
+            )}
+            {/* Diskret "laddar fortfarande"-pill: första batchen (destinations)
+                är redan på kartan — EventCards stora center-pill är släckt — men
+                cards/descriptions strömmar ännu. Utan denna ser det ut som att
+                inget händer tills allt kommit fram. Under navbar+kategorichips;
+                pointer-events-none så den aldrig blockerar kartan. */}
+            {eventsLoaded && !eventsSettled && (
+                <div className="absolute top-[120px] left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
+                    <div role="status" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 dark:border-slate-700 px-4 py-2 flex items-center gap-2 animate-in fade-in duration-300">
+                        <span className="w-3.5 h-3.5 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Laddar fler event…</p>
+                    </div>
+                </div>
             )}
             {/* CSS och Keyframes för en mjuk, progressiv animation */}
             <style>{`

@@ -720,6 +720,7 @@ export default function HomePage() {
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
                 eventsLoaded={eventsLoaded}
+                eventsSettled={eventsSettled}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}
