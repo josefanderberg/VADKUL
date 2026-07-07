@@ -648,6 +648,8 @@ export default function V2Map({
     // / map-load utan att hamna i temporal-dead-zone.
     const ensureRevealPumpRef = useRef<() => void>(() => {});
     const reapplyAllRevealRef = useRef<() => void>(() => {});
+    // Speglar tänd reveal-uppsättning som filter på prick-lagret (definieras nedan).
+    const applyDotsRevealFilterRef = useRef<() => void>(() => {});
     const recomputeRevealSeedRef = useRef<() => void>(() => {});
     // Startar "vandringen": avslöjningen glider event-för-event från förra trycket
     // till den nya platsen (toLng/toLat). Sätts nedan.
@@ -774,8 +776,18 @@ export default function V2Map({
                         // reveal-staten → bara de ~30 avslöjade prickarna syntes under zoom.)
                         'circle-opacity': 1,
                         'circle-stroke-opacity': 0.9,
+                        // Ingen fade-in: sätt opaciteten direkt. Utan detta använder
+                        // maplibre 300ms default-transition → prickarna blinkar in vid
+                        // mount/omskapande.
+                        'circle-opacity-transition': { duration: 0, delay: 0 },
+                        'circle-stroke-opacity-transition': { duration: 0, delay: 0 },
                     },
-                });
+                // Prick-lagret UNDER alla andra event-GL-lager: infoga FÖRE 'plain-events'
+                // (brickorna) så brickan alltid täcker sin ev. prick och prickarna ligger
+                // i botten av event-stacken.
+                }, layerExists(map, 'plain-events') ? 'plain-events' : undefined);
+                // Nyss (om)skapat → spegla nuvarande reveal-uppsättning som filter direkt.
+                applyDotsRevealFilterRef.current();
             }
             const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
             src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
@@ -883,8 +895,26 @@ export default function V2Map({
         };
         revealSeedRef.current.forEach(light);
         revealStickyRef.current.forEach(light); // klickade brickor stannar tända
+        applyDotsRevealFilterRef.current();
     }, []);
     reapplyAllRevealRef.current = reapplyAllReveal;
+
+    // Prick-lagret (plain-events-dots) ska INTE rita en prick under en bricka som
+    // redan är avslöjad (tänd) — annars syns en prick "underifrån" bakom brickan i
+    // glappet efter en zoom. Maplibre-filter kan inte läsa feature-state, så vi
+    // speglar den tända uppsättningen (seed ∪ sticky) som ett key-filter i stället.
+    const applyDotsRevealFilter = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !layerExists(map, 'plain-events-dots')) return;
+        const lit: string[] = [];
+        revealSeedRef.current.forEach(k => lit.push(k));
+        revealStickyRef.current.forEach(k => lit.push(k));
+        try {
+            map.setFilter('plain-events-dots',
+                lit.length ? ['!', ['in', ['get', 'key'], ['literal', lit]]] : null);
+        } catch { /* källan ej redo */ }
+    }, []);
+    applyDotsRevealFilterRef.current = applyDotsRevealFilter;
 
     // Avslöjning sker BARA via vilo-uppsättningen (seed): de ~10 närmast mitten vid
     // start, eller de REVEAL_NEAREST_COUNT närmaste KRING SENASTE TAP. INGEN hover-
@@ -901,6 +931,8 @@ export default function V2Map({
         revealWrittenRef.current.forEach((op, k) => { if (op > 0 && !seed.has(k) && !sticky.has(k)) writeReveal(k, 0); });
         revealRafRef.current = null;
         reportRevealCount('vila');
+        // Håll prick-filtret i takt med den tända uppsättningen (seed ∪ sticky).
+        applyDotsRevealFilterRef.current();
     }, [reportRevealCount, writeReveal]);
     const ensureRevealPump = useCallback(() => {
         if (revealRafRef.current == null) revealRafRef.current = requestAnimationFrame(pumpReveal);
