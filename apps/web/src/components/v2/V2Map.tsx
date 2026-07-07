@@ -27,12 +27,13 @@ import V2MapGroupList from './V2MapGroupList';
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
 //
-//   1. Modul-konstanter: reveal-/tinder-tuning + startvy.
+//   1. Modul-konstanter: reveal-tuning + startvy.
 //   2. Data-pipeline (memos): events → groups (per koordinat) → visibleGroups
 //      (de få "speciella" DOM-brickorna) + plainData (allt annat som ETT
 //      GPU-symbol-lager, "plain-events").
-//   3. Reveal-systemet: GL-brickorna börjar dolda; vilo-TINDER före första
-//      trycket, sen "resa + insug" (startRevealTravel) till de N närmast tappet.
+//   3. Reveal-systemet: GL-brickorna börjar dolda; vid start tänds de N närmast
+//      användarens plats (om känd — annars bara nål-prickarna), sen "resa +
+//      insug" (startRevealTravel) till de N närmast tappet.
 //   4. Kart-init (effekt, körs en gång): MapLibre-instans, zoom-lägen
 //      (brickor ↔ prickar), klick-hantering, bounds-rapportering.
 //   5. Stil-/läges-effekter: mapStyle, klot, 3D-terräng, kamera (recenter/zoom).
@@ -56,18 +57,19 @@ type PlainFeature = {
 };
 
 // ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
-// Vid laddning FÖRHANDSVISAS eventen tindrande (se REVEAL_TWINKLE_*). Första trycket på
-// kartan kollapsar till de N närmast trycket. Ingen hover längre — man TRYCKER: de
-// REVEAL_NEAREST_COUNT närmaste brickorna kring trycket avslöjas och ligger KVAR
-// (panorering byter inte urvalet) tills man trycker på nytt. Vid ett nytt tryck
-// BYTS urvalet ut med en kugghjuls-effekt (se nedan). Ingen queryRenderedFeatures
-// (den var det tunga som laggade): vi räknar avståndet själva (O(antal), kvadrerat
-// + cos-lat-skalad longitud) och sätter feature-state direkt via nyckeln
-// (promoteId 'key'). Aldrig fler än ~N synliga samtidigt = ingen lagg.
+// Vid laddning tänds SEEDET DIREKT: de REVEAL_SEED_COUNT brickorna närmast
+// ANVÄNDARENS PLATS — men bara om platsen faktiskt är känd (GPS eller tap).
+// Vet vi inte var besökaren är tänds INGA brickor vid start: kartan visar bara
+// nål-prickarna (kartmitten säger inget om var besökaren står). Ingen hover —
+// man TRYCKER: de REVEAL_NEAREST_COUNT närmaste brickorna kring trycket
+// avslöjas och ligger KVAR (panorering byter inte urvalet) tills man trycker
+// på nytt. Vid ett nytt tryck BYTS urvalet ut med en kugghjuls-effekt (se
+// nedan). Ingen queryRenderedFeatures (den var det tunga som laggade): vi
+// räknar avståndet själva (O(antal), kvadrerat + cos-lat-skalad longitud) och
+// sätter feature-state direkt via nyckeln (promoteId 'key'). Aldrig fler än
+// ~N synliga samtidigt = ingen lagg.
 const REVEAL_NEAREST_COUNT = 50;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 50;         // antal synliga efter första trycket när inget tap-ankare finns
-// Vid start FÖRHANDSVISAS ALLA event (previewAllUntilTapRef). Första trycket på kartan
-// kollapsar till de N närmast trycket — ingen tidsinställd blink längre.
+const REVEAL_SEED_COUNT = 50;         // antal tända vid start kring användarens plats (utan tap)
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
@@ -96,22 +98,6 @@ const styleReady = (map: maplibregl.Map): boolean => {
 const layerExists = (map: maplibregl.Map, id: string): boolean => {
     try { return !!map.getLayer(id); } catch { return false; }
 };
-
-// ── Vilo-TINDER (före första trycket) ─────────────────────────────────────────
-// I stället för att tända ALLA event statiskt (för mycket för ögat) TINDRAR de
-// som stjärnor: varje markör blinkar oberoende i sin egen slumpade cykel (fas +
-// period per nyckel) — tonas in, lyser, tonas ut, mörk resten av varvet. Andelen
-// av cykeln en markör är tänd (REVEAL_TWINKLE_LIT) blir med slumpade faser också
-// andelen synliga vid varje ögonblick — 0.25 ⇒ max ~1/4 av eventen åt gången.
-// Slutar vid första trycket (då kollapsar allt till N-närmast).
-const REVEAL_TWINKLE_STEP_MS = 50;       // uppdaterings-takt (~18 fps) — lägre = mjukare men tyngre
-const REVEAL_TWINKLE_LIT = 0.09;         // andel av cykeln en markör är tänd ⇒ ~andel synliga samtidigt
-const REVEAL_TWINKLE_PERIOD_MIN_S = 20.2; // kortaste blink-cykeln (s, mörk+tänd totalt)
-const REVEAL_TWINKLE_PERIOD_MAX_S = 24.5; // längsta blink-cykeln (s) — spridningen håller tindret osynkat
-const REVEAL_TWINKLE_EDGE = 0.2;        // andel av tänd-fönstret som är in-/uttoning (0–0.5) — högre = mjukare puls
-const REVEAL_TWINKLE_FLOOR = 0;          // opacitet mellan blinkarna — 0 = helt mörk
-
-
 
 // Startvy: centrerad över mellersta Sverige (≈ Dalarna/Gävle) + mer inzoomad än
 // hela landet, så man ser längre UPP i landet direkt (inte bara söder). (GPS flyger
@@ -561,7 +547,9 @@ export default function V2Map({
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
                 // Vald grupp → jättestor sortKey så brickan (och dess "+N"-siffra)
                 // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
-                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (isSel ? 1_000_000 : 0) },
+                // Användarskapade event boostas också (under valt) — de är alltid
+                // tända (sticky) och ska vinna staplingen mot importerade grannar.
+                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (isSel ? 1_000_000 : 0) },
             });
         }
         // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
@@ -633,17 +621,6 @@ export default function V2Map({
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
     const revealCleanupRef = useRef<null | (() => void)>(null);
-    // Förhandsvisning vid start: ALLA event syns på kartan från början (ingen
-    // tidsinställd blink). Vid FÖRSTA trycket på kartan kollapsar det till normal-
-    // läget = de N närmast trycket, resten tonas bort. Sätts false vid det trycket.
-    const previewAllUntilTapRef = useRef(true);
-    // Vilo-tindret (se REVEAL_TWINKLE_*): rAF-id, tidsgate och per-markör-fas/period.
-    const twinkleRafRef = useRef<number | null>(null);
-    const twinkleLastTickRef = useRef(0);
-    const twinkleFeatRef = useRef<{ key: string; phase: number; period: number }[]>([]);
-    const ensureTwinklePumpRef = useRef<() => void>(() => {});
-    const stopTwinkleRef = useRef<() => void>(() => {});
-    const hardClearRevealRef = useRef<() => void>(() => {});
     // Ref-wrappers så funktionerna (definierade nedan) kan kallas från syncPlainLayer
     // / map-load utan att hamna i temporal-dead-zone.
     const ensureRevealPumpRef = useRef<() => void>(() => {});
@@ -760,22 +737,32 @@ export default function V2Map({
                     id: 'plain-events-dots',
                     type: 'circle',
                     source: 'plain-events',
-                    layout: { 'visibility': 'none' },
+                    layout: { 'visibility': 'visible' },
                     paint: {
                         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
                         // Nål-pricken får eventets KATEGORIFÄRG (mörk standard för stora källor).
                         'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
-                        // ALLA prickar fullt synliga (oberoende av reveal-state). Lagret
-                        // visas BARA under zoom-gesten (visibility växlas av showNeedles/
-                        // exitZooming) → då ska HELA Sveriges färgade prickar synas medan
-                        // de fulla brickorna ännu inte hunnit ritas. (Förut följde de
-                        // reveal-staten → bara de ~30 avslöjade prickarna syntes under zoom.)
-                        'circle-opacity': 1,
-                        'circle-stroke-opacity': 0.9,
+                        // ALLA prickar fullt synliga (oberoende av reveal-state) under zoom,
+                        // men i vila (när vi inte zoomar) döljs de som är avslöjade (har bricka).
+                        'circle-opacity': isZoomingRef.current ? 1 : [
+                            '-',
+                            1,
+                            ['coalesce', ['feature-state', 'reveal'], 0]
+                        ],
+                        'circle-stroke-opacity': isZoomingRef.current ? 0.9 : [
+                            '*',
+                            0.9,
+                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]]
+                        ],
+                        'circle-opacity-transition': { duration: 0, delay: 0 },
+                        'circle-stroke-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
+            }
+            if (map.getLayer('plain-events-dots') && map.getLayer('plain-events')) {
+                map.moveLayer('plain-events-dots', 'plain-events');
             }
             const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
             src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
@@ -858,9 +845,8 @@ export default function V2Map({
     // Skriv ETT reveal-opacitetsvärde till GL-lagret — men bara när värdet
     // faktiskt ändrats (write-cachen revealWrittenRef skippar redundanta
     // setFeatureState-anrop). Delas av vilo-loopen (pumpReveal) och migrationen
-    // (startRevealTravel). OBS: reapplyAllReveal och hardClearReveal skriver
-    // medvetet med egna, hårdare regler (force-tänd resp. force-släck även små
-    // restvärden) och ska INTE gå via den här helpern.
+    // (startRevealTravel). OBS: reapplyAllReveal skriver medvetet med en egen,
+    // hårdare regel (force-tänd) och ska INTE gå via den här helpern.
     const writeReveal = useCallback((key: string, op: number) => {
         const map = mapRef.current;
         if (!map) return;
@@ -886,10 +872,11 @@ export default function V2Map({
     }, []);
     reapplyAllRevealRef.current = reapplyAllReveal;
 
-    // Avslöjning sker BARA via vilo-uppsättningen (seed): de ~10 närmast mitten vid
-    // start, eller de REVEAL_NEAREST_COUNT närmaste KRING SENASTE TAP. INGEN hover-
-    // följning längre — markörerna tänds bara där man trycker (mobil-vänligt) och
-    // ligger kvar. Engångsskrivning per recompute/tap (ingen rAF-loop i vila).
+    // Avslöjning sker BARA via vilo-uppsättningen (seed): de REVEAL_SEED_COUNT
+    // närmast ANVÄNDARENS PLATS vid start (om känd — annars inget), eller de
+    // REVEAL_NEAREST_COUNT närmaste KRING SENASTE TAP. INGEN hover-följning —
+    // markörerna tänds bara där man trycker (mobil-vänligt) och ligger kvar.
+    // Engångsskrivning per recompute/tap (ingen rAF-loop i vila).
     const pumpReveal = useCallback(() => {
         const map = mapRef.current;
         if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) { revealRafRef.current = null; return; }
@@ -906,98 +893,6 @@ export default function V2Map({
         if (revealRafRef.current == null) revealRafRef.current = requestAnimationFrame(pumpReveal);
     }, [pumpReveal]);
     ensureRevealPumpRef.current = ensureRevealPump;
-
-    // ── Vilo-tindret ──────────────────────────────────────────────────────────
-    // Ger varje markör en stabil slump-fas (var i cykeln den startar) och en egen
-    // period. Körs när tindret (åter)startar eller datan ändras.
-    const rebuildTwinkleField = useCallback(() => {
-        const coords = revealCoordsRef.current;
-        if (coords.length === 0) { twinkleFeatRef.current = []; return; }
-        // Billig, deterministisk hash → stabil slump i [0,1) per nyckel (+salt för
-        // en andra oberoende slump till perioden).
-        const hash01 = (s: string) => {
-            let h = 2166136261;
-            for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-            return ((h >>> 0) % 1000) / 1000;
-        };
-        twinkleFeatRef.current = coords.map(c => ({
-            key: c.key,
-            phase: hash01(c.key),
-            period: REVEAL_TWINKLE_PERIOD_MIN_S
-                + hash01(c.key + '¤') * (REVEAL_TWINKLE_PERIOD_MAX_S - REVEAL_TWINKLE_PERIOD_MIN_S),
-        }));
-    }, []);
-
-    // Ett tinder-steg: position i markörens egen cykel p ∈ [0,1). Tänd-fönstret är
-    // [0, LIT) som en mjuk trapets-puls (tona in → lys → tona ut, smoothstep på
-    // ramperna); resten av cykeln mörk. Slumpade faser ⇒ ~LIT av markörerna synliga
-    // vid varje given tidpunkt.
-    const pumpTwinkle = useCallback(() => {
-        const map = mapRef.current;
-        // Slut på förhandsvisning (tap skett) → stanna tindret helt.
-        if (!previewAllUntilTapRef.current || revealAnchorPtRef.current) {
-            twinkleRafRef.current = null;
-            return;
-        }
-        // Fortf. i förhandsvisning: håll loopen vid liv. Är kartan/lagret inte redo
-        // än (initial laddning eller mitt i ett stilbyte) väntar vi till nästa frame.
-        twinkleRafRef.current = requestAnimationFrame(pumpTwinkle);
-        if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) return;
-        const nowMs = performance.now();
-        if (nowMs - twinkleLastTickRef.current < REVEAL_TWINKLE_STEP_MS) return; // gate ~18 fps
-        twinkleLastTickRef.current = nowMs;
-
-        if (twinkleFeatRef.current.length === 0) rebuildTwinkleField();
-        const feats = twinkleFeatRef.current;
-        const sticky = revealStickyRef.current;
-        const written = revealWrittenRef.current;
-        const t = nowMs / 1000;
-        const w = REVEAL_TWINKLE_LIT;          // tänd-fönstrets längd (andel av cykeln)
-        const r = w * REVEAL_TWINKLE_EDGE;     // in-/uttoningens längd
-        for (let i = 0; i < feats.length; i++) {
-            const f = feats[i];
-            if (sticky.has(f.key)) continue;   // klickade/valda styrs av reveal-loopen
-            const p = (f.phase + t / f.period) % 1;
-            let op = 0;
-            if (p < w) {
-                const ramp = p < r ? p / r : p > w - r ? (w - p) / r : 1;
-                op = ramp * ramp * (3 - 2 * ramp); // smoothstep → mjuk andning
-            }
-            op = REVEAL_TWINKLE_FLOOR + (1 - REVEAL_TWINKLE_FLOOR) * op;
-            const prev = written.get(f.key);
-            if (prev === undefined || Math.abs(op - prev) > 0.01) {
-                try { map.setFeatureState({ source: 'plain-events', id: f.key }, { reveal: op }); } catch { /* */ }
-                written.set(f.key, op);
-            }
-        }
-    }, [rebuildTwinkleField]);
-    const ensureTwinklePump = useCallback(() => {
-        rebuildTwinkleField();
-        if (twinkleRafRef.current == null) twinkleRafRef.current = requestAnimationFrame(pumpTwinkle);
-    }, [pumpTwinkle, rebuildTwinkleField]);
-    ensureTwinklePumpRef.current = ensureTwinklePump;
-    const stopTwinkle = useCallback(() => {
-        if (twinkleRafRef.current != null) { cancelAnimationFrame(twinkleRafRef.current); twinkleRafRef.current = null; }
-    }, []);
-    stopTwinkleRef.current = stopTwinkle;
-    // Nollar OMEDELBART alla tända reveal-brickor (utom valt/sticky) — inkl. tindrets
-    // halvljusa mellansteg, som pumpReveal/reconcileLit (tröskel 0.5) annars kunde
-    // lämna kvar. Kallas vid första trycket så tindret HELT försvinner innan de 50
-    // närmast klicket tänds.
-    const hardClearReveal = useCallback(() => {
-        const map = mapRef.current;
-        if (!map || !layerExists(map, 'plain-events')) return;
-        const written = revealWrittenRef.current;
-        const sticky = revealStickyRef.current;
-        written.forEach((op, k) => {
-            if (op > 0 && !sticky.has(k)) {
-                try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 0 }); } catch { /* */ }
-                written.set(k, 0);
-            }
-        });
-        revealSeedRef.current = new Set();
-    }, []);
-    hardClearRevealRef.current = hardClearReveal;
 
     // De n närmaste brickorna (nycklar) till en geo-punkt. Billigt partiellt urval
     // (kvadrerat avstånd, longitud cos-lat-skalad) — ingen full sortering, ingen
@@ -1124,41 +1019,35 @@ export default function V2Map({
     }, [nearestKeysTo, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
-    // Välj seed = de REVEAL_SEED_COUNT markörerna närmast KARTANS MITT just nu.
-    // Körs vid dataändring OCH efter varje move/zoom (moveend) + på 'load', så det
-    // alltid finns ~10 synliga där man landar (även efter flyg till min-position).
+    // Välj seed = de REVEAL_SEED_COUNT markörerna närmast ANVÄNDARENS PLATS (tap-
+    // ankare eller GPS). Körs vid dataändring, på 'load' och när GPS-positionen
+    // dyker upp — så brickorna kring en tänds direkt vid start när platsen är känd.
     // Avståndet skalar longitud med cos(latitud) så det blir rätt på svenska breddgrader.
     const recomputeRevealSeed = useCallback(() => {
         const map = mapRef.current;
         // Utgångspunkt: tap-ankaret om man tryckt på kartan (mobil-vänligt), annars
-        // kartans mitt. Ett tap visar fler brickor (REVEAL_NEAREST_COUNT) och låser
-        // dem — panorering reseedar inte (se moveend-handlern).
+        // ANVÄNDARENS plats (om GPS/platstjänst hunnit svara). Ett tap visar
+        // REVEAL_NEAREST_COUNT brickor och låser dem — panorering reseedar inte
+        // (se moveend-handlern). Vet vi INTE var besökaren är (ingen tap, ingen
+        // plats) tänds INGA brickor — kartan visar bara nål-prickarna; kartmitten
+        // säger inget om var besökaren står och gav bara godtyckliga 50 event.
         const anchor = revealAnchorPtRef.current;
         const count = anchor ? REVEAL_NEAREST_COUNT : REVEAL_SEED_COUNT;
-        // Utgångspunkt utan tap = ANVÄNDARENS plats (om GPS hunnit komma), annars
-        // kartmitten. Så default-eventen visas där man är, inte mitt i Sverige.
-        const origin = anchor ?? userPosRef.current ?? (map ? map.getCenter() : null);
+        const origin = anchor ?? userPosRef.current;
         const coords = new Map<string, [number, number]>();
         for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
-        const allKeys = [...coords.keys()];
-        // FÖRHANDSVISNING (före första trycket): tänd INTE alla statiskt — låt
-        // vilo-TINDRET blinka brickorna in/ut oberoende (max ~1/4 samtidigt). Seedet
-        // hålls tomt så pump-loopen inte fightar med tindret; ett tap kollapsar till
-        // normal-läget (de N närmast trycket) och stänger tindret.
-        if (previewAllUntilTapRef.current && !anchor) {
-            revealSeedRef.current = new Set();
-            ensureTwinklePumpRef.current();
-            return;
+        let seedKeys: string[] = [];
+        if (origin) {
+            const allKeys = [...coords.keys()];
+            if (allKeys.length > count) {
+                const cl = origin.lng, ca = origin.lat;
+                const kx = Math.cos(ca * Math.PI / 180);
+                const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
+                allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
+            }
+            seedKeys = allKeys.slice(0, count);
         }
-        // Lämnat förhandsvisningen → stäng tindret och gå tillbaka till N-närmast-läget.
-        stopTwinkleRef.current();
-        if (origin && allKeys.length > count) {
-            const cl = origin.lng, ca = origin.lat;
-            const kx = Math.cos(ca * Math.PI / 180);
-            const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
-            allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
-        }
-        const newSeed = new Set(allKeys.slice(0, count));
+        const newSeed = new Set(seedKeys);
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
         if (map && layerExists(map, 'plain-events')) {
             revealSeedRef.current.forEach(k => {
@@ -1175,8 +1064,8 @@ export default function V2Map({
     recomputeRevealSeedRef.current = recomputeRevealSeed;
 
     // GPS-platsen kommer asynkront efter laddning. När den dyker upp (och man inte
-    // redan tryckt på kartan) → flytta default-avslöjningen till användarens plats
-    // i stället för kartmitten (Östersund/mitt-Sverige).
+    // redan tryckt på kartan) → tänd seedet kring användarens plats (innan dess
+    // är inget tänt — bara nål-prickarna).
     useEffect(() => {
         if (userPos && !revealAnchorPtRef.current) recomputeRevealSeedRef.current();
     }, [userPos]);
@@ -1235,10 +1124,15 @@ export default function V2Map({
         }
         // Gillade (framtida) event hålls ALLTID tända (force-reveal) så deras vita GL-
         // bricka syns överallt — oavsett avslöjning, viewport eller vad som är valt.
+        // Samma sak för event SKAPADE PÅ VADKUL (userCreated): sajtens kärna ska
+        // aldrig behöva skrapas fram utan syns alltid, för alla besökare.
         {
             const savedCutoff = Date.now() - ONE_HOUR_MS;
             for (const [key, group] of groupsRef.current) {
-                if (group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)) sticky.add(key);
+                if (group.some(e =>
+                    e.userCreated ||
+                    (savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)
+                )) sticky.add(key);
             }
         }
         // Användarskapade event (sajtens kärna) hålls ALLTID tända — samma force-
@@ -1452,6 +1346,11 @@ export default function V2Map({
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
+            // During zoom, show all dots including revealed ones
+            if (layerExists(map, 'plain-events-dots')) {
+                map.setPaintProperty('plain-events-dots', 'circle-opacity', 1);
+                map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', 0.9);
+            }
             setGlLayer('plain-events-dots', true);
         };
         const showBricks = () => {
@@ -1482,7 +1381,21 @@ export default function V2Map({
         const hideNeedleDotsWhenRendered = () => {
             const m = mapRef.current;
             if (!m) return;
-            const finish = () => { if (!isZoomingRef.current) setGlLayer('plain-events-dots', false); };
+            const finish = () => {
+                if (!isZoomingRef.current && layerExists(m, 'plain-events-dots')) {
+                    // Restore conditional opacity in rest state: hide dots under the revealed bricks
+                    m.setPaintProperty('plain-events-dots', 'circle-opacity', [
+                        '-',
+                        1,
+                        ['coalesce', ['feature-state', 'reveal'], 0]
+                    ]);
+                    m.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', [
+                        '*',
+                        0.9,
+                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]]
+                    ]);
+                }
+            };
             m.once('idle', finish);
             setTimeout(finish, 1500);
         };
@@ -1523,21 +1436,6 @@ export default function V2Map({
         const glLayersPresent = () => glHitLayers.filter(id => layerExists(map, id));
 
         map.on('click', (e) => {
-            // FÖRHANDSVISNING → NORMAL: vid FÖRSTA trycket på kartan slutar vi visa
-            // ALLA event och kollapsar till de N närmast trycket (resten tonas bort).
-            // Ankaret sätts till trycket så recompute (och ev. startRevealTravel nedan,
-            // vars from == to då → direkt-settle) ger samma N-uppsättning utan dubbel
-            // animation. Ett tryck på en SYNLIG bricka (nu = valfri) väljer ändå eventet
-            // via lager-handlern; mängden krymper till de närmaste.
-            if (previewAllUntilTapRef.current) {
-                previewAllUntilTapRef.current = false;
-                // Stäng tindret och NOLLA alla dess brickor direkt → inget spill blir
-                // kvar; sen tänder recompute enbart de N närmast trycket.
-                stopTwinkleRef.current();
-                hardClearRevealRef.current();
-                revealAnchorPtRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
-                recomputeRevealSeedRef.current();
-            }
             // Klick på en SYNLIG GL-markör hanteras av lager-handlern nedan (väljer
             // eventet) — avmarkera/avslöja då inte. En DOLD bricka (icon-opacity 0)
             // är fortfarande träffbar i queryRenderedFeatures men ska INTE gå att
@@ -1709,8 +1607,8 @@ export default function V2Map({
             // "~10 närmast mitten" så fort kartan rörde sig — och moln-driften fyrar
             // moveend hela tiden → de 30 man klickat fram försvann och ersattes av ~10
             // nära mitten/min-position. Borttaget: panorering/drift ändrar inte urvalet.
-            // Initialt: FÖRHANDSVISA alla event (previewAllUntilTapRef=true → seed =
-            // alla nycklar). Vid första trycket kollapsar det till de N närmast trycket.
+            // Initialt seed: de N närmast användarens plats om den är känd (tap/GPS)
+            // — annars tänds inget (bara nål-prickarna) tills första trycket.
             recomputeRevealSeedRef.current();
         });
 
@@ -1723,7 +1621,6 @@ export default function V2Map({
             // Reveal: lyssnare + rAF (vilo-skrivning + vandring).
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
-            if (twinkleRafRef.current != null) { cancelAnimationFrame(twinkleRafRef.current); twinkleRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
             map.remove();
             mapRef.current = null;
