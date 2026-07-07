@@ -762,7 +762,10 @@ export default function V2Map({
                     id: 'plain-events-dots',
                     type: 'circle',
                     source: 'plain-events',
-                    layout: { 'visibility': 'none' },
+                    // Vid start (förhandsvisning före första trycket) ÄR prickarna
+                    // vilo-vyn — samma vy som under zoom — i stället för tindrande
+                    // brickor. Efter första trycket styr zoom-gesten synligheten.
+                    layout: { 'visibility': previewAllUntilTapRef.current ? 'visible' : 'none' },
                     paint: {
                         'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
                         // Nål-pricken får eventets KATEGORIFÄRG (mörk standard för stora källor).
@@ -1173,13 +1176,20 @@ export default function V2Map({
         const coords = new Map<string, [number, number]>();
         for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
         const allKeys = [...coords.keys()];
-        // FÖRHANDSVISNING (före första trycket): tänd INTE alla statiskt — låt
-        // vilo-TINDRET blinka brickorna in/ut oberoende (max ~1/4 samtidigt). Seedet
-        // hålls tomt så pump-loopen inte fightar med tindret; ett tap kollapsar till
-        // normal-läget (de N närmast trycket) och stänger tindret.
+        // FÖRHANDSVISNING (före första trycket): visa PRICKARNA (samma vy som under
+        // zoom) i stället för tindrande brickor — inget blinkande vid start. Seedet
+        // hålls tomt så inga vanliga brickor avslöjas; bara sticky (sparat/eget)
+        // lyser som brickor och filtreras då bort ur prick-lagret. reapplyAllReveal +
+        // pump speglar prick-filtret mot sticky. Ett tap kollapsar till normal-läget
+        // (de N närmast trycket) och gömmer förhandsvis-prickarna.
         if (previewAllUntilTapRef.current && !anchor) {
             revealSeedRef.current = new Set();
-            ensureTwinklePumpRef.current();
+            stopTwinkleRef.current();
+            if (map && layerExists(map, 'plain-events-dots')) {
+                map.setLayoutProperty('plain-events-dots', 'visibility', 'visible');
+            }
+            reapplyAllRevealRef.current();
+            ensureRevealPumpRef.current();
             return;
         }
         // Lämnat förhandsvisningen → stäng tindret och gå tillbaka till N-närmast-läget.
@@ -1514,7 +1524,9 @@ export default function V2Map({
         const hideNeedleDotsWhenRendered = () => {
             const m = mapRef.current;
             if (!m) return;
-            const finish = () => { if (!isZoomingRef.current) setGlLayer('plain-events-dots', false); };
+            // Under förhandsvisningen (före första trycket) ÄR prickarna vilo-vyn →
+            // göm dem INTE när zoomen lagt sig; först i normal-läget (efter tap).
+            const finish = () => { if (!isZoomingRef.current && !previewAllUntilTapRef.current) setGlLayer('plain-events-dots', false); };
             m.once('idle', finish);
             setTimeout(finish, 1500);
         };
@@ -1569,6 +1581,10 @@ export default function V2Map({
                 hardClearRevealRef.current();
                 revealAnchorPtRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
                 recomputeRevealSeedRef.current();
+                // Göm förhandsvis-prickarna FÖRST när de N närmast trycket ritats
+                // (idle) → mjuk övergång utan tomt glapp; sen är prickarna bara kvar
+                // under zoom-gesten som vanligt.
+                hideNeedleDotsWhenRendered();
             }
             // Klick på en SYNLIG GL-markör hanteras av lager-handlern nedan (väljer
             // eventet) — avmarkera/avslöja då inte. En DOLD bricka (icon-opacity 0)
