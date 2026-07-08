@@ -41,9 +41,20 @@ export const SATELLITE_STYLE: maplibregl.StyleSpecification = {
     ]
 };
 
-// Nöjesfältets land-färg — delas av bootstrap-stilen, themepark-transformen
-// och container-bakgrunden i V2Map så de aldrig glider isär.
-export const THEMEPARK_LAND_COLOR = '#93c46c';
+// Nöjesfältets land-färger. Utzoomat (nationell vy) är landet EN mörk grön ton;
+// inzoomat, när grönska-lagren syns och landet får två gröna skalor, tonar
+// bakgrunden till den ursprungliga ljusa paletten. THEMEPARK_LAND_COLOR (den
+// mörka) delas av bootstrap-stilen och container-bakgrunden i V2Map — de ska
+// matcha det UTZOOMADE läget eftersom kartan startar på zoom 5.
+export const THEMEPARK_LAND_COLOR = '#5b9b3b';
+const THEMEPARK_LAND_COLOR_NEAR = '#93c46c';
+// Grönskan tonar i samma zoomintervall så den alltid ligger ett snäpp djupare
+// än landet — annars inverteras hierarkin halvvägs i tonövergången.
+const THEMEPARK_GREENERY_FAR = '#47822c';
+const THEMEPARK_GREENERY_NEAR = '#7eb152';
+// Zoomintervallet där land tonar mörk→ljus (nationell vy → stadsnivå).
+const LAND_ZOOM_FAR = 6;
+const LAND_ZOOM_NEAR = 10;
 
 // Bootstrap-stil vid mount: kartan behöver en SYNKRON startstil för att rendera
 // direkt, men förvald 'themepark' hämtas async (fetch + transform) → annars syns
@@ -89,18 +100,23 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
             // Palett: djupare naturliga toner — som satellitkartan fast
             // minimalistisk. Mörkare grönt land/grönska, mörkare blått vatten,
             // vita vägar som kontrast.
-            // Land / Background
+            // Land / Background — zoom-tonad: mörk enhetsgrön utzoomat, original-
+            // ljus inzoomat när grönskan ger landet två gröna skalor.
             if (layer.id === 'background') {
-                paint['background-color'] = THEMEPARK_LAND_COLOR; // mättat gräsgrönt land — dominerar utzoomat
+                paint['background-color'] = [
+                    'interpolate', ['linear'], ['zoom'],
+                    LAND_ZOOM_FAR, THEMEPARK_LAND_COLOR,
+                    LAND_ZOOM_NEAR, THEMEPARK_LAND_COLOR_NEAR
+                ];
             }
             // Water
             else if (layer.id === 'water' || layer.id === 'water_shadow') {
                 paint['fill-color'] = layer.id === 'water_shadow'
-                    ? '#5791b8'
-                    : '#679fc6'; // mellanblått — mörkare än original, ljusare än djupblått
+                    ? '#4278a4'
+                    : '#4e8ab7'; // havsblått — mellanting mellan mellanblått och djupblått
             }
             else if (layer.id === 'waterway') {
-                paint['line-color'] = '#679fc6';
+                paint['line-color'] = '#4e8ab7';
             }
             // Parker, skog, naturreservat, grön landuse
             else if (
@@ -110,7 +126,12 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
                 layer.id === 'landuse'
             ) {
                 if (paint['fill-color']) {
-                    paint['fill-color'] = '#7eb152'; // grönska, ett snäpp djupare än landet
+                    // Grönska, ett snäpp djupare än landet — följer landets zoom-ton.
+                    paint['fill-color'] = [
+                        'interpolate', ['linear'], ['zoom'],
+                        LAND_ZOOM_FAR, THEMEPARK_GREENERY_FAR,
+                        LAND_ZOOM_NEAR, THEMEPARK_GREENERY_NEAR
+                    ];
                 }
             }
             // Bostadsområden
