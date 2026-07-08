@@ -77,6 +77,17 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
  */
 const layerCache = new Map<string, { updatedAt: string; data: any }>();
 
+/**
+ * Statisk-JSON-först med FÖRSPRÅNG: har API-routen inte svarat inom så här
+ * många ms hämtas deploy-snapshoten /events-destinations.json parallellt och
+ * ritar kartan så länge. Snapshoten är en ren CDN-fil (ingen funktion, ingen
+ * Firestore) — vid CDN-miss + kallstart kunde routen ta 10–30 s och kartan
+ * stod tom hela tiden. Färska svaret ersätter snapshoten när det landar.
+ * Fördröjningen gör att varma besökare (CDN-träff, svar < ~1 s) aldrig laddar
+ * datan dubbelt (~1,5 MB gzippad extra-egress annars).
+ */
+const STATIC_HEADSTART_MS = 1500;
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). Direktläsningen ur Firestore (väg 2) drog
@@ -503,11 +514,36 @@ export const linkEventService = {
         // cachen i fetchLayer kostar en OFÖRÄNDRAD poll bara 3 reads (en index-doc
         // per lager) i stället för ~51 — shards läses bara om vid ny updatedAt.
         async function loadAggregates() {
+            // Statisk-JSON-först (bara FÖRSTA laddningen, inte pollarna): svarar
+            // API-routen inte inom STATIC_HEADSTART_MS ritas kartan från deploy-
+            // snapshoten så länge — se konstantens kommentar. Snapshoten kan vara
+            // några dagar gammal men innehåller framtida event, så dagens prickar
+            // finns i stort sett där; färska svaret ersätter när det landar.
+            let staticTimer: ReturnType<typeof setTimeout> | null = null;
+            let realDestLanded = false;
+            const cancelStaticFirst = () => {
+                realDestLanded = true;
+                if (staticTimer) { clearTimeout(staticTimer); staticTimer = null; }
+            };
+            if (!baseEvents.length) {
+                staticTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch('/events-destinations.json');
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        // Hann riktiga svaret före (eller är vi nedstängda)? Rör inget.
+                        if (!active || realDestLanded || baseEvents.length || !data?.events?.length) return;
+                        baseEvents = mapDestinationsToLinkEvents(data.events);
+                        emit();
+                    } catch { /* snapshot saknas/trasig → vänta på riktiga svaret */ }
+                }, STATIC_HEADSTART_MS);
+            }
             try {
                 // 1. Destinations FÖRST och ENSAMT — markörerna behöver bara det
                 // här lagret, och på smala mobilnät ska det inte konkurrera om
                 // bandbredd med de två större lagren. Ritas direkt när det landat.
                 const destData = await fetchLayer('destinations');
+                cancelStaticFirst();
                 if (!active || !destData) return;
 
                 baseEvents = mapDestinationsToLinkEvents(destData.events || []);
@@ -534,11 +570,17 @@ export const linkEventService = {
                 if (active) {
                     linkEventService.getAll(onlyFuture).then((evts) => {
                         if (!active) return;
+                        // Tom fallback får inte radera snapshot-prickarna som
+                        // statisk-JSON-först redan hunnit rita.
+                        if (!evts.length && baseEvents.length) return;
                         baseEvents = evts;
                         emit();
                     });
                 }
             } finally {
+                // Fel-/fallbackvägarna ska inte lämna en väntande snapshot-hämtning
+                // efter sig (lyckade vägen har redan avbrutit den vid destinations).
+                cancelStaticFirst();
                 // Destinations-lagret (steg 1) är hämtat här — det innehåller ALLA
                 // event med tider, så dagens lista är komplett. Signalera "laddat"
                 // (en gång) även om lagret var tomt (äkta tom dag/databas).

@@ -77,6 +77,11 @@ export default function HomePage() {
     // Styr "Inga event den här dagen" så den inte blinkar förbi i introt medan
     // event fortfarande strömmar in (loadern är redan borta då).
     const [eventsSettled, setEventsSettled] = useState(false);
+    // Sant när AGGREGATEN (de scrapade eventen) landat — användar-eventen kommer
+    // via en egen snabbare poll FÖRE aggregaten, och utan denna spärr visade
+    // dagväljar-badgen "1 event" (bara sajtens egna) i flera sekunder innan den
+    // hoppade till dagens riktiga antal. Badgen visar "…" tills detta är sant.
+    const [dayCountReady, setDayCountReady] = useState(false);
     // filteredEvents är en useMemo längre ner (synkron med events).
     const [selectedEvent, setSelectedEvent] = useState<LinkEvent | null>(null);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
@@ -194,6 +199,9 @@ export default function HomePage() {
             // kvar: vi tänder bara tidigt när det FAKTISKT finns event (sorted > 0);
             // en äkta tom dag väntar fortf. på det definitiva beskedet.
             if (sorted.length > 0) setEventsLoaded(true);
+            // Aggregaten med i batchen (något icke-användarskapat event) → dagens
+            // riktiga antal är här; badgen får byta "…" mot siffran.
+            if (fetched.some(e => !e.userCreated)) setDayCountReady(true);
         }, () => {
             // DEFINITIVT "laddat"-besked: första aggregat-laddningen är klar (datan
             // finns, eller så är det en äkta tom dag). Först nu får popupar visas —
@@ -201,10 +209,13 @@ export default function HomePage() {
             // dagen" förbi med 0/halvladdad data).
             setEventsLoaded(true);
             setEventsSettled(true);
+            // Definitivt besked = även en äkta tom dag (0 aggregat-event) räknas
+            // som "siffran är klar" — annars stod badgen på "…" för evigt.
+            setDayCountReady(true);
         });
         // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
         // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
-        const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); }, 15000);
+        const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); setDayCountReady(true); }, 15000);
         return () => { unsubscribe(); clearTimeout(hangGuard); };
     }, []);
 
@@ -671,6 +682,7 @@ export default function HomePage() {
                 onDayRangeChange={handleDayRangeChange}
                 dayCount={dayTotalCount}
                 eventsLoaded={eventsLoaded}
+                dayCountReady={dayCountReady}
             />
 
             {/* 1b. Kategorichips under navbaren — filtrerar kartan + kortleken.

@@ -27,6 +27,10 @@ interface FloatingNavbarProps {
     onDayRangeChange?: (offset: number, days: number) => void;
     dayCount?: number;
     eventsLoaded?: boolean;
+    /** Sant först när aggregaten (de scrapade eventen) landat. Innan dess visar
+     *  badgen "…" — annars stod det "1 event" (bara sajtens egna, som kommer via
+     *  en snabbare poll) i flera sekunder innan riktiga antalet hoppade in. */
+    dayCountReady?: boolean;
 }
 
 const getDayLabel = (offset: number, days = 1) => {
@@ -66,6 +70,7 @@ export default function FloatingNavbar({
     onDayRangeChange,
     dayCount = 0,
     eventsLoaded = true,
+    dayCountReady = true,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -204,7 +209,7 @@ export default function FloatingNavbar({
                                     <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
                                 </button>
                                 <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
-                                    {eventsLoaded ? dayCount : '…'}
+                                    {eventsLoaded && dayCountReady ? dayCount : '…'}
                                 </span>
                                 {dayPickerOpen && (
                                     <DayPicker

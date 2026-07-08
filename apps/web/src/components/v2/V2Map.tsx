@@ -56,6 +56,26 @@ type PlainFeature = {
     properties: { icon: string; key: string; count: number; color: string; sortKey: number };
 };
 
+// Är två feature-listor IDENTISKA till innehållet? plainData byggs om vid varje
+// events-uppdatering (nya arrayer), men cards-/descriptions-mergarna och pollen
+// ändrar inget som GL-lagret ritar (position/emoji/färg/count kommer allihop
+// från destinations-fälten) → deras pushar är rena no-ops till innehållet.
+// Utan denna koll dödade de den pågående våg-streamen och tvingade fram en
+// monolitisk full setData — DET var väntan under "Ritar ut eventen…" innan
+// första pricken syntes. Billig: ~längd × 7 jämförelser.
+function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
+    if (a === b) return true;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const pa = a[i].properties, pb = b[i].properties;
+        if (pa.key !== pb.key || pa.icon !== pb.icon || pa.count !== pb.count ||
+            pa.color !== pb.color || pa.sortKey !== pb.sortKey) return false;
+        const ca = a[i].geometry.coordinates, cb = b[i].geometry.coordinates;
+        if (ca[0] !== cb[0] || ca[1] !== cb[1]) return false;
+    }
+    return true;
+}
+
 // ── "Skrapa fram"-markörer: tunbara konstanter ────────────────────────────────
 // Vid laddning tänds SEEDET DIREKT: de REVEAL_SEED_COUNT brickorna närmast
 // ANVÄNDARENS PLATS — men bara om platsen faktiskt är känd (GPS eller tap).
@@ -86,6 +106,29 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
 const REVEAL_VISIBLE_WARN = 80;
+
+// ── Streamad utritning av eventmarkörerna ────────────────────────────────────
+// Den INITIALA påfyllnaden (källan tom → tusentals features) portioneras i
+// VÅGOR så prickarna dyker upp pö om pö direkt när datan landat, i stället för
+// i en enda smäll flera sekunder senare (ikonbakning + tiling + symbollayout
+// för allt på en gång). Ingen extra nätverkstrafik — datan är redan hämtad;
+// bara UTRITNINGEN portioneras. Två saker gör vågorna FAKTISKT synliga (första
+// försöket — fast timer + full setData per steg — var det inte: workern hann
+// inte tila varje generation på steg-tiden, MapLibre slog ihop köade setData
+// och mellanstegen renderades aldrig → fortfarande "allt på en gång"):
+//   1. Event-driven takt: nästa våg skickas först när källan BEKRÄFTAT att
+//      förra vågen är inne (sourcedata/isSourceLoaded) + en kort paus.
+//   2. updateData({add})-diffar: bara de NYA featurena överförs per våg — inte
+//      hela den ackumulerade mängden igen som setData gör.
+// Första vågen är liten (något ska synas DIREKT — få ikoner att baka, lite att
+// tila); sedan dubblas vågstorleken upp till taket så helheten ändå går snabbt.
+// Små ändringar (dagbyte, cards-merge, poll) pushas som en enda setData som förr.
+const STREAM_MIN_GROWTH = 300;      // färre NYA features än så → ingen stream, en setData
+const STREAM_PREV_MAX = 25;         // fler än så i källan redan → ingen stream (bara initialen)
+const STREAM_CHUNK_START = 50;      // första vågen (liten → första prickarna syns direkt)
+const STREAM_CHUNK_MAX = 400;       // vågtak (dubblas dit: 50, 100, 200, 400, 400…)
+const STREAM_STEP_MS = 80;          // paus efter att förra vågen bekräftats inne
+const STREAM_WAVE_TIMEOUT_MS = 800; // säkerhetsnät: skicka nästa våg ändå om signalen uteblir
 
 // ── WebGL-livräddare ──────────────────────────────────────────────────────────
 // Efter en WebGL-kontextförlust (eller mitt i teardown) är map.style borta och
@@ -120,7 +163,9 @@ interface V2MapProps {
     eventsLoaded?: boolean;
     /** True först när ALLA aggregat-lager (destinations+cards+descriptions)
      *  landat. Mellan eventsLoaded och eventsSettled visar kartan en diskret
-     *  "Laddar fler event…"-pill. Default true (bakåtkompat). */
+     *  "Laddar fler event…"-pill; därefter ligger pillen kvar ("Ritar ut
+     *  eventen…") tills GL-symbolerna faktiskt målats på kartan. Default true
+     *  (bakåtkompat). */
     eventsSettled?: boolean;
     /** Bumpas av zoom-knappen i Nästa-pillen → zooma IN på det valda eventet
      *  (vanliga val står still/zoomar inte; detta är den explicita inzoomningen). */
@@ -565,6 +610,34 @@ export default function V2Map({
     }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>>(new Map());
+    // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
+    // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
+    // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
+    // pendingPaintRef = 1 medan en push-runda (enkel setData ELLER hel stream) är
+    // på väg mot skärmen; hasPaintedOnceRef = minst en runda har målats klart;
+    // symbolsPainted är latchen som (tillsammans med eventsSettled) släcker
+    // pillen för gott. Klart-signalen är KÄLLANS egen sourcedata/isSourceLoaded
+    // (+ en render-frame) — inte map 'idle', som på kallstart väntar på ALLA
+    // baskarte-tiles och därför kunde dröja långt efter att prickarna redan syntes.
+    const pendingPaintRef = useRef(0);
+    const hasPaintedOnceRef = useRef(false);
+    const paintLatchRef = useRef(false);
+    const [paintDoneNonce, setPaintDoneNonce] = useState(0);
+    const [symbolsPainted, setSymbolsPainted] = useState(false);
+    // Antal features som FAKTISKT pushats till källan (nollställs när källan
+    // återskapas, t.ex. vid stilbyte) — skiljer "initial stor påfyllnad" (streamas
+    // pö om pö) från små uppdateringar (en enda setData).
+    const pushedCountRef = useRef(0);
+    // Senast ACCEPTERADE target (innehållet vi pushar/streamar mot källan just
+    // nu). Nästa push med identiskt innehåll hoppas över helt — se
+    // samePlainFeatures för varför det är avgörande för den initiala streamen.
+    const lastPushedTargetRef = useRef<PlainFeature[]>([]);
+    // Städfunktion för pågående våg-stream (lyssnare + timers) — kallas när en
+    // ny push tar över eller vid unmount.
+    const streamCleanupRef = useRef<(() => void) | null>(null);
+    // Aktiv målnings-runda. Bara EN åt gången — en ny push avbryter den gamla
+    // (dess klart-signal ska inte längre räknas).
+    const paintRoundRef = useRef<{ canceled: boolean; detach?: () => void } | null>(null);
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
     // Multi-gruppernas frame-rotationer per cykel-bild-id (byggda i plainData).
@@ -644,10 +717,185 @@ export default function V2Map({
     // klicket (där ska den valda brickan tvärtom få bli synlig via recenter).
     const suppressAutoRecenterUntilRef = useRef(0);
 
+    // Baka (eller återanvänd) brick-bilderna som en uppsättning features faktiskt
+    // pekar på (properties.icon). Under den streamade påfyllnaden kallas den per
+    // delmängd, så bakningen sprids ut i stället för att blockera huvudtråden i
+    // en enda lång svit innan första pricken ens kan synas.
+    const bakeIconsFor = useCallback((map: maplibregl.Map, feats: PlainFeature[]) => {
+        for (const f of feats) {
+            const id = f.properties.icon as string | undefined;
+            if (!id || map.hasImage(id)) continue;
+            const info = usedIconsRef.current.get(id);
+            if (!info) continue;
+            let baked = bakedIconsRef.current.get(id);
+            if (!baked) {
+                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved);
+                if (b) { bakedIconsRef.current.set(id, b); baked = b; }
+            }
+            if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
+        }
+    }, []);
+
+    // Starta en målnings-runda (pillen "Ritar ut eventen…" lever tills den är klar).
+    // Returnerar arm(): koppla klart-lyssnarna — direkt för en enkel push, efter
+    // SISTA delmängden för en stream (annars avslutar första delmängden rundan).
+    // Klar = källans egen isSourceLoaded + en render-frame, med 'idle' som
+    // säkerhetsnät om signalen uteblir.
+    const beginPaintRound = useCallback((map: maplibregl.Map): (() => void) => {
+        const prev = paintRoundRef.current;
+        if (prev) { prev.canceled = true; prev.detach?.(); }
+        if (paintLatchRef.current) { paintRoundRef.current = null; return () => {}; }
+        const round: { canceled: boolean; detach?: () => void } = { canceled: false };
+        paintRoundRef.current = round;
+        pendingPaintRef.current = 1;
+        return () => {
+            if (round.canceled) return;
+            const finish = () => {
+                if (round.canceled) return;
+                round.canceled = true;
+                round.detach?.();
+                pendingPaintRef.current = 0;
+                hasPaintedOnceRef.current = true;
+                setPaintDoneNonce(n => n + 1);
+            };
+            const onData = (e: maplibregl.MapSourceDataEvent) => {
+                if (e.sourceId === 'plain-events' && e.isSourceLoaded) map.once('render', finish);
+            };
+            const onIdle = () => finish();
+            round.detach = () => { map.off('sourcedata', onData); map.off('idle', onIdle); };
+            map.on('sourcedata', onData);
+            map.once('idle', onIdle);
+        };
+    }, []);
+
+    // Pusha plainFeaturesRef till källan. Den INITIALA påfyllnaden (källan tom →
+    // tusentals nya) streamas i vågor så prickarna dyker upp pö om pö i stället
+    // för i en enda smäll flera sekunder senare — utan extra nätverkshämtningar
+    // (datan är redan här; det är bara utritningen som portioneras). Vågorna är
+    // event-drivna (nästa skickas när förra bekräftats inne — se STREAM_-
+    // kommentaren) och skickas som updateData({add})-diffar. Små ändringar
+    // (dagbyte, cards-merge, poll) pushas som förr i en enda setData. instant =
+    // hoppa över streamen (stilbyte: användaren har redan sett markörerna —
+    // återställ allt direkt).
+    const pushPlainEvents = useCallback((map: maplibregl.Map, opts?: { instant?: boolean }) => {
+        const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
+        if (!src) return;
+        const target = plainFeaturesRef.current;
+        // IDENTISKT innehåll → rör ingenting. Cards-/descriptions-mergarna (och
+        // pollen var 30 s) bygger nya arrayer med samma GL-innehåll; utan denna
+        // koll avbröt de den initiala våg-streamen (källan hade > STREAM_PREV_MAX
+        // → direkt-spåret) och ersatte den med en monolitisk full setData — allt
+        // "på en gång" igen, efter lång väntan. Nu fortsätter streamen ostörd
+        // (och redan färdigmålad karta slipper meningslösa omtilingar). Kravet
+        // på streamActive/full källa gör att en ÅTERSKAPAD källa (stilbyte:
+        // pushedCount nollställd) aldrig skippas.
+        const streamActive = streamCleanupRef.current != null;
+        if (!opts?.instant &&
+            samePlainFeatures(target, lastPushedTargetRef.current) &&
+            (streamActive || pushedCountRef.current === target.length)) {
+            return;
+        }
+        lastPushedTargetRef.current = target;
+        if (streamCleanupRef.current) { streamCleanupRef.current(); streamCleanupRef.current = null; }
+        const prevCount = pushedCountRef.current;
+        // Latch-återöppning: hang-guarden kan ha satt eventsSettled (och släckt
+        // pillen) INNAN någon data ens hunnit fram — landar den första riktiga
+        // datamängden efter det ska "Ritar ut eventen…" tillbaka tills den målats.
+        if (paintLatchRef.current && !opts?.instant && prevCount === 0 && target.length > 0) {
+            paintLatchRef.current = false;
+            hasPaintedOnceRef.current = false;
+            setSymbolsPainted(false);
+        }
+        const setData = (feats: PlainFeature[]) => {
+            src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
+            pushedCountRef.current = feats.length;
+        };
+        if (target.length === 0) {
+            // Inget att måla: avbryt ev. runda och knuffa latch-effekten (tom dag
+            // släcker pillen via nothingToPaint-villkoret).
+            const round = paintRoundRef.current;
+            if (round) { round.canceled = true; round.detach?.(); paintRoundRef.current = null; }
+            pendingPaintRef.current = 0;
+            setData(target);
+            setPaintDoneNonce(n => n + 1);
+            return;
+        }
+        const arm = beginPaintRound(map);
+        // Streama BARA den initiala påfyllnaden: källan (nästan) tom — högst några
+        // användar-event som landade via sin snabbare poll — och en stor mängd nytt.
+        // Allt annat — även en avbruten stream som får ny data (cards-merge mitt i,
+        // prevCount = det som hunnit skickas) — går som en enda setData: kartan har
+        // redan innehåll, tomma-kartan-problemet finns inte.
+        if (opts?.instant || prevCount > STREAM_PREV_MAX || target.length - prevCount < STREAM_MIN_GROWTH) {
+            bakeIconsFor(map, target);
+            setData(target);
+            arm();
+            return;
+        }
+        // Strömordning: boostade features (användarskapade — alltid tända, sajtens
+        // kärna) FÖRST så de hamnar i våg 1 och aldrig blinkar bort när setData:n
+        // där ersätter den lilla förra pushen. Resten i target-ordning. Kanoniska
+        // ordningen (vald-sist för prick-lagret) återställs vid nästa push med
+        // FAKTISKT ändrat innehåll (dagbyte/val) — identiska pushar skippas ju.
+        const boosted: PlainFeature[] = [];
+        const rest: PlainFeature[] = [];
+        for (const f of target) (f.properties.sortKey >= 100_000 ? boosted : rest).push(f);
+        const ordered = boosted.length ? [...boosted, ...rest] : target;
+        // Våg-streamen. sent = hur många av ordered som skickats; vågorna är
+        // PREFIX-diffar (ordered[sent..next]) så källan alltid är ordered[0..sent].
+        let sent = 0;
+        let waveSize = STREAM_CHUNK_START;
+        const sendWave = () => {
+            streamCleanupRef.current = null;
+            if (mapRef.current !== map) return;
+            const liveSrc = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
+            if (!liveSrc) return; // stilbyte mitt i — afterLoad gör en instant-push
+            const next = Math.min(sent + waveSize, ordered.length);
+            const slice = ordered.slice(sent, next);
+            bakeIconsFor(map, slice);
+            if (sent === 0) {
+                // Våg 1 ERSÄTTER (setData) — den lilla förra pushen (user-event)
+                // ligger redan först i ordered, så inget synligt försvinner.
+                liveSrc.setData({ type: 'FeatureCollection', features: slice as unknown as GeoJSON.Feature[] });
+            } else {
+                liveSrc.updateData({ add: slice as unknown as GeoJSON.Feature[] });
+            }
+            pushedCountRef.current = next;
+            sent = next;
+            waveSize = Math.min(waveSize * 2, STREAM_CHUNK_MAX);
+            if (sent >= ordered.length) { arm(); return; }
+            // Vänta tills vågen är INNE (källan laddad) + kort paus → nästa våg.
+            // Timeout-fallback så en utebliven signal aldrig strandar streamen.
+            let fired = false;
+            let pauseTimer: ReturnType<typeof setTimeout> | null = null;
+            const onData = (e: maplibregl.MapSourceDataEvent) => {
+                if (e.sourceId === 'plain-events' && e.isSourceLoaded) proceed();
+            };
+            const fallbackTimer = setTimeout(() => proceed(), STREAM_WAVE_TIMEOUT_MS);
+            const proceed = () => {
+                if (fired) return;
+                fired = true;
+                map.off('sourcedata', onData);
+                clearTimeout(fallbackTimer);
+                pauseTimer = setTimeout(sendWave, STREAM_STEP_MS);
+            };
+            streamCleanupRef.current = () => {
+                fired = true;
+                map.off('sourcedata', onData);
+                clearTimeout(fallbackTimer);
+                if (pauseTimer) clearTimeout(pauseTimer);
+            };
+            map.on('sourcedata', onData);
+        };
+        sendWave();
+    }, [bakeIconsFor, beginPaintRound]);
+
     // Installerar/uppdaterar GL-markörlagret: källa + bakade emoji-bilder + lager,
     // och pushar senaste datan. Idempotent — säker att kalla efter varje stilbyte
     // (setStyle rensar källor/bilder/lager, så de måste återinstalleras).
-    const syncPlainLayer = useCallback(() => {
+    // instant skickas vidare till pushen (stilbyte = återställ allt direkt,
+    // ingen ny stream).
+    const syncPlainLayer = useCallback((opts?: { instant?: boolean }) => {
         const map = mapRef.current;
         if (!map || !styleReady(map)) return;
         try {
@@ -655,17 +903,11 @@ export default function V2Map({
                 // promoteId: 'key' → feature-state kan adresseras via gruppnyckeln
                 // (reveal-systemet sätter icon-opacity per markör).
                 map.addSource('plain-events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'key' });
+                // Färsk (tom) källa → nollställ push-räknaren så nästa push vet
+                // att den fyller från noll (stilbyte återskapar källan).
+                pushedCountRef.current = 0;
             }
-            // Baka (eller återanvänd) bild för varje brick-variant (emoji × källfärg).
-            usedIconsRef.current.forEach(({ emoji, color, selected, saved }, id) => {
-                if (map.hasImage(id)) return;
-                let baked = bakedIconsRef.current.get(id);
-                if (!baked) {
-                    const b = makeBrickaImageData(emoji, color, selected, saved);
-                    if (b) { bakedIconsRef.current.set(id, b); baked = b; }
-                }
-                if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
-            });
+            // Ikonbakningen sker i pushPlainEvents (per delmängd under streamen).
             // Brickorna: ALLA event syns på ALLA zoomnivåer (allow-overlap +
             // ignore-placement = ingen avkrockning) så man alltid ser var man kan
             // klicka — även i hela-Sverige-vyn. Det är ett GPU-lager, så även
@@ -769,8 +1011,10 @@ export default function V2Map({
             if (map.getLayer('plain-events-dots') && map.getLayer('plain-events')) {
                 map.moveLayer('plain-events-dots', 'plain-events');
             }
-            const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
-            src?.setData({ type: 'FeatureCollection', features: plainFeaturesRef.current as unknown as GeoJSON.Feature[] });
+            // Pusha datan — stor initial påfyllnad streamas i delmängder (pö om
+            // pö), små ändringar går som en enda setData. Ladda-pillen i JSX:en
+            // följer rundan via pendingPaintRef/paintDoneNonce.
+            pushPlainEvents(map, opts);
 
             // Multi-event- & "inom 1 timme"-prickar. Egen lätt cirkel-källa/lager —
             // INGEN clustering. Svart fyllning (orange för "inom 1 timme"), liten
@@ -828,7 +1072,7 @@ export default function V2Map({
         } catch (err) {
             console.warn('Kunde inte synka GL-markörlagret', err);
         }
-    }, []);
+    }, [pushPlainEvents]);
     const syncPlainLayerRef = useRef(syncPlainLayer);
     syncPlainLayerRef.current = syncPlainLayer;
 
@@ -1096,6 +1340,26 @@ export default function V2Map({
             return () => { map.off('style.load', h); };
         }
     }, [plainData, multiEventDotData]);
+
+    // Släck ladda-pillen för gott (latch) först när ALLT landat OCH kartan
+    // faktiskt målat symbolerna: inga omgångar i kön + minst en genomförd
+    // målning (eller noll event att måla — t.ex. tom dag). Kravet på en
+    // genomförd målning täcker kallstarten där aggregaten landar innan
+    // kartstilen ens laddat klart — pending är då 0 utan att något synts.
+    // Effekten ligger EFTER data-push-effekten ovan så en settled-batch hinner
+    // ställa sig i kön (pendingPaintRef++) innan latch-villkoret prövas.
+    useEffect(() => {
+        if (symbolsPainted || !eventsSettled) return;
+        const nothingToPaint = plainFeaturesRef.current.length === 0;
+        if (pendingPaintRef.current === 0 && (hasPaintedOnceRef.current || nothingToPaint)) {
+            paintLatchRef.current = true;
+            setSymbolsPainted(true);
+        }
+        // Annars: målnings-rundans klart-signal (sourcedata/isSourceLoaded + en
+        // render-frame, idle som säkerhetsnät) bumpar paintDoneNonce → hit igen.
+        // Obs: hang-guarden kan latcha här med 0 features INNAN datan ens kommit —
+        // pushPlainEvents ÅTERÖPPNAR då latchen när första riktiga datan landar.
+    }, [eventsSettled, paintDoneNonce, symbolsPainted]);
 
     // Håll reveal-systemet i synk med datan: rensa bort nycklar som inte längre
     // finns (inkl. MapLibres interna feature-state, så en återanvänd nyckel börjar
@@ -1627,6 +1891,10 @@ export default function V2Map({
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
+            // Pågående marker-stream + målnings-runda (map.remove() tar lyssnarna,
+            // timers måste vi städa själva).
+            if (streamCleanupRef.current) { streamCleanupRef.current(); streamCleanupRef.current = null; }
+            if (paintRoundRef.current) { paintRoundRef.current.canceled = true; paintRoundRef.current = null; }
             map.remove();
             mapRef.current = null;
         };
@@ -1661,7 +1929,9 @@ export default function V2Map({
             // rensat ett ev. gammalt lager, så vi behöver bara lägga till det igen.
             applyHillshade(map, mapStyleRef.current === 'orientering');
             // setStyle rensade GL-markörlagret (källa/bilder/lager) — återinstallera.
-            syncPlainLayerRef.current();
+            // instant: användaren har redan sett markörerna — återställ allt direkt,
+            // ingen ny pö-om-pö-stream (och ingen latch-återöppning av ladda-pillen).
+            syncPlainLayerRef.current({ instant: true });
         };
         const applyStyle = (style: string | maplibregl.StyleSpecification) => {
             map.setStyle(style);
@@ -2122,16 +2392,18 @@ export default function V2Map({
                     onClose={() => { setGroupList(null); setGroupListAnchor(null); }}
                 />
             )}
-            {/* Diskret "laddar fortfarande"-pill: första batchen (destinations)
-                är redan på kartan — EventCards stora center-pill är släckt — men
-                cards/descriptions strömmar ännu. Utan denna ser det ut som att
-                inget händer tills allt kommit fram. Under navbar+kategorichips;
-                pointer-events-none så den aldrig blockerar kartan. */}
-            {eventsLoaded && !eventsSettled && (
+            {/* Diskret "laddar fortfarande"-pill i TVÅ faser: (1) aggregat-lagren
+                strömmar ännu ("Laddar fler event…"), (2) allt är hämtat men GL-
+                symbolerna har inte målats klart än ("Ritar ut eventen…") — utan
+                fas 2 släcktes pillen vid hämtat-klart och kartan stod tom tills
+                tiling/rendering hunnit ikapp. symbolsPainted är latchen som
+                släcker för gott. Under navbar+kategorichips; pointer-events-none
+                så den aldrig blockerar kartan. */}
+            {eventsLoaded && (!eventsSettled || !symbolsPainted) && (
                 <div className="absolute top-[120px] left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
                     <div role="status" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 dark:border-slate-700 px-4 py-2 flex items-center gap-2 animate-in fade-in duration-300">
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
-                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Laddar fler event…</p>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">{eventsSettled ? 'Ritar ut eventen…' : 'Laddar fler event…'}</p>
                     </div>
                 </div>
             )}
