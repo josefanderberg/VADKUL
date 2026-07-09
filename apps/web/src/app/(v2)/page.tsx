@@ -662,12 +662,13 @@ export default function HomePage() {
                 den diskreta länken är Googles (enda) crawlbara väg från sajtens
                 starkaste sida in i /evenemang-hierarkin (stad → kategori).
                 Utan den nås stadssidorna bara via sitemapen = noll intern
-                länkkraft. Länken ligger med lågt z-index — paneler och
-                eventkort får täcka den. */}
+                länkkraft. Placerad i högra hörnet strax OVANFÖR kartans
+                attributions-"i" (som måste förbli klickbar enligt Cartos/OSM:s
+                villkor), med z-index över kartkontrollerna. */}
             <h1 className="sr-only">Hitta evenemang och saker att göra nära dig — hela Sverige på en karta</h1>
             <a
                 href="/evenemang"
-                className="absolute bottom-1 left-14 z-[5] rounded bg-white/60 px-1.5 py-0.5 text-[10px] text-slate-500 backdrop-blur-sm hover:text-slate-800 hover:bg-white/80"
+                className="absolute bottom-9 right-1 z-[40] rounded bg-white/70 px-1.5 py-0.5 text-[10px] text-slate-500 backdrop-blur-sm hover:text-slate-800 hover:bg-white/90"
             >
                 Evenemang stad för stad
             </a>
