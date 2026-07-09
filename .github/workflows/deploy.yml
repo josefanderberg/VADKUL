@@ -70,7 +70,7 @@ jobs:
           # Samma version som den lokalt verifierade deployen — v14 genererar
           # ett funktionspaket med äldre sharp än repo-lockfilen (npm ci-krasch
           # i Cloud Build).
-          npx firebase-tools@15.18.0 deploy --only hosting --project vadkul-f2cb2 --force
+          npx firebase-tools@15.22.4 deploy --only hosting --project vadkul-f2cb2 --force
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
