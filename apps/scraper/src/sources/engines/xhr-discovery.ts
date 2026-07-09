@@ -27,6 +27,7 @@
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
+import { cleanDescription } from '../../utils/text';
 import type { Browser, Page } from 'puppeteer';
 
 const DEFAULT_UA =
@@ -175,8 +176,9 @@ function itemToRawEvent(item: any, cfg: XhrDiscoveryConfig): RawEvent | null {
     const descRaw = cfg.fieldMap?.description
         ? getPath(item, cfg.fieldMap.description)
         : pickField(item, ['description', 'excerpt', 'summary', 'text', 'body']);
-    const description = typeof descRaw === 'string' ? descRaw.replace(/<[^>]+>/g, '').trim()
-                       : descRaw?.rendered ? String(descRaw.rendered).replace(/<[^>]+>/g, '').trim()
+    // cleanDescription strippar taggar OCH avkodar entities (&auml; → ä).
+    const description = typeof descRaw === 'string' ? cleanDescription(descRaw, 600) || undefined
+                       : descRaw?.rendered ? cleanDescription(descRaw.rendered, 600) || undefined
                        : undefined;
 
     return { title, startDate, url: url || cfg.url, venueName, city, description, imageUrl };

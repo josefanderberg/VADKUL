@@ -22,6 +22,7 @@ import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { cleanDescription } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -232,7 +233,9 @@ function itemToRawEvent(item: any, cfg: NuxtDataConfig, baseUrl: string): RawEve
     const city = typeof cityRaw === 'string' ? cityRaw : cfg.defaultCity;
 
     const descRaw = pickField(item, ['description', 'excerpt', 'summary']);
-    const description = unwrapRendered(descRaw)?.replace(/<[^>]+>/g, '').trim();
+    // cleanDescription strippar taggar OCH avkodar entities (&auml; → ä).
+    const descHtml = unwrapRendered(descRaw);
+    const description = descHtml ? cleanDescription(descHtml, 600) || undefined : undefined;
 
     return { title, startDate, endDate: endDate && !isNaN(endDate.getTime()) ? endDate : undefined, url, venueName, city, description, imageUrl };
 }

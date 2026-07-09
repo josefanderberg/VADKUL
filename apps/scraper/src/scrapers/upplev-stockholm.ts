@@ -22,6 +22,7 @@
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { classifyEvent } from '../utils/classify';
 import { geocodeVenue } from '../utils/venueCoordinates';
+import { decodeHtmlEntities } from '../utils/text';
 
 const SITEMAP_URL = 'https://upplev.stockholm/sitemap.xml';
 const LIST_URL = 'https://upplev.stockholm/aktuellt/?t=event';
@@ -36,13 +37,10 @@ const MONTHS: Record<string, number> = {
     juli: 6, augusti: 7, september: 8, oktober: 9, november: 10, december: 11,
 };
 
+// Delad avkodare (svenska tecken + numeriska + dubbelkodning) — den lokala
+// varianten missade namngivna entiteter som &auml;/&ouml;/&aring;.
 function decodeEntities(s: string): string {
-    return s
-        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-        .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-        .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
-        .trim();
+    return decodeHtmlEntities(s).trim();
 }
 
 async function fetchText(url: string): Promise<string> {
