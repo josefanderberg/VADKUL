@@ -88,6 +88,27 @@ const layerCache = new Map<string, { updatedAt: string; data: any }>();
  */
 const STATIC_HEADSTART_MS = 1500;
 
+/**
+ * Snabbstart: DAGENS destinations-slice (?from/to = lokal midnatt→midnatt som
+ * UTC-ISO). ~1 400 event i stället för 22 000+ → ~90 % mindre nedladdning och
+ * parse, så första markörerna kan ritas långt före fulla lagret. Alla besökare
+ * i samma tidszon bygger identiska from/to-strängar → CDN:en cachar EN slice
+ * per dag. Fel/tomt svar → null (kartan väntar på fulla lagret som förut).
+ */
+async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
+    try {
+        const from = new Date(); from.setHours(0, 0, 0, 0);
+        const to = new Date(); to.setHours(23, 59, 59, 999);
+        const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data?.events?.length) return null;
+        return mapDestinationsToLinkEvents(data.events);
+    } catch {
+        return null;
+    }
+}
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). Direktläsningen ur Firestore (väg 2) drog
@@ -526,6 +547,14 @@ export const linkEventService = {
                 if (staticTimer) { clearTimeout(staticTimer); staticTimer = null; }
             };
             if (!baseEvents.length) {
+                // Dagens slice PARALLELLT med fulla lagret (ingen fördröjning —
+                // den är ~90 % mindre och landar nästan alltid långt före).
+                // Ritar kartan med dagens event tills fulla lagret ersätter.
+                fetchTodaySlice().then((slice) => {
+                    if (!active || realDestLanded || baseEvents.length || !slice) return;
+                    baseEvents = slice;
+                    emit();
+                });
                 staticTimer = setTimeout(async () => {
                     try {
                         const res = await fetch('/events-destinations.json');
