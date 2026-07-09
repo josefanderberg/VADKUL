@@ -22,6 +22,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
+import { cleanDescription } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -174,7 +175,8 @@ function itemToRawEvent(item: any, cfg: NextjsDataConfig, baseUrl: string): RawE
     const city = typeof cityRaw === 'string' ? cityRaw : cfg.defaultCity;
 
     const descRaw = cfg.fieldMap?.description ? getPath(item, cfg.fieldMap.description) : pickField(item, ['description', 'excerpt', 'summary']);
-    const description = typeof descRaw === 'string' ? descRaw.replace(/<[^>]+>/g, '').trim() : undefined;
+    // cleanDescription strippar taggar OCH avkodar entities (&auml; → ä).
+    const description = typeof descRaw === 'string' ? cleanDescription(descRaw, 600) || undefined : undefined;
 
     return { title, startDate, endDate: endDate && !isNaN(endDate.getTime()) ? endDate : undefined, url, venueName, city, description, imageUrl };
 }

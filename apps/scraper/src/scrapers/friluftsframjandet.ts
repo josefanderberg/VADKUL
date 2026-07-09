@@ -28,6 +28,7 @@
 import { Engine, RawEvent } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
 import { parseSwedishDate } from '../utils/swedishDate';
+import { decodeHtmlEntities } from '../utils/text';
 
 const SITE = 'https://www.friluftsframjandet.se';
 const BOOT_PATH = '/lat-aventyret-borja/hitta-aventyr/';
@@ -111,10 +112,9 @@ export function parseDetailTimes(html: string): { start: Date | null; end: Date 
 export function parseDescription(html: string): string | undefined {
     const m = html.match(/property="og:description" content="([^"]*)"/);
     if (!m) return undefined;
-    const text = m[1]
-        .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(parseInt(c, 10)))
-        .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&[a-z]+;/g, ' ')
-        .replace(/\s+/g, ' ').trim();
+    // decodeHtmlEntities avkodar &auml; m.fl. — den gamla regexen ersatte alla
+    // okända entiteter med mellanslag (å/ä/ö försvann ur texten).
+    const text = decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim();
     return text || undefined;
 }
 

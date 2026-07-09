@@ -25,6 +25,7 @@ import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { findFirstDateInText } from '../../utils/swedishDate';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
+import { cleanDescription, decodeHtmlEntities } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -112,13 +113,9 @@ function metaContent(html: string, keys: string[]): string | undefined {
     return undefined;
 }
 
-const HTML_ENTITIES: Record<string, string> = {
-    '&amp;': '&', '&quot;': '"', '&#039;': "'", '&#39;': "'", '&apos;': "'",
-    '&lt;': '<', '&gt;': '>', '&nbsp;': ' ',
-};
-function decodeEntities(s: string): string {
-    return s.replace(/&(?:amp|quot|#0?39|apos|lt|gt|nbsp);/g, m => HTML_ENTITIES[m] ?? m);
-}
+// Full entitetsavkodning (svenska tecken, numeriska, dubbelkodade) — den lokala
+// minitabellen som bara tog &amp;/&quot;/… lämnade &auml; m.fl. råa i texten.
+const decodeEntities = decodeHtmlEntities;
 
 /**
  * Beskrivning ur detalj-sidans meta-taggar. Kräver ≥20 tecken för att inte
@@ -173,9 +170,11 @@ function tribeToRawEvent(e: any): RawEvent | null {
         city: venue?.city,
         address: venue?.address,
         coords,
+        // cleanDescription strippar taggar OCH avkodar entities — den nakna
+        // tag-strippen lämnade &auml; osv. råa i beskrivningen.
         description: e.description
-            ? String(e.description).replace(/<[^>]+>/g, '').trim()
-            : (e.excerpt ? String(e.excerpt).replace(/<[^>]+>/g, '').trim() : undefined),
+            ? cleanDescription(e.description, 600) || undefined
+            : (e.excerpt ? cleanDescription(e.excerpt, 600) || undefined : undefined),
         imageUrl: e.image?.url || (typeof e.image === 'string' ? e.image : undefined),
         organizer: Array.isArray(e.organizer) ? e.organizer[0]?.organizer : e.organizer?.organizer,
         category: Array.isArray(e.categories) && e.categories[0]?.name
@@ -279,11 +278,12 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
 
     if (!start || isNaN(start.getTime())) return null;
 
-    // Description: föredra excerpt, annars första 600 tecken av content
+    // Description: föredra excerpt, annars första 600 tecken av content.
+    // cleanDescription avkodar entities — WP:s rendered-HTML är alltid kodad.
     let description = e.excerpt?.rendered
-        ? String(e.excerpt.rendered).replace(/<[^>]+>/g, '').trim()
+        ? cleanDescription(e.excerpt.rendered, 600)
         : (e.content?.rendered
-            ? String(e.content.rendered).replace(/<[^>]+>/g, '').trim().slice(0, 600)
+            ? cleanDescription(e.content.rendered, 600)
             : '');
 
     // Image: prefer _embed featuredmedia (full quality), annars fall tillbaka
