@@ -111,16 +111,21 @@ try {
 
         const messaging = firebase.messaging();
 
-        // Handle background messages
+        // Handle background messages.
+        // Event-påminnelserna skickas som DATA-ONLY (title/body/url i payload.data)
+        // så att FCM-SDK:t inte auto-visar en EGEN notis utöver den här → läs
+        // notification-fälten först och falla tillbaka på data-fälten.
         messaging.onBackgroundMessage((payload) => {
             console.log('Background message received:', payload);
 
-            const notificationTitle = payload.notification?.title || 'VADKUL';
+            const notificationTitle = payload.notification?.title || payload.data?.title || 'VADKUL';
             const notificationOptions = {
-                body: payload.notification?.body || 'Du har en ny notis',
+                body: payload.notification?.body || payload.data?.body || 'Du har en ny notis',
                 icon: '/pwa-icon-v2.png',
                 badge: '/pwa-icon-v2.png',
-                tag: payload.data?.type || 'general',
+                // Tag per event → två påminnelser (t.ex. olika enhets-tokens som
+                // levereras dubbelt) staplas inte som separata notiser.
+                tag: payload.data?.eventId ? `${payload.data?.type}:${payload.data.eventId}` : (payload.data?.type || 'general'),
                 data: payload.data,
                 vibrate: [200, 100, 200],
                 requireInteraction: false,

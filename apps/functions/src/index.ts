@@ -11,6 +11,8 @@ const region = functions.region('europe-west1');
 
 import { scrapeTickster } from './scrapers/tickster';
 import { scrapeEventbrite } from './scrapers/eventbrite';
+import { sendPushToUser } from './utils/push';
+import { eventShareSlug } from './utils/eventShareSlug';
 
 /**
  * Daily Scraper Bot
@@ -211,6 +213,95 @@ export const sendPushNotification = region.firestore
         } catch (error) {
             console.error('Error sending push notification:', error);
         }
+    });
+
+// ==============================
+// EVENT-PÅMINNELSER (1 h innan start)
+// ==============================
+
+/**
+ * Körs var 5:e minut: hittar event som börjar inom en timme och pushar en
+ * påminnelse till alla som ANMÄLT sig (linkEvents/{id}/attendees) eller
+ * GILLAT eventet (users där savedEventIds innehåller event-id:t).
+ *
+ * Dedupe: eventReminders/{eventId} skapas med create() INNAN utskicket —
+ * finns dokumentet redan har en tidigare körning tagit eventet, så varje
+ * event påminns exakt en gång. Ingen klient kan läsa/skriva collectionen
+ * (reglerna är default-deny), bara admin-SDK:t här.
+ *
+ * Fönstret är (nu, nu+60 min]: med 5-minuters-schemat fångas eventet första
+ * ticken efter att det klivit in i fönstret (~55–60 min innan), och skulle en
+ * körning missas tar nästa tick det (så länge eventet inte redan börjat).
+ */
+export const eventReminders = region.pubsub
+    .schedule('every 5 minutes')
+    .onRun(async () => {
+        const now = admin.firestore.Timestamp.now();
+        const inOneHour = admin.firestore.Timestamp.fromMillis(now.toMillis() + 60 * 60 * 1000);
+
+        const eventsSnap = await db.collection('linkEvents')
+            .where('time', '>', now)
+            .where('time', '<=', inOneHour)
+            .get();
+        if (eventsSnap.empty) return null;
+
+        for (const eventDoc of eventsSnap.docs) {
+            const event = eventDoc.data();
+            // Heldags-event (tid = 00:00 utan klockslag): en "om 1 timme"-notis
+            // kl 23 kvällen innan vore fel — hoppa över dem.
+            if (event.hasSpecificTime === false) continue;
+
+            // Ta eventet: create() kastar ALREADY_EXISTS om en tidigare körning
+            // redan påmint → hoppa vidare.
+            const markerRef = db.collection('eventReminders').doc(eventDoc.id);
+            try {
+                await markerRef.create({ claimedAt: now, eventTime: event.time });
+            } catch {
+                continue;
+            }
+
+            try {
+                // Anmälda (subcollectionens doc-id = uid) ∪ gillare.
+                const recipients = new Set<string>();
+                const attendeesSnap = await eventDoc.ref.collection('attendees').get();
+                attendeesSnap.docs.forEach(d => recipients.add(d.id));
+                const likersSnap = await db.collection('users')
+                    .where('savedEventIds', 'array-contains', eventDoc.id)
+                    .get();
+                likersSnap.docs.forEach(d => recipients.add(d.id));
+
+                if (recipients.size === 0) {
+                    await markerRef.update({ sentAt: now, recipients: 0, delivered: 0 });
+                    continue;
+                }
+
+                const startsAt = (event.time as admin.firestore.Timestamp).toDate()
+                    .toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' });
+                const title = `⏰ Om 1 timme: ${event.title}`;
+                const body = `Börjar kl ${startsAt}${event.locationName ? ` · ${event.locationName}` : ''}`;
+                // /e/<slug> studsar direkt in på kartan med eventet öppet.
+                const url = `/e/${eventShareSlug(eventDoc.id)}`;
+
+                let delivered = 0;
+                for (const uid of recipients) {
+                    try {
+                        delivered += await sendPushToUser(uid, {
+                            title, body, url,
+                            type: 'eventReminder',
+                            eventId: eventDoc.id,
+                        });
+                    } catch (err) {
+                        console.error(`[reminder] Push till ${uid} för event ${eventDoc.id} misslyckades:`, err);
+                    }
+                }
+                await markerRef.update({ sentAt: now, recipients: recipients.size, delivered });
+                console.log(`[reminder] "${event.title}" (${eventDoc.id}): ${delivered} leveranser till ${recipients.size} mottagare.`);
+            } catch (err) {
+                // Markören är redan tagen — logga och gå vidare; nästa event ska inte stoppas.
+                console.error(`[reminder] Event ${eventDoc.id} kunde inte behandlas:`, err);
+            }
+        }
+        return null;
     });
 
 // ==============================

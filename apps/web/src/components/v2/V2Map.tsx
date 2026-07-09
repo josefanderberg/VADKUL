@@ -18,7 +18,7 @@ import {
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     ONE_HOUR_MS, BRICKA_DARK_BG,
-    brickaBodyBg, brickaBodyHex, eventEmoji, groupKeyOf, groupStartsWithinHour,
+    brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour,
     makeBrickaImageData, sourceGradientCss,
 } from './v2MapBricka';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
@@ -53,8 +53,15 @@ type PlainFeature = {
     // color = kategorifärg (hex) för nål-pricken; mörk standard för stora källor.
     // sortKey = count + stor boost för den VALDA gruppen → den valda brickan
     // ritas ALLTID överst i GL-lagret (gäller både multi-event och enskilda).
-    properties: { icon: string; key: string; count: number; color: string; sortKey: number };
+    // past = ALLA event i gruppen har redan varit → markören dämpas till 50 %.
+    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean };
 };
+
+// Opacity-faktor för "har varit"-grupper: 0.5 när properties.past är satt,
+// annars 1. Multipliceras in i ALLA opacity-uttryck (bricka, +N-badge, prick)
+// så dämpningen följer med oavsett reveal-state och zoom-läge.
+const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
+    ['case', ['boolean', ['get', 'past'], false], 0.5, 1];
 
 // Är två feature-listor IDENTISKA till innehållet? plainData byggs om vid varje
 // events-uppdatering (nya arrayer), men cards-/descriptions-mergarna och pollen
@@ -69,7 +76,7 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
     for (let i = 0; i < a.length; i++) {
         const pa = a[i].properties, pb = b[i].properties;
         if (pa.key !== pb.key || pa.icon !== pb.icon || pa.count !== pb.count ||
-            pa.color !== pb.color || pa.sortKey !== pb.sortKey) return false;
+            pa.color !== pb.color || pa.sortKey !== pb.sortKey || pa.past !== pb.past) return false;
         const ca = a[i].geometry.coordinates, cb = b[i].geometry.coordinates;
         if (ca[0] !== cb[0] || ca[1] !== cb[1]) return false;
     }
@@ -142,12 +149,13 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
     try { return !!map.getLayer(id); } catch { return false; }
 };
 
-// Startvy: centrerad över mellersta Sverige (≈ Dalarna/Gävle) + mer inzoomad än
-// hela landet, så man ser längre UPP i landet direkt (inte bara söder). (GPS flyger
-// sedan dit man faktiskt står när den hunnit fram.) Tunbart: sänk lat = mer söderut,
-// höj lat = längre upp, höj zoom = mer inzoomat.
-const START_CENTER: [number, number] = [14.8, 59.0];
-const START_ZOOM = 5.2;
+// Startvy: centrerad kring Mälardalen/södra Dalarna, mer inzoomad än hela
+// landet — nedflyttad en grad (60.5→59.5) så man ser längre NER i Sverige
+// direkt. (GPS flyger sedan dit man faktiskt står när den hunnit fram.)
+// Tunbart: sänk lat = mer söderut, höj lat = längre upp, höj lng = åt
+// höger/öster, höj zoom = mer inzoomat.
+const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
+const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -599,7 +607,7 @@ export default function V2Map({
                 // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
                 // Användarskapade event boostas också (under valt) — de är alltid
                 // tända (sticky) och ska vinna staplingen mot importerade grannar.
-                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (isSel ? 1_000_000 : 0) },
+                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (isSel ? 1_000_000 : 0), past: groupIsPast(group, nowMs) },
             });
         }
         // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
@@ -607,7 +615,11 @@ export default function V2Map({
         const selIdx = features.findIndex(f => f.properties.sortKey >= 1_000_000);
         if (selIdx >= 0 && selIdx < features.length - 1) features.push(...features.splice(selIdx, 1));
         return { features, icons, rotations };
-    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds]);
+        // minuteTick håller past-dämpningen (50 %) i takt med klockan — utan den
+        // uppdateras "har varit"-statusen bara när datan råkar byggas om. Oförändrade
+        // minuter kortsluts av samePlainFeatures-vakten → ingen onödig setData.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, minuteTick]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
@@ -935,7 +947,8 @@ export default function V2Map({
                     },
                     paint: {
                         // Dold tills reveal-systemet tonar in den (feature-state 'reveal').
-                        'icon-opacity': ['coalesce', ['feature-state', 'reveal'], 0],
+                        // "Har varit"-grupper toppas på 50 % (PAST_DIM_EXPR).
+                        'icon-opacity': ['*', ['coalesce', ['feature-state', 'reveal'], 0], PAST_DIM_EXPR],
                         'icon-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
@@ -971,7 +984,7 @@ export default function V2Map({
                         'text-color': '#ffffff',
                         'text-halo-color': '#006AA7',
                         'text-halo-width': 2.4,
-                        'text-opacity': ['coalesce', ['feature-state', 'reveal'], 0],
+                        'text-opacity': ['*', ['coalesce', ['feature-state', 'reveal'], 0], PAST_DIM_EXPR],
                         'text-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
@@ -991,17 +1004,19 @@ export default function V2Map({
                         'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-width': 1.5,
-                        // ALLA prickar fullt synliga (oberoende av reveal-state) under zoom,
-                        // men i vila (när vi inte zoomar) döljs de som är avslöjade (har bricka).
-                        'circle-opacity': isZoomingRef.current ? 1 : [
-                            '-',
-                            1,
-                            ['coalesce', ['feature-state', 'reveal'], 0]
+                        // ALLA prickar synliga (oberoende av reveal-state) under zoom,
+                        // men i vila (när vi inte zoomar) döljs de som är avslöjade (har
+                        // bricka). "Har varit"-grupper toppas alltid på 50 % (PAST_DIM_EXPR).
+                        'circle-opacity': isZoomingRef.current ? PAST_DIM_EXPR : [
+                            '*',
+                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
+                            PAST_DIM_EXPR
                         ],
-                        'circle-stroke-opacity': isZoomingRef.current ? 0.9 : [
+                        'circle-stroke-opacity': isZoomingRef.current ? ['*', 0.9, PAST_DIM_EXPR] : [
                             '*',
                             0.9,
-                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]]
+                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
+                            PAST_DIM_EXPR
                         ],
                         'circle-opacity-transition': { duration: 0, delay: 0 },
                         'circle-stroke-opacity-transition': { duration: 0, delay: 0 },
@@ -1615,10 +1630,10 @@ export default function V2Map({
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
-            // During zoom, show all dots including revealed ones
+            // During zoom, show all dots including revealed ones ("har varit" stays at 50%)
             if (layerExists(map, 'plain-events-dots')) {
-                map.setPaintProperty('plain-events-dots', 'circle-opacity', 1);
-                map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', 0.9);
+                map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
+                map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', ['*', 0.9, PAST_DIM_EXPR]);
             }
             setGlLayer('plain-events-dots', true);
         };
@@ -1652,16 +1667,18 @@ export default function V2Map({
             if (!m) return;
             const finish = () => {
                 if (!isZoomingRef.current && layerExists(m, 'plain-events-dots')) {
-                    // Restore conditional opacity in rest state: hide dots under the revealed bricks
+                    // Restore conditional opacity in rest state: hide dots under the
+                    // revealed bricks ("har varit" stays capped at 50%)
                     m.setPaintProperty('plain-events-dots', 'circle-opacity', [
-                        '-',
-                        1,
-                        ['coalesce', ['feature-state', 'reveal'], 0]
+                        '*',
+                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
+                        PAST_DIM_EXPR
                     ]);
                     m.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', [
                         '*',
                         0.9,
-                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]]
+                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
+                        PAST_DIM_EXPR
                     ]);
                 }
             };

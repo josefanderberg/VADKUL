@@ -237,8 +237,12 @@ service cloud.firestore {
     }
 
     // 10. AGGREGATED EVENTS (Progressive event layers)
+    // Klientläsning STÄNGD 2026-07-09: aggregat-sharderna (~26 MB/omgång) lästes
+    // direkt av gamla klienter/flikar = ~9 GiB Firestore-internet-egress per dag
+    // (fakturerad under "App Engine"). All utlämning går via /api/events/[layer]
+    // (Admin SDK → påverkas inte av reglerna) + statiska deploy-snapshots.
     match /aggregatedEvents/{docId} {
-      allow read: if true;
+      allow read: if false;
       allow write: if isAdmin();
     }
 

@@ -29,6 +29,24 @@ export function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolea
     return group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= ONE_HOUR_MS);
 }
 
+// Ett event "har varit": start + 1 h (standardlängden, samma som EventCard/
+// SavedPanel) har passerat. Heldags-event (hasSpecificTime false, tid 00:00)
+// räknas som pågående hela sin dag och blir "varit" först vid midnatt.
+export function isEventPast(e: LinkEvent, nowMs: number): boolean {
+    if (!e.time) return false;
+    if (e.hasSpecificTime === false) {
+        const endOfDay = new Date(e.time);
+        endOfDay.setHours(23, 59, 59, 999);
+        return endOfDay.getTime() < nowMs;
+    }
+    return e.time.getTime() + ONE_HOUR_MS <= nowMs;
+}
+
+// Gruppens markör dämpas (50 % opacity) först när ALLA event i gruppen har varit.
+export function groupIsPast(group: LinkEvent[], nowMs: number): boolean {
+    return group.length > 0 && group.every(e => isEventPast(e, nowMs));
+}
+
 // Grupp-nyckel: event på (nästan) samma koordinat delar markör. 4 decimaler ≈ 11 m.
 export function groupKeyOf(lat: number, lng: number): string {
     return `${lat.toFixed(4)},${lng.toFixed(4)}`;

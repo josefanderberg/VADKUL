@@ -563,6 +563,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [visitedEventIds, setVisitedEventIds] = useState<Set<string>>(new Set());
     const [nearbyVisibleCount, setNearbyVisibleCount] = useState(NEARBY_PAGE_SIZE);
     const [now, setNow] = useState(() => Date.now());
+    const [scrollNudgeActive, setScrollNudgeActive] = useState(false);
+    const scrollNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     // Browse-historik (bakåt-stack): event-id:n vi tittade på innan vi gick vidare.
     const [historyStack, setHistoryStack] = useState<string[]>([]);
@@ -795,6 +797,45 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const t = setInterval(() => setNow(Date.now()), 30_000);
         return () => clearInterval(t);
     }, []);
+
+    // ── Scroll-nudge ────────────────────────────────────────────────────────────
+    // Om användaren inte scrollat innehållet på 5 sekunder efter att ett event
+    // öppnats visas en liten upp-ner-animation som påminner om att det finns mer
+    // innehåll att scrolla. Animationen nollställs direkt vid scroll.
+    useEffect(() => {
+        const sc = scrollContainerRef.current;
+        if (!selectedEvent || !sc) {
+            setScrollNudgeActive(false);
+            if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+            return;
+        }
+
+        // Starta timern när ett nytt event väljs.
+        if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+        setScrollNudgeActive(false);
+        scrollNudgeTimerRef.current = setTimeout(() => {
+            // Nudga bara om innehållet faktiskt är scrollbart och användaren är
+            // uppe vid toppen (har inte redan scrollat).
+            if (sc.scrollTop < 5 && sc.scrollHeight > sc.clientHeight + 10) {
+                setScrollNudgeActive(true);
+            }
+        }, 5000);
+
+        const resetNudge = () => {
+            if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+            setScrollNudgeActive(false);
+        };
+
+        sc.addEventListener('scroll', resetNudge, { passive: true });
+        return () => {
+            sc.removeEventListener('scroll', resetNudge);
+            if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent?.id]);
+
+    // Rensa nudge-timer vid unmount.
+    useEffect(() => () => { if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current); }, []);
 
     // Sortera övriga event efter avstånd från valt event (närmst först).
     const nearbyEvents = useMemo(() => {
@@ -1439,6 +1480,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
             {selectedEvent ? (
             <div
+                className={`w-full max-w-4xl${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
+                onAnimationEnd={() => setScrollNudgeActive(false)}
+            >
+            <div
                 className="relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -1546,6 +1591,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         />
                     )}
                 </div>
+            </div>
             </div>
             ) : (
                 /* Håll reglaget på 30% höjd från botten när inget kort visas.

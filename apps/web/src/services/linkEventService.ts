@@ -1,6 +1,6 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
 
 /**
@@ -68,16 +68,6 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
 }
 
 /**
- * Klient-cache av de sammanslagna aggregat-lagren, nycklat på lagernamn.
- * Aggregaten byggs om ~1×/dygn (efter scrape) men polldes tidigare var 30 s,
- * där VARJE poll läste om alla shards (cards ~29, destinations ~11,
- * descriptions ~8 = ~51 doc-reads/poll). Vi cachar den sammanslagna datan och
- * läser bara om shards när index-docens updatedAt faktiskt ändrats — en
- * oförändrad poll kostar då bara 1 read/lager (själva index-docen).
- */
-const layerCache = new Map<string, { updatedAt: string; data: any }>();
-
-/**
  * Statisk-JSON-först med FÖRSPRÅNG: har API-routen inte svarat inom så här
  * många ms hämtas deploy-snapshoten /events-destinations.json parallellt och
  * ritar kartan så länge. Snapshoten är en ren CDN-fil (ingen funktion, ingen
@@ -111,68 +101,33 @@ async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
 
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
-    // besökare via Hosting-CDN:en). Direktläsningen ur Firestore (väg 2) drog
-    // ~26 MB okomprimerad egress per ny besökare = den stora GCP-kostnaden.
-    // 30s-pollen är också gratis här: max-age=300 → webbläsaren svarar ur egen
-    // HTTP-cache utan nätverk (och utan Firestore-reads) i 5 min.
+    // besökare via Hosting-CDN:en). 30s-pollen är också gratis här:
+    // max-age=300 → webbläsaren svarar ur egen HTTP-cache utan nätverk i 5 min.
     // Vid kallstart direkt efter en deploy kan svaret komma trunkerat
     // (funktions-timeouten klipper strömmen mitt i → res.json() kastar
     // "Unterminated string"). Ett omtag träffar då nästan alltid ett komplett,
-    // CDN-cachat svar — långt billigare än att ramla ner i väg 2.
+    // CDN-cachat svar.
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
             const res = await fetch(`/api/events/${layerName}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data) {
-                    if (typeof data.updatedAt === 'string') {
-                        layerCache.set(layerName, { updatedAt: data.updatedAt, data });
-                    }
-                    return data;
-                }
+                if (data) return data;
             }
         } catch (e) {
             if (attempt === 1) {
-                console.warn(`API-route för lagret "${layerName}" svarade inte (2 försök), provar Firestore direkt:`, e);
+                console.warn(`API-route för lagret "${layerName}" svarade inte (2 försök), tar deploy-snapshoten:`, e);
             }
         }
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
 
-    // 2. Firestore Client SDK — färskt men dyrt (okomprimerad egress);
-    // används bara när API-routen inte svarar.
-    try {
-        if (db) {
-            const docRef = doc(db, 'aggregatedEvents', layerName);
-            const snapshot = await getDoc(docRef);
-            if (snapshot.exists()) {
-                const data: any = snapshot.data();
-                if (data) {
-                    // Shardad: index-doc har shardCount men ingen events/data.
-                    // Slå ihop alla shards.
-                    if (typeof data.shardCount === 'number' && data.shardCount > 0) {
-                        // Oförändrat sedan förra pollen → använd cachen, hoppa
-                        // över shard-läsningarna (0 extra reads).
-                        const cached = layerCache.get(layerName);
-                        if (cached && typeof data.updatedAt === 'string' && cached.updatedAt === data.updatedAt) {
-                            return cached.data;
-                        }
-                        const merged = await fetchShards(layerName, data.shardCount, data.updatedAt);
-                        if (merged && typeof data.updatedAt === 'string') {
-                            layerCache.set(layerName, { updatedAt: data.updatedAt, data: merged });
-                        }
-                        return merged;
-                    }
-                    // Icke-shardad: hela datat ligger redan i index-docen.
-                    return data;
-                }
-            }
-        }
-    } catch (e) {
-        console.warn(`Firestore read failed for layer "${layerName}". Falling back to static JSON:`, e);
-    }
+    // OBS: den gamla väg 2 (Firestore Client SDK direkt) är BORTTAGEN och
+    // Firestore-reglerna nekar numera klientläsning av aggregatedEvents.
+    // Direktläsningarna drog ~26 MB okomprimerad internet-egress per omgång
+    // (~9 GiB/dag totalt, fakturerat under "App Engine") — därav spärren.
 
-    // 3. Sista utväg: statisk JSON från public-mappen (ögonblicksbild från
+    // 2. Sista utväg: statisk JSON från public-mappen (ögonblicksbild från
     // senaste deployen — kan vara dagar gammal, men kartan är aldrig tom).
     try {
         const res = await fetch(`/events-${layerName}.json`);
@@ -184,28 +139,6 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
     }
 
     return null;
-}
-
-/** Hämta och slå ihop shards parallellt (cards_0…cards_N eller descriptions_0…) */
-async function fetchShards(layerName: string, shardCount: number, updatedAt: any): Promise<any> {
-    if (!db) return null;
-    const refs = Array.from({ length: shardCount }, (_, i) => doc(db, 'aggregatedEvents', `${layerName}_${i}`));
-    const snaps = await Promise.all(refs.map((r) => getDoc(r)));
-
-    if (layerName === 'descriptions') {
-        // Slå ihop data-objekt
-        const data: Record<string, string> = {};
-        for (const s of snaps) {
-            if (s.exists()) Object.assign(data, (s.data() as any).data || {});
-        }
-        return { updatedAt, data };
-    }
-    // cards / destinations: slå ihop events-array
-    const events: any[] = [];
-    for (const s of snaps) {
-        if (s.exists()) events.push(...((s.data() as any).events || []));
-    }
-    return { updatedAt, events };
 }
 
 /**

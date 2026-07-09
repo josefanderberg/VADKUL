@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Layers, X } from 'lucide-react';
+import { Layers, X, MoreHorizontal, ChevronUp } from 'lucide-react';
 import { LinkEvent } from '@/types';
-import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
+import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_LIST, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 
 interface CategoryFilterProps {
@@ -14,24 +14,32 @@ interface CategoryFilterProps {
     onClear: () => void;
 }
 
+/** Hur många kategori-cirklar som visas direkt — resten (+ opt-in-källorna)
+ *  ligger bakom "visa mer"-knappen så kolumnen får plats på en mobilskärm. */
+const MAX_DIRECT_CIRCLES = 8;
+
 /**
- * Kategorifilter i samma formspråk som funktions-väskan: en rund knapp under
- * profilen (spegelplats till lager-knappen på högersidan) som fäller ut en
- * panel med en rad per kategori — emoji-bricka + namn + antal + PÅ-indikator.
- * Flerval; tom selection = alla kategorier visas.
+ * Kategorifilter i samma formspråk som navbar-knapparna: lager-knappen fäller
+ * ut en KOLUMN av runda emoji-cirklar (en per kategori, mest event överst) —
+ * ett tryck togglar filtret direkt. Svans-kategorierna + opt-in-källorna
+ * (Korpen/Svenska kyrkan/PRO) ligger bakom en ⋯"visa mer"-cirkel längst ner.
+ * Namn + antal finns som tooltip/aria-label. Flerval; tom selection = alla.
  */
 export default function CategoryFilter({ events, selected, onToggle, onClear }: CategoryFilterProps) {
     const [open, setOpen] = useState(false);
+    const [showMore, setShowMore] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
 
-    // Stäng vid klick utanför panelen/knappen
+    // Stäng vid klick utanför kolumnen/knappen. "Visa mer"-läget nollställs
+    // vid stängning så kolumnen alltid öppnar i sitt korta läge.
     useEffect(() => {
         if (!open) return;
         const onDown = (e: MouseEvent) => {
             const t = e.target as Node;
             if (panelRef.current?.contains(t) || btnRef.current?.contains(t)) return;
             setOpen(false);
+            setShowMore(false);
         };
         document.addEventListener('mousedown', onDown);
         return () => document.removeEventListener('mousedown', onDown);
@@ -65,38 +73,35 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         [counts, selected],
     );
 
-    // Gemensam rad-rendering för både opt-in-källor och vanliga kategorier.
-    const renderRow = (cat: { id: string; label: string; emoji: string; color: string }) => {
+    // Gemensam cirkel-rendering för både vanliga kategorier och opt-in-källor:
+    // samma 40px-cirkel som navbar-knapparna ovanför. Namn + antal ligger i
+    // tooltip/aria-label (kolumnen har inga textrader längre).
+    const renderCircle = (cat: { id: string; label: string; emoji: string; color: string }) => {
         const active = selected.has(cat.id);
+        // Cirkeln bär alltid sin kategorifärg (samma kulör som markörerna på
+        // kartan — lättare att jämföra). Färgstark = syns på kartan just nu,
+        // urblekt = bortfiltrerad, blå ring = uttryckligen vald. Tom selection
+        // betyder "alla PÅ" för vanliga kategorier, men opt-in-källorna
+        // (Korpen/Svenska kyrkan/PRO) är bara på när de är ikryssade.
+        const shownOnMap = active || (selected.size === 0 && !SPECIAL_CATEGORY_KEYS.has(cat.id));
+        const count = counts.get(cat.id) ?? 0;
         return (
             <button
                 key={cat.id}
                 type="button"
                 onClick={() => onToggle(cat.id)}
                 aria-pressed={active}
-                className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-xl text-left transition-colors ${active ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700'}`}
+                aria-label={`${cat.label} — ${count} event idag`}
+                title={`${cat.label} · ${count} event idag`}
+                className={`h-10 w-10 shrink-0 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${cat.color} ${
+                    active
+                        ? 'border-transparent ring-2 ring-[#006AA7]'
+                        : shownOnMap
+                            ? 'border-white/50 dark:border-slate-700'
+                            : 'border-white/50 dark:border-slate-700 opacity-40 saturate-50 hover:opacity-70'
+                }`}
             >
-                <span
-                    className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-lg leading-none border ${
-                        active ? `${cat.color} border-transparent ring-2 ring-offset-1 ring-slate-300` : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                    }`}
-                    aria-hidden
-                >
-                    {cat.emoji}
-                </span>
-                <span className="flex-1 min-w-0">
-                    <span className={`block text-sm font-bold leading-tight ${active ? 'text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
-                        {cat.label}
-                    </span>
-                    <span className="block text-[11px] text-slate-500 leading-tight tabular-nums">
-                        {counts.get(cat.id) ?? 0} event idag
-                    </span>
-                </span>
-                {active && (
-                    <span className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wide ${cat.color}`}>
-                        PÅ
-                    </span>
-                )}
+                <span aria-hidden>{cat.emoji}</span>
             </button>
         );
     };
@@ -115,7 +120,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     <button
                         ref={btnRef}
                         type="button"
-                        onClick={() => setOpen(o => !o)}
+                        onClick={() => { setOpen(o => !o); setShowMore(false); }}
                         aria-expanded={open}
                         aria-label="Filtrera på kategori"
                         className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors relative"
@@ -128,36 +133,55 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                         )}
                     </button>
 
-                    {/* Panel — under knappen, höger-justerad. */}
-                    {open && (
-                        <div
-                            ref={panelRef}
-                            className="absolute right-0 top-[52px] w-[270px] max-h-[68vh] overflow-y-auto no-scrollbar rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border border-white/60 dark:border-slate-700 p-1.5 pointer-events-auto animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
-                        >
-                            <div className="px-2.5 pt-1 pb-1.5 flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                    Kategorier
-                                </span>
+                    {/* Cirkelkolumn — under knappen, höger-justerad. p-1/-m-1 så
+                        ringar och skuggor inte klipps av scroll-containern. */}
+                    {open && (() => {
+                        const direct = visible.slice(0, MAX_DIRECT_CIRCLES);
+                        const rest = visible.slice(MAX_DIRECT_CIRCLES);
+                        const hasMore = rest.length > 0 || visibleSpecial.length > 0;
+                        return (
+                            <div
+                                ref={panelRef}
+                                className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[72vh] overflow-y-auto no-scrollbar p-1 -m-1 mt-0 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200"
+                            >
+                                {/* Rensa-kryss — bara ett kryss, samma cirkel som resten.
+                                    Betydelsen ("visa alla") ligger i tooltip/aria. */}
                                 {selected.size > 0 && (
                                     <button
                                         type="button"
                                         onClick={onClear}
-                                        className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#006AA7] hover:text-[#005590] px-1.5 py-0.5"
+                                        aria-label="Rensa filter — visa alla kategorier"
+                                        title="Visa alla"
+                                        className="h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
                                     >
-                                        <X size={10} strokeWidth={3} /> Visa alla
+                                        <X size={18} strokeWidth={2.5} />
+                                    </button>
+                                )}
+                                {direct.map((id) => renderCircle(EVENT_CATEGORIES[id]))}
+                                {showMore && rest.map((id) => renderCircle(EVENT_CATEGORIES[id]))}
+                                {/* Opt-in-källorna (Korpen/Svenska kyrkan/PRO) bakom
+                                    "visa mer", avgränsade med ett litet streck. */}
+                                {showMore && visibleSpecial.length > 0 && (
+                                    <>
+                                        <span className="w-6 mr-2 border-t border-white/80 dark:border-slate-600" aria-hidden />
+                                        {visibleSpecial.map(renderCircle)}
+                                    </>
+                                )}
+                                {hasMore && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMore(m => !m)}
+                                        aria-expanded={showMore}
+                                        aria-label={showMore ? 'Visa färre kategorier' : 'Visa fler kategorier'}
+                                        title={showMore ? 'Visa färre' : 'Visa mer'}
+                                        className="h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
+                                    >
+                                        {showMore ? <ChevronUp size={18} /> : <MoreHorizontal size={18} />}
                                     </button>
                                 )}
                             </div>
-                            {/* Opt-in-källor överst — avgränsade från de vanliga kategorierna. */}
-                            {visibleSpecial.length > 0 && (
-                                <>
-                                    {visibleSpecial.map(renderRow)}
-                                    <div className="mx-2 my-1 border-t border-slate-200/70 dark:border-slate-700/70" aria-hidden />
-                                </>
-                            )}
-                            {visible.map((id) => renderRow(EVENT_CATEGORIES[id]))}
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             </div>
         </div>

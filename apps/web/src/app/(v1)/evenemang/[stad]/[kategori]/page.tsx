@@ -60,12 +60,22 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
         <main className="min-h-screen bg-slate-50 text-slate-800">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <div className="max-w-2xl mx-auto px-5 py-10">
-                <Link
-                    href={`/evenemang/${city.slug}`}
-                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
-                >
-                    ← Alla evenemang i {city.name}
-                </Link>
+                {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger
+                    (samma mönster som stadssidan). */}
+                <div className="flex items-center justify-between gap-3">
+                    <Link
+                        href={`/evenemang/${city.slug}`}
+                        className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
+                    >
+                        ← Alla evenemang i {city.name}
+                    </Link>
+                    <Link
+                        href="/"
+                        className="inline-flex items-center px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-md transition-colors shrink-0"
+                    >
+                        Se allt på kartan
+                    </Link>
+                </div>
 
                 <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">
                     <span aria-hidden>{cat.emoji}</span> {cat.h1(city.name)}
@@ -76,13 +86,6 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                     Allt är gratis att utforska, utan konto.
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
-
-                <Link
-                    href="/"
-                    className="mt-5 inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-sm shadow-lg transition-colors"
-                >
-                    Se allt på kartan
-                </Link>
 
                 <EventDayList events={events} cityName={city.name} />
 

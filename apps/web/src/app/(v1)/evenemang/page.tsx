@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getCityCounts } from './cityData';
+import { getCityDayCounts } from './cityData';
+import CityLeaderboard from './CityLeaderboard';
 
 // Indexsida för stadssidorna — intern länknav som hjälper Google att hitta
 // alla städer, och en naturlig landningssida för breda sök ("evenemang sverige").
@@ -14,8 +15,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CityIndexPage() {
-    const counts = await getCityCounts();
-    const total = counts.reduce((sum, c) => sum + c.count, 0);
+    // Sorteras i klienten (CityLeaderboard) — default = flest event totalt.
+    const cities = await getCityDayCounts();
+    const total = cities.reduce((sum, c) => sum + c.total, 0);
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
@@ -36,28 +38,7 @@ export default async function CityIndexPage() {
                     kring städerna nedan. Välj din stad, eller öppna kartan direkt.
                 </p>
 
-                <Link
-                    href="/"
-                    className="mt-5 inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-sm shadow-lg transition-colors"
-                >
-                    Öppna kartan
-                </Link>
-
-                <ul className="mt-9 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {counts.map(({ city, count }) => (
-                        <li key={city.slug}>
-                            <Link
-                                href={`/evenemang/${city.slug}`}
-                                className="flex items-baseline justify-between gap-3 rounded-xl bg-white border border-slate-200 px-4 py-3 hover:border-[#006AA7]/40 hover:shadow-sm transition-all"
-                            >
-                                <span className="text-sm font-bold text-slate-900">Vad händer i {city.name}?</span>
-                                <span className="text-xs font-black text-[#006AA7] whitespace-nowrap tabular-nums">
-                                    {count} event
-                                </span>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                <CityLeaderboard cities={cities} />
             </div>
         </main>
     );

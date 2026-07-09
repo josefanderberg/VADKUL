@@ -229,10 +229,14 @@ export default function FloatingNavbar({
                         vänsterdel täckte kartbandet under navbaren och slukade klick).
                         Varje faktisk kontroll nedan sätter pointer-events-auto själv. */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-none">
-                        {/* Sök */}
+                        {/* Sök. Öppet läge expanderar från högerkanten som förut,
+                            men ligger ÖVER allt annat i navbaren (z-[1200] >
+                            plussets 1100 > dagchipens 10) med SOLID vit bakgrund —
+                            förut hamnade fältet under dagväljaren så man inte såg
+                            det man skrev; nu täcker det chipen medan man söker. */}
                         {searchOpen ? (
-                            <div className="flex items-center flex-1 min-w-0 max-w-[420px] bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 px-3 py-2 pointer-events-auto">
-                                <Search size={15} className="text-slate-400 shrink-0 mr-2" />
+                            <div className="relative z-[1200] flex items-center flex-1 min-w-0 max-w-[520px] bg-white rounded-full shadow-xl border border-white/50 px-4 h-10 pointer-events-auto">
+                                <Search size={16} className="text-slate-400 shrink-0 mr-2" />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
@@ -240,32 +244,31 @@ export default function FloatingNavbar({
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Sök event..."
                                     aria-label="Sök event"
-                                    className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 min-w-0"
+                                    className="flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400 min-w-0"
                                 />
                                 <button
                                     onClick={handleCloseSearch}
                                     className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
                                 >
-                                    <X size={15} />
+                                    <X size={16} />
                                 </button>
                             </div>
                         ) : (
-                            // Hopfälld sök: samma 40px-storlek som lager- + funktions-
-                            // knapparna, och order-last gör den ytterst till höger så den
-                            // hamnar rakt ovanför lager-knappen (i linje med kolumnen).
-                            // När söket öppnas tas order bort → input fyller som förut.
+                            // Hopfälld sök: samma 40px-storlek som övriga runda knappar.
+                            // Ligger VÄNSTER om plusset — plusset är ytterst i hörnet,
+                            // rakt ovanför kategorifilter-knappen (i linje med kolumnen).
                             <button
                                 onClick={() => setSearchOpen(true)}
-                                className="order-last bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
+                                className="bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
                                 aria-label="Sök event"
                             >
                                 <Search size={20} className="text-slate-700" />
                             </button>
                         )}
 
-                        {/* +-knappen döljs medan söket är öppet — annars hamnar den
-                            längst till höger exakt där sökknappen nyss satt, och man
-                            råkar trycka på den när man egentligen ville söka.
+                        {/* +-knappen (ytterst i hörnet) döljs medan söket är öppet —
+                            input-fältet får hela bredden och man råkar inte starta
+                            skapa-event-flödet när man siktar på sökfältet.
                             UNDANTAG: i placerings-läget är plusset bekräfta-knappen
                             och måste alltid synas, och mitt i drop-animationen får
                             den inte unmountas (då fastnar plusDropping-låset). */}
@@ -276,9 +279,9 @@ export default function FloatingNavbar({
                                 onClick={handlePlusClick}
                                 disabled={plusDropping}
                                 aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
-                                className="bg-[#006AA7] hover:bg-[#005590] w-11 h-11 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
+                                className="bg-[#006AA7] hover:bg-[#005590] w-10 h-10 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
                             >
-                                <Plus size={22} className="text-white" />
+                                <Plus size={20} className="text-white" />
                             </button>
                         )}
                     </div>

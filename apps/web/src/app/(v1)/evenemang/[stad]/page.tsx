@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { CITIES, CITY_RADIUS_KM, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, dayLabel } from '../cityData';
-import { EventDayList, buildEventsJsonLd } from '../EventList';
+import { CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, pickRecommended, dayLabel } from '../cityData';
+import { EventDayList, RecommendedList, buildEventsJsonLd } from '../EventList';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -45,6 +45,10 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         .map(cat => ({ cat, count: perKey.get(cat.dataKey) ?? 0 }))
         .filter(c => c.count >= MIN_CATEGORY_EVENTS);
 
+    // Rekommenderat först — unika/påkostade händelser, inte det som råkar
+    // ligga närmast i tid. Dag-för-dag-listan följer under som förut.
+    const recommended = pickRecommended(events);
+
     const jsonLd = buildEventsJsonLd(`Evenemang i ${city.name}`, events, city.name, `/evenemang/${city.slug}`);
     const otherCities = CITIES.filter(c => c.slug !== city.slug);
 
@@ -52,32 +56,38 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         <main className="min-h-screen bg-slate-50 text-slate-800">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <div className="max-w-2xl mx-auto px-5 py-10">
-                <Link
-                    href="/"
-                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
-                >
-                    ← Till kartan
-                </Link>
+                {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger. */}
+                <div className="flex items-center justify-between gap-3">
+                    <Link
+                        href="/"
+                        className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
+                    >
+                        ← Till kartan
+                    </Link>
+                    <Link
+                        href="/"
+                        className="inline-flex items-center px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-md transition-colors"
+                    >
+                        Se allt på kartan
+                    </Link>
+                </div>
 
                 <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">
                     Vad händer i {city.name}?
                 </h1>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
-                    Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> inom
-                    {' '}{CITY_RADIUS_KM} km från {city.name} på VADKUL — konserter, marknader, föreläsningar,
+                    Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> i
+                    {' '}{city.name} med omnejd på VADKUL — konserter, marknader, föreläsningar,
                     sport och saker att göra med barn. Allt är gratis att utforska, utan konto.
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
 
-                <Link
-                    href="/"
-                    className="mt-5 inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-sm shadow-lg transition-colors"
-                >
-                    Se allt på kartan
-                </Link>
+                <RecommendedList events={recommended} cityName={city.name} />
 
+                {/* Kategorierna ligger under Rekommenderat, precis ovanför dag-/
+                    tidschipsen — alla filter samlade på samma ställe. */}
                 {cityCategories.length > 0 && (
-                    <div className="mt-6">
+                    <div className="mt-8">
                         <h2 className="text-sm font-black text-slate-900 mb-2">Populärt i {city.name}</h2>
                         <div className="flex flex-wrap gap-2">
                             {cityCategories.map(({ cat, count }) => (

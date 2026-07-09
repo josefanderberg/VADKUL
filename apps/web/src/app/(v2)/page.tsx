@@ -17,6 +17,7 @@ import { storageService } from '@/services/storageService';
 import { X, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
+import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -588,6 +589,9 @@ export default function HomePage() {
     // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
     // Next-navigation). Att dela länken återskapar exakt vy.
     const urlApplied = useRef(false);
+    // Sant när en delad länk styrde dag eller event — då ska auto-hoppet till
+    // Imorgon (nedan) aldrig lägga sig i.
+    const deepLinkedRef = useRef(false);
     useEffect(() => {
         if (!eventsLoaded || urlApplied.current) return;
         urlApplied.current = true;
@@ -602,6 +606,7 @@ export default function HomePage() {
         const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
         const target = eventId ? events.find(e => e.id === eventId) : undefined;
+        if (target || !Number.isNaN(dag) || !Number.isNaN(dagar)) deepLinkedRef.current = true;
         if (target) {
             // Härled eventets dag så dagfiltret inte gömmer det — och markera
             // dagbytet som "redan hanterat" så day-switch-effekten inte byter
@@ -630,6 +635,30 @@ export default function HomePage() {
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
     }, [dayOffset, dayRangeDays, selectedCategories]);
+
+    // ── Auto-hopp till Imorgon när dagens tidssatta utbud redan varit ────────
+    // Sent på kvällen är nästan alla "Idag"-event släckta (past-dämpade 50 %-
+    // brickor): allt med klockslag startade för över en timme sedan och kvar
+    // finns bara heldagsposter utan specifik tid. Då är Imorgon en vettigare
+    // startvy än en karta full av släckta brickor. Beslutet tas EN gång, när
+    // aggregaten landat (dayCountReady), och bara i orört default-läge:
+    // aldrig när en delad länk styrt dag/event, användaren hunnit byta dag
+    // eller redan har ett event öppet.
+    const autoDayBumped = useRef(false);
+    useEffect(() => {
+        if (autoDayBumped.current || !dayCountReady) return;
+        autoDayBumped.current = true;
+        if (deepLinkedRef.current || dayOffset !== 0 || dayRangeDays !== 1 || selectedEvent) return;
+        const now = Date.now();
+        const start = new Date(); start.setHours(0, 0, 0, 0);
+        const end = new Date(); end.setHours(23, 59, 59, 999);
+        const liveSpecificToday = events.some(e =>
+            e.time >= start && e.time <= end &&
+            e.hasSpecificTime !== false &&
+            !isEventPast(e, now),
+        );
+        if (!liveSpecificToday) setDayOffset(1);
+    }, [dayCountReady, events, dayOffset, dayRangeDays, selectedEvent]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent

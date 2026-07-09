@@ -6,42 +6,44 @@ import path from 'path';
 // Datat uppdateras alltså vid deploy; kartan själv hämtar färskare data via
 // Firestore-aggregaten i drift. För SEO räcker deploy-takten gott.
 
-export type City = { name: string; slug: string; lat: number; lng: number };
+export type City = { name: string; slug: string; lat: number; lng: number; population: number };
 
 // Städer som får en egen landningssida. Ordningen spelar ingen roll —
-// sidorna sorterar själva efter eventantal.
+// sidorna sorterar själva efter eventantal. population = kommunens, ca
+// (SCB 2024, avrundat) — används bara för topplistans "per invånare"-läge,
+// grova siffror räcker gott.
 export const CITIES: City[] = [
-    { name: 'Stockholm', slug: 'stockholm', lat: 59.33, lng: 18.06 },
-    { name: 'Göteborg', slug: 'goteborg', lat: 57.71, lng: 11.97 },
-    { name: 'Malmö', slug: 'malmo', lat: 55.60, lng: 13.00 },
-    { name: 'Uppsala', slug: 'uppsala', lat: 59.86, lng: 17.64 },
-    { name: 'Linköping', slug: 'linkoping', lat: 58.41, lng: 15.62 },
-    { name: 'Örebro', slug: 'orebro', lat: 59.27, lng: 15.21 },
-    { name: 'Västerås', slug: 'vasteras', lat: 59.61, lng: 16.55 },
-    { name: 'Helsingborg', slug: 'helsingborg', lat: 56.05, lng: 12.69 },
-    { name: 'Norrköping', slug: 'norrkoping', lat: 58.59, lng: 16.19 },
-    { name: 'Jönköping', slug: 'jonkoping', lat: 57.78, lng: 14.16 },
-    { name: 'Umeå', slug: 'umea', lat: 63.83, lng: 20.26 },
-    { name: 'Lund', slug: 'lund', lat: 55.70, lng: 13.19 },
-    { name: 'Borås', slug: 'boras', lat: 57.72, lng: 12.94 },
-    { name: 'Sundsvall', slug: 'sundsvall', lat: 62.39, lng: 17.31 },
-    { name: 'Gävle', slug: 'gavle', lat: 60.67, lng: 17.14 },
-    { name: 'Eskilstuna', slug: 'eskilstuna', lat: 59.37, lng: 16.51 },
-    { name: 'Halmstad', slug: 'halmstad', lat: 56.67, lng: 12.86 },
-    { name: 'Växjö', slug: 'vaxjo', lat: 56.88, lng: 14.81 },
-    { name: 'Karlstad', slug: 'karlstad', lat: 59.40, lng: 13.51 },
-    { name: 'Södertälje', slug: 'sodertalje', lat: 59.20, lng: 17.63 },
-    { name: 'Kristianstad', slug: 'kristianstad', lat: 56.03, lng: 14.16 },
-    { name: 'Luleå', slug: 'lulea', lat: 65.58, lng: 22.15 },
-    { name: 'Skellefteå', slug: 'skelleftea', lat: 64.75, lng: 20.95 },
-    { name: 'Kalmar', slug: 'kalmar', lat: 56.66, lng: 16.36 },
-    { name: 'Östersund', slug: 'ostersund', lat: 63.18, lng: 14.64 },
-    { name: 'Falun', slug: 'falun', lat: 60.61, lng: 15.63 },
-    { name: 'Karlskrona', slug: 'karlskrona', lat: 56.16, lng: 15.59 },
-    { name: 'Visby', slug: 'visby', lat: 57.64, lng: 18.30 },
-    { name: 'Trollhättan', slug: 'trollhattan', lat: 58.28, lng: 12.29 },
-    { name: 'Nyköping', slug: 'nykoping', lat: 58.75, lng: 17.01 },
-    { name: 'Skövde', slug: 'skovde', lat: 58.39, lng: 13.85 },
+    { name: 'Stockholm', slug: 'stockholm', lat: 59.33, lng: 18.06, population: 990000 },
+    { name: 'Göteborg', slug: 'goteborg', lat: 57.71, lng: 11.97, population: 600000 },
+    { name: 'Malmö', slug: 'malmo', lat: 55.60, lng: 13.00, population: 366000 },
+    { name: 'Uppsala', slug: 'uppsala', lat: 59.86, lng: 17.64, population: 242000 },
+    { name: 'Linköping', slug: 'linkoping', lat: 58.41, lng: 15.62, population: 167000 },
+    { name: 'Örebro', slug: 'orebro', lat: 59.27, lng: 15.21, population: 159000 },
+    { name: 'Västerås', slug: 'vasteras', lat: 59.61, lng: 16.55, population: 160000 },
+    { name: 'Helsingborg', slug: 'helsingborg', lat: 56.05, lng: 12.69, population: 152000 },
+    { name: 'Norrköping', slug: 'norrkoping', lat: 58.59, lng: 16.19, population: 146000 },
+    { name: 'Jönköping', slug: 'jonkoping', lat: 57.78, lng: 14.16, population: 147000 },
+    { name: 'Umeå', slug: 'umea', lat: 63.83, lng: 20.26, population: 133000 },
+    { name: 'Lund', slug: 'lund', lat: 55.70, lng: 13.19, population: 131000 },
+    { name: 'Borås', slug: 'boras', lat: 57.72, lng: 12.94, population: 115000 },
+    { name: 'Sundsvall', slug: 'sundsvall', lat: 62.39, lng: 17.31, population: 100000 },
+    { name: 'Gävle', slug: 'gavle', lat: 60.67, lng: 17.14, population: 103000 },
+    { name: 'Eskilstuna', slug: 'eskilstuna', lat: 59.37, lng: 16.51, population: 108000 },
+    { name: 'Halmstad', slug: 'halmstad', lat: 56.67, lng: 12.86, population: 106000 },
+    { name: 'Växjö', slug: 'vaxjo', lat: 56.88, lng: 14.81, population: 98000 },
+    { name: 'Karlstad', slug: 'karlstad', lat: 59.40, lng: 13.51, population: 97000 },
+    { name: 'Södertälje', slug: 'sodertalje', lat: 59.20, lng: 17.63, population: 103000 },
+    { name: 'Kristianstad', slug: 'kristianstad', lat: 56.03, lng: 14.16, population: 87000 },
+    { name: 'Luleå', slug: 'lulea', lat: 65.58, lng: 22.15, population: 79000 },
+    { name: 'Skellefteå', slug: 'skelleftea', lat: 64.75, lng: 20.95, population: 78000 },
+    { name: 'Kalmar', slug: 'kalmar', lat: 56.66, lng: 16.36, population: 72000 },
+    { name: 'Östersund', slug: 'ostersund', lat: 63.18, lng: 14.64, population: 65000 },
+    { name: 'Falun', slug: 'falun', lat: 60.61, lng: 15.63, population: 60000 },
+    { name: 'Karlskrona', slug: 'karlskrona', lat: 56.16, lng: 15.59, population: 67000 },
+    { name: 'Visby', slug: 'visby', lat: 57.64, lng: 18.30, population: 61000 },
+    { name: 'Trollhättan', slug: 'trollhattan', lat: 58.28, lng: 12.29, population: 60000 },
+    { name: 'Nyköping', slug: 'nykoping', lat: 58.75, lng: 17.01, population: 58000 },
+    { name: 'Skövde', slug: 'skovde', lat: 58.39, lng: 13.85, population: 58000 },
 ];
 
 // "I {stad}" = inom den här radien från stadskärnan. 35 km täcker pendlings-
@@ -58,17 +60,25 @@ export type CityEvent = {
     emoji: string;
     hostName?: string;
     coverImage?: string;
+    price?: string;
+    attendees?: number;
+    /** Hur många gånger samma (normaliserade) titel förekommer i HELA datat.
+     *  1 = engångshändelse; 400 = rutinverksamhet typ "sommarcafé". Grunden
+     *  för rekommendations-rankingen. */
+    repeatCount: number;
 };
 
 type RawDest = {
     id: string; title: string; time: string; hasSpecificTime: boolean;
     lat: number; lng: number; locationName: string; category: string; emoji: string;
 };
-type RawCard = { id: string; hostName?: string; coverImage?: string };
+type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number };
+
+const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').trim();
 
 // Modulnivå-cache: JSON-filerna (~21k event) läses en gång per build-process,
 // inte en gång per stad.
-let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; updatedAt: string }> | null = null;
+let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
 
 function loadData() {
     if (!dataPromise) {
@@ -82,7 +92,14 @@ function loadData() {
             const cardJson = JSON.parse(cardRaw) as { events: RawCard[] };
             const cards = new Map<string, RawCard>();
             for (const c of cardJson.events) cards.set(c.id, c);
-            return { dests: destJson.events, cards, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
+            // Global titel-frekvens (hela Sverige, inte per stad): en "vägkyrka"
+            // är rutin även om den bara finns en gång i just den här staden.
+            const titleFreq = new Map<string, number>();
+            for (const e of destJson.events) {
+                const k = normTitle(e.title);
+                titleFreq.set(k, (titleFreq.get(k) ?? 0) + 1);
+            }
+            return { dests: destJson.events, cards, titleFreq, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
         })();
     }
     return dataPromise;
@@ -98,16 +115,40 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-/** Kommande event inom CITY_RADIUS_KM från staden, tidssorterade. */
+// Närmsta-stad-tilldelning: varje event tillhör EN stad — den närmaste inom
+// CITY_RADIUS_KM. Utan detta överlappade 35 km-radierna så att t.ex. hela
+// Stockholms utbud även räknades in i Södertälje: topplistan dubbelräknade
+// och stadssidorna mixades ihop. Byggs en gång per build-process.
+let assignPromise: Promise<Map<string, RawDest[]>> | null = null;
+function assignEvents() {
+    if (!assignPromise) {
+        assignPromise = loadData().then(({ dests }) => {
+            const bySlug = new Map<string, RawDest[]>(CITIES.map(c => [c.slug, []]));
+            for (const e of dests) {
+                if (!e.lat || !e.lng) continue;
+                let best: City | null = null;
+                let bestD = CITY_RADIUS_KM;
+                for (const c of CITIES) {
+                    const d = distKm(c.lat, c.lng, e.lat, e.lng);
+                    if (d <= bestD) { best = c; bestD = d; }
+                }
+                if (best) bySlug.get(best.slug)!.push(e);
+            }
+            return bySlug;
+        });
+    }
+    return assignPromise;
+}
+
+/** Stadens kommande event (närmsta-stad-tilldelade, tidssorterade).
+ *  "Kommande" = IDAG eller senare (svensk tid) — inte `time >= nu`: scrapade
+ *  event har ofta midnatt som starttid, så en ren tidsjämförelse slänger hela
+ *  dagens utbud så fort dagen börjat. */
 export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; updatedAt: string }> {
-    const { dests, cards, updatedAt } = await loadData();
-    const now = Date.now();
-    const events = dests
-        .filter(e =>
-            e.lat && e.lng &&
-            Date.parse(e.time) >= now &&
-            distKm(city.lat, city.lng, e.lat, e.lng) <= CITY_RADIUS_KM,
-        )
+    const [{ cards, titleFreq, updatedAt }, assigned] = await Promise.all([loadData(), assignEvents()]);
+    const todayK = dayKey(new Date().toISOString());
+    const events = (assigned.get(city.slug) ?? [])
+        .filter(e => dayKey(e.time) >= todayK)
         .sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
         .map(e => {
             const card = cards.get(e.id);
@@ -121,9 +162,87 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
                 emoji: e.emoji,
                 hostName: card?.hostName || undefined,
                 coverImage: card?.coverImage || undefined,
+                price: card?.price || undefined,
+                attendees: card?.attendees || undefined,
+                repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
             };
         });
     return { events, updatedAt };
+}
+
+// ── Rekommenderade event ──────────────────────────────────────────────────────
+// Rankar stadens event efter "unikt + viktigt att känna till" i stället för
+// tidsordning. Helt heuristiskt vid build, ingen AI. Tyngsta signalen är
+// UNIKHET: titlar som återkommer många gånger i datat (sommarcafé 400×,
+// vägkyrka 214×, morgonbön 98×…) är rutinverksamhet, inte händelser. Därtill
+// belönas bild, biljettpris, värd, händelse-ord (festival/premiär/…) och
+// närhet i tid. Vikterna är känsel, inte vetenskap — justera fritt.
+
+const SPECIAL_WORDS = /festival|premiär|vernissage|invigning|turné|mässa|stand.?up|konsert|final|release|cirkus|opera|musikal|nationaldag|midsommar|utställning|föreställning/;
+
+// Rutinverksamhet som ska bort även när titeln råkar vara unik (varje församling
+// namnger sin "öppen kyrka" lite olika → repeatCount biter inte). Medvetet
+// smal — "mässa"/"konsert i kyrkan" ska INTE straffas.
+const ROUTINE_WORDS = /gudstjänst|morgonbön|middagsbön|aftonbön|vägkyrka|sommarkyrka|öppen kyrka|sommarcafé|drop.?in|öppen förskola|språkcafé|stickcafé|promenadgrupp|bokcirkel/;
+
+function scoreEvent(e: CityEvent, now: number): number {
+    let s = 0;
+    // Unikhet — engångstitel = riktig händelse, mångfaldig titel = rutin.
+    s += e.repeatCount <= 1 ? 30 : -12 * Math.log2(e.repeatCount);
+    if (e.coverImage) s += 14;          // arrangören har lagt jobb på eventet
+    if (e.price) s += 6;                // biljettbelagt = arrangemang, inte drop-in
+    if ((e.attendees ?? 0) > 0) s += 10;
+    if (e.hasSpecificTime) s += 4;
+    if (e.hostName) s += 3;
+    const nt = normTitle(e.title);
+    if (SPECIAL_WORDS.test(nt)) s += 10;
+    if (ROUTINE_WORDS.test(nt)) s -= 20;
+    const days = (Date.parse(e.time) - now) / 86_400_000;
+    s += 14 * Math.exp(-days / 12);     // snart slår långt-fram, mjukt avtagande
+    return s;
+}
+
+/** Poängfloor för att alls rekommenderas — hellre en kort lista än utfylld. */
+const MIN_RECOMMEND_SCORE = 18;
+
+// Dedup-nyckel: samma händelse i flera upplagor ("Föreställning 6"/"…7",
+// "EFTERFESTEN FREDAG"/"…LÖRDAG") ska bara ta EN rekommendationsplats —
+// siffror och veckodagar strippas ur titeln innan jämförelse.
+const WEEKDAYS = new Set(['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag']);
+const dedupKey = (t: string) =>
+    normTitle(t).split(' ').filter(w => w && !WEEKDAYS.has(w) && !/^\d+$/.test(w)).join(' ');
+
+/** Stadens topp-N "värda att känna till"-event, med spridning över
+ *  kategorier/värdar/platser så listan inte blir åtta konserter från samma
+ *  arrangör (eller samma festival under två namn). */
+export function pickRecommended(events: CityEvent[], n = 8): CityEvent[] {
+    const now = Date.now();
+    const scored = events
+        .map(e => ({ e, s: scoreEvent(e, now) }))
+        .sort((a, b) => b.s - a.s);
+    const picks: CityEvent[] = [];
+    const perCat = new Map<string, number>();
+    const perHost = new Map<string, number>();
+    const seenTitle = new Set<string>();
+    const seenPlaceDay = new Set<string>();
+    for (const { e, s } of scored) {
+        if (picks.length >= n || s < MIN_RECOMMEND_SCORE) break;
+        const t = dedupKey(e.title);
+        if (seenTitle.has(t)) continue;
+        // Samma plats + samma dag = med stor sannolikhet samma arrangemang
+        // under olika namn ("Fittja festival" + "Fittja Familjefestival").
+        const pd = e.locationName ? `${e.locationName}|${dayKey(e.time)}` : '';
+        if (pd && seenPlaceDay.has(pd)) continue;
+        if ((perCat.get(e.category) ?? 0) >= 2) continue;
+        const host = e.hostName ?? '';
+        if (host && (perHost.get(host) ?? 0) >= 2) continue;
+        picks.push(e);
+        seenTitle.add(t);
+        if (pd) seenPlaceDay.add(pd);
+        perCat.set(e.category, (perCat.get(e.category) ?? 0) + 1);
+        if (host) perHost.set(host, (perHost.get(host) ?? 0) + 1);
+    }
+    return picks;
 }
 
 /** Antal kommande event per stad — för indexsidan och sitemapen. */
@@ -132,6 +251,39 @@ export async function getCityCounts(): Promise<{ city: City; count: number }[]> 
         CITIES.map(async city => ({ city, count: (await getCityEvents(city)).events.length })),
     );
     return counts.sort((a, b) => b.count - a.count);
+}
+
+// ── Stad-för-stad-topplistan (indexsidan) ─────────────────────────────────────
+// Sidan är statisk men ska kunna filtrera på "Idag"/"I helgen" — så vi bakar
+// in antal per DAG (svensk tidszon) de närmaste dagarna, och låter klienten
+// räkna ut vilka datum "idag"/"helgen" är mot riktiga klockan. Då pekar
+// filtren rätt även om deployen är några dagar gammal (datat är förstås
+// deploy-färskt, men dag-bucketarna hamnar inte fel).
+
+export const DAY_COUNT_HORIZON_DAYS = 30;
+
+export type CityDayCounts = {
+    slug: string;
+    name: string;
+    population: number;
+    total: number;
+    /** 'YYYY-MM-DD' (svensk tid) → antal event den dagen. Bara dagar inom
+     *  DAY_COUNT_HORIZON_DAYS tas med — 31 städer × 30 dagar är pyttelitet. */
+    byDay: Record<string, number>;
+};
+
+export async function getCityDayCounts(): Promise<CityDayCounts[]> {
+    const horizon = Date.now() + DAY_COUNT_HORIZON_DAYS * 86_400_000;
+    return Promise.all(CITIES.map(async city => {
+        const { events } = await getCityEvents(city);
+        const byDay: Record<string, number> = {};
+        for (const e of events) {
+            if (Date.parse(e.time) > horizon) continue;
+            const k = dayKey(e.time);
+            byDay[k] = (byDay[k] ?? 0) + 1;
+        }
+        return { slug: city.slug, name: city.name, population: city.population, total: events.length, byDay };
+    }));
 }
 
 // ── Kategorisidor ─────────────────────────────────────────────────────────────
@@ -216,3 +368,12 @@ export function dayKey(iso: string) { return keyFmt.format(new Date(iso)); }
 export function dayLabel(iso: string) { return labelFmt.format(new Date(iso)); }
 /** T.ex. "18.30". */
 export function clockLabel(iso: string) { return clockFmt.format(new Date(iso)); }
+/** T.ex. "Lör 11/7" — dagchipsen på stads-/kategorisidorna. */
+export function shortDayLabel(iso: string) {
+    const s = chipFmt.format(new Date(iso));
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const chipFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'numeric' });
+/** Starttimme 0–23 i svensk tid. */
+export function hourOf(iso: string) { return parseInt(hourFmt.format(new Date(iso)), 10); }
+const hourFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' });

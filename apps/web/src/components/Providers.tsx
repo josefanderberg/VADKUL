@@ -29,14 +29,15 @@ function FCMHandler() {
 
         requestPermission();
 
-        // Handle foreground messages
+        // Handle foreground messages. Event-påminnelserna är data-only
+        // (title/body i payload.data) — falla tillbaka på dem.
         const unsubscribe = onForegroundMessage((payload) => {
-            const title = payload.notification?.title || 'VADKUL';
-            const body = payload.notification?.body || 'Du har en ny notis';
+            const title = payload.notification?.title || payload.data?.title || 'VADKUL';
+            const body = payload.notification?.body || payload.data?.body || 'Du har en ny notis';
 
-            toast(body, {
+            toast(`${title}\n${body}`, {
                 icon: '🔔',
-                duration: 4000,
+                duration: 6000,
             });
         });
 
