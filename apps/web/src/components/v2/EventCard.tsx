@@ -1455,13 +1455,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                         aria-hidden
                                         className="relative z-20 text-[13px] uppercase animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap"
                                         style={{
-                                            // Urklippt text: bokstäverna själva är genomskinliga (color:
-                                            // transparent) så kartan syns GENOM formerna. En tunn vit kontur
-                                            // + mörk gloria håller "Nästa" läsbart mot vilken bakgrund som helst.
+                                            // Rent hål: texten har INGEN egen färg, ingen kontur, ingen
+                                            // skugga, ingen tint — bara color: transparent. Kartan syns
+                                            // orenad rakt igenom bokstavsformerna.
                                             color: 'transparent',
-                                            WebkitTextStrokeWidth: '1px',
-                                            WebkitTextStrokeColor: 'rgba(255,255,255,0.95)',
-                                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
                                         }}
                                     >
                                         Nästa
