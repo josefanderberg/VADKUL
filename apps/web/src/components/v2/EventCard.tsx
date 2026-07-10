@@ -1438,15 +1438,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                className={`group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
-                                    flex items-center justify-end gap-2 pr-1.5 transition-colors ${
-                                    /* Initial-läget (visar "Nästa", ännu ej klickat): knappen själv har
-                                       INGEN bakgrund — gradient-pillen med de urstansade bokstäverna ritas
-                                       av SVG:n nedan, så kartan syns rakt genom bokstavshålen. Efter första
-                                       framåt-navigeringen återgår den till den vita gradient-pillen. */
+                                className={`group relative min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
+                                    flex items-center justify-end gap-2 pr-1.5 transition-all duration-300 ease-out ${
+                                    /* Initial-läget (visar "Nästa", ännu ej klickat): KORT pill längst till
+                                       höger (flex-none + ml-auto + fast bredd). Gradient-pillen med de
+                                       urstansade bokstäverna ritas av SVG:n nedan, så kartan syns rakt genom
+                                       hålen. Vid HOVER expanderar bredden mjukt till full (minus föregående-
+                                       knappen + gap) och gradienten fylls på som en preview. Efter första
+                                       framåt-navigeringen är full bredd + gradient permanent. */
                                     nextHintDismissed
-                                        ? 'bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
-                                        : 'bg-transparent'
+                                        ? 'flex-1 bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
+                                        : 'flex-none ml-auto w-[124px] bg-transparent hover:w-[calc(100%_-_46px)] hover:bg-gradient-to-r hover:from-transparent hover:via-white/30 hover:to-white/80'
                                 }`}
                             >
                                 {/* "Nästa"-etikett tills första framåt-navigeringen — ritad som en
