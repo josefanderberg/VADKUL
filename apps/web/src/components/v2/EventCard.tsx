@@ -1438,30 +1438,58 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                className={`group relative isolate flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
+                                className={`group relative isolate min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
                                     flex items-center justify-end gap-2 pr-1.5 transition-all duration-300 ease-out ${
-                                    /* Initial-läget (visar "Nästa", ännu ej klickat): INGEN egen pill —
-                                       knappen är transparent och bara "Nästa"-texten syns över kartan.
-                                       Vid HOVER fadar den fulla gradient-pillen in bakom och texten blir
-                                       cut-out (mix-blend-difference). Efter första framåt-navigeringen är
-                                       full bredd + gradient permanent. */
+                                    /* Initial-läget (visar "Nästa", ännu ej klickat): HALV-bredd gradient-pill
+                                       längst till höger (w-[56%] + ml-auto). Gradienten + de urstansade
+                                       bokstäverna ritas av SVG:n nedan (absolut, fyller pillen) → kartan syns
+                                       rakt genom bokstavshålen. Vid HOVER expanderar bredden mjukt till full
+                                       (minus föregående-knapp + gap); texten förblir cut-out. Efter första
+                                       framåt-navigeringen är full bredd + gradient permanent. */
                                     nextHintDismissed
-                                        ? 'bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
-                                        : 'bg-transparent hover:bg-gradient-to-r hover:from-transparent hover:via-white/30 hover:to-white/80'
+                                        ? 'flex-1 bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
+                                        : 'flex-none ml-auto w-[56%] bg-transparent hover:w-[calc(100%_-_46px)]'
                                 }`}
                             >
-                                {/* "Nästa"-etikett tills första framåt-navigeringen. DEFAULT: bara vit
-                                    text med skugga, läsbar direkt över kartan (ingen egen pill). HOVER:
-                                    gradient-pillen fadar in bakom (se knapp-bg) och texten blir cut-out
-                                    via mix-blend-difference → bokstäverna inverterar gradienten under och
-                                    får hög kontrast. */}
+                                {/* "Nästa"-etikett tills första framåt-navigeringen. SVG fyller HELA
+                                    pillen (absolut) och ritar gradienten med "NÄSTA" URSTANSAT via en
+                                    <mask> (vit = synlig gradient, svart text = hål) → kartan syns rakt
+                                    genom bokstavshålen. Inget viewBox → koordinaterna är CSS-pixlar, så
+                                    texten skalas INTE när pillen växer; den är förankrad till högerkanten
+                                    (x=100%, dx=-48) så den ligger kvar bredvid emoji-brickan i alla
+                                    bredder. Gradienten går transparent→vit (som originalet). */}
                                 {!nextHintDismissed && (
-                                    <span
+                                    <svg
                                         aria-hidden
-                                        className="relative z-20 text-[13px] uppercase text-white whitespace-nowrap select-none animate-in fade-in slide-in-from-right-2 duration-500 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] mix-blend-normal transition-[filter] group-hover:mix-blend-difference group-hover:drop-shadow-none"
+                                        className="absolute inset-0 h-full w-full block pointer-events-none animate-in fade-in duration-500"
                                     >
-                                        Nästa
-                                    </span>
+                                        <defs>
+                                            <linearGradient id="nastaCutGrad" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
+                                                <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.35" />
+                                                <stop offset="1" stopColor="#ffffff" stopOpacity="0.85" />
+                                            </linearGradient>
+                                            <mask id="nastaCutMask">
+                                                {/* vit = behåll gradienten, svart text = stansa hål */}
+                                                <rect x="0" y="0" width="100%" height="100%" rx="19" fill="#ffffff" />
+                                                <text
+                                                    x="100%"
+                                                    dx="-48"
+                                                    y="50%"
+                                                    textAnchor="end"
+                                                    dominantBaseline="central"
+                                                    fontSize="13"
+                                                    fontWeight="900"
+                                                    letterSpacing="1"
+                                                    fontFamily="var(--font-fredoka), system-ui, sans-serif"
+                                                    fill="#000000"
+                                                >
+                                                    NÄSTA
+                                                </text>
+                                            </mask>
+                                        </defs>
+                                        <rect x="0" y="0" width="100%" height="100%" rx="19" fill="url(#nastaCutGrad)" mask="url(#nastaCutMask)" />
+                                    </svg>
                                 )}
                                 {/* Emoji-bricka för nästa event — samma look som
                                     Föregående-knappens bricka, fast med framåt-pil. */}
