@@ -1438,15 +1438,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                className="group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
-                                    bg-gradient-to-r from-transparent via-white/30 to-white/80
-                                    flex items-center justify-end gap-2 pr-1.5
-                                    transition-colors hover:via-white/40 hover:to-white/90"
+                                className={`group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
+                                    flex items-center justify-end gap-2 pr-1.5 transition-colors ${
+                                    /* Initial-läget (visar "Nästa", ännu ej klickat) → helt genomskinlig
+                                       bakgrund så kartan syns igenom. Efter första framåt-navigeringen
+                                       återgår den till den vita gradient-pillen. */
+                                    nextHintDismissed
+                                        ? 'bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
+                                        : 'bg-transparent'
+                                }`}
                             >
                                 {/* "Nästa"-etikett tills första framåt-navigeringen —
                                     gör det tydligt vad knappen gör innan man klickat. */}
                                 {!nextHintDismissed && (
-                                    <span aria-hidden className="relative z-20 text-[13px] uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap">
+                                    <span aria-hidden className="relative z-20 text-[13px] uppercase text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)] animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap">
                                         Nästa
                                     </span>
                                 )}
@@ -1479,18 +1484,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
             {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
             {selectedEvent ? (
+            <div className="w-full max-w-4xl">
             <div
-                className={`w-full max-w-4xl${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
-                onAnimationEnd={() => setScrollNudgeActive(false)}
-            >
-            <div
-                className="relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10"
+                className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
+                onAnimationEnd={(e) => { if (e.animationName === 'scroll-nudge') setScrollNudgeActive(false); }}
                 style={{
-                    height: `${heightVh}vh`,
+                    // Höjden går via --sheet-h så scroll-nudge-animationen kan
+                    // växa kortet från samma basvärde (botten förblir förankrad).
+                    ['--sheet-h' as string]: `${heightVh}vh`,
+                    height: 'var(--sheet-h)',
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
                     opacity: exitX !== null ? 0 : opacity,
                     transition: isAnimating ? 'transform 200ms ease-out, opacity 200ms ease-out, height 350ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
