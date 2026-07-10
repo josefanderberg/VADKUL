@@ -1440,12 +1440,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 className={`group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
                                     flex items-center justify-end gap-2 pr-1.5 transition-colors ${
-                                    /* Initial-läget (visar "Nästa", ännu ej klickat) → helt genomskinlig
-                                       bakgrund så kartan syns igenom. Efter första framåt-navigeringen
-                                       återgår den till den vita gradient-pillen. */
+                                    /* Initial-läget (visar "Nästa", ännu ej klickat) → frostad pill
+                                       (Alt B): halvtransparent vit yta + backdrop-blur ger en tydlig
+                                       form med kartan skymtande igenom. Bokstäverna görs läsbara via
+                                       mix-blend-mode på texten nedan (så de syns mot vilken karta som
+                                       helst). Efter första framåt-navigeringen återgår den till den
+                                       vita gradient-pillen. */
                                     nextHintDismissed
                                         ? 'bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
-                                        : 'bg-transparent'
+                                        : 'bg-white/35 backdrop-blur-[4px]'
                                 }`}
                             >
                                 {/* "Nästa"-etikett tills första framåt-navigeringen —
@@ -1455,10 +1458,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                         aria-hidden
                                         className="relative z-20 text-[13px] uppercase animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap"
                                         style={{
-                                            // Rent hål: texten har INGEN egen färg, ingen kontur, ingen
-                                            // skugga, ingen tint — bara color: transparent. Kartan syns
-                                            // orenad rakt igenom bokstavsformerna.
-                                            color: 'transparent',
+                                            // Läsbar cut-out: vit text + mix-blend-mode difference inverterar
+                                            // det som ligger under (frostad pill + karta) → bokstäverna får
+                                            // ALLTID hög kontrast och "speglar" kartans färger genom formerna,
+                                            // oavsett bakgrund. Ingen egen tint/skugga behövs.
+                                            color: '#ffffff',
+                                            mixBlendMode: 'difference',
                                         }}
                                     >
                                         Nästa
