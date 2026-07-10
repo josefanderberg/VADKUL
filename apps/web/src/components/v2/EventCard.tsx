@@ -1440,34 +1440,53 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 className={`group relative flex-1 min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
                                     flex items-center justify-end gap-2 pr-1.5 transition-colors ${
-                                    /* Initial-läget (visar "Nästa", ännu ej klickat) → frostad pill
-                                       (Alt B): halvtransparent vit yta + backdrop-blur ger en tydlig
-                                       form med kartan skymtande igenom. Bokstäverna görs läsbara via
-                                       mix-blend-mode på texten nedan (så de syns mot vilken karta som
-                                       helst). Efter första framåt-navigeringen återgår den till den
-                                       vita gradient-pillen. */
+                                    /* Initial-läget (visar "Nästa", ännu ej klickat): knappen själv har
+                                       INGEN bakgrund — gradient-pillen med de urstansade bokstäverna ritas
+                                       av SVG:n nedan, så kartan syns rakt genom bokstavshålen. Efter första
+                                       framåt-navigeringen återgår den till den vita gradient-pillen. */
                                     nextHintDismissed
                                         ? 'bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
-                                        : 'bg-white/35 backdrop-blur-[4px]'
+                                        : 'bg-transparent'
                                 }`}
                             >
-                                {/* "Nästa"-etikett tills första framåt-navigeringen —
-                                    gör det tydligt vad knappen gör innan man klickat. */}
+                                {/* "Nästa"-etikett tills första framåt-navigeringen — ritad som en
+                                    SVG-gradient-pill där bokstäverna är URSTANSADE via en <mask>
+                                    (vit = synlig gradient, svart text = hål). Bokstavshålen är helt
+                                    genomskinliga → kartan bakom knappen syns rakt igenom dem, medan
+                                    gradienten runt om ger tydlig kontrast så "Nästa" är läsbart. */}
                                 {!nextHintDismissed && (
-                                    <span
+                                    <svg
                                         aria-hidden
-                                        className="relative z-20 text-[13px] uppercase animate-in fade-in slide-in-from-right-2 duration-500 select-none whitespace-nowrap"
-                                        style={{
-                                            // Läsbar cut-out: vit text + mix-blend-mode difference inverterar
-                                            // det som ligger under (frostad pill + karta) → bokstäverna får
-                                            // ALLTID hög kontrast och "speglar" kartans färger genom formerna,
-                                            // oavsett bakgrund. Ingen egen tint/skugga behövs.
-                                            color: '#ffffff',
-                                            mixBlendMode: 'difference',
-                                        }}
+                                        width="70"
+                                        height="22"
+                                        viewBox="0 0 70 22"
+                                        className="relative z-20 block animate-in fade-in slide-in-from-right-2 duration-500 select-none"
                                     >
-                                        Nästa
-                                    </span>
+                                        <defs>
+                                            <linearGradient id="nastaKnockoutGrad" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />
+                                                <stop offset="1" stopColor="#ffffff" stopOpacity="0.9" />
+                                            </linearGradient>
+                                            <mask id="nastaKnockoutMask" maskUnits="userSpaceOnUse" x="0" y="0" width="70" height="22">
+                                                {/* vit = behåll gradienten, svart text = stansa hål */}
+                                                <rect x="0" y="0" width="70" height="22" rx="11" fill="#ffffff" />
+                                                <text
+                                                    x="35"
+                                                    y="11"
+                                                    textAnchor="middle"
+                                                    dominantBaseline="central"
+                                                    fontSize="12"
+                                                    fontWeight="900"
+                                                    letterSpacing="1.2"
+                                                    fontFamily="var(--font-fredoka), system-ui, sans-serif"
+                                                    fill="#000000"
+                                                >
+                                                    NÄSTA
+                                                </text>
+                                            </mask>
+                                        </defs>
+                                        <rect x="0" y="0" width="70" height="22" rx="11" fill="url(#nastaKnockoutGrad)" mask="url(#nastaKnockoutMask)" />
+                                    </svg>
                                 )}
                                 {/* Emoji-bricka för nästa event — samma look som
                                     Föregående-knappens bricka, fast med framåt-pil. */}
