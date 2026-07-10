@@ -1494,7 +1494,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 {/* Emoji-bricka för nästa event — samma look som
                                     Föregående-knappens bricka, fast med framåt-pil. */}
                                 {nextEvent ? (
-                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/35 backdrop-blur-md ring-1 ring-white/55 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] text-lg leading-none transition-transform group-hover:translate-x-0.5">
+                                    <span aria-hidden className={`relative z-20 flex items-center justify-center w-8 h-8 text-lg leading-none ${
+                                        /* Efter första klick (dismissed): den älskade vita brick-cirkeln +
+                                           mikro-shift på hover. Initial-läget: BARA själva symbolen (emoji +
+                                           liten framåt-pil) — ingen vit cirkel/bakgrund, och ingen hover-
+                                           förflyttning (stannar still när pillen expanderar). */
+                                        nextHintDismissed
+                                            ? 'rounded-full bg-white/35 backdrop-blur-md ring-1 ring-white/55 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] transition-transform group-hover:translate-x-0.5'
+                                            : ''
+                                    }`}>
                                         {eventEmoji(nextEvent)}
                                         {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
                                         <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
@@ -1508,7 +1516,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                         )}
                                     </span>
                                 ) : (
-                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-7 h-7 rounded-full bg-[#006AA7]/60 backdrop-blur-md ring-1 ring-white/50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)] transition-transform group-hover:translate-x-0.5">
+                                    <span aria-hidden className={`relative z-20 flex items-center justify-center w-7 h-7 [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)] ${
+                                        /* Samma som ovan: cirkel + hover-shift bara i dismissed-läget;
+                                           i initial-läget bara pilen utan bakgrund, still vid hover. */
+                                        nextHintDismissed
+                                            ? 'rounded-full bg-[#006AA7]/60 backdrop-blur-md ring-1 ring-white/50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] transition-transform group-hover:translate-x-0.5'
+                                            : ''
+                                    }`}>
                                         <ArrowRight size={16} />
                                     </span>
                                 )}
