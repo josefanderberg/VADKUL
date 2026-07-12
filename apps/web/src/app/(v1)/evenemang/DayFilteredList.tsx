@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users } from 'lucide-react';
 import { PERIODS, periodKeys, type Period } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
@@ -240,9 +240,12 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // MED bild: omslagsbild kant till kant, titel + emoji + statusbadge överlagd
     // på en mörk gradient, inforaden under — spara-hjärtat överlagrat uppe till
     // höger (utanför Link:en så det inte navigerar).
+    // content-visibility:auto på raderna: rader utanför viewporten kostar
+    // ingen layout/paint (stora listor = stor INP/LCP-vinst på mobil);
+    // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all ${dimmed ? 'opacity-55' : ''}`}>
+            <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
                 <Link href={e.href} className="block">
                     <div className="relative">
                         <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
@@ -272,7 +275,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
 
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
     return (
-        <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all ${dimmed ? 'opacity-55' : ''}`}>
+        <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
             <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3">
                 <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
                 <span className="min-w-0 flex-1">
@@ -311,6 +314,10 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     const [sel, setSel] = useState<Sel>({ kind: 'period', period: 'all' });
     // Valda timstaplar. Behålls när man byter dag — "kvällsfiltret" följer med.
     const [hours, setHours] = useState<number[]>([]);
+    // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
+    // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
+    // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).
+    const [, startTransition] = useTransition();
     // Sparade event (hjärtan) + klockan. Båda sätts efter mount så att
     // SSR-HTML:en är deterministisk; innan dess är inget sparat/passerat.
     const [saved, setSaved] = useState<Set<string>>(new Set());
@@ -326,7 +333,11 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
         try {
             setSaved(new Set(JSON.parse(localStorage.getItem(SAVED_KEY) ?? '[]') as string[]));
         } catch { /* trasig post — börja med tom lista */ }
-        setNowTs(Date.now());
+        // Kollapsen från SSR:ens ALLA dagar (kan vara 1000+ rader) till
+        // dag-för-dag-avtäckningen är sidans tyngsta omrendering — körd som
+        // transition kan React avbryta den för en inkommande tapp i stället
+        // för att blockera tråden direkt efter hydreringen.
+        startTransition(() => setNowTs(Date.now()));
     }, []);
 
     const toggleSave = (id: string) =>
@@ -428,7 +439,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     const showHist = sel.kind !== 'nextHour' && hist.some(c => c > 0);
 
     const toggleHour = (h: number) =>
-        setHours(prev => (prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]));
+        startTransition(() => setHours(prev => (prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])));
     const togglePast = (key: string) =>
         setOpenPast(prev => {
             const next = new Set(prev);
@@ -455,13 +466,13 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
                         key={p.key}
                         label={p.label}
                         active={sel.kind === 'period' && sel.period === p.key}
-                        onClick={() => setSel({ kind: 'period', period: p.key })}
+                        onClick={() => startTransition(() => setSel({ kind: 'period', period: p.key }))}
                     />
                 ))}
                 <Chip
                     label="Nästa timmen"
                     active={sel.kind === 'nextHour'}
-                    onClick={() => { setSel({ kind: 'nextHour' }); setHours([]); }}
+                    onClick={() => startTransition(() => { setSel({ kind: 'nextHour' }); setHours([]); })}
                 />
                 <span className="shrink-0 mx-1 h-5 w-px bg-slate-200" aria-hidden />
                 {days.slice(2).map(d => (
@@ -469,7 +480,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
                         key={d.key}
                         label={d.short}
                         active={sel.kind === 'day' && sel.key === d.key}
-                        onClick={() => setSel({ kind: 'day', key: d.key })}
+                        onClick={() => startTransition(() => setSel({ kind: 'day', key: d.key }))}
                     />
                 ))}
             </div>
@@ -484,7 +495,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
                         {hours.length > 0 && (
                             <button
                                 type="button"
-                                onClick={() => setHours([])}
+                                onClick={() => startTransition(() => setHours([]))}
                                 className="shrink-0 text-[11px] font-black text-[#006AA7] hover:underline"
                             >
                                 kl {hourRanges(hours)} · Rensa ✕

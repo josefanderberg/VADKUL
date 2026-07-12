@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import type { CityDayCounts, CityShowcaseItem } from './cityData';
 import { PERIODS, periodKeys, type Period } from './periods';
@@ -187,11 +187,16 @@ function CityShowcase({ items, slug, registry }: {
 export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] }) {
     const [period, setPeriod] = useState<Period>('all');
     const [sort, setSort] = useState<SortMode>('count');
+    // Filterbyten sorterar om + renderar om hela topplistan (31 rader med
+    // bildspel) — som transition blockerar det inte tappen (INP, mobil).
+    const [, startTransition] = useTransition();
     // Se filhuvudet: dagfiltren får läsa klockan först efter mount, annars
     // spricker hydreringen. Pre-mount → totalerna (keys = null), som 'Alla'
     // — vilket med default 'Alla' också är exakt vad som visas efter mount.
     const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
+    // Transition av samma skäl som filterknapparna: omsorteringen direkt
+    // efter hydreringen ska inte blockera besökarens första tapp.
+    useEffect(() => startTransition(() => setMounted(true)), []);
 
     const rows = useMemo(() => {
         const keys = mounted ? periodKeys(period) : null;
@@ -241,7 +246,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                     <button
                         key={p.key}
                         type="button"
-                        onClick={() => setPeriod(p.key)}
+                        onClick={() => startTransition(() => setPeriod(p.key))}
                         aria-pressed={period === p.key}
                         className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-colors border ${
                             period === p.key
@@ -255,7 +260,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                 <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden />
                 <button
                     type="button"
-                    onClick={() => setSort(s => (s === 'count' ? 'perCapita' : 'count'))}
+                    onClick={() => startTransition(() => setSort(s => (s === 'count' ? 'perCapita' : 'count')))}
                     className="px-3.5 py-1.5 rounded-full text-xs font-black bg-white border border-[#FECC02] text-slate-700 hover:bg-[#FECC02]/10 transition-colors"
                 >
                     {sort === 'count' ? 'Sortera: flest event' : 'Sortera: per 1\u00a0000 inv\u00e5nare'}
