@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LinkEvent } from '@/types';
+import { EventWish, LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
+import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout } from '@/services/boostService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
@@ -13,6 +14,7 @@ import SavedPanel from '@/components/v2/SavedPanel';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
+import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { X, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
@@ -120,26 +122,63 @@ export default function HomePage() {
     const [newEventImage, setNewEventImage] = useState<File | null>(null);
     const [newEventImagePreview, setNewEventImagePreview] = useState('');
     const [creatingEvent, setCreatingEvent] = useState(false);
+    // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
+    // Modalen har två lägen: skapa ett riktigt event ELLER önska ett ("någon
+    // borde ordna X här"). En önskan har bara titel/kategori/beskrivning —
+    // ingen tid, ingen bild — och lever i 14 dagar eller tills någon skapar
+    // eventet av den. Bara inloggade får önska (spärren ligger vid Spara,
+    // precis som för skapa event).
+    const [createKind, setCreateKind] = useState<'event' | 'wish'>('event');
+    // Önskan som ett "Skapa det här eventet"-klick utgick ifrån: modalen är då
+    // förifylld från den, och när eventet skapas kvitteras önskan (fulfilled).
+    const [fulfillingWish, setFulfillingWish] = useState<EventWish | null>(null);
+    // "Ändra plats"-varvet: modalen göms, en center-pin + bekräfta-pill visas
+    // och kartan kan panoreras. Bekräfta → pickedLocation = kartans mitt.
+    const [repicking, setRepicking] = useState(false);
+    // Aktiva önskningar (egen 30 s-poll — blandas ALDRIG in i events-listan,
+    // aggregaten eller "Nästa"-poolen). selectedWish = öppet önske-kort.
+    const [wishes, setWishes] = useState<EventWish[]>([]);
+    const [selectedWish, setSelectedWish] = useState<EventWish | null>(null);
+    // Sessionens egna nyskapade önskningar (syns direkt, innan pollen hunnit
+    // hämta dem — samma idé som myCreatedRef för event) respektive lokalt
+    // uppfyllda/raderade (göms direkt, även om en redan startad poll hinner
+    // svara med dem).
+    const myWishesRef = useRef<EventWish[]>([]);
+    const goneWishIdsRef = useRef<Set<string>>(new Set());
+
+    // Gemensam nollställning av HELA skapa/önska-flödet — delas av Avbryt,
+    // Escape och lyckad skapning så inget läge (t.ex. fulfillingWish) lever kvar.
+    const resetCreateFlow = useCallback(() => {
+        setCreationMode('idle');
+        setPickedLocation(null);
+        setNewEventTitle('');
+        setNewEventTime('');
+        setNewEventCategory('other');
+        setNewEventPlace('');
+        setNewEventDescription('');
+        setNewEventImage(null);
+        setNewEventImagePreview('');
+        setCreateKind('event');
+        setFulfillingWish(null);
+        setRepicking(false);
+    }, []);
 
     // Escape stänger skapa event-modalen (samma städning som Avbryt-knappen) —
-    // standardbeteende för dialoger, viktigt för tangentbordsanvändare.
+    // standardbeteende för dialoger, viktigt för tangentbordsanvändare. Mitt i
+    // ett "Ändra plats"-varv backar Escape bara till formuläret.
     useEffect(() => {
         if (creationMode !== 'editing') return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
-            setCreationMode('idle');
-            setPickedLocation(null);
-            setNewEventTitle('');
-            setNewEventTime('');
-            setNewEventPlace('');
-            setNewEventDescription('');
+            if (repicking) { setRepicking(false); return; }
+            resetCreateFlow();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [creationMode]);
+    }, [creationMode, repicking, resetCreateFlow]);
 
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
     const openLogin = useCallback((reason?: string) => setAuthModal({ open: true, reason }), []);
 
@@ -218,6 +257,67 @@ export default function HomePage() {
         // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
         const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); setDayCountReady(true); }, 15000);
         return () => { unsubscribe(); clearTimeout(hangGuard); };
+    }, []);
+
+    // Önskningarna: EGEN poll (samma mönster som användarevent-hämtningen i
+    // linkEventService — de bor bara i Firestore). Servicen filtrerar redan
+    // bort uppfyllda + utgångna; här slås sessionens egna nyskapade in (syns
+    // direkt) och lokalt uppfyllda/raderade hålls borta även om en poll som
+    // startade före skrivningen hinner svara med dem.
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            const fetched = await wishService.fetchActiveWishes();
+            if (!active) return;
+            const nowMs = Date.now();
+            const seen = new Set(fetched.map(w => w.id));
+            const extras = myWishesRef.current.filter(w => !seen.has(w.id) && w.expiresAt.getTime() > nowMs);
+            setWishes([...fetched, ...extras].filter(w => !goneWishIdsRef.current.has(w.id)));
+        };
+        load();
+        const iv = setInterval(load, 30000);
+        return () => { active = false; clearInterval(iv); };
+    }, []);
+
+    // Klick på en önske-bricka på kartan (null = tom karta-klick → stäng kortet).
+    // Önske-kortet ersätter eventkortet — de ska aldrig ligga öppna samtidigt.
+    const handleSelectWish = useCallback((wish: EventWish | null) => {
+        setSelectedWish(wish);
+        if (wish) setSelectedEvent(null);
+    }, []);
+
+    // Ta bort sin EGEN önskan (kryss i önske-kortet; reglerna verifierar ägarskap).
+    const handleDeleteWish = useCallback(async (wishId: string) => {
+        try {
+            await wishService.deleteWish(wishId);
+            goneWishIdsRef.current.add(wishId);
+            myWishesRef.current = myWishesRef.current.filter(w => w.id !== wishId);
+            setWishes(prev => prev.filter(w => w.id !== wishId));
+            setSelectedWish(prev => (prev?.id === wishId ? null : prev));
+            toast.success('Önskan är borttagen.');
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte ta bort önskan.');
+        }
+    }, []);
+
+    // "Skapa det här eventet" på ett önske-kort → öppna vanliga skapa-modalen
+    // med titel/kategori/beskrivning/plats FÖRIFYLLDA från önskan (allt
+    // justerbart — platsen via "Ändra plats"-varvet). Tiden förifylls som i
+    // +-flödet (nästa hela timme) eftersom önskningar saknar tid.
+    const startFulfillWish = useCallback((wish: EventWish) => {
+        setSelectedWish(null);
+        setFulfillingWish(wish);
+        setCreateKind('event');
+        setPickedLocation({ lat: wish.lat, lng: wish.lng });
+        setNewEventTitle(wish.title);
+        setNewEventCategory(wish.category in EVENT_CATEGORIES ? wish.category : 'other');
+        setNewEventDescription(wish.description || '');
+        setNewEventPlace('');
+        const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        setCreationMode('editing');
     }, []);
 
     // Filtrera events för vald dag ELLER valt intervall (t.ex. helgen = fre–sön).
@@ -535,17 +635,23 @@ export default function HomePage() {
         [events, user]
     );
 
-    // Aktivt sparade = sparade event som ÄNNU INTE passerat (samma 1 h-gräns som
-    // SavedPanel). Passerade sparade räknas som HISTORIK och ska inte blåsa upp
+    // Aktivt sparade = sparade event som ÄNNU INTE passerat (samma isEventPast-
+    // gräns som SavedPanel/kartan: start + 1 h, kl 20 för event utan klockslag).
+    // Passerade sparade räknas som HISTORIK och ska inte blåsa upp
     // hjärt-badgen / "Sparade event"-räknaren — de ligger under Historik i panelen.
     const activeSavedCount = useMemo(() => {
-        const cutoff = Date.now() - 60 * 60 * 1000;
+        const nowMs = Date.now();
         let n = 0;
         for (const e of events) {
-            if (savedEventIds.has(e.id) && e.time.getTime() >= cutoff) n++;
+            if (savedEventIds.has(e.id) && !isEventPast(e, nowMs)) n++;
         }
         return n;
     }, [events, savedEventIds]);
+
+    // Användarens GPS-position — rapporteras upp från kartan (den blå plats-
+    // pricken; tyst hämtning vid start + "Min plats"-knappen). EventCard visar
+    // avståndet från den till det valda eventet. null tills positionen är känd.
+    const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
 
     // Kategorier användaren visat intresse för = kategorierna på de event man
     // sparat (över alla dagar, därför hela `events` och inte bara dagens vy).
@@ -583,6 +689,94 @@ export default function HomePage() {
             return next;
         });
     }, []);
+
+    // ── Stjärn-gåvan ⭐: /?stjarna=<KOD> ─────────────────────────────────────
+    // Tack-kampanj till de första användarna: EN gemensam gåvolänk ger varje
+    // konto EN stjärna som sätts på valfritt event — eventet lyser då (guld-
+    // bricka + alltid synlig, som userCreated) för ALLA tills det passerat.
+    // All skrivning sker i Cloud Functions (redeemStarGift/placeStar);
+    // klienten läser bara eventStars + sitt eget starGift-fält.
+    //
+    // Vilka event som har en stjärna — litet live-set som överlagras på kartan
+    // och kortet (stjärnan bor ALDRIG i aggregaten: de byggs 1 gång/dygn +
+    // CDN-cachas och skulle släpa upp till ett dygn).
+    const [starredEventIds, setStarredEventIds] = useState<Set<string>>(new Set());
+    useEffect(() => starService.subscribeStarredEventIds(setStarredEventIds), []);
+
+    // Egen stjärn-status: 'none' = ingen (eller utloggad), 'unused' = hämtad
+    // men inte satt, 'placed' = förbrukad. Läses från users/{uid} vid inloggning
+    // och uppdateras optimistiskt efter lyckade funktionsanrop.
+    const [starGiftStatus, setStarGiftStatus] = useState<'none' | 'unused' | 'placed'>('none');
+    useEffect(() => {
+        if (!user) { setStarGiftStatus('none'); return; }
+        let cancelled = false;
+        userService.getUserProfile(user.uid).then(profile => {
+            if (cancelled || !profile) return;
+            setStarGiftStatus(profile.starGift === 'unused' ? 'unused'
+                : profile.starGift === 'placed' ? 'placed' : 'none');
+        }).catch(err => console.warn('Kunde inte läsa stjärn-status:', err));
+        return () => { cancelled = true; };
+    }, [user]);
+
+    // Gåvolänken läses EN gång vid mount (samma anda som ?event=-hanteringen
+    // nedan, men oberoende av eventsLoaded — inlösen behöver ingen eventdata).
+    // Koden parkeras i en ref och parametern städas ur URL:en direkt så en
+    // omladdning inte försöker igen. Utloggad → login-modalen med förklaring;
+    // inlösen-effekten nedan fyrar sedan så fort user landat.
+    const pendingStarCodeRef = useRef<string | null>(null);
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('stjarna');
+        if (!code) return;
+        pendingStarCodeRef.current = code;
+        params.delete('stjarna');
+        const qs = params.toString();
+        window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    useEffect(() => {
+        if (!pendingStarCodeRef.current) return;
+        // Vänta tills Firebase återställt sessionen — annars öppnas login-
+        // modalen i onödan för redan inloggade (user är null under restoren).
+        if (authLoading) return;
+        if (!user) {
+            // Visa login-modalen (en gång räcker — koden ligger kvar i refen
+            // och effekten körs om när user loggat in).
+            openLogin('Logga in för att hämta din stjärna ⭐');
+            return;
+        }
+        const code = pendingStarCodeRef.current;
+        pendingStarCodeRef.current = null;
+        (async () => {
+            const res = await starService.redeemStarGift(code);
+            if (res.success) {
+                setStarGiftStatus('unused');
+                toast.success('Du har en stjärna! Öppna ett event och tryck på ⭐ bredvid hjärtat.', { duration: 8000, icon: '⭐' });
+            } else {
+                // Redan hämtad/placerad eller ogiltig kod — statusen från
+                // profilhämtningen ovan gäller; visa bara beskedet.
+                toast(res.message, { icon: '⭐', duration: 6000 });
+            }
+        })();
+    }, [user, authLoading, openLogin]);
+
+    // Sätt stjärnan (bekräftelsedialogen bor i LinkEventCard). Optimistisk
+    // uppdatering av båda staten — eventStars-lyssnaren bekräftar strax efter.
+    const handlePlaceStar = useCallback(async (eventId: string) => {
+        if (!user) { openLogin('Logga in för att sätta din stjärna ⭐'); return; }
+        const res = await starService.placeStar(eventId);
+        if (res.success) {
+            setStarGiftStatus('placed');
+            setStarredEventIds(prev => {
+                const next = new Set(prev);
+                next.add(eventId);
+                return next;
+            });
+            toast.success('Din stjärna sitter! ⭐ Eventet lyser nu för alla.', { duration: 6000 });
+        } else {
+            toast.error(res.message);
+        }
+    }, [user, openLogin]);
 
     // ── Delbara länkar: ?event=<id>&dag=<n>&kategori=<a,b> ──────────────────
     // Läses EN gång när eventlistan först landat; därefter speglas valt event/
@@ -695,12 +889,13 @@ export default function HomePage() {
                 i högra hörnet (användarbeslut 2026-07-09: täck i:et) — solid
                 bakgrund + z-index över kartkontrollerna. */}
             <h1 className="sr-only">Hitta evenemang och saker att göra nära dig — hela Sverige på en karta</h1>
-            {/* Mått valda för att HELT täcka attributions-i:et (24px-knapp med
-                10px marginal = spannet 10–34px från hörnet): bottom/right 8px +
-                py-1.5 ger ~8–34px — inget av i:et sticker fram. */}
+            {/* Blå pill i hörnet — större/tydligare CTA (användaren ville synas
+                mer) med ett glest ljussvep (.city-cta, se globals.css). Täcker
+                fortfarande attributions-i:et: den är nu större än förut, så
+                spannet från hörnet växer bara → i:et förblir dolt. */}
             <a
                 href="/evenemang"
-                className="absolute bottom-2 right-2 z-[40] rounded-full bg-white px-3 py-1.5 text-[10px] font-medium text-slate-600 shadow-md hover:text-slate-900 hover:shadow-lg"
+                className="city-cta absolute bottom-2 right-2 z-[40] overflow-hidden rounded-full bg-[#006AA7] px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-[#005590] hover:shadow-xl transition-colors"
             >
                 Evenemang stad för stad
             </a>
@@ -788,6 +983,8 @@ export default function HomePage() {
                 onFeatureFlagsChange={handleFeatureFlagsChange}
                 onActivateMultiplayer={handleActivateMultiplayer}
                 onFuncBagOpenChange={setFuncBagOpen}
+                onUserPosChange={setUserPos}
+                starredEventIds={starredEventIds}
             />
 
 
@@ -954,6 +1151,7 @@ export default function HomePage() {
                 discardedEventIds={discardedEventIds}
                 savedEventIds={savedEventIds}
                 interestedCategories={interestedCategories}
+                userPos={userPos}
                 onUnsaveEvent={handleUnsaveEvent}
                 onCardExpandedChange={setCardExpanded}
                 onNavigate={() => setNavSelectNonce(n => n + 1)}
@@ -966,6 +1164,9 @@ export default function HomePage() {
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}
                 onBoostOwnEvent={handleBoostOwnEvent}
+                starredEventIds={starredEventIds}
+                canPlaceStar={starGiftStatus === 'unused'}
+                onPlaceStar={handlePlaceStar}
             />
 
         </main>

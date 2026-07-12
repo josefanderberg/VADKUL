@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
@@ -21,15 +22,19 @@ const MAX_IMMINENT_DISTANCE_KM = 70;
 // de skulle annars dyka upp med ett vilt missvisande avstånd. 50 mil = 500 km.
 const MAX_NEARBY_DISTANCE_KM = 500;
 
-type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later';
+type EventStatus = 'past' | 'ongoing' | 'soon' | 'within3' | 'within5' | 'later' | 'today';
 
 const getEventStatus = (time: Date, now: number, hasSpecificTime = true): EventStatus => {
-    // Event utan klockslag (midnatt = bara datum): "pågår" hela sin dag —
-    // annars stämplas de "Har varit" från 00:00 och framåt.
+    // Event utan klockslag (midnatt = bara datum): vi vet inte NÄR på dagen de
+    // är — de får den neutrala statusen "Idag" (aldrig "Pågår") och stämplas
+    // "Har varit" från kl 20 sin dag (NO_TIME_PAST_HOUR, delas med kartans
+    // markör-dämpning).
     if (!hasSpecificTime) {
+        const cutoff = new Date(time);
+        cutoff.setHours(NO_TIME_PAST_HOUR, 0, 0, 0);
+        if (now >= cutoff.getTime()) return 'past';
         const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
-        if (sameDay) return 'ongoing';
-        return time.getTime() < now ? 'past' : 'later';
+        return sameDay ? 'today' : 'later';
     }
     const start = time.getTime();
     const end = start + DEFAULT_EVENT_MS;
@@ -58,10 +63,16 @@ const formatTimeHint = (time: Date, now: number, hasSpecificTime = true): string
     // Visa ALLTID klockslaget — även för "Snart"/pågående event. Tidigare gav
     // <1h en tom sträng, så just de eventen saknade tid (det användaren såg).
     // UNDANTAG: event utan riktigt klockslag (midnatt = bara datum från källan)
-    // ska inte påstå "kl 00:00" — visa bara dagen.
+    // ska inte påstå "kl 00:00" — visa bara dagen. Samma dag FÖRE kl 20 säger
+    // statusbadgen redan "Idag" (tom hint = ingen dubblering); efter kl 20
+    // säger badgen "Har varit" och då behövs dagen här.
     const sameDay = new Date(time).toDateString() === new Date(now).toDateString();
     if (!hasSpecificTime) {
-        if (sameDay) return 'Idag';
+        if (sameDay) {
+            const cutoff = new Date(time);
+            cutoff.setHours(NO_TIME_PAST_HOUR, 0, 0, 0);
+            return now >= cutoff.getTime() ? 'Idag' : '';
+        }
         return time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
     }
     const hhmm = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
@@ -176,6 +187,8 @@ function StatusBadge({ status }: { status: EventStatus }) {
     if (status === 'later') return null;
     const cfg = {
         ongoing: { label: 'Pågår', cls: 'bg-emerald-500 text-white' },
+        // Event utan klockslag: vi vet inte när på dagen — säg bara "Idag".
+        today: { label: 'Idag', cls: 'bg-emerald-300 text-emerald-900' },
         soon: { label: 'Snart', cls: 'bg-amber-500 text-white' },
         within3: { label: 'Inom 3h', cls: 'bg-amber-300 text-amber-900' },
         within5: { label: 'Inom 5h', cls: 'bg-sky-300 text-sky-900' },
@@ -468,6 +481,9 @@ interface EventCardProps {
     /** Kategorier användaren visat intresse för (härledda ur sparade event).
      *  Driver "Tips för dig" — närliggande event i samma kategorier tipsas. */
     interestedCategories?: Set<EventCategoryType>;
+    /** Användarens GPS-position (kartans blå plats-prick). Känd → kortet visar
+     *  avståndet från användaren till det valda eventet. */
+    userPos?: { lat: number; lng: number } | null;
     onUnsaveEvent?: (eventId: string) => void;
     onCardExpandedChange?: (expanded: boolean) => void;
     /** Signaleras precis innan en INTERN navigering (Nästa/Föregående/svep) byter
@@ -518,9 +534,15 @@ interface EventCardProps {
     onDeleteOwnEvent?: (eventId: string) => void;
     /** Boosta (featura) sitt eget event — startar Stripe Checkout. */
     onBoostOwnEvent?: (eventId: string) => void;
+    /** Stjärn-gåvan ⭐: eventId:n som redan fått en stjärna (guld-indikator på
+     *  kortet), om användaren har en oanvänd stjärna att sätta, samt placerings-
+     *  callbacken (bekräftelsedialogen bor i LinkEventCard). */
+    starredEventIds?: Set<string>;
+    canPlaceStar?: boolean;
+    onPlaceStar?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -573,9 +595,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [forwardStack, setForwardStack] = useState<string[]>([]);
 
     const [isAnimating, setIsAnimating] = useState(true);
-    // "Nästa"-etiketten i nästa-knappen visas tills användaren navigerat framåt
-    // första gången (klick eller svep) — därefter räcker emoji-brickan + pilen.
-    const [nextHintDismissed, setNextHintDismissed] = useState(false);
     const isDragging = useRef(false);
     const dragDirection = useRef<'none' | 'horizontal' | 'vertical'>('none');
     const startX = useRef(0);
@@ -737,6 +756,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // till default vid en ny öppning, inte vid byte.
     const prevSelectedIdRef = useRef<string | null>(null);
 
+    // När ankaret sattes (kart-klicket). Nästa-poolens ankar-klassning (past
+    // eller ej) görs mot DEN tidpunkten, så regeln inte flippar mitt i en
+    // Nästa-kedja när klockan passerar ankarets egen "har varit"-gräns.
+    const anchorSetAtRef = useRef(Date.now());
+
     // Detektera om selectedEvent ändrats utifrån (kartklick) → då är det en ny ankare.
     useEffect(() => {
         const prevId = prevSelectedIdRef.current;
@@ -759,6 +783,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // Användaren valde ett nytt event (kartkick / första valet) → ny
             // ankare och en helt ny browsing-gren: nollställ besökt + historik.
             setAnchorId(selectedEvent.id);
+            anchorSetAtRef.current = Date.now();
             setVisitedEventIds(new Set());
             setHistoryStack([]);
             setForwardStack([]);
@@ -836,6 +861,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     // Rensa nudge-timer vid unmount.
     useEffect(() => () => { if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current); }, []);
+
+    // Avstånd från ANVÄNDARENS position (kartans plats-prick) till det valda
+    // eventet — visas i kortets inforad. undefined när positionen är okänd
+    // eller eventet saknar riktiga koordinater (0,0-sentinel).
+    const distanceFromUserKm = useMemo(() => {
+        if (!userPos || !selectedEvent || !hasValidCoords(selectedEvent)) return undefined;
+        return haversineKm(userPos.lat, userPos.lng, selectedEvent.lat, selectedEvent.lng);
+    }, [userPos, selectedEvent]);
 
     // Sortera övriga event efter avstånd från valt event (närmst först).
     const nearbyEvents = useMemo(() => {
@@ -931,18 +964,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
         const PRELOAD_COUNT = 4;
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        const pool = nextCandidatePool(anchor);
         const simVisited = new Set(visitedEventIds);
         let current: LinkEvent = selectedEvent;
         const upcoming: LinkEvent[] = [];
 
         for (let i = 0; i < PRELOAD_COUNT; i++) {
             simVisited.add(current.id);
-            let next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+            let next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
             if (!next) {
                 // Allt besökt — börja om från ankaret (matchar pickNext-logiken).
                 simVisited.clear();
                 simVisited.add(anchor.id);
-                next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+                simVisited.add(current.id);
+                next = findNearestEvent(anchor, pool, discardedEventIds, simVisited)
+                    ?? findNearestEvent(anchor, events, discardedEventIds, simVisited);
             }
             if (!next || upcoming.some(e => e.id === next!.id)) break;
             upcoming.push(next);
@@ -968,6 +1004,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
     }, [selectedEvent?.id, anchorId, events, discardedEventIds, visitedEventIds, nearbyEvents]);
 
+    // Kandidat-pool för "Nästa": klickade man på ett KOMMANDE event hoppar
+    // Nästa aldrig till event som redan har varit — de är inte aktuella att
+    // besöka. Klickade man däremot på ett event som redan HAR varit stegas
+    // ALLA event igenom. Ankaret klassas mot KLICK-tidpunkten (anchorSetAtRef)
+    // så regeln inte byts mitt i kedjan när klockan passerar ankarets egen
+    // gräns; pool-medlemmarna filtreras däremot mot levande `now` (event som
+    // hinner bli "har varit" medan man bläddrar faller bort).
+    const nextCandidatePool = (anchor: LinkEvent): LinkEvent[] => {
+        const anchorPast = getEventStatus(anchor.time, anchorSetAtRef.current, anchor.hasSpecificTime !== false) === 'past';
+        if (anchorPast) return events;
+        const isPast = (e: LinkEvent) => getEventStatus(e.time, now, e.hasSpecificTime !== false) === 'past';
+        return events.filter(e => !isPast(e));
+    };
+
     /**
      * Plocka nästa event utifrån ankaret (spiral utåt i avstånd).
      * Lägger nuvarande event i visited och letar närmaste-till-ankaret som inte är besökt.
@@ -975,6 +1025,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
      */
     const pickNext = (current: LinkEvent): LinkEvent | null => {
         const anchor = events.find(e => e.id === anchorId) ?? current;
+        const pool = nextCandidatePool(anchor);
 
         const newVisited = new Set(visitedEventIds);
         
@@ -995,12 +1046,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             newVisited.add(current.id);
         }
 
-        let next = findNearestEvent(anchor, events, discardedEventIds, newVisited);
+        let next = findNearestEvent(anchor, pool, discardedEventIds, newVisited);
         if (!next) {
-            // Allt slut — börja om från ankaret, exkludera bara ankaret självt + discarded
+            // Allt slut — börja om från ankaret. Ankaret OCH kortet man står på
+            // exkluderas (annars kan varvet "hoppa" till nuvarande kort = no-op,
+            // och fallbacken nedan nås aldrig).
             newVisited.clear();
             newVisited.add(anchor.id);
-            next = findNearestEvent(anchor, events, discardedEventIds, newVisited);
+            newVisited.add(current.id);
+            next = findNearestEvent(anchor, pool, discardedEventIds, newVisited)
+                // Degenererat läge: inga andra kommande event finns alls —
+                // ta vad som finns hellre än en död Nästa-knapp.
+                ?? findNearestEvent(anchor, events, discardedEventIds, newVisited);
         }
         setVisitedEventIds(newVisited);
         if (next) expectedNextIdRef.current = next.id;
@@ -1157,8 +1214,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const handleSwipeOut = (direction: 'left' | 'right') => {
         if (!selectedEvent) return;
-        // Ett svep är också framåt-navigering — då behövs inte "Nästa"-hinten längre.
-        setNextHintDismissed(true);
 
         // Animate off screen
         setExitX(direction === 'right' ? window.innerWidth : -window.innerWidth);
@@ -1213,7 +1268,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const handleNextOnly = () => {
         if (didDragRef.current) { didDragRef.current = false; return; }
         if (!selectedEvent || events.length === 0) return;
-        setNextHintDismissed(true);
 
         // Har vi backat? Spela då upp framåt-stacken i SAMMA ordning igen i
         // stället för att räkna fram ett nytt närmaste event.
@@ -1273,6 +1327,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
         // Annars: samma logik som pickNext, utan sidoeffekter.
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        const pool = nextCandidatePool(anchor);
         const simVisited = new Set(visitedEventIds);
         const curKey = selectedEvent.lat && selectedEvent.lng
             ? `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}` : null;
@@ -1283,14 +1338,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         } else {
             simVisited.add(selectedEvent.id);
         }
-        let next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+        let next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
         if (!next) {
             simVisited.clear();
             simVisited.add(anchor.id);
-            next = findNearestEvent(anchor, events, discardedEventIds, simVisited);
+            simVisited.add(selectedEvent.id);
+            next = findNearestEvent(anchor, pool, discardedEventIds, simVisited)
+                ?? findNearestEvent(anchor, events, discardedEventIds, simVisited);
         }
         return next;
-    }, [selectedEvent, events, forwardStack, anchorId, visitedEventIds, discardedEventIds]);
+    }, [selectedEvent, events, forwardStack, anchorId, visitedEventIds, discardedEventIds, now]);
 
     // Antal event i nästa events grupp (om det är en multibricka)
     const nextEventGroupCount = useMemo(() => {
@@ -1438,71 +1495,56 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
                                 title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                className={`group relative isolate min-w-0 h-[38px] box-border rounded-full text-[#006AA7] font-black tracking-wide
-                                    flex items-center justify-end gap-2 pr-1.5 transition-all duration-300 ease-out ${
-                                    /* Initial-läget (visar "Nästa", ännu ej klickat): HALV-bredd gradient-pill
-                                       längst till höger (w-[56%] + ml-auto). Gradienten + de urstansade
-                                       bokstäverna ritas av SVG:n nedan (absolut, fyller pillen) → kartan syns
-                                       rakt genom bokstavshålen. Vid HOVER expanderar bredden mjukt till full
-                                       (minus föregående-knapp + gap); texten förblir cut-out. Efter första
-                                       framåt-navigeringen är full bredd + gradient permanent. */
-                                    nextHintDismissed
-                                        ? 'flex-1 bg-gradient-to-r from-transparent via-white/30 to-white/80 hover:via-white/40 hover:to-white/90'
-                                        : 'flex-none ml-auto w-[56%] bg-transparent hover:w-[calc(100%_-_46px)]'
-                                }`}
+                                className="group/nasta relative min-w-0 h-[38px] box-border rounded-full text-[#006AA7]
+                                    flex items-center justify-end gap-2 pr-1.5 flex-1 bg-transparent"
                             >
-                                {/* "Nästa"-etikett tills första framåt-navigeringen. SVG fyller HELA
-                                    pillen (absolut) och ritar gradienten med "NÄSTA" URSTANSAT via en
-                                    <mask> (vit = synlig gradient, svart text = hål) → kartan syns rakt
-                                    genom bokstavshålen. Inget viewBox → koordinaterna är CSS-pixlar, så
-                                    texten skalas INTE när pillen växer; den är förankrad till högerkanten
-                                    (x=100%, dx=-48) så den ligger kvar bredvid emoji-brickan i alla
-                                    bredder. Gradienten går transparent→vit (som originalet). */}
-                                {!nextHintDismissed && (
-                                    <svg
-                                        aria-hidden
-                                        className="absolute inset-0 h-full w-full block pointer-events-none animate-in fade-in duration-500"
-                                    >
-                                        <defs>
-                                            <linearGradient id="nastaCutGrad" x1="0" y1="0" x2="1" y2="0">
-                                                <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
-                                                <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.35" />
-                                                <stop offset="1" stopColor="#ffffff" stopOpacity="0.85" />
-                                            </linearGradient>
-                                            <mask id="nastaCutMask">
-                                                {/* vit = behåll gradienten, svart text = stansa hål */}
-                                                <rect x="0" y="0" width="100%" height="100%" rx="19" fill="#ffffff" />
-                                                <text
-                                                    x="100%"
-                                                    dx="-48"
-                                                    y="50%"
-                                                    textAnchor="end"
-                                                    dominantBaseline="central"
-                                                    fontSize="13"
-                                                    fontWeight="900"
-                                                    letterSpacing="1"
-                                                    fontFamily="var(--font-fredoka), system-ui, sans-serif"
-                                                    fill="#000000"
-                                                >
-                                                    NÄSTA
-                                                </text>
-                                            </mask>
-                                        </defs>
-                                        <rect x="0" y="0" width="100%" height="100%" rx="19" fill="url(#nastaCutGrad)" mask="url(#nastaCutMask)" />
-                                    </svg>
-                                )}
-                                {/* Emoji-bricka för nästa event — samma look som
-                                    Föregående-knappens bricka, fast med framåt-pil. */}
+                                {/* Permanent "NÄSTA"-etikett. SVG:n fyller hela pillen (absolut) och
+                                    ritar gradienten (transparent→vit åt höger) med "NÄSTA" URSTANSAT
+                                    via en <mask> (vit = synlig gradient, svart text = hål) → kartan
+                                    syns rakt genom bokstavshålen. Inget viewBox → koordinaterna är
+                                    CSS-pixlar; texten är förankrad till högerkanten (x=100%, dx=-48)
+                                    så den ligger kvar bredvid emojin i alla bredder.
+                                    I VILA når fyllnaden kortare åt vänster (transparent ända fram
+                                    till ~0.62); hover/tryck tonar upp den till full längd. offset
+                                    kan inte CSS-animeras, så stopparna ligger FAST och bara deras
+                                    stop-opacity växlar (transition = mjuk övergång). Hover-värdena
+                                    ÄR gamla gradienten: 0.43 @0.62 ligger på linjen 0.35@0.55→0.85@1. */}
+                                <svg
+                                    aria-hidden
+                                    className="absolute inset-0 h-full w-full block pointer-events-none"
+                                >
+                                    <defs>
+                                        <linearGradient id="nastaCutGrad" x1="0" y1="0" x2="1" y2="0">
+                                            <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
+                                            <stop offset="0.55" stopColor="#ffffff" className="transition-[stop-opacity] duration-300 ease-out [stop-opacity:0] group-hover/nasta:[stop-opacity:0.35] group-active/nasta:[stop-opacity:0.35]" />
+                                            <stop offset="0.62" stopColor="#ffffff" className="transition-[stop-opacity] duration-300 ease-out [stop-opacity:0] group-hover/nasta:[stop-opacity:0.43] group-active/nasta:[stop-opacity:0.43]" />
+                                            <stop offset="1" stopColor="#ffffff" stopOpacity="0.85" />
+                                        </linearGradient>
+                                        <mask id="nastaCutMask">
+                                            {/* vit = behåll gradienten, svart text = stansa hål */}
+                                            <rect x="0" y="0" width="100%" height="100%" rx="19" fill="#ffffff" />
+                                            <text
+                                                x="100%"
+                                                dx="-48"
+                                                y="50%"
+                                                textAnchor="end"
+                                                dominantBaseline="central"
+                                                fontSize="13"
+                                                fontWeight="900"
+                                                letterSpacing="1"
+                                                fontFamily="var(--font-fredoka), system-ui, sans-serif"
+                                                fill="#000000"
+                                            >
+                                                NÄSTA
+                                            </text>
+                                        </mask>
+                                    </defs>
+                                    <rect x="0" y="0" width="100%" height="100%" rx="19" fill="url(#nastaCutGrad)" mask="url(#nastaCutMask)" />
+                                </svg>
+                                {/* Emoji för nästa event — BARA symbolen (emoji + liten framåt-pil),
+                                    ingen cirkel/bakgrund bakom. Samma look från första trycket. */}
                                 {nextEvent ? (
-                                    <span aria-hidden className={`relative z-20 flex items-center justify-center w-8 h-8 text-lg leading-none ${
-                                        /* Efter första klick (dismissed): den älskade vita brick-cirkeln +
-                                           mikro-shift på hover. Initial-läget: BARA själva symbolen (emoji +
-                                           liten framåt-pil) — ingen vit cirkel/bakgrund, och ingen hover-
-                                           förflyttning (stannar still när pillen expanderar). */
-                                        nextHintDismissed
-                                            ? 'rounded-full bg-white/35 backdrop-blur-md ring-1 ring-white/55 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] transition-transform group-hover:translate-x-0.5'
-                                            : ''
-                                    }`}>
+                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-8 h-8 text-lg leading-none">
                                         {eventEmoji(nextEvent)}
                                         {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
                                         <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
@@ -1516,13 +1558,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                         )}
                                     </span>
                                 ) : (
-                                    <span aria-hidden className={`relative z-20 flex items-center justify-center w-7 h-7 [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)] ${
-                                        /* Samma som ovan: cirkel + hover-shift bara i dismissed-läget;
-                                           i initial-läget bara pilen utan bakgrund, still vid hover. */
-                                        nextHintDismissed
-                                            ? 'rounded-full bg-[#006AA7]/60 backdrop-blur-md ring-1 ring-white/50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),0_4px_12px_rgba(0,0,0,0.28)] transition-transform group-hover:translate-x-0.5'
-                                            : ''
-                                    }`}>
+                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-7 h-7 [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)]">
                                         <ArrowRight size={16} />
                                     </span>
                                 )}
@@ -1599,6 +1635,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
+                        distance={distanceFromUserKm}
                         showFullAddress
                         groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
                         groupTotal={sameSpotGroup.length}
@@ -1622,6 +1659,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canDelete={!!(currentUserUid && selectedEvent.userCreated && selectedEvent.hostUid === currentUserUid)}
                         onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
                         onBoost={onBoostOwnEvent ? () => onBoostOwnEvent(selectedEvent.id) : undefined}
+                        hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
+                        // Passerade event kan inte stjärnmärkas — stjärnan vore
+                        // förbrukad direkt (den lyser bara tills eventet varit).
+                        canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
+                        onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
                     {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
                     {onRequireLogin && (

@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star } from 'lucide-react';
 import type { LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -14,11 +14,33 @@ import toast from 'react-hot-toast';
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
 const ADDRESS_FALLBACKS = new Set(['växjö', 'vaxjo', 'stockholm', 'sverige', 'sweden', '']);
 
+/**
+ * Äldre skrapade beskrivningar tappade radbrytningarna HELT — styckena sitter
+ * ihop utan ens mellanslag ("…intresseklubb.Tävlingsområde…", "…11:30Klasserna…").
+ * Saknar texten \n men har sådana skarvar (skiljetecken/siffra direkt följt av
+ * versal) stoppar vi in radbrytningar där. Nyskrapat innehåll har riktiga \n
+ * (skraperfix 2026-07-11) och lämnas orört.
+ */
+function withRecoveredLineBreaks(text: string): string {
+    if (!text || text.includes('\n')) return text;
+    return text
+        .replace(/([.!?…)])(?=[A-ZÅÄÖ"“])/g, '$1\n')
+        .replace(/(\d)(?=[A-ZÅÄÖ])/g, '$1\n');
+}
+
 function isSpecificAddress(addr: string | undefined | null): boolean {
     if (!addr) return false;
     const trimmed = addr.trim();
     if (trimmed.length === 0) return false;
     return !ADDRESS_FALLBACKS.has(trimmed.toLowerCase());
+}
+
+// Avstånd från användarens position — samma formatregler som EventCards
+// närhetslista (<1 km → jämna tiotal meter, <10 km → en decimal).
+function formatDistanceKm(km: number): string {
+    if (km < 1) return `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m`;
+    if (km < 10) return `${km.toFixed(1)} km`;
+    return `${Math.round(km)} km`;
 }
 
 interface LinkEventCardProps {
@@ -51,9 +73,15 @@ interface LinkEventCardProps {
     groupIndex?: number;
     groupTotal?: number;
     onGroupNext?: () => void;
+    /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
+    hasStar?: boolean;
+    /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
+     *  klickbar och placerar stjärnan (bekräftelsedialog, går inte att ångra). */
+    canPlaceStar?: boolean;
+    onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, groupIndex = 0, groupTotal = 1, onGroupNext }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
@@ -176,6 +204,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         onToggleSave?.();
     };
 
+    // Stjärn-gåvan ⭐: placeringen är ENGÅNGS (kan aldrig ångras eller flyttas)
+    // → alltid bekräftelsedialog innan Cloud-funktionen kallas.
+    const handlePlaceStar = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm(`Sätt din stjärna på "${linkEvent.title}"? Det går inte att ångra.`)) return;
+        onPlaceStar?.();
+    };
+
     // Dela eventet: native share-dialog på mobil, annars kopiera länken.
     // Skrapade event delas som /e/<slug> — den sidan serverar eventets EGEN
     // delningsbild (titel/emoji/plats) till FB/Messenger och skickar människor
@@ -267,6 +304,27 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                     {/* Hjärta för att spara samt primär ANMÄL-knapp till höger om titeln. */}
                     <div className="shrink-0 flex items-center gap-2">
+                        {/* Stjärn-gåvan ⭐ bredvid hjärtat: klickbar när man har en
+                            oanvänd stjärna, annars ren guld-indikator på event som
+                            redan HAR en stjärna (syns för alla). */}
+                        {canPlaceStar && onPlaceStar ? (
+                            <button
+                                onClick={handlePlaceStar}
+                                aria-label="Sätt din stjärna på eventet"
+                                title="Sätt din stjärna här — eventet lyser då för alla"
+                                className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-amber-50 border-amber-300 text-amber-500 hover:bg-amber-100 hover:border-amber-400 dark:bg-amber-950/30 dark:border-amber-900/60 dark:text-amber-400"
+                            >
+                                <Star size={15} fill={hasStar ? 'currentColor' : 'none'} />
+                            </button>
+                        ) : hasStar ? (
+                            <span
+                                aria-label="Det här eventet har fått en stjärna"
+                                title="Det här eventet har fått en stjärna av en tidig VADKUL-användare"
+                                className="w-8 h-8 rounded-full border flex items-center justify-center shrink-0 bg-amber-100 border-amber-300 text-amber-500 dark:bg-amber-950/40 dark:border-amber-900/60 dark:text-amber-400"
+                            >
+                                <Star size={15} fill="currentColor" />
+                            </span>
+                        ) : null}
                         {onToggleSave && (
                             <button
                                 onClick={handleToggleSave}
@@ -296,6 +354,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
                     </div>
+                    {/* Avstånd från användarens plats (kartans blå prick) — visas
+                        bara när positionen är känd (distance-propen satt). */}
+                    {typeof distance === 'number' && (
+                        <div className="flex items-center gap-1.5 shrink-0" title="Avstånd från din plats">
+                            <Navigation size={13} className="text-primary" />
+                            <span className="whitespace-nowrap">{formatDistanceKm(distance)}</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                         <MapPin size={14} className="text-primary shrink-0" />
                         <span className="text-sm truncate">{linkEvent.locationName}</span>
@@ -386,7 +452,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         onClick={handleContentClick}
                     >
                         <p data-event-description className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                            {(linkEvent as any).description || 'Ingen beskrivning tillgänglig.'}
+                            {withRecoveredLineBreaks((linkEvent as any).description) || 'Ingen beskrivning tillgänglig.'}
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">
@@ -454,6 +520,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     anmälningsknappen i stället för utspridda
                                     småknappar uppe vid titeln. */}
                                 <div className="flex gap-3">
+                                    {/* Stjärn-gåvan ⭐ bredvid Spara: samma logik som
+                                        header-stjärnan (knapp när man kan placera,
+                                        annars indikator på stjärnmärkta event). */}
+                                    {canPlaceStar && onPlaceStar ? (
+                                        <button
+                                            onClick={handlePlaceStar}
+                                            aria-label="Sätt din stjärna på eventet"
+                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] border-amber-400 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                                        >
+                                            <Star size={20} fill={hasStar ? 'currentColor' : 'none'} />
+                                            Sätt stjärna
+                                        </button>
+                                    ) : hasStar ? (
+                                        <div
+                                            aria-label="Det här eventet har fått en stjärna"
+                                            title="Det här eventet har fått en stjärna av en tidig VADKUL-användare"
+                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30 dark:border-amber-900/60"
+                                        >
+                                            <Star size={20} fill="currentColor" />
+                                            Stjärnmärkt
+                                        </div>
+                                    ) : null}
                                     {onToggleSave && (
                                         <button
                                             onClick={handleToggleSave}

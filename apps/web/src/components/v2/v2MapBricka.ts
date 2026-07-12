@@ -107,11 +107,19 @@ export function brickaBodyBg(ev: LinkEvent): string {
     return hex ? sourceGradientCss(hex) : BRICKA_DARK_BG;
 }
 
+// Nål-prickens färg för ÖNSKE-brickor (samma lila familj som wish-gradienten).
+export const WISH_DOT_HEX = '#8b5cf6';
+
 // Baka en bricka som ImageData för GL-symbol-lagret. bodyColor = kategori-/käll-
 // färg (utelämnad → mörk standard); selected → tydlig vit ram; saved → vit kropp
-// + ljusblå ram (matchar DOM-markörens sparad-look). Alla brickor bakas med SAMMA
-// mått (S/pad/DPR) — det är kravet för map.updateImage i emoji-cykelpumpen.
-export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false): { data: ImageData; pixelRatio: number } | null {
+// + ljusblå ram (matchar DOM-markörens sparad-look); wish → "drömsk" önske-look:
+// halvtransparent lila kropp, streckad vit kant + liten ✨ vid axeln; starred →
+// stjärn-gåvans GULD-kropp + varm ljus kant + liten ⭐ vid axeln (guld vinner
+// över sparad-vitt — stjärnan är den starkare statusen). Alla brickor bakas med
+// SAMMA mått (S/pad/DPR) — det är kravet för map.updateImage i emoji-cykel-
+// pumpen, och därför är wish/starred grenar HÄR i stället för egna bakfunktioner
+// (måtten kan aldrig glida isär).
+export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
@@ -143,8 +151,13 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     }
     const grad = ctx.createLinearGradient(-S / 2, -S / 2, S / 2, S / 2);
     // Sparad (gillad) bricka = ljus/vit kropp (matchar DOM-markörens vita bakgrund);
-    // annars källans/kategorins färg eller mörk standard.
-    const stops = saved
+    // önskan = halvtransparent lila "dröm" (kartan skiner igenom → skiljs direkt
+    // från riktiga event); annars källans/kategorins färg eller mörk standard.
+    const stops = wish
+        ? ['rgba(221,190,254,0.80)', 'rgba(167,139,250,0.66)', 'rgba(109,40,217,0.58)']
+        : starred
+        ? ['#ffe9a3', '#f0b429', '#a8730a']
+        : saved
         ? ['#ffffff', '#f3f6fa', '#e3e9f1']
         : bodyColor
         ? [mixHex(bodyColor, '#ffffff', 0.22), bodyColor, mixHex(bodyColor, '#000000', 0.32)]
@@ -153,15 +166,17 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     grad.addColorStop(0.55, stops[1]);
     grad.addColorStop(1, stops[2]);
     ctx.fillStyle = grad;
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowColor = wish ? 'rgba(88,28,135,0.28)' : 'rgba(0,0,0,0.35)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 2;
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    // Ram: vald = tydlig opak vit (markeringen man är "på"); sparad = ljusblå
-    // (#5BA3CC, samma som DOM); annars svag vit kant för djup.
-    ctx.lineWidth = selected ? 3.5 : saved ? 2.5 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : saved ? '#5BA3CC' : 'rgba(255,255,255,0.28)';
+    // Ram: vald = tydlig opak vit (markeringen man är "på"); stjärnmärkt = varm
+    // ljusgul kant mot guldkroppen; sparad = ljusblå (#5BA3CC, samma som DOM);
+    // önskan = STRECKAD vit (drömlinje); annars svag vit kant för djup.
+    if (wish) ctx.setLineDash([5, 4]);
+    ctx.lineWidth = selected ? 3.5 : starred || saved ? 2.5 : 2;
+    ctx.strokeStyle = selected ? '#ffffff' : starred ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)';
     ctx.stroke();
     ctx.restore();
 
@@ -170,6 +185,21 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(emoji, cx, cy);
+
+    // Önskans ✨ — svävar strax UTANFÖR kroppens övre högra axel (ryms i
+    // canvasens hörn-triangel: |dx|+|dy| ≈ 0,84·S > halva diagonalen ≈ 0,71·S,
+    // men klart innanför kanten W/2 ≈ 0,88·S).
+    if (wish) {
+        ctx.font = `${Math.round(S * 0.34)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
+        ctx.fillText('✨', cx + S * 0.42, cy - S * 0.42);
+    }
+
+    // Stjärn-gåvans ⭐ — samma axel-position som önskans ✨ (wish och starred
+    // förekommer aldrig på samma bricka: önskningar är inte riktiga event).
+    if (starred) {
+        ctx.font = `${Math.round(S * 0.34)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
+        ctx.fillText('⭐', cx + S * 0.42, cy - S * 0.42);
+    }
 
     return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
 }

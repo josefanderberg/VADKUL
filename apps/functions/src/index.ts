@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions/v1";
 
 import * as admin from "firebase-admin";
+import { createHash } from "crypto";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -104,6 +105,134 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
             'internal',
             'Ett fel uppstod vid inlösning av koden.'
         );
+    }
+});
+
+// ==============================
+// STJÄRN-GÅVAN (tack-kampanj till de första ~100 användarna)
+// ==============================
+//
+// EN gemensam kampanjlänk (/?stjarna=STJARNA1) ger varje konto EN stjärna ⭐
+// som kan sättas på VALFRITT event. users/{uid}.starGift: 'unused' → 'placed'
+// (+ starEventId) och eventStars/{docId} skrivs ENBART härifrån via admin-SDK:t
+// — Firestore-reglerna blockerar all klientskrivning av både eventStars och
+// starGift-fälten, annars vore gåvan förfalskbar.
+
+// Giltiga kampanjkoder. EN kod för hela mail-kampanjen — inlösen begränsas
+// per KONTO (starGift-fältet), inte per kod.
+const STAR_GIFT_CODES = ['STJARNA1'];
+
+/** Lös in stjärn-gåvan: sätter starGift='unused' på kontot, max en gång. */
+export const redeemStarGift = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'Du måste vara inloggad för att hämta din stjärna.'
+        );
+    }
+
+    const { code } = data;
+    const uid = context.auth.uid;
+
+    if (!code || typeof code !== 'string') {
+        throw new functions.https.HttpsError('invalid-argument', 'Ingen kod angiven.');
+    }
+    if (!STAR_GIFT_CODES.includes(code.toUpperCase().trim())) {
+        return { success: false, message: 'Ogiltig gåvolänk.' };
+    }
+
+    const userRef = db.collection('users').doc(uid);
+
+    try {
+        let result: { success: boolean; status: 'unused' | 'placed'; message: string } = {
+            success: true, status: 'unused', message: 'Du har en stjärna! ⭐'
+        };
+
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            const userData = userDoc.exists ? (userDoc.data() || {}) : {};
+
+            if (userData.starGift === 'placed') {
+                result = { success: false, status: 'placed', message: 'Din stjärna är redan använd — den sitter på ett event. ⭐' };
+                return;
+            }
+            if (userData.starGift === 'unused') {
+                result = { success: false, status: 'unused', message: 'Du har redan hämtat din stjärna — öppna ett event och tryck på ⭐.' };
+                return;
+            }
+            // users-dokumentet ska finnas (skapas vid registrering), men gamla
+            // konton utan doc får inte fastna → set med merge täcker båda.
+            transaction.set(userRef, { starGift: 'unused' }, { merge: true });
+        });
+
+        return result;
+    } catch (error) {
+        console.error('[stjärna] Inlösen misslyckades:', error);
+        throw new functions.https.HttpsError('internal', 'Ett fel uppstod. Försök igen.');
+    }
+});
+
+/**
+ * Sätt sin stjärna på ett event: kräver starGift='unused'. Skapar
+ * eventStars/{safeEventKey__uid} + flippar starGift='placed' i SAMMA
+ * transaction, så stjärnan aldrig kan dubbelplaceras. Flera användares
+ * stjärnor på samma event är ok (uid ingår i doc-id:t).
+ */
+export const placeStar = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'Du måste vara inloggad för att sätta din stjärna.'
+        );
+    }
+
+    const { eventId } = data;
+    const uid = context.auth.uid;
+
+    if (!eventId || typeof eventId !== 'string' || eventId.length > 1000) {
+        throw new functions.https.HttpsError('invalid-argument', 'Ogiltigt event.');
+    }
+
+    // Doc-id får inte innehålla '/' (skrapade event-id:n kan vara URL:ar) —
+    // hasha sådana till en kort hex-nyckel. Själva eventId ligger orört i fältet.
+    const safeEventKey = eventId.includes('/')
+        ? createHash('sha256').update(eventId).digest('hex').slice(0, 32)
+        : eventId;
+    const starRef = db.collection('eventStars').doc(`${safeEventKey}__${uid}`);
+    const userRef = db.collection('users').doc(uid);
+
+    try {
+        let result: { success: boolean; message: string } = {
+            success: true, message: 'Din stjärna sitter! ⭐'
+        };
+
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            const userData = userDoc.exists ? (userDoc.data() || {}) : {};
+
+            if (userData.starGift === 'placed') {
+                result = { success: false, message: 'Din stjärna är redan placerad — den kan bara användas en gång.' };
+                return;
+            }
+            if (userData.starGift !== 'unused') {
+                result = { success: false, message: 'Du har ingen stjärna att sätta. Har du klickat på gåvolänken?' };
+                return;
+            }
+
+            // create() kastar om dokumentet redan finns — kan inte hända när
+            // starGift-gaten håller, men skyddar mot race på samma konto.
+            transaction.create(starRef, {
+                eventId,
+                uid,
+                createdAt: admin.firestore.Timestamp.now(),
+            });
+            transaction.update(userRef, { starGift: 'placed', starEventId: eventId });
+        });
+
+        return result;
+    } catch (error) {
+        console.error('[stjärna] Placering misslyckades:', error);
+        throw new functions.https.HttpsError('internal', 'Ett fel uppstod. Försök igen.');
     }
 });
 

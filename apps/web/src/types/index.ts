@@ -22,6 +22,12 @@ export interface UserProfile {
   redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
   savedEventIds?: string[]; // Sparade event (hjärtan) — synkas mellan enheter
   reviretHue?: number; // <--- NY: vald spelfärg (färgton 0–359) för Reviret/topplistan
+  /** Stjärn-gåvan ⭐: 'unused' = inlöst men inte satt, 'placed' = förbrukad.
+   *  SERVERGIVET fält — skrivs enbart av Cloud-funktionerna redeemStarGift/
+   *  placeStar (reglerna blockerar klientskrivning). */
+  starGift?: 'unused' | 'placed';
+  /** Eventet stjärnan sitter på (satt när starGift === 'placed'). */
+  starEventId?: string;
 }
 
 export interface UserReview {
@@ -172,4 +178,25 @@ export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 
   time: Timestamp;
   createdAt: Timestamp;
   featuredUntil?: Timestamp;
+}
+
+/**
+ * En ÖNSKAN om ett event ("någon borde ordna X här") — egen collection
+ * eventWishes, HELT skild från linkEvents/aggregaten/"Nästa"-poolen.
+ * Ingen tid, ingen bild. Lever i 14 dagar (expiresAt) eller tills någon
+ * skapat eventet av den (fulfilled=true) — därefter försvinner den från kartan.
+ */
+export interface EventWish {
+  id: string;
+  title: string;
+  category: EventCategoryType;
+  description?: string;
+  lat: number;
+  lng: number;
+  /** Önskarens uid — styr "Ta bort önskan" (bara sin egen). */
+  uid: string;
+  hostName: string;
+  createdAt: Date;
+  expiresAt: Date;
+  fulfilled?: boolean;
 }

@@ -41,11 +41,17 @@ service cloud.firestore {
       
       // Man får uppdatera sin egen profil...
       // ELLER om man bara uppdaterar 'rating' och 'ratingCount' (för att ge omdöme)
-      allow update: if isOwner(userId) 
+      // OBS: starGift/starEventId (stjärn-gåvan) är SERVERGIVNA — de skrivs
+      // enbart av Cloud-funktionerna redeemStarGift/placeStar (admin-SDK,
+      // kringgår reglerna). Klientskrivning blockeras här, annars kunde vem
+      // som helst ge sig själv en stjärna.
+      allow update: if isOwner(userId)
         && (
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified']) || request.resource.data.isVerified == false)
           &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus']) || request.resource.data.verificationStatus in ['pending', 'none'])
+          &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['starGift', 'starEventId'])
         )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         
@@ -214,6 +220,42 @@ service cloud.firestore {
       }
     }
 
+    // 8c. EVENT-ÖNSKNINGAR ("någon borde ordna X här") — egen collection, HELT
+    // skild från linkEvents. Alla kan läsa (önske-brickorna syns för alla på
+    // kartan). Bara inloggade får önska, med sig själva som avsändare och hårt
+    // formbegränsat. fulfilled får sättas (enbart → true, inget annat fält) av
+    // vilken inloggad som helst — det är den som skapar eventet av önskan som
+    // kvitterar den. Radera: bara sin egen önskan. Utgångna önskningar
+    // (expiresAt passerad) filtreras bort på klienten — ingen städning här.
+    match /eventWishes/{wishId} {
+      allow read: if true;
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.category is string
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.hostName is string
+        && request.resource.data.hostName.size() <= 80
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.fulfilled == false
+        && request.resource.data.keys().hasAll([
+            'title', 'category', 'description', 'lat', 'lng', 'uid',
+            'hostName', 'createdAt', 'expiresAt', 'fulfilled'
+        ])
+        && request.resource.data.keys().hasOnly([
+            'title', 'category', 'description', 'lat', 'lng', 'uid',
+            'hostName', 'createdAt', 'expiresAt', 'fulfilled'
+        ]);
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fulfilled'])
+        && request.resource.data.fulfilled == true;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
     // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).
     // Läsning öppen (chatten syns för alla) — skrivning kräver konto och
     // formbegränsas mot spam/spoofing (senderId måste vara ens eget uid).
@@ -343,6 +385,33 @@ service cloud.firestore {
       match /payments/{id} {
         allow read: if isOwner(uid);
       }
+    }
+
+    // 17. EVENT STARS (stjärn-gåvan ⭐)
+    // Vilka event som fått en stjärna av en tidig användare. Alla kan läsa
+    // (stjärnmärkta event lyser på kartan för alla besökare). Skrivs ENBART av
+    // Cloud-funktionen placeStar via admin-SDK:t (kringgår reglerna) — klient-
+    // skrivning helt stängd så stjärnor aldrig kan fejkas eller tas bort.
+    match /eventStars/{starId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 18. EVENT STATS (visningsräknare per event)
+    // Doc-id = eventShareSlug(event-id) — rå-id:t är oftast en URL och därmed
+    // ogiltigt som doc-id; rå-id:t sparas i fältet eventId. Alla (även
+    // oinloggade) får öka räknaren, men bara med exakt formen
+    // {views: number, eventId: string}. Klienter kan i teorin spamma räknaren —
+    // accepterat läge så länge den bara är ägar-statistik i konsolen.
+    match /eventStats/{docId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['views', 'eventId'])
+        && request.resource.data.views is number
+        && request.resource.data.eventId is string;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'eventId'])
+        && request.resource.data.views is number
+        && request.resource.data.eventId is string;
+      allow delete: if false;
     }
   }
 }

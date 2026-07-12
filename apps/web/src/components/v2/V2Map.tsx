@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
-import { LinkEvent } from '../../types';
+import { EventWish, LinkEvent } from '../../types';
+import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
@@ -17,8 +18,8 @@ import {
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
-    ONE_HOUR_MS, BRICKA_DARK_BG,
-    brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour,
+    BRICKA_DARK_BG, WISH_DOT_HEX,
+    brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
     makeBrickaImageData, sourceGradientCss,
 } from './v2MapBricka';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
@@ -53,15 +54,50 @@ type PlainFeature = {
     // color = kategorifärg (hex) för nål-pricken; mörk standard för stora källor.
     // sortKey = count + stor boost för den VALDA gruppen → den valda brickan
     // ritas ALLTID överst i GL-lagret (gäller både multi-event och enskilda).
-    // past = ALLA event i gruppen har redan varit → markören dämpas till 50 %.
+    // past = ALLA event i gruppen har redan varit → brickan släcks helt och
+    // gruppen visas som sin nål-prick (dämpad till 50 %).
     properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean };
 };
 
+// En cyklande multibrickas rotation: den EGNA cykel-bildens id + frames i tur-
+// ordning. eventId = eventet bakom framen — klicket ska öppna det som VISAS.
+type CycleRotation = {
+    icon: string;
+    frames: { emoji: string; color?: string; saved?: boolean; eventId: string }[];
+};
+
+// Det event vars frame en cyklande multibricka visar JUST NU. frameIdx (pumpens
+// skrivcache) är per BILD-id: ett nytt bild-id saknar post → index 0 = frame 0,
+// exakt vad den nybakade bilden visar. Delas av GL-klicket och DOM-markör-
+// synken så de aldrig pekar ut olika event än det som faktiskt syns.
+function shownCycleEvent(rot: CycleRotation | undefined, frameIdx: Map<string, number>, group: LinkEvent[]): LinkEvent | undefined {
+    if (!rot || rot.frames.length === 0) return undefined;
+    const fr = rot.frames[(frameIdx.get(rot.icon) ?? 0) % rot.frames.length];
+    return fr ? group.find(ev => ev.id === fr.eventId) : undefined;
+}
+
 // Opacity-faktor för "har varit"-grupper: 0.5 när properties.past är satt,
-// annars 1. Multipliceras in i ALLA opacity-uttryck (bricka, +N-badge, prick)
-// så dämpningen följer med oavsett reveal-state och zoom-läge.
+// annars 1. Används i zoom-lägets prick-uttryck (alla prickar synliga, passerade
+// dämpade).
 const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
     ['case', ['boolean', ['get', 'past'], false], 0.5, 1];
+// "Har varit"-grupper visas inte längre som (dämpade) brickor — brickan (och
+// "+N"-badgen) släcks HELT och gruppen står kvar som sin nål-prick, dämpad till
+// 50 %. Uttrycken delas av lager-skapandet (syncPlainLayer) och återställningen
+// efter zoom (hideNeedleDotsWhenRendered) så vilo-looken aldrig glider isär.
+const IS_PAST_EXPR: maplibregl.ExpressionSpecification =
+    ['boolean', ['get', 'past'], false];
+const REVEAL_STATE_EXPR: maplibregl.ExpressionSpecification =
+    ['coalesce', ['feature-state', 'reveal'], 0];
+// Bricka + "+N"-badge: följer reveal-state, men ALDRIG för passerade grupper.
+const BRICKA_OPACITY_EXPR: maplibregl.ExpressionSpecification =
+    ['case', IS_PAST_EXPR, 0, REVEAL_STATE_EXPR];
+// Nål-pricken i vila: passerade grupper ALLTID prick (50 %), övriga bara när
+// brickan är släckt (1 − reveal).
+const DOT_REST_OPACITY_EXPR: maplibregl.ExpressionSpecification =
+    ['case', IS_PAST_EXPR, 0.5, ['-', 1, REVEAL_STATE_EXPR]];
+const DOT_REST_STROKE_OPACITY_EXPR: maplibregl.ExpressionSpecification =
+    ['case', IS_PAST_EXPR, 0.45, ['*', 0.9, ['-', 1, REVEAL_STATE_EXPR]]];
 
 // Är två feature-listor IDENTISKA till innehållet? plainData byggs om vid varje
 // events-uppdatering (nya arrayer), men cards-/descriptions-mergarna och pollen
@@ -199,6 +235,22 @@ interface V2MapProps {
      *  använder det för att tillfälligt gömma poäng-brickan som annars ligger i
      *  samma vänsterkolumn och skulle krocka med utfällningen. */
     onFuncBagOpenChange?: (open: boolean) => void;
+    /** Fyrar när användarens GPS-position blir känd/uppdateras (samma position
+     *  som den blå plats-pricken — hämtas tyst vid start + "Min plats"-knappen).
+     *  Sidan skickar den vidare till EventCard som visar avstånd till valt event. */
+    onUserPosChange?: (pos: { lat: number; lng: number } | null) => void;
+    /** Aktiva event-ÖNSKNINGAR (eventWishes) — renderas som egna drömska,
+     *  ALLTID synliga brickor (sticky force-reveal, samma mönster som
+     *  userCreated-event). Blandas ALDRIG in i events/"Nästa"-poolen. */
+    wishes?: EventWish[];
+    /** Klick på en önske-bricka → önskan; klick på tom karta → null (stäng
+     *  önske-kortet). Sidan renderar det lilla önske-kortet. */
+    onSelectWish?: (wish: EventWish | null) => void;
+    /** Stjärn-gåvan ⭐: eventId:n som fått en stjärna (läses live ur eventStars).
+     *  Stjärnmärkta event får guld-bricka, force-reveal (alltid tända, som
+     *  userCreated) och blir representant i sin multi-event-grupp — tills
+     *  eventet passerat (då gäller vanliga past-släckningen). */
+    starredEventIds?: Set<string>;
 }
 
 export default function V2Map({
@@ -219,6 +271,10 @@ export default function V2Map({
     onFeatureFlagsChange,
     onActivateMultiplayer,
     onFuncBagOpenChange,
+    onUserPosChange,
+    wishes = [],
+    onSelectWish,
+    starredEventIds = new Set(),
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -295,6 +351,10 @@ export default function V2Map({
     // i stället för kartmitten (annars hamnar default-eventen mitt i Sverige/Östersund).
     const userPosRef = useRef(userPos);
     userPosRef.current = userPos;
+    // Rapportera positionen uppåt (ref så effekten inte behöver callbacken som dep).
+    const onUserPosChangeRef = useRef(onUserPosChange);
+    onUserPosChangeRef.current = onUserPosChange;
+    useEffect(() => { onUserPosChangeRef.current?.(userPos); }, [userPos]);
     const [locating, setLocating] = useState(false);
     const userPosMarkerRef = useRef<maplibregl.Marker | null>(null);
     const handleLocateMe = () => {
@@ -456,6 +516,13 @@ export default function V2Map({
     const onSelectEventRef = useRef(onSelectEvent);
     onSelectEventRef.current = onSelectEvent;
 
+    // Önskningar: ref-speglar så klick-handlern (registreras en gång) kan slå
+    // upp önskan bakom en wish:-nyckel och rapportera valet uppåt.
+    const wishesRef = useRef(wishes);
+    wishesRef.current = wishes;
+    const onSelectWishRef = useRef(onSelectWish);
+    onSelectWishRef.current = onSelectWish;
+
     const onCenterChangeRef = useRef(onCenterChange);
     onCenterChangeRef.current = onCenterChange;
 
@@ -539,26 +606,32 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>();
+        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>();
         // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
-        // en DELAD cykel-bild (`cycle:<frame-ids>`) vars PIXLAR cykelpumpen byter
-        // på plats via map.updateImage — ingen setData, ingen feature-state, bara
-        // en liten texturuppdatering per byte. Dedupliceras per emoji — finns
-        // flera event med samma emoji deltar bara det första i växlingen. Nyckel =
-        // cykel-bildens id; värde = frame-beskrivningar (bakas vid behov i pumpen).
-        const rotations = new Map<string, { emoji: string; color?: string; saved?: boolean }[]>();
+        // en EGEN cykel-bild (`cycle:<gruppnyckel>:<frame-ids>`) vars PIXLAR
+        // cykelpumpen byter på plats via map.updateImage — ingen setData, ingen
+        // feature-state, bara en liten texturuppdatering per byte. Bild-id:t är
+        // unikt PER GRUPP (nyckeln ingår) så pumpen kan växla EN grupp i taget
+        // (staggrat) utan att grannar med identisk rotation byter samtidigt.
+        // Dedupliceras per emoji — finns flera event med samma emoji deltar bara
+        // det första i växlingen. Nyckel = GRUPPNYCKELN; värdet bär cykel-bildens
+        // id + frames med eventId (klicket öppnar det event vars frame visas).
+        const rotations = new Map<string, CycleRotation>();
         // Det VALDA eventet behålls i GL-lagret (utöver sin DOM-markör) så att brickan
         // man är "på" ALLTID syns. Eftersom det valda ALLTID är "special" ritas just
         // dess GL-bricka med sin riktiga look INBAKAD (vit ram = vald, vit kropp =
         // sparad) — annars täckte den kantlösa standard-GL-brickan DOM-markörens look
         // (anchor-glapp) → "ingen vit ram / ingen vit bakgrund".
-        const savedCutoff = nowMs - ONE_HOUR_MS;
         const selId = selectedEvent?.id;
         for (const [key, group] of groups) {
             const isSel = selId != null && group.some(e => e.id === selId);
             const special = isSpecialGroup(group, key, nowMs);
             if (!isSel && special) continue;
-            const rep = group[0];
+            // Stjärn-gåvan ⭐: ett (ännu inte passerat) stjärnmärkt event blir
+            // gruppens REPRESENTANT — dess emoji/färg visas på brickan, även i
+            // multi-event-grupper. Passerad stjärna = förbrukad → vanlig rep.
+            const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
+            const rep = starredRep ?? group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const emoji = eventEmoji(rep);
             // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard);
@@ -569,18 +642,25 @@ export default function V2Map({
             // oavsett om de är valda — så de FÖRBLIR vita när man bläddrar vidare. Övriga
             // (reveal-brickorna) = normal look.
             const drawSel = isSel;
-            const drawSav = group.some(e => savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff);
+            // "Ännu inte passerat" = samma isEventPast som dämpningen (start + 1 h,
+            // kl 20 för event utan klockslag) — inte en rå 1 h-cutoff som släppte
+            // heldagsevent redan kl 01.
+            const drawSav = group.some(e => savedEventIds.has(e.id) && !isEventPast(e, nowMs));
+            // Stjärnmärkt (ej passerad) → guld-bricka med ⭐-badge.
+            const drawStar = starredRep != null;
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
-            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}`;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav });
+            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : ''}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar });
             // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
-            // Blir den ≥2 frames pekar brickan på den delade cykel-bilden i stället
-            // för rep-ikonen; grupper med identisk rotation delar bild och byter
-            // därmed i perfekt synk utan extra kostnad.
+            // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
+            // stället för rep-ikonen.
             let finalIcon = iconId;
-            if (group.length > 1 && !drawSel) {
+            // Stjärnmärkta grupper cyklar INTE — det stjärnmärkta eventet ÄR
+            // det som visas (beslutet för multi-event-brickor), så emoji-
+            // växlingen stängs av så länge stjärnan lyser.
+            if (group.length > 1 && !drawSel && !drawStar) {
                 const seenEmoji = new Set<string>();
-                const frames: { emoji: string; color?: string; saved?: boolean }[] = [];
+                const frames: CycleRotation['frames'] = [];
                 const frameIds: string[] = [];
                 for (const ev of group) {
                     if (discardedEventIds.has(ev.id)) continue;
@@ -588,15 +668,18 @@ export default function V2Map({
                     if (seenEmoji.has(em)) continue;
                     seenEmoji.add(em);
                     const col = brickaBodyHex(ev) ?? undefined;
-                    frames.push({ emoji: em, color: col, saved: drawSav });
+                    frames.push({ emoji: em, color: col, saved: drawSav, eventId: ev.id });
                     frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}`);
                 }
                 if (frames.length > 1) {
-                    const cycleId = `cycle:${frameIds.join('|')}`;
+                    // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
+                    // (Identiska rotationer delade förr EN bild och bytte i
+                    // perfekt synk — nu ska EN bricka i taget byta, staggrat.)
+                    const cycleId = `cycle:${key}:${frameIds.join('|')}`;
                     // Registrera cykel-bilden med frame 0 som utgångsutseende så
                     // syncPlainLayer bakar + addImage:ar den som alla andra.
-                    if (!icons.has(cycleId)) icons.set(cycleId, { ...frames[0] });
-                    rotations.set(cycleId, frames);
+                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved });
+                    rotations.set(key, { icon: cycleId, frames });
                     finalIcon = cycleId;
                 }
             }
@@ -607,7 +690,25 @@ export default function V2Map({
                 // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
                 // Användarskapade event boostas också (under valt) — de är alltid
                 // tända (sticky) och ska vinna staplingen mot importerade grannar.
-                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (isSel ? 1_000_000 : 0), past: groupIsPast(group, nowMs) },
+                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (drawStar ? 200_000 : 0) + (isSel ? 1_000_000 : 0), past: groupIsPast(group, nowMs) },
+            });
+        }
+        // ÖNSKNINGARNA (eventWishes) — egna features i SAMMA källa, nyckel
+        // "wish:<id>" (kolliderar aldrig med groupKeyOf-nycklar). De blir aldrig
+        // past (ingen tid), cyklar aldrig och grupperas inte. sortKey 100_000 av
+        // TVÅ skäl: (1) de staplas ovanför vanliga event (under stjärna/valt),
+        // (2) pushPlainEvents boosted-prefix (>= 100_000) lägger dem i våg 1 —
+        // annars blinkade en redan synlig önske-bricka bort när aggregat-
+        // streamens setData i våg 1 ersatte önske-pollens tidiga push.
+        for (const w of wishes) {
+            if (!isValidLatLng(w.lat, w.lng)) continue;
+            const emoji = EVENT_CATEGORIES[w.category]?.emoji ?? '🎫';
+            const iconId = `wish:${emoji}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, wish: true });
+            features.push({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
+                properties: { icon: iconId, key: `wish:${w.id}`, count: 1, color: WISH_DOT_HEX, sortKey: 100_000, past: false },
             });
         }
         // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
@@ -619,9 +720,9 @@ export default function V2Map({
         // uppdateras "har varit"-statusen bara när datan råkar byggas om. Oförändrade
         // minuter kortsluts av samePlainFeatures-vakten → ingen onödig setData.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, minuteTick]);
+    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean }>>(new Map());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
     // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
@@ -652,8 +753,15 @@ export default function V2Map({
     const paintRoundRef = useRef<{ canceled: boolean; detach?: () => void } | null>(null);
     // Nyckel = hela ikon-id:t (bricka:[färg:]emoji) så färgvarianter cachas separat.
     const bakedIconsRef = useRef<Map<string, { data: ImageData; pixelRatio: number }>>(new Map());
-    // Multi-gruppernas frame-rotationer per cykel-bild-id (byggda i plainData).
-    const cycleRotationsRef = useRef<Map<string, { emoji: string; color?: string; saved?: boolean }[]>>(new Map());
+    // Multi-gruppernas frame-rotationer per GRUPPNYCKEL (byggda i plainData).
+    const cycleRotationsRef = useRef<Map<string, CycleRotation>>(new Map());
+    // Aktuellt frame-index per cykel-BILD-id = vad bilden visar JUST NU (pumpen
+    // skriver). Nytt bild-id ⇒ nybakad bild på frame 0 ⇒ saknat index läses som
+    // 0. GL-klicket och DOM-synken slår upp här (via shownCycleEvent) för att
+    // öppna/visa exakt det event vars frame syns.
+    const cycleFrameIndexRef = useRef<Map<string, number>>(new Map());
+    // Round-robin-pekare för pumpen: gruppnyckeln som bytte frame förra ticken.
+    const cycleLastKeyRef = useRef<string | null>(null);
 
     // Lätta GL-prickar för multi-event-grupper UNDER zoom-gesten. I vila är listan
     // tom → DOM-brickorna ritar dem i stället (se visibleGroups). Egenskapen `count`
@@ -741,7 +849,7 @@ export default function V2Map({
             if (!info) continue;
             let baked = bakedIconsRef.current.get(id);
             if (!baked) {
-                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved);
+                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred);
                 if (b) { bakedIconsRef.current.set(id, b); baked = b; }
             }
             if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -947,14 +1055,17 @@ export default function V2Map({
                     },
                     paint: {
                         // Dold tills reveal-systemet tonar in den (feature-state 'reveal').
-                        // "Har varit"-grupper toppas på 50 % (PAST_DIM_EXPR).
-                        'icon-opacity': ['*', ['coalesce', ['feature-state', 'reveal'], 0], PAST_DIM_EXPR],
+                        // "Har varit"-grupper visar ALDRIG bricka — de står som sin prick.
+                        'icon-opacity': BRICKA_OPACITY_EXPR,
                         'icon-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
                 // Lagret (om)skapades → feature-state är tomt (setStyle rensar det).
                 // Glöm vad som skrivits och skriv om seed + ev. levande penseldrag.
                 revealWrittenRef.current.clear();
+                // Bilderna nybakas efter stilbytet (frame 0) — nollställ frame-
+                // indexen så klick-uppslaget matchar det som faktiskt visas.
+                cycleFrameIndexRef.current.clear();
                 reapplyAllRevealRef.current();
                 ensureRevealPumpRef.current();
             }
@@ -984,7 +1095,8 @@ export default function V2Map({
                         'text-color': '#ffffff',
                         'text-halo-color': '#006AA7',
                         'text-halo-width': 2.4,
-                        'text-opacity': ['*', ['coalesce', ['feature-state', 'reveal'], 0], PAST_DIM_EXPR],
+                        // Badgen följer brickan — släckt för passerade grupper.
+                        'text-opacity': BRICKA_OPACITY_EXPR,
                         'text-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
@@ -1006,18 +1118,9 @@ export default function V2Map({
                         'circle-stroke-width': 1.5,
                         // ALLA prickar synliga (oberoende av reveal-state) under zoom,
                         // men i vila (när vi inte zoomar) döljs de som är avslöjade (har
-                        // bricka). "Har varit"-grupper toppas alltid på 50 % (PAST_DIM_EXPR).
-                        'circle-opacity': isZoomingRef.current ? PAST_DIM_EXPR : [
-                            '*',
-                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
-                            PAST_DIM_EXPR
-                        ],
-                        'circle-stroke-opacity': isZoomingRef.current ? ['*', 0.9, PAST_DIM_EXPR] : [
-                            '*',
-                            0.9,
-                            ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
-                            PAST_DIM_EXPR
-                        ],
+                        // bricka). Passerade grupper är ALLTID prick (dämpad till 50 %).
+                        'circle-opacity': isZoomingRef.current ? PAST_DIM_EXPR : DOT_REST_OPACITY_EXPR,
+                        'circle-stroke-opacity': isZoomingRef.current ? ['*', 0.9, PAST_DIM_EXPR] : DOT_REST_STROKE_OPACITY_EXPR,
                         'circle-opacity-transition': { duration: 0, delay: 0 },
                         'circle-stroke-opacity-transition': { duration: 0, delay: 0 },
                     },
@@ -1298,8 +1401,14 @@ export default function V2Map({
         const anchor = revealAnchorPtRef.current;
         const count = anchor ? REVEAL_NEAREST_COUNT : REVEAL_SEED_COUNT;
         const origin = anchor ?? userPosRef.current;
+        // BARA icke-passerade grupper (revealCoordsRef är förfiltrerad på past) —
+        // "har varit"-grupper ritas aldrig som brickor (bara prickar) och får inte
+        // äta upp seed-platser: sent på kvällen såg man annars en handfull brickor
+        // fast 50 relevanta fanns längre bort. Samma urval som tap-migrationen
+        // (nearestKeysTo), så seed-omräkningen efter minut-ticken inte byter
+        // uppsättning mot en med osynliga platser.
         const coords = new Map<string, [number, number]>();
-        for (const f of plainFeaturesRef.current) coords.set(f.properties.key, f.geometry.coordinates);
+        for (const c of revealCoordsRef.current) coords.set(c.key, [c.lng, c.lat]);
         let seedKeys: string[] = [];
         if (origin) {
             const allKeys = [...coords.keys()];
@@ -1340,9 +1449,21 @@ export default function V2Map({
         plainFeaturesRef.current = plainData.features;
         usedIconsRef.current = plainData.icons;
         cycleRotationsRef.current = plainData.rotations;
+        // cycleFrameIndexRef rensas MEDVETET inte här: en vald grupps rotation
+        // försvinner tillfälligt (valda cyklar inte) men GL-bilden ligger kvar i
+        // kartan på sin senaste frame — kommer samma bild-id tillbaka vid
+        // avmarkering måste indexet ha överlevt, annars öppnar klicket frame 0
+        // medan bilden visar frame N. Ett NYTT bild-id (ändrade frames) saknar
+        // post → 0 = frame 0, vilket den nybakade bilden också visar. Stilbyte
+        // (allt nybakas om på frame 0) nollställer i syncPlainLayer. Posterna
+        // är småbytes — samma tillväxt som bakedIconsRef.
         multiEventDotFeaturesRef.current = multiEventDotData;
         // Platt koord-lista för "de N närmaste pekaren" (slipper bygga om varje frame).
-        revealCoordsRef.current = plainData.features.map(f => ({
+        // Passerade grupper hoppas över — deras brickor tänds aldrig (de står som
+        // prickar), så de ska inte äta upp reveal-platser kring ett tap/seedet.
+        // Önskningarna likaså: de är REDAN alltid tända (sticky) och ska inte
+        // äta upp seed-/tap-platser eller dras med i reveal-vandringen.
+        revealCoordsRef.current = plainData.features.filter(f => !f.properties.past && !f.properties.key.startsWith('wish:')).map(f => ({
             key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
         }));
         const map = mapRef.current;
@@ -1388,7 +1509,9 @@ export default function V2Map({
         // Sticky-nycklar vars event helt försvunnit ur datan rensas; en VALD bricka
         // saknas tillfälligt i plainData (den är DOM medan den är vald) men finns kvar
         // i groups → behåll den så den tänds igen i GL när den avmarkeras.
-        for (const k of [...revealStickyRef.current]) if (!groupsRef.current.has(k)) revealStickyRef.current.delete(k);
+        // wish:-nycklar finns aldrig i groups — de städas av sticky-effekten
+        // nedan (dep wishes) + present-prunen ovan, inte här.
+        for (const k of [...revealStickyRef.current]) if (!k.startsWith('wish:') && !groupsRef.current.has(k)) revealStickyRef.current.delete(k);
         for (const k of [...revealWrittenRef.current.keys()]) if (!present.has(k)) { revealWrittenRef.current.delete(k); drop(k); }
         recomputeRevealSeedRef.current();
     }, [plainData]);
@@ -1411,11 +1534,18 @@ export default function V2Map({
         // Samma sak för event SKAPADE PÅ VADKUL (userCreated): sajtens kärna ska
         // aldrig behöva skrapas fram utan syns alltid, för alla besökare.
         {
-            const savedCutoff = Date.now() - ONE_HOUR_MS;
+            // Samma isEventPast-gräns som dämpningen/SavedPanel (start + 1 h,
+            // kl 20 för event utan klockslag).
+            const stickyNowMs = Date.now();
             for (const [key, group] of groupsRef.current) {
                 if (group.some(e =>
                     e.userCreated ||
-                    (savedEventIds.has(e.id) && e.time.getTime() >= savedCutoff)
+                    (savedEventIds.has(e.id) && !isEventPast(e, stickyNowMs)) ||
+                    // Stjärn-gåvan ⭐: stjärnmärkta event lyser för ALLA —
+                    // samma force-reveal som userCreated, tills eventet passerat
+                    // (därefter är stjärnan förbrukad och vanliga past-
+                    // släckningen gäller, ingen specialbehandling).
+                    (starredEventIds.has(e.id) && !isEventPast(e, stickyNowMs))
                 )) sticky.add(key);
             }
         }
@@ -1427,54 +1557,63 @@ export default function V2Map({
         for (const [key, group] of groupsRef.current) {
             if (group.some(e => e.userCreated)) sticky.add(key);
         }
+        // Önskningarna hålls OCKSÅ alltid tända — de ska aldrig behöva skrapas
+        // fram (drömska brickor som syns för alla, tills de gått ut/uppfyllts).
+        for (const w of wishes) sticky.add(`wish:${w.id}`);
         reapplyAllRevealRef.current();
-    }, [selectedEvent, savedEventIds, groups]);
+    }, [selectedEvent, savedEventIds, starredEventIds, groups, wishes]);
 
     // ── Emoji-/färgväxling för multi-event-BRICKOR (GL) ───────────────────────
     // Multi-grupperna är GL-brickor numera (DOM-markör finns bara för den VALDA
-    // gruppen). Grupper med ≥2 OLIKA emojis pekar på en DELAD cykel-bild
-    // (`cycle:<frames>`, se plainData) och växlingen är ett RAKT byte av den
-    // bildens pixlar via map.updateImage — minsta möjliga data: en liten
-    // texturuppload per byte, ingen setData/omtiling, ingen fade, ingen
-    // feature-state. Bara bilder som används av minst en TÄND bricka
-    // (reveal > 0.5) byts; är ingen tänd står allt still (noll kostnad i vila).
+    // gruppen). Grupper med ≥2 OLIKA emojis pekar på sin EGEN cykel-bild
+    // (`cycle:<gruppnyckel>:<frames>`, se plainData) och växlingen är ett RAKT
+    // byte av den bildens pixlar via map.updateImage — minsta möjliga data: en
+    // liten texturuppload per byte, ingen setData/omtiling, ingen fade, ingen
+    // feature-state. STAGGRAT: bland de TÄNDA (reveal > 0.5) cyklande brickorna
+    // byter EN bricka per tick, i tur och ordning (round-robin) — aldrig två
+    // samtidigt. Är ingen tänd står allt still (noll kostnad i vila).
     // Count-badgen är ett eget textlager och ligger stilla under bytet.
     const selectedEventValRef = useRef(selectedEvent);
     selectedEventValRef.current = selectedEvent;
     useEffect(() => {
-        const CYCLE_PERIOD_MS = 2600; // visningstid per emoji
-        let step = 0;
+        const CYCLE_STEP_MS = 1000; // EN bricka byter per sekund
         const interval = setInterval(() => {
             const map = mapRef.current;
             if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) return;
             const rotations = cycleRotationsRef.current;
             if (rotations.size === 0) return;
             const written = revealWrittenRef.current;
-            // Cykel-bilder som används av minst en tänd bricka just nu.
-            const visible = new Set<string>();
+            // Tända cyklande brickor just nu, i stabil ordning (feature-ordningen).
+            // rot.icon måste matcha featurens icon — annars är rotationen från en
+            // nyare databygge än det som ligger i källan (skarven vid en push).
+            const visible: { key: string; rot: CycleRotation }[] = [];
             for (const f of plainFeaturesRef.current) {
-                const icon = f.properties.icon;
-                if (!rotations.has(icon)) continue;
-                if ((written.get(f.properties.key) ?? 0) > 0.5) visible.add(icon);
+                const rot = rotations.get(f.properties.key);
+                if (!rot || rot.icon !== f.properties.icon) continue;
+                if ((written.get(f.properties.key) ?? 0) > 0.5) visible.push({ key: f.properties.key, rot });
             }
-            if (visible.size === 0) return;
-            step++;
-            for (const id of visible) {
-                const frames = rotations.get(id)!;
-                const fr = frames[step % frames.length];
-                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}`;
-                let baked = bakedIconsRef.current.get(frameId);
-                if (!baked) {
-                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved);
-                    if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
-                }
-                // Alla brickbilder bakas med samma mått (S/DPR-konstanterna i
-                // makeBrickaImageData) — kravet för updateImage.
-                if (baked && map.hasImage(id)) {
-                    try { map.updateImage(id, baked.data); } catch { /* stilbyte i skarven */ }
-                }
+            if (visible.length === 0) return;
+            // Round-robin: fortsätt EFTER den som bytte förra ticken. Har den
+            // släckts/försvunnit ger findIndex −1 → börja om från listans start.
+            const lastKey = cycleLastKeyRef.current;
+            const pick = visible[(visible.findIndex(v => v.key === lastKey) + 1) % visible.length];
+            cycleLastKeyRef.current = pick.key;
+            const frames = pick.rot.frames;
+            const nextIdx = ((cycleFrameIndexRef.current.get(pick.rot.icon) ?? 0) + 1) % frames.length;
+            cycleFrameIndexRef.current.set(pick.rot.icon, nextIdx);
+            const fr = frames[nextIdx];
+            const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}`;
+            let baked = bakedIconsRef.current.get(frameId);
+            if (!baked) {
+                const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved);
+                if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
             }
-        }, CYCLE_PERIOD_MS);
+            // Alla brickbilder bakas med samma mått (S/DPR-konstanterna i
+            // makeBrickaImageData) — kravet för updateImage.
+            if (baked && map.hasImage(pick.rot.icon)) {
+                try { map.updateImage(pick.rot.icon, baked.data); } catch { /* stilbyte i skarven */ }
+            }
+        }, CYCLE_STEP_MS);
         return () => clearInterval(interval);
     }, []);
 
@@ -1668,18 +1807,9 @@ export default function V2Map({
             const finish = () => {
                 if (!isZoomingRef.current && layerExists(m, 'plain-events-dots')) {
                     // Restore conditional opacity in rest state: hide dots under the
-                    // revealed bricks ("har varit" stays capped at 50%)
-                    m.setPaintProperty('plain-events-dots', 'circle-opacity', [
-                        '*',
-                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
-                        PAST_DIM_EXPR
-                    ]);
-                    m.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', [
-                        '*',
-                        0.9,
-                        ['-', 1, ['coalesce', ['feature-state', 'reveal'], 0]],
-                        PAST_DIM_EXPR
-                    ]);
+                    // revealed bricks (passerade grupper förblir prickar på 50 %)
+                    m.setPaintProperty('plain-events-dots', 'circle-opacity', DOT_REST_OPACITY_EXPR);
+                    m.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', DOT_REST_STROKE_OPACITY_EXPR);
                 }
             };
             m.once('idle', finish);
@@ -1748,6 +1878,7 @@ export default function V2Map({
             setGroupList(null);            // stäng ev. öppen multi-event-lista
             setGroupListAnchor(null);
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
+            onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort
             startRevealTravelRef.current(e.lngLat.lng, e.lngLat.lat);
         });
 
@@ -1789,12 +1920,30 @@ export default function V2Map({
             // Närmast vinner; ligger två i princip lika nära (≤3px) avgör flest event.
             ranked.sort((a, b) => (Math.abs(a.d - b.d) > 3 ? a.d - b.d : b.count - a.count));
             const key = ranked[0].f.properties?.key as string | undefined;
+            // ÖNSKE-bricka (nyckel "wish:<id>") → öppna det lilla önske-kortet
+            // (renderas av sidan) i stället för ett eventkort. Önskningar finns
+            // aldrig i groups, så de måste fångas FÖRE grupp-uppslaget.
+            if (key?.startsWith('wish:')) {
+                const wish = wishesRef.current.find(w => `wish:${w.id}` === key);
+                if (wish) {
+                    setGroupList(null);
+                    setGroupListAnchor(null);
+                    onSelectWishRef.current?.(wish);
+                }
+                return;
+            }
             const group = key ? groupsRef.current.get(key) : undefined;
             if (!group || group.length === 0) return;
             // FLERA event på samma plats → öppna en LISTA (emoji + titel + tid) så man
             // kan välja vilket. Ett enda event → öppna direkt.
             if (group.length > 1) {
-                const rep = group.find(e => e.id === selectedEventValRef.current?.id) || group[0];
+                // Multibrickan cyklar: öppna det event vars frame VISAS just nu
+                // (pumpens frame-index via shownCycleEvent) — inte gruppens
+                // första. Saknas rotation (t.ex. alla frames samma emoji) →
+                // redan valt event i gruppen, sist group[0].
+                const rep = shownCycleEvent(key ? cycleRotationsRef.current.get(key) : undefined, cycleFrameIndexRef.current, group)
+                    || group.find(ev => ev.id === selectedEventValRef.current?.id)
+                    || group[0];
                 // Ankra listan vid brickans geo-punkt (projiceras i updateCloudPosition).
                 if (isValidLatLng(rep.lat, rep.lng)) {
                     setGroupListAnchor({ lng: rep.lng!, lat: rep.lat! });
@@ -2074,6 +2223,23 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent, cardExpanded]);
 
+    // 2a. Håll den valda brickan synlig LÖPANDE — inte bara en gång vid valet.
+    //     Panorerar man iväg så brickan hamnar bakom kortet (eller utanför vyn)
+    //     dras den fram igen var 5:e sekund. Kollen står still om brickan redan
+    //     syns (recenterOnSelected returnerar tidigt) och hoppar över pågående
+    //     gest/animation så vi inte rycker kartan ur handen på användaren.
+    useEffect(() => {
+        if (!selectedEvent) return;
+        const t = setInterval(() => {
+            if (performance.now() < suppressAutoRecenterUntilRef.current) return;
+            const map = mapRef.current;
+            if (!map || map.isMoving()) return;
+            recenterOnSelected();
+        }, 5000);
+        return () => clearInterval(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent, cardExpanded]);
+
     // 2b. Zoom-knappen i Nästa-pillen: flyg till det valda eventet och zooma IN
     //     (vanliga val står still — detta är den explicita inzoomningen). Klicket i
     //     kortet byter samtidigt till nästa event, så vi landar inzoomade på det.
@@ -2132,9 +2298,15 @@ export default function V2Map({
             const count = group.length;
             const inGroupSelected = group.find(e => e.id === selectedEvent?.id);
             const nonDiscarded = group.filter(e => !discardedEventIds.has(e.id));
-            // Stabil representant. Emoji-växlingen för OVALDA multi-grupper sker i
-            // GL-lagret (cykelpumpen); DOM-markören här finns bara för den valda.
-            const rep = inGroupSelected || nonDiscarded[0] || group[0];
+            // Representant: det valda eventet i första hand. Cyklar gruppen i
+            // GL-lagret just nu → spegla frame:n som VISAS (samma shownCycleEvent
+            // som GL-klicket) så DOM-brickan aldrig visar ett annat event än
+            // bilden gjorde. (OVALDA multi-gruppers växling sker i cykelpumpen;
+            // DOM-markören här finns i praktiken bara för valda/speciella.)
+            const rep = inGroupSelected
+                || (count > 1 ? shownCycleEvent(cycleRotationsRef.current.get(key), cycleFrameIndexRef.current, group) : undefined)
+                || nonDiscarded[0]
+                || group[0];
 
             const isSelected = !!inGroupSelected;
             const isSaved = group.some(e => savedEventIds.has(e.id));
