@@ -282,10 +282,19 @@ export default function HomePage() {
 
     // Klick på en önske-bricka på kartan (null = tom karta-klick → stäng kortet).
     // Önske-kortet ersätter eventkortet — de ska aldrig ligga öppna samtidigt.
+    // Mitt i skapa-flödet ("Ändra plats"-varvet håller kartan klickbar) ignoreras
+    // önske-klick så kortet inte krockar med modalen/bekräfta-pillen.
     const handleSelectWish = useCallback((wish: EventWish | null) => {
+        if (wish && creationMode === 'editing') return;
         setSelectedWish(wish);
         if (wish) setSelectedEvent(null);
-    }, []);
+    }, [creationMode]);
+
+    // Väljs ett event någon annan väg (kortbläddring, sök, sparat-listan) ska
+    // önske-kortet också stängas — samma "en i taget"-regel som ovan.
+    useEffect(() => {
+        if (selectedEvent) setSelectedWish(null);
+    }, [selectedEvent]);
 
     // Ta bort sin EGEN önskan (kryss i önske-kortet; reglerna verifierar ägarskap).
     const handleDeleteWish = useCallback(async (wishId: string) => {
@@ -455,23 +464,60 @@ export default function HomePage() {
             setDayOffset(dayOffsetForEvent);
             setDayRangeDays(1);
             setSelectedEvent(created);
-            toast.success('Eventet är skapat och syns på kartan! 🎉');
-            setCreationMode('idle');
-            setPickedLocation(null);
-            setNewEventTitle('');
-            setNewEventTime('');
-            setNewEventCategory('other');
-            setNewEventPlace('');
-            setNewEventDescription('');
-            setNewEventImage(null);
-            setNewEventImagePreview('');
+            // Skapades eventet AV EN ÖNSKAN → kvittera den (fulfilled=true) så
+            // önske-brickan försvinner från kartan för alla. Optimistiskt lokalt
+            // först; själva skrivningen är best-effort (eventet är redan skapat
+            // — en misslyckad kvittens ska inte fälla flödet, önskan dör ändå
+            // av sig själv via expiresAt).
+            if (fulfillingWish) {
+                const wishId = fulfillingWish.id;
+                goneWishIdsRef.current.add(wishId);
+                myWishesRef.current = myWishesRef.current.filter(w => w.id !== wishId);
+                setWishes(prev => prev.filter(w => w.id !== wishId));
+                setSelectedWish(prev => (prev?.id === wishId ? null : prev));
+                wishService.markFulfilled(wishId).catch(err =>
+                    console.warn('Kunde inte kvittera önskan som uppfylld:', err));
+            }
+            toast.success(fulfillingWish
+                ? 'Önskan uppfylld — eventet är skapat och syns på kartan! ✨🎉'
+                : 'Eventet är skapat och syns på kartan! 🎉');
+            resetCreateFlow();
         } catch (err) {
             console.error(err);
             toast.error('Kunde inte skapa eventet. Försök igen.');
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, user, openLogin]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, user, openLogin, fulfillingWish, resetCreateFlow]);
+
+    // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
+    // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
+    // på kartan via optimistisk insättning (pollen tar sedan över).
+    const handleCreateWish = useCallback(async () => {
+        if (!pickedLocation || !newEventTitle.trim()) return;
+        if (!user) { openLogin('Logga in för att önska ett event'); return; }
+        setCreatingEvent(true);
+        try {
+            const created = await wishService.createWish({
+                title: newEventTitle,
+                category: newEventCategory,
+                description: newEventDescription,
+                lat: pickedLocation.lat,
+                lng: pickedLocation.lng,
+                uid: user.uid,
+                hostName: user.displayName || user.email || 'VADKUL-användare',
+            });
+            myWishesRef.current = [...myWishesRef.current, created];
+            setWishes(prev => [...prev, created]);
+            toast.success(`Önskan är ute på kartan! ✨ Den syns i ${WISH_LIFETIME_DAYS} dagar — eller tills någon skapar eventet.`);
+            resetCreateFlow();
+        } catch (err) {
+            console.error(err);
+            toast.error('Kunde inte spara önskan. Försök igen.');
+        } finally {
+            setCreatingEvent(false);
+        }
+    }, [pickedLocation, newEventTitle, newEventCategory, newEventDescription, user, openLogin, resetCreateFlow]);
 
     // Ta bort sitt EGET användarskapade event: Firestore-delete (reglerna
     // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
@@ -1002,42 +1048,92 @@ export default function HomePage() {
                 onFuncBagOpenChange={setFuncBagOpen}
                 onUserPosChange={setUserPos}
                 starredEventIds={starredEventIds}
+                wishes={wishes}
+                onSelectWish={handleSelectWish}
             />
 
 
 
-            {/* Modal för att skapa event — skriver till Firestore (kräver konto). */}
-            {creationMode === 'editing' && pickedLocation && (
+            {/* Modal för att skapa ELLER önska event — skriver till Firestore
+                (kräver konto). Göms under "Ändra plats"-varvet (repicking) så
+                kartan går att panorera; formulär-staten lever kvar. */}
+            {creationMode === 'editing' && pickedLocation && !repicking && (
                 <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="create-event-title"
-                        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4"
+                        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
                     >
-                        <h2 id="create-event-title" className="text-xl font-bold text-slate-800">Skapa event</h2>
-                        <p className="text-xs text-slate-500 tabular-nums">
-                            📍 {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
-                        </p>
+                        <h2 id="create-event-title" className="text-xl font-bold text-slate-800">
+                            {fulfillingWish ? 'Skapa eventet av önskan' : createKind === 'wish' ? 'Önska event' : 'Skapa event'}
+                        </h2>
+                        {/* Läge: skapa på riktigt eller önska. Gömd när modalen öppnats
+                            från en önskan ("Skapa det här eventet") — då skapar man. */}
+                        {!fulfillingWish && (
+                            <div className="flex rounded-full bg-slate-100 p-1 text-sm font-bold" role="tablist" aria-label="Skapa eller önska">
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={createKind === 'event'}
+                                    onClick={() => setCreateKind('event')}
+                                    className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${createKind === 'event' ? 'bg-green-600 text-white shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Skapa event
+                                </button>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={createKind === 'wish'}
+                                    onClick={() => setCreateKind('wish')}
+                                    className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${createKind === 'wish' ? 'bg-violet-600 text-white shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    ✨ Önska event
+                                </button>
+                            </div>
+                        )}
+                        {createKind === 'wish' && (
+                            <p className="text-xs text-slate-500">
+                                Önska något du vill skulle hända här — kanske skapar någon det!
+                                Önskan syns på kartan i {WISH_LIFETIME_DAYS} dagar eller tills eventet blir av.
+                            </p>
+                        )}
+                        {fulfillingWish && (
+                            <p className="text-xs font-semibold text-violet-700 bg-violet-50 rounded-lg px-3 py-2">
+                                ✨ Förifyllt från {fulfillingWish.hostName}s önskan — justera fritt, även platsen.
+                            </p>
+                        )}
+                        {/* Platsen är redan vald (kartans mitt/önskans plats) — koordinaterna
+                            visas inte; vill man flytta gör man ett nytt placerings-varv. */}
+                        <button
+                            type="button"
+                            onClick={() => setRepicking(true)}
+                            className="self-start text-xs font-bold text-[#006AA7] hover:underline"
+                        >
+                            📍 Ändra plats på kartan
+                        </button>
                         <input
                             type="text"
                             value={newEventTitle}
                             onChange={e => setNewEventTitle(e.target.value)}
-                            placeholder="Namn på event"
-                            aria-label="Namn på event"
+                            placeholder={createKind === 'wish' ? 'Vad önskar du hände här?' : 'Namn på event'}
+                            aria-label={createKind === 'wish' ? 'Vad önskar du hände här?' : 'Namn på event'}
                             autoFocus
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
-                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
-                            När?
-                            <input
-                                type="datetime-local"
-                                value={newEventTime}
-                                onChange={e => setNewEventTime(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
-                            />
-                        </label>
+                        {/* En önskan har ingen tid — bara skapa-läget frågar När. */}
+                        {createKind === 'event' && (
+                            <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                                När?
+                                <input
+                                    type="datetime-local"
+                                    value={newEventTime}
+                                    onChange={e => setNewEventTime(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
+                                />
+                            </label>
+                        )}
                         <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
                             Kategori
                             <select
@@ -1050,25 +1146,29 @@ export default function HomePage() {
                                 ))}
                             </select>
                         </label>
-                        <input
-                            type="text"
-                            value={newEventPlace}
-                            onChange={e => setNewEventPlace(e.target.value)}
-                            placeholder="Plats — t.ex. Vasaparken (valfritt)"
-                            aria-label="Plats (valfritt)"
-                            maxLength={120}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
-                        />
+                        {createKind === 'event' && (
+                            <input
+                                type="text"
+                                value={newEventPlace}
+                                onChange={e => setNewEventPlace(e.target.value)}
+                                placeholder="Plats — t.ex. Vasaparken (valfritt)"
+                                aria-label="Plats (valfritt)"
+                                maxLength={120}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+                            />
+                        )}
                         <textarea
                             value={newEventDescription}
                             onChange={e => setNewEventDescription(e.target.value)}
-                            placeholder="Beskrivning — vad händer? (valfritt)"
+                            placeholder={createKind === 'wish' ? 'Beskriv önskan — vad borde hända? (valfritt)' : 'Beskrivning — vad händer? (valfritt)'}
                             aria-label="Beskrivning (valfritt)"
                             maxLength={1000}
                             rows={3}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none resize-none"
                         />
-                        {/* Bild på eventet (valfritt) — laddas upp till Storage vid Skapa. */}
+                        {/* Bild på eventet (valfritt) — laddas upp till Storage vid Skapa.
+                            En önskan har ingen bild. */}
+                        {createKind === 'event' && (
                         <div>
                             <input
                                 id="new-event-image"
@@ -1105,37 +1205,109 @@ export default function HomePage() {
                                 </label>
                             )}
                         </div>
+                        )}
                         {!user && (
                             <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                                Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.
+                                {createKind === 'wish'
+                                    ? 'Du behöver logga in för att önska — det fixar vi i nästa steg.'
+                                    : 'Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.'}
                             </p>
                         )}
                         <div className="flex justify-end gap-2 mt-2">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setCreationMode('idle');
-                                    setPickedLocation(null);
-                                    setNewEventTitle('');
-                                    setNewEventTime('');
-                                    setNewEventPlace('');
-                                    setNewEventDescription('');
-                                    setNewEventImage(null);
-                                    setNewEventImagePreview('');
-                                }}
+                                onClick={resetCreateFlow}
                                 className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors font-semibold"
                             >
                                 Avbryt
                             </button>
                             <button
                                 type="button"
-                                disabled={!newEventTitle.trim() || !newEventTime || creatingEvent}
-                                onClick={handleCreateEvent}
-                                className="px-5 py-2 rounded-full bg-green-600 text-white font-bold disabled:opacity-40 hover:bg-green-500 transition-colors"
+                                disabled={!newEventTitle.trim() || (createKind === 'event' && !newEventTime) || creatingEvent}
+                                onClick={createKind === 'wish' ? handleCreateWish : handleCreateEvent}
+                                className={`px-5 py-2 rounded-full text-white font-bold disabled:opacity-40 transition-colors ${createKind === 'wish' ? 'bg-violet-600 hover:bg-violet-500' : 'bg-green-600 hover:bg-green-500'}`}
                             >
-                                {creatingEvent ? 'Skapar…' : user ? 'Skapa' : 'Logga in & skapa'}
+                                {creatingEvent
+                                    ? (createKind === 'wish' ? 'Önskar…' : 'Skapar…')
+                                    : user
+                                    ? (createKind === 'wish' ? 'Önska ✨' : 'Skapa')
+                                    : (createKind === 'wish' ? 'Logga in & önska' : 'Logga in & skapa')}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* "Ändra plats"-varvet: modalen gömd, kartan fri att panorera.
+                Center-pinnen visar var platsen hamnar (kartans mitt) och pillen
+                bekräftar/avbryter. Formuläret väntar orört under tiden. */}
+            {creationMode === 'editing' && repicking && (
+                <>
+                    <div aria-hidden className="pointer-events-none fixed left-1/2 top-1/2 z-[1190] -translate-x-1/2 -translate-y-[85%] text-4xl drop-shadow-lg">📍</div>
+                    <div className="fixed inset-x-0 bottom-24 z-[1190] flex justify-center px-4 pointer-events-none">
+                        <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-4 pr-2 py-2">
+                            <span className="text-sm font-semibold text-slate-700">Panorera kartan till rätt plats</span>
+                            <button
+                                type="button"
+                                onClick={() => { if (mapCenterRef.current) setPickedLocation(mapCenterRef.current); setRepicking(false); }}
+                                className="px-4 py-1.5 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-500 transition-colors"
+                            >
+                                Välj här
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRepicking(false)}
+                                className="px-3 py-1.5 rounded-full text-slate-500 text-sm font-semibold hover:bg-slate-100 transition-colors"
+                            >
+                                Avbryt
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Önske-kortet: klick på en önske-bricka på kartan. Litet kort med
+                titel/kategori/önskare + "Skapa det här eventet" (förifyller
+                skapa-modalen och kvitterar önskan när eventet skapats). */}
+            {selectedWish && (
+                <div className="fixed inset-x-0 bottom-24 z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl border border-violet-200 p-4 flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 text-[11px] font-black px-2 py-0.5">✨ Önskemål</span>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWish(null)}
+                                aria-label="Stäng"
+                                className="w-7 h-7 -mt-1 -mr-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center transition-colors"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 leading-snug">{selectedWish.title}</h3>
+                        <p className="text-xs text-slate-500">
+                            {(EVENT_CATEGORIES[selectedWish.category] ?? EVENT_CATEGORIES.other).emoji}{' '}
+                            {(EVENT_CATEGORIES[selectedWish.category] ?? EVENT_CATEGORIES.other).label}
+                            {' · '}Önskat av {selectedWish.hostName}
+                        </p>
+                        {selectedWish.description && (
+                            <p className="text-sm text-slate-600 whitespace-pre-line">{selectedWish.description}</p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => startFulfillWish(selectedWish)}
+                            className="mt-1 w-full px-4 py-2.5 rounded-full bg-violet-600 text-white font-bold hover:bg-violet-500 transition-colors"
+                        >
+                            Skapa det här eventet
+                        </button>
+                        {user?.uid === selectedWish.uid && (
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteWish(selectedWish.id)}
+                                className="self-center text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                                Ta bort min önskan
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
