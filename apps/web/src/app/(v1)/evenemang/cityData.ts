@@ -62,6 +62,9 @@ export type CityEvent = {
     coverImage?: string;
     price?: string;
     attendees?: number;
+    /** Kort beskrivning (max ~300 tecken, trimmad vid inläsning) — används i
+     *  sidornas schema.org-Event så Google får description-fältet. */
+    description?: string;
     /** Hur många gånger samma (normaliserade) titel förekommer i HELA datat.
      *  1 = engångshändelse; 400 = rutinverksamhet typ "sommarcafé". Grunden
      *  för rekommendations-rankingen. */
@@ -78,20 +81,35 @@ const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' 
 
 // Modulnivå-cache: JSON-filerna (~21k event) läses en gång per build-process,
 // inte en gång per stad.
-let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
+let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; descs: Map<string, string>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
 
 function loadData() {
     if (!dataPromise) {
         dataPromise = (async () => {
             const pub = (f: string) => readFile(path.join(process.cwd(), 'public', f), 'utf8');
-            const [destRaw, cardRaw] = await Promise.all([
+            const [destRaw, cardRaw, descRaw] = await Promise.all([
                 pub('events-destinations.json'),
                 pub('events-cards.json'),
+                // Beskrivningarna är trevliga-att-ha (schema.org) — saknas
+                // filen ska stadssidorna INTE krascha.
+                pub('events-descriptions.json').catch(() => null),
             ]);
             const destJson = JSON.parse(destRaw) as { updatedAt?: string; events: RawDest[] };
             const cardJson = JSON.parse(cardRaw) as { events: RawCard[] };
             const cards = new Map<string, RawCard>();
             for (const c of cardJson.events) cards.set(c.id, c);
+            // Beskrivningslagret är { data: { [id]: text } }. Trimmas hårt här
+            // (en gång per build) — schemat behöver en aptitretare, inte hela
+            // programtexten i varje sidas JSON-LD.
+            const descs = new Map<string, string>();
+            if (descRaw) {
+                const descJson = JSON.parse(descRaw) as { data?: Record<string, string> };
+                for (const [id, text] of Object.entries(descJson.data ?? {})) {
+                    const t = (text || '').replace(/\s+/g, ' ').trim();
+                    if (t.length < 20) continue; // för kort för att vara en beskrivning
+                    descs.set(id, t.length > 300 ? `${t.slice(0, 297).replace(/\s+\S*$/, '')}…` : t);
+                }
+            }
             // Global titel-frekvens (hela Sverige, inte per stad): en "vägkyrka"
             // är rutin även om den bara finns en gång i just den här staden.
             const titleFreq = new Map<string, number>();
@@ -99,7 +117,7 @@ function loadData() {
                 const k = normTitle(e.title);
                 titleFreq.set(k, (titleFreq.get(k) ?? 0) + 1);
             }
-            return { dests: destJson.events, cards, titleFreq, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
+            return { dests: destJson.events, cards, descs, titleFreq, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
         })();
     }
     return dataPromise;
@@ -145,7 +163,7 @@ function assignEvents() {
  *  event har ofta midnatt som starttid, så en ren tidsjämförelse slänger hela
  *  dagens utbud så fort dagen börjat. */
 export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; updatedAt: string }> {
-    const [{ cards, titleFreq, updatedAt }, assigned] = await Promise.all([loadData(), assignEvents()]);
+    const [{ cards, descs, titleFreq, updatedAt }, assigned] = await Promise.all([loadData(), assignEvents()]);
     const todayK = dayKey(new Date().toISOString());
     const events = (assigned.get(city.slug) ?? [])
         .filter(e => dayKey(e.time) >= todayK)
@@ -164,6 +182,7 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
                 coverImage: card?.coverImage || undefined,
                 price: card?.price || undefined,
                 attendees: card?.attendees || undefined,
+                description: descs.get(e.id),
                 repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
             };
         });
