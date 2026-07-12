@@ -504,14 +504,17 @@
   100% { box-shadow: 0 1px 4px rgba(0,0,0,0.35), 0 0 0 0 rgba(29,155,240,0); }
 }
 
-/* Scroll-nudge: subtil upp-ner-animation som påminner om att man kan scrolla */
+/* Scroll-nudge: kortet "kikar upp" — höjden växer kort med botten förankrad
+   så mer av kortet skymtar. Höjd-animation (inte translateY) för att kortet
+   inte ska släppa från underkanten och visa en glipa av kartan bakom.
+   Basvärdet kommer från --sheet-h (sätts inline i EventCard). */
 @keyframes scroll-nudge {
-  0%   { transform: translateY(0); }
-  20%  { transform: translateY(-10px); }
-  45%  { transform: translateY(3px); }
-  65%  { transform: translateY(-5px); }
-  80%  { transform: translateY(1px); }
-  100% { transform: translateY(0); }
+  0%   { height: var(--sheet-h); }
+  20%  { height: calc(var(--sheet-h) + 16px); }
+  45%  { height: var(--sheet-h); }
+  65%  { height: calc(var(--sheet-h) + 8px); }
+  80%  { height: var(--sheet-h); }
+  100% { height: var(--sheet-h); }
 }
 
 .scroll-nudge-anim {

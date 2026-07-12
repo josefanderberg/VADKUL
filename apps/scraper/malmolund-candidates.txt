@@ -1,0 +1,12 @@
+Kulturmejeriet|lund|https://mejeriet.se
+Plan B|malmo|https://plan-b.nu
+Palladium Malmö|malmo|https://palladium.nu
+Panora|malmo|https://panora.se
+Biograf Spegeln|malmo|https://biografspegeln.se
+Nöjesteatern|malmo|https://nojesteatern.se
+Malmö Stadsteater|malmo|https://malmostadsteater.se
+Form Design Center|malmo|https://formdesigncenter.com
+STPLN|malmo|https://stpln.se
+Skissernas Museum|lund|https://skissernasmuseum.se
+AF Borgen|lund|https://afborgen.se
+Botaniska trädgården Lund|lund|https://www.botan.lu.se

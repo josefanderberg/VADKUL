@@ -42,6 +42,111 @@ export interface SiteVisionConfig {
      * på för källor där list-korten är text-tomma (Strömsund, Svenljunga).
      */
     fetchDetailDesc?: boolean;
+    /**
+     * Soleil eventListingLocal:s JSON-API (upptäckt på malmo.se 2026-07-09):
+     *   GET <origin>/appresource/<pageId>/<portletId>/items?start=0&num=100
+     *   → { count, items: [{ title, url, desc, image, place[], dates:{date,time} }] }
+     * När satt hämtas HELA kalendern via API:t istället för list-sidans HTML
+     * (som bara server-renderar första dagens ~18 kort). pageId/portletId
+     * sniffas ur "Visa fler"-knappens XHR (xhr-sniff.cjs — klicka och läs
+     * /appresource/<pageId>/<portletId>/items?start=N).
+     */
+    itemsApi?: { pageId: string; portletId: string };
+}
+
+/** Rått item ur soleil items-API:t (bara fälten vi läser). */
+interface SoleilItem {
+    id?: string;
+    title?: string;
+    url?: string;
+    desc?: string;
+    image?: string;
+    place?: string[];
+    dates?: {
+        date?: string;          // "2026-07-10"
+        time?: string | null;   // "18:00" | null
+        locations?: string[];
+    };
+}
+
+/** "2026-07-10" + ev. "18:00" → lokal Date. Exporterad för test. */
+export function parseSoleilDate(
+    date: string | undefined,
+    time: string | null | undefined,
+): { date: Date; hasClock: boolean } | null {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    const [y, mo, da] = date.split('-').map((n) => parseInt(n, 10));
+    const clock = time && /^\d{1,2}[:.]\d{2}$/.test(time.trim()) ? time.trim().replace('.', ':') : null;
+    const [hh, mi] = clock ? clock.split(':').map((n) => parseInt(n, 10)) : [0, 0];
+    const d = new Date(y, mo - 1, da, hh, mi);
+    if (isNaN(d.getTime())) return null;
+    return { date: d, hasClock: !!clock };
+}
+
+/** Mappa ett soleil-item → RawEvent. Exporterad för test. */
+export function mapSoleilItem(
+    item: SoleilItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = (item.title || '').trim();
+    const parsed = parseSoleilDate(item.dates?.date, item.dates?.time);
+    const eventUrl = makeAbsoluteUrl(item.url, baseUrl);
+    if (!title || !parsed || !eventUrl) return null;
+
+    const venueName = item.place?.find(Boolean)?.trim()
+        || item.dates?.locations?.find(Boolean)?.trim()
+        || undefined;
+
+    return {
+        externalId: item.id,
+        title,
+        startDate: parsed.date,
+        url: eventUrl,
+        venueName,
+        city: defaultCity,
+        description: item.desc?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.image, baseUrl),
+        hasSpecificTime: parsed.hasClock ? true : undefined,
+    };
+}
+
+/** Paginera igenom items-API:t. 18/sida är serverns default; num=100 funkar. */
+async function scrapeSoleilItemsApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const { pageId, portletId } = config.itemsApi!;
+    const cap = config.maxItems ?? 1000;
+    const events: RawEvent[] = [];
+    const seenUrls = new Set<string>();
+
+    let start = 0;
+    let count = Infinity;
+    while (start < count && events.length < cap) {
+        const url = `${origin}/appresource/${pageId}/${portletId}/items?start=${start}&num=100`;
+        const body = await fetchHtml(url, config);
+        if (!body) { ctx.log(`  items-API svarade inte (start=${start})`); break; }
+
+        let data: { count?: number; items?: SoleilItem[] };
+        try { data = JSON.parse(body); } catch { ctx.log('  items-API gav icke-JSON'); break; }
+
+        const items = data.items ?? [];
+        if (typeof data.count === 'number') count = data.count;
+        if (items.length === 0) break;
+
+        for (const item of items) {
+            const ev = mapSoleilItem(item, base, config.defaultCity);
+            if (!ev || seenUrls.has(ev.url)) continue;
+            seenUrls.add(ev.url);
+            events.push(ev);
+        }
+        start += items.length;
+    }
+    ctx.log(`items-API: ${events.length} event (count=${count})`);
+    return events;
 }
 
 async function fetchHtml(url: string, cfg: SiteVisionConfig): Promise<string | null> {
@@ -77,6 +182,8 @@ export const sitevisionEngine = async (
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
+    if (config.itemsApi) return scrapeSoleilItemsApi(config, ctx);
+
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();
     const maxItems = config.maxItems ?? 200;

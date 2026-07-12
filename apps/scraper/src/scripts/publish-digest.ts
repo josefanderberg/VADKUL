@@ -3,10 +3,14 @@
  *
  * Flöde (v1):
  *   1. Hämta upp till 10 event för IDAG ur events.db
+ *      • Har en publik bild (krav — utan bild ingen slide; event i egen
+ *        Firebase Storage föredras eftersom Meta alltid kan hämta dem)
  *      • En per stad (geografisk spridning)
  *      • Titel ≤ 40 tecken
  *      • Inte hidden, verifierad plats
  *      • Spridning över kategorier
+ *      Utöver de 10 byggs en reservkö — avvisar Meta en bild fylls listan på
+ *      så vi ändå landar på 10 publicerade event.
  *   2. Räkna totalt antal event idag (för "minst X event"-headern)
  *   3. Skicka utkast till Telegram + approval-loop
  *      • "byt N"       → byt event N
@@ -220,7 +224,10 @@ function loadCandidates(db: Database.Database, excludedUrls: Set<string>): Diges
         .filter(r => !excludedUrls.has(r.url))
         .map(r => ({ ...r, city: extractCity(r), cleanTitle: cleanTitle(r.title || '') }))
         .filter(e => e.city.length > 0)
-        .filter(e => e.cleanTitle.length >= 3 && e.cleanTitle.length <= MAX_TITLE_LEN);
+        .filter(e => e.cleanTitle.length >= 3 && e.cleanTitle.length <= MAX_TITLE_LEN)
+        // Bild är ett hårt krav — event utan publik bild-URL kan aldrig bli en
+        // slide, så de får inte äta upp platser i 10-listan.
+        .filter(e => !!e.coverImage && /^https?:\/\//.test(e.coverImage.trim()));
 
     // Tabort dubbletter (samma titel + stad)
     const seen = new Set<string>();
@@ -247,9 +254,26 @@ function countTodayTotal(db: Database.Database): number {
 
 // ── Välj 10 event (en per stad, kategori-spridning) ──────────────────────────
 
+function isStorageImage(url: string | null): boolean {
+    return !!url && /storage\.googleapis\.com|firebasestorage/i.test(url);
+}
+
+/**
+ * Slumpa ordningen, men lägg event med bild i egen Firebase Storage först —
+ * de URL:erna kan Metas servrar alltid hämta, medan externa bild-URL:er är
+ * det som brukar avvisas (fel format, hotlink-skydd, döda länkar).
+ */
+function tieredShuffle(events: DigestEvent[]): DigestEvent[] {
+    const sh = [...events].sort(() => Math.random() - 0.5);
+    return [
+        ...sh.filter(e => isStorageImage(e.coverImage)),
+        ...sh.filter(e => !isStorageImage(e.coverImage)),
+    ];
+}
+
 function pickTen(candidates: DigestEvent[], n: number = TARGET_COUNT): DigestEvent[] {
     // Slumpa lite per körning så vi inte ser exakt samma lista igen
-    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+    const shuffled = tieredShuffle(candidates);
 
     const usedCities = new Set<string>();
     const categoryCount: Record<string, number> = {};
@@ -336,78 +360,85 @@ function buildCaptionPlain(picks: DigestEvent[], totalToday: number): string {
 }
 
 /**
- * Publicera listan till Instagram (karusell) + Facebook. Bara event med publik
- * bild kan bli carousel-slides, så vi filtrerar och renumrerar bildtexten så
- * den matchar slidesen. IG kräver minst 1 bild (≥2 = karusell).
+ * Publicera listan till Instagram (karusell) + Facebook. Kön = de 10 valda +
+ * reserverna, alla med publik bild (kravet ligger i loadCandidates). Varje
+ * plattform fyller på från kön när Meta avvisar en bild och bygger sin EGEN
+ * bildtext från de bilder som faktiskt kom med — så numreringen alltid
+ * matchar och vi landar på 10 event även när enskilda bilder avvisas.
+ * FB och IG publicerar oberoende av varandra: fallerar den ena postar den
+ * andra ändå.
  */
-async function publishDigest(state: DigestState): Promise<void> {
+async function publishDigest(state: DigestState, backups: DigestEvent[] = []): Promise<void> {
     if (!isInstagramConfigured() && !isFacebookConfigured()) {
         await sendMessage('⚠️ Varken Instagram eller Facebook är konfigurerat (FB_PAGE_TOKEN/IG_USER_ID saknas i ~/.vadkul-secrets/env).');
         return;
     }
 
-    // Bara event med en publik bild-URL kan bli slides. Behåll listans ordning.
-    const imaged = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim())).slice(0, 10);
-    const imageUrls = imaged.map(p => p.coverImage!.trim());
+    const hasImg = (p: DigestEvent) => !!p.coverImage && /^https?:\/\//.test(p.coverImage.trim());
+    const inPicks = new Set(state.picks.map(p => p.url));
+    const queue: DigestEvent[] = [
+        ...state.picks.filter(hasImg),
+        ...backups.filter(b => hasImg(b) && !inPicks.has(b.url)),
+    ];
+    const imageUrls = queue.map(p => p.coverImage!.trim());
 
-    if (imageUrls.length === 0) {
+    if (queue.length === 0) {
         await sendMessage(
-            '🚫 Kan inte publicera till Instagram — inget av eventen har en bild.\n' +
+            '🚫 Kan inte publicera — inget av eventen har en bild.\n' +
             'Sätt bilder med <code>bild N &lt;URL&gt;</code> och skriv <code>klar</code> igen.'
         );
         return;
     }
 
-    const skipped = state.picks.length - imaged.length;
+    const reserves = queue.length - Math.min(state.picks.length, queue.length);
     await sendMessage(
-        `🚀 Publicerar ${imaged.length} event` +
-        (skipped > 0 ? ` (${skipped} hoppas över — saknar bild)` : '') +
-        ` till Instagram${isFacebookConfigured() ? ' + Facebook' : ''}…`
+        `🚀 Publicerar (mål ${TARGET_COUNT} event, ${reserves} reserver i kön) till` +
+        `${isInstagramConfigured() ? ' Instagram' : ''}${isInstagramConfigured() && isFacebookConfigured() ? ' +' : ''}${isFacebookConfigured() ? ' Facebook' : ''}…`
     );
 
-    // Bildtexten byggs FÖRST när IG bekräftat vilka bilder som blev slides, så
-    // numreringen matchar karusellen 1:1 (IG avvisar t.ex. otillåten aspect
-    // ratio). keptIdx pekar in i `imaged`. Vi fångar det bekräftade setet i en
-    // closure så Facebook kan posta exakt samma event + text.
-    let publishedEvents: DigestEvent[] = imaged;
-    let sharedCaption: string | null = null;
-    const buildCaption = (keptIdx: number[]): string => {
-        publishedEvents = keptIdx.map(i => imaged[i]);
-        sharedCaption = buildCaptionPlain(publishedEvents, state.totalToday);
-        return sharedCaption;
-    };
+    // Bildtexten byggs FÖRST när plattformen bekräftat vilka bilder som kom
+    // med (keptIdx pekar in i `queue`), så numreringen matchar 1:1.
+    const captionFor = (keptIdx: number[]): string =>
+        buildCaptionPlain(keptIdx.map(i => queue[i]), state.totalToday);
 
-    // Instagram (karusell ≥2, annars single). Facebook med samma bekräftade set.
-    let igOk = false;
+    let igCaption: string | null = null;
     if (isInstagramConfigured()) {
+        let igCount = 0;
         try {
-            const igId = await postToInstagram(buildCaption, imageUrls);
-            igOk = true;
-            const dropped = imaged.length - publishedEvents.length;
+            const igId = await postToInstagram(keptIdx => {
+                igCount = keptIdx.length;
+                igCaption = captionFor(keptIdx);
+                return igCaption;
+            }, imageUrls, TARGET_COUNT);
             await sendMessage(
-                `✅ Instagram publicerat! (id ${escapeHtml(igId)})` +
-                (dropped > 0 ? `\n♻️ ${dropped} bild(er) föll bort (fel format/otillåten ratio) — listan renumrerad till ${publishedEvents.length}.` : '')
+                `✅ Instagram: ${igCount} event publicerade (id ${escapeHtml(igId)})` +
+                (igCount < TARGET_COUNT ? `\n♻️ Nådde inte ${TARGET_COUNT} — kön (${queue.length} kandidater) tog slut på godkända bilder.` : '')
             );
         } catch (e) {
             await sendMessage(`⚠️ Instagram misslyckades: ${escapeHtml((e as Error).message)}`);
         }
     }
+
+    let fbCaption: string | null = null;
     if (isFacebookConfigured()) {
-        // Rikta FB mot samma bilder + text som IG faktiskt publicerade. Kördes
-        // inte IG (ej konfigurerat/fel) faller vi tillbaka på hela imaged-listan.
-        const fbEvents = igOk ? publishedEvents : imaged;
-        const fbUrls = fbEvents.map(p => p.coverImage!.trim());
-        const fbCaption = sharedCaption ?? buildCaptionPlain(imaged, state.totalToday);
+        let fbCount = 0;
         try {
-            await postToFacebook(fbCaption, fbUrls);
-            await sendMessage('✅ Facebook publicerat!');
+            await postToFacebook(keptIdx => {
+                fbCount = keptIdx.length;
+                fbCaption = captionFor(keptIdx);
+                return fbCaption;
+            }, imageUrls, TARGET_COUNT);
+            await sendMessage(
+                `✅ Facebook: ${fbCount} event publicerade` +
+                (fbCount < TARGET_COUNT ? `\n♻️ Nådde inte ${TARGET_COUNT} — kön (${queue.length} kandidater) tog slut på godkända bilder.` : '')
+            );
         } catch (e) {
             await sendMessage(`⚠️ Facebook misslyckades: ${escapeHtml((e as Error).message)}`);
         }
     }
 
-    console.log(`[Digest] Publicerat (IG=${igOk}):`);
-    console.log(sharedCaption ?? buildCaptionPlain(imaged, state.totalToday));
+    console.log('[Digest] Publicerat:');
+    console.log(fbCaption ?? igCaption ?? '(inget gick ut)');
 }
 
 const HELP = `
@@ -425,6 +456,17 @@ interface DigestState {
     picks: DigestEvent[];
     totalToday: number;
     excludedUrls: Set<string>;
+}
+
+/**
+ * Reservkö till publiceringen: dagens övriga kandidater (alla har bild via
+ * loadCandidates), utom de redan valda/uteslutna. Storage-bilder först.
+ * Används av publishDigest för att fylla upp till 10 när Meta avvisar bilder.
+ */
+function buildBackups(db: Database.Database, state: DigestState): DigestEvent[] {
+    const picked = new Set(state.picks.map(p => p.url));
+    const pool = loadCandidates(db, state.excludedUrls).filter(e => !picked.has(e.url));
+    return tieredShuffle(pool).slice(0, 20);
 }
 
 async function sendDraft(state: DigestState): Promise<void> {
@@ -456,7 +498,7 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
     let picks = pickTen(loadCandidates(db, excludedUrls));
 
     if (picks.length === 0) {
-        await sendMessage('🤷 Inga event idag som matchar filtren (titel ≤ 40 tecken, verifierad plats, en per stad).');
+        await sendMessage('🤷 Inga event idag som matchar filtren (har bild, titel ≤ 40 tecken, verifierad plats, en per stad).');
         return;
     }
 
@@ -508,7 +550,7 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
         }
 
         if (['klar', 'ok', '👍', '✅', 'publicera'].includes(cmd)) {
-            await publishDigest(state);
+            await publishDigest(state, buildBackups(db, state));
             return;
         }
 
@@ -546,7 +588,7 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
                     .map(e => e.city.toLowerCase())
             );
             const replacements: (DigestEvent | null)[] = swapIdx.map(() => null);
-            const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+            const shuffled = tieredShuffle(candidates);
             let rIdx = 0;
             for (const cand of shuffled) {
                 if (rIdx >= swapIdx.length) break;
@@ -592,7 +634,7 @@ async function runAuto(db: Database.Database): Promise<void> {
     const picks = pickTen(loadCandidates(db, new Set<string>()));
 
     if (picks.length === 0) {
-        await sendMessage('🤷 <b>Dagens 10-lista</b> — inga event idag som matchar filtren (titel ≤ 40 tecken, verifierad plats, en per stad). Inget publiceras.');
+        await sendMessage('🤷 <b>Dagens 10-lista</b> — inga event idag som matchar filtren (har bild, titel ≤ 40 tecken, verifierad plats, en per stad). Inget publiceras.');
         return;
     }
 
@@ -603,7 +645,7 @@ async function runAuto(db: Database.Database): Promise<void> {
     await sendMessage(buildDigestText(state.picks, state.totalToday));
 
     // Publicera direkt (samma väg som "klar" i det manuella flödet).
-    await publishDigest(state);
+    await publishDigest(state, buildBackups(db, state));
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────

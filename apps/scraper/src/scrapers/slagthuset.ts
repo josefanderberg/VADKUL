@@ -6,6 +6,15 @@
  *   GET https://slagthuset.se/api/events
  *   → [ { id, slug, title:{rendered}, featured_media, acf:{...}, event_medium:{url}, ... } ]
  *
+ * SAMMA ACF-SCHEMA driver även Kulturmejeriet i Lund (upptäckt 2026-07-10 —
+ * samma byrå bakom sajterna?): headless WP på cms.mejeriet.net, CPT "program",
+ *   GET https://cms.mejeriet.net/wp-json/wp/v2/program?per_page=100&acf_format=standard
+ * Skillnader som motorn tolererar: acf.plats är STRÄNG (inte term-array),
+ * kategorin heter typ_av_arrangemang (inte typ_av_evenemang), bilden ligger i
+ * toppnivåns fimg_url/large (inte event_medium.url), och acf.kort_info finns
+ * som extra ingress. wp/v2-varianten är publiceringssorterad och innehåller
+ * även passerade event — fönsterfiltret i motorn/runnern klipper dem.
+ *
  * Fallgropar (verifierade):
  *  - acf.startdatum är "YYYYMMDD" (ingen separator) — egen parsning krävs,
  *    standard wp-rest/wp-v2-motorn klarar den inte.
@@ -35,18 +44,24 @@ interface SlagthusetEvent {
     slug?: string;
     title?: { rendered?: string };
     event_medium?: { url?: string };
+    /** Mejeriet-varianten (wp/v2): utvald bild på toppnivå. */
+    fimg_url?: string | false;
+    large?: string | false;
     acf?: {
         startdatum?: string;       // "YYYYMMDD"
         slutdatum?: string;        // "YYYYMMDD" | ""
         oppnar?: string;           // "19:00" (insläpp)
         borjar?: string;           // "20:00" (start)
-        plats?: SlagthusetTerm[];  // venue-taxonomi
+        /** Slagthuset: term-array. Mejeriet: ren sträng ("Mejeriet"). */
+        plats?: SlagthusetTerm[] | string;
         ingang?: string;           // gatuadress
         underrubrik?: string;
+        kort_info?: string;        // Mejeriet: ingress
         lang_info?: string;        // HTML-beskrivning
         pris?: string;
         aldersgrans?: string;
-        typ_av_evenemang?: SlagthusetTerm; // event_type-taxonomi
+        typ_av_evenemang?: SlagthusetTerm;      // Slagthuset
+        typ_av_arrangemang?: SlagthusetTerm;    // Mejeriet
         gom_i_kalender?: boolean | string;
     };
 }
@@ -96,16 +111,18 @@ export function mapSlagthusetEvent(
     const end = parseSlagthusetDate(acf.slutdatum, undefined);
     const endDate = end && end.date.getTime() > parsed.date.getTime() ? end.date : undefined;
 
-    const venueName = acf.plats?.find((p) => p?.name)?.name?.trim() || undefined;
-    const category = acf.typ_av_evenemang?.name
-        ? acf.typ_av_evenemang.name.toLowerCase().trim()
-        : undefined;
+    const venueName = typeof acf.plats === 'string'
+        ? acf.plats.trim() || undefined
+        : acf.plats?.find((p) => p?.name)?.name?.trim() || undefined;
+    const categoryTerm = acf.typ_av_evenemang?.name || acf.typ_av_arrangemang?.name;
+    const category = categoryTerm ? categoryTerm.toLowerCase().trim() : undefined;
 
     const lead = acf.underrubrik ? decodeHtmlEntities(acf.underrubrik.trim()) : '';
+    const intro = acf.kort_info ? decodeHtmlEntities(acf.kort_info.trim()) : '';
     const body = acf.lang_info
         ? decodeHtmlEntities(acf.lang_info.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
         : '';
-    const description = [lead, body].filter(Boolean).join(' ').slice(0, 800) || undefined;
+    const description = [lead, intro, body].filter(Boolean).join(' ').slice(0, 800) || undefined;
 
     return {
         externalId: e.id != null ? String(e.id) : undefined,
@@ -117,7 +134,11 @@ export function mapSlagthusetEvent(
         city: defaultCity,
         address: acf.ingang?.trim() || undefined,
         description,
-        imageUrl: fullResImage(e.event_medium?.url),
+        imageUrl: fullResImage(
+            e.event_medium?.url
+            || (typeof e.fimg_url === 'string' ? e.fimg_url : undefined)
+            || (typeof e.large === 'string' ? e.large : undefined),
+        ),
         category,
         price: acf.pris?.trim() || undefined,
         hasSpecificTime: parsed.hasClock,

@@ -22,7 +22,7 @@ describe('mapSvkEvent', () => {
         expect(e.hasSpecificTime).toBe(true);
         expect(e.venueName).toBe('Uppsala domkyrka, Uppsala pastorat');
         expect(e.hostName).toBe('Uppsala pastorat');
-        expect(e.description).toBe('Välkommen varmt välkommen');
+        expect(e.description).toBe('Välkommen & varmt välkommen');
         expect(e.startDate.toISOString()).toBe('2026-06-23T09:00:00.000Z'); // +02:00 → UTC
     });
 
