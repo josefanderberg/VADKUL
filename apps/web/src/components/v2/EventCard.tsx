@@ -433,31 +433,6 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
     );
 }
 
-function RecommendedForYou({ items, now, onSelect }: {
-    items: { evt: LinkEvent; distanceKm: number | null }[];
-    now: number;
-    onSelect: (evt: LinkEvent) => void;
-}) {
-    if (items.length === 0) return null;
-    return (
-        <div className="w-full bg-primary/5 dark:bg-primary/10 border-t border-border">
-            <div className="px-4 md:px-6 pt-3 pb-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                    ✨ Tips för dig
-                </span>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-                    Närliggande event i kategorier du gillat
-                </p>
-            </div>
-            <ul className="divide-y divide-border">
-                {items.map(({ evt, distanceKm }) => (
-                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
-                ))}
-            </ul>
-        </div>
-    );
-}
-
 interface EventCardProps {
     events: LinkEvent[];
     /** Antal event för dagen i dag-väljarens badge — räknas FÖRE källfiltret så
@@ -478,9 +453,6 @@ interface EventCardProps {
     discardedEventIds: Set<string>;
     /** Sparade event — hjärtat på kortet visar/ändrar status. */
     savedEventIds?: Set<string>;
-    /** Kategorier användaren visat intresse för (härledda ur sparade event).
-     *  Driver "Tips för dig" — närliggande event i samma kategorier tipsas. */
-    interestedCategories?: Set<EventCategoryType>;
     /** Användarens GPS-position (kartans blå plats-prick). Känd → kortet visar
      *  avståndet från användaren till det valda eventet. */
     userPos?: { lat: number; lng: number } | null;
@@ -542,7 +514,7 @@ interface EventCardProps {
     onPlaceStar?: (eventId: string) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, interestedCategories, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -919,20 +891,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
-
-    // "Tips för dig": har man gillat (sparat) event bygger vi upp vilka kategorier
-    // man är intresserad av — och lyfter fram närliggande KOMMANDE event i just de
-    // kategorierna (som man inte redan sparat). Tomt om man inte gillat något än.
-    const RECOMMEND_LIMIT = 6;
-    const recommendedNearby = useMemo(() => {
-        if (!interestedCategories || interestedCategories.size === 0) return [] as typeof upcomingNearby;
-        return upcomingNearby
-            .filter(n =>
-                n.evt.category != null
-                && interestedCategories.has(n.evt.category)
-                && !(savedEventIds?.has(n.evt.id) ?? false))
-            .slice(0, RECOMMEND_LIMIT);
-    }, [upcomingNearby, interestedCategories, savedEventIds]);
 
     // Event på EXAKT samma plats (koordinat) som det valda — multi-event-högen.
     // Driver pagern ("3/7") på kortets platsrad. Ordnad efter tid för stabil numrering.
@@ -1671,13 +1629,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             <EventChatPanel eventId={selectedEvent.id} onRequireLogin={onRequireLogin} />
                         </div>
                     )}
-                    {recommendedNearby.length > 0 && (
-                        <RecommendedForYou
-                            items={recommendedNearby}
-                            now={now}
-                            onSelect={evt => onSelectEvent(evt)}
-                        />
-                    )}
+                    {/* Direkt till närhetslistan — "Tips för dig"-sektionen togs
+                        bort 2026-07-13 (ägarbeslut: onödig, folk vill se Fler
+                        event i närheten direkt när de scrollar). */}
                     {nearbyEvents.length > 0 && (
                         <NearbyEventsList
                             upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
