@@ -29,15 +29,20 @@ export function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolea
     return group.some(e => e.time && e.time.getTime() > nowMs && e.time.getTime() - nowMs <= ONE_HOUR_MS);
 }
 
+// Event utan klockslag (hasSpecificTime false, tid 00:00) vet vi inte NÄR på
+// dagen de är — de visas som "Idag" och räknas som aktuella fram till kl 20,
+// sedan "har varit". Midnatt som gräns höll dem "levande" hela kvällen.
+export const NO_TIME_PAST_HOUR = 20;
+
 // Ett event "har varit": start + 1 h (standardlängden, samma som EventCard/
-// SavedPanel) har passerat. Heldags-event (hasSpecificTime false, tid 00:00)
-// räknas som pågående hela sin dag och blir "varit" först vid midnatt.
+// SavedPanel) har passerat. Event utan klockslag blir "varit" kl 20 sin dag
+// (NO_TIME_PAST_HOUR ovan).
 export function isEventPast(e: LinkEvent, nowMs: number): boolean {
     if (!e.time) return false;
     if (e.hasSpecificTime === false) {
-        const endOfDay = new Date(e.time);
-        endOfDay.setHours(23, 59, 59, 999);
-        return endOfDay.getTime() < nowMs;
+        const cutoff = new Date(e.time);
+        cutoff.setHours(NO_TIME_PAST_HOUR, 0, 0, 0);
+        return cutoff.getTime() <= nowMs;
     }
     return e.time.getTime() + ONE_HOUR_MS <= nowMs;
 }

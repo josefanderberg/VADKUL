@@ -175,8 +175,10 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
 // tidsordning. Helt heuristiskt vid build, ingen AI. Tyngsta signalen är
 // UNIKHET: titlar som återkommer många gånger i datat (sommarcafé 400×,
 // vägkyrka 214×, morgonbön 98×…) är rutinverksamhet, inte händelser. Därtill
-// belönas bild, biljettpris, värd, händelse-ord (festival/premiär/…) och
-// närhet i tid. Vikterna är känsel, inte vetenskap — justera fritt.
+// belönas bild, biljettpris, värd, händelse-ord (festival/premiär/…), närhet
+// i tid och KVÄLLSTID — de bästa eventen börjar oftast kl 19–20, medan
+// morgon/dagtid mest är rutinverksamhet. Vikterna är känsel, inte vetenskap —
+// justera fritt.
 
 const SPECIAL_WORDS = /festival|premiär|vernissage|invigning|turné|mässa|stand.?up|konsert|final|release|cirkus|opera|musikal|nationaldag|midsommar|utställning|föreställning/;
 
@@ -194,6 +196,14 @@ function scoreEvent(e: CityEvent, now: number): number {
     if ((e.attendees ?? 0) > 0) s += 10;
     if (e.hasSpecificTime) s += 4;
     if (e.hostName) s += 3;
+    // Kvällsbonus: riktiga arrangemang (konsert, föreställning, festival­kväll)
+    // börjar oftast kl 19–20 — dagtid är mer rutin. Topp 19–20, avtrappat runt.
+    if (e.hasSpecificTime) {
+        const h = hourOf(e.time);
+        if (h === 19 || h === 20) s += 12;
+        else if (h === 18 || h === 21) s += 7;
+        else if (h === 17 || h === 22) s += 3;
+    }
     const nt = normTitle(e.title);
     if (SPECIAL_WORDS.test(nt)) s += 10;
     if (ROUTINE_WORDS.test(nt)) s -= 20;
@@ -262,6 +272,42 @@ export async function getCityCounts(): Promise<{ city: City; count: number }[]> 
 
 export const DAY_COUNT_HORIZON_DAYS = 30;
 
+export type CityShowcaseItem = {
+    id: string;
+    href: string;
+    title: string;
+    emoji: string;
+    coverImage: string;
+    locationName: string;
+    /** T.ex. "Torsdag 17 juli · kl 19.00" — versaliserad dag, klockslag om känt. */
+    when: string;
+};
+
+const SHOWCASE_SIZE = 10;
+/** Färre bildsatta event än så → ingen bildspels-sektion alls för staden
+ *  (samma tröskel-idé som Rekommenderat-karusellen: hellre ingen sektion än
+ *  en tunn en). */
+const MIN_SHOWCASE = 3;
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Bildsatta KOMMANDE event för stadsindexets "bildspel" (/evenemang) — de
+ *  närmaste i tid som faktiskt har en omslagsbild (annars blir det inget
+ *  bildspel att visa). `events` kommer redan tidssorterat från getCityEvents,
+ *  så ordningen bevaras rakt av. */
+function buildShowcase(events: CityEvent[]): CityShowcaseItem[] {
+    const withImage = events.filter(e => !!e.coverImage);
+    if (withImage.length < MIN_SHOWCASE) return [];
+    return withImage.slice(0, SHOWCASE_SIZE).map(e => ({
+        id: e.id,
+        href: `/?event=${encodeURIComponent(e.id)}`,
+        title: e.title,
+        emoji: e.emoji || '📍',
+        coverImage: e.coverImage!,
+        locationName: e.locationName,
+        when: cap(dayLabel(e.time)) + (e.hasSpecificTime ? ` · kl ${clockLabel(e.time)}` : ''),
+    }));
+}
+
 export type CityDayCounts = {
     slug: string;
     name: string;
@@ -270,6 +316,9 @@ export type CityDayCounts = {
     /** 'YYYY-MM-DD' (svensk tid) → antal event den dagen. Bara dagar inom
      *  DAY_COUNT_HORIZON_DAYS tas med — 31 städer × 30 dagar är pyttelitet. */
     byDay: Record<string, number>;
+    /** Bildsatta framtida höjdpunkter — "bildspelet" under staden på
+     *  stadsindexet. Tom array döljer sektionen (för få bildsatta event). */
+    showcase: CityShowcaseItem[];
 };
 
 export async function getCityDayCounts(): Promise<CityDayCounts[]> {
@@ -282,7 +331,11 @@ export async function getCityDayCounts(): Promise<CityDayCounts[]> {
             const k = dayKey(e.time);
             byDay[k] = (byDay[k] ?? 0) + 1;
         }
-        return { slug: city.slug, name: city.name, population: city.population, total: events.length, byDay };
+        return {
+            slug: city.slug, name: city.name, population: city.population,
+            total: events.length, byDay,
+            showcase: buildShowcase(events),
+        };
     }));
 }
 

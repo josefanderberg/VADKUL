@@ -300,6 +300,28 @@
   pointer-events: none;
 }
 
+/* Samma ljussvep men GLESARE — "Evenemang stad för stad"-pillen i karthörnet.
+   8 s-cykel med svepet bara under första ~20 % → skimrar förbi ungefär var 8:e
+   sekund (welcome-CTA:n gör det var 3,2:a). */
+@keyframes city-cta-shimmer {
+  0%        { transform: translateX(-160%) skewX(-18deg); }
+  20%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+.city-cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: city-cta-shimmer 8s ease-in-out 2.5s infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-cta::before { animation: none; }
+}
+
 /* Exit: kortet zoomar "ner i kartan" medan backdropen tonar bort.
    Längden styrs av --welcome-exit-ms som komponenten sätter (håller JS-timeouten
    och animationen i synk från ETT ställe: EXIT_MS i WelcomeOverlay.tsx). */

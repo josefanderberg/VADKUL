@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, pickRecommended, dayLabel } from '../cityData';
-import { EventDayList, RecommendedList, buildEventsJsonLd } from '../EventList';
+import { EventDayList, buildEventsJsonLd } from '../EventList';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -45,8 +45,8 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         .map(cat => ({ cat, count: perKey.get(cat.dataKey) ?? 0 }))
         .filter(c => c.count >= MIN_CATEGORY_EVENTS);
 
-    // Rekommenderat först — unika/påkostade händelser, inte det som råkar
-    // ligga närmast i tid. Dag-för-dag-listan följer under som förut.
+    // Rekommenderat = unika/påkostade händelser (rankingen i cityData), men
+    // visas närmast-i-tid-först och styrs av filterraden överst på sidan.
     const recommended = pickRecommended(events);
 
     const jsonLd = buildEventsJsonLd(`Evenemang i ${city.name}`, events, city.name, `/evenemang/${city.slug}`);
@@ -59,10 +59,10 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger. */}
                 <div className="flex items-center justify-between gap-3">
                     <Link
-                        href="/"
+                        href="/evenemang"
                         className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
                     >
-                        ← Till kartan
+                        ← Tillbaka till Evenemang i Sverige
                     </Link>
                     <Link
                         href="/"
@@ -82,30 +82,29 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
 
-                <RecommendedList events={recommended} cityName={city.name} />
-
-                {/* Kategorierna ligger under Rekommenderat, precis ovanför dag-/
-                    tidschipsen — alla filter samlade på samma ställe. */}
-                {cityCategories.length > 0 && (
-                    <div className="mt-8">
-                        <h2 className="text-sm font-black text-slate-900 mb-2">Populärt i {city.name}</h2>
-                        <div className="flex flex-wrap gap-2">
-                            {cityCategories.map(({ cat, count }) => (
-                                <Link
-                                    key={cat.slug}
-                                    href={`/evenemang/${city.slug}/${cat.slug}`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
-                                >
-                                    <span aria-hidden>{cat.emoji}</span>
-                                    {cat.label}
-                                    <span className="text-slate-400 font-black">{count}</span>
-                                </Link>
-                            ))}
+                {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
+                    i sektionen och styr allt under: Rekommenderat, kategori-
+                    chipsen (children) och dag-för-dag-listan. */}
+                <EventDayList events={events} cityName={city.name} recommended={recommended}>
+                    {cityCategories.length > 0 && (
+                        <div className="mt-8">
+                            <h2 className="text-sm font-black text-slate-900 mb-2">Populärt i {city.name}</h2>
+                            <div className="flex flex-wrap gap-2">
+                                {cityCategories.map(({ cat, count }) => (
+                                    <Link
+                                        key={cat.slug}
+                                        href={`/evenemang/${city.slug}/${cat.slug}`}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
+                                    >
+                                        <span aria-hidden>{cat.emoji}</span>
+                                        {cat.label}
+                                        <span className="text-slate-400 font-black">{count}</span>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-
-                <EventDayList events={events} cityName={city.name} />
+                    )}
+                </EventDayList>
 
                 <div className="mt-10 pt-6 border-t border-slate-200">
                     <h2 className="text-sm font-black text-slate-900 mb-3">Evenemang i fler städer</h2>
