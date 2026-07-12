@@ -1,5 +1,5 @@
 // src/services/eventStatsService.ts
-import { doc, setDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { eventShareSlug } from '../utils/eventShareSlug';
 
@@ -11,7 +11,7 @@ import { eventShareSlug } from '../utils/eventShareSlug';
  * är samma stabila hash som /e/[slug]-delningen använder, så statistiken kan
  * korsrefereras mot delningslänkarna. Rå-id:t sparas som fält för uppslag.
  *
- * Ingen läs-yta i appen — ägaren läser siffrorna i Firestore-konsolen.
+ * Visas som 👁-badge på eventkortet (LinkEventCard) + läsbart i konsolen.
  */
 export function recordEventView(eventId: string): void {
     try {
@@ -23,5 +23,21 @@ export function recordEventView(eventId: string): void {
         });
     } catch {
         /* defensivt — en trasig räknare ska inte fälla kartan */
+    }
+}
+
+/**
+ * Läs visningsantalet för ett event (👁-badgen på kortet). En getDoc per
+ * kortöppning — inga lyssnare, ingen extra egress. Returnerar null vid fel
+ * (offline, rules ej deployade) så badgen döljs i stället för att ljuga "0".
+ */
+export async function getEventViews(eventId: string): Promise<number | null> {
+    try {
+        const snap = await getDoc(doc(db, 'eventStats', eventShareSlug(eventId)));
+        if (!snap.exists()) return 0;
+        const views = snap.data()?.views;
+        return typeof views === 'number' ? views : 0;
+    } catch {
+        return null;
     }
 }
