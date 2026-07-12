@@ -947,9 +947,53 @@ export default function V2Map({
         // prevCount = det som hunnit skickas) — går som en enda setData: kartan har
         // redan innehåll, tomma-kartan-problemet finns inte.
         if (opts?.instant || prevCount > STREAM_PREV_MAX || target.length - prevCount < STREAM_MIN_GROWTH) {
-            bakeIconsFor(map, target);
-            setData(target);
-            arm();
+            if (opts?.instant) {
+                // Stilbyte: användaren har redan sett markörerna — återställ direkt.
+                bakeIconsFor(map, target);
+                setData(target);
+                arm();
+                return;
+            }
+            // Dagbyte/poll/merge: brick-bakningen för en hel NY dags ikoner är
+            // sidans tyngsta huvudtrådsjobb (sekunder i en enda task = INP >500 ms
+            // på mobil — tappen som utlöste dagbytet satt fast bakom den). Baka i
+            // tidsbudgeterade bitar med yields emellan och skicka setData:n när
+            // allt är klart; redan bakade ikoner (poll/merge) passerar på en runda.
+            // Avbryts via streamCleanupRef precis som våg-streamen (ny push/stilbyte).
+            const BAKE_BUDGET_MS = 10;
+            const BAKE_SLICE = 25;
+            let i = 0;
+            let canceled = false;
+            // Yield via MessageChannel — setTimeout stryps i dolda flikar (≥1 s
+            // per hopp) och nästlade timeouts klampas till 4 ms; en message-post
+            // gör varken eller, så bakningen blir klar snabbt även i bakgrunden.
+            const yieldThen = (fn: () => void) => {
+                const ch = new MessageChannel();
+                ch.port1.onmessage = () => fn();
+                ch.port2.postMessage(null);
+            };
+            const bakeStep = () => {
+                streamCleanupRef.current = null;
+                if (canceled || mapRef.current !== map) return;
+                const deadline = performance.now() + BAKE_BUDGET_MS;
+                while (i < target.length && performance.now() < deadline) {
+                    bakeIconsFor(map, target.slice(i, i + BAKE_SLICE));
+                    i += BAKE_SLICE;
+                }
+                if (i < target.length) {
+                    streamCleanupRef.current = () => { canceled = true; };
+                    yieldThen(bakeStep);
+                    return;
+                }
+                // Källan kan ha återskapats under bakningen (stilbyte avbryter via
+                // cleanup, men hängslen ändå) — hämta den levande källan.
+                const liveSrc = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
+                if (!liveSrc) return;
+                liveSrc.setData({ type: 'FeatureCollection', features: target as unknown as GeoJSON.Feature[] });
+                pushedCountRef.current = target.length;
+                arm();
+            };
+            bakeStep();
             return;
         }
         // Strömordning: boostade features (användarskapade — alltid tända, sajtens

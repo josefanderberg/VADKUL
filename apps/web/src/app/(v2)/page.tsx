@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
@@ -646,19 +646,33 @@ export default function HomePage() {
         [selectedCategories, searchFilteredEvents, visibleEvents],
     );
 
+    // Dag-/kategori-/eventval renderar om stora träd (kortet, listorna) och
+    // triggar kartans GL-uppdateringar — som transitions är omrenderingen
+    // avbrytbar och blockerar inte tappen (INP på kartsidan låg >500 ms mobil).
+    const [, startTransition] = useTransition();
+
     const handleToggleCategory = useCallback((id: string) => {
-        setSelectedCategories(prev => {
+        startTransition(() => setSelectedCategories(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
-        });
+        }));
     }, []);
-    const handleClearCategories = useCallback(() => setSelectedCategories(new Set()), []);
+    const handleClearCategories = useCallback(() => startTransition(() => setSelectedCategories(new Set())), []);
 
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
     const handleDayRangeChange = useCallback((offset: number, days: number) => {
-        setDayOffset(offset);
-        setDayRangeDays(days);
+        startTransition(() => {
+            setDayOffset(offset);
+            setDayRangeDays(days);
+        });
+    }, []);
+
+    // Eventval (kartklick, Nästa/Föregående, sök/sparat) — samma transition-
+    // skäl. Nonce-bumpar och panelstängningar förblir urgenta (billiga) så
+    // suppress-refarna hinner armeras innan valet landar.
+    const selectEventSmooth = useCallback((evt: LinkEvent | null) => {
+        startTransition(() => setSelectedEvent(evt));
     }, []);
 
     // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
@@ -720,12 +734,16 @@ export default function HomePage() {
         startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((evt.time.getTime() - startOfToday.getTime()) / 86_400_000);
         prevDayKey.current = `${offset}:1`;
-        setDayOffset(offset);
-        setDayRangeDays(1);
-        setSelectedEvent(evt);
+        // Panelerna stängs urgent (direkt visuell respons); dag+val är den
+        // tunga omrenderingen och körs som transition.
         setSearchQuery('');
         setSavedPanelOpen(false);
         setProfilePanelOpen(false);
+        startTransition(() => {
+            setDayOffset(offset);
+            setDayRangeDays(1);
+            setSelectedEvent(evt);
+        });
     }, []);
 
     // Ta bort från sparade (hjärtat på kortet eller krysset i sparat-listan).
@@ -1032,7 +1050,7 @@ export default function HomePage() {
             <V2MapDynamic
                 events={visibleEvents}
                 selectedEvent={selectedEvent}
-                onSelectEvent={setSelectedEvent}
+                onSelectEvent={selectEventSmooth}
                 savedEventIds={savedEventIds}
                 discardedEventIds={discardedEventIds}
                 cardExpanded={cardExpanded}
@@ -1334,7 +1352,7 @@ export default function HomePage() {
                 eventsLoaded={eventsLoaded}
                 eventsSettled={eventsSettled}
                 selectedEvent={selectedEvent}
-                onSelectEvent={setSelectedEvent}
+                onSelectEvent={selectEventSmooth}
                 onSaveEvent={handleSaveEvent}
                 onDiscardEvent={handleDiscardEvent}
                 discardedEventIds={discardedEventIds}
