@@ -16,6 +16,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
+import { recordEventView } from '@/services/eventStatsService';
 import { X, ImagePlus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
@@ -853,6 +854,20 @@ export default function HomePage() {
         );
         if (!liveSpecificToday) setDayOffset(1);
     }, [dayCountReady, events, dayOffset, dayRangeDays, selectedEvent]);
+
+    // ── Visningsräknare ──────────────────────────────────────────────────────
+    // Ett "visat event" = kortet öppnas, oavsett väg hit: kartklick, sök,
+    // sparat-listan, Nästa-bläddring eller delad länk (/?event= och /e/[slug]
+    // studsar båda in här med kortet öppet). Fire-and-forget till
+    // eventStats/{slug} i Firestore; dedupe per event & session så samma kort
+    // inte räknas om under ett besök.
+    const viewedEventIdsRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        const id = selectedEvent?.id;
+        if (!id || viewedEventIdsRef.current.has(id)) return;
+        viewedEventIdsRef.current.add(id);
+        recordEventView(id);
+    }, [selectedEvent]);
 
     // Index för valt event i sökresultaten (null = inget valt eller inte i listan)
     const currentEventIndex = selectedEvent
