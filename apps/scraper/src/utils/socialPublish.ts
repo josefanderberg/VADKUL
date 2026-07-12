@@ -146,9 +146,16 @@ function resolveCaption(caption: IgCaption, keptIndices: number[]): string {
     return typeof caption === 'function' ? caption(keptIndices) : caption;
 }
 
+/** IG:s hårda tak för slides per karusell. */
+const MAX_CAROUSEL_SLIDES = 10;
+
 /**
- * Publicera till Instagram. 1 bild = single post, 2–10 = karusell.
+ * Publicera till Instagram. 1 bild = single post, 2+ = karusell (max 10 slides).
  * Kräver att bilderna är publika https-URL:er (Meta hämtar dem serverside).
+ *
+ * Skicka gärna FLER än 10 URL:er (rankade, bästa först): karusellen fylls upp
+ * till exakt 10 slides genom att nästa i kön rycker in när IG avvisar en bild
+ * (otillåten aspect ratio, fel filtyp, oåtkomlig URL).
  *
  * `caption` kan vara en byggar-funktion (se IgCaption) för att renumrera texten
  * efter att vi vet vilka bilder som passerade IG:s validering.
@@ -181,27 +188,47 @@ export async function postToInstagram(caption: IgCaption, imageUrls: string[]): 
     }
 
     // Karusell: skapa item-containers → vänta på FINISHED per styck → wrapper.
-    // Vi spårar ursprungsindex hela vägen och bygger bildtexten FÖRST när vi vet
-    // exakt vilka bilder som blir slides (skippar både creation- och FINISHED-fel).
-    const created: { childId: string; idx: number }[] = [];
-    for (const { url, idx } of validPairs.slice(0, 10)) {
+    // Kön kan innehålla fler än 10 (rankade reserver): avvisas en bild — vid
+    // creation ELLER genom att containern aldrig blir FINISHED — rycker nästa
+    // i kön in, så vi landar på exakt 10 slides så länge kön räcker. Vi spårar
+    // ursprungsindex hela vägen och bygger bildtexten FÖRST när vi vet exakt
+    // vilka bilder som blir slides.
+    const queue = [...validPairs];
+    const createItem = async (url: string): Promise<string | null> => {
         const cRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: FB_PAGE_TOKEN }),
         });
         const cData = await cRes.json() as any;
-        if (cData.error) { console.warn(`[IG] Carousel-item misslyckades (${cData.error.message}) — skippar`); continue; }
-        created.push({ childId: cData.id as string, idx });
-    }
-    if (created.length < 2) throw new Error('IG carousel kräver minst 2 giltiga bilder');
-    console.log(`[IG] ${created.length} carousel-items skapade, väntar på FINISHED…`);
+        if (cData.error) { console.warn(`[IG] Carousel-item misslyckades (${cData.error.message}) — tar nästa i kön`); return null; }
+        return cData.id as string;
+    };
 
+    // Första svepet: skapa upp till 10 containers (Meta processar dem parallellt);
+    // creation-fel fylls på ur kön direkt.
+    const pending: { childId: string; idx: number }[] = [];
+    while (pending.length < MAX_CAROUSEL_SLIDES && queue.length > 0) {
+        const { url, idx } = queue.shift()!;
+        const childId = await createItem(url);
+        if (childId) pending.push({ childId, idx });
+    }
+    console.log(`[IG] ${pending.length} carousel-items skapade, väntar på FINISHED…`);
+
+    // Invänta FINISHED; faller en ifrån skapas en ersättare från kön.
     const ready: { childId: string; idx: number }[] = [];
-    for (const c of created) {
+    while (pending.length > 0) {
+        const c = pending.shift()!;
         try { await waitForIgContainerReady(c.childId); ready.push(c); }
-        catch (e) { console.warn(`[IG] Carousel-item ${c.childId} blev inte klart (${(e as Error).message}) — skippar`); }
+        catch (e) { console.warn(`[IG] Carousel-item ${c.childId} blev inte klart (${(e as Error).message}) — tar nästa i kön`); }
+        while (ready.length + pending.length < MAX_CAROUSEL_SLIDES && queue.length > 0) {
+            const { url, idx } = queue.shift()!;
+            const childId = await createItem(url);
+            if (childId) pending.push({ childId, idx });
+        }
     }
     if (ready.length < 2) throw new Error('IG carousel kräver minst 2 giltiga bilder');
+    // Slides i anroparens (rankade) ordning även när en reserv ryckt in mitt i.
+    ready.sort((a, b) => a.idx - b.idx);
     console.log(`[IG] ${ready.length} items klara — skapar carousel-wrapper…`);
 
     const childIds = ready.map((r) => r.childId);

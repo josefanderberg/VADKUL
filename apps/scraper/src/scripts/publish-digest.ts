@@ -1,18 +1,23 @@
 /**
  * publish-digest.ts — Daglig 10-event-lista som lockar engagemang.
  *
- * Flöde (v1):
- *   1. Hämta upp till 10 event för IDAG ur events.db
- *      • En per stad (geografisk spridning)
- *      • Titel ≤ 40 tecken
- *      • Inte hidden, verifierad plats
- *      • Spridning över kategorier
- *   2. Räkna totalt antal event idag (för "minst X event"-headern)
- *   3. Skicka utkast till Telegram + approval-loop
- *      • "byt N"       → byt event N
+ * Flöde (v2 — rankat urval, alltid 10 med bild):
+ *   1. Hämta dagens event ur events.db — bild (http/https-coverImage) KRÄVS,
+ *      titel ≤ 40 tecken, inte hidden, verifierad plats.
+ *   2. Ranka: kvällsevent först (kl 20 högst, 18–21 högt) + bildkvalitet
+ *      (dimensioner probas över nätet — stora bilder och IG-vänlig aspekt
+ *      vinner, oåtkomlig/trasig bild diskvalificerar).
+ *   3. Välj OVERPICK_COUNT (14) i rankad ordning med spridningskvot
+ *      (max 1/stad, max 2/kategori) — plats 11–14 är reserver så
+ *      publiceringen fyller upp till EXAKT 10 slides även om Instagram
+ *      avvisar någon bild.
+ *   4. Räkna totalt antal event idag (för "minst X event"-headern)
+ *   5. Skicka utkast till Telegram + approval-loop
+ *      • "byt N"       → byt event N (rankat bästa ersättare)
  *      • "byt N,M,K"   → byt flera
+ *      • "bild N URL"  → sätt bild för N (DB + Firestore)
  *      • "nytt"        → byt alla
- *      • "klar"        → bekräfta (v1: postar INGENTING — bara loggar)
+ *      • "klar"        → 📲 publicera till Instagram + Facebook
  *      • "stopp"       → avbryt
  *
  * Körning:  npm run digest
@@ -22,6 +27,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import probe from 'probe-image-size';
 import { sendMessage, waitForReply, flushPendingUpdates, isTelegramConfigured } from '../utils/telegram';
 import { setEventImage, isValidImageUrl } from '../utils/setEventImage';
 import { postToInstagram, postToFacebook, isInstagramConfigured, isFacebookConfigured } from '../utils/socialPublish';
@@ -64,6 +70,15 @@ const DB_PATH = process.env.SCRAPER_SQLITE_PATH
 
 const MAX_TITLE_LEN = 40;
 const TARGET_COUNT  = 10;
+// Över-välj: plats 11–14 är reserver som fyller upp karusellen till exakt
+// TARGET_COUNT om Instagram avvisar någon bild (fel aspect ratio o.dyl.).
+const OVERPICK_COUNT = 14;
+
+// Bildprobning (dimensioner hämtas över nätet — bara headerbytes läses).
+const PROBE_TIMEOUT_MS     = 8_000;
+const PROBE_CONCURRENCY    = 6;
+const PROBE_BATCH          = 40;   // proba så här många kandidater åt gången
+const MAX_PROBES_PER_RUN   = 200;  // tak så en dag med många trasiga bilder inte drar iväg
 
 // ── Typdefinitioner ──────────────────────────────────────────────────────────
 
@@ -84,6 +99,8 @@ interface EventRow {
 interface DigestEvent extends EventRow {
     city: string;
     cleanTitle: string;
+    /** Rankingpoäng (kvällstid + bildkvalitet). Sätts av rankByScore. */
+    score?: number;
 }
 
 // De ~150 vanligaste svenska tätorterna. Räcker för att matcha det mesta vi
@@ -132,9 +149,13 @@ const SWEDISH_CITIES: string[] = [
 
 // Bygg en case-insensitive sökning. Sortera efter längd så längre städer
 // (ex "Lidköping") matchas före kortare ("Lid").
+// OBS: inte \b — JS ordgränser är ASCII-baserade, så städer som börjar/slutar
+// på å/ä/ö (Malmö, Umeå, Örebro, Luleå, Växjö…) matchade aldrig med \bstad\b.
+// Lookarounds med svenskt bokstavsspann ger riktiga ordgränser.
 const CITY_INDEX = [...SWEDISH_CITIES].sort((a, b) => b.length - a.length);
+const SWEDISH_LETTER = 'A-Za-zÅÄÖåäöÉé';
 const CITY_REGEX = new RegExp(
-    `\\b(${CITY_INDEX.map(c => c.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\b`,
+    `(?<![${SWEDISH_LETTER}])(${CITY_INDEX.map(c => c.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})(?![${SWEDISH_LETTER}])`,
     'i'
 );
 
@@ -218,6 +239,9 @@ function loadCandidates(db: Database.Database, excludedUrls: Set<string>): Diges
 
     const mapped: DigestEvent[] = rows
         .filter(r => !excludedUrls.has(r.url))
+        // Bild är ett HÅRT krav (beslut: alltid 10 slides med bild) — bildlösa
+        // event ska aldrig ta en plats i listan bara för att droppas vid publicering.
+        .filter(r => !!r.coverImage && /^https?:\/\//i.test(r.coverImage.trim()))
         .map(r => ({ ...r, city: extractCity(r), cleanTitle: cleanTitle(r.title || '') }))
         .filter(e => e.city.length > 0)
         .filter(e => e.cleanTitle.length >= 3 && e.cleanTitle.length <= MAX_TITLE_LEN);
@@ -245,18 +269,105 @@ function countTodayTotal(db: Database.Database): number {
     return row?.n ?? 0;
 }
 
-// ── Välj 10 event (en per stad, kategori-spridning) ──────────────────────────
+// ── Ranking: kvällstid + bildkvalitet ────────────────────────────────────────
 
-function pickTen(candidates: DigestEvent[], n: number = TARGET_COUNT): DigestEvent[] {
-    // Slumpa lite per körning så vi inte ser exakt samma lista igen
-    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+/**
+ * Kvällspoäng (0–60): prioritet 1 i urvalet. Kl 20 är bäst, 18–21 högt,
+ * sen fallande. Midnatt/tidig morgon är oftast heldagsposter utan riktigt
+ * klockslag — lägst.
+ */
+function timeScore(e: DigestEvent): number {
+    const h = new Date(e.time).getHours();
+    if (h === 20) return 60;
+    if (h >= 18 && h <= 21) return 50;
+    if (h === 17 || h === 22) return 30;
+    if (h >= 11 && h <= 16) return 15;
+    return 5;
+}
 
+interface ImageDim { width: number; height: number }
+
+// Cache per URL så approval-loopens omval ("byt N"/"nytt") inte probar om.
+// null = oåtkomlig/trasig → diskvalificerad.
+const probeCache = new Map<string, ImageDim | null>();
+
+/** Proba bilddimensioner (bara headerbytes hämtas). Timeout/fel → null. */
+async function probeImage(url: string): Promise<ImageDim | null> {
+    if (probeCache.has(url)) return probeCache.get(url)!;
+    let result: ImageDim | null = null;
+    try {
+        const r = await Promise.race([
+            // Needle-timeouts stänger sockets; racen är bältet+hängslen så en
+            // hängd probe aldrig blockerar hela urvalet.
+            probe(url, { open_timeout: PROBE_TIMEOUT_MS, response_timeout: PROBE_TIMEOUT_MS, read_timeout: PROBE_TIMEOUT_MS }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('probe timeout')), PROBE_TIMEOUT_MS).unref?.()),
+        ]);
+        if (r && r.width > 0 && r.height > 0) result = { width: r.width, height: r.height };
+    } catch { /* trasig/oåtkomlig bild → null */ }
+    probeCache.set(url, result);
+    return result;
+}
+
+/** Proba en uppsättning URL:er med begränsad parallellism. */
+async function probeAll(urls: string[]): Promise<void> {
+    const queue = [...new Set(urls)];
+    await Promise.all(
+        Array.from({ length: PROBE_CONCURRENCY }, async () => {
+            while (queue.length > 0) {
+                await probeImage(queue.shift()!);
+            }
+        }),
+    );
+}
+
+/**
+ * Bildpoäng (0–40): prioritet 2. Stora bilder (≥800 px breda) och IG-vänlig
+ * aspekt vinner. IG kräver 0.8–1.91:1 för karusell-slides; nära 4:5–1:1 är
+ * bäst. Utanför spannet ⇒ 0 aspektpoäng (IG avvisar troligen sliden).
+ */
+function imageScore(dim: ImageDim): number {
+    const widthPts = (Math.min(dim.width, 1600) / 1600) * 14 + (dim.width >= 800 ? 6 : 0);
+    const a = dim.width / dim.height;
+    let aspectPts = 0;
+    if (a >= 0.8 && a <= 1.0) aspectPts = 20;
+    else if (a > 1.0 && a <= 1.91) aspectPts = 20 - ((a - 1.0) / 0.91) * 12;
+    return widthPts + aspectPts;
+}
+
+/**
+ * Proba bilder i kvällspoängs-ordning (batchvis — vi vill inte proba hundratals
+ * bilder när de bästa räcker) tills minst `minCount` godkända kandidater finns,
+ * kandidaterna är slut eller probe-taket nåtts. Trasig/oåtkomlig bild ⇒ bortfall.
+ * Returnerar kandidaterna sorterade på totalpoäng (kvällstid + bild).
+ */
+async function rankByScore(candidates: DigestEvent[], minCount: number): Promise<DigestEvent[]> {
+    const byTime = [...candidates].sort((a, b) => timeScore(b) - timeScore(a));
+    const ranked: DigestEvent[] = [];
+    let cursor = 0;
+    while (cursor < byTime.length && ranked.length < minCount && cursor < MAX_PROBES_PER_RUN) {
+        const batch = byTime.slice(cursor, cursor + PROBE_BATCH);
+        cursor += batch.length;
+        await probeAll(batch.map(e => e.coverImage!.trim()));
+        for (const e of batch) {
+            const dim = probeCache.get(e.coverImage!.trim());
+            if (!dim) continue;
+            e.score = timeScore(e) + imageScore(dim);
+            ranked.push(e);
+        }
+    }
+    return ranked.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+}
+
+// ── Välj event i rankad ordning (en per stad, kategori-spridning) ────────────
+
+function pickRanked(ranked: DigestEvent[], n: number): DigestEvent[] {
     const usedCities = new Set<string>();
     const categoryCount: Record<string, number> = {};
     const picks: DigestEvent[] = [];
 
     // Pass 1: max 1 per stad + favorisera kategori-spridning (max 2 per kategori i första svepet)
-    for (const e of shuffled) {
+    for (const e of ranked) {
         if (picks.length >= n) break;
         const cityKey = e.city.toLowerCase();
         if (usedCities.has(cityKey)) continue;
@@ -267,9 +378,9 @@ function pickTen(candidates: DigestEvent[], n: number = TARGET_COUNT): DigestEve
         categoryCount[e.category] = catCount + 1;
     }
 
-    // Pass 2: om vi inte fick 10, släpp kategori-cap men håll städer unika
+    // Pass 2: om vi inte fick n, släpp kategori-cap men håll städer unika
     if (picks.length < n) {
-        for (const e of shuffled) {
+        for (const e of ranked) {
             if (picks.length >= n) break;
             const cityKey = e.city.toLowerCase();
             if (usedCities.has(cityKey)) continue;
@@ -278,10 +389,10 @@ function pickTen(candidates: DigestEvent[], n: number = TARGET_COUNT): DigestEve
         }
     }
 
-    // Pass 3: om vi STILL inte fick 10 (för få unika städer idag) — släpp city-cap också
+    // Pass 3: om vi STILL inte fick n (för få unika städer idag) — släpp city-cap också
     if (picks.length < n) {
         const usedUrls = new Set(picks.map(p => p.url));
-        for (const e of shuffled) {
+        for (const e of ranked) {
             if (picks.length >= n) break;
             if (usedUrls.has(e.url)) continue;
             picks.push(e);
@@ -291,7 +402,32 @@ function pickTen(candidates: DigestEvent[], n: number = TARGET_COUNT): DigestEve
     return picks;
 }
 
+/**
+ * Hela urvalet: kandidater → ranking (bildprober) → kvot-plock. Över-rankar
+ * 3× kvoten så stads-/kategorispridningen har spelrum; räcker inte det
+ * (kvoterna åt upp poolen) rankas allt som finns i ett andra försök.
+ */
+async function selectDigest(
+    db: Database.Database,
+    excludedUrls: Set<string>,
+    n: number = OVERPICK_COUNT,
+): Promise<DigestEvent[]> {
+    const candidates = loadCandidates(db, excludedUrls);
+    let picks = pickRanked(await rankByScore(candidates, n * 3), n);
+    if (picks.length < n && candidates.length > n) {
+        picks = pickRanked(await rankByScore(candidates, Infinity), n);
+    }
+    return picks;
+}
+
 // ── Bygg Telegram-text ───────────────────────────────────────────────────────
+
+/** "kl 20:00" för preview-raden — utelämnas för midnattstider (heldag/utan klockslag). */
+function previewTime(e: DigestEvent): string {
+    const d = new Date(e.time);
+    if (d.getHours() === 0 && d.getMinutes() === 0) return '';
+    return ` · kl ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function buildDigestText(picks: DigestEvent[], totalToday: number): string {
     const todayStr = new Date().toLocaleDateString('sv-SE', {
@@ -300,20 +436,31 @@ function buildDigestText(picks: DigestEvent[], totalToday: number): string {
 
     const header = `📋 <b>${todayStr}</b>\nIdag händer det minst <b>${totalToday}</b> unika event i Sverige.\n`;
 
-    const lines = picks.map((e, i) => {
+    const row = (e: DigestEvent, i: number): string => {
         const num = String(i + 1).padStart(2, ' ');
-        const head = ` ${num}. <b>${escapeHtml(e.city)}</b> — ${escapeHtml(e.cleanTitle)}`;
+        const head = ` ${num}. <b>${escapeHtml(e.city)}</b> — ${escapeHtml(e.cleanTitle)}${previewTime(e)}`;
         // Bildrad: klickbar länk Josef kan öppna/spara för Instagram. Saknas bild
-        // → påminn om hur man sätter en.
+        // (kan bara hända om en manuell bild tagits bort) → påminn om kommandot.
         const img = e.coverImage && e.coverImage.trim()
             ? `\n      🖼 <a href="${escapeHtml(e.coverImage.trim())}">bild</a>`
             : `\n      🖼 <i>saknas — skriv</i> <code>bild ${i + 1} &lt;URL&gt;</code>`;
         return head + img;
-    }).join('\n');
+    };
+
+    // Rankad ordning: 1–10 är dagens lista, resten reserver som rycker in om
+    // Instagram avvisar någon slide vid publiceringen.
+    const main    = picks.slice(0, TARGET_COUNT);
+    const reserve = picks.slice(TARGET_COUNT);
+
+    const lines = main.map(row).join('\n');
+    const reserveBlock = reserve.length > 0
+        ? `\n\n🎟 <b>Reserver</b> (fyller upp till ${TARGET_COUNT} om IG nobbar en bild):\n`
+          + reserve.map((e, i) => row(e, TARGET_COUNT + i)).join('\n')
+        : '';
 
     const footer = '\n\n<i>Vilket hade du helst velat gå på?</i>';
 
-    return `${header}\n${lines}${footer}`;
+    return `${header}\n${lines}${reserveBlock}${footer}`;
 }
 
 function escapeHtml(s: string): string {
@@ -346,8 +493,9 @@ async function publishDigest(state: DigestState): Promise<void> {
         return;
     }
 
-    // Bara event med en publik bild-URL kan bli slides. Behåll listans ordning.
-    const imaged = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim())).slice(0, 10);
+    // Alla picks (inkl. reserverna) skickas med — postToInstagram fyller upp
+    // till TARGET_COUNT slides och tar nästa i rankingen om IG avvisar någon.
+    const imaged = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim()));
     const imageUrls = imaged.map(p => p.coverImage!.trim());
 
     if (imageUrls.length === 0) {
@@ -358,18 +506,19 @@ async function publishDigest(state: DigestState): Promise<void> {
         return;
     }
 
-    const skipped = state.picks.length - imaged.length;
+    const mainCount    = Math.min(imaged.length, TARGET_COUNT);
+    const reserveCount = imaged.length - mainCount;
     await sendMessage(
-        `🚀 Publicerar ${imaged.length} event` +
-        (skipped > 0 ? ` (${skipped} hoppas över — saknar bild)` : '') +
+        `🚀 Publicerar ${mainCount} event` +
+        (reserveCount > 0 ? ` (+${reserveCount} reserver om IG nobbar någon bild)` : '') +
         ` till Instagram${isFacebookConfigured() ? ' + Facebook' : ''}…`
     );
 
     // Bildtexten byggs FÖRST när IG bekräftat vilka bilder som blev slides, så
     // numreringen matchar karusellen 1:1 (IG avvisar t.ex. otillåten aspect
-    // ratio). keptIdx pekar in i `imaged`. Vi fångar det bekräftade setet i en
-    // closure så Facebook kan posta exakt samma event + text.
-    let publishedEvents: DigestEvent[] = imaged;
+    // ratio — då rycker nästa reserv in). keptIdx pekar in i `imaged`. Vi fångar
+    // det bekräftade setet i en closure så Facebook kan posta samma event + text.
+    let publishedEvents: DigestEvent[] = imaged.slice(0, TARGET_COUNT);
     let sharedCaption: string | null = null;
     const buildCaption = (keptIdx: number[]): string => {
         publishedEvents = keptIdx.map(i => imaged[i]);
@@ -383,10 +532,11 @@ async function publishDigest(state: DigestState): Promise<void> {
         try {
             const igId = await postToInstagram(buildCaption, imageUrls);
             igOk = true;
-            const dropped = imaged.length - publishedEvents.length;
+            // Hur många reserver (plats > TARGET_COUNT i rankingen) ryckte in?
+            const usedReserves = publishedEvents.filter(p => imaged.indexOf(p) >= TARGET_COUNT).length;
             await sendMessage(
-                `✅ Instagram publicerat! (id ${escapeHtml(igId)})` +
-                (dropped > 0 ? `\n♻️ ${dropped} bild(er) föll bort (fel format/otillåten ratio) — listan renumrerad till ${publishedEvents.length}.` : '')
+                `✅ Instagram publicerat! (id ${escapeHtml(igId)}) — ${publishedEvents.length} slides.` +
+                (usedReserves > 0 ? `\n♻️ IG nobbade ${usedReserves} bild(er) — ${usedReserves} reserv(er) ryckte in, listan renumrerad.` : '')
             );
         } catch (e) {
             await sendMessage(`⚠️ Instagram misslyckades: ${escapeHtml((e as Error).message)}`);
@@ -394,10 +544,10 @@ async function publishDigest(state: DigestState): Promise<void> {
     }
     if (isFacebookConfigured()) {
         // Rikta FB mot samma bilder + text som IG faktiskt publicerade. Kördes
-        // inte IG (ej konfigurerat/fel) faller vi tillbaka på hela imaged-listan.
-        const fbEvents = igOk ? publishedEvents : imaged;
+        // inte IG (ej konfigurerat/fel) faller vi tillbaka på topp 10 i rankingen.
+        const fbEvents = igOk ? publishedEvents : imaged.slice(0, TARGET_COUNT);
         const fbUrls = fbEvents.map(p => p.coverImage!.trim());
-        const fbCaption = sharedCaption ?? buildCaptionPlain(imaged, state.totalToday);
+        const fbCaption = sharedCaption ?? buildCaptionPlain(fbEvents, state.totalToday);
         try {
             await postToFacebook(fbCaption, fbUrls);
             await sendMessage('✅ Facebook publicerat!');
@@ -407,15 +557,15 @@ async function publishDigest(state: DigestState): Promise<void> {
     }
 
     console.log(`[Digest] Publicerat (IG=${igOk}):`);
-    console.log(sharedCaption ?? buildCaptionPlain(imaged, state.totalToday));
+    console.log(sharedCaption ?? buildCaptionPlain(imaged.slice(0, TARGET_COUNT), state.totalToday));
 }
 
 const HELP = `
 — Svara:
-  <code>byt 5</code>          = byt event #5
-  <code>byt 3,7,10</code>     = byt flera
+  <code>byt 5</code>          = byt event #5 (även reserverna 11–${OVERPICK_COUNT})
+  <code>byt 3,7,12</code>     = byt flera
   <code>bild 5 &lt;URL&gt;</code>   = sätt bild för #5 (DB + Firestore)
-  <code>nytt</code>           = byt alla 10
+  <code>nytt</code>           = byt alla
   <code>klar</code>           = 📲 PUBLICERA till Instagram + Facebook
   <code>stopp</code>          = avbryt`;
 
@@ -437,7 +587,7 @@ function parseSetImage(cmd: string): { slot: number; url: string } | null {
     const m = cmd.match(/^(?:bild|setimage|sätt\s*bild)\s+(\d+)\s+(\S+)$/i);
     if (!m) return null;
     const slot = parseInt(m[1], 10);
-    if (isNaN(slot) || slot < 1 || slot > TARGET_COUNT) return null;
+    if (isNaN(slot) || slot < 1 || slot > OVERPICK_COUNT) return null;
     return { slot, url: m[2] };
 }
 
@@ -446,17 +596,17 @@ function parseSwapIndices(cmd: string): number[] | null {
     const m = cmd.match(/^(?:byt|swap|replace)\s+([\d,\s]+)$/i);
     if (!m) return null;
     const digits = m[1].split(/[,\s]+/).map(s => parseInt(s, 10)).filter(n => !isNaN(n));
-    const valid = digits.filter(n => n >= 1 && n <= TARGET_COUNT);
+    const valid = digits.filter(n => n >= 1 && n <= OVERPICK_COUNT);
     return [...new Set(valid)].sort((a, b) => a - b);
 }
 
 async function runApprovalLoop(db: Database.Database): Promise<void> {
     const totalToday = countTodayTotal(db);
     const excludedUrls = new Set<string>();
-    let picks = pickTen(loadCandidates(db, excludedUrls));
+    const picks = await selectDigest(db, excludedUrls);
 
     if (picks.length === 0) {
-        await sendMessage('🤷 Inga event idag som matchar filtren (titel ≤ 40 tecken, verifierad plats, en per stad).');
+        await sendMessage('🤷 Inga event idag som matchar filtren (fungerande bild, titel ≤ 40 tecken, verifierad plats, en per stad).');
         return;
     }
 
@@ -518,10 +668,10 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
         }
 
         if (['nytt', 'allt', 'omstart'].includes(cmd)) {
-            await sendMessage('🔄 Byter alla 10…');
+            await sendMessage('🔄 Byter alla…');
             // Lägg nuvarande i excluded och kör om
             for (const e of state.picks) state.excludedUrls.add(e.url);
-            const fresh = pickTen(loadCandidates(db, state.excludedUrls));
+            const fresh = await selectDigest(db, state.excludedUrls);
             if (fresh.length === 0) {
                 await sendMessage('🚫 Inga fler event att välja mellan — behåller nuvarande.');
                 await sendDraft(state);
@@ -532,23 +682,26 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
             continue;
         }
 
-        const swapIdx = parseSwapIndices(cmd);
-        if (swapIdx && swapIdx.length > 0) {
-            // Lägg de valda i excluded, ladda kandidater, fyll på
+        const swapIdx = (parseSwapIndices(cmd) ?? []).filter(n => n <= state.picks.length);
+        if (swapIdx.length > 0) {
+            // Lägg de valda i excluded, ranka kandidaterna och fyll på med de
+            // poängbästa ersättarna (samma kvällstid+bild-ranking som urvalet).
             const targetSet = new Set(swapIdx);
             for (let i = 0; i < state.picks.length; i++) {
                 if (targetSet.has(i + 1)) state.excludedUrls.add(state.picks[i].url);
             }
-            const candidates = loadCandidates(db, state.excludedUrls);
+            const ranked = await rankByScore(
+                loadCandidates(db, state.excludedUrls),
+                swapIdx.length * 3 + 10,
+            );
             const usedCities = new Set(
                 state.picks
                     .filter((_, i) => !targetSet.has(i + 1))
                     .map(e => e.city.toLowerCase())
             );
             const replacements: (DigestEvent | null)[] = swapIdx.map(() => null);
-            const shuffled = [...candidates].sort(() => Math.random() - 0.5);
             let rIdx = 0;
-            for (const cand of shuffled) {
+            for (const cand of ranked) {
                 if (rIdx >= swapIdx.length) break;
                 const cityKey = cand.city.toLowerCase();
                 if (usedCities.has(cityKey)) continue;
@@ -589,10 +742,10 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
  */
 async function runAuto(db: Database.Database): Promise<void> {
     const totalToday = countTodayTotal(db);
-    const picks = pickTen(loadCandidates(db, new Set<string>()));
+    const picks = await selectDigest(db, new Set<string>());
 
     if (picks.length === 0) {
-        await sendMessage('🤷 <b>Dagens 10-lista</b> — inga event idag som matchar filtren (titel ≤ 40 tecken, verifierad plats, en per stad). Inget publiceras.');
+        await sendMessage('🤷 <b>Dagens 10-lista</b> — inga event idag som matchar filtren (fungerande bild, titel ≤ 40 tecken, verifierad plats, en per stad). Inget publiceras.');
         return;
     }
 
@@ -608,15 +761,19 @@ async function runAuto(db: Database.Database): Promise<void> {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-/** Smoke-test: bygg listan och skriv ut den (med bildrader) utan att röra Telegram. */
-function runDry(db: Database.Database): void {
+/** Smoke-test: bygg listan (inkl. bildprober) och skriv ut den utan att röra Telegram. */
+async function runDry(db: Database.Database): Promise<void> {
     const totalToday = countTodayTotal(db);
-    const picks = pickTen(loadCandidates(db, new Set<string>()));
+    const picks = await selectDigest(db, new Set<string>());
     if (picks.length === 0) {
         console.log('🤷 Inga event idag som matchar filtren.');
         return;
     }
     console.log(buildDigestText(picks, totalToday));
+    for (const [i, e] of picks.entries()) {
+        const dim = probeCache.get(e.coverImage!.trim());
+        console.log(`   #${i + 1} poäng=${e.score?.toFixed(1)} bild=${dim ? `${dim.width}×${dim.height}` : '?'} ${e.city} — ${e.cleanTitle}`);
+    }
     console.log(HELP);
 }
 
@@ -635,7 +792,7 @@ async function main() {
 
     if (dry) {
         const db = new Database(DB_PATH, { readonly: true });
-        try { runDry(db); } finally { db.close(); }
+        try { await runDry(db); } finally { db.close(); }
         return;
     }
 
