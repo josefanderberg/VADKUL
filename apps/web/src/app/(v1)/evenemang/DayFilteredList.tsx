@@ -23,10 +23,14 @@ import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 //  - HJÄRTAN: varje rad har en spara-knapp längst till höger. Samma
 //    localStorage-nyckel som kartan ('vadkul_saved_events') — sparade event
 //    dyker upp i kartans Sparat-panel.
-// Servern (EventDayList) har redan trimmat urvalet och förbyggt raderna till
-// rena strängar. Default-filtret är 'Idag', men själva dag-filtreringen slår
-// till först EFTER mount (nowTs) — SSR-HTML:en visar hela listan (deterministisk
-// + crawlbar) och hydreringen matchar; pre-mount behandlas perioden som 'Alla'.
+// Servern (EventDayList) har förbyggt raderna till rena strängar; varje listad
+// dag innehåller ALLA sina event. Default-filtret är 'Alla', och dag-
+// filtreringen slår till först EFTER mount (nowTs) — SSR-HTML:en visar hela
+// listan (deterministisk + crawlbar) och hydreringen matchar.
+//  - DAG-FÖR-DAG-AVTÄCKNING: efter mount renderas dagarna en i taget — nästa
+//    dag monteras först när man scrollar nära listans slut (sentinel +
+//    scroll-lyssnare). Pre-mount renderas alla dagar (crawlbart); filterbyte
+//    nollställer avtäckningen.
 
 export type ListedEvent = {
     id: string;
@@ -60,10 +64,7 @@ export type ListedDay = {
     /** Chip-etikett, t.ex. "Lör 11/7". */
     short: string;
     events: ListedEvent[];
-    /** Antal ytterligare event samma dag som inte fick plats i listan. */
-    more: number;
-    /** Antal event per starttimme 0–23 för HELA dagen (alla event, inte bara
-     *  de listade) — histogrammet ska visa den sanna fördelningen. */
+    /** Antal event per starttimme 0–23 för dagen — histogrammets staplar. */
     hourCounts: number[];
 };
 
@@ -307,7 +308,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     /** Renderas mellan Rekommenderat och daglistan (t.ex. kategorichips). */
     children?: ReactNode;
 }) {
-    const [sel, setSel] = useState<Sel>({ kind: 'period', period: 'today' });
+    const [sel, setSel] = useState<Sel>({ kind: 'period', period: 'all' });
     // Valda timstaplar. Behålls när man byter dag — "kvällsfiltret" följer med.
     const [hours, setHours] = useState<number[]>([]);
     // Sparade event (hjärtan) + klockan. Båda sätts efter mount så att
@@ -316,6 +317,10 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     const [nowTs, setNowTs] = useState(0);
     // Dagar vars "har redan varit"-sektion är uppfälld.
     const [openPast, setOpenPast] = useState<Set<string>>(new Set());
+    // Dag-för-dag-avtäckning (se filhuvudet): antal dagar som renderats.
+    // Gäller först efter mount (nowTs) — pre-mount renderas alla dagar.
+    const [revealed, setRevealed] = useState(1);
+    const sentinelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         try {
@@ -346,7 +351,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     // annars skiljer sig byggdagens "idag" från besökarens och hydreringen
     // spricker (+ server-HTML:en skulle bara innehålla byggdagens event, inte
     // hela den crawlbara listan). Före mount (nowTs === 0) behandlas perioden
-    // som 'Alla' (null); direkt efter mount slår default-filtret Idag till.
+    // som 'Alla' (null) — vilket med default 'Alla' är samma urval efter mount.
     const periodReady = nowTs !== 0;
     const dayKeys = sel.kind === 'period' ? (periodReady ? periodKeys(sel.period) : null)
         : sel.kind === 'day' ? [sel.key]
@@ -365,6 +370,44 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
             return { ...d, upcoming: rows.filter(e => !isPast(e)), past: rows.filter(isPast) };
         })
         .filter(d => d.upcoming.length > 0 || d.past.length > 0);
+
+    // Dag-för-dag-avtäckningen: pre-mount (nowTs 0) renderas ALLT — serverns
+    // HTML ska vara hel och crawlbar. Efter mount renderas `revealed` dagar;
+    // sentineln under listan fyller på nästa dag när den scrollas inom räckhåll.
+    const dayLimit = nowTs === 0 ? shownDays.length : revealed;
+    const renderDays = shownDays.slice(0, dayLimit);
+    const hasMoreDays = renderDays.length < shownDays.length;
+
+    // Filterbyte → börja om från första dagen i det nya urvalet.
+    useEffect(() => { setRevealed(1); }, [sel, hours]);
+
+    // Nästa dag monteras när sentineln ligger OVANFÖR laddlinjen (viewport-
+    // botten + 700 px) — "ovanför" i stället för "inom" så att en snabb
+    // scroll förbi (t.ex. rakt till sidfoten, ~1700 px under sentineln) inte
+    // parkerar den utanför räckhåll och låser listan (IntersectionObserver
+    // med rootMargin gjorde precis det). `done` = max EN dag per varv;
+    // effekten körs om efter varje reveal och check():en direkt vid setup
+    // ger kaskaden som fyller skärmen utan scroll. Utan fler dagar renderas
+    // ingen sentinel (el null) och effekten är passiv.
+    useEffect(() => {
+        if (!hasMoreDays) return;
+        let done = false;
+        const check = () => {
+            const el = sentinelRef.current;
+            if (!el || done) return;
+            if (el.getBoundingClientRect().top < window.innerHeight + 700) {
+                done = true;
+                setRevealed(r => r + 1);
+            }
+        };
+        check();
+        window.addEventListener('scroll', check, { passive: true });
+        window.addEventListener('resize', check);
+        return () => {
+            window.removeEventListener('scroll', check);
+            window.removeEventListener('resize', check);
+        };
+    }, [revealed, hasMoreDays, sel, hours]);
 
     // Rekommenderat följer samma filter; passerade kort försvinner helt.
     const shownRecs = recs.filter(r =>
@@ -400,11 +443,6 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
     const emptyPhrase = sel.kind === 'nextHour'
         ? 'den närmaste timmen'
         : `${hours.length ? `kl ${hourRanges(hours)} ` : ''}${selDayLabel ?? unit}`;
-    // Sant antal event vid timfilter (hourCounts) — så tomläget kan säga
-    // "de finns, men ryms inte i listan" i stället för att se tomt ut.
-    const hiddenTotal = hours.length && sel.kind !== 'nextHour'
-        ? visDays.reduce((s, d) => s + hours.reduce((x, h) => x + (d.hourCounts[h] ?? 0), 0), 0)
-        : 0;
 
     return (
         <div className="mt-7">
@@ -550,13 +588,7 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
             {children}
 
             <div className="mt-6 flex flex-col gap-8">
-                {shownDays.map(day => {
-                    // Sant antal ytterligare event: vid timfilter vet vi dagens
-                    // totaler per timme; "Nästa timmen" kan inte veta (byggtid).
-                    const listedCount = day.upcoming.length + day.past.length;
-                    const extra = hours.length && sel.kind !== 'nextHour'
-                        ? Math.max(0, hours.reduce((s, h) => s + (day.hourCounts[h] ?? 0), 0) - listedCount)
-                        : sel.kind === 'nextHour' ? 0 : day.more;
+                {renderDays.map(day => {
                     const pastOpen = openPast.has(day.key);
                     return (
                         <section key={day.key}>
@@ -581,34 +613,25 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
                                     <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
                                 ))}
                             </ul>
-                            {extra > 0 && (
-                                <p className="mt-2 text-xs font-bold text-slate-400">
-                                    + {extra} till {hours.length ? `kl ${hourRanges(hours)} ` : ''}denna dag —{' '}
-                                    <Link href="/" className="text-[#006AA7]">se dem på kartan</Link>
-                                </p>
-                            )}
                         </section>
                     );
                 })}
             </div>
 
+            {/* Sentinel för dag-för-dag-avtäckningen — renderas bara när fler
+                dagar väntar (aldrig i SSR:en, där allt redan är utskrivet). */}
+            {hasMoreDays && <div ref={sentinelRef} aria-hidden className="h-px" />}
+
             {shownDays.length === 0 && (
                 <p className="mt-6 text-sm font-bold text-slate-500">
-                    {hiddenTotal > 0 ? (
-                        <>
-                            {hiddenTotal} event {emptyPhrase} i {cityName} — de ryms inte i listan här.{' '}
-                            <Link href="/" className="text-[#006AA7]">Se dem på kartan</Link>
-                        </>
-                    ) : (
-                        <>
-                            Inga listade event {emptyPhrase} i {cityName}.{' '}
-                            <Link href="/" className="text-[#006AA7]">Se hela utbudet på kartan</Link>
-                        </>
-                    )}
+                    Inga listade event {emptyPhrase} i {cityName}.{' '}
+                    <Link href="/" className="text-[#006AA7]">Se hela utbudet på kartan</Link>
                 </p>
             )}
 
-            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && restCount > 0 && (
+            {/* Visas först när alla dagar är avtäckta — annars ser det ut som
+                att listan tar slut fast sentineln fyller på fler dagar. */}
+            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && !hasMoreDays && restCount > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500">
                     …och {restCount} evenemang längre fram.{' '}
                     <Link href="/" className="text-[#006AA7]">Utforska hela utbudet på kartan</Link>

@@ -7,11 +7,11 @@ import { normalizePriceLabel } from '@/utils/priceLabel';
 // + schema.org-markup. Sidorna ska se ut och bete sig identiskt — bara
 // urvalet av event skiljer.
 
-// Hur många dagar som listas dag-för-dag, och max antal listade event totalt.
-// Resten sammanfattas med en "se kartan"-rad — sidan ska vara snabb och läsbar,
-// kartan är alltid den fulla vyn.
+// Hur många dagar som listas dag-för-dag. Varje listad dag tar med ALLA sina
+// event — klienten avtäcker dagarna en i taget vid scroll (DayFilteredList),
+// så allt renderas ändå inte på en gång. Event bortom horisonten sammanfattas
+// med "…längre fram"-raden; kartan är alltid den fulla vyn.
 const DAYS_LISTED = 14;
-const MAX_LISTED = 150;
 
 export const mapHref = (id: string) => `/?event=${encodeURIComponent(id)}`;
 
@@ -70,40 +70,11 @@ function buildRecRows(recommended: CityEvent[], cityName: string): ListedRec[] {
         }));
 }
 
-/** Sprid dagens urval över starttimmarna (round-robin per timme) i stället
- *  för "första N" — annars representeras bara morgonen i stora städer och
- *  timfiltrets staplar pekar på rader som inte finns i listan. Visningen
- *  tidssorteras efteråt; event utan klockslag är en egen hink (-1). */
-function pickSpread(list: CityEvent[], n: number): CityEvent[] {
-    if (list.length <= n) return list;
-    const buckets = new Map<number, CityEvent[]>();
-    for (const e of list) {
-        const h = e.hasSpecificTime ? hourOf(e.time) : -1;
-        const b = buckets.get(h);
-        if (b) b.push(e); else buckets.set(h, [e]);
-    }
-    const order = [...buckets.keys()].sort((a, b) => a - b);
-    const picked: CityEvent[] = [];
-    for (let round = 0; picked.length < n; round++) {
-        let any = false;
-        for (const h of order) {
-            const b = buckets.get(h)!;
-            if (round < b.length) {
-                picked.push(b[round]);
-                any = true;
-                if (picked.length >= n) break;
-            }
-        }
-        if (!any) break;
-    }
-    return picked.sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
-}
-
 /** Hela eventsektionen: filterrad överst (Idag/Imorgon/I helgen + timstaplar),
  *  därefter Rekommenderat (om `recommended` skickas med), `children` (t.ex.
- *  kategorichips) och den dag-grupperade listan med "se kartan"-rader för
- *  resten. Servern trimmar urvalet och förbygger raderna till rena strängar
- *  här — cityData (fs) kan inte importeras från klientkomponenter. */
+ *  kategorichips) och den dag-grupperade listan. Servern förbygger raderna
+ *  till rena strängar här — cityData (fs) kan inte importeras från
+ *  klientkomponenter. */
 export function EventDayList({ events, cityName, recommended = [], children }: {
     events: CityEvent[];
     cityName: string;
@@ -117,34 +88,21 @@ export function EventDayList({ events, cityName, recommended = [], children }: {
         if (list) list.push(e); else byDay.set(k, [e]);
     }
     const days = [...byDay.entries()].slice(0, DAYS_LISTED);
-    // Fördela MAX_LISTED rättvist över dagarna: basranson per dag först, sen
-    // resterande platser i tidsordning. Utan detta äter dag 1–2 hela budgeten
-    // i stora städer och Idag/Imorgon/I helgen-filtret får tomma senare dagar.
-    const base = Math.max(1, Math.floor(MAX_LISTED / Math.max(1, days.length)));
-    const takes = days.map(([, list]) => Math.min(list.length, base));
-    let left = MAX_LISTED - takes.reduce((a, b) => a + b, 0);
-    for (let i = 0; i < days.length && left > 0; i++) {
-        const extra = Math.min(days[i][1].length - takes[i], left);
-        takes[i] += extra;
-        left -= extra;
-    }
     let listed = 0;
     const shownDays: ListedDay[] = days
-        .map(([k, list], i) => {
-            // Bild först inom dagen: rader med omslagsbild överst, bildlösa
-            // under — tidsordningen (från pickSpread) bevaras inbördes.
-            const spread = pickSpread(list, takes[i]);
-            const shown = [...spread.filter(e => !!e.coverImage), ...spread.filter(e => !e.coverImage)];
+        .map(([k, list]) => {
+            // ALLA dagens event listas (ingen budget) — bild först inom dagen:
+            // rader med omslagsbild överst, bildlösa under; tidsordningen
+            // (listan kommer tidssorterad) bevaras inbördes.
+            const shown = [...list.filter(e => !!e.coverImage), ...list.filter(e => !e.coverImage)];
             listed += shown.length;
-            // Sann timfördelning för HELA dagen (inte bara de listade raderna)
-            // — klientens stapeldiagram ska visa dagens verkliga utbud.
+            // Timfördelning för dagen — klientens stapeldiagram.
             const hourCounts = Array(24).fill(0) as number[];
             for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
             return {
                 key: k,
                 label: dayLabel(list[0].time),
                 short: shortDayLabel(list[0].time),
-                more: list.length - shown.length,
                 hourCounts,
                 events: shown.map(e => ({
                     id: e.id,
