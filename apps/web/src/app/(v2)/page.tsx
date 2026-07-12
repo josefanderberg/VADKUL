@@ -905,12 +905,14 @@ export default function HomePage() {
                 bakgrund + z-index över kartkontrollerna. */}
             <h1 className="sr-only">Hitta evenemang och saker att göra nära dig — hela Sverige på en karta</h1>
             {/* Blå pill i hörnet — större/tydligare CTA (användaren ville synas
-                mer) med ett glest ljussvep (.city-cta, se globals.css). Täcker
-                fortfarande attributions-i:et: den är nu större än förut, så
-                spannet från hörnet växer bara → i:et förblir dolt. */}
+                mer) med ett glest ljussvep (.city-cta, se globals.css). Lika hög
+                som dagväljar-chippen (h-10, ägarbeslut 2026-07-12 — sajtens enda
+                stad-för-stad-länk, en navbar-dubblett provades och togs bort).
+                Täcker fortfarande attributions-i:et: den är nu större än förut,
+                så spannet från hörnet växer bara → i:et förblir dolt. */}
             <a
                 href="/evenemang"
-                className="city-cta absolute bottom-2 right-2 z-[40] overflow-hidden rounded-full bg-[#006AA7] px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-[#005590] hover:shadow-xl transition-colors"
+                className="city-cta absolute bottom-2 right-2 z-[40] overflow-hidden rounded-full bg-[#006AA7] px-4 h-10 flex items-center text-xs font-black text-white shadow-lg hover:bg-[#005590] hover:shadow-xl transition-colors"
             >
                 Evenemang stad för stad
             </a>
