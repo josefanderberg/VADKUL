@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { cleanDescription } from './text';
 
 describe('cleanDescription', () => {
-    it('strippar HTML-taggar och entities, kollapsar whitespace', () => {
+    it('strippar HTML-taggar, avkodar entities, kollapsar whitespace', () => {
+        // &amp; ska AVKODAS till &, inte blankas (encoding-fixen 2026-07-09).
         expect(cleanDescription('<p>Hej &amp; välkommen</p>\n\n  <b>alla</b>'))
-            .toBe('Hej välkommen alla');
+            .toBe('Hej & välkommen alla');
     });
 
     it('tar bort WP-excerpt-rester', () => {

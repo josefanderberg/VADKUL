@@ -285,6 +285,16 @@ function timeScore(e: DigestEvent): number {
     return 5;
 }
 
+/** Bild i vår egen Firebase Storage? Metas servrar kan ALLTID hämta dem,
+ *  medan externa URL:er är det som brukar avvisas (fel format, hotlink-skydd,
+ *  döda länkar). Ger en fetchbarhets-bonus i rankningen (Mac Mini-insikt). */
+function isStorageImage(url: string | null | undefined): boolean {
+    return !!url && /storage\.googleapis\.com|firebasestorage/i.test(url);
+}
+// Poäng-bonus för Storage-bild — väger ungefär som ett steg i kvällstid, så en
+// säkert hämtbar bild kan gå före en marginellt bättre men riskabel extern bild.
+const STORAGE_BONUS = 12;
+
 interface ImageDim { width: number; height: number }
 
 // Cache per URL så approval-loopens omval ("byt N"/"nytt") inte probar om.
@@ -352,7 +362,7 @@ async function rankByScore(candidates: DigestEvent[], minCount: number): Promise
         for (const e of batch) {
             const dim = probeCache.get(e.coverImage!.trim());
             if (!dim) continue;
-            e.score = timeScore(e) + imageScore(dim);
+            e.score = timeScore(e) + imageScore(dim) + (isStorageImage(e.coverImage) ? STORAGE_BONUS : 0);
             ranked.push(e);
         }
     }
@@ -483,9 +493,12 @@ function buildCaptionPlain(picks: DigestEvent[], totalToday: number): string {
 }
 
 /**
- * Publicera listan till Instagram (karusell) + Facebook. Bara event med publik
- * bild kan bli carousel-slides, så vi filtrerar och renumrerar bildtexten så
- * den matchar slidesen. IG kräver minst 1 bild (≥2 = karusell).
+ * Publicera listan till Instagram (karusell) + Facebook. Kön = hela den rankade
+ * över-listan (state.picks, upp till OVERPICK_COUNT — alla har bild via
+ * loadCandidates): de TARGET_COUNT bästa blir slides, resten är reserver som
+ * fyller på när Meta avvisar en bild. Varje plattform bygger sin EGEN bildtext
+ * från de bilder som FAKTISKT kom med (keptIdx → 1:1-numrering) och publicerar
+ * OBEROENDE av den andra — fallerar IG postar FB ändå (Mac Mini-strukturen).
  */
 async function publishDigest(state: DigestState): Promise<void> {
     if (!isInstagramConfigured() && !isFacebookConfigured()) {
@@ -493,71 +506,65 @@ async function publishDigest(state: DigestState): Promise<void> {
         return;
     }
 
-    // Alla picks (inkl. reserverna) skickas med — postToInstagram fyller upp
-    // till TARGET_COUNT slides och tar nästa i rankingen om IG avvisar någon.
-    const imaged = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim()));
-    const imageUrls = imaged.map(p => p.coverImage!.trim());
+    // Hela den rankade listan är kön: topp-TARGET_COUNT + reserver, alla med bild.
+    const queue = state.picks.filter(p => p.coverImage && /^https?:\/\//.test(p.coverImage.trim()));
+    const imageUrls = queue.map(p => p.coverImage!.trim());
 
     if (imageUrls.length === 0) {
         await sendMessage(
-            '🚫 Kan inte publicera till Instagram — inget av eventen har en bild.\n' +
+            '🚫 Kan inte publicera — inget av eventen har en bild.\n' +
             'Sätt bilder med <code>bild N &lt;URL&gt;</code> och skriv <code>klar</code> igen.'
         );
         return;
     }
 
-    const mainCount    = Math.min(imaged.length, TARGET_COUNT);
-    const reserveCount = imaged.length - mainCount;
+    const reserves = Math.max(0, queue.length - TARGET_COUNT);
     await sendMessage(
-        `🚀 Publicerar ${mainCount} event` +
-        (reserveCount > 0 ? ` (+${reserveCount} reserver om IG nobbar någon bild)` : '') +
-        ` till Instagram${isFacebookConfigured() ? ' + Facebook' : ''}…`
+        `🚀 Publicerar (mål ${TARGET_COUNT} event, ${reserves} reserver i kön) till` +
+        `${isInstagramConfigured() ? ' Instagram' : ''}${isInstagramConfigured() && isFacebookConfigured() ? ' +' : ''}${isFacebookConfigured() ? ' Facebook' : ''}…`
     );
 
-    // Bildtexten byggs FÖRST när IG bekräftat vilka bilder som blev slides, så
-    // numreringen matchar karusellen 1:1 (IG avvisar t.ex. otillåten aspect
-    // ratio — då rycker nästa reserv in). keptIdx pekar in i `imaged`. Vi fångar
-    // det bekräftade setet i en closure så Facebook kan posta samma event + text.
-    let publishedEvents: DigestEvent[] = imaged.slice(0, TARGET_COUNT);
-    let sharedCaption: string | null = null;
-    const buildCaption = (keptIdx: number[]): string => {
-        publishedEvents = keptIdx.map(i => imaged[i]);
-        sharedCaption = buildCaptionPlain(publishedEvents, state.totalToday);
-        return sharedCaption;
-    };
+    // Bildtexten byggs FÖRST när plattformen bekräftat vilka bilder som kom med
+    // (keptIdx pekar in i `queue`), så numreringen matchar 1:1.
+    const captionFor = (keptIdx: number[]): string =>
+        buildCaptionPlain(keptIdx.map(i => queue[i]), state.totalToday);
 
-    // Instagram (karusell ≥2, annars single). Facebook med samma bekräftade set.
-    let igOk = false;
+    let lastCaption: string | null = null;
     if (isInstagramConfigured()) {
+        let igCount = 0;
         try {
-            const igId = await postToInstagram(buildCaption, imageUrls);
-            igOk = true;
-            // Hur många reserver (plats > TARGET_COUNT i rankingen) ryckte in?
-            const usedReserves = publishedEvents.filter(p => imaged.indexOf(p) >= TARGET_COUNT).length;
+            const igId = await postToInstagram(keptIdx => {
+                igCount = keptIdx.length;
+                lastCaption = captionFor(keptIdx);
+                return lastCaption;
+            }, imageUrls, TARGET_COUNT);
             await sendMessage(
-                `✅ Instagram publicerat! (id ${escapeHtml(igId)}) — ${publishedEvents.length} slides.` +
-                (usedReserves > 0 ? `\n♻️ IG nobbade ${usedReserves} bild(er) — ${usedReserves} reserv(er) ryckte in, listan renumrerad.` : '')
+                `✅ Instagram: ${igCount} event publicerade (id ${escapeHtml(igId)})` +
+                (igCount < TARGET_COUNT ? `\n♻️ Nådde inte ${TARGET_COUNT} — kön (${queue.length} kandidater) tog slut på godkända bilder.` : '')
             );
         } catch (e) {
             await sendMessage(`⚠️ Instagram misslyckades: ${escapeHtml((e as Error).message)}`);
         }
     }
     if (isFacebookConfigured()) {
-        // Rikta FB mot samma bilder + text som IG faktiskt publicerade. Kördes
-        // inte IG (ej konfigurerat/fel) faller vi tillbaka på topp 10 i rankingen.
-        const fbEvents = igOk ? publishedEvents : imaged.slice(0, TARGET_COUNT);
-        const fbUrls = fbEvents.map(p => p.coverImage!.trim());
-        const fbCaption = sharedCaption ?? buildCaptionPlain(fbEvents, state.totalToday);
+        let fbCount = 0;
         try {
-            await postToFacebook(fbCaption, fbUrls);
-            await sendMessage('✅ Facebook publicerat!');
+            await postToFacebook(keptIdx => {
+                fbCount = keptIdx.length;
+                lastCaption = captionFor(keptIdx);
+                return lastCaption;
+            }, imageUrls, TARGET_COUNT);
+            await sendMessage(
+                `✅ Facebook: ${fbCount} event publicerade` +
+                (fbCount < TARGET_COUNT ? `\n♻️ Nådde inte ${TARGET_COUNT} — kön (${queue.length} kandidater) tog slut på godkända bilder.` : '')
+            );
         } catch (e) {
             await sendMessage(`⚠️ Facebook misslyckades: ${escapeHtml((e as Error).message)}`);
         }
     }
 
-    console.log(`[Digest] Publicerat (IG=${igOk}):`);
-    console.log(sharedCaption ?? buildCaptionPlain(imaged.slice(0, TARGET_COUNT), state.totalToday));
+    console.log('[Digest] Publicerat:');
+    console.log(lastCaption ?? buildCaptionPlain(queue.slice(0, TARGET_COUNT), state.totalToday));
 }
 
 const HELP = `

@@ -75,3 +75,38 @@ describe('mapSlagthusetEvent', () => {
         expect(mapSlagthusetEvent({ ...ev, acf: { ...ev.acf, startdatum: '' } }, 'https://slagthuset.se', 'Malmö')).toBeNull();
     });
 });
+
+describe('mapSlagthusetEvent — Mejeriet-varianten (wp/v2, samma ACF-schema)', () => {
+    const mejerietEvent = {
+        id: 9182,
+        slug: 'pasta-basta-4',
+        title: { rendered: 'Pasta Basta &#8211; fylld pasta' },
+        fimg_url: 'https://cms.mejeriet.net/wp-content/uploads/2023/12/Mejeriet-webb.jpg',
+        large: 'https://cms.mejeriet.net/wp-content/uploads/2023/12/Mejeriet-webb-1024x640.jpg',
+        acf: {
+            startdatum: '20261006',
+            slutdatum: '',
+            oppnar: '17:00',
+            borjar: '',
+            plats: 'Mejeriet',                       // sträng, inte term-array
+            underrubrik: 'PASTAKURS PÅ MEJERIET!',
+            kort_info: 'Lär dig skapa handgjord fylld pasta.',
+            lang_info: '<p>Tillsammans med Bianca.</p>',
+            typ_av_arrangemang: { name: 'Klubb / Bar' },
+        },
+    };
+
+    it('sträng-plats, typ_av_arrangemang och fimg_url mappas', () => {
+        const ev = mapSlagthusetEvent(mejerietEvent as any, 'https://mejeriet.se/program', 'Lund')!;
+        expect(ev.title).toBe('Pasta Basta – fylld pasta');
+        expect(ev.url).toBe('https://mejeriet.se/program/pasta-basta-4');
+        expect(ev.venueName).toBe('Mejeriet');
+        expect(ev.city).toBe('Lund');
+        expect(ev.category).toBe('klubb / bar');
+        expect(ev.imageUrl).toBe('https://cms.mejeriet.net/wp-content/uploads/2023/12/Mejeriet-webb.jpg');
+        expect(ev.description).toContain('PASTAKURS');
+        expect(ev.description).toContain('handgjord fylld pasta');
+        expect(ev.startDate.getHours()).toBe(17);   // oppnar när borjar saknas
+        expect(ev.hasSpecificTime).toBe(true);
+    });
+});

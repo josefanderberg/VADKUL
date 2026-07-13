@@ -1046,9 +1046,45 @@ export const SOURCES: Source[] = [
         config: {
             urls: ['https://malmo.se/evenemangskalender'],
             defaultCity: 'Malmö',
+            // Soleil items-API (2026-07-09): HTML-listan server-renderar bara
+            // första dagens ~18 kort — API:t bär hela kalendern (357 event vid
+            // upptäckt, inkl Sommarscen). Id:n sniffade ur "Visa fler"-XHR:en.
+            itemsApi: {
+                pageId: '4.50574bcf196ed960a55408d',
+                portletId: '12.50574bcf196ed960a55409f',
+            },
         },
         updateFrequency: 'daily',
-        notes: 'SiteVision se.soleil.eventListingLocal.',
+        notes: 'SiteVision se.soleil.eventListingLocal + items-API (18→357 event 2026-07-09). Pågående utställningar (dates.date i det förflutna) klipps av fönstret — medveten begränsning.',
+        lastVerified: '2026-07-09',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://malmo.se/appresource/4.50574bcf196ed960a55408d/12.50574bcf196ed960a55409f/items?start=0&num=100',
+            date: '2026-07-09',
+            rawEventCount: 357,
+            notes: '"Visa fler evenemang"-knappens XHR avslöjade appresource-endpointen; num=100 funkar (server-default 18/sida).',
+        },
+    },
+    {
+        id: 'visitlund',
+        hostName: 'Visit Lund',
+        region: 'lund',
+        engine: 'cruncho',
+        config: {
+            pageUrl: 'https://visitlund.se/evenemangskalender',
+            defaultCity: 'Lund',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Cruncho-driven kalender (lnd-cruncho-events-webapp): hela listan som JSON i sidans initial state, ?offset= är kumulativ. 297 event vid upptäckt, 100 % koordinater, gratis-flagga, förekomstserier. Lunds kommun (lund.se) länkar hit som sin eventhubb.',
+        lastVerified: '2026-07-09',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://visitlund.se/evenemangskalender?offset=400',
+            date: '2026-07-09',
+            rawEventCount: 297,
+            notes: 'AppRegistry.registerInitialState-blob i sid-HTML; direkta api.cruncho.co-gissningar gav 404 — sidvägen är enda öppna dörren.',
+        },
     },
 
     // SiteVision-källor från probe 2026-06-02 (31 träffar utöver Malmö, ~836 events totalt)
@@ -3162,6 +3198,30 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Recon 2026-06-22: Next.js-sajt med rent JSON-API /api/events (~73 framtida event, redan kommande-filtrerade). Bespoke-motor pga acf.startdatum=YYYYMMDD. Scen/konsert/klubb (Saluhallen m.fl.) — musik dominerar.',
         lastVerified: '2026-06-22',
+    },
+    {
+        id: 'mejeriet',
+        hostName: 'Kulturmejeriet',
+        region: 'lund',
+        engine: 'slagthuset',
+        config: {
+            // Headless WP — SAMMA ACF-schema som Slagthuset (se motorns header).
+            // acf_format=standard krävs för utfällda ACF-fält.
+            apiUrl: 'https://cms.mejeriet.net/wp-json/wp/v2/program?per_page=100&acf_format=standard',
+            eventBaseUrl: 'https://mejeriet.se/program',
+            defaultCity: 'Lund',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Lunds stora konsert-/kulturscen. wp/v2/program är publiceringssorterad (per_page=100 täckte 99 framtida vid upptäckt: 31 i juli, 29 i aug). Bild i fimg_url/large, plats är sträng, kategori i typ_av_arrangemang.',
+        lastVerified: '2026-07-10',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://cms.mejeriet.net/wp-json/wp/v2/program?per_page=3&acf_format=standard',
+            date: '2026-07-10',
+            rawEventCount: 99,
+            notes: 'bulk-probe FAIL:ade (Next-frontend utan sitemap/JSON-LD) men bild-URL:erna i sid-HTML avslöjade cms.mejeriet.net — öppen wp/v2 med samma ACF-schema som Slagthuset.',
+        },
     },
     {
         id: 'moriska-paviljongen',

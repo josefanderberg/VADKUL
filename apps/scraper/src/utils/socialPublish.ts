@@ -54,8 +54,26 @@ export function isInstagramConfigured(): boolean {
     return isFacebookConfigured() && !!igUserId();
 }
 
-function validImageUrls(urls: string[]): string[] {
-    return urls.filter((u) => !!u && u.startsWith('http'));
+/**
+ * Bildtext för ett inlägg (FB eller IG). Antingen en färdig sträng, eller en
+ * byggare som anropas med indexen (in i den inskickade `imageUrls`-arrayen)
+ * för de bilder som FAKTISKT gick igenom plattformens validering och blir
+ * bilder/slides i inlägget. Byggaren låter anroparen renumrera texten så den
+ * matchar bilderna 1:1 — Meta avvisar bilder (otillåten aspect ratio, fel
+ * filtyp, död URL) vid uppladdning, så en text som bakas i förväg riskerar
+ * att lista fler event än det finns bilder.
+ */
+export type IgCaption = string | ((keptIndices: number[]) => string);
+
+function resolveCaption(caption: IgCaption, keptIndices: number[]): string {
+    return typeof caption === 'function' ? caption(keptIndices) : caption;
+}
+
+/** Para ihop varje URL med sitt ursprungsindex och släng ogiltiga. */
+function validImagePairs(urls: string[]): { url: string; idx: number }[] {
+    return urls
+        .map((url, idx) => ({ url, idx }))
+        .filter((p) => !!p.url && p.url.startsWith('http'));
 }
 
 // ── Facebook ──────────────────────────────────────────────────────────────────
@@ -63,55 +81,67 @@ function validImageUrls(urls: string[]): string[] {
 /**
  * Publicera till Facebook-sidan.
  *   0 bilder → feed-inlägg · 1 bild → /photos · 2+ → multi-photo feed.
+ *
+ * `imageUrls` behandlas som en KÖ: de första `target` som Facebook accepterar
+ * blir inläggets bilder, resten är reserver. Skicka alltså med fler URL:er än
+ * `target` så fylls det på när en uppladdning avvisas. `message` kan vara en
+ * byggar-funktion (IgCaption) som får indexen för de bilder som faktiskt kom med.
  */
-export async function postToFacebook(message: string, imageUrls: string[]): Promise<string> {
+export async function postToFacebook(message: IgCaption, imageUrls: string[], target = 10): Promise<string> {
     const FB_PAGE_ID = fbPageId(), FB_PAGE_TOKEN = fbPageToken();
-    const validImages = validImageUrls(imageUrls);
+    const validPairs = validImagePairs(imageUrls);
 
-    if (validImages.length === 0) {
+    const postFeed = async (msg: string, mediaIds: string[]): Promise<string> => {
+        const body: Record<string, unknown> = { message: msg, access_token: FB_PAGE_TOKEN };
+        if (mediaIds.length > 0) body.attached_media = mediaIds.map((id) => ({ media_fbid: id }));
         const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/feed`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, access_token: FB_PAGE_TOKEN }),
+            body: JSON.stringify(body),
         });
         const data = await res.json() as any;
         if (data.error) throw new Error(`FB API ${data.error.code}: ${data.error.message}`);
         return data.id as string;
-    }
+    };
 
-    if (validImages.length === 1) {
+    if (validPairs.length === 0) return postFeed(resolveCaption(message, []), []);
+
+    if (validPairs.length === 1) {
+        const { url, idx } = validPairs[0];
         const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/photos`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caption: message, url: validImages[0], access_token: FB_PAGE_TOKEN }),
+            body: JSON.stringify({ caption: resolveCaption(message, [idx]), url, access_token: FB_PAGE_TOKEN }),
         });
         const data = await res.json() as any;
         if (data.error) {
-            console.warn(`[FB] Bildpost misslyckades (${data.error.message}) — försöker utan bild`);
-            return postToFacebook(message, []);
+            console.warn(`[FB] Bildpost misslyckades (${data.error.message}) — postar utan bild`);
+            return postFeed(resolveCaption(message, [idx]), []);
         }
         return data.id as string;
     }
 
-    // Multi-photo: ladda upp varje som unpublished → feed-post med attached_media
+    // Multi-photo: gå igenom kön och ladda upp (unpublished) tills vi har
+    // `target` accepterade bilder eller kön är slut → feed med attached_media.
+    const kept: number[] = [];
     const mediaIds: string[] = [];
-    for (const url of validImages) {
+    for (const { url, idx } of validPairs) {
+        if (mediaIds.length >= target) break;
         const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/photos`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, published: false, access_token: FB_PAGE_TOKEN }),
         });
         const data = await res.json() as any;
-        if (data.error) { console.warn(`[FB] Upload misslyckades (${data.error.message}) — skippar`); continue; }
+        if (data.error) { console.warn(`[FB] Upload misslyckades (${data.error.message}) — tar nästa i kön`); continue; }
         mediaIds.push(data.id as string);
+        kept.push(idx);
     }
-    if (mediaIds.length === 0) { console.warn('[FB] Inga bilder gick att ladda upp — postar utan'); return postToFacebook(message, []); }
+    if (mediaIds.length === 0) {
+        console.warn('[FB] Inga bilder gick att ladda upp — postar utan');
+        return postFeed(resolveCaption(message, validPairs.slice(0, target).map((p) => p.idx)), []);
+    }
 
-    const feedRes = await fetch(`${GRAPH}/${FB_PAGE_ID}/feed`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, attached_media: mediaIds.map((id) => ({ media_fbid: id })), access_token: FB_PAGE_TOKEN }),
-    });
-    const feedData = await feedRes.json() as any;
-    if (feedData.error) throw new Error(`FB feed: ${feedData.error.message}`);
+    const postId = await postFeed(resolveCaption(message, kept), mediaIds);
     console.log(`[FB] Multi-photo post med ${mediaIds.length} bilder`);
-    return feedData.id as string;
+    return postId;
 }
 
 // ── Instagram ─────────────────────────────────────────────────────────────────
@@ -133,39 +163,20 @@ async function waitForIgContainerReady(containerId: string, maxSec = 60): Promis
 }
 
 /**
- * Bildtext för ett IG-inlägg. Antingen en färdig sträng, eller en byggare som
- * anropas med indexen (in i den inskickade `imageUrls`-arrayen) för de bilder
- * som FAKTISKT gick igenom IG:s validering och blir slides. Byggaren låter
- * anroparen renumrera texten så den matchar slidesen 1:1 — IG avvisar bilder
- * (otillåten aspect ratio, fel filtyp) vid container-skapandet, så en text som
- * bakas i förväg riskerar att lista fler event än det finns slides.
- */
-export type IgCaption = string | ((keptIndices: number[]) => string);
-
-function resolveCaption(caption: IgCaption, keptIndices: number[]): string {
-    return typeof caption === 'function' ? caption(keptIndices) : caption;
-}
-
-/** IG:s hårda tak för slides per karusell. */
-const MAX_CAROUSEL_SLIDES = 10;
-
-/**
- * Publicera till Instagram. 1 bild = single post, 2+ = karusell (max 10 slides).
+ * Publicera till Instagram. 1 bild = single post, 2–10 = karusell (max 10 slides).
  * Kräver att bilderna är publika https-URL:er (Meta hämtar dem serverside).
  *
- * Skicka gärna FLER än 10 URL:er (rankade, bästa först): karusellen fylls upp
- * till exakt 10 slides genom att nästa i kön rycker in när IG avvisar en bild
- * (otillåten aspect ratio, fel filtyp, oåtkomlig URL).
- *
- * `caption` kan vara en byggar-funktion (se IgCaption) för att renumrera texten
- * efter att vi vet vilka bilder som passerade IG:s validering.
+ * `imageUrls` behandlas som en KÖ (rankade, bästa först — som i postToFacebook):
+ * de första `target` som passerar IG:s validering blir slides, resten är
+ * reserver som fyller på när IG avvisar en bild (otillåten aspect ratio, fel
+ * filtyp, död URL). `caption` kan vara en byggar-funktion (se IgCaption) som
+ * renumrerar texten efter de bilder som faktiskt blev slides.
  */
-export async function postToInstagram(caption: IgCaption, imageUrls: string[]): Promise<string> {
+export async function postToInstagram(caption: IgCaption, imageUrls: string[], target = 10): Promise<string> {
     const IG_USER_ID = igUserId(), FB_PAGE_TOKEN = fbPageToken();
+    const igTarget = Math.min(target, 10); // IG-karusell är max 10 slides
     // Behåll ursprungsindex så en caption-byggare kan mappa tillbaka till event.
-    const validPairs = imageUrls
-        .map((url, idx) => ({ url, idx }))
-        .filter((p) => !!p.url && p.url.startsWith('http'));
+    const validPairs = validImagePairs(imageUrls);
     if (validPairs.length === 0) throw new Error('IG: ingen bild att posta');
 
     if (validPairs.length === 1) {
@@ -188,12 +199,10 @@ export async function postToInstagram(caption: IgCaption, imageUrls: string[]): 
     }
 
     // Karusell: skapa item-containers → vänta på FINISHED per styck → wrapper.
-    // Kön kan innehålla fler än 10 (rankade reserver): avvisas en bild — vid
-    // creation ELLER genom att containern aldrig blir FINISHED — rycker nästa
-    // i kön in, så vi landar på exakt 10 slides så länge kön räcker. Vi spårar
-    // ursprungsindex hela vägen och bygger bildtexten FÖRST när vi vet exakt
-    // vilka bilder som blir slides.
-    const queue = [...validPairs];
+    // Kön (rankade reserver, fler än igTarget) fyller på när en bild avvisas —
+    // vid creation ELLER genom att containern aldrig blir FINISHED — så vi landar
+    // på exakt igTarget slides så länge kön räcker. Vi spårar ursprungsindex hela
+    // vägen och bygger bildtexten FÖRST när vi vet exakt vilka bilder som blir slides.
     const createItem = async (url: string): Promise<string | null> => {
         const cRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -203,28 +212,30 @@ export async function postToInstagram(caption: IgCaption, imageUrls: string[]): 
         if (cData.error) { console.warn(`[IG] Carousel-item misslyckades (${cData.error.message}) — tar nästa i kön`); return null; }
         return cData.id as string;
     };
+    const awaitReady = async (childId: string): Promise<boolean> => {
+        try { await waitForIgContainerReady(childId); return true; }
+        catch (e) { console.warn(`[IG] Carousel-item ${childId} blev inte klart (${(e as Error).message}) — tar nästa i kön`); return false; }
+    };
 
-    // Första svepet: skapa upp till 10 containers (Meta processar dem parallellt);
-    // creation-fel fylls på ur kön direkt.
-    const pending: { childId: string; idx: number }[] = [];
-    while (pending.length < MAX_CAROUSEL_SLIDES && queue.length > 0) {
-        const { url, idx } = queue.shift()!;
-        const childId = await createItem(url);
-        if (childId) pending.push({ childId, idx });
+    // Svep 1: skapa containers tills vi har `igTarget` (creation-fel äter kö
+    // direkt), invänta sedan alla — Metas processning löper parallellt.
+    let qi = 0;
+    const created: { childId: string; idx: number }[] = [];
+    while (created.length < igTarget && qi < validPairs.length) {
+        const p = validPairs[qi++];
+        const childId = await createItem(p.url);
+        if (childId) created.push({ childId, idx: p.idx });
     }
-    console.log(`[IG] ${pending.length} carousel-items skapade, väntar på FINISHED…`);
-
-    // Invänta FINISHED; faller en ifrån skapas en ersättare från kön.
+    console.log(`[IG] ${created.length} carousel-items skapade, väntar på FINISHED…`);
     const ready: { childId: string; idx: number }[] = [];
-    while (pending.length > 0) {
-        const c = pending.shift()!;
-        try { await waitForIgContainerReady(c.childId); ready.push(c); }
-        catch (e) { console.warn(`[IG] Carousel-item ${c.childId} blev inte klart (${(e as Error).message}) — tar nästa i kön`); }
-        while (ready.length + pending.length < MAX_CAROUSEL_SLIDES && queue.length > 0) {
-            const { url, idx } = queue.shift()!;
-            const childId = await createItem(url);
-            if (childId) pending.push({ childId, idx });
-        }
+    for (const c of created) {
+        if (await awaitReady(c.childId)) ready.push(c);
+    }
+    // Svep 2: fyll på seriellt från kön för items som föll på FINISHED.
+    while (ready.length < igTarget && qi < validPairs.length) {
+        const p = validPairs[qi++];
+        const childId = await createItem(p.url);
+        if (childId && await awaitReady(childId)) ready.push({ childId, idx: p.idx });
     }
     if (ready.length < 2) throw new Error('IG carousel kräver minst 2 giltiga bilder');
     // Slides i anroparens (rankade) ordning även när en reserv ryckt in mitt i.
