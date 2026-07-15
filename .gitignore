@@ -67,3 +67,7 @@ apps/web/public/pwa-icon-v222.png
 
 # Claude Code local state
 .claude/
+
+# Genereras vid build (dagens slice av events-destinations.json) — daglig
+# färskvara, ska inte ligga i repot.
+apps/web/public/events-today.json

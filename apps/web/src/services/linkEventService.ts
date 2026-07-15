@@ -109,6 +109,47 @@ async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
     }
 }
 
+// Dagens STATISKA slice — /events-today.json är en ren Hosting-CDN-fil (bakad
+// vid deploy av scripts/build-events-today.mjs), så den svarar på ~300 ms även
+// när API-funktionen kallstartar (40 s-fallet). day-fältet valideras mot svensk
+// dag (samma definition som bakningen) — en fil från igår (besök före morgon-
+// deployen) slängs och API-slicen får ta det.
+const STOCKHOLM_DAY_FMT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }); // → 'ÅÅÅÅ-MM-DD'
+
+async function fetchTodayStatic(): Promise<LinkEvent[] | null> {
+    try {
+        const w = window as unknown as { __vadkulTodayStatic?: Promise<{ day?: string; events?: unknown[] } | null> };
+        const data = w.__vadkulTodayStatic
+            ? await w.__vadkulTodayStatic
+            : await fetch('/events-today.json').then(r => (r.ok ? r.json() : null)).catch(() => null);
+        if (!data?.events?.length) return null;
+        if (data.day !== STOCKHOLM_DAY_FMT.format(new Date())) return null; // förlegad fil
+        return mapDestinationsToLinkEvents(data.events);
+    } catch {
+        return null;
+    }
+}
+
+// ── Tunga lagren hålls tillbaka tills kartan målat ──────────────────────────
+// cards + descriptions (~flera MB gzippat) ska inte konkurrera med karttiles
+// och prick-utritningen om bandbredd på smala mobilnät. Kartan släpper gaten
+// via releaseHeavyLayers() (V2Map:s onFirstPaint när första målnings-rundan
+// är klar); säkerhetsnätet släpper ändå efter HEAVY_GATE_MAX_MS om kartan
+// aldrig målar (WebGL-fel, dold flik, sida utan karta). Gaten är engångs —
+// pollarna (5 min) passerar en redan-släppt gate utan kostnad.
+const HEAVY_GATE_MAX_MS = 8000;
+let heavyGate: Promise<void> | null = null;
+let releaseHeavyGate: (() => void) | null = null;
+function awaitHeavyLayersGate(): Promise<void> {
+    if (!heavyGate) {
+        heavyGate = new Promise<void>((res) => {
+            releaseHeavyGate = res;
+            setTimeout(res, HEAVY_GATE_MAX_MS);
+        });
+    }
+    return heavyGate;
+}
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). 30s-pollen är också gratis här:
@@ -229,6 +270,10 @@ function mergeDescriptionsWithEvents(events: LinkEvent[], descMap: Record<string
 }
 
 export const linkEventService = {
+    /** Kartan har målat första prick-rundan → cards/descriptions får hämtas
+     *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
+    releaseHeavyLayers() { releaseHeavyGate?.(); },
+
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
@@ -490,11 +535,27 @@ export const linkEventService = {
                 if (staticTimer) { clearTimeout(staticTimer); staticTimer = null; }
             };
             if (!baseEvents.length) {
-                // Dagens slice PARALLELLT med fulla lagret (ingen fördröjning —
-                // den är ~90 % mindre och landar nästan alltid långt före).
-                // Ritar kartan med dagens event tills fulla lagret ersätter.
+                // Dagens event från TVÅ källor parallellt med fulla lagret.
+                // Prioritetsstege (högre ersätter lägre, fulla API-svaret slår
+                // allt via realDestLanded): 1 = statisk dagsfil (snabbast,
+                // CDN-fil, opåverkad av kallstart), 2 = API-slicen (färskast).
+                // Den fulla statiska snapshoten (1,5 s-timern) tar bara helt
+                // omålad karta — har dagens prickar redan ritats laddar vi inte
+                // 1,5 MB till i onödan (fulla API-svaret är ändå på väg).
+                let todayLevel = 0;
+                fetchTodayStatic().then((slice) => {
+                    if (!active || realDestLanded || todayLevel >= 1 || baseEvents.length || !slice) return;
+                    todayLevel = 1;
+                    baseEvents = slice;
+                    emit();
+                });
                 fetchTodaySlice().then((slice) => {
-                    if (!active || realDestLanded || baseEvents.length || !slice) return;
+                    // Ersätter den statiska dagsfilen (färskare data) men ALDRIG
+                    // den fulla snapshoten (baseEvents utan todayLevel = alla
+                    // dagar målade — en dagsslice vore en nedgradering).
+                    if (!active || realDestLanded || todayLevel >= 2 || !slice) return;
+                    if (baseEvents.length && todayLevel === 0) return;
+                    todayLevel = 2;
                     baseEvents = slice;
                     emit();
                 });
@@ -503,7 +564,8 @@ export const linkEventService = {
                         const res = await fetch('/events-destinations.json');
                         if (!res.ok) return;
                         const data = await res.json();
-                        // Hann riktiga svaret före (eller är vi nedstängda)? Rör inget.
+                        // Hann riktiga svaret/dagsprickarna före (eller är vi
+                        // nedstängda)? Rör inget — se prioritetsstegen ovan.
                         if (!active || realDestLanded || baseEvents.length || !data?.events?.length) return;
                         baseEvents = mapDestinationsToLinkEvents(data.events);
                         emit();
@@ -521,8 +583,20 @@ export const linkEventService = {
                 baseEvents = mapDestinationsToLinkEvents(destData.events || []);
                 emit();
 
+                // Definitivt "laddat" REDAN HÄR — destinations innehåller alla
+                // event med tider, så dagens lista är komplett. Måste dessutom
+                // ligga FÖRE gaten nedan: pill-latchen i V2Map kräver settled,
+                // och gaten släpps av kartans första målning — signalerades
+                // settled först i finally (efter cards/descriptions) vore det
+                // moment 22 och allt väntade ut säkerhetsnätet.
+                signalInitialLoad();
+
                 // 2+3. Cards + descriptions PARALLELLT (laddades förr i serie =
-                // onödigt lång svans innan bilder/arrangörer/beskrivningar fanns).
+                // onödigt lång svans innan bilder/arrangörer/beskrivningar fanns)
+                // — men först när kartan målat klart (eller säkerhetsnätet gått):
+                // de ska inte konkurrera med tiles + prickar om bandbredden.
+                await awaitHeavyLayersGate();
+                if (!active) return;
                 const [cardsData, descData] = await Promise.all([
                     fetchLayer('cards'),
                     fetchLayer('descriptions'),

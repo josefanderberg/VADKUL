@@ -1046,6 +1046,9 @@ export default function HomePage() {
                 onCenterChange={handleMapCenterChange}
                 eventsLoaded={eventsLoaded}
                 eventsSettled={eventsSettled}
+                // Första prick-rundan målad → släpp cards/descriptions-hämtningen
+                // (de ska inte konkurrera med tiles + prickar om bandbredden).
+                onFirstPaint={linkEventService.releaseHeavyLayers}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}

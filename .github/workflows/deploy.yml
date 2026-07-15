@@ -58,6 +58,14 @@ jobs:
             fi
           done
 
+      # Dagens statiska slice (public/events-today.json) — ren CDN-fil för
+      # kartans snabbstart, bakad ur nyss uppdaterade destinations. Körs även
+      # som prebuild vid lokala byggen; här explicit eftersom frameworks-
+      # deployen inte garanterat kör npm-lifecycle-hooks.
+      - name: Baka dagens statiska event-slice
+        run: node scripts/build-events-today.mjs
+        working-directory: apps/web
+
       - name: Installera beroenden
         run: npm ci
 

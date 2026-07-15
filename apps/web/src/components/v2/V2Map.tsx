@@ -251,6 +251,11 @@ interface V2MapProps {
      *  userCreated) och blir representant i sin multi-event-grupp — tills
      *  eventet passerat (då gäller vanliga past-släckningen). */
     starredEventIds?: Set<string>;
+    /** Fyrar EN gång när första prick-rundan är färdigmålad (symbolsPainted-
+     *  latchen). Sidan släpper då linkEventService.releaseHeavyLayers() så
+     *  cards/descriptions börjar hämtas — de ska inte konkurrera med tiles +
+     *  prickar om bandbredden på smala nät. */
+    onFirstPaint?: () => void;
 }
 
 export default function V2Map({
@@ -275,6 +280,7 @@ export default function V2Map({
     wishes = [],
     onSelectWish,
     starredEventIds = new Set(),
+    onFirstPaint,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -737,6 +743,11 @@ export default function V2Map({
     const paintLatchRef = useRef(false);
     const [paintDoneNonce, setPaintDoneNonce] = useState(0);
     const [symbolsPainted, setSymbolsPainted] = useState(false);
+    // onFirstPaint via ref (som onMapDragRef) — latch-effekten ska inte få
+    // proppen som dep. firstPaintFiredRef = fyra EN gång per sidladdning.
+    const onFirstPaintRef = useRef(onFirstPaint);
+    onFirstPaintRef.current = onFirstPaint;
+    const firstPaintFiredRef = useRef(false);
     // Antal features som FAKTISKT pushats till källan (nollställs när källan
     // återskapas, t.ex. vid stilbyte) — skiljer "initial stor påfyllnad" (streamas
     // pö om pö) från små uppdateringar (en enda setData).
@@ -1534,6 +1545,13 @@ export default function V2Map({
         if (pendingPaintRef.current === 0 && (hasPaintedOnceRef.current || nothingToPaint)) {
             paintLatchRef.current = true;
             setSymbolsPainted(true);
+            // Första FAKTISKA målningen (inte hang-guardens tomma latch — den
+            // har 0 features och återöppnas av datan) → släpp de tunga lagren
+            // (cards/descriptions) via onFirstPaint. En gång per sidladdning.
+            if (hasPaintedOnceRef.current && !firstPaintFiredRef.current) {
+                firstPaintFiredRef.current = true;
+                onFirstPaintRef.current?.();
+            }
         }
         // Annars: målnings-rundans klart-signal (sourcedata/isSourceLoaded + en
         // render-frame, idle som säkerhetsnät) bumpar paintDoneNonce → hit igen.
