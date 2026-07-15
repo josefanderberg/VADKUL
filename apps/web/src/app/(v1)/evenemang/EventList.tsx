@@ -96,6 +96,56 @@ export function buildEventsJsonLd(listName: string, events: CityEvent[], cityNam
     };
 }
 
+/** schema.org BreadcrumbList (Hem → Evenemang → Stad → ev. kategori) — ger
+ *  Google sökvägen och snyggare brödsmulor i träfflistan. */
+export function buildBreadcrumbJsonLd(crumbs: { name: string; path: string }[]) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: crumbs.map((c, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: c.name,
+            item: `${SITE}${c.path}`,
+        })),
+    };
+}
+
+export type Faq = { q: string; a: string };
+
+export function buildFaqJsonLd(faqs: Faq[]) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map(f => ({
+            '@type': 'Question',
+            name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+    };
+}
+
+/** Synlig FAQ ("Vad händer i X idag?" …) — svaren bakas ur eventdatat i
+ *  sidorna, så texten är unik per sida och färsk per deploy. FAQPage-schemat
+ *  kräver att frågorna faktiskt SYNS på sidan — den här sektionen är den
+ *  synliga halvan, buildFaqJsonLd den maskinläsbara. */
+export function FaqSection({ faqs }: { faqs: Faq[] }) {
+    if (!faqs.length) return null;
+    return (
+        <section className="mt-10 pt-6 border-t border-slate-200">
+            <h2 className="text-sm font-black text-slate-900 mb-3">Vanliga frågor</h2>
+            <dl className="space-y-4">
+                {faqs.map(f => (
+                    <div key={f.q}>
+                        <dt className="text-sm font-black text-slate-800">{f.q}</dt>
+                        <dd className="mt-1 text-sm leading-relaxed text-slate-600 font-medium">{f.a}</dd>
+                    </div>
+                ))}
+            </dl>
+        </section>
+    );
+}
+
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Förbygg Rekommenderat-korten till rena strängar för klientkomponenten

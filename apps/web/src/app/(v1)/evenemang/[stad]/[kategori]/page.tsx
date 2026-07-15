@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
     categoryBySlug, getCityCategoryEvents, getCategoryCombos, dayLabel,
+    todayKey, weekendKeys, countByDayKeys, topVenues, exampleTitles, svList,
 } from '../../cityData';
-import { EventDayList, buildEventsJsonLd } from '../../EventList';
+import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -25,9 +26,16 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const cat = categoryBySlug(kategori);
     if (!city || !cat) return {};
     const { events } = await getCityCategoryEvents(city, cat.dataKey);
-    const description = `${events.length} kommande evenemang: ${cat.intro(city.name)} i ${city.name} med omnejd. Se allt som händer på VADKUL-kartan, gratis.`;
+    // "idag & i helgen" i titeln fångar långsvansen ("konserter kalmar i
+    // helgen") — siffrorna hålls färska av den dagliga auto-deployen.
+    const todayCount = countByDayKeys(events, [todayKey()]);
+    const weekendCount = countByDayKeys(events, weekendKeys());
+    const counts = todayCount > 0 || weekendCount > 0
+        ? ` ${todayCount} idag, ${weekendCount} i helgen.`
+        : '';
+    const description = `${events.length} kommande evenemang: ${cat.intro(city.name)} i ${city.name} med omnejd.${counts} Se allt som händer på VADKUL-kartan, gratis.`;
     return {
-        title: cat.h1(city.name),
+        title: `${cat.h1(city.name)} — idag & i helgen`,
         description,
         alternates: { canonical: `/evenemang/${city.slug}/${cat.slug}` },
         openGraph: {
@@ -54,11 +62,50 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
         .sort((a, b) => b.count - a.count)
         .slice(0, 12);
 
+    // Idag/helg-siffror + exempel + vanligaste platserna — samma sökfras-
+    // matchande build-text som stadssidan, men kategorispecifik ("vilka
+    // konserter är det i kalmar i helgen").
+    const tKey = todayKey();
+    const wkKeys = weekendKeys();
+    const todayCount = countByDayKeys(events, [tKey]);
+    const weekendCount = countByDayKeys(events, wkKeys);
+    const venues = topVenues(events, city.name);
+    const todayEx = exampleTitles(events, [tKey]);
+    const weekendEx = exampleTitles(events, wkKeys);
+
+    const faqs: Faq[] = [
+        {
+            q: `Vilka ${cat.noun} är det i ${city.name} idag?`,
+            a: todayCount > 0
+                ? `Idag finns ${todayCount} ${cat.noun} i ${city.name} med omnejd${todayEx.length ? ` — till exempel ${svList(todayEx)}` : ''}.`
+                : `Inga ${cat.noun} är listade i ${city.name} just idag — men ${events.length} kommande ligger i listan ovan och på VADKUL-kartan.`,
+        },
+        {
+            q: `Vilka ${cat.noun} är det i helgen i ${city.name}?`,
+            a: weekendCount > 0
+                ? `I helgen finns ${weekendCount} ${cat.noun} i ${city.name}${weekendEx.length ? `, bland annat ${svList(weekendEx)}` : ''}.`
+                : `Helgen har inga listade ${cat.noun} än — håll utkik i listan ovan, den uppdateras varje dag.`,
+        },
+        ...(venues.length >= 2 ? [{
+            q: `Var brukar ${cat.noun} hållas i ${city.name}?`,
+            a: `Platserna med flest kommande ${cat.noun} är ${svList(venues)}.`,
+        }] : []),
+    ];
+
     const jsonLd = buildEventsJsonLd(cat.h1(city.name), events, city.name, `/evenemang/${city.slug}/${cat.slug}`);
+    const breadcrumbLd = buildBreadcrumbJsonLd([
+        { name: 'VADKUL', path: '/' },
+        { name: 'Evenemang', path: '/evenemang' },
+        { name: city.name, path: `/evenemang/${city.slug}` },
+        { name: cat.label, path: `/evenemang/${city.slug}/${cat.slug}` },
+    ]);
+    const faqLd = buildFaqJsonLd(faqs);
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
             <div className="max-w-2xl mx-auto px-5 py-10">
                 {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger
                     (samma mönster som stadssidan). */}
@@ -82,12 +129,19 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 </h1>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
                     Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> med
-                    {' '}{cat.intro(city.name)} i {city.name} med omnejd på VADKUL.
+                    {' '}{cat.intro(city.name)} i {city.name} med omnejd på VADKUL
+                    {(todayCount > 0 || weekendCount > 0) && (
+                        <> — <strong className="text-slate-900">{todayCount} idag</strong> och{' '}
+                        <strong className="text-slate-900">{weekendCount} i helgen</strong></>
+                    )}.
                     Allt är gratis att utforska, utan konto.
+                    {venues.length >= 2 && <> Vanliga platser: {svList(venues)}.</>}
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
 
                 <EventDayList events={events} cityName={city.name} />
+
+                <FaqSection faqs={faqs} />
 
                 {siblingCategories.length > 0 && (
                     <div className="mt-10 pt-6 border-t border-slate-200">

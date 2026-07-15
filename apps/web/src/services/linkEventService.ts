@@ -87,11 +87,21 @@ const STATIC_HEADSTART_MS = 1500;
  */
 async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
     try {
+        // Boot-scriptet i (v2)/layout.tsx startar hämtningen redan i HTML-
+        // parsningen (långt före hydreringen) — återanvänd dess promise om den
+        // finns OCH gäller idag (dagstämpeln skyddar mot en flik som legat över
+        // midnatt). Annars egen hämtning med exakt samma URL-form.
+        const w = window as unknown as { __vadkulTodaySlice?: Promise<{ events?: unknown[] } | null>; __vadkulTodaySliceDay?: string };
         const from = new Date(); from.setHours(0, 0, 0, 0);
-        const to = new Date(); to.setHours(23, 59, 59, 999);
-        const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
-        if (!res.ok) return null;
-        const data = await res.json();
+        let data: { events?: unknown[] } | null;
+        if (w.__vadkulTodaySlice && w.__vadkulTodaySliceDay === from.toDateString()) {
+            data = await w.__vadkulTodaySlice;
+        } else {
+            const to = new Date(); to.setHours(23, 59, 59, 999);
+            const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+            if (!res.ok) return null;
+            data = await res.json();
+        }
         if (!data?.events?.length) return null;
         return mapDestinationsToLinkEvents(data.events);
     } catch {

@@ -373,36 +373,48 @@ export type CategoryPage = {
     emoji: string;
     h1: (city: string) => string;
     intro: (city: string) => string; // vad sidan täcker, används i beskrivningen
+    /** Substantiv i plural för löptext/FAQ ("Vilka {noun} är det i X idag?").
+     *  `label` funkar inte där ("För barn" böjs inte). */
+    noun: string;
 };
 
 export const CATEGORY_PAGES: CategoryPage[] = [
     { slug: 'konserter', dataKey: 'music', label: 'Konserter', emoji: '🎵',
         h1: c => `Konserter & livemusik i ${c}`,
-        intro: () => 'konserter, spelningar, festivaler och klubbkvällar' },
+        intro: () => 'konserter, spelningar, festivaler och klubbkvällar',
+        noun: 'konserter' },
     { slug: 'barn', dataKey: 'family', label: 'För barn', emoji: '🧸',
         h1: c => `Saker att göra med barn i ${c}`,
-        intro: () => 'sagostunder, familjedagar, lek och barnföreställningar' },
+        intro: () => 'sagostunder, familjedagar, lek och barnföreställningar',
+        noun: 'barnaktiviteter' },
     { slug: 'sport', dataKey: 'sport', label: 'Sport & träning', emoji: '⚽',
         h1: c => `Sport & träning i ${c}`,
-        intro: () => 'matcher, lopp, pass och prova-på-aktiviteter' },
+        intro: () => 'matcher, lopp, pass och prova-på-aktiviteter',
+        noun: 'sportevenemang' },
     { slug: 'marknader', dataKey: 'market', label: 'Marknader', emoji: '🛍️',
         h1: c => `Marknader & loppisar i ${c}`,
-        intro: () => 'marknader, loppisar, mässor och försäljningar' },
+        intro: () => 'marknader, loppisar, mässor och försäljningar',
+        noun: 'marknader och loppisar' },
     { slug: 'konst', dataKey: 'art', label: 'Konst', emoji: '🎨',
         h1: c => `Konst & utställningar i ${c}`,
-        intro: () => 'utställningar, vernissager och gallerier' },
+        intro: () => 'utställningar, vernissager och gallerier',
+        noun: 'utställningar' },
     { slug: 'teater', dataKey: 'stage', label: 'Teater & scen', emoji: '🎭',
         h1: c => `Teater, standup & scenkonst i ${c}`,
-        intro: () => 'teater, standup, dans, opera och film' },
+        intro: () => 'teater, standup, dans, opera och film',
+        noun: 'föreställningar' },
     { slug: 'kurser', dataKey: 'course', label: 'Kurser', emoji: '📚',
         h1: c => `Kurser & föreläsningar i ${c}`,
-        intro: () => 'kurser, föreläsningar, workshops och studiecirklar' },
+        intro: () => 'kurser, föreläsningar, workshops och studiecirklar',
+        noun: 'kurser och föreläsningar' },
     { slug: 'fest', dataKey: 'party', label: 'Fest & nattliv', emoji: '🎉',
         h1: c => `Fest & nattliv i ${c}`,
-        intro: () => 'fester, klubbar och nattliv' },
+        intro: () => 'fester, klubbar och nattliv',
+        noun: 'fester och klubbkvällar' },
     { slug: 'mat', dataKey: 'food', label: 'Mat & dryck', emoji: '🍽️',
         h1: c => `Mat & dryck i ${c}`,
-        intro: () => 'matmarknader, provningar och matfestivaler' },
+        intro: () => 'matmarknader, provningar och matfestivaler',
+        noun: 'matevenemang' },
 ];
 
 export const categoryBySlug = (slug: string) => CATEGORY_PAGES.find(c => c.slug === slug);
@@ -449,3 +461,80 @@ const chipFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, weekday: 'short
 /** Starttimme 0–23 i svensk tid. */
 export function hourOf(iso: string) { return parseInt(hourFmt.format(new Date(iso)), 10); }
 const hourFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' });
+
+// ── Sidtext ur datat (SEO) ────────────────────────────────────────────────────
+// Folk googlar "vad händer i {stad} IDAG" och "konserter {stad} I HELGEN" —
+// helpers nedan bakar de svaren ur eventdatat vid build (unik text per sida,
+// dagsfärsk via den dagliga auto-deployen).
+
+/** Dagens 'YYYY-MM-DD' (svensk tid) — vid build, dvs. deploydagens. */
+export function todayKey() { return dayKey(new Date().toISOString()); }
+
+/** Innevarande/nästa helgs dagnycklar: första lör/sön framåt + resten av den
+ *  helgen. Pågår helgen redan (idag är lör/sön) = det som är kvar av den. */
+export function weekendKeys(): string[] {
+    const wdFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' });
+    const keys: string[] = [];
+    for (let i = 0; i < 8; i++) {
+        const d = new Date(Date.now() + i * 86_400_000);
+        const wd = wdFmt.format(d);
+        if (wd === 'Sat' || wd === 'Sun') keys.push(keyFmt.format(d));
+        else if (keys.length) break; // helgen är slut
+    }
+    return keys;
+}
+
+/** Antal event som infaller på någon av dagarna. */
+export function countByDayKeys(events: CityEvent[], keys: string[]): number {
+    const set = new Set(keys);
+    let n = 0;
+    for (const e of events) if (set.has(dayKey(e.time))) n++;
+    return n;
+}
+
+/** Platserna med flest kommande event — entitetsrik löptext ("Mest händer på
+ *  Kalmar Slott, Larmtorget…"). Korta/tomma namn hoppas över, liksom kladdiga
+ *  kompositsträngar ("Kackelstugan och Jonas Mat och Event, Rotaryklubb…") —
+ *  komma eller överlängd = ingen ren platsentitet, förstör uppräkningen.
+ *  `cityName` filtreras också bort: "Mest händer på … Växjö" på Växjö-sidan
+ *  säger inget (skrapade event har ofta bara stadsnamnet som plats). */
+export function topVenues(events: CityEvent[], cityName: string, n = 4): string[] {
+    const freq = new Map<string, number>();
+    const cityLc = cityName.toLowerCase();
+    for (const e of events) {
+        const name = e.locationName?.replace(/\s+/g, ' ').trim();
+        if (!name || name.length < 3 || name.length > 40 || name.includes(',')) continue;
+        if (name.toLowerCase() === cityLc) continue;
+        freq.set(name, (freq.get(name) ?? 0) + 1);
+    }
+    return [...freq.entries()]
+        .filter(([, c]) => c >= 2) // en enstaka träff är ingen "vanlig plats"
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, n)
+        .map(([name]) => name);
+}
+
+/** Exempeltitlar för FAQ-svaren — bildsatta event först (arrangören har lagt
+ *  jobb = oftast riktiga händelser), dubbletter bort, trimmade för löptext. */
+export function exampleTitles(events: CityEvent[], keys: string[], n = 3): string[] {
+    const set = new Set(keys);
+    const picked = events.filter(e => set.has(dayKey(e.time)));
+    const sorted = [...picked.filter(e => e.coverImage), ...picked.filter(e => !e.coverImage)];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const e of sorted) {
+        const t = e.title.replace(/\s+/g, ' ').trim();
+        const k = normTitle(t);
+        if (!t || seen.has(k)) continue;
+        seen.add(k);
+        out.push(t.length > 60 ? `${t.slice(0, 57).replace(/\s+\S*$/, '')}…` : t);
+        if (out.length >= n) break;
+    }
+    return out;
+}
+
+/** Svensk uppräkning: "A, B och C". */
+export function svList(xs: string[]): string {
+    if (xs.length <= 1) return xs.join('');
+    return `${xs.slice(0, -1).join(', ')} och ${xs[xs.length - 1]}`;
+}
