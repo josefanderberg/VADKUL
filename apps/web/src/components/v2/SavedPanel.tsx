@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { LinkEvent } from '@/types';
 import EventListRow from './EventListRow';
+import { isEventPast } from './v2MapBricka';
 import { Heart, X, ChevronDown } from 'lucide-react';
 
 interface SavedPanelProps {
@@ -25,11 +26,12 @@ export default function SavedPanel({ open, events, savedEventIds, onPick, onRemo
 
     const { upcoming, past } = useMemo(() => {
         const saved = events.filter(e => savedEventIds.has(e.id));
-        // Äldre än 1 h räknas som "har varit" (matchar kortlekens statuslogik).
-        const cutoff = Date.now() - 60 * 60 * 1000;
+        // "Har varit" = samma logik som kartan/kortleken (isEventPast): start
+        // + 1 h passerad, eller kl 20 för event utan klockslag.
+        const nowMs = Date.now();
         return {
-            upcoming: saved.filter(e => e.time.getTime() >= cutoff),
-            past: saved.filter(e => e.time.getTime() < cutoff).reverse(),
+            upcoming: saved.filter(e => !isEventPast(e, nowMs)),
+            past: saved.filter(e => isEventPast(e, nowMs)).reverse(),
         };
     }, [events, savedEventIds]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import { LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
@@ -181,6 +181,10 @@ interface NearbyEventsListProps {
     now: number;
     onSelect: (evt: LinkEvent) => void;
     onLoadMore: () => void;
+    /** Onboarding-ankare: sätts på raden EFTER det 5:e eventet (eller sista om
+     *  färre) — när det syns har användaren scrollat ända ner till listan och
+     *  ser minst 5 event, och scroll-coachen kan släckas. */
+    coachMarkerRef?: React.Ref<HTMLLIElement>;
 }
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -375,8 +379,12 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
+    // Ankaret sätts efter det 4:e eventet (0-indexerat: 3) — eller sista raden
+    // om listan är kortare — så "ser minst 4"-villkoret blir sant först när man
+    // scrollat ända ner hit.
+    const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
         <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
             <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10">
@@ -386,8 +394,13 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
             </div>
 
             <ul className="divide-y divide-border">
-                {upcomingItems.map(({ evt, distanceKm }) => (
-                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                {upcomingItems.map(({ evt, distanceKm }, i) => (
+                    <Fragment key={evt.id}>
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                        {i === markerIdx && coachMarkerRef && (
+                            <li ref={coachMarkerRef} aria-hidden className="h-px" />
+                        )}
+                    </Fragment>
                 ))}
             </ul>
 
@@ -560,6 +573,39 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [scrollNudgeActive, setScrollNudgeActive] = useState(false);
     const scrollNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+    // ── Scroll-coach (engångs-onboarding) ──────────────────────────────────────
+    // Första gången någonsin man öppnar ett kort guidas man ner till event-listan:
+    //   'nudge' → kortet studsar, men BARA tills man scrollat ner första gången
+    //             NÅGONSIN (sparas direkt — kortet studsar aldrig igen efter det),
+    //   'hint'  → "scrolla ner"-pilen visas på varje kort tills man scrollat ner
+    //             och sett ≥4 event i närhetslistan,
+    //   'off'   → klart, sparas i localStorage och visas ALDRIG igen.
+    const COACH_KEY = 'vadkul_scroll_coach_done';
+    const NUDGE_KEY = 'vadkul_scroll_nudge_done';
+    const [coachStage, setCoachStage] = useState<'nudge' | 'hint' | 'off'>('off');
+    const coachMarkerRef = useRef<HTMLLIElement | null>(null);
+    // Läs "redan klar"-flaggorna en gång; är coach-flaggan satt startar coachen
+    // aldrig, är nudge-flaggan satt studsar kortet aldrig (pilen kan ändå visas).
+    const coachDoneRef = useRef(true);
+    const nudgeDoneRef = useRef(true);
+    useEffect(() => {
+        try {
+            coachDoneRef.current = localStorage.getItem(COACH_KEY) === '1';
+            nudgeDoneRef.current = localStorage.getItem(NUDGE_KEY) === '1';
+        }
+        catch { coachDoneRef.current = true; nudgeDoneRef.current = true; } // privat läge → hoppa över coachen
+    }, []);
+    const finishNudge = () => {
+        nudgeDoneRef.current = true;
+        try { localStorage.setItem(NUDGE_KEY, '1'); } catch { /* privat läge */ }
+    };
+    const finishCoach = () => {
+        coachDoneRef.current = true;
+        finishNudge(); // klar coach ⇒ studsen är också förbrukad
+        setCoachStage('off');
+        try { localStorage.setItem(COACH_KEY, '1'); } catch { /* privat läge */ }
+    };
     // Browse-historik (bakåt-stack): event-id:n vi tittade på innan vi gick vidare.
     const [historyStack, setHistoryStack] = useState<string[]>([]);
     // Framåt-stack: event vi backat ur. Nästa spelar upp dem i samma ordning igen
@@ -795,41 +841,74 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return () => clearInterval(t);
     }, []);
 
-    // ── Scroll-nudge ────────────────────────────────────────────────────────────
-    // Om användaren inte scrollat innehållet på 5 sekunder efter att ett event
-    // öppnats visas en liten upp-ner-animation som påminner om att det finns mer
-    // innehåll att scrolla. Animationen nollställs direkt vid scroll.
+    // ── Scroll-coach: nudge → hint → klart ──────────────────────────────────────
+    // Fas 'nudge' (bara innan man scrollat FÖRSTA gången någonsin): kortet studsar
+    // (efter 5 s stilla vid toppen) för att signalera "det finns mer nedåt". Vid
+    // första scrollen (>8 px) sparas nudge-flaggan permanent — kortet studsar
+    // aldrig igen, på något kort. Fas 'hint': "scrolla ner"-pilen visas direkt på
+    // varje kort tills observern nedan släcker allt (≥4 event i närheten sedda).
     useEffect(() => {
         const sc = scrollContainerRef.current;
-        if (!selectedEvent || !sc) {
-            setScrollNudgeActive(false);
-            if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
-            return;
-        }
-
-        // Starta timern när ett nytt event väljs.
         if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
         setScrollNudgeActive(false);
-        scrollNudgeTimerRef.current = setTimeout(() => {
-            // Nudga bara om innehållet faktiskt är scrollbart och användaren är
-            // uppe vid toppen (har inte redan scrollat).
-            if (sc.scrollTop < 5 && sc.scrollHeight > sc.clientHeight + 10) {
-                setScrollNudgeActive(true);
-            }
-        }, 5000);
 
-        const resetNudge = () => {
+        // Ingen coach om: redan klar tidigare, inget event öppet, eller ingen container.
+        if (coachDoneRef.current || !selectedEvent || !sc) { setCoachStage('off'); return; }
+
+        // Färskt kort → studsa bara om man ALDRIG scrollat förr, annars direkt pil.
+        setCoachStage(nudgeDoneRef.current ? 'hint' : 'nudge');
+
+        // Studsa när innehållet är scrollbart och man står kvar vid toppen —
+        // aldrig mer när första-scrollen är förbrukad.
+        const armNudge = () => {
+            if (nudgeDoneRef.current) return;
             if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
-            setScrollNudgeActive(false);
+            scrollNudgeTimerRef.current = setTimeout(() => {
+                if (sc.scrollTop < 5 && sc.scrollHeight > sc.clientHeight + 10) {
+                    setScrollNudgeActive(true); // en studs; onAnimationEnd re-armar via nedan
+                }
+            }, 5000);
         };
+        armNudge();
 
-        sc.addEventListener('scroll', resetNudge, { passive: true });
+        const onScroll = () => {
+            // Nått botten (t.ex. event utan grannar → ingen lista/ankare) räknas
+            // också som "framme" — annars kunde coachen aldrig bli klar där.
+            if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 40) {
+                finishCoach();
+                return;
+            }
+            // Första scrollen NÅGONSIN förbrukar studsen permanent och tänder pilen.
+            if (sc.scrollTop > 8) {
+                if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+                setScrollNudgeActive(false);
+                if (!nudgeDoneRef.current) finishNudge();
+                setCoachStage(stage => (stage === 'nudge' ? 'hint' : stage));
+            } else {
+                armNudge(); // tillbaka vid toppen → studsa igen (no-op efter första scrollen)
+            }
+        };
+        sc.addEventListener('scroll', onScroll, { passive: true });
+
         return () => {
-            sc.removeEventListener('scroll', resetNudge);
+            sc.removeEventListener('scroll', onScroll);
             if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent?.id]);
+
+    // Nudgen är en engångsanimation — re-arma nästa studs medan vi är kvar i
+    // nudge-fasen (onAnimationEnd nollställer scrollNudgeActive).
+    useEffect(() => {
+        if (coachStage !== 'nudge' || scrollNudgeActive || nudgeDoneRef.current) return;
+        const sc = scrollContainerRef.current;
+        if (!sc) return;
+        if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current);
+        scrollNudgeTimerRef.current = setTimeout(() => {
+            if (sc.scrollTop < 5 && sc.scrollHeight > sc.clientHeight + 10) setScrollNudgeActive(true);
+        }, 4500);
+        return () => { if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current); };
+    }, [coachStage, scrollNudgeActive]);
 
     // Rensa nudge-timer vid unmount.
     useEffect(() => () => { if (scrollNudgeTimerRef.current) clearTimeout(scrollNudgeTimerRef.current); }, []);
@@ -891,6 +970,24 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
+
+    // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
+    // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
+    // efter nearbyEvents-deklarationen (deps läser dess längd). Ankaret sitter
+    // efter det 4:e eventet — syns det har man scrollat ner och sett ≥4 event.
+    useEffect(() => {
+        if (coachDoneRef.current || !selectedEvent) return;
+        const sc = scrollContainerRef.current;
+        const marker = coachMarkerRef.current;
+        if (!sc || !marker || typeof IntersectionObserver === 'undefined') return;
+        const io = new IntersectionObserver(
+            entries => { if (entries.some(e => e.isIntersecting)) finishCoach(); },
+            { root: sc, threshold: 0.01 },
+        );
+        io.observe(marker);
+        return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent?.id, nearbyEvents.length]);
 
     // Event på EXAKT samma plats (koordinat) som det valda — multi-event-högen.
     // Driver pagern ("3/7") på kortets platsrad. Ordnad efter tid för stabil numrering.
@@ -1640,9 +1737,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             now={now}
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
+                            coachMarkerRef={coachMarkerRef}
                         />
                     )}
                 </div>
+
+                {/* Scroll-coach: "scrolla ner"-pil (fas 2). Visas på varje kort
+                    tills man scrollat ner till närhetslistan och sett ≥4 event —
+                    engångs, aldrig igen när man klarat det en gång. Ligger nedtill
+                    på kortet, pointer-events-none så den inte fångar scroll/tap. */}
+                {coachStage === 'hint' && (
+                    <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex items-center gap-2 rounded-full bg-[#006AA7] text-white text-xs font-black px-4 py-2 shadow-lg">
+                            <span>Scrolla ner — fler event i närheten</span>
+                            <ChevronDown size={15} className="animate-bounce" />
+                        </div>
+                    </div>
+                )}
             </div>
             </div>
             ) : (

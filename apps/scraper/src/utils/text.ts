@@ -50,18 +50,25 @@ export function decodeHtmlEntities(s: string): string {
 }
 
 /**
- * Normalisera beskrivnings-HTML från en källa: strippa taggar, AVKODA entities
- * (förr: ersattes med mellanslag → å/ä/ö försvann), ta bort WP-excerpt-rester
- * ("[…]"), kollapsa whitespace, klipp längden.
+ * Normalisera beskrivnings-HTML från en källa: gör blockslut/<br> till
+ * radbrytningar, strippa övriga taggar, AVKODA entities (förr: ersattes med
+ * mellanslag → å/ä/ö försvann), ta bort WP-excerpt-rester ("[…]"), kollapsa
+ * whitespace — men BEHÅLL radbrytningarna (förr: allt blev ETT stycke,
+ * rapporterat 2026-07-11; webben visar beskrivningar med whitespace-pre-wrap
+ * så \n renderas). Klipp längden sist.
  */
 export function cleanDescription(raw: unknown, maxLen = 500): string {
     return decodeHtmlEntities(
         (raw ?? '')
             .toString()
+            // Radbrytande taggar → \n så styckena överlever tag-strippen.
+            .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/gi, '\n')
             .replace(/<[^>]+>/g, ' '),
     )
         .replace(/\[…\]|\[\.\.\.\]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[^\S\n]+/g, ' ')   // kollapsa whitespace, men inte \n
+        .replace(/ ?\n ?/g, '\n')    // inga hängande mellanslag runt radbryt
+        .replace(/\n{3,}/g, '\n\n')  // max en tomrad i följd
         .trim()
         .slice(0, maxLen);
 }

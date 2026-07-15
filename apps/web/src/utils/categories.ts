@@ -174,13 +174,16 @@ export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
  *
  * Nycklarna måste matcha SOURCE_DEFS i ./sources (klassningen sker på event-
  * URL:ens värdnamn via classifySource, samma logik som markörfärgen på kartan).
- * Färgerna är valda så att 100/700-paret matchar markörens hex i sources.ts.
+ * markerHex används av filtrets cirklar (samma brick-gradient som kart-
+ * markörerna); 700-nyanser så de skiljer sig från de vanliga kategoriernas
+ * 500/600-kulörer (kyrkans violett vs Scens lila, PRO:s rosa vs Musiks rosa).
  */
 export const SPECIAL_CATEGORIES = {
   korpen: {
     id: 'korpen',
     label: 'Korpen',
     emoji: '🏃',
+    markerHex: '#15803d',
     color: 'bg-green-100 text-green-700',
     description: 'Korpen — motion & breddidrott',
   },
@@ -188,6 +191,7 @@ export const SPECIAL_CATEGORIES = {
     id: 'svenskakyrkan',
     label: 'Svenska kyrkan',
     emoji: '⛪',
+    markerHex: '#6d28d9',
     color: 'bg-violet-100 text-violet-700',
     description: 'Svenska kyrkans församlingar',
   },
@@ -195,6 +199,7 @@ export const SPECIAL_CATEGORIES = {
     id: 'pro',
     label: 'PRO',
     emoji: '🧓',
+    markerHex: '#be185d',
     color: 'bg-pink-100 text-pink-700',
     description: 'PRO — pensionärernas riksorganisation',
   },

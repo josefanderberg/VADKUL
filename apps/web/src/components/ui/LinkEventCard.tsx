@@ -364,7 +364,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
-                <div className="flex items-center gap-x-4 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden">
+                {/* Användarskapade event länkar inte ut någonstans — platsen är
+                    enda sättet att hitta dit och får därför ALDRIG trunkeras:
+                    den får en egen rad (nedan) som radbryts fritt. Skrapade
+                    event behåller platsen inline (trunkerad) — där finns alltid
+                    ANMÄL-länken med fullständig info. */}
+                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${linkEvent.userCreated ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
@@ -377,15 +382,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             <span className="whitespace-nowrap">{formatDistanceKm(distance)}</span>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                        <MapPin size={14} className="text-primary shrink-0" />
-                        <span className="text-sm truncate">{linkEvent.locationName}</span>
-                        {secondaryAddress && (
-                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                                · {secondaryAddress}
-                            </span>
-                        )}
-                    </div>
+                    {linkEvent.userCreated ? (
+                        <div className="flex-1 min-w-0" />
+                    ) : (
+                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                            <MapPin size={14} className="text-primary shrink-0" />
+                            <span className="text-sm truncate">{linkEvent.locationName}</span>
+                            {secondaryAddress && (
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                    · {secondaryAddress}
+                                </span>
+                            )}
+                        </div>
+                    )}
                     {/* 👁 Antal visningar (eventStats). Visas först när siffran
                         är hämtad och > 0 — aldrig en ljugande nolla. */}
                     {viewCount !== null && viewCount > 0 && (
@@ -412,6 +421,20 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </button>
                     )}
                 </div>
+
+                {linkEvent.userCreated && (
+                    <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
+                        <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
+                        <span className="text-sm min-w-0 break-words">
+                            {linkEvent.locationName}
+                            {secondaryAddress && (
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    {' '}· {secondaryAddress}
+                                </span>
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 <div data-peek-boundary className="border-t border-border pt-2 flex items-end justify-between gap-4">
                     {/* Värd */}

@@ -83,16 +83,19 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
         const timeMatch = textContent.match(/(\d{1,2}[:.]\d{2})/);
         if (timeMatch) exactTime = timeMatch[1].replace('.', ':');
 
-        // 6. Description
+        // 6. Description — innerText, INTE textContent: Facebook renderar
+        // beskrivningen som flera block-divar och textContent klistrar ihop
+        // styckena utan separator ("…klubb.Tävlingsområde…"). innerText
+        // bevarar de renderade radbrytningarna som \n.
         let description = '';
         const descEl = main.querySelector('div[data-ad-preview="message"], div[style*="white-space: pre-wrap"]');
         if (descEl && descEl.textContent) {
-            description = descEl.textContent.trim();
+            description = ((descEl as any).innerText || descEl.textContent).trim();
         } else {
             const allDivs = Array.from(main.querySelectorAll('div[dir="auto"], span[dir="auto"]'));
             let longestText = '';
             for (const div of allDivs) {
-                const txt = div.textContent?.trim() || '';
+                const txt = ((div as any).innerText || div.textContent || '').trim();
                 if (txt.length > longestText.length && txt.length > 50) {
                     if (!txt.includes('Logga in') && !txt.includes('Tidigare evenemang') && !txt.match(/ska gå|intresserade/i)) {
                         longestText = txt;
