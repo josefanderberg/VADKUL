@@ -27,6 +27,41 @@ export function recordEventView(eventId: string): void {
 }
 
 /**
+ * Klick på ANMÄL = vi länkar en besökare vidare till arrangören. Räknas i
+ * SAMMA eventStats-doc som visningarna: `clicks` (totalt) + `clicksByMonth`
+ * ('ÅÅÅÅ-MM' → antal, tidsserien bakom "vi har skickat er X besökare sedan
+ * maj") + hostName/domain/title INBAKADE i dokumentet — eventet försvinner ur
+ * aggregaten när det passerat, men statistiken ska kunna summeras per
+ * arrangör långt senare (outreach-mejlen, docs/outreach/).
+ *
+ * Aggregering per arrangör: filtrera eventStats på hostName/domain och summera
+ * clicks — se docs/outreach/README.md.
+ */
+export function recordEventClick(evt: { id: string; url?: string; title?: string; hostName?: string }): void {
+    try {
+        const ref = doc(db, 'eventStats', eventShareSlug(evt.id));
+        const month = new Date().toISOString().slice(0, 7); // 'ÅÅÅÅ-MM'
+        let domain: string | null = null;
+        try { domain = new URL(evt.url || evt.id).hostname.replace(/^www\./, ''); } catch { /* icke-URL */ }
+        // OBS: nästlad map (INTE punktnotation) — setDoc+merge deep-mergar
+        // mapar, medan 'clicksByMonth.2026-07' som nyckel hade blivit ett
+        // bokstavligt fältnamn med punkt i (punktvägar tolkas bara av updateDoc).
+        setDoc(ref, {
+            eventId: evt.id,
+            clicks: increment(1),
+            clicksByMonth: { [month]: increment(1) },
+            ...(evt.title ? { title: evt.title } : {}),
+            ...(evt.hostName ? { hostName: evt.hostName } : {}),
+            ...(domain ? { domain } : {}),
+        }, { merge: true }).catch(() => {
+            /* nätverk/regler nere → släpp klicket, aldrig störa utlänkningen */
+        });
+    } catch {
+        /* defensivt — räknaren får inte hindra att länken öppnas */
+    }
+}
+
+/**
  * Läs visningsantalet för ett event (👁-badgen på kortet). En getDoc per
  * kortöppning — inga lyssnare, ingen extra egress. Returnerar null vid fel
  * (offline, rules ej deployade) så badgen döljs i stället för att ljuga "0".

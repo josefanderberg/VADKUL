@@ -1,9 +1,12 @@
 # Mejlmallar — arrangörs-outreach
 
-Tre mallar + stjärn-erbjudandet som P.S. Skicka från **josef@vadkul.se** (Zoho)
+Tre mallar + stjärn-erbjudandet som P.S. Skicka från **info@vadkul.se** (Zoho)
 med signaturen nedan. **Personifiera alltid första raden** — nämn deras
 event/stad (exempel-eventen står i [arrangorer.md](arrangorer.md)). Aldrig
 masskopia, aldrig BCC-listor: 5–10 mejl i veckan, ett i taget.
+
+> FB-gruppinlägg (privata kontot) ligger separat:
+> [facebook-poster.md](facebook-poster.md).
 
 ---
 

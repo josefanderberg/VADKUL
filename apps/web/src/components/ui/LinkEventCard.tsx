@@ -6,7 +6,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
-import { getEventViews } from '../../services/eventStatsService';
+import { getEventViews, recordEventClick } from '../../services/eventStatsService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
@@ -197,6 +197,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const handleVisitSite = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        // Vidarelänknings-statistik (fire-and-forget): hur många vi skickar
+        // till vilken arrangör — underlaget för outreach-mejlen. Får aldrig
+        // fördröja eller stoppa själva öppningen.
+        recordEventClick({
+            id: linkEvent.id,
+            url: linkEvent.url,
+            title: linkEvent.title,
+            hostName: linkEvent.hostName,
+        });
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
     };
 

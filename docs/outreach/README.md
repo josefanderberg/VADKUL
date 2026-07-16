@@ -10,6 +10,7 @@ arrangörerna vars event redan visas på kartan.
 |---|---|
 | [arrangorer.md](arrangorer.md) | Bocklistan — 120 arrangörer ur riktiga eventdatat, prioriterade i tre nivåer |
 | [mail-mallar.md](mail-mallar.md) | Mall A (mejl), mall B (Facebook), uppföljning, stjärn-P.S., signatur |
+| [facebook-poster.md](facebook-poster.md) | Inläggsutkast för "Vad händer i [stad]"-grupperna (privata kontot) |
 | [generate-arrangorer.mjs](generate-arrangorer.mjs) | Bygger om arrangorer.md ur `apps/web/public/events-*.json` — **skriver över ibockningarna**, kopiera undan dem först |
 
 ## Veckorutinen (≈30 min)
@@ -20,7 +21,7 @@ arrangörerna vars event redan visas på kartan.
    Facebook-arrangörer (mall B): skriv till FB-sidan direkt.
 3. Kopiera mallen, **byt ut första raden** mot något om just deras event
    (exempel-eventen står i raden) och klistra in rätt stadslänk.
-4. Skicka från **josef@vadkul.se** (Zoho, se nedan). Ett mejl i taget — aldrig BCC.
+4. Skicka från **info@vadkul.se** (Zoho). Ett mejl i taget — aldrig BCC.
 5. Bocka i `- [x]`, fyll i `skickat: 2026-07-__`.
 6. Efter 7–10 dagar utan svar: EN uppföljning (mallen finns), sen släpp.
 7. När en länk är uppe: fyll i `länk:` — det är målraden.
@@ -33,16 +34,30 @@ eventet ägt rum**. En stjärna per konto, server-säkrat. Attribution via
 `starGiftCode: 'ARRANGOR1'` på user-dokumentet — så här räknar du nappen
 (Firebase Console → Firestore → users, filtrera på fältet, eller be Claude).
 
-## Zoho-mejlen (engångs-setup, ~15 min)
+## Avsändare
 
-1. [zoho.com/mail](https://zoho.com/mail) → Business Email → **Forever Free**
-   (1 domän, 5 konton, 5 GB — räcker gott).
-2. Lägg till domänen `vadkul.se`, verifiera med TXT-posten Zoho ger.
-3. Skapa **josef@vadkul.se** (personlig avsändare får fler svar än info@).
-4. DNS: MX (`mx.zoho.eu` 10, `mx2.zoho.eu` 20, `mx3.zoho.eu` 50) + SPF
-   (`v=spf1 include:zoho.eu ~all`) + DKIM-posten Zoho genererar.
-5. Inställningar → Signatur → klistra in HTML-signaturen ur
-   [mail-mallar.md](mail-mallar.md).
+**info@vadkul.se** (Zoho — uppsatt 2026-07-16). Signaturen finns i
+[mail-mallar.md](mail-mallar.md) → Inställningar → Signatur i Zoho.
+
+## Vidarelänknings-statistiken (siffrorna till framtida mejl)
+
+Varje ANMÄL-klick på ett eventkort räknas i Firestore-collectionen
+**`eventStats`** (`recordEventClick` i `eventStatsService.ts`):
+
+- `clicks` — totalt antal besökare vi skickat vidare till eventet
+- `clicksByMonth` — `'2026-07': 12, '2026-08': 31 …` (tidsserien)
+- `hostName` / `domain` / `title` — inbakade så statistiken kan summeras
+  **per arrangör** även efter att eventet passerat och lämnat datat
+
+**Så läser du dem:** Firebase Console → Firestore → `eventStats`, eller be
+Claude summera per arrangör ("hur många klick har ABF fått totalt/per månad?").
+Användning i uppföljningsmejl/nya mejl: _"Sedan i somras har vi skickat
+**X besökare** vidare till era event via kartan."_ — konkret värde, svårslaget
+argument för en länk tillbaka.
+
+> OBS: räknaren kräver att firestore-reglerna deployats
+> (`firebase deploy --only firestore:rules`) — före det faller skrivningarna
+> tyst (medvetet: får aldrig störa utlänkningen).
 
 ## Varför detta är rätt fokus
 
