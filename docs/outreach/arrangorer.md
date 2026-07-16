@@ -1,0 +1,265 @@
+# Arrangörs-outreach — bocklista
+
+> Genererad 2026-07-16 ur eventdatat (120 arrangörer med
+> kommande event, biljettplattformar borträknade). Bygg om med
+> `node docs/outreach/generate-arrangorer.mjs` — **men kopiera först undan dina
+> ibockningar**, filen skrivs över helt.
+
+**Arbetssätt:** se [README](README.md). Mallar: [mail-mallar.md](mail-mallar.md).
+Bocka i rutan när mejlet är SKICKAT och fyll i datumet; "svar"/"länk" fylls i
+när de svarat resp. när länken till vadkul.se är uppe.
+
+## Prio 1 — topp 20 (börja här)
+
+_Flest kommande event = mest värde av kartan = störst chans till svar och länk._
+
+- [ ] **ABF** — 355 event · Västerås, Malmö · `abf.se` · mall A (mejl)
+  - t.ex. _Föreläsning, gudning i Karmanbo_ · _Amigurumi på sommarkarusellen i Skinnskatteberg_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Åtvids församling** — 177 event · Linköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommaröppet i Åtvids Gamla kyrka 10-16_ · _Sommaröppet i Yxnerums kyrka 10-16_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Destination Uppsala** — 174 event · Uppsala · `destinationuppsala.se` · mall A (mejl)
+  - t.ex. _En dagsresa till Lövstabruk_ · _VM-fest på Studenternas_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Korpen Stockholm** — 142 event · Stockholm · `korpenstockholm.zoezi.se` · mall A (mejl)
+  - t.ex. _Jajamen - Boulevard_ · _Gentlemän - PMP_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Studieförbundet Vuxenskolan** — 136 event · Trollhättan, Eskilstuna · `sv.se` · mall A (mejl)
+  - t.ex. _Musik till tusen på Emåns Ekomuseum_ · _Musikunderhållning på Sörmlandsgården_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Trosa** — 127 event · Nyköping, Södertälje · `trosa.com` · mall A (mejl)
+  - t.ex. _Bakluckeloppis i Trosa_ · _Musikquiz på Kölsvinet_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Uppsala domkyrkoförsamling** — 122 event · Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Utställning ”Who Am I?” av Sean Henry 28/5–30/8_ · _Utställning: Katarina Jagellonica 500 år 8/5–8/11_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Vimmerby** — 114 event · Uppsala · `vimmerby.com` · mall A (mejl)
+  - t.ex. _Onsdagspub på Kharma_ · _Loppis centralt i Vimmerby_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Jönköping Kommun** — 113 event · Jönköping, Göteborg · `jonkoping.se` · mall A (mejl)
+  - t.ex. _Schackmatt vid Råslätts Bibliotek_ · _Wetterbygden Basketball Summer Reach_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Säffle Kommun** — 109 event · Karlstad · `saffle.se` · mall A (mejl)
+  - t.ex. _VÄGKYRKA_ · _"Sopan" Ingela Öhman, Familjeföreställning_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Bollnäs Kommun** — 106 event · — · `bollnas.se` · mall A (mejl)
+  - t.ex. _Skate på Solrosen_ · _Växbo Kvarn: Petra Marklund!_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Robertsfors Kommun** — 85 event · Umeå · `robertsfors.se` · mall A (mejl)
+  - t.ex. _Prova på triathlon!_ · _Musikcafé med Good Fellaz_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Lunds domkyrkoförsamling** — 84 event · Lund · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Domkyrkoforum_ · _Guidad visning, svenska_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Upplands-Bro Kommun** — 78 event · Stockholm · `upplands-bro.se` · mall A (mejl)
+  - t.ex. _SOMMARLOV: Grill & Vibe_ · _Musik i sommarkväll!_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Uppåkra församling** — 78 event · Lund · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Uppåkra kyrka sommaröppen för besök_ · _Görslövs kyrka sommaröppen för besök_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Bilda** — 77 event · Falun, Sundsvall · `bilda.nu` · mall A (mejl)
+  - t.ex. _Sommarkväll i ord och ton_ · _Sommarens musikcaféer på Bönergården_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Malmö Stad** — 76 event · Malmö · `malmo.se` · mall A (mejl)
+  - t.ex. _Mindfulness för kreatörer_ · _Musikaliska möten: Deng Deng i parken_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Lund** — 74 event · Lund · `visitlund.se` · mall A (mejl)
+  - t.ex. _Musik i sommarkväll - EBBA_ · _Sommarlund: Salsa med Cubasalsa_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Malmö S:t Petri församling** — 74 event · Malmö · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _S:t Andreas kyrka är öppen för bön och ljuständning_ · _Hjälp, Andreas har tappat bort sina fiskar och ett viktigt m_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Höganäs Kommun** — 71 event · Helsingborg · `hoganas.se` · mall A (mejl)
+  - t.ex. _Screentryck med ER_ · _La Traviata med Skånska Operan_ · skickat: ____ · svar: ____ · länk: ____
+
+## Prio 2 — nästa våg
+
+_Ta 5–10 i veckan när Prio 1 är avverkad._
+
+- [ ] **Studiefrämjandet** — 69 event · Eskilstuna, Halmstad · `studieframjandet.se` · mall A (mejl)
+  - t.ex. _Ta del av Ljungdalens kulturhistoria under hembygdsföreninge_ · _SAMBANDET på Hantverkshuset_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Västervik** — 66 event · — · `vastervik.com` · mall A (mejl)
+  - t.ex. _Mollie Minott & Dimpker Brothers spelar i Blankaholm_ · _Musik i sommarkväll, Odensvi kyrka_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Gotlands Museum** — 66 event · — · `gotlandsmuseum.se` · mall A (mejl)
+  - t.ex. _Stadsvandring: Ringmur, rosor och ruiner_ · _Stadsvandring: Bakom låsta dörrar_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visby domkyrkoförsamling** — 64 event · Visby · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Konrad - Våra hemliga rum är en dramatiserad visning av Visb_ · _Klukku tei_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Strömsund Kommun** — 63 event · — · `stromsund.se` · mall A (mejl)
+  - t.ex. _Sommarcafé på Sögårn_ · _Bingo i Rossön_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Medborgarskolan** — 62 event · Örebro, Umeå · `medborgarskolan.se` · mall A (mejl)
+  - t.ex. _Prova/träna dreja_ · _Stadra Teater - Ett resande teatersällskap_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Halmstads församling** — 61 event · Halmstad · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sticka och virka - lappa och laga._ · _Promenadgrupp Holm_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Västerås domkyrkoförsamling** — 59 event · Västerås · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Grand tour_ · _Visning av domkyrkan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Karlskrona** — 58 event · Karlskrona · `visitkarlskrona.se` · mall A (mejl)
+  - t.ex. _Sommarlovsaktiviteter - Sommarsagor på_ · _Musik i sommarkväll_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Jönköpings församling** — 58 event · Jönköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Gemenskapscafe_ · _Bibelstudier - Romarbrevet_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Ale Kommun** — 56 event · Göteborg · `ale.se` · mall A (mejl)
+  - t.ex. _Märkestagning i Hultasjön_ · _Sy sommarblommor hos Ale Slöjdare_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Landskrona Stad** — 55 event · Helsingborg · `landskrona.se` · mall A (mejl)
+  - t.ex. _Dans i Slottsparken_ · _Film i parken: Wicked_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Bollnäs församling** — 53 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Bollnäs kyrka håller öppet_ · _Sommarcafé-Prästnäsgården_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **By-Folkärna pastorat** — 51 event · Karlstad · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Tipspromenad i Folkärna_ · _Tipspromenad i Folkärna_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Östersund** — 50 event · Östersund, Linköping · `visitostersund.se` · mall A (mejl)
+  - t.ex. _Summerparty med Micke Mojo 15:e juli_ · _Jemtlands Veteranbilklubbs Fikaträffar 2026_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Strängnäs domkyrkoförsamling med Aspö** — 49 event · Eskilstuna · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Lilla stugan - öppen diakonimottagning_ · _Utställning - Från katedral till kateder_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Gärsnäs församling** — 49 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Musik i sommarkväll_ · _Morgonbön_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Malmö S:t Johannes församling** — 47 event · Malmö · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Cafe Maria_ · _Utställning: Inner peace - skulptur och måleri av Lisa Linda_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Trollhättans församling** — 47 event · Trollhättan · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Vägkyrka_ · _Vägkyrka_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kulturen i Lund** — 46 event · Lund · `kulturen.com` · mall A (mejl)
+  - t.ex. _Kvällsöppet till kl 20_ · _Drop-in slöjd på Kulturens Östarp_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kulturbolaget** — 44 event · Malmö · `kulturbolaget.se` · mall A (mejl)
+  - t.ex. _The Jayhawks_ · _Torsson_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Umeå** — 43 event · Umeå · `visitumea.se` · mall A (mejl)
+  - t.ex. _Livemusik med Evelina Rolon och Jonas Strandgård_ · _Foodtruck Festival_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Mora församling** — 43 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarcafé med utelek i parken_ · _Siljan Återbyggdepå öppen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Linköping** — 42 event · Linköping · `visitlinkoping.se` · mall A (mejl)
+  - t.ex. _Mode, nipper och accessoarer på Ljungs slott_ · _Folk, konstverk och växter i Trädgårdsföreningen med Linköpi_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Ålidhems församling** — 42 event · Umeå · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Kafé Kyrkstugan öppen_ · _Promenadgrupp_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **S:t Johannes församling** — 41 event · Norrköping, Eskilstuna · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Församlingskväll_ · _Måbra Promenad_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Habo församling** — 40 event · Jönköping, Nyköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Vägkyrkoguidning i Habo kyrka_ · _Habo vägkyrka i Sockenstugan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Stockholms domkyrkoförsamling** — 40 event · Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Tornvisning_ · _Visning_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Ystad-Sövestads församling** — 40 event · Lund · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Barnpyssel i Latinskolan_ · _Middagsbön_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kiladalens församling** — 40 event · Nyköping, Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommaröppet i Tuna kyrka_ · _Stavgång_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Gävle Kommun** — 39 event · Gävle · `gavle.se` · mall A (mejl)
+  - t.ex. _Musik på Brukscaféet_ · _Stand up Comedy_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Korpen Gävle** — 39 event · Gävle · `korpengavle.zoezi.se` · mall A (mejl)
+  - t.ex. _GRUNDEN BOIS - Skutte BK_ · _FC Calcaneus - Newroz FF_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Svedala Kommun** — 38 event · Malmö · `svedala.se` · mall A (mejl)
+  - t.ex. _Sommarpyssla med pärlor på Svedala bibliotek_ · _Basketturnering med ungdomsledarna i Klågerup_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Karlskrona-Aspö församling** — 37 event · Karlskrona · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sinnesromässa/O store Gud_ · _Frukost_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Piteå församling** — 37 event · Luleå · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _S:t Mary Kyrkstadscafé har Öppet_ · _guidning_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **RaceID** — 37 event · Karlskrona, Halmstad · `raceid.com` · mall A (mejl)
+  - t.ex. _Åsele Trailrun 2026_ · _Västmanland Gravel Motion_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Falu Kristine församling** — 36 event · Falun · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarverksamhet för små och stora_ · _Café Mary, Ryggåsstugan i Falu Stadspark_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Södertälje Kommun** — 36 event · Södertälje · `sodertalje.se` · mall A (mejl)
+  - t.ex. _Öppet gym på Morkullan torsdagar - sommaren_ · _Utomhusspel på Morkullan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Sigtuna** — 36 event · Uppsala · `bibliotek.sigtuna.se` · mall A (mejl)
+  - t.ex. _Quiz för stora och små på Humlegården_ · _Bokbord på Humlegården_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Hedvig Eleonora och Oscars församling** — 35 event · Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Hedvig Eleonora sommarcafé_ · _Djurgårdskyrkans sommarcafé_ · skickat: ____ · svar: ____ · länk: ____
+
+## Prio 3 — långsvansen
+
+_Lägre volym per arrangör — men lokala föreningslänkar väger fint i Googles ögon._
+
+- [ ] **Katrineholm Kommun** — 35 event · Eskilstuna, Norrköping · `katrineholm.se` · mall A (mejl)
+  - t.ex. _Julitafestivalen_ · _Cirkusskola_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Emmaboda Kommun** — 34 event · Karlskrona · `emmaboda.se` · mall A (mejl)
+  - t.ex. _Tillfälliga avstängningar på Centrumtorget v. 25-28_ · _Tillfälliga avstängningar på Centrumtorget v. 25-28_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Falköpings församling** — 34 event · Skövde, Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarutställning_ · _Café Himmel & Jord_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Sköns församling** — 34 event · Sundsvall, Malmö · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Stor & Liten vid Kyrkstugan_ · _Café Kyrkstugan har öppet_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Vara Konserthus** — 34 event · Trollhättan · `varakonserthus.se` · mall A (mejl)
+  - t.ex. _Jag sa ju förlåt_ · _Klassisk julkonsert med Anne Sofie von Otter_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Älvsbyn** — 33 event · — · `visitalvsbyn.se` · mall A (mejl)
+  - t.ex. _Diggiloo_ · _Music on a Summer Evening_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Skarpnäcks församling** — 33 event · Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Allsång med Olle Eilerstam_ · _Markuskyrkan är öppen - St Marks's church is open_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Oskarshamns församling** — 32 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Förbönsgemenskapen_ · _Sommarpratare: Laila Naraghi_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Stadsbiblioteket** — 32 event · Uppsala, Halmstad · `bibliotek.laholm.se` · mall A (mejl)
+  - t.ex. _Stöd på vägen till jobb eller studier_ · _Sommar i Makerspace - Vecka 25 till 33_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Två systrars församling** — 32 event · Helsingborg, Kalmar · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Grillning_ · _Morgonbön_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Fjärdhundra församling** — 32 event · Västerås, Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarcafé i Härnevi församlingshem_ · _Sommaröppen kyrka_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Sigtuna församling** — 31 event · Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Mariakyrkan öppen_ · _Mariakyrkan öppen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Eslövs Kommun** — 30 event · Lund · `eslov.se` · mall A (mejl)
+  - t.ex. _Sommarbokcirkel på Eslövs stadsbibliotek_ · _Sommarkväll i Eslöv_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Morlanda församling** — 30 event · Trollhättan · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Vägkyrka i Hälleviksstrand_ · _Sommarsamtal: Från förnedring till upprättelse_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kiviks församling** — 29 event · Kristianstad · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Bokhörnan öppen_ · _Öppna kyrkor_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Helsingborgs Maria församling** — 29 event · Helsingborg · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarmusik i Anna - Mozart, Schumann och Carlén_ · _Sommar i Maria_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Falkenberg Kommun** — 29 event · Halmstad · `falkenberg.se` · mall A (mejl)
+  - t.ex. _Utställning Havets Skatter – Treasures of the Sea_ · _Musikkvällar – Birkir Blaer & Hannah Anders_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Arbogabygdens församling** — 29 event · Gävle, Örebro · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Volontärernas Sommarlunch_ · _Guidning av kyrkan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Vingåker Kommun** — 29 event · Örebro · `vingaker.se` · mall A (mejl)
+  - t.ex. _Tosca_ · _Trädgårdskonsert med Widén Strand Poppe_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Värmdö församling** — 28 event · Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarkvällskonsert: Från Psalmer till Bach - Jazziga tolkni_ · _Våffelcafé_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Hägerstens församling** — 28 event · Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarorgel_ · _Sommarcafé_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Norra Tjusts pastorat** — 28 event · Västerås · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _"Musik i sommarkväll" i Odensvi kyrka_ · _" Öppen kyrka" i Lofta kyrka_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kvistofta församling** — 28 event · Helsingborg · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Konstutställning i Rydebäck kyrka_ · _Café påtår i sommarkväll_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Hammarö församling** — 28 event · Karlstad · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Hammarö kyrka är öppen varje dag kl 10.00-16.00_ · _Sommarcafé_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Norrköpings S:t Olofs församling** — 28 event · Norrköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Middagsbön_ · _Utställning: Tre månader i rikets centrum_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Växjö stads- och domkyrkoförsamling** — 28 event · Växjö · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarguidning Växjö domkyrka_ · _Sommarguidning Växjö domkyrka_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Bio Roy** — 27 event · Göteborg · `bioroy.se` · mall A (mejl)
+  - t.ex. _Konsten att skrika_ · _Casablanca_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Söndrum-Vapnö församling** — 27 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Söndrums kyrka & Vapnö kyrka håller öppet_ · _Caféet_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Älvkarleby-Skutskärs församling** — 27 event · Gävle · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Vägkyrka besök "Bruden vid älven"_ · _Café Träffpunkt Fyrklövern_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Järfälla församling** — 27 event · Stockholm, Skövde · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarcafé Maria_ · _Sommarmusik: Wild Mountain Thyme_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Burseryds församling** — 27 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommar i Sandvik_ · _Sommarmusik_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Göteborg Kommun** — 26 event · Göteborg · `goteborg.com` · mall A (mejl)
+  - t.ex. _Biohazard, Sworn Enemy & Striking 13 - Konsert med hardcore_ · _Korsvägen - utomhuskonsert_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Sundsvalls församling** — 26 event · Sundsvall · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarkyrkan Öppettider 22 juni - 22 augusti, må-lö 11-16. G_ · _Lunchmusik_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kalmar domkyrkoförsamling** — 26 event · Kalmar · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Laudes (morgonbön)_ · _Guidning av domkyrkan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Askersund-Hammars församling** — 26 event · Örebro · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Kyrkan är öppen_ · _Kyrkan öppen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Katarina församling** — 26 event · Sundsvall, Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Konst i Katarina - Catharina Gotby_ · _Lunchmusik med Maria Wilsson_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Tumba bibliotek** — 26 event · Södertälje · `bibliotek.botkyrka.se` · mall A (mejl)
+  - t.ex. _Sommarateljé_ · _Canastaklubben_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Svenska Naturskyddsföreningen** — 26 event · Stockholm, Malmö · `naturskyddsforeningen.se` · mall A (mejl)
+  - t.ex. _Skyltverkstad inför klimatdemonstrationen_ · _Den stora klimatdemonstrationen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Svenljunga Kommun** — 25 event · Borås · `ic-calendar.svenljunga.se` · mall A (mejl)
+  - t.ex. _Sommar tillsammans Med Hasse Davidsson_ · _Sommar tillsammans Med Hasse Davidsson på Hammarlinds_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Visit Sörmland** — 25 event · Eskilstuna, Nyköping · `visitsormland.se` · mall A (mejl)
+  - t.ex. _Familjedag: ICA Maxi Eskilstuna Fyraåringstest (trav) och Li_ · _Allsång i Parken_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Luleå domkyrkoförsamling** — 25 event · Luleå · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarkonsert-Fred Holmlund spelar klassisk gitarr, brasilan_ · _Diakoni i Centrum-Nykter idag_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Nederluleå församling** — 25 event · Luleå · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Kyrkan öppen 10-17_ · _Musik i sommarkväll_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Melleruds församling** — 25 event · Trollhättan, Göteborg · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommaröppen kyrka_ · _Kafé Kom in_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Flen, Helgesta-Hyltinge församling** — 25 event · Eskilstuna, Nyköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Välkommen till Hyltinge kyrka - vår sommaröppna kyrka_ · _Mötesplatsen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Byske-Fällfors församling** — 25 event · Skellefteå · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Kyrkan öppen_ · _Kyrkan öppen_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Uppvidinge Kommun** — 25 event · — · `uppvidinge.se` · mall A (mejl)
+  - t.ex. _Våffelservering i Mösjöhult_ · _Bruksbodensdag i Sävsjöström_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Tomelilla Kommun** — 24 event · Lund · `tomelilla.se` · mall A (mejl)
+  - t.ex. _Allsång i Stadsparken: Danne Stråhed, Carolina Sandgren och _ · _Marknader_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Katrineholmsbygdens församling** — 24 event · Eskilstuna, Norrköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarmusik_ · _Sinnesrogudstjänst_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kågedalens församling** — 24 event · — · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Cafékväll med folkmusik_ · _Café Pärlan_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Rotary Ängelholm-Bjäre** — 24 event · — · `portal.clubrunner.ca` · mall A (mejl)
+  - t.ex. _Walk & Talk längs Rönne Å_ · _Walk & Talk, kanske i Magnarp_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Kulturhuset Fyren** — 24 event · Göteborg · `bibliotek.kungsbacka.se` · mall A (mejl)
+  - t.ex. _Teckna digitalt karaktärer för mysterier och dolda spår!_ · _Sommarsagostund_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Krokom Kommun** — 24 event · Östersund · `krokom.se` · mall A (mejl)
+  - t.ex. _Andakt_ · _Öppet hus i Hembygdsrummet i Ås_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Båstad** — 24 event · Halmstad · `bastad.com` · mall A (mejl)
+  - t.ex. _Mare Nostrum , Christel Amos Jönsson_ · _Summer of the Sea – sånger till havet_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Karlstads domkyrkoförsamling** — 23 event · Karlstad · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Tornuppstigning i Domkyrkan, vardagar 15:00_ · _Musik i sommarkväll: "Intimt och fängslande i mötet"_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Upplev Stockholm** — 23 event · Stockholm · `upplev.stockholm` · mall A (mejl)
+  - t.ex. _Häng med i en skapande workshop med Chisel Studio i Akalla_ · _Skejta med Fryshuset_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Helsingborgs Stad** — 23 event · Helsingborg · `helsingborg.se` · mall A (mejl)
+  - t.ex. _Chill på Mäster Palm_ · _Premiär: Emil i Lönneberga_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Ronneby församling** — 23 event · Karlskrona · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommarkyrkokväll_ · _Sommarkyrkocafé_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Prins Eugens Waldemarsudde** — 23 event · Stockholm · `waldemarsudde.se` · mall A (mejl)
+  - t.ex. _Sommarkonsert - Waldemarsudde_ · _Trädgårdsvisning - Waldemarsudde_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Västermalms församling** — 23 event · Stockholm, Västerås · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Musik i sommarkväll-Ett äventyr på saxofon och klarinett_ · _Sommarcafé_ · skickat: ____ · svar: ____ · länk: ____
+- [ ] **Vällingby församling** — 23 event · Södertälje, Stockholm · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Afton i trädgården -"Triol runt tiden - från Back till Beatl_ · _Kyrkan öppen mellan kl 10:00 - 14:00_ · skickat: ____ · svar: ____ · länk: ____

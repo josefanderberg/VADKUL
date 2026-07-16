@@ -118,9 +118,11 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
 // — Firestore-reglerna blockerar all klientskrivning av både eventStars och
 // starGift-fälten, annars vore gåvan förfalskbar.
 
-// Giltiga kampanjkoder. EN kod för hela mail-kampanjen — inlösen begränsas
-// per KONTO (starGift-fältet), inte per kod.
-const STAR_GIFT_CODES = ['STJARNA1'];
+// Giltiga kampanjkoder. Inlösen begränsas per KONTO (starGift-fältet), inte
+// per kod — koderna finns för att kunna hålla isär kampanjer i attributionen
+// (starGiftCode på user-dokumentet): STJARNA1 = mail-kampanjen till användare,
+// ARRANGOR1 = arrangörs-outreachen (docs/outreach/).
+const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1'];
 
 /** Lös in stjärn-gåvan: sätter starGift='unused' på kontot, max en gång. */
 export const redeemStarGift = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
@@ -162,7 +164,8 @@ export const redeemStarGift = region.https.onCall(async (data: any, context: fun
             }
             // users-dokumentet ska finnas (skapas vid registrering), men gamla
             // konton utan doc får inte fastna → set med merge täcker båda.
-            transaction.set(userRef, { starGift: 'unused' }, { merge: true });
+            // starGiftCode = vilken kampanj stjärnan kom från (attribution).
+            transaction.set(userRef, { starGift: 'unused', starGiftCode: code.toUpperCase().trim() }, { merge: true });
         });
 
         return result;
