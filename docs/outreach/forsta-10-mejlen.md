@@ -50,7 +50,8 @@ Studsar ett mejl: kolla sajtens kontaktsida — kursiverade noter anger fallback
 > Gamla kyrka, Yxnerums kyrka och mycket mer – 177 stycken just nu, helt
 > gratis.
 >
-> Här syns de: https://vadkul.se/evenemang/linkoping
+> Åtvids Gamla kyrka, direkt på kartan:
+> https://vadkul.se/?event=https%3A%2F%2Fwww.svenskakyrkan.se%2Fkalender%3Fevent%3D15a481410bfb46bc88d6282bf186b66d
 >
 > Om ni tycker det är fint att synas där skulle en liten länk till vadkul.se
 > från församlingens sida hjälpa fler att hitta både era öppna kyrkor och
@@ -158,7 +159,8 @@ Studsar ett mejl: kolla sajtens kontaktsida — kursiverade noter anger fallback
 > musikquizet på Kölsvinet och 120 till – så både Trosabor och
 > sommargäster kan hitta dem på ett ställe.
 >
-> Närmaste områdessidan: https://vadkul.se/evenemang/nykoping
+> Er bakluckeloppis, direkt på kartan:
+> https://vadkul.se/?event=https%3A%2F%2Ftrosa.com%2Fevent%2Fbakluckeloppis-i-trosa%2F2026-07-22%2F
 >
 > Ni gör ett fantastiskt jobb med trosa.com – om kartan känns som ett bra
 > komplement vore en liten länk till vadkul.se guld värd. Varje event hos oss
