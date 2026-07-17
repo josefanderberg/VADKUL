@@ -17,9 +17,9 @@ Siffrorna i inläggen är verkliga (räknade ur eventdatat 2026-07-17, kommande
 
 | Grupp (ordagrant namn) | Ort | Inlägg | Postat | Reaktion | Nästa tidigast |
 |---|---|---|---|---|---|
-| Vad händer i Byske? | Byske | 1 | ____ | ____ | +3 v |
-| Vad händer i Norrtälje? | Norrtälje | 2 | ____ | ____ | +3 v |
-| Vad händer i Svalövs Kommun | Svalöv | 3 | ____ | ____ | +3 v |
+| Vad händer i Byske? | Byske | 1 | 2026-07-17 | ____ | 2026-08-07 |
+| Vad händer i Norrtälje? | Norrtälje | 2 | 2026-07-17 | ____ | 2026-08-07 |
+| Vad händer i Svalövs Kommun | Svalöv | 3 | 2026-07-17 | ____ | 2026-08-07 |
 | Vad händer i Malå? | Malå | 4 | ____ | ____ | +3 v |
 | Vad händer I Åmål och Säffle | Åmål/Säffle | 5 | ____ | ____ | +3 v |
 | Vad händer i Tierps kommun? | Tierp | 6 | ____ | ____ | +3 v |
