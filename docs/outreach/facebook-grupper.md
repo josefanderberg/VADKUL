@@ -1,10 +1,38 @@
-# FB-grupperna — logg + färdiga inlägg
+# FB-grupperna — logg + inlägg
 
-Postas från **Josefs privata konto**. Regler: läs gruppens regler först, max
-2–3 grupper per dag, svara på alla kommentarer första dygnet. **Samma grupp
-tidigast var 3:e vecka** — fyll i "postat" så vi har koll. Gruppnamnen är
-ORDAGRANNA — det kan finnas likalydande grupper senare; de räknas som nya
-rader, inte dubbletter.
+## ⚠️ LÄRDOM 2026-07-18: rakt-på-inlägg med länk fungerade INTE
+
+Alla tre första inläggen (Byske/Norrtälje/Svalöv) togs bort eller nekades av
+moderatorer inom ett dygn. Byske hade t.o.m. **15 likes + 8 kommentarer** innan
+det försvann — så INNEHÅLLET funkade, det var FORMATET som dödades. Ett inlägg
+med extern länk från en nyinkommen icke-medlem läses som reklam av moderatorer,
+hur användbart det än är. Den här broadcast-metoden är alltså avskriven.
+
+**Nya spelplanen (i prioritetsordning):**
+
+1. **Fråga admin FÖRST.** DM:a gruppens admin: _"Hej! Jag har byggt en gratis
+   evenemangskarta (vadkul.se) — får jag dela den i gruppen?"_ Ett ja betyder
+   att inlägget inte plockas bort. Ett nej sparar dig besväret.
+2. **Samarbeta med admin.** "Vad händer i [stad]"-admins gör MANUELLT exakt det
+   VADKUL gör automatiskt — de är kollegor, inte publik. Erbjud kartan som ett
+   verktyg för DEM (de kan använda den för att hitta event att posta). Vissa
+   vill kanske co-posta eller länka permanent. Detta är den starkaste vägen.
+3. **Delta på riktigt (Variant D).** Broadcasta inte — SVARA när någon frågar
+   "vad ska man göra i helgen?". Ingen tar bort ett hjälpsamt svar. Bygg
+   trovärdighet som deltagare först, nämn kartan naturligt.
+4. **Länken i en KOMMENTAR, inte i inlägget** där reglerna är hårda — många
+   grupper/filter triggar på extern URL i själva inlägget.
+
+Broadcast-inläggen nedan (1–10) behålls som RÅMATERIAL för när admin sagt ja,
+eller för att korta ner till Variant D-svar. Men posta dem inte kalla igen.
+
+---
+
+## Gamla instruktionen (gäller bara EFTER admins ja)
+
+Postas från **Josefs privata konto**. Läs gruppens regler, max 2–3 grupper per
+dag, svara på alla kommentarer första dygnet. **Samma grupp tidigast var 3:e
+vecka.** Gruppnamnen är ORDAGRANNA — likalydande grupper senare = nya rader.
 
 Stjärnlänken i inläggen är **STJARNA1** (publika användarkampanjen) — INTE
 ARRANGOR1, den är reserverad för arrangörsmejlen så attributionen
@@ -18,9 +46,9 @@ be Claude räkna om den först.
 
 | Grupp (ordagrant namn) | Ort | Inlägg | Postat | Reaktion | Nästa tidigast |
 |---|---|---|---|---|---|
-| Vad händer i Byske? | Byske | 1 | 2026-07-17 | ____ | 2026-08-07 |
-| Vad händer i Norrtälje? | Norrtälje | 2 | 2026-07-17 | ____ | 2026-08-07 |
-| Vad händer i Svalövs Kommun | Svalöv | 3 | 2026-07-17 | ____ | 2026-08-07 |
+| Vad händer i Byske? | Byske | 1 | 2026-07-17 | 15 likes, 8 kommentarer — sen BORTTAGEN av moderator | — |
+| Vad händer i Norrtälje? | Norrtälje | 2 | 2026-07-17 | BORTTAGEN/nekad | — |
+| Vad händer i Svalövs Kommun | Svalöv | 3 | 2026-07-17 | BORTTAGEN/nekad | — |
 | Vad händer i Malå? | Malå | 4 | ____ | ____ | +3 v |
 | Vad händer I Åmål och Säffle | Åmål/Säffle | 5 | ____ | ____ | +3 v |
 | Vad händer i Tierps kommun? | Tierp | 6 | ____ | ____ | +3 v |
