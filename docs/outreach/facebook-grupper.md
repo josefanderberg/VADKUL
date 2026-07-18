@@ -10,8 +10,9 @@ Stjärnlänken i inläggen är **STJARNA1** (publika användarkampanjen) — INT
 ARRANGOR1, den är reserverad för arrangörsmejlen så attributionen
 (`starGiftCode`) hålls ren per kanal.
 
-Siffrorna i inläggen är verkliga (räknade ur eventdatat 2026-07-17, kommande
-30 dagar inom 2,5–4 mil) — uppdatera dem om du postar långt senare.
+Siffrorna + exemplen är verkliga (post 1–3 räknade 2026-07-17, post 4–10
+uppdaterade 2026-07-18) — färskvara! Postar du en post långt efter dess datum,
+be Claude räkna om den först.
 
 ## Loggen
 
@@ -68,43 +69,45 @@ Siffrorna i inläggen är verkliga (räknade ur eventdatat 2026-07-17, kommande
 ## 4. Vad händer i Malå?
 
 > Hej Malå! 👋 Jag har byggt en gratis karta över allt som händer i Sverige —
-> vadkul.se — och jag ska vara ärlig: för Malå-trakten har jag bara hittat
-> en handfull än så länge. Men de finns där: **Gul å blå-sommarkonserten på
-> Holmberget imorgon** 🎵 och Promenadkul med 4-benta vänner nästa vecka 🐕
+> vadkul.se — och jag ska vara helt ärlig: för Malå-trakten har jag nästan
+> inga event än. "Promenadkul med 4-benta vänner" på onsdag är ungefär vad
+> jag hittat 🐕
 >
-> Här behöver jag er hjälp: vad ordnas i Malå som borde synas på kartan?
-> Tipsa i kommentarerna så lägger jag in det! Och skapar ni gratis konto via
-> vadkul.se/?stjarna=STJARNA1 får ni en guldstjärna ⭐ att sätta på det event
-> ni tycker förtjänar mest uppmärksamhet.
+> Och det är just därför jag skriver här: **vad ordnas i Malå som borde synas
+> på kartan?** Marknader, konserter, loppisar, byalag – tipsa i kommentarerna
+> så lägger jag in det, så folk faktiskt hittar det! Skapar ni gratis konto
+> via vadkul.se/?stjarna=STJARNA1 får ni dessutom en guldstjärna ⭐ att sätta
+> på det event ni tycker är viktigast.
 
 ## 5. Vad händer I Åmål och Säffle
 
-> Kolla vad jag hittade för helgen härikring 👇
+> Kolla vad som händer härikring i helgen 👇
 >
-> 🤠 Westernfest i Svanskog
-> 🏆 "Inofficiella VM" (ja, det heter faktiskt så)
-> 🧶 Hantverksmässa med Säffle Slöjd- & Hantverksgrupp
-> 🎶 Frida Franzén — Sköna toner om tid och rum
+> 🤠 Westernfest i Svanskog (idag!)
+> 🏆 Efterfesten – Inofficiella VM
+> ⚔️ Värmlands Vikingacenter
+> 🧶 Hantverkskafé
 >
-> Plus typ 150 grejer till närmaste månaden — allt på vadkul.se, en gratis
-> karta över allt som händer i Sverige som jag byggt på kvällar och helger.
-> Säg till om något saknas så fixar jag! Vad går ni på?
+> Plus runt **137 grejer till** närmaste månaden — allt på vadkul.se, en
+> gratis karta över allt som händer i Sverige som jag byggt på kvällar och
+> helger. Säg till om något saknas så fixar jag! Vad går ni på?
 
 ## 6. Vad händer i Tierps kommun?
 
-> Visste ni att det ligger **85 evenemang** i Tierps-trakten närmaste
+> Visste ni att det ligger **runt 78 evenemang** i Tierps-trakten närmaste
 > månaden? Jag visste inte förrän jag byggde en karta över allt som händer i
-> Sverige (vadkul.se, gratis) 😄 I helgen t.ex.: storloppis på Stavgården,
-> sommarteatern "Kampen om Mellangården" och guidade vägkyrkobesök.
+> Sverige (vadkul.se, gratis) 😄 I helgen t.ex.: sommarteatern "Kampen om
+> Mellangården" idag, storloppis på Stavgården imorgon och guidade
+> vägkyrkobesök.
 >
 > Kika gärna — och kommentera om jag missat något som borde vara med!
 
 ## 7. Vad händer i Kville?
 
 > Sommaren i Kville-trakten är sjukt späckad just nu — jag räknade till
-> **124 evenemang inom 2,5 mil** på kartan jag byggt (vadkul.se, gratis
-> karta över allt som händer i Sverige). Viksholmsfestivalen pågår,
-> After Beach med John Lindberg Trio, konsertkryssning med västkustbuffé... 🦐
+> **runt 110 evenemang inom 2,5 mil** på kartan jag byggt (vadkul.se, gratis
+> karta över allt som händer i Sverige). Ikväll spelar Arvingarna,
+> Björn Rosenström är i Hamburgsund och SUPERGIRL kör igång... 🎶
 >
 > Bra för både oss som bor här och alla sommargäster som frågar "vad ska vi
 > hitta på?" — skicka dem länken 😄 Något som saknas? Tipsa!
@@ -124,8 +127,8 @@ Siffrorna i inläggen är verkliga (räknade ur eventdatat 2026-07-17, kommande
 
 > Någon mer som tycker det är svårt att ha koll på vad som händer häromkring?
 > Jag tröttnade och byggde en karta: vadkul.se — gratis, hela Sverige, och
-> just nu **117 evenemang inom 2,5 mil från Kungsör**. I helgen bl.a. Danny
-> Saucedo, Petter på Bryggan och pilgrimsvandring till S:t Olofs källa 🚶
+> just nu **runt 112 evenemang inom 2,5 mil från Kungsör**. Ikväll bl.a.
+> Petter @ Bryggan och Sofia Ullman, och imorgon bakluckeloppis på Tuna Park 🛍️
 >
 > Inget konto behövs — kika och säg vad som saknas!
 
@@ -133,10 +136,10 @@ Siffrorna i inläggen är verkliga (räknade ur eventdatat 2026-07-17, kommande
 
 > Vad händer i Halmstad framöver? Här är ett axplock 👇
 >
-> 🎪 Sandstock Festival — nu i helgen!
-> 🎭 Pettson tältar (för de små)
-> 🎬 Toy Story 5 med svenskt tal
-> …och 170 till närmaste månaden.
+> 🎭 The Odyssey (idag)
+> 🎶 Musik i sommarkväll med mingel
+> ⚽ After Match at Sand
+> …och drygt 160 till närmaste månaden.
 >
 > Allt finns på vadkul.se/evenemang/halmstad — en gratis karta över allt som
 > händer i Sverige som jag byggt själv. Skapa gratis konto via
