@@ -26,6 +26,27 @@ hur användbart det än är. Den här broadcast-metoden är alltså avskriven.
 Broadcast-inläggen nedan (1–10) behålls som RÅMATERIAL för när admin sagt ja,
 eller för att korta ner till Variant D-svar. Men posta dem inte kalla igen.
 
+### Admin-DM (Messenger)
+
+⚠️ **Messenger-spamvarning:** privatkonto + liknande meddelanden till många
+främlingar snabbt = kontot kan BEGRÄNSAS (värre än borttaget inlägg). Regler:
+**max 3–5 per dag**, utspritt, och **personifiera första raden** (gruppnamn +
+ort) — identisk copy-paste triggar filtret. Admins är icke-vänner → hamnar i
+deras "Meddelandeförfrågningar".
+
+> Hej! Jag såg att du driver **[gruppnamn]** – vad kul att någon håller koll på
+> allt som händer i [ort]! 🙌
+>
+> Jag har byggt en gratis karta över events i hela Sverige (vadkul.se) och
+> tänkte höra: vore det okej att dela den i gruppen? Jag vill absolut inte
+> spamma – bara tipsa om något jag tror medlemmarna skulle gilla.
+>
+> Och om det är till hjälp för dig när du letar event att posta får du
+> jättegärna använda den själv. Säg bara till om det passar! /Josef
+
+Logga admin-DM:en i en egen kolumn/anteckning så du inte dubbel-DM:ar samma
+person.
+
 ---
 
 ## Gamla instruktionen (gäller bara EFTER admins ja)
