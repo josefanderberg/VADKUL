@@ -164,8 +164,17 @@ Inlägg:
 
 Första kommentaren (skriv själv direkt efter):
 
-> Här är kartan om någon vill kika: vadkul.se/evenemang/tierp 🗺️ Gratis och
-> inget konto behövs.
+> Här är kartan om någon vill kika: vadkul.se 🗺️ Gratis och inget konto behövs.
+
+⚠️ **Tierp har INGEN egen stadssida** (bara de 31 största städerna har det —
+lista i cityData.ts). Länka därför till `vadkul.se`, ALDRIG
+`vadkul.se/evenemang/tierp` (404). Gäller alla orter utanför de 31: Byske,
+Norrtälje, Svalöv, Malå, Åmål/Säffle, Kville, Harads, Kungsör → använd
+`vadkul.se`. Städer MED sida (ok att djuplänka): stockholm, goteborg, malmo,
+uppsala, linkoping, orebro, vasteras, helsingborg, norrkoping, jonkoping,
+umea, lund, boras, sundsvall, gavle, eskilstuna, halmstad, vaxjo, karlstad,
+sodertalje, kristianstad, lulea, skelleftea, kalmar, ostersund, falun,
+karlskrona, visby, trollhattan, nykoping, skovde.
 
 ## 7. Vad händer i Kville?
 
