@@ -77,6 +77,7 @@ be Claude räkna om den först.
 | Vad händer i Harads? | Harads | 8 | ____ | ____ | +3 v |
 | Vad händer i Kungsör 2.0 | Kungsör | 9 | ____ | ____ | +3 v |
 | Halmstad - Vad händer i stan med omnejd | Halmstad | 10 | ____ | ____ | +3 v |
+| Vad händer i Gränna (grupp) | Gränna | 11 | 2026-07-19 | (länk i kommentar — test 2) | 2026-08-09 |
 
 ---
 
@@ -205,6 +206,30 @@ karlskrona, visby, trollhattan, nykoping, skovde.
 > Petter @ Bryggan och Sofia Ullman, och imorgon bakluckeloppis på Tuna Park 🛍️
 >
 > Inget konto behövs — kika och säg vad som saknas!
+
+## 11. Gränna (postat 2026-07-19 — länk-i-kommentar-test 2)
+
+Gränna saknar egen stadssida → länk = `vadkul.se`. 29 event inom 2,5 mil.
+Inlägg:
+
+> Vad händer i Gränna-trakten framöver? Kollade lite och det var mer än jag
+> trodde 👇
+>
+> ☕ Hemvändardag på Klockaregården (idag)
+> 🎶 Sommarmusik på Visingsö, Brahekyrkan
+> 🦐 Räkfrossa & pizzabuffé på Gränna Strandhotell (onsdag)
+> 🎡 Sommarparken på Stora Lek
+>
+> …och runt 29 grejer till på gång närmaste månaden. Jag har samlat allt på en
+> karta (gratis, byggd på kvällar och helger) — men det finns säkert mer som
+> borde vara med.
+>
+> **Vad har jag missat?** Tipsa i kommentarerna så lägger jag in det! 👇
+
+Första kommentaren (skriv direkt efter):
+
+> Här är kartan för den som vill kika: vadkul.se 🗺️ Gratis och inget konto
+> behövs.
 
 ## 10. Halmstad - Vad händer i stan med omnejd
 
