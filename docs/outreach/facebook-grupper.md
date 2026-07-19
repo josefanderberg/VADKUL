@@ -143,13 +143,29 @@ be Claude räkna om den först.
 
 ## 6. Vad händer i Tierps kommun?
 
-> Visste ni att det ligger **runt 78 evenemang** i Tierps-trakten närmaste
-> månaden? Jag visste inte förrän jag byggde en karta över allt som händer i
-> Sverige (vadkul.se, gratis) 😄 I helgen t.ex.: sommarteatern "Kampen om
-> Mellangården" idag, storloppis på Stavgården imorgon och guidade
-> vägkyrkobesök.
+**Ingen admin hittad → postat direkt, men LÄNK I FÖRSTA KOMMENTAREN (inte i
+inlägget) för att överleva moderering. Uppdaterat 2026-07-19 (sön).**
+Inlägg:
+
+> Vad händer i Tierps kommun idag? Kollade runt lite och det var mer än jag
+> trodde 👇
 >
-> Kika gärna — och kommentera om jag missat något som borde vara med!
+> ☕ Sommarcafé och lunchunderhållning på Hembygdsgården
+> 🎭 Kampen om Mellangården
+> 🎶 Musik i sommarkvällen
+> ⛪ Guidade vägkyrkobesök
+> 🚶 Bruksvandring i Söderfors
+>
+> …och totalt runt 74 grejer i kommunen närmaste månaden. Jag har samlat allt
+> på en karta (byggd på kvällar och helger, helt gratis) — men jag vet att
+> det finns mer som borde vara med.
+>
+> **Vad har jag missat?** Tipsa i kommentarerna så lägger jag in det! 👇
+
+Första kommentaren (skriv själv direkt efter):
+
+> Här är kartan om någon vill kika: vadkul.se/evenemang/tierp 🗺️ Gratis och
+> inget konto behövs.
 
 ## 7. Vad händer i Kville?
 
