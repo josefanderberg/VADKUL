@@ -72,7 +72,7 @@ be Claude räkna om den först.
 | Vad händer i Svalövs Kommun | Svalöv | 3 | 2026-07-17 | BORTTAGEN/nekad | — |
 | Vad händer i Malå? | Malå | 4 | ____ | ____ | +3 v |
 | Vad händer I Åmål och Säffle | Åmål/Säffle | 5 | ____ | ____ | +3 v |
-| Vad händer i Tierps kommun? | Tierp | 6 | ____ | ____ | +3 v |
+| Vad händer i Tierps kommun? | Tierp | 6 | 2026-07-19 | (länk i kommentar — se nedan) | 2026-08-09 |
 | Vad händer i Kville? | Kville | 7 | ____ | ____ | +3 v |
 | Vad händer i Harads? | Harads | 8 | ____ | ____ | +3 v |
 | Vad händer i Kungsör 2.0 | Kungsör | 9 | ____ | ____ | +3 v |
