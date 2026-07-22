@@ -27,14 +27,14 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 5 | Vad Händer I Nykvarn | vadkul.se |  |
 | 6 | Vad händer i Eksjö | vadkul.se |  |
 | 7 | Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | vadkul.se |  |
-| 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad |  |
+| 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad | 22/7 · länk i inlägg (variant A) · ? |
 | 9 | Vad händer i Sorsele? | vadkul.se |  |
 | 10 | Händer i Hudiksvall! 🌞 | vadkul.se |  |
 | 11 | Norrtälje - Vad händer på byn? | vadkul.se |  |
 | 12 | Det händer i Helsingborg | /evenemang/helsingborg |  |
 | 13 | Vad händer i Skogås, Trångsund och Länna | vadkul.se |  |
 | 14 | Det händer i Ängelholm | vadkul.se |  |
-| 15 | Vad händer i Kungsör 2.0 | vadkul.se |  |
+| 15 | Vad händer i Kungsör 2.0 | vadkul.se | 22/7 · länk i inlägg · ? |
 | 16 | Vad händer på Yxlan | vadkul.se |  |
 | 17 | Älmhultsbor, vad händer? | vadkul.se |  |
 | 18 | Vad händer på Högsbohöjd? | vadkul.se |  |
@@ -72,7 +72,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 50 | Vad händer på Östermalm. | vadkul.se |  |
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
-| 53 | Vad händer i Halmstad? | /evenemang/halmstad |  |
+| 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
 | 54 | Vad Händer På Gotland? | vadkul.se |  |
 | 55 | Vad händer i Majorna | vadkul.se |  |
 | 56 | Vad händer i Linné? | vadkul.se |  |
@@ -97,7 +97,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 75 | Vad händer på Södermalm | vadkul.se |  |
 | 76 | Vad händer i Sölvesborg | vadkul.se |  |
 | 77 | Vad händer i Gävle? | /evenemang/gavle |  |
-| 78 | Vad händer i Kville? | vadkul.se |  |
+| 78 | Vad händer i Kville? | vadkul.se | 22/7 · länk i inlägg · ? |
 | 79 | Vad händer på Hisingen? | vadkul.se |  |
 | 80 | Vad händer i Sölvesborg och på Lister? | vadkul.se |  |
 | 81 | Vad händer i Luleå? | /evenemang/lulea |  |
