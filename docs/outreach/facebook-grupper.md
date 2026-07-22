@@ -254,8 +254,9 @@ Första kommentaren (skriv direkt efter):
 
 ## 10. Halmstad - Vad händer i stan med omnejd
 
-**TVÅ Halmstad-grupper → två olika inlägg (22/7). Bio-visningar bortsållade
-(inte "riktiga" event). Halmstad HAR egen sida → djuplänk funkar.**
+**TVÅ Halmstad-grupper → två olika inlägg (22/7). Bio-visningar bortsållade.
+Halmstad HAR egen sida → djuplänk funkar. LÄNK DIREKT I INLÄGGET** (dessa
+grupper förhandsgodkänner inlägg → man hinner inte kommentera först).
 
 **Variant A — "den här veckan" (grupp 1):**
 
@@ -266,10 +267,10 @@ Första kommentaren (skriv direkt efter):
 > 🧶 Hantverksmässan i Hembygdsparken
 > 🎭 Pettson tältar – Maskrosteatern (för barnen)
 >
-> …och drygt 140 till närmaste månaden. Jag har samlat allt på en gratis karta
-> (byggd på kvällar och helger). **Vad ser ni mest fram emot?** 👇
-
-Kommentar: `Halmstads egen sida: vadkul.se/evenemang/halmstad 🗺️ Gratis, inget konto behövs.`
+> …och drygt 140 till närmaste månaden. Allt finns samlat på en gratis karta
+> jag byggt (på kvällar och helger): **vadkul.se/evenemang/halmstad** 🗺️
+>
+> Vad ser ni mest fram emot? 👇
 
 **Variant B — "i helgen" (grupp 2):**
 
@@ -280,10 +281,14 @@ Kommentar: `Halmstads egen sida: vadkul.se/evenemang/halmstad 🗺️ Gratis, in
 > ⛪ Guidad visning av S:t Nikolai kyrka
 > 🎭 Pettson tältar (för barnfamiljerna)
 >
-> …plus massor mer på kartan jag byggt (gratis, hela Sverige samlat).
-> **Vad går ni på i helgen?** 👇
-
-Kommentar: `Kartan: vadkul.se/evenemang/halmstad 🗺️ Gratis och inget konto behövs.`
+> …plus massor mer på kartan jag byggt — gratis, hela Sverige samlat:
+> **vadkul.se/evenemang/halmstad** 🗺️
+>
+> Vad går ni på i helgen? 👇
 
 ⚠️ Filtrera alltid bort bio (Filmstaden/"Sv. tal"/filmtitlar) ur FB-tipsen —
 de är ingen "händelse i stan".
+
+**OBS om länkplacering:** grupper med FÖRHANDSGODKÄNNANDE → länk i inlägget
+(inget kommentarsfält innan godkänt). Öppna grupper utan godkännande → testa
+länk i första kommentaren (överlever moderering bättre). Anpassa per grupp.
