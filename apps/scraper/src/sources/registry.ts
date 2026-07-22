@@ -572,6 +572,28 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-08',
     },
     {
+        id: 'visiteskilstuna',
+        hostName: 'Visit Eskilstuna — Evenemangsguiden',
+        region: 'eskilstuna',
+        engine: 'sitevision',
+        config: {
+            urls: ['https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden'],
+            defaultCity: 'Eskilstuna',
+            restApi: { url: 'https://visiteskilstuna.se/rest-api/Evenemang' },
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Eskilstuna kommuns/Visit Eskilstunas gemensamma eventguide (SiteVision RESTApp "Evenemang"). ETT anrop bär hela kalendern: 556 event vid upptäckt, alla framtida, 98,6 % med klockslag, 100 % bild, venue-namn (geocodas mot Eskilstuna). Beskrivningar är API-trunkerade (~200 tecken). type=other (~26) = utställningar, ej hämtade.',
+        lastVerified: '2026-07-22',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://visiteskilstuna.se/rest-api/Evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D',
+            date: '2026-07-22',
+            rawEventCount: 556,
+            notes: 'API-URL ur AppRegistry.registerInitialState i sid-HTML; param-signaturen (num/query/count/page/type/timestamp/filters) ur Vue-bundelns query-builder — filters-param obligatorisk, annars 500.',
+        },
+    },
+    {
         id: 'parkenzoo',
         hostName: 'Parken Zoo',
         region: 'eskilstuna',
