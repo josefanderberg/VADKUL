@@ -76,7 +76,8 @@ be Claude räkna om den först.
 | Vad händer i Kville? | Kville | 7 | ____ | ____ | +3 v |
 | Vad händer i Harads? | Harads | 8 | ____ | ____ | +3 v |
 | Vad händer i Kungsör 2.0 | Kungsör | 9 | ____ | ____ | +3 v |
-| Halmstad - Vad händer i stan med omnejd | Halmstad | 10 | ____ | ____ | +3 v |
+| Halmstad-grupp 1 (Vad händer i stan m. omnejd) | Halmstad | 10A | ____ | ____ | +3 v |
+| Halmstad-grupp 2 | Halmstad | 10B | ____ | ____ | +3 v |
 | Vad händer i Gränna (grupp) | Gränna | 11 | 2026-07-19 | (länk i kommentar — test 2) | 2026-08-09 |
 
 ---
@@ -253,19 +254,36 @@ Första kommentaren (skriv direkt efter):
 
 ## 10. Halmstad - Vad händer i stan med omnejd
 
-**Länk-i-kommentar-format, uppdaterat 2026-07-22 (ons). Halmstad HAR egen sida
-→ djuplänk funkar.** Inlägg:
+**TVÅ Halmstad-grupper → två olika inlägg (22/7). Bio-visningar bortsållade
+(inte "riktiga" event). Halmstad HAR egen sida → djuplänk funkar.**
+
+**Variant A — "den här veckan" (grupp 1):**
 
 > Vad händer i Halmstad den här veckan? Ett axplock 👇
 >
-> 🎤 SUPERGIRL
-> 🎬 Scary Movie + Vaiana & Minioner (för barnen)
-> 🎶 Klubb Holm
+> 🎸 Jacob Douglas på Rotundan (torsdag)
+> 🐴 Nattravet på Halmstadtravet (fredag kväll)
+> 🧶 Hantverksmässan i Hembygdsparken
+> 🎭 Pettson tältar – Maskrosteatern (för barnen)
 >
 > …och drygt 140 till närmaste månaden. Jag har samlat allt på en gratis karta
 > (byggd på kvällar och helger). **Vad ser ni mest fram emot?** 👇
 
-Första kommentaren:
+Kommentar: `Halmstads egen sida: vadkul.se/evenemang/halmstad 🗺️ Gratis, inget konto behövs.`
 
-> Halmstads egen sida: vadkul.se/evenemang/halmstad 🗺️ Gratis, inget konto
-> behövs.
+**Variant B — "i helgen" (grupp 2):**
+
+> Vad ska man hitta på i Halmstad i helgen? Här är några tips 👇
+>
+> 🎨 Konst- & hantverksutställning i Heberg
+> 🎶 Lördagsmusik i S:t Nikolai kyrka
+> ⛪ Guidad visning av S:t Nikolai kyrka
+> 🎭 Pettson tältar (för barnfamiljerna)
+>
+> …plus massor mer på kartan jag byggt (gratis, hela Sverige samlat).
+> **Vad går ni på i helgen?** 👇
+
+Kommentar: `Kartan: vadkul.se/evenemang/halmstad 🗺️ Gratis och inget konto behövs.`
+
+⚠️ Filtrera alltid bort bio (Filmstaden/"Sv. tal"/filmtitlar) ur FB-tipsen —
+de är ingen "händelse i stan".
