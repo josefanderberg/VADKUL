@@ -179,13 +179,23 @@ karlskrona, visby, trollhattan, nykoping, skovde.
 
 ## 7. Vad händer i Kville?
 
-> Sommaren i Kville-trakten är sjukt späckad just nu — jag räknade till
-> **runt 110 evenemang inom 2,5 mil** på kartan jag byggt (vadkul.se, gratis
-> karta över allt som händer i Sverige). Ikväll spelar Arvingarna,
-> Björn Rosenström är i Hamburgsund och SUPERGIRL kör igång... 🎶
+**Länk-i-kommentar-format, uppdaterat 2026-07-22 (ons). Kville saknar egen
+sida → länk = vadkul.se.** Inlägg:
+
+> Vad händer i Kville-trakten den här veckan? Kollade och det händer mer än
+> man tror mitt i veckan 👇
 >
-> Bra för både oss som bor här och alla sommargäster som frågar "vad ska vi
-> hitta på?" — skicka dem länken 😄 Något som saknas? Tipsa!
+> 🎸 BEHARIE – live på Falkeröd (ikväll)
+> 🛶 Onsdagspaddling – hyr kajak
+> 🎬 Vaiana & Minioner på bio (för barnen)
+> ☕ Café Träffpunkten
+>
+> …och runt 83 grejer till på gång närmaste månaden. Jag har byggt en gratis
+> karta där allt samlas — men säkert missat något. **Vad borde vara med?** 👇
+
+Första kommentaren:
+
+> Kartan för den som vill kika: vadkul.se 🗺️ Gratis, inget konto behövs.
 
 ## 8. Vad händer i Harads?
 
@@ -200,12 +210,22 @@ karlskrona, visby, trollhattan, nykoping, skovde.
 
 ## 9. Vad händer i Kungsör 2.0
 
-> Någon mer som tycker det är svårt att ha koll på vad som händer häromkring?
-> Jag tröttnade och byggde en karta: vadkul.se — gratis, hela Sverige, och
-> just nu **runt 112 evenemang inom 2,5 mil från Kungsör**. Ikväll bl.a.
-> Petter @ Bryggan och Sofia Ullman, och imorgon bakluckeloppis på Tuna Park 🛍️
+**Länk-i-kommentar-format, uppdaterat 2026-07-22 (ons). Kungsör saknar egen
+sida → länk = vadkul.se.** Inlägg:
+
+> Trodde det var lugnt mitt i veckan i Kungsör-trakten... men nej 😄 Kollade
+> kartan jag byggt och hittade massor:
 >
-> Inget konto behövs — kika och säg vad som saknas!
+> 🎶 Sommarmusik "Livet och Kärleken"
+> ⛪ Musik i sommarkväll i Odensvi kyrka (ikväll)
+> 🎵 Musikunderhållning på Sörmlandsgården
+>
+> …och runt 89 event närmaste månaden. **Vad har jag missat?** Tipsa i
+> kommentarerna så lägger jag in det! 👇
+
+Första kommentaren:
+
+> Här är kartan: vadkul.se 🗺️ Gratis och inget konto behövs.
 
 ## 11. Gränna (postat 2026-07-19 — länk-i-kommentar-test 2)
 
@@ -233,16 +253,19 @@ Första kommentaren (skriv direkt efter):
 
 ## 10. Halmstad - Vad händer i stan med omnejd
 
-> Vad händer i Halmstad framöver? Här är ett axplock 👇
+**Länk-i-kommentar-format, uppdaterat 2026-07-22 (ons). Halmstad HAR egen sida
+→ djuplänk funkar.** Inlägg:
+
+> Vad händer i Halmstad den här veckan? Ett axplock 👇
 >
-> 🎭 The Odyssey (idag)
-> 🎶 Musik i sommarkväll med mingel
-> ⚽ After Match at Sand
-> …och drygt 160 till närmaste månaden.
+> 🎤 SUPERGIRL
+> 🎬 Scary Movie + Vaiana & Minioner (för barnen)
+> 🎶 Klubb Holm
 >
-> Allt finns på vadkul.se/evenemang/halmstad — en gratis karta över allt som
-> händer i Sverige som jag byggt själv. Skapa gratis konto via
-> vadkul.se/?stjarna=STJARNA1 så får du en guldstjärna ⭐ att sätta på det
-> event du minst vill missa — då syns det alltid på kartan.
->
-> Vad ser ni mest fram emot i sommar? 👇
+> …och drygt 140 till närmaste månaden. Jag har samlat allt på en gratis karta
+> (byggd på kvällar och helger). **Vad ser ni mest fram emot?** 👇
+
+Första kommentaren:
+
+> Halmstads egen sida: vadkul.se/evenemang/halmstad 🗺️ Gratis, inget konto
+> behövs.
