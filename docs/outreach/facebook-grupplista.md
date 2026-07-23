@@ -8,6 +8,10 @@ MEDLEMSKAPSREGISTRET — de färdiga inläggen bor i
 egen stadssida (djuplänk ok); `vadkul.se` = ingen sida, länka till startsidan.
 **22 grupper** ligger i städer med egen sida, 60 utan.
 
+**LOGGREGEL (efter 23/7-förvirringen):** en grupp markeras "postat" FÖRST
+när Josef bekräftat att inlägget faktiskt lagts upp — aldrig när utkastet
+skrivs. Utkast märks "utkast klart, EJ postat".
+
 **Postat-kolumnen:** fyll i `datum · metod · utfall` när du postat, så
 3-veckorsregeln och A/B-testet (länk-i-inlägg vs länk-i-kommentar) hålls koll.
 Tomrad = orörd. Flera grupper för samma ort (t.ex. 2 Halmstad, 4 Ängelholm,
