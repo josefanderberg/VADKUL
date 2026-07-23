@@ -102,4 +102,4 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 80 | Vad händer i Sölvesborg och på Lister? | vadkul.se |  |
 | 81 | Vad händer i Luleå? | /evenemang/lulea |  |
 | 82 | VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland | /evenemang/goteborg |  |
-| 83 | Händer i Borås | /evenemang/boras | kö fre 24/7 |
+| 83 | Händer i Borås | /evenemang/boras | 23/7 · Dolly Style-inlägget · ? |
