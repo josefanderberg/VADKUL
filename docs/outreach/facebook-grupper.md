@@ -292,3 +292,17 @@ de är ingen "händelse i stan".
 **OBS om länkplacering:** grupper med FÖRHANDSGODKÄNNANDE → länk i inlägget
 (inget kommentarsfält innan godkänt). Öppna grupper utan godkännande → testa
 länk i första kommentaren (överlever moderering bättre). Anpassa per grupp.
+
+---
+
+## Kö 24–25 juli (7 inlägg, skrivna 23/7 — event är färskvara!)
+
+**Fre 24/7:** Händer i Borås (Dolly Style!) · Du vet vad som händer i
+Eskilstuna (Countryfesten/Jill Johnson!) · Vad händer i Nyköping med omnejd. ·
+Vad händer i Uppsala — **Lör 25/7:** Vad händer i Sundsvall? · Vad händer i
+Kristianstad · Vad händer i Luleå?
+
+Fulla texterna gavs i chatten 23/7 — event hämtade ur datat samma dag.
+Länkregeln gäller: godkännande-grupp → länk i inlägget; direktpublicering →
+länk i första kommentaren. OBS Borås: om medlemskapet är nytt, vänta några
+dagar + engagera först — ny medlem som direktpostar länk = raderingsrisk.

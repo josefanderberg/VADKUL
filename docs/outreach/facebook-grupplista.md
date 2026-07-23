@@ -1,6 +1,6 @@
 # FB-grupper — masterlista (alla jag är medlem i)
 
-82 grupper (importerade 2026-07-22 ur medlemslistan). Detta är
+83 grupper (82 importerade 2026-07-22 + Händer i Borås tillagd 23/7). Detta är
 MEDLEMSKAPSREGISTRET — de färdiga inläggen bor i
 [facebook-grupper.md](facebook-grupper.md).
 
@@ -102,3 +102,4 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 80 | Vad händer i Sölvesborg och på Lister? | vadkul.se |  |
 | 81 | Vad händer i Luleå? | /evenemang/lulea |  |
 | 82 | VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland | /evenemang/goteborg |  |
+| 83 | Händer i Borås | /evenemang/boras | kö fre 24/7 |
