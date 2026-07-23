@@ -297,10 +297,11 @@ länk i första kommentaren (överlever moderering bättre). Anpassa per grupp.
 
 ## Kö 24–25 juli (7 inlägg, skrivna 23/7 — event är färskvara!)
 
-**Fre 24/7:** Händer i Borås (Dolly Style!) · Du vet vad som händer i
-Eskilstuna (Countryfesten/Jill Johnson!) · Vad händer i Nyköping med omnejd. ·
-Vad händer i Uppsala — **Lör 25/7:** Vad händer i Sundsvall? · Vad händer i
-Kristianstad · Vad händer i Luleå?
+**FACIT 23/7:** postade = Borås, Kalmar, Uppsala, Gävle (4 st — Gävle enda
+som krävde godkännande; övriga publicerades direkt m. länk i kommentar).
+Helsingborg + Karlstad EJ postade — utkasten återanvänds (uppdatera event!).
+**Kö fre 24/7:** Eskilstuna (Countryfesten/Jill Johnson!) · Nyköping ·
+Helsingborg · Karlstad — **Lör 25/7:** Sundsvall · Kristianstad · Luleå
 
 Fulla texterna gavs i chatten 23/7 — event hämtade ur datat samma dag.
 Länkregeln gäller: godkännande-grupp → länk i inlägget; direktpublicering →
