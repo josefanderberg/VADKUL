@@ -71,3 +71,6 @@ apps/web/public/pwa-icon-v222.png
 # Genereras vid build (dagens slice av events-destinations.json) — daglig
 # färskvara, ska inte ligga i repot.
 apps/web/public/events-today.json
+
+# Medlemsexporter — innehåller e-postadresser, får ALDRIG committas
+medlemmar-*.csv

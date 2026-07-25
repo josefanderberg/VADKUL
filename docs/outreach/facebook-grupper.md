@@ -79,6 +79,13 @@ be Claude räkna om den först.
 | Halmstad-grupp 1 (Vad händer i stan m. omnejd) | Halmstad | 10A | 2026-07-22 | länk i inlägg — ? | 2026-08-12 |
 | Halmstad-grupp 2 (Vad händer i Halmstad?) | Halmstad | 10B | 2026-07-22 | länk i inlägg — ✅ GODKÄNT/uppe | 2026-08-12 |
 | Vad händer i Gränna (grupp) | Gränna | 11 | 2026-07-19 | (länk i kommentar — test 2) | 2026-08-09 |
+| Det händer i Helsingborg | Helsingborg | 24/7-C | 2026-07-24 | **26 likes, 15 komm., 1 delning** — bästa i listan | 2026-08-14 |
+| Vad händer i Nyköping med omnejd. | Nyköping | 24/7-B | 2026-07-24 | 6 likes, 2 kommentarer | 2026-08-14 |
+| Händer i Karlstad-Tipsa om vad som händer i stan! | Karlstad | 24/7-D | 2026-07-24 | 5 likes | 2026-08-14 |
+| Du vet vad som händer i Eskilstuna | Eskilstuna | 24/7-A | 2026-07-24 | godkännande-kö — ej släppt ännu (25/7) | 2026-08-14 |
+| Vad som händer i Stockholm | Stockholm | 25/7-E | 2026-07-25 | KRÄVDE GODKÄNNANDE (enda av dagens tre) — variant 1, länk i inlägget | 2026-08-15 |
+| Vad händer i Malmö? | Malmö | 25/7-F | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
+| Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 
 ---
 
@@ -307,3 +314,259 @@ Fulla texterna gavs i chatten 23/7 — event hämtade ur datat samma dag.
 Länkregeln gäller: godkännande-grupp → länk i inlägget; direktpublicering →
 länk i första kommentaren. OBS Borås: om medlemskapet är nytt, vänta några
 dagar + engagera först — ny medlem som direktpostar länk = raderingsrisk.
+
+---
+
+## Fredag 24/7 — 4 utkast (skrivna 24/7 ur färskt data)
+
+**FACIT 24/7 (bekräftat av Josef samma kväll): ALLA 4 POSTADE** — Eskilstuna,
+Nyköping, Helsingborg, Karlstad, länk i inlägget + stjärnlänk i alla.
+**Bara "Du vet vad som händer i Eskilstuna" krävde godkännande** (låg i kö
+vid postning); övriga tre publicerades direkt. OBS: texterna skrevs med
+"vänta på godkännande"-antagandet (bara lördag-och-framåt-event) — det höll,
+inga inaktuella event oavsett när Eskilstuna-inlägget släpps igenom.
+Nästa tidigast för alla fyra: **2026-08-14** (+3 v).
+
+Nya formatet (Östersund-mallen + stjärnraden): kort intro, 4 event-rader med
+emoji, karta+antal MED LÄNK, stjärnmening MED LÄNK, avslutande fråga.
+**LÄNKARNA I INLÄGGET** — grupperna kräver godkännande, så admin granskar
+ändå (= länkregelns godkännande-spår; ingen kommentarslänk behövs).
+Stjärnlänken är `https://vadkul.se/?stjarna=STJARNA1` — koden ger EN stjärna
+per konto att sätta på valfritt event.
+
+**REGEL (24/7): inga "ikväll"-event i godkännande-grupper** — inlägget kan
+ligga i kö tills eventet redan varit. Ta bara LÖRDAG OCH FRAMÅT (generellt:
+tidigast dagen efter postningsdagen).
+
+⚠️ Lör 25/7-kön: **Luleå ser SVAG ut** (9 helg-event, mest öppna kyrkor) —
+överväg att byta mot t.ex. en Göteborgs-grupp. Sundsvall är däremot STARK
+(The Ark på Stora Torget lör + Summer Days) och Kristianstad ok (Sanna
+Nielsen på Bäckaskog lör).
+
+### A. Du vet vad som händer i Eskilstuna (→ /evenemang/eskilstuna)
+
+> Massor på gång i Eskilstuna i helgen 👇
+>
+> 🎤 Skrattfest med Fredrik Lindström & Messiah Hallberg på Rademachersmedjorna (lördag)
+> 🍛 Afrikansk matfestival (lördag)
+> 🎸 Toni Holgersson & Lars Halapi på Rademachersmedjorna (söndag)
+> 🎶 Allsång på Sörmlandsgården (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Eskilstunatrakten
+> — ett 80-tal event bara närmaste månaden:
+> https://vadkul.se/evenemang/eskilstuna
+>
+> Ny grej: hämta en egen stjärna ⭐ via
+> https://vadkul.se/?stjarna=STJARNA1 och sätt den på eventet du ser mest
+> fram emot — då lyser det för alla på kartan.
+>
+> Vad går ni på i helgen? 👇
+
+### B. Vad händer i Nyköping med omnejd. (→ /evenemang/nykoping)
+
+> Medeltidshelg i Nyköping 👇
+>
+> 🏰 Nyköpings Gästabud (lördag & söndag)
+> 🎭 Medeltidsäventyret (lördag & söndag)
+> 🧸 Maria Gripes kalas i Biblioteksparken (lördag, för barnen)
+> 🎤 David Urwitz på Fåfängans Trädgårdscafé (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Nyköping med
+> omnejd — 150+ event bara närmaste månaden, Oxelösund inräknat:
+> https://vadkul.se/evenemang/nykoping
+>
+> Psst: via https://vadkul.se/?stjarna=STJARNA1 hämtar du en stjärna ⭐ och
+> sätter den på det du längtar mest till — så lyser det för alla på kartan.
+>
+> Vad blir det för er i helgen? 👇
+
+### C. Det händer i Helsingborg (→ /evenemang/helsingborg)
+
+> Vilken helg Helsingborg har framför sig 👇
+>
+> 🎸 Håkan Hellström på Sofiero (lördag — med Dina Ögon som gäst)
+> 🎤 Diggiloo på Hedens IP (söndag)
+> 🎨 Helsingborgs Konst- & Antikmässa (söndag)
+> 🌅 Sunset Session på Sea U (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Helsingborgstrakten — över 300 event bara närmaste månaden:
+> https://vadkul.se/evenemang/helsingborg
+>
+> Just nu kan du dessutom hämta en stjärna ⭐ via
+> https://vadkul.se/?stjarna=STJARNA1 och sätta den på ditt favoritevent —
+> då syns det extra för alla på kartan.
+>
+> Vad går ni på i helgen? 👇
+
+### D. Händer i Karlstad-Tipsa om vad som händer i stan! (→ /evenemang/karlstad)
+
+> Karlstad laddar för helgen 👇
+>
+> 🎤 Tommy Körberg i Mariebergsskogen (lördag)
+> 🎸 Môra-Per live på Nöjesfabrikens innergård (lördag)
+> 🛶 Forshaga–Karlstad by gummibåt (lördag — heja på!)
+> 🎉 DAP Dayparty på Barbros Brygga (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Karlstadstrakten
+> — närmare 100 event bara närmaste månaden:
+> https://vadkul.se/evenemang/karlstad
+>
+> Bonus: via https://vadkul.se/?stjarna=STJARNA1 hämtar du en stjärna ⭐ att
+> sätta på valfritt event — det du ser mest fram emot lyser då för alla.
+>
+> Vad hittar ni på i helgen? 👇
+
+---
+
+## Lördag 25/7 — 3 städer × 2 varianter (skrivna 25/7 ur data kl 05:37)
+
+**Urvalsmetod:** räknade event/vecka (26/7–2/8) i ALLA orter där vi har en
+orörd grupp. Facit: Stockholm 506 · Malmö 230 · Göteborg 208 — resten långt
+efter. **Den gamla lördagskön (Sundsvall 57, Kristianstad 36, Luleå 26) är
+alltså avskriven** — utbudet driver reaktionen (Helsingborg 305 event → 26
+likes vs Karlstad 98 → 5 likes), och storstäderna är dessutom helt orörda.
+
+⚠️ **Risknot:** det här är de STÖRSTA grupperna = hårdast modererade. Går ett
+inlägg bort är det den kostnaden; överväg admin-DM först i den som känns
+strulig. Alla tre städerna har FLER grupper i listan (Sthlm 2, Gbg 6, Malmö
+1) — spara dem till senare varv med annan text, posta inte samma stad två
+gånger samma vecka.
+
+**TVÅ VARIANTER PER STAD — välj vid postningstillfället:**
+* **Variant 1 (länk i inlägget)** — när gruppen KRÄVER GODKÄNNANDE. Admin
+  granskar ändå, och inlägget ska vara komplett när det släpps igenom.
+* **Variant 2 (länk i kommentaren)** — när gruppen PUBLICERAR DIREKT. Ren
+  text i inlägget (många filter/moderatorer triggar på extern URL), länkarna
+  i första kommentaren direkt efter postning.
+
+Event = SÖNDAG OCH FRAMÅT i båda varianterna (ett godkännande-inlägg kan
+släppas långt efter postning; se regeln från 24/7).
+
+📌 **Nästa helg: GOTLAND.** Medeltidsveckan startar 2/8 → "Vad Händer På
+Gotland?" (#54) är ett självklart val då, inte nu (bara 5 event imorgon).
+
+---
+
+### E. Vad som händer i Stockholm (→ /evenemang/stockholm)
+
+**E1 — länk i inlägget (godkännande-grupp):**
+
+> Pride-vecka i Stockholm — och mer därtill 👇
+>
+> 🎸 Anette Olzon (Nightwish) på Kollektivet Livet (tisdag)
+> 🏳️‍🌈 Stockholm Pride i Slakthusområdet från torsdag — paraden på lördag
+> 🎷 Jazz på Skansen: Lina Nyberg & Max Schultz (torsdag)
+> 🎉 FATBOY firar 30 år på Lasse i Parken (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Stockholm med
+> omnejd — över 500 event bara den närmaste veckan:
+> https://vadkul.se/evenemang/stockholm
+>
+> Ny grej: hämta en egen stjärna ⭐ via https://vadkul.se/?stjarna=STJARNA1
+> och sätt den på det du ser mest fram emot — då lyser det för alla på kartan.
+>
+> Vad blir det för er i veckan? 👇
+
+**E2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Pride-vecka i Stockholm — och mer därtill 👇
+>
+> 🎸 Anette Olzon (Nightwish) på Kollektivet Livet (tisdag)
+> 🏳️‍🌈 Stockholm Pride i Slakthusområdet från torsdag — paraden på lördag
+> 🎷 Jazz på Skansen: Lina Nyberg & Max Schultz (torsdag)
+> 🎉 FATBOY firar 30 år på Lasse i Parken (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Stockholm med
+> omnejd — över 500 event bara den närmaste veckan. Ny grej också: du kan
+> hämta en egen stjärna ⭐ och sätta den på eventet du ser mest fram emot —
+> då lyser det för alla på kartan. Länk till båda i kommentarerna 👇
+>
+> Vad blir det för er i veckan?
+
+**Reserv-rader** (byt ut om någon känns fel för gruppen): 🎭 Poppeas kröning
+på Drottningholms Slottsteater (lör 1/8) · 🎭 Confidencen Opera & Music
+Festival i Ulriksdal (tors) · 🎸 Christian Kjellvander (fre) · 🎬 The Odyssey
+i 70 mm på Bio Skandia (imorgon sön) · 🎪 Cirkus Sylwan på Skarpnäcks torg
+(sön 2/8) · 🎸 Stockholm Blues & Heritage, Ekermanska Folkparken (fre).
+
+Första kommentaren: `Här är kartan för Stockholm: https://vadkul.se/evenemang/stockholm — och stjärnan hämtar du här: https://vadkul.se/?stjarna=STJARNA1 ⭐ (en per konto)`
+
+---
+
+### F. Vad händer i Malmö? (→ /evenemang/malmo)
+
+**F1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka Malmö har framför sig 👇
+>
+> 💃 Karla Da Silva på Pildammsteatern (imorgon söndag)
+> 🎸 Kim Wilde, Macy Gray & Seinabo Sey i Folkets Park (fredag)
+> 🎸 The Sisters of Mercy och Tangerine Dream på Slagthuset (fredag)
+> 🍜 Thaifestival i Folkets Park (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Malmötrakten —
+> 230+ event bara den närmaste veckan: https://vadkul.se/evenemang/malmo
+>
+> Bonus: via https://vadkul.se/?stjarna=STJARNA1 hämtar du en stjärna ⭐ att
+> sätta på valfritt event — det du längtar mest till lyser då för alla.
+>
+> Vad går ni på? 👇
+
+**F2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Vilken vecka Malmö har framför sig 👇
+>
+> 💃 Karla Da Silva på Pildammsteatern (imorgon söndag)
+> 🎸 Kim Wilde, Macy Gray & Seinabo Sey i Folkets Park (fredag)
+> 🎸 The Sisters of Mercy och Tangerine Dream på Slagthuset (fredag)
+> 🍜 Thaifestival i Folkets Park (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Malmötrakten —
+> 230+ event bara den närmaste veckan. Dessutom kan du hämta en egen stjärna
+> ⭐ och sätta den på ditt favoritevent, så syns det extra för alla. Länkar
+> i kommentarerna 👇
+>
+> Vad går ni på?
+
+Första kommentaren: `Kartan för Malmö: https://vadkul.se/evenemang/malmo — och stjärnlänken: https://vadkul.se/?stjarna=STJARNA1 ⭐`
+
+---
+
+### G. Vad händer i Göteborg? (→ /evenemang/goteborg)
+
+**G1 — länk i inlägget (godkännande-grupp):**
+
+> Massor på gång i Göteborg 👇
+>
+> ⚽ GAIS på Gamla Ullevi (imorgon söndag)
+> 🎸 Bob Log III — träskpunkblues på Monument (onsdag)
+> 🔮 I magins tecken — festival på Bohus fästning (fredag)
+> 🎸 Dina Ögon på Liseberg (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Göteborgstrakten
+> — över 200 event bara den närmaste veckan:
+> https://vadkul.se/evenemang/goteborg
+>
+> Psst: via https://vadkul.se/?stjarna=STJARNA1 hämtar du en stjärna ⭐ och
+> sätter den på ditt favoritevent — då syns det extra för alla på kartan.
+>
+> Vad hittar ni på i veckan? 👇
+
+**G2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Massor på gång i Göteborg 👇
+>
+> ⚽ GAIS på Gamla Ullevi (imorgon söndag)
+> 🎸 Bob Log III — träskpunkblues på Monument (onsdag)
+> 🔮 I magins tecken — festival på Bohus fästning (fredag)
+> 🎸 Dina Ögon på Liseberg (lördag 1/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Göteborgstrakten
+> — över 200 event bara den närmaste veckan. Och en ny grej: hämta en egen
+> stjärna ⭐ och sätt den på det du längtar mest till, så lyser det för alla
+> på kartan. Länkar i kommentarerna 👇
+>
+> Vad hittar ni på i veckan?
+
+Första kommentaren: `Kartan för Göteborg: https://vadkul.se/evenemang/goteborg — stjärnan hämtar du här: https://vadkul.se/?stjarna=STJARNA1 ⭐`

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { LinkEvent } from '@/types';
+import { isVadkulHostedEvent, LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { formatEventDate } from '@/utils/dateUtils';
 import { Clock, MapPin } from 'lucide-react';
@@ -31,7 +31,7 @@ export default function EventListRow({ evt, onPick, right, dimmed = false }: Eve
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
-                        evt.userCreated
+                        isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
                             : 'bg-slate-100 dark:bg-slate-800'
                     }`}
@@ -42,7 +42,7 @@ export default function EventListRow({ evt, onPick, right, dimmed = false }: Eve
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <h4 className="font-black text-sm text-black dark:text-white truncate min-w-0">{evt.title}</h4>
-                        {evt.userCreated && (
+                        {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL
                             </span>

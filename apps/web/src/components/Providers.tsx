@@ -18,8 +18,14 @@ function FCMHandler() {
     useEffect(() => {
         if (!user) return;
 
-        // Request notification permission and save token
-        const requestPermission = async () => {
+        // Token-UPPFRÄSCHNING, aldrig en prompt: permission-frågan ställs bara
+        // från en riktig tap (profilpanelens notis-rad / gilla-nudgen) — en
+        // gest-lös requestPermission() här avvisades alltid på iOS och gav
+        // 0 registrerade tokens. Är tillståndet redan beviljat resolvar
+        // requestNotificationPermission() utan UI och vi sparar om token på
+        // det inloggade kontot (token är per enhet, kontot kan ha bytts).
+        const refreshToken = async () => {
+            if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
             const token = await requestNotificationPermission();
             if (token) {
                 await notificationService.saveFCMToken(user.uid, token);
@@ -27,7 +33,7 @@ function FCMHandler() {
             }
         };
 
-        requestPermission();
+        refreshToken().catch(console.error);
 
         // Handle foreground messages. Event-påminnelserna är data-only
         // (title/body i payload.data) — falla tillbaka på dem.

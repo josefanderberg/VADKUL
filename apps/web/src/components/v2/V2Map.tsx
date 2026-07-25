@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
-import { EventWish, LinkEvent } from '../../types';
+import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { isEventFeatured } from '../../services/linkEventService';
@@ -2385,11 +2385,12 @@ export default function V2Map({
             if (isSelected) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
-            // Event skapade direkt på VADKUL lyfts fram med en egen smaragdgrön
+            // Event VÄRDADE på VADKUL lyfts fram med en egen smaragdgrön
             // bricka (samma gröna som skapa-flödet) — de är sajtens kärna.
-            // Gäller bara enskilda markörer; grupper cyklar genom flera event
-            // och behåller därför standardutseendet.
-            const isUserCreated = count === 1 && !!rep.userCreated;
+            // Tips (användarskapade MED länk) räknas INTE hit: de ska se ut
+            // som vanliga länk-event. Gäller bara enskilda markörer; grupper
+            // cyklar genom flera event och behåller därför standardutseendet.
+            const isUserCreated = count === 1 && isVadkulHostedEvent(rep);
 
             // Boostat ("featured") event: betald framlyftning. Bara enskilda
             // markörer (grupper cyklar och behåller standardutseende). Featured är

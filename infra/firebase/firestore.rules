@@ -171,6 +171,9 @@ service cloud.firestore {
 
       // Inloggade får skapa EGNA event — hårt formbegränsade så de inte kan
       // låtsas vara scrapade event eller skriva godtyckliga fält.
+      // url: '' för egna arrangemang; TIPS-flödet ("jag arrangerar inte själv")
+      // sätter en http(s)-länk till källan — då presenteras eventet som ett
+      // vanligt länk-event. Valideringen stoppar javascript:-/data:-URL:er.
       allow create: if isAuthenticated()
         && request.resource.data.userCreated == true
         && request.resource.data.hostUid == request.auth.uid
@@ -180,6 +183,11 @@ service cloud.firestore {
         && request.resource.data.lat is number
         && request.resource.data.lng is number
         && request.resource.data.status == 'published'
+        && (!request.resource.data.keys().hasAny(['url'])
+            || (request.resource.data.url is string
+                && (request.resource.data.url == ''
+                    || (request.resource.data.url.size() <= 500
+                        && request.resource.data.url.matches('https?://.*')))))
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',

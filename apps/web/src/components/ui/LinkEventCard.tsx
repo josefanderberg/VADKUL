@@ -1,5 +1,5 @@
 import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye } from 'lucide-react';
-import type { LinkEvent } from '../../types';
+import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
@@ -88,15 +88,21 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
 
-    // Anmälningar (RSVP) — bara för användarskapade event (de länkar inte ut, allt
+    // VADKUL-värdat = skapat här UTAN länk (anmälan sker på sidan). Användar-
+    // skapade event MED länk är TIPS — de presenteras som vanliga länk-event
+    // (favicon-värd, ANMÄL ut) så tipsaren aldrig ser ut som arrangör.
+    const vadkulHosted = isVadkulHostedEvent(linkEvent);
+    const isTip = !!linkEvent.userCreated && !vadkulHosted;
+
+    // Anmälningar (RSVP) — bara för VADKUL-värdade event (de länkar inte ut, allt
     // sker här på sidan). Live-lyssnare på linkEvents/{id}/attendees.
     const [attendees, setAttendees] = useState<RsvpAttendee[]>([]);
     const [rsvpBusy, setRsvpBusy] = useState(false);
     useEffect(() => {
-        if (!linkEvent.userCreated) { setAttendees([]); return; }
+        if (!vadkulHosted) { setAttendees([]); return; }
         const unsub = linkEventService.subscribeAttendees(linkEvent.id, setAttendees);
         return () => unsub();
-    }, [linkEvent.id, linkEvent.userCreated]);
+    }, [linkEvent.id, vadkulHosted]);
     const isAttending = !!user && attendees.some(a => a.uid === user.uid);
     const handleRsvpToggle = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -154,7 +160,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         e.preventDefault();
         e.stopPropagation();
         try {
-            await feedbackService.reportEvent(linkEvent, reason);
+            // Inloggad → namn/e-post följer med rapporten så vi kan återkoppla;
+            // utloggade kan fortfarande rapportera anonymt (medvetet).
+            await feedbackService.reportEvent(
+                linkEvent,
+                reason,
+                user?.uid,
+                user ? { name: user.displayName, email: user.email } : undefined,
+            );
             setReportSent(true);
         } catch (err) {
             console.error('Kunde inte skicka eventrapporten:', err);
@@ -310,9 +323,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </button>
                 )}
 
-                {/* Event skapade direkt på VADKUL lyfts fram med en grön badge —
-                    de är sajtens kärna och ska kännas igen direkt. */}
-                {linkEvent.userCreated && (
+                {/* Event VÄRDADE på VADKUL lyfts fram med en grön badge — de är
+                    sajtens kärna och ska kännas igen direkt. (Tips får den INTE:
+                    de ska smälta in bland de vanliga länk-eventen.) */}
+                {vadkulHosted && (
                     <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
                         <Sparkles size={11} className="shrink-0" />
                         Skapat på VADKUL
@@ -373,12 +387,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </div>
                 </div>
 
-                {/* Användarskapade event länkar inte ut någonstans — platsen är
+                {/* VADKUL-värdade event länkar inte ut någonstans — platsen är
                     enda sättet att hitta dit och får därför ALDRIG trunkeras:
                     den får en egen rad (nedan) som radbryts fritt. Skrapade
-                    event behåller platsen inline (trunkerad) — där finns alltid
-                    ANMÄL-länken med fullständig info. */}
-                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${linkEvent.userCreated ? 'mb-1.5' : 'mb-4'}`}>
+                    event och tips behåller platsen inline (trunkerad) — där
+                    finns alltid ANMÄL-länken med fullständig info. */}
+                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
@@ -391,7 +405,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             <span className="whitespace-nowrap">{formatDistanceKm(distance)}</span>
                         </div>
                     )}
-                    {linkEvent.userCreated ? (
+                    {vadkulHosted ? (
                         <div className="flex-1 min-w-0" />
                     ) : (
                         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
@@ -431,7 +445,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     )}
                 </div>
 
-                {linkEvent.userCreated && (
+                {vadkulHosted && (
                     <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
                         <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
                         <span className="text-sm min-w-0 break-words">
@@ -450,14 +464,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                         <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Värd</span>
                         <div className="flex items-center gap-2">
-                            {/* VADKUL-skapade event: grön avatar med värdens initial
-                                (de saknar favicon — ingen extern sajt). */}
+                            {/* VADKUL-värdade event: grön avatar med värdens initial
+                                (de saknar favicon — ingen extern sajt). Tips har en
+                                länk → favicon som de skrapade eventen. */}
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${
-                                linkEvent.userCreated
+                                vadkulHosted
                                     ? 'bg-emerald-500 border-emerald-400 text-white'
                                     : 'bg-white border-border'
                             }`}>
-                                {!linkEvent.userCreated && faviconUrl ? (
+                                {!vadkulHosted && faviconUrl ? (
                                     <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
                                 ) : (
                                     <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
@@ -525,10 +540,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     </button>
                                 )}
 
-                                {/* Användarskapade event: anmälan sker HÄR på sidan, ingen
+                                {/* VADKUL-värdade event: anmälan sker HÄR på sidan, ingen
                                     extern länk. Knappen togglar din anmälan och listan visar
-                                    vilka som kommer. */}
-                                {!linkEvent.url && linkEvent.userCreated && (
+                                    vilka som kommer. (Tips har url → ANMÄL-knappen ovan.) */}
+                                {vadkulHosted && (
                                     <div className="flex flex-col gap-3">
                                         <button
                                             onClick={handleRsvpToggle}
@@ -654,6 +669,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                                 {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
                                 <div className="flex flex-col items-center gap-1 pt-1">
+                                    {/* Transparens för TIPS: inlagt av en användare, men
+                                        anonymt — tipsaren ska aldrig se ut som arrangör. */}
+                                    {isTip && (
+                                        <p className="text-[10px] font-semibold text-slate-400 py-0.5">
+                                            💡 Tipsat av en VADKUL-användare
+                                        </p>
+                                    )}
                                     {reportSent ? (
                                         <p className="text-xs font-bold text-emerald-600 py-1.5">Tack! Vi tittar på det. 🙏</p>
                                     ) : reportOpen ? (

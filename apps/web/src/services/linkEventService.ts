@@ -322,11 +322,13 @@ export const linkEventService = {
      * Skapa ett ANVÄNDAR-event direkt mot Firestore (reglerna kräver
      * userCreated=true + hostUid=eget uid och begränsar fälten). Returnerar
      * dokument-id:t — eventet syns på kartan vid nästa poll (≤30 s).
+     * `url` sätts BARA av tips-flödet ("jag arrangerar inte själv") — den gör
+     * att eventet presenteras som ett vanligt länk-event, se isVadkulHostedEvent.
      */
     async createUserEvent(input: {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
-        hostName: string; hostUid: string; coverImage?: string;
+        hostName: string; hostUid: string; coverImage?: string; url?: string;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -342,7 +344,7 @@ export const linkEventService = {
             userCreated: true,
             status: 'published',
             hidden: 0,
-            url: '',
+            url: input.url || '',
             isLocationVerified: true,
             createdAt: serverTimestamp(),
         };
