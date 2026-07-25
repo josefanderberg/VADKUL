@@ -1329,13 +1329,18 @@ export default function HomePage() {
                 onClose={() => setAuthModal({ open: false })}
             />
 
-            {/* Onboarding vid första besöket — en skärm, sen ut på kartan.
+            {/* Onboarding — bara för utloggade. Vänta in authLoading: under
+                Firebase-sessionsrestoren är user null även för inloggade, och
+                utan väntan skulle overlayn blinka fram för dem (t.ex. via
+                delade eventlänkar som /evenemang/malmö).
                 (PWA-installbannern monteras globalt i Providers, inte här.) */}
-            <WelcomeOverlay
-                onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
-                todayEventCount={todayEventCount}
-                soonEventCount={soonEventCount}
-            />
+            {!authLoading && !user && (
+                <WelcomeOverlay
+                    onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+                    todayEventCount={todayEventCount}
+                    soonEventCount={soonEventCount}
+                />
+            )}
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard

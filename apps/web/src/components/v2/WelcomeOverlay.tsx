@@ -67,9 +67,10 @@ function useCountUp(target: number, durationMs = 1200) {
 }
 
 /**
- * Onboarding-skärm som visas vid VARJE besök (medvetet val) och släpper ut
- * användaren på kartan: himmel med sol + drivande moln, logga som poppar in
- * bokstav för bokstav, live-räknare och en zoom-exit ner i kartan.
+ * Onboarding-skärm som visas vid VARJE besök för UTLOGGADE (inloggade slipper
+ * den — gaten ligger i page.tsx) och släpper ut användaren på kartan: himmel
+ * med sol + drivande moln, logga som poppar in bokstav för bokstav,
+ * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
 export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonEventCount }: WelcomeOverlayProps) {
