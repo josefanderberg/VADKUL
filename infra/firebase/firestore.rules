@@ -437,5 +437,21 @@ service cloud.firestore {
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow delete: if false;
     }
+
+    // 19. OUTREACH-KONTAKTER (FB-grupper, arrangörer, medlemslistan)
+    // 20. OUTREACH-LOGG (varje publiceringsförsök, inkl. hela inläggstexten)
+    // 21. OUTREACH-ANTECKNINGAR (Claudes insikter, Anta/Förkasta)
+    //
+    // HELT STÄNGDA för klienter — exakt samma modell som aggregatedEvents
+    // (regel 10). All läsning/skrivning går via /api/admin/outreach/* med
+    // Admin SDK bakom requireAdmin(). Skäl: (a) datan innehåller adminnamn,
+    // mejladresser och hela inläggstexter som inte ska ligga publikt, (b) en
+    // öppen list-query på 200+ dokument per admin-sidladdning skulle återskapa
+    // juli-egress-mönstret, (c) shape-låsning i rules vore ~120 rader för fält
+    // vi ändå bara skriver server-side. Firebase Console kringgår reglerna,
+    // så manuell inspektion fungerar fortfarande.
+    match /outreachContacts/{docId} { allow read, write: if false; }
+    match /outreachLog/{docId}      { allow read, write: if false; }
+    match /outreachNotes/{docId}    { allow read, write: if false; }
   }
 }

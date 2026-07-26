@@ -79,13 +79,14 @@ be Claude räkna om den först.
 | Halmstad-grupp 1 (Vad händer i stan m. omnejd) | Halmstad | 10A | 2026-07-22 | länk i inlägg — ? | 2026-08-12 |
 | Halmstad-grupp 2 (Vad händer i Halmstad?) | Halmstad | 10B | 2026-07-22 | länk i inlägg — ✅ GODKÄNT/uppe | 2026-08-12 |
 | Vad händer i Gränna (grupp) | Gränna | 11 | 2026-07-19 | (länk i kommentar — test 2) | 2026-08-09 |
-| Det händer i Helsingborg | Helsingborg | 24/7-C | 2026-07-24 | **26 likes, 15 komm., 1 delning** — bästa i listan | 2026-08-14 |
+| Det händer i Helsingborg | Helsingborg | 24/7-C | 2026-07-24 | **26 likes, 15 komm., 1 delning** — rekord tills Gotland 26/7 | 2026-08-14 |
 | Vad händer i Nyköping med omnejd. | Nyköping | 24/7-B | 2026-07-24 | 6 likes, 2 kommentarer | 2026-08-14 |
 | Händer i Karlstad-Tipsa om vad som händer i stan! | Karlstad | 24/7-D | 2026-07-24 | 5 likes | 2026-08-14 |
 | Du vet vad som händer i Eskilstuna | Eskilstuna | 24/7-A | 2026-07-24 | godkännande-kö — ej släppt ännu (25/7) | 2026-08-14 |
 | Vad som händer i Stockholm | Stockholm | 25/7-E | 2026-07-25 | KRÄVDE GODKÄNNANDE (enda av dagens tre) — variant 1, länk i inlägget | 2026-08-15 |
 | Vad händer i Malmö? | Malmö | 25/7-F | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
+| Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | KRÄVDE GODKÄNNANDE → ✅ godkänt/uppe · **39 likes, 11 komm., 3 delningar — NYTT REKORD** (V1, utan stjärnrad, → /evenemang/visby) | 2026-08-16 |
 
 ---
 
@@ -570,3 +571,125 @@ Första kommentaren: `Kartan för Malmö: https://vadkul.se/evenemang/malmo — 
 > Vad hittar ni på i veckan?
 
 Första kommentaren: `Kartan för Göteborg: https://vadkul.se/evenemang/goteborg — stjärnan hämtar du här: https://vadkul.se/?stjarna=STJARNA1 ⭐`
+
+---
+
+## Söndag 26/7 — 3 nya grupper × 2 varianter (skrivna 26/7 ur data kl 05:18)
+
+**Urvalet:** Kristianstad/Sundsvall/Luleå (orörda städer m. egen sida) SKIPPADES —
+bara 50–60 event/vecka och topplistan är PRO-boule + församlingscaféer, inget som
+lockar. Valda i stället på utbud + dragplåster: **Gotland** (Miss Li, Molly Sandén,
+Dina Ögon, Danny Saucedo, Medeltidsveckan — 75 event), **Ängelholm** (Lisa Nilsson
+i Hembygdsparken, 212 event i trakten, 4 orörda grupper — börja med "Nöjen & Event"),
+**Österlen** (Sonja Aldén, Olofsdagen, Ystad Jazz, Ola Rapace — 83 event).
+
+**NYTT från idag: INGEN stjärnrad.** 7 inlägg med stjärnlänk → 0 inlösta koder.
+Kortare inlägg, EN länk, EN uppmaning. (Koden STJARNA1 lever kvar i andra kanaler.)
+
+**Postningsläge okänt för alla tre** → posta V1 om composern visar "väntar på
+godkännande", annars V2 + kommentar DIREKT efter publicering. Utkast = EJ postat.
+
+### H. Vad Händer På Gotland? (→ /evenemang/visby — masterlistan uppdaterad, Visby har egen sida)
+
+**✅ POSTAT 26/7 (V1 — gruppen KRÄVDE GODKÄNNANDE, släpptes samma dygn).
+Resultat 27/7: 39 likes, 11 kommentarer, 3 delningar — bästa inlägget hittills,
+och det UTAN stjärnrad. Karens till 2026-08-16.**
+
+**H1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka ön har framför sig 👇
+>
+> 🎤 Miss Li på Krusmyntagården (imorgon måndag)
+> 🎶 Molly Sandén, Dina Ögon och Eric Gadd — alla på tisdag
+> 🎸 Danny Saucedo på Kallis & Rock Am Ringmuren i S:t Nicolai (torsdag)
+> 🤹 Medeltidsveckan drar igång (söndag 2/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer på Gotland —
+> över 70 event bara den närmaste veckan:
+> https://vadkul.se/evenemang/visby
+>
+> Vad går ni på? 👇
+
+**H2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Vilken vecka ön har framför sig 👇
+>
+> 🎤 Miss Li på Krusmyntagården (imorgon måndag)
+> 🎶 Molly Sandén, Dina Ögon och Eric Gadd — alla på tisdag
+> 🎸 Danny Saucedo på Kallis & Rock Am Ringmuren i S:t Nicolai (torsdag)
+> 🤹 Medeltidsveckan drar igång (söndag 2/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer på Gotland —
+> över 70 event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+>
+> Vad går ni på?
+
+Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/visby`
+
+### I. Vad händer i Ängelholm Nöjen & Event (→ vadkul.se — ingen stadssida; 3 systergrupper sparas till senare, ALDRIG samma text)
+
+**I1 — länk i inlägget (godkännande-grupp):**
+
+> Mycket på gång i Ängelholmstrakten den här veckan 👇
+>
+> 🎤 Lisa Nilsson "I nöd & lust" i Hembygdsparken (torsdag)
+> 🎉 Sommarfest på Enkegården (fredag)
+> 🛍️ Hantverks- och matmarknad i Hembygdsparken (lördag)
+> 🎷 Arilds Jazzfestival ute på Kullahalvön (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten —
+> över 200 event inom en halvtimme från Ängelholm bara den närmaste veckan:
+> https://vadkul.se
+>
+> Vad går ni på i veckan? 👇
+
+**I2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Mycket på gång i Ängelholmstrakten den här veckan 👇
+>
+> 🎤 Lisa Nilsson "I nöd & lust" i Hembygdsparken (torsdag)
+> 🎉 Sommarfest på Enkegården (fredag)
+> 🛍️ Hantverks- och matmarknad i Hembygdsparken (lördag)
+> 🎷 Arilds Jazzfestival ute på Kullahalvön (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten —
+> över 200 event inom en halvtimme från Ängelholm bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+>
+> Vad går ni på i veckan?
+
+Första kommentaren: `Här är kartan: https://vadkul.se`
+
+### J. Vad händer på Österlen (→ vadkul.se — ingen stadssida)
+
+**J1 — länk i inlägget (godkännande-grupp):**
+
+> Österlen laddar för en riktig sommarvecka 👇
+>
+> 🎤 Sonja Aldén på Backagården (ikväll måndag)
+> 🛍️ Olofsdagen i Sankt Olof (onsdag)
+> 🎷 Ystad Sweden Jazz Festival drar igång (onsdag)
+> 🎸 Jimmy Uller Band med Ola Rapace på Blå Elefanten (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer på Österlen
+> med omnejd — över 80 event bara den närmaste veckan:
+> https://vadkul.se
+>
+> Vad ser ni mest fram emot? 👇
+
+**J2 — länk i kommentaren (direktpublicerande grupp):**
+
+> Österlen laddar för en riktig sommarvecka 👇
+>
+> 🎤 Sonja Aldén på Backagården (ikväll måndag)
+> 🛍️ Olofsdagen i Sankt Olof (onsdag)
+> 🎷 Ystad Sweden Jazz Festival drar igång (onsdag)
+> 🎸 Jimmy Uller Band med Ola Rapace på Blå Elefanten (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer på Österlen
+> med omnejd — över 80 event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+>
+> Vad ser ni mest fram emot?
+
+Första kommentaren: `Här är kartan: https://vadkul.se`

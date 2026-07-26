@@ -77,7 +77,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
 | 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
-| 54 | Vad Händer På Gotland? | vadkul.se |  |
+| 54 | Vad Händer På Gotland? | /evenemang/visby | 26/7 · länk i inlägg (V1, utan stjärnrad) · KRÄVDE GODKÄNNANDE → ✅ godkänt/uppe · **39 likes, 11 komm., 3 delningar** |
 | 55 | Vad händer i Majorna | vadkul.se |  |
 | 56 | Vad händer i Linné? | vadkul.se |  |
 | 57 | Vad händer i Sundsvall? | /evenemang/sundsvall |  |

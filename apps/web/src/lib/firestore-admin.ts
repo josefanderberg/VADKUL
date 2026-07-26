@@ -96,12 +96,18 @@ export async function requireAdmin(request: Request): Promise<NextResponse | nul
     }
 
     let uid: string;
+    let email = '';
     try {
         const decoded = await auth.verifyIdToken(token);
         uid = decoded.uid;
+        email = decoded.email ?? '';
     } catch {
         return NextResponse.json({ error: 'Unauthorized: invalid token' }, { status: 401 });
     }
+
+    // Samma dubbla väg som firestore.rules isAdmin(): ägar-kontot admin@admin.com
+    // kortsluter (behöver aldrig isAdmin-fältet), övriga admins via users-fältet.
+    if (email === 'admin@admin.com') return null;
 
     try {
         const userSnap = await db.collection('users').doc(uid).get();
