@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-27T23:16:16.174Z",
+  "updatedAt": "2026-07-27T23:49:58.617Z",
   "events": [
     {
       "id": "https://www.gotabiblioteken.se/evenemang#8d04654c-8f93-4df5-af52-6029fd817575",
@@ -2730,6 +2730,17 @@
       "emoji": "💃"
     },
     {
+      "id": "https://www.facebook.com/events/1380278074128561/",
+      "title": "Zumba+Lift™ i Fontänens gymnastiksal (anpassat för Zumba Gold®) ",
+      "time": "2026-07-28T08:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.4098135,
+      "lng": 15.6245252,
+      "locationName": "Fontänen, Föreningsservice sedan 1984",
+      "category": "sport",
+      "emoji": "💃"
+    },
+    {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/sittgympa-pa-morkullan232/",
       "title": "Stolsgympa på Bergvik tisdagar - sommaren",
       "time": "2026-07-28T08:15:00.000Z",
@@ -4952,6 +4963,17 @@
       "emoji": "🏛️"
     },
     {
+      "id": "https://www.facebook.com/events/1353380683605957/",
+      "title": "Spontant träff på Marvikarna imorgon ",
+      "time": "2026-07-28T10:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 59.1922476,
+      "lng": 17.1565547,
+      "locationName": "Marvikarnas Naturreservat",
+      "category": "sport",
+      "emoji": "🛶"
+    },
+    {
       "id": "https://www.svenskakyrkan.se/kalender?event=287e783e79de4cf4952d48f824981b0c",
       "title": "Guidning i kyrkan",
       "time": "2026-07-28T10:15:00.000Z",
@@ -6226,6 +6248,17 @@
       "locationName": "Dackegatan 40 C, Plan 2, Tingsryd",
       "category": "social",
       "emoji": "☕"
+    },
+    {
+      "id": "https://www.facebook.com/events/1413093443967741/",
+      "title": "Original/patinautställning Rättviksparken 28 juli 2026",
+      "time": "2026-07-28T11:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 60.8902108,
+      "lng": 15.1410901,
+      "locationName": "Furudalsvägen 1, 79532 Rättvik, Sweden",
+      "category": "art",
+      "emoji": "🚗"
     },
     {
       "id": "https://www.goteborg.com/evenemang/guidad-visning-i-goteborgs-domkyrka/",
@@ -7735,6 +7768,28 @@
       "emoji": "🧸"
     },
     {
+      "id": "https://www.facebook.com/events/1286613200037950/",
+      "title": "Hoppborgspark & Glittertaueringar! ",
+      "time": "2026-07-28T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 57.0719253,
+      "lng": 12.2813577,
+      "locationName": "Läjets Camping",
+      "category": "family",
+      "emoji": "🧸"
+    },
+    {
+      "id": "https://www.facebook.com/events/1561165175535159/",
+      "title": "Ljudvandring: Skogens tid",
+      "time": "2026-07-28T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Naturum Skrylle",
+      "category": "sport",
+      "emoji": "⚽"
+    },
+    {
       "id": "https://www.svenskakyrkan.se/kalender?event=dd475f077b504c87b83425270ee5a1b5",
       "title": "Vägkyrka",
       "time": "2026-07-28T12:15:00.000Z",
@@ -8109,6 +8164,17 @@
       "emoji": "🧸"
     },
     {
+      "id": "https://www.facebook.com/events/1048659224188575/",
+      "title": "Skivsignering – Ronny & Ragge – Rättviksparken 28 juli 2026",
+      "time": "2026-07-28T13:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 60.8902108,
+      "lng": 15.1410901,
+      "locationName": "Furudalsvägen 1, 79532 Rättvik, Sweden",
+      "category": "music",
+      "emoji": "💿"
+    },
+    {
       "id": "https://www.tickster.com/se/sv/events/kfp18aafnahbz5e/2026-07-28/stadsvandring-klotter-och-queera-motesplatser",
       "title": "Stadsvandring: Klotter och queera mötesplatser",
       "time": "2026-07-28T13:30:00.000Z",
@@ -8470,6 +8536,17 @@
       "locationName": "Drottninggatan 6, 803 20 Gävle",
       "category": "party",
       "emoji": "🍻"
+    },
+    {
+      "id": "https://www.facebook.com/events/27201335682865076/",
+      "title": "Sommarens bästa deal är här – 50% på aktiviteter för alla medlemmar!",
+      "time": "2026-07-28T14:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 60.6738835,
+      "lng": 17.1408003,
+      "locationName": "Drottninggatan 6, 803 20 Gävle",
+      "category": "party",
+      "emoji": "🎳"
     },
     {
       "id": "https://www.hoor.se/event/torgliv-foreningar-i-hoor/",
@@ -9803,6 +9880,17 @@
       "emoji": "🧘"
     },
     {
+      "id": "https://www.facebook.com/events/1673758070745871/",
+      "title": "Bilbingo – Tisdagen den 28 juli 2026 – Rättviks Travbana",
+      "time": "2026-07-28T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Rättviks Travbana",
+      "category": "social",
+      "emoji": "🎲"
+    },
+    {
       "id": "https://www.abf.se/blekinge/kurs/teater-odysseus-aventyr-3927283/",
       "title": "Odysseus äventyr - sommarteater på Kastellet",
       "time": "2026-07-28T16:15:00.000Z",
@@ -10978,6 +11066,17 @@
       "locationName": "Västra sörbys bygata 16, 387 92 Borgholm, Sweden",
       "category": "other",
       "emoji": "✨"
+    },
+    {
+      "id": "https://www.facebook.com/events/4432300927088086/",
+      "title": "💖🌙 Pyjamaspartyt🌙💖",
+      "time": "2026-07-28T17:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.7221101,
+      "lng": 11.1994289,
+      "locationName": "Saltviks Camping",
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://korpengavle.zoezi.se/schema#pass-11805",
@@ -16315,6 +16414,17 @@
       "emoji": "🎤"
     },
     {
+      "id": "https://www.facebook.com/events/1516605060203015/",
+      "title": "RIX FM Festival Karlskrona 2026",
+      "time": "2026-07-29T10:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 62.3907552,
+      "lng": 17.3071024,
+      "locationName": "Stortorget",
+      "category": "music",
+      "emoji": "🎸"
+    },
+    {
       "id": "https://www.svenskakyrkan.se/kalender?event=827d8705462c4fb6b1953b27ee854dcc",
       "title": "Tolv o tie: Lunchmusik",
       "time": "2026-07-29T10:10:00.000Z",
@@ -19626,6 +19736,28 @@
       "emoji": "🧸"
     },
     {
+      "id": "https://www.facebook.com/events/918664267642714/",
+      "title": "Superlabyrinten! ",
+      "time": "2026-07-29T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.7221101,
+      "lng": 11.1994289,
+      "locationName": "Saltviks Camping",
+      "category": "family",
+      "emoji": "🧸"
+    },
+    {
+      "id": "https://www.facebook.com/events/1329977339000986/",
+      "title": "Hoppborgspark & Glittertaueringar! ",
+      "time": "2026-07-29T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "GrebbestadFjorden",
+      "category": "family",
+      "emoji": "🧸"
+    },
+    {
       "id": "https://www.svenskakyrkan.se/kalender?event=1f1b647108dd47eeb660b235384818db",
       "title": "Vägkyrka",
       "time": "2026-07-29T12:15:00.000Z",
@@ -22728,6 +22860,28 @@
       "emoji": "💃"
     },
     {
+      "id": "https://www.facebook.com/events/1709488227015236/",
+      "title": "Onsdagsintervaller ",
+      "time": "2026-07-29T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "",
+      "category": "social",
+      "emoji": "🗣️"
+    },
+    {
+      "id": "https://www.facebook.com/events/2593846767736356/",
+      "title": "Onsdagspasset v31 - Danska intervaller på plats eller som läxa/tips!",
+      "time": "2026-07-29T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.8615349,
+      "lng": 14.8149083,
+      "locationName": "Södra Skogsägarna Teleborg",
+      "category": "sport",
+      "emoji": "🏃"
+    },
+    {
       "id": "https://tomelilla.se/upplevaochgora/evenemang/allsangistadsparken.10857.html",
       "title": "Allsång i Stadsparken",
       "time": "2026-07-29T16:15:00.000Z",
@@ -22748,6 +22902,17 @@
       "locationName": "Egby kyrka, Köpingsviks församling",
       "category": "music",
       "emoji": "🎶"
+    },
+    {
+      "id": "https://www.facebook.com/events/1507446221083273/",
+      "title": "Zumba® i Emmalunds koloniområde - Hela sommaren!",
+      "time": "2026-07-29T16:15:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.4098135,
+      "lng": 15.6245252,
+      "locationName": "Emmalunds Koloniområde",
+      "category": "stage",
+      "emoji": "💃"
     },
     {
       "id": "https://www.hembygd.se/nassjo?a=53493",
@@ -30989,6 +31154,17 @@
       "emoji": "🚶"
     },
     {
+      "id": "https://www.facebook.com/events/1540911680727383/",
+      "title": "Sommarcafé vid Bagarstugan på Porsön",
+      "time": "2026-07-30T11:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 65.6156573,
+      "lng": 22.1552337,
+      "locationName": "Forskarvägen 22, Porsön",
+      "category": "social",
+      "emoji": "☕"
+    },
+    {
       "id": "https://krokom.se/omsorg-och-hjalp/evenemang/2025-07-03-filmvisning.html",
       "title": "Filmvisning",
       "time": "2026-07-30T11:30:00.000Z",
@@ -32813,6 +32989,17 @@
       "locationName": "Källarbacken, Brittatorp",
       "category": "stage",
       "emoji": "🎭"
+    },
+    {
+      "id": "https://www.facebook.com/events/1361201409389694/",
+      "title": "Scensommar: Lorpan längtar med Dockteatern Tittut",
+      "time": "2026-07-30T13:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.8325886,
+      "lng": 13.9359916,
+      "locationName": "Källarbacken Brittatorp",
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://pro.se/distrikt/norrbotten/kommun/arjeplog/pro-arjeplog/vara-aktiviteter/aktivitet?id=227557",
@@ -34883,6 +35070,28 @@
       "emoji": "🎶"
     },
     {
+      "id": "https://www.facebook.com/events/921094680708183/",
+      "title": "Lyckorna guidad vandring",
+      "time": "2026-07-30T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "P-plats Ljungs nya kyrka",
+      "category": "sport",
+      "emoji": "⚽"
+    },
+    {
+      "id": "https://www.facebook.com/events/1932506777667540/",
+      "title": "Runt Ivösjöns magiska stränder",
+      "time": "2026-07-30T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.1823728,
+      "lng": 14.3737102,
+      "locationName": "Villands Vånga, Skåne Län, Sweden",
+      "category": "sport",
+      "emoji": "⚽"
+    },
+    {
       "id": "https://www.destinationvaxholm.se/events/grillkvall-med-liveband-30-juli-2026",
       "title": "Grillkväll med liveband — Destination Vaxholm",
       "time": "2026-07-30T16:15:00.000Z",
@@ -36683,6 +36892,17 @@
       "lat": 59.5864546,
       "lng": 16.929253,
       "locationName": "Teda kyrka",
+      "category": "music",
+      "emoji": "🎶"
+    },
+    {
+      "id": "https://www.facebook.com/events/854598291053124/",
+      "title": "Scensommar: Astridkvartetten & Linda Petersson",
+      "time": "2026-07-30T17:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.8325886,
+      "lng": 13.9359916,
+      "locationName": "Åryd Masugnen",
       "category": "music",
       "emoji": "🎶"
     },
@@ -45641,6 +45861,17 @@
       "emoji": "🎭"
     },
     {
+      "id": "https://www.facebook.com/events/2472181376637646/",
+      "title": "Miss Quiz på Droskan",
+      "time": "2026-07-31T18:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 63.8221434,
+      "lng": 20.2737809,
+      "locationName": "Storgatan 60, SE-903 30 Umeå, Sverige",
+      "category": "social",
+      "emoji": "🧠"
+    },
+    {
       "id": "https://falkenberg.se/evenemang/bandet-leif/",
       "title": "Bandet LEIF",
       "time": "2026-07-31T19:00:00.000Z",
@@ -46497,6 +46728,17 @@
       "locationName": "Gotland",
       "category": "sport",
       "emoji": "🏋️"
+    },
+    {
+      "id": "https://www.facebook.com/events/1060115963257327/",
+      "title": "Loppis på Nya torg i Höör 1/8",
+      "time": "2026-08-01T07:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 55.9394727,
+      "lng": 13.5503347,
+      "locationName": "Industrigatan 5, Höör",
+      "category": "market",
+      "emoji": "🛍️"
     },
     {
       "id": "https://www.naturskyddsforeningen.se/engagera-dig/kalender/slatter-nybygget-sodra-angen-norrkoping-2026-08-01/",
@@ -48433,6 +48675,17 @@
       "locationName": "Folkparksgatan 3A, SE-441 43 Alingsås, Sverige",
       "category": "course",
       "emoji": "💃"
+    },
+    {
+      "id": "https://www.facebook.com/events/25343686468663708/",
+      "title": "Mopedrally - BIK(E)rally",
+      "time": "2026-08-01T09:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 59.8135289,
+      "lng": 12.5723322,
+      "locationName": "Gunnarskog, Värmland",
+      "category": "sport",
+      "emoji": "🏍️"
     },
     {
       "id": "https://www.nortic.se/ticket/event/83172#a0",
@@ -50523,6 +50776,28 @@
       "locationName": "Old Town (Gamla stan)",
       "category": "other",
       "emoji": "🚶"
+    },
+    {
+      "id": "https://www.facebook.com/events/27304801215786620/",
+      "title": "Campingkuls hoppborgspark kommer till Apelviken 💕☀️💖",
+      "time": "2026-08-01T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Destination Apelviken - fotbollsplanen",
+      "category": "family",
+      "emoji": "🧸"
+    },
+    {
+      "id": "https://www.facebook.com/events/1803369577024481/",
+      "title": "Hoppborgspark & Glittertatueringar! ",
+      "time": "2026-08-01T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.9228325,
+      "lng": 14.817543,
+      "locationName": "Evedals Camping",
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7d5cb65e98ed4559b3a86cf94363fa7c",
@@ -58652,6 +58927,17 @@
       "locationName": "Marks GK",
       "category": "sport",
       "emoji": "⛳"
+    },
+    {
+      "id": "https://www.facebook.com/events/1406896611306170/",
+      "title": "Skeda körke, Skrivarehagen och Valhall i Jämshög",
+      "time": "2026-08-02T13:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.3014882,
+      "lng": 14.5161735,
+      "locationName": "Boa GK Olofström",
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://hallwylskamuseet.se/pa-gang/kalender/klotter-och-queera-motesplatser/",
@@ -66836,6 +67122,17 @@
       "locationName": "S:t Eskils kyrka, Österhaninge församling",
       "category": "social",
       "emoji": "📖"
+    },
+    {
+      "id": "https://www.facebook.com/events/1532347971623618/",
+      "title": "Tango i Stadsparken i Lund med Tangokompaniet",
+      "time": "2026-08-03T16:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Sommarlunds dansbana",
+      "category": "food",
+      "emoji": "💃"
     },
     {
       "id": "https://www.nortic.se/ticket/event/82396#a0",
@@ -93951,6 +94248,17 @@
       "locationName": "Vaniljgatan 29",
       "category": "family",
       "emoji": "🧸"
+    },
+    {
+      "id": "https://www.facebook.com/events/1006513218780115/",
+      "title": "Sommarlovsaktivitet vecka 32: Filmvisning utomhus",
+      "time": "2026-08-06T14:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Friluftsscenen intill Kumlasjön i Kumla stadspark",
+      "category": "stage",
+      "emoji": "🎬"
     },
     {
       "id": "https://www.nortic.se/ticket/event/82437#a0",
@@ -139427,6 +139735,28 @@
       "emoji": "🎶"
     },
     {
+      "id": "https://www.facebook.com/events/1675816210131678/",
+      "title": "Erika Bjerström - Demokrati och klimat",
+      "time": "2026-08-12T16:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.3896329,
+      "lng": 13.8456344,
+      "locationName": "Skövde Kulturhus",
+      "category": "course",
+      "emoji": "🎓"
+    },
+    {
+      "id": "https://www.facebook.com/events/2122255661675386/",
+      "title": "Erika Bjerström: Demokratin dör i hettan",
+      "time": "2026-08-12T16:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.3899165,
+      "lng": 13.8507408,
+      "locationName": "Trädgårdsgatan 9, SE-541 30 Skövde, Sverige",
+      "category": "course",
+      "emoji": "🎓"
+    },
+    {
       "id": "https://www.stromsund.se/17225.html",
       "title": "Bingo i Rossön",
       "time": "2026-08-12T16:45:00.000Z",
@@ -153177,6 +153507,17 @@
       "emoji": "🎨"
     },
     {
+      "id": "https://www.facebook.com/events/1545453693925829/",
+      "title": "RIX FM Festival Norrköping 2026 ",
+      "time": "2026-08-14T10:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 62.3907552,
+      "lng": 17.3071024,
+      "locationName": "Vasaparken",
+      "category": "music",
+      "emoji": "🎸"
+    },
+    {
       "id": "https://portal.clubrunner.ca/15269/Event/årets-uppstart-med-presidenten",
       "title": "Årets uppstart med presidenten",
       "time": "2026-08-14T10:15:00.000Z",
@@ -155496,6 +155837,17 @@
       "locationName": "Västra Esplanaden, Växjö, Sweden",
       "category": "music",
       "emoji": "🎸"
+    },
+    {
+      "id": "https://www.facebook.com/events/1320107126896991/",
+      "title": "Öppet hus med Epa-träff och drive-in-bio",
+      "time": "2026-08-14T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.4134114,
+      "lng": 14.170977,
+      "locationName": "Tibro ishall",
+      "category": "other",
+      "emoji": "🎬"
     },
     {
       "id": "https://kulturhusetstadsteatern.se/konserter/siberian-hotheads",
@@ -159731,6 +160083,17 @@
       "locationName": "Gustav Adolfs torg, Malmö, Sverige",
       "category": "food",
       "emoji": "🍽️"
+    },
+    {
+      "id": "https://www.facebook.com/events/4418350638478743/",
+      "title": "Pop-up-utställning: Heavy metal art med Carl Anders Andersson",
+      "time": "2026-08-15T10:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 0,
+      "lng": 0,
+      "locationName": "Bjuvs konsthall",
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9cd0caaf6bfc4cf4a3a945da64a0d65c",
@@ -164538,6 +164901,17 @@
       "locationName": "Rosenhill 23, Botkyrka, Sweden",
       "category": "market",
       "emoji": "🛍️"
+    },
+    {
+      "id": "https://www.facebook.com/events/3100828130308539/",
+      "title": "Smålands mäktiga Blända och Vikingarna kring Åsnen, Salen",
+      "time": "2026-08-16T08:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.5318259,
+      "lng": 14.8112359,
+      "locationName": "Urshult",
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/ddttx920mvk0kpr/2026-08-16/guided-tour-dalarna-crash-course",
@@ -195967,6 +196341,17 @@
       "emoji": "🚴"
     },
     {
+      "id": "https://www.facebook.com/events/1031891592661422/",
+      "title": "Talang",
+      "time": "2026-08-20T15:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.4151368,
+      "lng": 14.168639,
+      "locationName": "Gymnasiegatan 29, SE-543 32 Tibro, Sverige",
+      "category": "family",
+      "emoji": "🧸"
+    },
+    {
       "id": "https://www.medborgarskolan.se/arrangemang-sok/trana-dreja-med-throw-and-throw-1511222/",
       "title": "Träna dreja med \"throw and throw\"",
       "time": "2026-08-20T15:15:00.000Z",
@@ -204019,6 +204404,17 @@
       "emoji": "☕"
     },
     {
+      "id": "https://www.facebook.com/events/960280283726007/",
+      "title": "WILLMER X | KACKELSTUGAN | ÖLAND",
+      "time": "2026-08-22T05:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 59.6749712,
+      "lng": 14.5208584,
+      "locationName": "Västra sörbys bygata 16, 387 92 Borgholm, Sweden",
+      "category": "other",
+      "emoji": "✨"
+    },
+    {
       "id": "https://www.hembygd.se/kastlosa?a=55739",
       "title": "VANDRING - Penåsa - Lundastugan",
       "time": "2026-08-22T06:00:00.000Z",
@@ -209167,6 +209563,17 @@
       "emoji": "💃"
     },
     {
+      "id": "https://www.facebook.com/events/1388589286418714/",
+      "title": "Sprängsten till gästhamnen ",
+      "time": "2026-08-22T16:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 59.1888896,
+      "lng": 17.6321557,
+      "locationName": "Lilla Gästhamnen",
+      "category": "food",
+      "emoji": "🍦"
+    },
+    {
       "id": "https://dunkerskulturhus.se/evenemang-dunkers/johannes-brahms-pianokonsert-i-b-dur-en-introduktion-med-per-nyren/",
       "title": "Johannes Brahms pianokonsert i B-dur – en introduktion med Per Nyrén",
       "time": "2026-08-22T16:15:00.000Z",
@@ -209473,6 +209880,17 @@
       "locationName": "Ljusnarsberg",
       "category": "art",
       "emoji": "🎭"
+    },
+    {
+      "id": "https://www.facebook.com/events/2039743466576401/",
+      "title": "PERNILLA WAHLGREN || FREDRIKSDALSTEATERN || HELSINGBORG",
+      "time": "2026-08-22T17:30:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 56.0442098,
+      "lng": 12.703706,
+      "locationName": "Fredriksdalsteatern",
+      "category": "music",
+      "emoji": "🎤"
     },
     {
       "id": "https://www.nortic.se/ticket/event/79687#a0",
@@ -220297,6 +220715,17 @@
       "locationName": "Sollefteå kyrka",
       "category": "stage",
       "emoji": "🎭"
+    },
+    {
+      "id": "https://www.facebook.com/events/1909317033066027/",
+      "title": "NoMeMus 2026",
+      "time": "2026-08-26T17:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 58.3678117,
+      "lng": 16.0463853,
+      "locationName": "Östergötland",
+      "category": "music",
+      "emoji": "🎶"
     },
     {
       "id": "https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2F-emmylou-harris-platinum-tickets-tickets%2F1397320558%3Flanguage%3Den-us&utm_medium=affiliate&c=8469859&ac=1",
