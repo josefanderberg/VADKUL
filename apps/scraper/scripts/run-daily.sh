@@ -51,6 +51,22 @@ cd "$SCRAPER_DIR" || {
     exit 1
 }
 
+# ─── Git-synk IN (bara nightly): hämta frontend-maskinens jobb ──────────────
+# Arbetsdelning (2026-07-28): den här maskinen äger scraping + datafiler,
+# den andra äger frontend. Pull med rebase+autostash så nattens kod är färsk;
+# konflikt ⇒ abort + kör vidare på lokal kod (hellre en natt osynkad än en
+# död nattkedja) — synka då manuellt på dagen.
+if [ "$JOB_NAME" = "nightly" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── GIT PULL (rebase, autostash) ──" >> "$LOG_FILE"
+    if git -C "$REPO_ROOT" pull --rebase --autostash origin main >> "$LOG_FILE" 2>&1; then
+        echo "Git pull OK ($(git -C "$REPO_ROOT" rev-parse --short HEAD))" >> "$LOG_FILE"
+    else
+        git -C "$REPO_ROOT" rebase --abort >> "$LOG_FILE" 2>&1 || true
+        echo "⚠️ Git pull misslyckades (konflikt?) — kör vidare på lokal kod. Synka manuellt!" >> "$LOG_FILE"
+    fi
+fi
+
 # ─── Cleanup (frivilligt) ───────────────────────────────────────────────────
 DELETED_COUNT=""
 if [ "$WITH_CLEANUP" = "--with-cleanup" ]; then
@@ -239,6 +255,35 @@ if npm run aggregate >> "$LOG_FILE" 2>&1; then
     echo "Re-aggregate OK" >> "$LOG_FILE"
 else
     echo "⚠️ Re-aggregate misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
+# ─── Git-synk UT (bara nightly): committa nattens data + pusha ──────────────
+# BARA whitelistade paths (aldrig add -A): aggregat-JSON:erna, FB-körloggen
+# och den genererade FB-watchlisten (skrivs om av måndags-snöbollen; om den
+# är orörd är add en no-op). Pågående kodarbete i working tree lämnas ifred.
+# Push-fel stoppar aldrig kedjan — det loggas och tas manuellt på dagen.
+if [ "$JOB_NAME" = "nightly" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── GIT PUSH (nattens data) ──" >> "$LOG_FILE"
+    git -C "$REPO_ROOT" add \
+        apps/web/public/events-cards.json \
+        apps/web/public/events-descriptions.json \
+        apps/web/public/events-destinations.json \
+        apps/scraped_events.json \
+        apps/scraper/src/scrapers/facebook/watchlist-national.ts >> "$LOG_FILE" 2>&1
+    if git -C "$REPO_ROOT" diff --cached --quiet; then
+        echo "Inget nytt att committa (datafilerna oförändrade)." >> "$LOG_FILE"
+    else
+        git -C "$REPO_ROOT" commit -q -m "data: nattligt aggregat $(date '+%Y-%m-%d') [auto]" >> "$LOG_FILE" 2>&1
+        # Frontend-maskinen kan ha pushat under natten — rebase:a innan push.
+        if git -C "$REPO_ROOT" pull --rebase --autostash origin main >> "$LOG_FILE" 2>&1 \
+           && git -C "$REPO_ROOT" push origin main >> "$LOG_FILE" 2>&1; then
+            echo "Git push OK ($(git -C "$REPO_ROOT" rev-parse --short HEAD))" >> "$LOG_FILE"
+        else
+            git -C "$REPO_ROOT" rebase --abort >> "$LOG_FILE" 2>&1 || true
+            echo "⚠️ Git push misslyckades — data-committen ligger kvar lokalt. Synka manuellt!" >> "$LOG_FILE"
+        fi
+    fi
 fi
 
 # ─── Plocka ut nyckeltal från loggen ────────────────────────────────────────
