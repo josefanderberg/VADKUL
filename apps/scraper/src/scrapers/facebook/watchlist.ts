@@ -47,6 +47,11 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'storakarlso', name: 'Stora Karlsö', city: 'Klintehamn' },
     { slug: 'sudersandsbion', name: 'Sudersandsbiografen', city: 'Fårö' },
     { slug: 'musikiruinen', name: 'Musik i ruinen', city: 'Visby' },
+    // Egen förfrågan i FB-kommentar 2026-07-27 ("lägg gärna till våra
+    // konserter"). Sid-slug = numeriskt ID (ingen vanity-URL). Events-fliken
+    // visade 0 publika event vid inläggning — deras konserter flödar redan
+    // via gotland.com-källan; bevakningen fångar framtida FB-event.
+    { slug: '375356275853238', name: 'Roma Kungsgård (Föreningen Roma Kungsgårds framtid)', city: 'Romakloster' },
     { slug: 'stclemenskammarkoer', name: 'S:t Clemens kammarkör', city: 'Visby' },
     { slug: 'gotlandsmusiken', name: 'Gotlandsmusiken', city: 'Visby' },
     { slug: 'gotlandsmusikalkompani', name: 'Gotlands MusikalKompani', city: 'Visby' },
