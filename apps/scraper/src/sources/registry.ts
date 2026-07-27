@@ -492,7 +492,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Stockholm',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida.',
+        status: 'experimental',
+        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida. SOMNAD 2026-07-27: HTTP 429 + Vercel Security Checkpoint (botskydd) — 0 event i DB. Kräver headless med challenge-lösning eller annan väg (biljettpartner?).',
         lastVerified: '2026-06-08',
     },
     {
@@ -940,7 +941,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Örebro',
         },
         updateFrequency: 'weekly',
-        notes: 'Probe 2026-06: 1 event. wp/v2 + content-parser.',
+        status: 'experimental',
+        notes: 'Probe 2026-06: 1 event. wp/v2 + content-parser. SOMNAD 2026-07-27: wp/v2/evenemang svarar 404 (CPT/REST borttagen?) — 0 event i DB. Re-proba REST-routes eller byt till sitemap.',
     },
     {
         id: 'conventum',
