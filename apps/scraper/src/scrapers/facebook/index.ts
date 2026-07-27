@@ -12,6 +12,7 @@ import { HostInstrument } from './host';
 import { LocationInstrument } from './location';
 import { FacebookSource } from './types';
 import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
+import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -322,7 +323,15 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         //    även sedan FB stängde den anonyma eventsöken 2026-07-2x).
         //    Inga datumfilter: fliken listar bara kommande, och sid-event får
         //    sitt datum från detaljsidan (trusted → 30d-horisont nedan).
-        for (const pageWatch of FACEBOOK_PAGE_WATCHLIST) {
+        const seenPageSlugs = new Set<string>();
+        const allPageWatches = [...FACEBOOK_PAGE_WATCHLIST, ...FACEBOOK_PAGE_WATCHLIST_NATIONAL]
+            .filter((w) => {
+                const key = w.slug.toLowerCase();
+                if (seenPageSlugs.has(key)) return false;
+                seenPageSlugs.add(key);
+                return true;
+            });
+        for (const pageWatch of allPageWatches) {
             SOURCES.push({
                 url: `https://www.facebook.com/${pageWatch.slug}/events`,
                 filters: [],
@@ -331,9 +340,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
             });
         }
 
-        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter + ${FACEBOOK_PAGE_WATCHLIST.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
+        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
 
-        const allEventUrls = new Map<string, { expectedDay: string; city?: string }>();
+        // requiresParsedDate: sid-/seed-event saknar sökets datumfilter — utan
+        // ett datum parsat från själva eventsidan vore fallbacken "idag" ren
+        // gissning → skippa hellre än att spara fel dag.
+        const allEventUrls = new Map<string, { expectedDay: string; city?: string; requiresParsedDate?: boolean }>();
 
         // Statistik per (keyword, filter)-kombination
         type SourceStat = { keyword: string; filter: string; found: number; unique: number; duplicates: number };
@@ -375,7 +387,11 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 let duplicatesThisSource = 0;
                 discovered.forEach(item => {
                     if (!allEventUrls.has(item.url)) {
-                        allEventUrls.set(item.url, { expectedDay: item.day, city: source.city });
+                        allEventUrls.set(item.url, {
+                            expectedDay: item.day,
+                            city: source.city,
+                            requiresParsedDate: source.label?.startsWith('page:') || undefined,
+                        });
                         uniqueThisSource++;
                     } else {
                         duplicatesThisSource++;
@@ -429,6 +445,31 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
             writeKeywordStats(sourceStats, perKeywordTotals, allEventUrls.size, totalDuplicateHits);
         }
 
+        // === SEED-FIL (snöboll) ===
+        // apps/scraper/fb-seed-urls.json: [{ "url": "...", "city"?: "..." }]
+        // Skrivs av snöbolls-verktyg (relaterade event skördade från kända
+        // eventsidor). Kompensation för det döda söket — extraheras som
+        // vanligt men kräver parsat datum (requiresParsedDate).
+        try {
+            const seedPath = path.resolve(__dirname, '../../../fb-seed-urls.json');
+            if (fs.existsSync(seedPath)) {
+                const seeds: Array<{ url: string; city?: string }> = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+                let added = 0;
+                for (const s of seeds) {
+                    const m = String(s.url || '').match(/facebook\.com\/events\/(?:[a-zA-Z0-9_-]+\/)*(\d{10,})/);
+                    if (!m) continue;
+                    const url = `https://www.facebook.com/events/${m[1]}/`;
+                    if (!allEventUrls.has(url)) {
+                        allEventUrls.set(url, { expectedDay: 'okänd', city: s.city, requiresParsedDate: true });
+                        added++;
+                    }
+                }
+                console.log(`🌱 Seed-fil: ${seeds.length} URL:er → ${added} nya i extraktionskön.`);
+            }
+        } catch (seedErr) {
+            console.log(`⚠️ Kunde inte läsa fb-seed-urls.json: ${(seedErr as Error)?.message}`);
+        }
+
         // === STATISTIK-SAMMANSTÄLLNING ===
         console.log('\n==========================================');
         console.log('📊 DISCOVERY-STATISTIK PER QUERY:');
@@ -476,7 +517,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         let extractFailed = 0;
         let extractNewlySaved = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
-            const { expectedDay, city } = itemData;
+            const { expectedDay, city, requiresParsedDate } = itemData;
             processed++;
             console.log(`\n📊 [${processed}/${totalToProcess}] Behandlar event (sparade hittills: ${scrapedEventsLog.length})`);
             try {
@@ -685,6 +726,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         eventTime = parsedIso;
                         hasValidDate = true;
                     }
+                }
+
+                if (!hasValidDate && requiresParsedDate) {
+                    // Sid-/seed-event utan datum från eventsidan: "idag"-fallbacken
+                    // vore en ren gissning (inget sökdatumfilter bakom) — skippa.
+                    console.log(`    ⏩ Skippar sid-/seed-event utan parsbart datum: ${details.title}`);
+                    extractSkippedDate++;
+                    continue;
                 }
 
                 if (!hasValidDate) {

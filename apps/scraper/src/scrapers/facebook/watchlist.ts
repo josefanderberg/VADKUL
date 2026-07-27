@@ -18,7 +18,8 @@
 export interface FacebookPageWatch {
     slug: string;
     name: string;
-    city: string;
+    /** Geokodningshint. Utelämnad → geokodningen skannar eventadressen. */
+    city?: string;
 }
 
 export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
