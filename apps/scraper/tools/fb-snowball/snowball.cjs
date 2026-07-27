@@ -79,6 +79,9 @@ const norm = (s) => (s || '').toLowerCase().replace(/[^a-zåäö0-9]/g, '');
     fs.writeFileSync(`${SC}/host-snowball.json`, JSON.stringify(results, null, 1));
     const withSlug = results.filter((r) => r.slug);
     const allRelated = new Set(results.flatMap((r) => r.related || []));
-    console.log(`KLART: ${withSlug.length}/${results.length} med slug, ${allRelated.size} unika relaterade event`);
+    // Seed-filen: relaterade event-ID:n -> extraheras av FB-skrapan varje natt.
+    const seeds = [...allRelated].map((id) => ({ url: `https://www.facebook.com/events/${id}/` }));
+    fs.writeFileSync(path.join(REPO, 'apps/scraper/fb-seed-urls.json'), JSON.stringify(seeds, null, 1));
+    console.log(`KLART: ${withSlug.length}/${results.length} med slug, ${allRelated.size} unika relaterade event (seed-fil skriven)`);
     await browser.close();
 })();
