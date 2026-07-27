@@ -24,7 +24,8 @@
   "urls": [
     "https://www.stromsund.se/evenemang"
   ],
-  "defaultCity": "Strömsund"
+  "defaultCity": "Strömsund",
+  "fetchDetailDesc": true
 }
 ```
 

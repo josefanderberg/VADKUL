@@ -8,7 +8,7 @@
 | **ID** | `upplands-vasby` |
 | **Region** | upplands-vasby |
 | **Engine** | `sitemap` |
-| **Update frequency** | `daily` |
+| **Update frequency** | `every-3d` |
 
 ## Hur vi hittade den
 

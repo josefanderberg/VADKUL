@@ -8,7 +8,7 @@
 | **ID** | `sodertalje` |
 | **Region** | sodertalje |
 | **Engine** | `sitemap` |
-| **Update frequency** | `daily` |
+| **Update frequency** | `every-3d` |
 
 ## Hur vi hittade den
 

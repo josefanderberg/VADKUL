@@ -421,6 +421,47 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-11',
     },
     {
+        id: 'fhosd-osd',
+        hostName: 'OSD / Folkets Hus Östersund',
+        region: 'ostersund',
+        engine: 'sitemap',
+        config: {
+            // osd.nu är en tom WP-placeholder — riktiga sajten är fhosd.se
+            // (Joomla). Joomla-sitemapen saknar detaljsidorna, men översikts-
+            // sidan listar allt i statisk HTML → HTML-katalog-läget.
+            sitemapUrl: 'https://www.fhosd.se/evenemang/oversikt',
+            isHtmlCatalog: true,
+            urlPatterns: [/\/evenemang\/evenemangskalender\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Östersund',
+            maxUrls: 100,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Agent-probe 2026-07-27: 27 kommande event t.o.m. mars 2027 (PB-Hallen/Arnljotsalen — Dina Ögon, Babblarna m.fl.). Datum radbrutet "21 mar." + "2027" — textparsern klarar det.',
+        lastVerified: '2026-07-27',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.fhosd.se/evenemang/oversikt', date: '2026-07-27', rawEventCount: 27, notes: 'osd.nu = placeholder; fhosd.se är den levande sajten.' },
+    },
+    {
+        id: 'storsjoyran',
+        hostName: 'Storsjöyran',
+        region: 'ostersund',
+        engine: 'sitemap',
+        config: {
+            // Säsongskälla: festivalen 31 juli–1 aug 2026. Artistsidorna har
+            // "fredag 31 juli"-text som parsern tar; klockslag finns bara på
+            // /spelschema/ (ej maskinläsbart) → hasSpecificTime=false.
+            sitemapUrl: 'https://www.yran.se/artist-sitemap.xml',
+            urlPatterns: [/\/artist\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            defaultCity: 'Östersund',
+            maxUrls: 50,
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        notes: 'Agent-probe 2026-07-27: 36 artistsidor (The Ark, Golf m.fl.). SÄSONG: stäng av/låt fönstret klippa efter 1 aug. Krogstråket (~56 punkter) är en enda sida — går ej med befintliga engines.',
+        lastVerified: '2026-07-27',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.yran.se/artist-sitemap.xml', date: '2026-07-27', rawEventCount: 36 },
+    },
+    {
         id: 'jamtli',
         hostName: 'Jamtli',
         region: 'ostersund',
@@ -570,6 +611,30 @@ export const SOURCES: Source[] = [
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: wp-sitemap-posts-shm_event, /pa-gang/kalender/-events.',
         lastVerified: '2026-06-08',
+    },
+    {
+        id: 'visiteskilstuna',
+        hostName: 'Visit Eskilstuna',
+        region: 'eskilstuna',
+        engine: 'sitevision',
+        config: {
+            urls: ['https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden/sok-evenemang'],
+            defaultCity: 'Eskilstuna',
+            // "events-list"-webappens (Vue) REST-API — hittat via nätverks-sniff
+            // 2026-07-27. Kumulativ paginering (page=N → första N*12 hits) så
+            // enginen hämtar allt i ett stort anrop. 481 event vid upptäckt.
+            guideApi: { basePath: '/rest-api/Evenemang' },
+        },
+        updateFrequency: 'daily',
+        notes: 'Kommunala Evenemangsguiden (SiteVision events-list-webapp). REST-API:t bär titel/bild/beskrivning/venue/start+slut — 481 event vid upptäckt 2026-07-27.',
+        lastVerified: '2026-07-27',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://visiteskilstuna.se/rest-api/Evenemang/events?count=0&filters=%7B%7D&page=1&query=&timestamp=1785173759100',
+            date: '2026-07-27',
+            rawEventCount: 481,
+            notes: 'Sök-sidans XHR. timestamp-param krävs (annars server-JSONException). info.start "00:00" = heldagsevent.',
+        },
     },
     {
         id: 'parkenzoo',
@@ -1173,18 +1238,31 @@ export const SOURCES: Source[] = [
         hostName: 'Kalmar Kommun',
         region: 'kalmar',
         engine: 'sitevision',
-        config: { urls: ['https://www.kalmar.se/evenemang'], defaultCity: 'Kalmar' },
-        updateFrequency: 'every-3d',
-        status: 'experimental',
-        // Tyst källa (0 event trots dagliga runs, inga fel). Diagnos 2026-06-22:
-        // kalmar.se/evenemang är numera bara en landningssida som länkar vidare
-        // till kalmar.com/evenemang. Där renderas evenemangen klient-sida av en
-        // SiteVision-"webapp" (vendor.js/webapp-resource) — statiska HTML:en har
-        // 0 <time>-element och ingen JSON-LD, så sitevision-motorn hittar inget.
-        // Fix kräver headless-rendering eller webappens interna data-endpoint —
-        // större jobb. Experimentell tills dess.
-        notes: 'Tyst 2026-06-22: events flyttade till kalmar.com (SiteVision-webapp, JS-renderad). Statisk HTML saknar <time>/JSON-LD. Kräver headless eller webapp-endpoint.',
-        lastVerified: '2026-06-22',
+        config: {
+            urls: ['https://kalmar.com/evenemang/'],
+            defaultCity: 'Kalmar',
+            // soleilit.eventSearch:s events-API — hittat via nätverks-sniff av
+            // kalmar.com/evenemang 2026-07-27 (samma metod som malmo itemsApi).
+            // Ger name/URl/description/local(venue)/location(gatuadress)/bild/
+            // fullStartDate+startTime — 171 träffar för jul-sep vid upptäckt.
+            eventSearchApi: {
+                pageId: '4.2a057aed1776e064a774f0',
+                portletId: '12.2a057aed1776e064a77113f',
+            },
+        },
+        updateFrequency: 'daily',
+        // Historik: tyst 2026-06-22 → 2026-07-27 (kalmar.se/evenemang blev
+        // landningssida; eventen bor på kalmar.com som JS-renderad webapp).
+        // Löst 2026-07-27 med webappens interna events-endpoint.
+        notes: 'kalmar.com (Destination Kalmar) via soleilit.eventSearch events-API. Väckt ur tystnad 2026-07-27: 171 event jul–sep, gatuadresser med.',
+        lastVerified: '2026-07-27',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://kalmar.com/appresource/4.2a057aed1776e064a774f0/12.2a057aed1776e064a77113f/events?fromDate=2026-07-27T00:00:00.000Z&toDate=2026-09-30T21:59:59.999Z&categories=&limit=500',
+            date: '2026-07-27',
+            rawEventCount: 171,
+            notes: 'Kalendersidans egna XHR (fromDate/toDate/limit). Fältet "URl" (sic). local=venue, location=gatuadress.',
+        },
     },
     {
         id: 'gotland-kommun',
@@ -2142,6 +2220,92 @@ export const SOURCES: Source[] = [
         updateFrequency: 'weekly',
         notes: 'Probe-sitemap 2026-06-04: 23 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
+    },
+    {
+        id: 'boras-com',
+        hostName: 'Borås TME',
+        region: 'boras',
+        engine: 'wp-graphql',
+        config: {
+            // Destinationssajten (boras.com) är Next.js mot headless WP på
+            // cms.boras.com. wp/v2-REST:en har acf:[] — datumen bor BARA i
+            // WPGraphQL. Aggregerar stadens kalender (bibliotek, museer m.m.).
+            endpoint: 'https://cms.boras.com/graphql',
+            eventBaseUrl: 'https://www.boras.com',
+            defaultCity: 'Borås',
+        },
+        updateFrequency: 'daily',
+        notes: 'Agent-probe 2026-07-27: 246 event varav 74 i 30d-fönstret. Självstädande (WP trashar passerade event). language:SV-filter i queryn — inga EN-dubbletter.',
+        lastVerified: '2026-07-27',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://cms.boras.com/graphql',
+            date: '2026-07-27',
+            rawEventCount: 246,
+            notes: 'WPGraphQL med öppen introspection; acfEvents-fältgruppen bär eventDateFrom/eventTime/eventPlace/eventVisitingAddress.',
+        },
+    },
+    {
+        id: 'ahaga',
+        hostName: 'Åhaga',
+        region: 'boras',
+        engine: 'sitemap',
+        config: {
+            // WP utan event-CPT: eventen är vanliga posts under /evenemang/<slug>/;
+            // passerade flyttas till /passerad/ (självstädande). Svensk datumtext
+            // server-renderad — cheerio-fallbacken tar den.
+            sitemapUrl: 'https://ahaga.se/wp-sitemap-posts-post-1.xml',
+            urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
+            defaultCity: 'Borås',
+            maxUrls: 50,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Agent-probe 2026-07-27: 24 kommande /evenemang/-URLs (mäss- och konserthall). Ingen JSON-LD Event.',
+        lastVerified: '2026-07-27',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://ahaga.se/wp-sitemap-posts-post-1.xml', date: '2026-07-27', rawEventCount: 24 },
+    },
+    {
+        id: 'boras-stadsteater',
+        hostName: 'Borås Stadsteater',
+        region: 'boras',
+        engine: 'sitemap',
+        config: {
+            // SiteVision-index → sitemap1.xml.gz (gzippad — enginen hanterar .gz).
+            // En URL = en produktion med datumintervall; slugens datum är
+            // publiceringsdatum, speldatum står i sidtexten.
+            sitemapUrl: 'https://borasstadsteater.se/sitemap.xml',
+            urlPatterns: [/\/forestallningar\/[^/]+\/?$/i],
+            defaultCity: 'Borås',
+            maxUrls: 40,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Agent-probe 2026-07-27: 29 /forestallningar/-URLs i sitemap1.xml.gz (~8 aktuella produktioner). Gamla produktioner ligger kvar — fönstret klipper.',
+        lastVerified: '2026-07-27',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://borasstadsteater.se/sitemap.xml', date: '2026-07-27', rawEventCount: 29 },
+    },
+    {
+        id: 'navet',
+        hostName: 'Navet Science Center',
+        region: 'boras',
+        engine: 'sitemap',
+        config: {
+            // Yoast events-sitemap. URL:erna är nästlade per kategori
+            // (/evenemang/<kategori>/<slug>/) — ta bara publika kategorier,
+            // skippa för-lärare/för-skolor och "Stängt". Datumtext ofta utan
+            // årtal ("14 augusti").
+            sitemapUrl: 'https://www.navet.com/events-sitemap.xml',
+            urlPatterns: [/\/evenemang\/(?:allmanhet|lovaktiviteter|for-alla)\/[^/]+\/?$/i],
+            urlBlacklist: [/\/stangt\/?$/i],
+            defaultCity: 'Borås',
+            maxUrls: 30,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Agent-probe 2026-07-27: 11 URLs. wp/v2/events finns men acf:[] — inga datum via REST.',
+        lastVerified: '2026-07-27',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.navet.com/events-sitemap.xml', date: '2026-07-27', rawEventCount: 11 },
     },
     {
         id: 'falkoping',
@@ -4009,10 +4173,13 @@ export const SOURCES: Source[] = [
         hostName: 'Storsjöteatern',
         region: 'jamtland',
         engine: 'sitemap',
-        config: { sitemapUrl: 'https://www.storsjoteatern.se/sitemap.xml', urlPatterns: [/\/(?:sv\/)?events\/[^/]+\/?$/i], defaultCity: 'Östersund', maxUrls: 300 },
+        // 2026-07-27: rot-sitemapen är numera ett WIX-index — peka direkt på
+        // event-pages-sitemap.xml (348 URLs, inkl. år av historik — fönstret
+        // klipper). Detaljsidorna har JSON-LD Event MED startDate.
+        config: { sitemapUrl: 'https://www.storsjoteatern.se/event-pages-sitemap.xml', urlPatterns: [/\/(?:sv\/)?events\/[^/]+\/?$/i], defaultCity: 'Östersund', maxUrls: 300 },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Probe-venues 2026-06-09: 346 event-URLs (events-mönster) — teater. Körd: 0/296 (sommarstängt, allt framåt). Kolla i sep.',
+        notes: 'Probe-venues 2026-06-09: 346 event-URLs (events-mönster) — teater. Körd: 0/296 (sommarstängt, allt framåt). 2026-07-27: WIX-index → direktpekad på event-pages-sitemap.xml (348 URLs, lastmod 2026-07-16); höstsäsongen bör ge utslag nu.',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.storsjoteatern.se/sitemap.xml', date: '2026-06-09' },
     },
     {

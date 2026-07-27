@@ -2,6 +2,12 @@
 
 Entry-point. Läs först. Hålls under 60 rader.
 
+## Senaste riktade insats
+
+2026-07-27: **Dammsugning Borås/Kalmar/Östersund/Eskilstuna** (GSC-topstäderna) —
+9 nya/väckta källor, ~560 nya event. Ny `wp-graphql`-engine + 2 sitevision-API-
+varianter. Detaljer: [runs/2026-07-27.md](runs/2026-07-27.md).
+
 ## Senaste körning
 
 | | |
