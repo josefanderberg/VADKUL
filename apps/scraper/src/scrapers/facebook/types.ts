@@ -18,4 +18,6 @@ export interface FacebookSource {
     url: string;
     filters: string[];
     city?: string;
+    /** Etikett för statistiken när URL:en saknar ?q= (sidbevakningar). */
+    label?: string;
 }

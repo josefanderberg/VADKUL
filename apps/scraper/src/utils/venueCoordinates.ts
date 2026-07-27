@@ -240,6 +240,12 @@ export const SWEDISH_GEO_CITIES = [
     'Lycksele', 'Eslöv', 'Staffanstorp', 'Sjöbo', 'Simrishamn', 'Laholm',
     'Eksjö', 'Vimmerby', 'Nybro', 'Sölvesborg', 'Olofström', 'Älmhult',
     'Finspång', 'Mjölby', 'Strängnäs', 'Nora', 'Lindesberg',
+    // Gotland-orter (2026-07-27): ankrar FB-events adress-skan på rätt ö.
+    // 'Roma' utelämnad — \b-regexen skulle träffa italienska adresser;
+    // countrycodes=se skyddar geokodningen men sökbruset är inte värt det.
+    'Hemse', 'Slite', 'Klintehamn', 'Fårösund', 'Ljugarn', 'Burgsvik',
+    'Katthammarsvik', 'Lärbro', 'Stånga', 'Havdhem', 'Tingstäde',
+    'Romakloster', 'Fårö',
 ];
 
 /**

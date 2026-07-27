@@ -49,6 +49,15 @@ export interface WpRestConfig {
      * content/excerpt är tomt i wp/v2 men datumet syns på sidan.
      */
     fetchDetailPage?: boolean;
+    /**
+     * Riktad datum-extraktion ur detaljsidans HTML: regex vars CAPTURE-GRUPP 1
+     * pekar ut texten med eventdatumet (t.ex. JetEngine:s
+     * jet-listing-dynamic-field-div på blacksheeparms). När satt används
+     * ENBART regex-träffen — helsides-skanningen är avstängd, eftersom den
+     * annars nappar på ovidkommande datum (öppettider i sidfoten m.m.).
+     * Ingen träff ⇒ eventet får inget datum (hellre bortfall än fel dag).
+     */
+    detailDateRegex?: RegExp;
 }
 
 function endpointFor(cfg: WpRestConfig): string {
@@ -271,8 +280,17 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
     if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && e.link) {
         detailHtml = await fetchDetailHtml(e.link, cfg, signal);
         if (detailHtml) {
-            const scanned = findFirstDateInText(detailHtml, now);
-            if (scanned) start = scanned;
+            if (cfg.detailDateRegex) {
+                // Riktad extraktion — skanna BARA utpekat element (se config-doc).
+                const m = detailHtml.match(cfg.detailDateRegex);
+                if (m?.[1]) {
+                    const scanned = findFirstDateInText(m[1].replace(/,/g, ' '), now);
+                    if (scanned) start = scanned;
+                }
+            } else {
+                const scanned = findFirstDateInText(detailHtml, now);
+                if (scanned) start = scanned;
+            }
         }
     }
 

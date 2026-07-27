@@ -24,6 +24,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
+import { decodeHtmlEntities } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -404,8 +405,8 @@ export const sitevisionEngine = async (
             const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
                 || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
             const desc = m?.[1]
-                ?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
-                .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+                : undefined;
             if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
         }
         if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);

@@ -24,6 +24,7 @@
 import { RawEvent, Engine } from '../sources/types';
 import { dedupeSeries } from './pro';
 import { mapPool } from '../utils/mapPool';
+import { cleanDescription } from '../utils/text';
 
 const CATALOG_URL = 'https://www.korpen.se/foreningar/';
 const CONCURRENCY = 6;
@@ -137,7 +138,8 @@ export function mapWorkout(w: ZoeziWorkout, assoc: KorpenAssociation): RawEvent 
 
     const descParts = [
         typeName && title !== typeName ? typeName : '',
-        w.description?.trim() || w.workoutType?.description?.trim() || '',
+        // Zoezi-beskrivningar är HTML med entiteter — måste genom cleanDescription
+        cleanDescription(w.description || w.workoutType?.description || ''),
         `Motionspass med ${assoc.name}. Boka/drop-in via föreningens schema.`,
     ].filter(Boolean);
 

@@ -16,6 +16,7 @@ import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
+import { decodeHtmlEntities } from '../utils/text';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
@@ -177,6 +178,10 @@ export async function runSource(
                 result.skipped.invalid++;
                 continue;
             }
+            // Encoding-guard: WP m.fl. levererar titlar med råa entiteter
+            // ("Live &#8211; Jimmy &#038; Co") — avkoda centralt så ingen
+            // engine behöver komma ihåg det.
+            e.title = decodeHtmlEntities(e.title).trim();
             if (e.startDate < windowStart || e.startDate >= windowEnd) {
                 result.skipped.outsideWindow++;
                 continue;

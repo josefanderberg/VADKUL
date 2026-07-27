@@ -25,6 +25,7 @@
 
 import { RawEvent, Engine } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
+import { decodeHtmlEntities } from '../utils/text';
 
 const API_BASE = 'https://api.axiell.com/event/api';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -128,12 +129,12 @@ interface AxiellHit {
 /** Strippa HTML till ren text (description är HTML i API:t). */
 export function stripHtml(html: string | undefined): string {
     if (!html) return '';
-    return html
-        .replace(/<br\s*\/?>/gi, ' ')
-        .replace(/<\/p>/gi, ' ')
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
+    return decodeHtmlEntities(
+        html
+            .replace(/<br\s*\/?>/gi, ' ')
+            .replace(/<\/p>/gi, ' ')
+            .replace(/<[^>]+>/g, ''),
+    )
         .replace(/\s+/g, ' ')
         .trim();
 }
