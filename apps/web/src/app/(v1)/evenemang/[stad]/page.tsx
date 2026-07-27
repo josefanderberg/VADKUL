@@ -6,6 +6,7 @@ import {
     todayKey, weekendKeys, countByDayKeys, topVenues, exampleTitles, svList,
 } from '../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
+import TopNav from '../TopNav';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -108,24 +109,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-            <div className="max-w-2xl mx-auto px-5 py-10">
-                {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger. */}
-                <div className="flex items-center justify-between gap-3">
-                    <Link
-                        href="/evenemang"
-                        className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
-                    >
-                        ← Tillbaka till Evenemang i Sverige
-                    </Link>
-                    <Link
-                        href="/"
-                        className="inline-flex items-center px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-md transition-colors"
-                    >
-                        Se allt på kartan
-                    </Link>
-                </div>
-
-                <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">
+            <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" />
+            <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
+                <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     Vad händer i {city.name}?
                 </h1>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">

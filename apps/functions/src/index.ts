@@ -120,9 +120,10 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
 
 // Giltiga kampanjkoder. Inlösen begränsas per KONTO (starGift-fältet), inte
 // per kod — koderna finns för att kunna hålla isär kampanjer i attributionen
-// (starGiftCode på user-dokumentet): STJARNA1 = mail-kampanjen till användare,
-// ARRANGOR1 = arrangörs-outreachen (docs/outreach/).
-const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1'];
+// (starGiftCode på user-dokumentet): STJARNA1 = publika kampanjer (FB-grupper
+// m.m.), ARRANGOR1 = arrangörs-outreachen (docs/outreach/), MEDLEM1 =
+// medlemsutskicket via Zoho Campaigns.
+const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1'];
 
 /** Lös in stjärn-gåvan: sätter starGift='unused' på kontot, max en gång. */
 export const redeemStarGift = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {

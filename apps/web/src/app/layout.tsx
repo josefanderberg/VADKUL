@@ -5,6 +5,7 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import Hotjar from '@/components/analytics/Hotjar';
 import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
+import SiteVisitBeacon from '@/components/analytics/SiteVisitBeacon';
 
 // Rundad, vänlig display-font för moln-texten och andra "lockande" inslag.
 // Variabel font så vi får alla vikter (300–700) i en fil.
@@ -107,6 +108,7 @@ export default function RootLayout({
                 <Providers>
                     {children}
                     <Hotjar />
+                    <SiteVisitBeacon />
                     {/* useSearchParams() i FirebaseAnalytics kräver en Suspense-gräns —
                         annars kan sidor tvingas ur statisk rendering. */}
                     <Suspense fallback={null}>

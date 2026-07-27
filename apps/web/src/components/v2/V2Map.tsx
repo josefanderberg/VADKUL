@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
-import { EventWish, LinkEvent } from '../../types';
+import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
 import { isEventFeatured } from '../../services/linkEventService';
@@ -636,8 +636,11 @@ export default function V2Map({
             // Stjärn-gåvan ⭐: ett (ännu inte passerat) stjärnmärkt event blir
             // gruppens REPRESENTANT — dess emoji/färg visas på brickan, även i
             // multi-event-grupper. Passerad stjärna = förbrukad → vanlig rep.
+            // Annars: första ÄNNU INTE passerade eventet — en grupp där några
+            // (men inte alla) varit ska visa ett kommande event, inte ett gammalt.
+            // Alla passerade → group[0] (brickan är ändå släckt via groupIsPast).
             const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
-            const rep = starredRep ?? group[0];
+            const rep = starredRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const emoji = eventEmoji(rep);
             // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard);
@@ -670,6 +673,11 @@ export default function V2Map({
                 const frameIds: string[] = [];
                 for (const ev of group) {
                     if (discardedEventIds.has(ev.id)) continue;
+                    // Passerade event deltar INTE i emoji-växlingen: har 2 av 3
+                    // i gruppen redan varit ska brickan stå still på det som
+                    // återstår (frames < 2 → ingen rotation alls). minuteTick i
+                    // deps håller filtret i takt med klockan under sessionen.
+                    if (isEventPast(ev, nowMs)) continue;
                     const em = eventEmoji(ev);
                     if (seenEmoji.has(em)) continue;
                     seenEmoji.add(em);
@@ -2002,9 +2010,12 @@ export default function V2Map({
                 // Multibrickan cyklar: öppna det event vars frame VISAS just nu
                 // (pumpens frame-index via shownCycleEvent) — inte gruppens
                 // första. Saknas rotation (t.ex. alla frames samma emoji) →
-                // redan valt event i gruppen, sist group[0].
+                // redan valt event i gruppen, sen första KOMMANDE (passerade
+                // ska inte öppnas av brick-klicket när kommande finns), sist
+                // group[0].
                 const rep = shownCycleEvent(key ? cycleRotationsRef.current.get(key) : undefined, cycleFrameIndexRef.current, group)
                     || group.find(ev => ev.id === selectedEventValRef.current?.id)
+                    || group.find(ev => !isEventPast(ev, Date.now()))
                     || group[0];
                 // Ankra listan vid brickans geo-punkt (projiceras i updateCloudPosition).
                 if (isValidLatLng(rep.lat, rep.lng)) {
@@ -2367,6 +2378,10 @@ export default function V2Map({
             // DOM-markören här finns i praktiken bara för valda/speciella.)
             const rep = inGroupSelected
                 || (count > 1 ? shownCycleEvent(cycleRotationsRef.current.get(key), cycleFrameIndexRef.current, group) : undefined)
+                // Föredra ett KOMMANDE event som ansikte utåt — samma regel som
+                // GL-lagrets rep, så DOM-brickan inte visar ett passerat event
+                // när kommande finns i gruppen.
+                || nonDiscarded.find(e => !isEventPast(e, Date.now()))
                 || nonDiscarded[0]
                 || group[0];
 
@@ -2385,11 +2400,12 @@ export default function V2Map({
             if (isSelected) revealedKeysRef.current.add(key);
             const isRevealed = revealedKeysRef.current.has(key);
 
-            // Event skapade direkt på VADKUL lyfts fram med en egen smaragdgrön
+            // Event VÄRDADE på VADKUL lyfts fram med en egen smaragdgrön
             // bricka (samma gröna som skapa-flödet) — de är sajtens kärna.
-            // Gäller bara enskilda markörer; grupper cyklar genom flera event
-            // och behåller därför standardutseendet.
-            const isUserCreated = count === 1 && !!rep.userCreated;
+            // Tips (användarskapade MED länk) räknas INTE hit: de ska se ut
+            // som vanliga länk-event. Gäller bara enskilda markörer; grupper
+            // cyklar genom flera event och behåller därför standardutseendet.
+            const isUserCreated = count === 1 && isVadkulHostedEvent(rep);
 
             // Boostat ("featured") event: betald framlyftning. Bara enskilda
             // markörer (grupper cyklar och behåller standardutseende). Featured är

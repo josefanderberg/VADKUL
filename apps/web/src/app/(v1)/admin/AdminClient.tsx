@@ -134,6 +134,17 @@ export default function AdminClient() {
                 </div>
             </div>
 
+            {/* Publiceringskonsolen — kön, utkasten och statistiken bor där */}
+            <Link href="/admin/outreach"
+                className="flex items-center justify-between rounded-xl border border-[#006AA7]/25 bg-[#006AA7]/5 p-4 mb-8 hover:bg-[#006AA7]/10 transition-colors">
+                <div>
+                    <p className="text-sm font-black text-[#006AA7]">Publiceringskonsol →</p>
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                        FB-grupper, utkast, schema och statistik
+                    </p>
+                </div>
+            </Link>
+
             {/* Eventrapporter */}
             <Section icon={<Flag size={15} className="text-rose-500" />} title="Eventrapporter" count={reports.length}>
                 {reports.length === 0 ? (

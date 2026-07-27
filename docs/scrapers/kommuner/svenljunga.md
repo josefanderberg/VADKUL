@@ -24,7 +24,8 @@
   "urls": [
     "https://www.svenljunga.se/evenemangskalender"
   ],
-  "defaultCity": "Svenljunga"
+  "defaultCity": "Svenljunga",
+  "fetchDetailDesc": true
 }
 ```
 

@@ -13,26 +13,26 @@ när de svarat resp. när länken till vadkul.se är uppe.
 
 _Flest kommande event = mest värde av kartan = störst chans till svar och länk._
 
-- [ ] **ABF** — 355 event · Västerås, Malmö · `abf.se` · mall A (mejl)
-  - t.ex. _Föreläsning, gudning i Karmanbo_ · _Amigurumi på sommarkarusellen i Skinnskatteberg_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Åtvids församling** — 177 event · Linköping · `svenskakyrkan.se` · mall A (mejl)
-  - t.ex. _Sommaröppet i Åtvids Gamla kyrka 10-16_ · _Sommaröppet i Yxnerums kyrka 10-16_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Destination Uppsala** — 174 event · Uppsala · `destinationuppsala.se` · mall A (mejl)
-  - t.ex. _En dagsresa till Lövstabruk_ · _VM-fest på Studenternas_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Korpen Stockholm** — 142 event · Stockholm · `korpenstockholm.zoezi.se` · mall A (mejl)
-  - t.ex. _Jajamen - Boulevard_ · _Gentlemän - PMP_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Studieförbundet Vuxenskolan** — 136 event · Trollhättan, Eskilstuna · `sv.se` · mall A (mejl)
-  - t.ex. _Musik till tusen på Emåns Ekomuseum_ · _Musikunderhållning på Sörmlandsgården_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Trosa** — 127 event · Nyköping, Södertälje · `trosa.com` · mall A (mejl)
-  - t.ex. _Bakluckeloppis i Trosa_ · _Musikquiz på Kölsvinet_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Uppsala domkyrkoförsamling** — 122 event · Uppsala · `svenskakyrkan.se` · mall A (mejl)
-  - t.ex. _Utställning ”Who Am I?” av Sean Henry 28/5–30/8_ · _Utställning: Katarina Jagellonica 500 år 8/5–8/11_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Vimmerby** — 114 event · Uppsala · `vimmerby.com` · mall A (mejl)
-  - t.ex. _Onsdagspub på Kharma_ · _Loppis centralt i Vimmerby_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Jönköping Kommun** — 113 event · Jönköping, Göteborg · `jonkoping.se` · mall A (mejl)
-  - t.ex. _Schackmatt vid Råslätts Bibliotek_ · _Wetterbygden Basketball Summer Reach_ · skickat: ____ · svar: ____ · länk: ____
-- [ ] **Säffle Kommun** — 109 event · Karlstad · `saffle.se` · mall A (mejl)
-  - t.ex. _VÄGKYRKA_ · _"Sopan" Ingela Öhman, Familjeföreställning_ · skickat: ____ · svar: ____ · länk: ____
+- [x] **ABF** — 355 event · Västerås, Malmö · `abf.se` · mall A (mejl)
+  - t.ex. _Föreläsning, gudning i Karmanbo_ · _Amigurumi på sommarkarusellen i Skinnskatteberg_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Åtvids församling** — 177 event · Linköping · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Sommaröppet i Åtvids Gamla kyrka 10-16_ · _Sommaröppet i Yxnerums kyrka 10-16_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Destination Uppsala** — 174 event · Uppsala · `destinationuppsala.se` · mall A (mejl)
+  - t.ex. _En dagsresa till Lövstabruk_ · _VM-fest på Studenternas_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Korpen Stockholm** — 142 event · Stockholm · `korpenstockholm.zoezi.se` · mall A (mejl)
+  - t.ex. _Jajamen - Boulevard_ · _Gentlemän - PMP_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Studieförbundet Vuxenskolan** — 136 event · Trollhättan, Eskilstuna · `sv.se` · mall A (mejl)
+  - t.ex. _Musik till tusen på Emåns Ekomuseum_ · _Musikunderhållning på Sörmlandsgården_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Trosa** — 127 event · Nyköping, Södertälje · `trosa.com` · mall A (mejl)
+  - t.ex. _Bakluckeloppis i Trosa_ · _Musikquiz på Kölsvinet_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Uppsala domkyrkoförsamling** — 122 event · Uppsala · `svenskakyrkan.se` · mall A (mejl)
+  - t.ex. _Utställning ”Who Am I?” av Sean Henry 28/5–30/8_ · _Utställning: Katarina Jagellonica 500 år 8/5–8/11_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Vimmerby** — 114 event · Uppsala · `vimmerby.com` · mall A (mejl)
+  - t.ex. _Onsdagspub på Kharma_ · _Loppis centralt i Vimmerby_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Jönköping Kommun** — 113 event · Jönköping, Göteborg · `jonkoping.se` · mall A (mejl)
+  - t.ex. _Schackmatt vid Råslätts Bibliotek_ · _Wetterbygden Basketball Summer Reach_ · skickat: 2026-07-17 · svar: ____ · länk: ____
+- [x] **Säffle Kommun** — 109 event · Karlstad · `saffle.se` · mall A (mejl)
+  - t.ex. _VÄGKYRKA_ · _"Sopan" Ingela Öhman, Familjeföreställning_ · skickat: 2026-07-17 · svar: ____ · länk: ____
 - [ ] **Bollnäs Kommun** — 106 event · — · `bollnas.se` · mall A (mejl)
   - t.ex. _Skate på Solrosen_ · _Växbo Kvarn: Petra Marklund!_ · skickat: ____ · svar: ____ · länk: ____
 - [ ] **Robertsfors Kommun** — 85 event · Umeå · `robertsfors.se` · mall A (mejl)

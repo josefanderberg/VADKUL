@@ -22,6 +22,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource } from '@/utils/sources';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
+import { getNotisStatus, enableEventReminders } from '@/utils/fcm';
 import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
@@ -54,6 +55,22 @@ const hasValidCoords = (evt: LinkEvent) =>
  * (relativt det gamla) någon annanstans. Faller tillbaka till första event om
  * punkten saknas eller inget event för dagen har koords.
  */
+/**
+ * Normalisera tips-länken: protokoll saknas → https:// läggs på, sedan måste
+ * det bli en riktig http(s)-URL med punkt i domänen ("aftonbladet" räcker inte,
+ * "javascript:…" stoppas). null = ogiltig → Skapa-knappen hålls inaktiv.
+ */
+const normalizeTipUrl = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+        const u = new URL(withProto);
+        if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname.includes('.')) return null;
+        return u.toString();
+    } catch { return null; }
+};
+
 const pickNearestToPoint = (point: { lat: number; lng: number } | null, dayEvents: LinkEvent[]): LinkEvent | null => {
     if (dayEvents.length === 0) return null;
     if (!point) return dayEvents[0];
@@ -123,6 +140,13 @@ export default function HomePage() {
     const [newEventImage, setNewEventImage] = useState<File | null>(null);
     const [newEventImagePreview, setNewEventImagePreview] = useState('');
     const [creatingEvent, setCreatingEvent] = useState(false);
+    // 💡 Tips-läget i skapa-flödet: man lägger in ett event man KÄNNER TILL men
+    // inte arrangerar (folk hör ofta av sig och vill få event inlagda). Eventet
+    // sparas med länk till källan och presenteras som ett vanligt länk-event —
+    // tipsaren står ALDRIG som arrangör/värd. 'host' = eget event som förut.
+    const [newEventRole, setNewEventRole] = useState<'host' | 'tip'>('host');
+    const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (krävs)
+    const [newEventHost, setNewEventHost] = useState('');  // tips: arrangörens namn (valfritt)
     // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
     // Modalen har två lägen: skapa ett riktigt event ELLER önska ett ("någon
     // borde ordna X här"). En önskan har bara titel/kategori/beskrivning —
@@ -159,6 +183,9 @@ export default function HomePage() {
         setNewEventDescription('');
         setNewEventImage(null);
         setNewEventImagePreview('');
+        setNewEventRole('host');
+        setNewEventUrl('');
+        setNewEventHost('');
         setCreateKind('event');
         setFulfillingWish(null);
         setRepicking(false);
@@ -279,6 +306,20 @@ export default function HomePage() {
         const iv = setInterval(load, 30000);
         return () => { active = false; clearInterval(iv); };
     }, []);
+
+    // Håll det ÖPPNA kortet i synk med den progressiva laddningen: cards-/
+    // descriptions-lagren mergar in NYA, rikare objekt (bild/värd/pris/
+    // beskrivning) i events-listan — men selectedEvent pekade kvar på det
+    // GAMLA magra objektet från urvalsögonblicket. Ett kort som öppnats före
+    // mergen (djuplänk, tidigt kartklick) stod då för alltid utan bild och med
+    // "Ingen beskrivning tillgänglig". Peka om till färska objektet per id.
+    useEffect(() => {
+        setSelectedEvent(prev => {
+            if (!prev) return prev;
+            const fresh = events.find(e => e.id === prev.id);
+            return fresh && fresh !== prev ? fresh : prev;
+        });
+    }, [events]);
 
     // Klick på en önske-bricka på kartan (null = tom karta-klick → stäng kortet).
     // Önske-kortet ersätter eventkortet — de ska aldrig ligga öppna samtidigt.
@@ -421,10 +462,21 @@ export default function HomePage() {
     // (pollen plockar sedan upp samma event från Firestore inom 30 s).
     const handleCreateEvent = useCallback(async () => {
         if (!pickedLocation || !newEventTitle.trim() || !newEventTime) return;
-        if (!user) { openLogin('Logga in för att skapa event'); return; }
+        // Tips ("jag arrangerar inte själv") kräver en giltig länk till källan —
+        // det är länken som gör att eventet presenteras som ett vanligt länk-
+        // event i stället för med tipsaren som värd.
+        const isTip = newEventRole === 'tip';
+        const tipUrl = isTip ? normalizeTipUrl(newEventUrl) : null;
+        if (isTip && !tipUrl) { toast.error('Lägg in en giltig länk till eventet — t.ex. arrangörens sida.'); return; }
+        if (!user) { openLogin(isTip ? 'Logga in för att tipsa om event' : 'Logga in för att skapa event'); return; }
         setCreatingEvent(true);
         try {
             const time = new Date(newEventTime);
+            // Tips: värden är arrangören man tipsar om (angivet namn, annars
+            // länkens domän) — aldrig tipsarens eget namn. Eget event: som förut.
+            const hostName = isTip
+                ? (newEventHost.trim() || new URL(tipUrl!).hostname.replace(/^www\./, ''))
+                : (user.displayName || user.email || 'VADKUL-användare');
             // Ladda upp ev. eventbild först så URL:en kan sparas på eventet.
             let coverImage = '';
             if (newEventImage) {
@@ -442,14 +494,15 @@ export default function HomePage() {
                 locationName: newEventPlace,
                 description: newEventDescription,
                 category: newEventCategory,
-                hostName: user.displayName || user.email || 'VADKUL-användare',
+                hostName,
                 hostUid: user.uid,
                 coverImage,
+                url: tipUrl ?? '',
             });
             const created: LinkEvent = {
-                id: docId, url: '', title: newEventTitle.trim(), time, createdAt: new Date(),
+                id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
                 locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
-                hostName: user.displayName || user.email || 'VADKUL-användare',
+                hostName,
                 category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
                 isLocationVerified: true, userCreated: true, hostUid: user.uid,
             } as LinkEvent;
@@ -480,6 +533,8 @@ export default function HomePage() {
             }
             toast.success(fulfillingWish
                 ? 'Önskan uppfylld — eventet är skapat och syns på kartan! ✨🎉'
+                : isTip
+                ? 'Tack för tipset — eventet syns nu på kartan! 💡'
                 : 'Eventet är skapat och syns på kartan! 🎉');
             resetCreateFlow();
         } catch (err) {
@@ -488,7 +543,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, user, openLogin, fulfillingWish, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, user, openLogin, fulfillingWish, resetCreateFlow]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -554,6 +609,50 @@ export default function HomePage() {
         }
     }, []);
 
+    // Notis-nudge vid första gillningen (en gång per enhet): påminnelserna når
+    // bara konton med en sparad FCM-token, och tillstånds-frågan måste komma
+    // från en riktig tap — gilla-tappen är den. Bara när frågan går att ställa
+    // ('default') och användaren är inloggad (token sparas per konto); annars
+    // finns vägen kvar via profilpanelens notis-rad.
+    const notisNudgeShownRef = useRef(false);
+    const maybeNudgeNotiser = useCallback(() => {
+        if (notisNudgeShownRef.current || !user) return;
+        if (localStorage.getItem('vadkul_notis_nudge_done')) return;
+        if (getNotisStatus() !== 'default') return;
+        notisNudgeShownRef.current = true;
+        localStorage.setItem('vadkul_notis_nudge_done', '1');
+        const uid = user.uid;
+        toast((t) => (
+            <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold">
+                    Vill du få en påminnelse 1 h innan dina gillade event börjar?
+                </span>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            const res = await enableEventReminders(uid);
+                            if (res === 'on') toast.success('Notiser på!');
+                            else if (res === 'denied') toast.error('Notiser är blockerade — tillåt dem för vadkul.se i webbläsarens inställningar.');
+                            else toast.error('Kunde inte aktivera notiser. Försök igen.');
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white text-xs font-black transition-colors"
+                    >
+                        Ja, aktivera notiser
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => toast.dismiss(t.id)}
+                        className="px-3.5 py-1.5 rounded-full text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"
+                    >
+                        Nej tack
+                    </button>
+                </div>
+            </div>
+        ), { duration: 12000, icon: '🔔' });
+    }, [user]);
+
     const handleSaveEvent = (eventId: string) => {
         setSavedEventIds(prev => {
             const next = new Set(prev);
@@ -566,6 +665,7 @@ export default function HomePage() {
             next.delete(eventId);
             return next;
         });
+        maybeNudgeNotiser();
     };
 
     // Sökfiltrering — söker över ALLA dagar (inte bara den valda): man ska kunna
@@ -840,6 +940,26 @@ export default function HomePage() {
     // Sant när en delad länk styrde dag eller event — då ska auto-hoppet till
     // Imorgon (nedan) aldrig lägga sig i.
     const deepLinkedRef = useRef(false);
+    // Djuplänkat event-id som ännu inte HITTATS i listan. Laddningen är
+    // progressiv (dagens slice → fulla lagret → cards/desc + user-events i egen
+    // poll) — vid kall last landar eventsLoaded ofta med BARA dagens event, och
+    // ett stadsside-klick på en annan dags event fanns då inte ännu. Förr
+    // gjordes uppslaget en enda gång ⇒ kortet öppnades bara ibland (varm cache).
+    // Nu ligger id:t kvar här och prövas om vid varje events-uppdatering tills
+    // det hittas eller datat är definitivt klart (eventsSettled).
+    const pendingEventIdRef = useRef<string | null>(null);
+
+    // Öppna det djuplänkade eventet: härled eventets dag så dagfiltret inte
+    // gömmer det — och markera dagbytet som "redan hanterat" så day-switch-
+    // effekten inte byter bort vårt val mot närmaste-event-heuristiken.
+    const applyDeepLinkedEvent = useCallback((target: LinkEvent) => {
+        const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+        const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
+        prevDayKey.current = `${offset}:1`;
+        setDayOffset(offset);
+        setSelectedEvent(target);
+    }, []);
+
     useEffect(() => {
         if (!eventsLoaded || urlApplied.current) return;
         urlApplied.current = true;
@@ -853,22 +973,39 @@ export default function HomePage() {
         const dag = parseInt(params.get('dag') ?? '', 10);
         const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
+        // Redan ett event-ID i länken (hittat eller ej) räknas som djuplänk —
+        // auto-hoppet till Imorgon får inte flytta dagen medan vi väntar på
+        // att eventet ska dyka upp i en senare batch.
+        if (eventId || !Number.isNaN(dag) || !Number.isNaN(dagar)) deepLinkedRef.current = true;
         const target = eventId ? events.find(e => e.id === eventId) : undefined;
-        if (target || !Number.isNaN(dag) || !Number.isNaN(dagar)) deepLinkedRef.current = true;
         if (target) {
-            // Härled eventets dag så dagfiltret inte gömmer det — och markera
-            // dagbytet som "redan hanterat" så day-switch-effekten inte byter
-            // bort vårt deep-linkade val mot närmaste-event-heuristiken.
-            const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-            const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
-            prevDayKey.current = `${offset}:1`;
-            setDayOffset(offset);
-            setSelectedEvent(target);
-        } else if (!Number.isNaN(dag)) {
+            applyDeepLinkedEvent(target);
+        } else if (eventId) {
+            pendingEventIdRef.current = eventId;
+        }
+        if (!target && !Number.isNaN(dag)) {
             setDayOffset(dag);
             if (!Number.isNaN(dagar) && dagar > 1) setDayRangeDays(Math.min(dagar, 31));
         }
-    }, [eventsLoaded, events]);
+    }, [eventsLoaded, events, applyDeepLinkedEvent]);
+
+    // Andra chansen (och tredje…): pröva det väntande djuplänks-id:t mot varje
+    // ny events-batch. Först när datat är DEFINITIVT klart (eventsSettled =
+    // fulla aggregatlagret hämtat; user-events-queryn är i praktiken alltid
+    // före) och eventet ändå saknas ger vi upp — med besked i stället för den
+    // gamla tysta tomma kartan.
+    useEffect(() => {
+        const id = pendingEventIdRef.current;
+        if (!id) return;
+        const target = events.find(e => e.id === id);
+        if (target) {
+            pendingEventIdRef.current = null;
+            applyDeepLinkedEvent(target);
+        } else if (eventsSettled) {
+            pendingEventIdRef.current = null;
+            toast('Eventet i länken kunde inte hittas — det kan ha passerat eller tagits bort.', { icon: '🤷' });
+        }
+    }, [events, eventsSettled, applyDeepLinkedEvent]);
 
     useEffect(() => {
         if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
@@ -1108,6 +1245,41 @@ export default function HomePage() {
                                 Önskan syns på kartan i {WISH_LIFETIME_DAYS} dagar eller tills eventet blir av.
                             </p>
                         )}
+                        {/* Skapa-läget: arrangerar du själv, eller TIPSAR du om ett
+                            event som redan finns? Tips kräver en länk till källan
+                            och visas som ett vanligt länk-event — tipsaren står
+                            aldrig som arrangör eller värd. */}
+                        {createKind === 'event' && (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex rounded-full bg-slate-100 p-1 text-xs font-bold" role="radiogroup" aria-label="Arrangerar du eller tipsar du?">
+                                    <button
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={newEventRole === 'host'}
+                                        onClick={() => setNewEventRole('host')}
+                                        className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${newEventRole === 'host' ? 'bg-white text-slate-800 shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Jag arrangerar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={newEventRole === 'tip'}
+                                        onClick={() => setNewEventRole('tip')}
+                                        className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${newEventRole === 'tip' ? 'bg-white text-slate-800 shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        💡 Jag tipsar bara
+                                    </button>
+                                </div>
+                                {newEventRole === 'tip' && (
+                                    <p className="text-xs text-slate-500">
+                                        Tipsa om ett event som redan finns — du står inte som
+                                        arrangör. Eventet visas som ett vanligt event med din
+                                        länk som källa, och anmälan sker där.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         {fulfillingWish && (
                             <p className="text-xs font-semibold text-violet-700 bg-violet-50 rounded-lg px-3 py-2">
                                 ✨ Förifyllt från {fulfillingWish.hostName}s önskan — justera fritt, även platsen.
@@ -1132,6 +1304,39 @@ export default function HomePage() {
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
+                        {/* Tips: länken till källan (obligatorisk — det är den som gör
+                            eventet till ett vanligt länk-event) + arrangörens namn
+                            (valfritt; annars visas länkens domän som värd). */}
+                        {createKind === 'event' && newEventRole === 'tip' && (
+                            <>
+                                <input
+                                    type="url"
+                                    value={newEventUrl}
+                                    onChange={e => setNewEventUrl(e.target.value)}
+                                    placeholder="Länk till eventet — t.ex. arrangörens sida"
+                                    aria-label="Länk till eventet"
+                                    inputMode="url"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                    maxLength={500}
+                                    className={`w-full px-4 py-3 rounded-xl border bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none ${
+                                        newEventUrl.trim() && !normalizeTipUrl(newEventUrl)
+                                            ? 'border-amber-400 focus:border-amber-500'
+                                            : 'border-slate-200 focus:border-green-500'
+                                    }`}
+                                />
+                                <input
+                                    type="text"
+                                    value={newEventHost}
+                                    onChange={e => setNewEventHost(e.target.value)}
+                                    placeholder="Arrangör — t.ex. Borås Stad (valfritt)"
+                                    aria-label="Arrangör (valfritt)"
+                                    maxLength={80}
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+                                />
+                            </>
+                        )}
                         {/* En önskan har ingen tid — bara skapa-läget frågar När. */}
                         {createKind === 'event' && (
                             <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
@@ -1220,6 +1425,8 @@ export default function HomePage() {
                             <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
                                 {createKind === 'wish'
                                     ? 'Du behöver logga in för att önska — det fixar vi i nästa steg.'
+                                    : newEventRole === 'tip'
+                                    ? 'Du behöver logga in för att tipsa — det fixar vi i nästa steg.'
                                     : 'Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.'}
                             </p>
                         )}
@@ -1233,15 +1440,18 @@ export default function HomePage() {
                             </button>
                             <button
                                 type="button"
-                                disabled={!newEventTitle.trim() || (createKind === 'event' && !newEventTime) || creatingEvent}
+                                disabled={!newEventTitle.trim()
+                                    || (createKind === 'event' && !newEventTime)
+                                    || (createKind === 'event' && newEventRole === 'tip' && !normalizeTipUrl(newEventUrl))
+                                    || creatingEvent}
                                 onClick={createKind === 'wish' ? handleCreateWish : handleCreateEvent}
                                 className={`px-5 py-2 rounded-full text-white font-bold disabled:opacity-40 transition-colors ${createKind === 'wish' ? 'bg-violet-600 hover:bg-violet-500' : 'bg-green-600 hover:bg-green-500'}`}
                             >
                                 {creatingEvent
                                     ? (createKind === 'wish' ? 'Önskar…' : 'Skapar…')
                                     : user
-                                    ? (createKind === 'wish' ? 'Önska ✨' : 'Skapa')
-                                    : (createKind === 'wish' ? 'Logga in & önska' : 'Logga in & skapa')}
+                                    ? (createKind === 'wish' ? 'Önska ✨' : createKind === 'event' && newEventRole === 'tip' ? 'Tipsa 💡' : 'Skapa')
+                                    : (createKind === 'wish' ? 'Logga in & önska' : createKind === 'event' && newEventRole === 'tip' ? 'Logga in & tipsa' : 'Logga in & skapa')}
                             </button>
                         </div>
                     </div>
@@ -1329,13 +1539,18 @@ export default function HomePage() {
                 onClose={() => setAuthModal({ open: false })}
             />
 
-            {/* Onboarding vid första besöket — en skärm, sen ut på kartan.
+            {/* Onboarding — bara för utloggade. Vänta in authLoading: under
+                Firebase-sessionsrestoren är user null även för inloggade, och
+                utan väntan skulle overlayn blinka fram för dem (t.ex. via
+                delade eventlänkar som /evenemang/malmö).
                 (PWA-installbannern monteras globalt i Providers, inte här.) */}
-            <WelcomeOverlay
-                onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
-                todayEventCount={todayEventCount}
-                soonEventCount={soonEventCount}
-            />
+            {!authLoading && !user && (
+                <WelcomeOverlay
+                    onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+                    todayEventCount={todayEventCount}
+                    soonEventCount={soonEventCount}
+                />
+            )}
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard

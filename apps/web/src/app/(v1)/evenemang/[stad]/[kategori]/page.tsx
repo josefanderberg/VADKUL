@@ -7,6 +7,7 @@ import {
     todayKey, weekendKeys, countByDayKeys, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
+import TopNav from '../../TopNav';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -106,25 +107,13 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-            <div className="max-w-2xl mx-auto px-5 py-10">
-                {/* Topprad: tillbaka-länken till vänster, kart-knappen till höger
-                    (samma mönster som stadssidan). */}
-                <div className="flex items-center justify-between gap-3">
-                    <Link
-                        href={`/evenemang/${city.slug}`}
-                        className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
-                    >
-                        ← Alla evenemang i {city.name}
-                    </Link>
-                    <Link
-                        href="/"
-                        className="inline-flex items-center px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-md transition-colors shrink-0"
-                    >
-                        Se allt på kartan
-                    </Link>
-                </div>
-
-                <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">
+            <TopNav
+                backHref={`/evenemang/${city.slug}`}
+                backLabel={`Alla evenemang i ${city.name}`}
+                ctaLabel="Se allt på kartan"
+            />
+            <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
+                <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     <span aria-hidden>{cat.emoji}</span> {cat.h1(city.name)}
                 </h1>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">

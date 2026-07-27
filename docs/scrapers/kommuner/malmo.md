@@ -12,12 +12,12 @@
 
 ## Hur vi hittade den
 
-- **Metod:** `probe-sitevision`
-- **Probe-URL:** https://malmo.se/evenemangskalender
-- **Upptäckt:** 2026-06-04
-- **Kör om probet:** `npm run probe-sitevision -- --only=malmo`
+- **Metod:** `probe-xhr`
+- **Probe-URL:** https://malmo.se/appresource/4.50574bcf196ed960a55408d/12.50574bcf196ed960a55409f/items?start=0&num=100
+- **Upptäckt:** 2026-07-09
+- **Antal events vid upptäckt:** 357
 
-> SiteVision se.soleil.eventListingLocal.
+> "Visa fler evenemang"-knappens XHR avslöjade appresource-endpointen; num=100 funkar (server-default 18/sida).
 
 ## Engine-config
 
@@ -26,7 +26,11 @@
   "urls": [
     "https://malmo.se/evenemangskalender"
   ],
-  "defaultCity": "Malmö"
+  "defaultCity": "Malmö",
+  "itemsApi": {
+    "pageId": "4.50574bcf196ed960a55408d",
+    "portletId": "12.50574bcf196ed960a55409f"
+  }
 }
 ```
 
@@ -50,6 +54,7 @@
 
 - _expectedMinEvents inte satt._
 - _Inget sample event-URL satt — vid nästa körning, hitta en känd-bra URL och pasta in._
+- **Senast verifierad:** 2026-07-09
 
 ## Troubleshooting
 

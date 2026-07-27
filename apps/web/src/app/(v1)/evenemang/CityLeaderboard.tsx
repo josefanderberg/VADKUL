@@ -107,6 +107,28 @@ function CityShowcase({ items, slug, registry }: {
         return () => { registry.delete(slug); };
     }, [registry, slug]);
 
+    // Förladda GRANNBILDERNA (nästa + föregående) så auto-bytet/pilarna visar
+    // bilden direkt ur webbläsarcachen — förr började hämtningen först när
+    // kortet byttes och den grå plattan syntes medan bilden laddade. Körs
+    // först när bildspelet synts (inView, samma lazy-gate som huvudbilden)
+    // och om per byte (idx) så nya grannar värms löpande. Samma
+    // referrerPolicy som <img>-taggen, annars återanvänds inte cache-posten.
+    // En trasig grannlänk markeras broken redan här → cykeln hoppar över den
+    // i stället för att visa en tom ruta som först då upptäcker felet.
+    useEffect(() => {
+        if (!inView) return;
+        const aliveNow = items.filter(it => !broken.has(it.id));
+        const m = aliveNow.length;
+        if (m < 2) return;
+        const wrap = (i: number) => aliveNow[((i % m) + m) % m];
+        for (const t of [wrap(idx + 1), wrap(idx - 1)]) {
+            const img = new window.Image();
+            img.referrerPolicy = 'no-referrer';
+            img.onerror = () => setBroken(prev => (prev.has(t.id) ? prev : new Set(prev).add(t.id)));
+            img.src = t.coverImage;
+        }
+    }, [inView, idx, items, broken]);
+
     if (n === 0) return null;
     const item = alive[((idx % n) + n) % n];
 

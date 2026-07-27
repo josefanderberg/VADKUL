@@ -7,8 +7,9 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getNotisStatus, enableEventReminders, NotisStatus } from '@/utils/fcm';
 
 interface ProfilePanelProps {
     open: boolean;
@@ -41,6 +42,29 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     const [feedbackBusy, setFeedbackBusy] = useState(false);
     const [feedbackSent, setFeedbackSent] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
+    const [notisStatus, setNotisStatus] = useState<NotisStatus>('unsupported');
+    const [notisBusy, setNotisBusy] = useState(false);
+
+    // Läs av notis-läget varje gång panelen öppnas (kan ha ändrats i
+    // webbläsarens inställningar sedan sist).
+    useEffect(() => {
+        if (open) setNotisStatus(getNotisStatus());
+    }, [open]);
+
+    const handleEnableNotiser = async () => {
+        if (!user || notisBusy) return;
+        setNotisBusy(true);
+        const res = await enableEventReminders(user.uid);
+        setNotisBusy(false);
+        setNotisStatus(getNotisStatus());
+        if (res === 'on') {
+            toast.success('Notiser på! Du får en påminnelse 1 h innan dina gillade event börjar.');
+        } else if (res === 'denied') {
+            toast.error('Notiser är blockerade — tillåt dem för vadkul.se i webbläsarens inställningar.');
+        } else {
+            toast.error('Kunde inte aktivera notiser. Försök igen.');
+        }
+    };
 
     const handlePhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -144,7 +168,12 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
         if (!msg) return;
         setFeedbackBusy(true);
         try {
-            await feedbackService.submitFeedback(msg, user.uid);
+            // Namn + e-post från kontot följer med så vi vet vem vi ska
+            // återkoppla till (transparensraden under fältet berättar det).
+            await feedbackService.submitFeedback(msg, user.uid, {
+                name: user.displayName,
+                email: user.email,
+            });
             setFeedbackSent(true);
             setFeedbackText('');
         } catch (err) {
@@ -252,6 +281,36 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
                             <ChevronRight size={15} className="text-slate-400 shrink-0" />
                         </button>
+
+                        {/* Notiser — påminnelse 1 h innan gillade event börjar.
+                            Permission-frågan får BARA ställas härifrån (riktig
+                            tap-gest) — se enableEventReminders i utils/fcm. */}
+                        {notisStatus !== 'unsupported' && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                {notisStatus === 'granted' ? (
+                                    <div className="flex items-center gap-3 px-4 py-3">
+                                        <Bell size={16} className="text-emerald-600 shrink-0" />
+                                        <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Notiser</span>
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-full px-2 py-0.5">På</span>
+                                    </div>
+                                ) : notisStatus === 'default' ? (
+                                    <button type="button" onClick={handleEnableNotiser} disabled={notisBusy} className={actionRow}>
+                                        <Bell size={16} className="text-[#006AA7] shrink-0" />
+                                        <span className="flex-1">{notisBusy ? 'Aktiverar…' : 'Aktivera notiser'}</span>
+                                        <span className="text-[10px] font-bold text-slate-400">påminnelse 1 h innan</span>
+                                    </button>
+                                ) : (
+                                    <div className="flex items-start gap-3 px-4 py-3">
+                                        <BellOff size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                                        <p className="flex-1 text-xs font-semibold text-slate-500">
+                                            {notisStatus === 'denied'
+                                                ? 'Notiser är blockerade — tillåt dem för vadkul.se i webbläsarens inställningar.'
+                                                : 'Lägg till VADKUL på hemskärmen (Dela → Lägg till på hemskärmen) så kan du få påminnelser om dina gillade event.'}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Mina event */}
                         <div className="border-t border-slate-100 dark:border-slate-800">
@@ -393,6 +452,11 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                                 placeholder="Beskriv problemet eller din idé…"
                                                 className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006AA7]/40"
                                             />
+                                            {/* Transparens: kontaktuppgifterna följer med
+                                                utskicket så vi kan återkoppla. */}
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                Ditt namn och din e-post ({user.email}) skickas med så vi kan återkoppla.
+                                            </p>
                                             <button
                                                 type="button"
                                                 onClick={handleSubmitFeedback}

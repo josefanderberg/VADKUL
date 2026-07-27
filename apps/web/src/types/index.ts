@@ -165,6 +165,14 @@ export interface LinkEvent {
   emoji?: string;
   /** Användarskapade event: skaparens uid — styr "Ta bort eventet" på kortet. */
   hostUid?: string;
+  /**
+   * Skapat av en användare på VADKUL. TVÅ sorter, särskilda på url-fältet:
+   *   • utan url  = EGET event ("jag arrangerar") — grön VADKUL-profil, RSVP på sidan.
+   *   • med url   = TIPS ("jag vet att det här händer men arrangerar inte") —
+   *     presenteras som ett vanligt länk-event (favicon-värd, ANMÄL-länk ut)
+   *     så tipsaren aldrig ser ut som arrangör. Se isVadkulHostedEvent.
+   * userCreated/hostUid gäller BÅDA sorterna (ägarskap, ta bort-rätt, reglerna).
+   */
   userCreated?: boolean;
   /**
    * Boostat ("featured") event: visas prioriterat på kartan t.o.m. denna tid.
@@ -172,6 +180,17 @@ export interface LinkEvent {
    * aldrig av klienten. Saknas/passerat datum = vanligt event.
    */
   featuredUntil?: Date;
+}
+
+/**
+ * Värdas eventet av en VADKUL-användare? (Skapat här UTAN extern länk — anmälan
+ * sker på sidan.) Falskt för TIPS (användarskapat MED länk) och skrapade event:
+ * de presenteras som vanliga länk-event. Styr all grön "eget event"-presentation
+ * (badge, brickfärg, värd-avatar, platsradens layout) — ägarskap (ta bort/boosta)
+ * går däremot fortsatt på userCreated + hostUid.
+ */
+export function isVadkulHostedEvent(e: Pick<LinkEvent, 'userCreated' | 'url'>): boolean {
+  return !!e.userCreated && !e.url;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt' | 'featuredUntil'> {

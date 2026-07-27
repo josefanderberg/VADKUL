@@ -8,7 +8,7 @@
 | **ID** | `studieframjandet` |
 | **Region** | national |
 | **Engine** | `sitemap` |
-| **Update frequency** | `daily` |
+| **Update frequency** | `every-3d` |
 
 ## Hur vi hittade den
 
@@ -23,7 +23,8 @@
 
 ```ts
 {
-  "sitemapUrl": "https://www.studieframjandet.se/sitemap.xml",
+  "sitemapUrl": "https://www.studieframjandet.se/kurssok/?type=event&page=100",
+  "isJsonCatalog": true,
   "urlPatterns": [
     {}
   ],
@@ -54,7 +55,7 @@
 
 - _expectedMinEvents inte satt._
 - _Inget sample event-URL satt — vid nästa körning, hitta en känd-bra URL och pasta in._
-- **Senast verifierad:** 2026-06-04
+- **Senast verifierad:** 2026-07-03
 
 ## Troubleshooting
 

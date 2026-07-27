@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
-import { LinkEvent } from '../../types';
+import { isVadkulHostedEvent, LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
@@ -323,7 +323,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                                 {evt.title}
                             </h4>
-                            {evt.userCreated && (
+                            {isVadkulHostedEvent(evt) && (
                                 <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                     VADKUL
                                 </span>
@@ -351,7 +351,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
-                        evt.userCreated
+                        isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
                             : 'bg-slate-100 dark:bg-slate-800'
                     }`}
@@ -364,7 +364,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
                             {evt.title}
                         </h4>
-                        {evt.userCreated && (
+                        {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL
                             </span>
@@ -1204,8 +1204,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             } else if (h < collapsed) {
                 // Strax under gränsen → snäpp tillbaka till peek-läget.
                 updateHeightVh(collapsed);
+            } else if (h > startHeightVh.current) {
+                // UPPÅT-drag → snäpp ända till MAX, oavsett hur kort svepet
+                // var. Det infriar löftet "ETT svep växer kortet hela vägen
+                // upp och NÄSTA svep scrollar": ett släpp på t.ex. 70vh
+                // lämnade annars kortet i touch-action:none-zonen (< MAX-5)
+                // där svep på innehållet bara fortsatte växa/stå still —
+                // långa beskrivningar gick då inte att scrolla alls.
+                updateHeightVh(MAX_HEIGHT_VH);
             } else {
-                // Stanna på exakt den höjd användaren dragit till.
+                // Neddrag: stanna på exakt den höjd användaren dragit till.
                 updateHeightVh(h);
             }
         } else if (dragDirection.current === 'horizontal') {

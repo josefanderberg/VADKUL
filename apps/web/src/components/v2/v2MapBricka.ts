@@ -17,7 +17,7 @@
 // spetsen ÄR nålen. icon-anchor:'bottom' sätter spetsen ~pad ovanför nederkanten,
 // dvs. i praktiken på koordinaten.
 
-import { LinkEvent } from '../../types';
+import { isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 
 export const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -96,9 +96,11 @@ export const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, 
 // aldrig glider isär.
 export const USER_EVENT_HEX = '#059669';
 export function brickaBodyHex(ev: LinkEvent): string | null {
-    // Användarskapade event: alltid smaragdgröna, oavsett kategori — de lyfts
+    // VADKUL-värdade event: alltid smaragdgröna, oavsett kategori — de lyfts
     // fram som sajtens kärna (samma emfas som deras alltid-synliga bricka).
-    if (ev.userCreated) return USER_EVENT_HEX;
+    // TIPS (användarskapade MED länk) får däremot sin vanliga kategorifärg —
+    // de ska smälta in bland länk-eventen, inte se ut som egna arrangemang.
+    if (isVadkulHostedEvent(ev)) return USER_EVENT_HEX;
     const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
     return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
 }
