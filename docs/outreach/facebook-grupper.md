@@ -628,6 +628,12 @@ Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/visby`
 
 ### I. Vad händer i Ängelholm Nöjen & Event (→ vadkul.se — ingen stadssida; 3 systergrupper sparas till senare, ALDRIG samma text)
 
+**✅ POSTAT (bekräftat av ägaren 27/7; I1 — länk i inlägget). Resultat: 3 likes,
+0 kommentarer. MEN ägaren skummade gruppens flöde: övriga inlägg ligger lika
+lågt — LÅGAKTIV GRUPP, inte textens fel (jfr Gotland 55/13). Insikt loggad i
+outreachNotes (`insikt-gruppaktivitet-2026-07-27`): gruppaktivitet som
+scoring-parameter. Karens till 2026-08-17.**
+
 **I1 — länk i inlägget (godkännande-grupp):**
 
 > Mycket på gång i Ängelholmstrakten den här veckan 👇
@@ -661,6 +667,40 @@ Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/visby`
 Första kommentaren: `Här är kartan: https://vadkul.se`
 
 ### J. Vad händer på Österlen (→ vadkul.se — ingen stadssida)
+
+**✅ POSTAT 27/7 (J2 — länk i kommentar, publicerades direkt). Karens till 2026-08-17.**
+
+### K. Vad händer på Södermalm (→ /evenemang/stockholm)
+
+**✅ POSTAT 27/7 (V2 — länk i kommentar, publicerades direkt). Pride-vinklad
+text (Pride Garden på Trädgården/Debaser Strand/Ö2scenkonst/Södra Teatern,
+"över 300 event på och kring Söder") — medvetet ANNAN text än det väntande
+Sthlm-inlägget (import-30). Fulltext i Firestore-loggen
+`post-vad-hander-pa-sodermalm-2026-07-27`. Karens till 2026-08-17.**
+
+### L. Vad händer i Landskrona och Kävlinge kommun 🇸🇪 (15,5k medl. — vald före systern 3,4k)
+
+**✅ GODKÄNT + UPPE 27/7 kväll (V1 — länk i inlägget). Inskickad text =
+URSPRUNGLIGA Landskrona-utkastet (Sommarbio ti/Academia Scaniensis on/
+UTEYOGA Borstahusen on/Renässansafton lö) — INTE Kävlinge-versionen med
+Maia Hirasawa. Första kommentaren ifrågasatte Sommarbio-datumet ("bion är
+på onsdag") — KÄLLKOLL 27/7: landskrona.se/evenemang/sommarbio-4 säger
+TISDAG 28/7 kl 13, inga syskonvisningar — vår data KORREKT, svar = hänvisa
+vänligt till kommunens kalender. Fulltext i
+`post-vad-hander-i-landskrona-och-kavlinge-kommun-2026-07-27`. Karens 17/8.**
+
+### L2. VAD HÄNDER I LANDSKRONA (3,4k medl.)
+
+**Plan: postas TIDIGAST 28/7 (dagens 2–3-kvot är full) med VARIERAD text
+(systergrupps-regeln — aldrig samma text; FB-spamfiltret triggar på identisk
+text i flera grupper): annan inledning, MAIA HIRASAWA i st.f. uteyogan
+(uteyogan togs av L-inlägget), V2 länk-i-kommentar. Text i konversationen
+27/7.**
+
+**Alla tre 27/7-inläggen postades med LÄNK I INLÄGGET (V1) — ägaren råkade
+hoppa över kommentar-varianten. Beslut: låt dem vara (redigera inte in/ut
+länkar i publicerade inlägg); länk-i-kommentar är ett FÖRHANDS-knep, inte
+något att rätta i efterhand. Bevaka borttagning första dygnet.**
 
 **J1 — länk i inlägget (godkännande-grupp):**
 

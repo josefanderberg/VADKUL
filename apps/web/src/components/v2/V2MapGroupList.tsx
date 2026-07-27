@@ -2,7 +2,7 @@
 
 import { ChevronRight, X } from 'lucide-react';
 import { LinkEvent } from '../../types';
-import { eventEmoji } from './v2MapBricka';
+import { eventEmoji, isEventPast } from './v2MapBricka';
 
 // ── Multi-event-lista ───────────────────────────────────────────────────────
 // Öppnas när man klickar en bricka med FLERA event på samma koordinat: en liten
@@ -46,10 +46,21 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     const top = Math.max(TOP_MARGIN, Math.min(cornerY - contentH, vh - contentH - BOTTOM_MARGIN));
     // Platsens namn (alla event i gruppen delar koordinat → samma plats).
     const placeName = events[0]?.locationName?.trim() || 'Den här platsen';
-    // "Nästa" stegar markeringen till nästa event i listan (wrap), listan
-    // hålls öppen precis som vid radval så man kan bläddra vidare.
-    const selIdx = events.findIndex(ev => ev.id === selectedEvent?.id);
-    const goNextInList = () => onSelect(events[(selIdx + 1) % events.length]);
+    // Kommande event överst (i inkommande ordning), passerade sist — dämpade
+    // med "har varit" (samma isEventPast som kartans dämpning: start + 1 h,
+    // kl 20 för event utan klockslag). Passerade rader går fortfarande att
+    // klicka (medvetet val), men bläddringen hoppar över dem.
+    const nowMs = Date.now();
+    const upcoming = events.filter(ev => !isEventPast(ev, nowMs));
+    const past = events.filter(ev => isEventPast(ev, nowMs));
+    const ordered = [...upcoming, ...past];
+    // "Nästa" stegar markeringen till nästa KOMMANDE event (wrap), listan
+    // hålls öppen precis som vid radval så man kan bläddra vidare. Står man
+    // på ett passerat event (eller inget) börjar den om på första kommande.
+    // Har ALLA varit bläddras hela listan som förr.
+    const pool = upcoming.length > 0 ? upcoming : ordered;
+    const selIdx = pool.findIndex(ev => ev.id === selectedEvent?.id);
+    const goNextInList = () => onSelect(pool[(selIdx + 1) % pool.length]);
 
     return (
         <div className="z-[1300] pointer-events-auto" style={{ position: 'absolute', left, top, width: W }}>
@@ -57,7 +68,7 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                 <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70">
                     <div className="min-w-0 flex-1">
                         <span className="block text-sm font-black text-slate-800 dark:text-slate-100 truncate leading-tight">{placeName}</span>
-                        <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{events.length} event</span>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{events.length} event{past.length > 0 && past.length < events.length ? ` · ${past.length} har varit` : ''}</span>
                     </div>
                     <button
                         type="button"
@@ -78,11 +89,12 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                     </button>
                 </div>
                 <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100 dark:divide-slate-800">
-                    {events.map((ev) => {
+                    {ordered.map((ev) => {
                         const tid = ev.time && ev.hasSpecificTime !== false
                             ? new Date(ev.time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
                             : '';
                         const isSel = selectedEvent?.id === ev.id;
+                        const isPast = isEventPast(ev, nowMs);
                         return (
                             <li key={ev.id}>
                                 <button
@@ -90,13 +102,14 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                                     onClick={() => onSelect(ev)}
                                     // Vald rad = blå med vit kant (ring-inset, ingen layout-shift) —
                                     // samma "vald = vit-kantad" som markören på kartan, så man ser
-                                    // vilket event man står på medan man bläddrar.
-                                    className={`relative w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700'}`}
+                                    // vilket event man står på medan man bläddrar. Passerad rad
+                                    // dämpas (samma 50 % som kartans nål-prickar).
+                                    className={`relative w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
                                 >
                                     <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`} aria-hidden>{eventEmoji(ev)}</span>
                                     <span className="flex-1 min-w-0">
                                         <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{ev.title}</span>
-                                        {tid && <span className={`block text-[11px] font-semibold tabular-nums ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>kl {tid}</span>}
+                                        {(tid || isPast) && <span className={`block text-[11px] font-semibold tabular-nums ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>{tid ? `kl ${tid}` : ''}{isPast ? `${tid ? ' · ' : ''}har varit` : ''}</span>}
                                     </span>
                                     <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                                 </button>

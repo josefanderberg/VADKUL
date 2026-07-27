@@ -98,6 +98,7 @@ export async function buildQueueResponse(db: Firestore): Promise<QueueResponse> 
                 type: 'följ-upp-utfall', logId: l.id, contactId: l.contactId, contactName: l.contactName,
                 label: `Kolla utfallet i ${l.contactName} (postat ${new Date(l.postedAt).toLocaleDateString('sv-SE')})`,
                 dueSince: l.postedAt + DAY_MS,
+                groupUrl: contactById.get(l.contactId)?.groupUrl,
             });
         }
         // Kölagt > 24 h — släppte moderatorn igenom det?
@@ -106,6 +107,7 @@ export async function buildQueueResponse(db: Firestore): Promise<QueueResponse> 
                 type: 'släpp-kollen', logId: l.id, contactId: l.contactId, contactName: l.contactName,
                 label: `Släppte moderatorn inlägget i ${l.contactName}?`,
                 dueSince: l.postedAt + DAY_MS,
+                groupUrl: contactById.get(l.contactId)?.groupUrl,
             });
         }
     }
@@ -117,6 +119,7 @@ export async function buildQueueResponse(db: Firestore): Promise<QueueResponse> 
                 type: 'mejluppföljning', contactId: c.id, contactName: c.name,
                 label: `Uppföljningsmejl till ${c.name} (skickat för ${Math.round((now - (c.followUpDueAt - 8 * DAY_MS)) / DAY_MS)} d sedan)`,
                 dueSince: c.followUpDueAt,
+                email: c.email,
             });
         }
     }

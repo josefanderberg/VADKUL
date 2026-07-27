@@ -102,7 +102,7 @@ export default function OutreachConsole() {
 
             {!data && !error && <p className="text-sm font-bold text-slate-400">Hämtar kön…</p>}
 
-            {data && tab === 'idag' && <TodayPanel data={data} />}
+            {data && tab === 'idag' && <TodayPanel data={data} onChanged={load} />}
             {data && tab === 'kon' && <QueuePanel data={data} />}
             {tab === 'planering' && (
                 <ComingSoon>

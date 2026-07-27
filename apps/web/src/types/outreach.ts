@@ -199,6 +199,8 @@ export interface TodayAction {
     logId?: string;
     contactId: string;
     dueSince?: number;
+    groupUrl?: string;            // fb-åtgärder: "Öppna gruppen"-länken i raden
+    email?: string;               // mejluppföljning: mailto-länken i raden
 }
 
 export interface QueueResponse {
