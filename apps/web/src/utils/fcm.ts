@@ -1,4 +1,4 @@
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { getMessaging, getToken, deleteToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '../lib/firebase';
 import { notificationService } from '../services/notificationService';
 
@@ -89,7 +89,21 @@ export function isNotificationGranted(): boolean {
     );
 }
 
-export type NotisStatus = 'unsupported' | 'ios-needs-pwa' | 'denied' | 'granted' | 'default';
+export type NotisStatus = 'unsupported' | 'ios-needs-pwa' | 'denied' | 'granted' | 'off' | 'default';
+
+// Satt när användaren själv stängt av påminnelser på den här enheten.
+// Webbläsarens permission går inte att återkalla från JS, så "av" =
+// enhetens token raderad + den här flaggan, som också hindrar FCMHandlers
+// tysta token-uppfräschning från att slå på notiserna igen vid nästa login.
+const NOTIS_OFF_KEY = 'vadkul_notiser_av';
+
+export function isNotisOffOnThisDevice(): boolean {
+    try {
+        return typeof window !== 'undefined' && localStorage.getItem(NOTIS_OFF_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
 
 /**
  * Var notis-läget står just nu. 'ios-needs-pwa' = iPhone/iPad i vanliga
@@ -104,6 +118,7 @@ export function getNotisStatus(): NotisStatus {
         || (navigator as unknown as { standalone?: boolean }).standalone === true;
     if (isIos && !isStandalone) return 'ios-needs-pwa';
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'unsupported';
+    if (Notification.permission === 'granted' && isNotisOffOnThisDevice()) return 'off';
     return Notification.permission;
 }
 
@@ -123,9 +138,34 @@ export async function enableEventReminders(uid: string): Promise<'on' | 'denied'
                 : 'error';
         }
         await notificationService.saveFCMToken(uid, token);
+        try { localStorage.removeItem(NOTIS_OFF_KEY); } catch { /* privat läge */ }
         return 'on';
     } catch (error) {
         console.error('Kunde inte aktivera notiser:', error);
+        return 'error';
+    }
+}
+
+/**
+ * Stänger AV påminnelser på den här enheten: tar bort enhetens token från
+ * kontot, ogiltigförklarar den hos FCM och sätter av-flaggan. Tokens på
+ * användarens ANDRA enheter rörs inte — av/på är per enhet, precis som
+ * webbläsarens eget notistillstånd.
+ */
+export async function disableEventReminders(uid: string): Promise<'off' | 'error'> {
+    // Flaggan sätts FÖRST: även om raderingen nedan failar ska UI:t visa av
+    // och FCMHandler sluta spara om token.
+    try { localStorage.setItem(NOTIS_OFF_KEY, '1'); } catch { /* privat läge */ }
+    try {
+        if (messaging) {
+            const registration = await navigator.serviceWorker.ready;
+            const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+            if (token) await notificationService.deleteFCMToken(uid, token);
+            await deleteToken(messaging);
+        }
+        return 'off';
+    } catch (error) {
+        console.error('Kunde inte stänga av notiser:', error);
         return 'error';
     }
 }

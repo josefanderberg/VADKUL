@@ -9,7 +9,7 @@ import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
 import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getNotisStatus, enableEventReminders, NotisStatus } from '@/utils/fcm';
+import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 
 interface ProfilePanelProps {
     open: boolean;
@@ -63,6 +63,19 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
             toast.error('Notiser är blockerade — tillåt dem för vadkul.se i webbläsarens inställningar.');
         } else {
             toast.error('Kunde inte aktivera notiser. Försök igen.');
+        }
+    };
+
+    const handleDisableNotiser = async () => {
+        if (!user || notisBusy) return;
+        setNotisBusy(true);
+        const res = await disableEventReminders(user.uid);
+        setNotisBusy(false);
+        setNotisStatus(getNotisStatus());
+        if (res === 'off') {
+            toast.success('Notiser av på den här enheten. Slå på dem igen här när du vill.');
+        } else {
+            toast.error('Kunde inte stänga av notiser. Försök igen.');
         }
     };
 
@@ -287,12 +300,27 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                             tap-gest) — se enableEventReminders i utils/fcm. */}
                         {notisStatus !== 'unsupported' && (
                             <div className="border-t border-slate-100 dark:border-slate-800">
-                                {notisStatus === 'granted' ? (
-                                    <div className="flex items-center gap-3 px-4 py-3">
-                                        <Bell size={16} className="text-emerald-600 shrink-0" />
+                                {notisStatus === 'granted' || notisStatus === 'off' ? (
+                                    <button
+                                        type="button"
+                                        onClick={notisStatus === 'granted' ? handleDisableNotiser : handleEnableNotiser}
+                                        disabled={notisBusy}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors disabled:opacity-60"
+                                    >
+                                        {notisStatus === 'granted'
+                                            ? <Bell size={16} className="text-emerald-600 shrink-0" />
+                                            : <BellOff size={16} className="text-slate-400 shrink-0" />}
                                         <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Notiser</span>
-                                        <span className="text-[10px] font-black uppercase tracking-wide text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-full px-2 py-0.5">På</span>
-                                    </div>
+                                        <span className="text-[10px] font-bold text-slate-400">
+                                            {notisBusy ? '…' : notisStatus === 'granted' ? 'påminnelse 1 h innan' : 'av på den här enheten'}
+                                        </span>
+                                        <span
+                                            aria-hidden
+                                            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${notisStatus === 'granted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                        >
+                                            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notisStatus === 'granted' ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                                        </span>
+                                    </button>
                                 ) : notisStatus === 'default' ? (
                                     <button type="button" onClick={handleEnableNotiser} disabled={notisBusy} className={actionRow}>
                                         <Bell size={16} className="text-[#006AA7] shrink-0" />

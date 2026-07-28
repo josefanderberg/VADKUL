@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import QueryProvider from './providers/QueryProvider';
 import InstallPrompt from './pwa/InstallPrompt';
 import { registerServiceWorker } from '@/utils/registerServiceWorker';
-import { requestNotificationPermission, onForegroundMessage } from '@/utils/fcm';
+import { requestNotificationPermission, onForegroundMessage, isNotisOffOnThisDevice } from '@/utils/fcm';
 import { notificationService } from '@/services/notificationService';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -26,6 +26,9 @@ function FCMHandler() {
         // det inloggade kontot (token är per enhet, kontot kan ha bytts).
         const refreshToken = async () => {
             if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+            // Användaren har stängt av på den här enheten (profilpanelen) —
+            // en omsparad token här skulle slå på notiserna bakom ryggen.
+            if (isNotisOffOnThisDevice()) return;
             const token = await requestNotificationPermission();
             if (token) {
                 await notificationService.saveFCMToken(user.uid, token);
