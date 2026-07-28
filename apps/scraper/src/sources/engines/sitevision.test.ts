@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSoleilDate, mapSoleilItem } from './sitevision';
+import { parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit } from './sitevision';
 
 describe('parseSoleilDate', () => {
     it('YYYY-MM-DD + HH:MM → lokal tid med klocka', () => {
@@ -78,5 +78,91 @@ describe('mapSoleilItem', () => {
     it('titel- eller datum-lösa items → null', () => {
         expect(mapSoleilItem({ ...item, title: '' }, BASE_URL, 'Malmö')).toBeNull();
         expect(mapSoleilItem({ ...item, dates: {} }, BASE_URL, 'Malmö')).toBeNull();
+    });
+});
+
+describe('parseRestAppDate', () => {
+    it('"YYYY-MM-DD HH:MM" → lokal tid med klocka', () => {
+        const r = parseRestAppDate('2026-07-24 18:00');
+        expect(r?.date.getFullYear()).toBe(2026);
+        expect(r?.date.getMonth()).toBe(6);
+        expect(r?.date.getDate()).toBe(24);
+        expect(r?.date.getHours()).toBe(18);
+        expect(r?.hasClock).toBe(true);
+    });
+
+    it('"00:00" behandlas som datum utan tid', () => {
+        const r = parseRestAppDate('2026-07-20 00:00');
+        expect(r?.date.getHours()).toBe(0);
+        expect(r?.hasClock).toBe(false);
+    });
+
+    it('bara datum utan klocka funkar', () => {
+        const r = parseRestAppDate('2026-07-20');
+        expect(r?.hasClock).toBe(false);
+    });
+
+    it('skräp → null', () => {
+        expect(parseRestAppDate('24/07/2026 18:00')).toBeNull();
+        expect(parseRestAppDate(undefined)).toBeNull();
+        expect(parseRestAppDate('')).toBeNull();
+    });
+});
+
+describe('mapRestAppHit', () => {
+    const BASE_URL = 'https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden';
+    const hit = {
+        id: '5.3274af7f19d24e4a02a5b98',
+        title: 'Countryfesten med Jill Johnson',
+        description: 'Parken Zoo möter Nashville.',
+        uri: '/evenemangsguiden/evenemangsguiden/evenemang/2026-03-26-countryfesten',
+        url: 'https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden/evenemang/2026-03-26-countryfesten',
+        image: { src: 'https://visiteskilstuna.se/images/18.x/jill.webp' },
+        info: {
+            start: '2026-07-24 18:00',
+            end: '2026-07-24 21:00',
+            location: { name: 'Parken Zoo', id: '4.abc' },
+        },
+    };
+
+    it('fullt hit → komplett RawEvent', () => {
+        const ev = mapRestAppHit(hit, BASE_URL, 'Eskilstuna')!;
+        expect(ev.externalId).toBe('5.3274af7f19d24e4a02a5b98');
+        expect(ev.title).toBe('Countryfesten med Jill Johnson');
+        expect(ev.startDate.getHours()).toBe(18);
+        expect(ev.endDate?.getHours()).toBe(21);
+        expect(ev.url).toBe(hit.url);
+        expect(ev.venueName).toBe('Parken Zoo');
+        expect(ev.city).toBe('Eskilstuna');
+        expect(ev.geocodeCandidates).toBeUndefined();
+        expect(ev.imageUrl).toBe('https://visiteskilstuna.se/images/18.x/jill.webp');
+        expect(ev.hasSpecificTime).toBe(true);
+    });
+
+    it('"Digitalt evenemang" → geocode ankras på staden', () => {
+        const ev = mapRestAppHit(
+            { ...hit, info: { ...hit.info, location: { name: 'Digitalt evenemang' } } },
+            BASE_URL, 'Eskilstuna',
+        )!;
+        expect(ev.venueName).toBe('Digitalt evenemang');
+        expect(ev.geocodeCandidates).toEqual(['Eskilstuna']);
+    });
+
+    it('end före start ignoreras', () => {
+        const ev = mapRestAppHit(
+            { ...hit, info: { ...hit.info, end: '2026-07-23 21:00' } },
+            BASE_URL, 'Eskilstuna',
+        )!;
+        expect(ev.endDate).toBeUndefined();
+    });
+
+    it('url saknas → uri görs absolut', () => {
+        const ev = mapRestAppHit({ ...hit, url: undefined }, BASE_URL, 'Eskilstuna')!;
+        expect(ev.url).toBe('https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden/evenemang/2026-03-26-countryfesten');
+    });
+
+    it('titel- eller startlösa hits → null', () => {
+        expect(mapRestAppHit({ ...hit, title: '' }, BASE_URL, 'Eskilstuna')).toBeNull();
+        expect(mapRestAppHit({ ...hit, info: {} }, BASE_URL, 'Eskilstuna')).toBeNull();
     });
 });

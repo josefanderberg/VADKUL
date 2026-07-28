@@ -34,6 +34,7 @@ import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { decodeHtmlEntities } from '../../utils/text';
 import { extractStreetAddress } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
 
@@ -602,9 +603,11 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         }
     }
 
-    const description =
+    // decodeHtmlEntities: cheerio avkodar EN nivå — dubbelkodade sajter
+    // (goteborg.com m.fl.) lämnar annars "&#8211;" synligt i texten.
+    const description = decodeHtmlEntities(
         ($('meta[property="og:description"]').attr('content') ||
-            $('meta[name="description"]').attr('content') || '').trim();
+            $('meta[name="description"]').attr('content') || '').trim());
     const imageUrl = $('meta[property="og:image"]').attr('content') || undefined;
     // Key/value-metadata ("Plats" → värde) — Episerver-sajter (Studiefrämjandet
     // m.fl.) lägger platsen i c-articlemeta-par utan microdata. #placeItem är
@@ -716,7 +719,7 @@ function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
     const $ = cheerio.load(html);
 
     if (needsDesc) {
-        let d = ($('meta[property="og:description"]').attr('content') ||
+        let d = decodeHtmlEntities($('meta[property="og:description"]').attr('content') ||
             $('meta[name="description"]').attr('content') ||
             $('meta[name="twitter:description"]').attr('content') || '')
             .replace(/\s+/g, ' ').trim();

@@ -26,7 +26,7 @@
  */
 
 import { sqlite } from '../utils/sqliteHelper';
-import { decodeHtmlEntities } from '../utils/text';
+import { cleanDescription, decodeHtmlEntities } from '../utils/text';
 
 const APPLY = process.argv.includes('--apply');
 const REFETCH = process.argv.includes('--refetch');
@@ -106,6 +106,23 @@ async function main() {
         }
     }
     console.log(`FEL A: ${aDesc} beskrivningar + ${aTitle} titlar ${APPLY ? 'avkodade' : 'skulle avkodas (dry-run)'}`);
+
+    // ── FEL C: råa HTML-taggar i texten ("<p>Core med boll...") ──────────────
+    // korpen/zoezi m.fl. sparade rå HTML före scraper-fixen 2026-07-25.
+    // Förlustfritt: cleanDescription strippar taggar + avkodar entiteter.
+    const TAG_RE = /<\/?(?:p|br|div|span|b|i|strong|em|li|ul|ol|h[1-6]|a)\b[^>]*>/i;
+    let cDesc = 0;
+    for (const r of rows) {
+        if (r.description && TAG_RE.test(r.description)) {
+            const fixed = cleanDescription(r.description);
+            if (fixed && fixed !== r.description) {
+                cDesc++;
+                if (cDesc <= 3) console.log(`  C desc: "${r.description.slice(0, 60)}" → "${fixed.slice(0, 60)}"`);
+                if (APPLY) updDesc.run(fixed, now, r.url);
+            }
+        }
+    }
+    console.log(`FEL C: ${cDesc} beskrivningar med rå HTML ${APPLY ? 'rensade' : 'skulle rensas (dry-run)'}`);
 
     // ── FEL B: omhämta strippade beskrivningar från källan ───────────────────
     const stripped = rows.filter(r => r.description && isStripped(r.description) && /^https?:\/\//.test(r.url));

@@ -24,6 +24,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
+import { decodeHtmlEntities } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -52,6 +53,18 @@ export interface SiteVisionConfig {
      * /appresource/<pageId>/<portletId>/items?start=N).
      */
     itemsApi?: { pageId: string; portletId: string };
+    /**
+     * SiteVision RESTApp "Evenemang" (upptäckt på visiteskilstuna.se 2026-07-22):
+     *   GET <url>/events?num=200&query=&count=0&page=N&type=event&timestamp=0
+     *       &filters={"type":"event"}
+     *   → { hits: [{ id, title, description, url, uri, image:{src,...},
+     *                info:{ start:"YYYY-MM-DD HH:MM", end, location:{name,id} } }],
+     *       searchInfo: { totalHits, ... } }
+     * Param-signaturen ur Vue-bundelns query-builder (oe/de i app.*.js);
+     * `filters` MÅSTE med, annars 500. API-bas-URL:en ligger i sidans
+     * AppRegistry.registerInitialState-blob ("api"-nyckeln).
+     */
+    restApi?: { url: string };
     /**
      * Soleil se.soleilit.eventSearch:s JSON-API (upptäckt på kalmar.com 2026-07-27):
      *   GET <origin>/appresource/<pageId>/<portletId>/events
@@ -130,6 +143,109 @@ export function mapSoleilItem(
         imageUrl: makeAbsoluteUrl(item.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/** Rått hit ur RESTApp-API:t (bara fälten vi läser). */
+interface RestAppHit {
+    id?: string;
+    title?: string;
+    description?: string;
+    url?: string;
+    uri?: string;
+    image?: { src?: string; mediumSrc?: string };
+    info?: {
+        start?: string;     // "2026-07-24 18:00"
+        end?: string;
+        location?: { name?: string; id?: string };
+    };
+}
+
+/**
+ * "YYYY-MM-DD HH:MM" → lokal Date. Klockan "00:00" behandlas som datum-utan-
+ * tid (8/556 vid upptäckt var heldags-/periodevent). Exporterad för test.
+ */
+export function parseRestAppDate(
+    raw: string | undefined,
+): { date: Date; hasClock: boolean } | null {
+    const m = raw?.trim().match(/^(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?$/);
+    if (!m) return null;
+    const time = m[2] && m[2] !== '00:00' ? m[2] : null;
+    return parseSoleilDate(m[1], time);
+}
+
+/** Mappa ett RESTApp-hit → RawEvent. Exporterad för test. */
+export function mapRestAppHit(
+    hit: RestAppHit,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = (hit.title || '').trim();
+    const parsed = parseRestAppDate(hit.info?.start);
+    const eventUrl = hit.url || makeAbsoluteUrl(hit.uri, baseUrl);
+    if (!title || !parsed || !eventUrl) return null;
+
+    const end = parseRestAppDate(hit.info?.end);
+    const venueName = hit.info?.location?.name?.trim() || undefined;
+    const isDigital = !!venueName && /^digitalt/i.test(venueName);
+
+    return {
+        externalId: hit.id,
+        title,
+        startDate: parsed.date,
+        endDate: end && end.date.getTime() >= parsed.date.getTime() ? end.date : undefined,
+        url: eventUrl,
+        venueName,
+        city: defaultCity,
+        // "Digitalt evenemang" är ingen geocodebar plats — ankra på staden.
+        geocodeCandidates: isDigital && defaultCity ? [defaultCity] : undefined,
+        description: hit.description?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(hit.image?.src || hit.image?.mediumSrc, baseUrl),
+        hasSpecificTime: parsed.hasClock ? true : undefined,
+    };
+}
+
+/** Paginera igenom RESTApp-API:t. num=200/sida; servern klarar allt-i-ett. */
+async function scrapeRestAppApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const apiBase = config.restApi!.url.replace(/\/$/, '');
+    const cap = config.maxItems ?? 1000;
+    const num = 200;
+    const events: RawEvent[] = [];
+    const seenUrls = new Set<string>();
+
+    let totalHits = Infinity;
+    for (let page = 1; events.length < cap && (page - 1) * num < totalHits; page++) {
+        const params = new URLSearchParams({
+            num: String(num),
+            query: '',
+            count: '0',
+            page: String(page),
+            type: 'event',
+            timestamp: '0',
+            filters: '{"type":"event"}',
+        });
+        const body = await fetchHtml(`${apiBase}/events?${params}`, config);
+        if (!body) { ctx.log(`  RESTApp-API svarade inte (page=${page})`); break; }
+
+        let data: { hits?: RestAppHit[]; searchInfo?: { totalHits?: number } };
+        try { data = JSON.parse(body); } catch { ctx.log('  RESTApp-API gav icke-JSON'); break; }
+
+        const hits = data.hits ?? [];
+        if (typeof data.searchInfo?.totalHits === 'number') totalHits = data.searchInfo.totalHits;
+        if (hits.length === 0) break;
+
+        for (const hit of hits) {
+            const ev = mapRestAppHit(hit, base, config.defaultCity);
+            if (!ev || seenUrls.has(ev.url)) continue;
+            seenUrls.add(ev.url);
+            events.push(ev);
+        }
+    }
+    ctx.log(`RESTApp-API: ${events.length} event (totalHits=${totalHits})`);
+    return events;
 }
 
 /** Paginera igenom items-API:t. 18/sida är serverns default; num=100 funkar. */
@@ -381,6 +497,7 @@ export const sitevisionEngine = async (
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
+    if (config.restApi) return scrapeRestAppApi(config, ctx);
     if (config.itemsApi) return scrapeSoleilItemsApi(config, ctx);
     if (config.eventSearchApi) return scrapeEventSearchApi(config, ctx);
     if (config.guideApi) return scrapeGuideApi(config, ctx);
@@ -489,8 +606,8 @@ export const sitevisionEngine = async (
             const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
                 || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
             const desc = m?.[1]
-                ?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
-                .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+                : undefined;
             if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
         }
         if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);

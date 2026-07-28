@@ -38,6 +38,9 @@ import { slagthusetEngine } from '../scrapers/slagthuset';
 import { norticEngine } from '../scrapers/nortic';
 import { cbisEngine } from '../scrapers/cbis';
 import { fhpEngine } from '../scrapers/fhp';
+import { goteborgStadEngine } from '../scrapers/goteborgstad';
+import { gotlandComEngine } from '../scrapers/gotlandcom';
+import { bergmancenterEngine } from '../scrapers/bergmancenter';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -98,4 +101,7 @@ export const ENGINES: Record<string, Engine> = {
     'nortic': norticEngine,
     'cbis': cbisEngine,
     'fhp': fhpEngine,
+    'goteborgstad': goteborgStadEngine,
+    'gotlandcom': gotlandComEngine,
+    'bergmancenter': bergmancenterEngine,
 };

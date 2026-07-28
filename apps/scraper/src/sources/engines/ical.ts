@@ -17,6 +17,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
+import { decodeHtmlEntities } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -152,12 +153,13 @@ function vEventToRawEvent(v: any, fallbackUrl: string): RawEvent | null {
     const location = v['LOCATION']?.value ? unescape(v['LOCATION'].value) : undefined;
     return {
         externalId: v['UID']?.value,
-        title: unescape(summary).trim(),
+        title: decodeHtmlEntities(unescape(summary)).trim(),
         startDate: start,
         endDate: end || undefined,
         url: v['URL']?.value || fallbackUrl,
         venueName: location,
-        description: v['DESCRIPTION']?.value ? unescape(v['DESCRIPTION'].value) : undefined,
+        // Vissa feeds (WP-kalendrar) lägger HTML i DESCRIPTION — avkoda entiteter
+        description: v['DESCRIPTION']?.value ? decodeHtmlEntities(unescape(v['DESCRIPTION'].value)) : undefined,
         organizer: v['ORGANIZER']?.value,
     };
 }

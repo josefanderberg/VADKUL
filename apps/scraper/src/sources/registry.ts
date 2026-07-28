@@ -219,6 +219,58 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-07-02',
     },
 
+    // ─── Gotland-maxning 2026-07-27 ───────────────────────────────────────
+    {
+        id: 'gotlandcom',
+        hostName: 'Gotland.com',
+        region: 'gotland',
+        engine: 'gotlandcom',
+        config: { defaultCity: 'Gotland' },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'manual', probeUrl: 'https://gotland.com/wp-json/api/v1/export/events', date: '2026-07-27' },
+        notes: 'Öns officiella besöksnärings-kalender (GFB, ~1650 företag). Öppen WP-export: 394 event i ETT anrop, 269 i 30d-fönstret vid upptäckt. Koordinater ~98 %, bild ~99 %, adress/ort/socken/kategori/arrangör/pris. URL:er matchas mot events-sitemap.xml (WP -N-suffix). SvK-event skippas i motorn (täcks av svenskakyrkan-källan, svk-flood-policyn).',
+        lastVerified: '2026-07-27',
+    },
+
+    // Länsstyrelsen Gotland PROBAD & AVFÄRDAD 2026-07-27: sitemapens
+    // kalenderhandelse-slugs har PUBLICERINGSdatum (inte eventdatum), inga
+    // framtida event publicerade i juli, och detaljsidornas textdatum
+    // ("31 jul 2026 10.00") parsas inte av sitemap-motorn (0/4 extraherade).
+    // Mest fack-webbinarier. Ej värd bespoke — re-proba tidigast i höst.
+
+    {
+        id: 'bergmancenter',
+        hostName: 'Bergmancenter',
+        region: 'gotland',
+        engine: 'bergmancenter',
+        config: {},
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'manual', probeUrl: 'https://bergmancenter.se/kalender?dateRange=anytime', date: '2026-07-27' },
+        notes: 'Gotland-maxning 2026-07-27: Fårö (bio/guidningar/cykelsafari/samtal). Custom CMS — server-renderad listsida, detaljsidor SAKNAR datum. ~6 tillfällen vid bygget.',
+        lastVerified: '2026-07-27',
+    },
+    {
+        id: 'blacksheeparms',
+        hostName: 'Black Sheep Arms',
+        region: 'gotland',
+        engine: 'wp-rest',
+        config: {
+            baseUrl: 'https://blacksheeparms.se',
+            variant: 'wp-v2',
+            fetchDetailPage: true,
+            detailDateRegex: /jet-listing-dynamic-field__content"\s*>([^<]{3,40})</,
+            embed: true,
+            defaultCity: 'Visby',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-wp', probeUrl: 'https://blacksheeparms.se/wp-json/wp/v2/event', date: '2026-07-27' },
+        notes: 'Gotland-maxning 2026-07-27: Visby-pub med livemusik/quiz flera ggr/vecka. JetEngine event-CPT; eventdatum EJ i REST (meta/acf tomma, date=publicering) — ligger som "24 juli, 2026" i jet-listing-div på detaljsidan → fetchDetailPage + detailDateRegex (helsides-skanning nappade på footerns "Öppettider Medeltidsveckan 2-12 augusti").',
+        lastVerified: '2026-07-27',
+    },
+
     // ─── Länsmuseer (agent-probe 2026-07-03: 4 rena tribe + 1 sitemap + 2 wp-v2+detalj) ──
     {
         id: 'gotlandsmuseum',
@@ -615,26 +667,24 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'visiteskilstuna',
-        hostName: 'Visit Eskilstuna',
+        hostName: 'Visit Eskilstuna — Evenemangsguiden',
         region: 'eskilstuna',
         engine: 'sitevision',
         config: {
-            urls: ['https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden/sok-evenemang'],
+            urls: ['https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden'],
             defaultCity: 'Eskilstuna',
-            // "events-list"-webappens (Vue) REST-API — hittat via nätverks-sniff
-            // 2026-07-27. Kumulativ paginering (page=N → första N*12 hits) så
-            // enginen hämtar allt i ett stort anrop. 481 event vid upptäckt.
-            guideApi: { basePath: '/rest-api/Evenemang' },
+            restApi: { url: 'https://visiteskilstuna.se/rest-api/Evenemang' },
         },
-        updateFrequency: 'daily',
-        notes: 'Kommunala Evenemangsguiden (SiteVision events-list-webapp). REST-API:t bär titel/bild/beskrivning/venue/start+slut — 481 event vid upptäckt 2026-07-27.',
-        lastVerified: '2026-07-27',
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Eskilstuna kommuns/Visit Eskilstunas gemensamma eventguide (SiteVision RESTApp "Evenemang"). ETT anrop bär hela kalendern: 556 event vid upptäckt, alla framtida, 98,6 % med klockslag, 100 % bild, venue-namn (geocodas mot Eskilstuna). Beskrivningar är API-trunkerade (~200 tecken). type=other (~26) = utställningar, ej hämtade.',
+        lastVerified: '2026-07-22',
         discovery: {
-            method: 'probe-xhr',
-            probeUrl: 'https://visiteskilstuna.se/rest-api/Evenemang/events?count=0&filters=%7B%7D&page=1&query=&timestamp=1785173759100',
-            date: '2026-07-27',
-            rawEventCount: 481,
-            notes: 'Sök-sidans XHR. timestamp-param krävs (annars server-JSONException). info.start "00:00" = heldagsevent.',
+            method: 'manual',
+            probeUrl: 'https://visiteskilstuna.se/rest-api/Evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D',
+            date: '2026-07-22',
+            rawEventCount: 556,
+            notes: 'API-URL ur AppRegistry.registerInitialState i sid-HTML; param-signaturen (num/query/count/page/type/timestamp/filters) ur Vue-bundelns query-builder — filters-param obligatorisk, annars 500.',
         },
     },
     {
@@ -1091,6 +1141,26 @@ export const SOURCES: Source[] = [
     },
 
     {
+        id: 'goteborgstad',
+        hostName: 'Göteborgs Stad',
+        region: 'goteborg',
+        engine: 'goteborgstad',
+        config: {
+            defaultCity: 'Göteborg',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Kommunens EGEN kalender på goteborg.se (bibliotek/kulturhus/parker/sommarlov) — skild från goteborg.com. Öppen mikrotjänst med Spring-paginering: ~5500 kommande tillfällen vid upptäckt, EXAKTA koordinater 92 %, bild 97 %, unit=per-event-värd. Serie-dedup på parent-id i motorn.',
+        lastVerified: '2026-07-23',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://microservices.goteborg.se/ua/kalendariet/public/activities/?page=0&size=200',
+            date: '2026-07-23',
+            rawEventCount: 5531,
+            notes: 'serviceUrl i klartext i kalendarium-sidans data-settings-attribut (och i kalendarium-frontend__0.0:config_js-bundeln). robots.txt vitlistar ?activityId=-detaljsidorna.',
+        },
+    },
+    {
         id: 'goteborg-co',
         hostName: 'Göteborg & Co',
         region: 'goteborg',
@@ -1273,6 +1343,10 @@ export const SOURCES: Source[] = [
         engine: 'sitevision',
         config: { urls: ['https://www.gotland.se/evenemang'], defaultCity: 'Gotland' },
         updateFrequency: 'every-3d',
+        // Inaktiverad 2026-07-27: sitemap-källan 'gotland' täcker nu samma arkiv
+        // med lagat mönster — denna gav www-prefixade URL:er (sitemapen är utan
+        // www) → dubblettrisk på samma event under två URL-PK:n.
+        disabled: true,
     },
     {
         id: 'klippan',
@@ -2109,17 +2183,23 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'gotland',
-        hostName: 'Gotland Kommun',
+        hostName: 'Region Gotland',
         region: 'gotland',
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://www.gotland.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-                    defaultCity: 'Gotland',
+                    // Sajten omlagd: event ligger under /arkiv/evenemang/arkiv/<ISO-datum>-<slug>
+                    // samt underverksamheter /rg/<x>/evenemang/evenemang/<ISO-datum>-<slug>
+                    // (Revet/Energicentrum/Almedalsveckan). Gamla mönstret /evenemang/<slug>
+                    // gav ~0. Datum i URL:en → urlDateRegex förfiltrerar;
+                    // detaljsidor har <time datetime>.
+                    urlPatterns: [/\/evenemang\/(?:arkiv|evenemang)\/\d{4}-\d{2}-\d{2}-[^/]+\/?$/i],
+                    urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+                    defaultCity: 'Visby',
                 },
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-04: 53 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Gotland-maxning 2026-07-27: URL-mönster lagat (302 event-URLs i sitemap, ~13 framtida — Region Gotlands egna arrangemang, ej öns turistkalender; den är gotland.com).',
+        lastVerified: '2026-07-27',
     },
     {
         id: 'emmaboda',

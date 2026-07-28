@@ -11,6 +11,8 @@ import { extractEventDetails } from './extractor';
 import { HostInstrument } from './host';
 import { LocationInstrument } from './location';
 import { FacebookSource } from './types';
+import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
+import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -258,6 +260,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
             // Norrbotten: ytterligare orter
             'Älvsbyn',
+
+            // Gotland-maxning 2026-07-27: hela ön, inte bara Visby.
+            // 'Gotland' fångar öbrett taggade event; orterna fångar landsbygden.
+            // OBS: Roma medvetet utelämnad som sökord (FB-brus från Rom/AS Roma) —
+            // Romakloster täcker samma geografi.
+            'Gotland', 'Hemse', 'Slite', 'Klintehamn', 'Fårösund',
+            'Ljugarn', 'Burgsvik', 'Katthammarsvik', 'Lärbro', 'Stånga',
+            'Havdhem', 'Tingstäde', 'Romakloster', 'Fårö',
         ];
 
         // Breda sökord – event-typer, aktiviteter, tider
@@ -309,9 +319,33 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
             }
         }
 
-        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter = ${SOURCES.length} queries totalt.`);
+        // 3. Sidbevakningar — bevakade sidors /events-flikar (fungerar utloggat
+        //    även sedan FB stängde den anonyma eventsöken 2026-07-2x).
+        //    Inga datumfilter: fliken listar bara kommande, och sid-event får
+        //    sitt datum från detaljsidan (trusted → 30d-horisont nedan).
+        const seenPageSlugs = new Set<string>();
+        const allPageWatches = [...FACEBOOK_PAGE_WATCHLIST, ...FACEBOOK_PAGE_WATCHLIST_NATIONAL]
+            .filter((w) => {
+                const key = w.slug.toLowerCase();
+                if (seenPageSlugs.has(key)) return false;
+                seenPageSlugs.add(key);
+                return true;
+            });
+        for (const pageWatch of allPageWatches) {
+            SOURCES.push({
+                url: `https://www.facebook.com/${pageWatch.slug}/events`,
+                filters: [],
+                city: pageWatch.city,
+                label: `page:${pageWatch.slug}`,
+            });
+        }
 
-        const allEventUrls = new Map<string, { expectedDay: string; city?: string }>();
+        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
+
+        // requiresParsedDate: sid-/seed-event saknar sökets datumfilter — utan
+        // ett datum parsat från själva eventsidan vore fallbacken "idag" ren
+        // gissning → skippa hellre än att spara fel dag.
+        const allEventUrls = new Map<string, { expectedDay: string; city?: string; requiresParsedDate?: boolean }>();
 
         // Statistik per (keyword, filter)-kombination
         type SourceStat = { keyword: string; filter: string; found: number; unique: number; duplicates: number };
@@ -320,9 +354,25 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         const perKeywordTotals: { [keyword: string]: { found: number; unique: number; duplicates: number } } = {};
         let totalDuplicateHits = 0;
 
+        // Sökvakt (2026-07-27): FB stängde utloggad eventsök 23–26 juli — alla
+        // queries ger "Vi hittade inte några resultat". 15 tomma sök-queries i
+        // RAD (Stockholm/Göteborg/Malmö ger aldrig legitimt 0) ⇒ söket är
+        // nere; hoppa över resterande sök så natten inte bränner timmar på
+        // ingenting. Sidbevakningar (page:...) berörs inte av vakten.
+        const SEARCH_DEAD_THRESHOLD = 15;
+        let consecutiveEmptySearches = 0;
+        let searchAbandoned = false;
+
         for (const source of SOURCES) {
-            const keyword = decodeURIComponent(source.url.split('q=')[1] || '');
+            const keyword = source.label || decodeURIComponent(source.url.split('q=')[1] || '');
             const filterLabel = source.filters.join(', ') || '(inget)';
+            const isSearchSource = source.url.includes('/events/search/');
+
+            if (searchAbandoned && isSearchSource) {
+                sourceStats.push({ keyword, filter: filterLabel, found: 0, unique: 0, duplicates: 0 });
+                if (!perKeywordTotals[keyword]) perKeywordTotals[keyword] = { found: 0, unique: 0, duplicates: 0 };
+                continue;
+            }
             console.log(`\n🔍 Letar event på: ${source.url} med filter: [${filterLabel}]`);
 
             try {
@@ -337,7 +387,11 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 let duplicatesThisSource = 0;
                 discovered.forEach(item => {
                     if (!allEventUrls.has(item.url)) {
-                        allEventUrls.set(item.url, { expectedDay: item.day, city: source.city });
+                        allEventUrls.set(item.url, {
+                            expectedDay: item.day,
+                            city: source.city,
+                            requiresParsedDate: source.label?.startsWith('page:') || undefined,
+                        });
                         uniqueThisSource++;
                     } else {
                         duplicatesThisSource++;
@@ -361,6 +415,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 perKeywordTotals[keyword].duplicates += duplicatesThisSource;
 
                 console.log(`    📌 Hittade ${discovered.length} länkar — ${uniqueThisSource} nya, ${duplicatesThisSource} dubbletter.`);
+
+                if (isSearchSource) {
+                    consecutiveEmptySearches = discovered.length === 0 ? consecutiveEmptySearches + 1 : 0;
+                    if (consecutiveEmptySearches >= SEARCH_DEAD_THRESHOLD && !searchAbandoned) {
+                        searchAbandoned = true;
+                        console.log(`\n🛑 Sökvakt: ${SEARCH_DEAD_THRESHOLD} tomma sök-queries i rad — FB-söket bedöms nere (login-vägg). Hoppar över resterande sök-källor; sidbevakningar körs som vanligt.`);
+                    }
+                }
             } catch (e: any) {
                 console.log(`    ⚠️ Hoppar över "${keyword}" [${filterLabel}] pga fel: ${e?.message || e}`);
                 sourceStats.push({
@@ -381,6 +443,31 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
             // Spara stoppords-statistik inkrementellt så vi har datan kvar även om körningen avbryts
             writeKeywordStats(sourceStats, perKeywordTotals, allEventUrls.size, totalDuplicateHits);
+        }
+
+        // === SEED-FIL (snöboll) ===
+        // apps/scraper/fb-seed-urls.json: [{ "url": "...", "city"?: "..." }]
+        // Skrivs av snöbolls-verktyg (relaterade event skördade från kända
+        // eventsidor). Kompensation för det döda söket — extraheras som
+        // vanligt men kräver parsat datum (requiresParsedDate).
+        try {
+            const seedPath = path.resolve(__dirname, '../../../fb-seed-urls.json');
+            if (fs.existsSync(seedPath)) {
+                const seeds: Array<{ url: string; city?: string }> = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+                let added = 0;
+                for (const s of seeds) {
+                    const m = String(s.url || '').match(/facebook\.com\/events\/(?:[a-zA-Z0-9_-]+\/)*(\d{10,})/);
+                    if (!m) continue;
+                    const url = `https://www.facebook.com/events/${m[1]}/`;
+                    if (!allEventUrls.has(url)) {
+                        allEventUrls.set(url, { expectedDay: 'okänd', city: s.city, requiresParsedDate: true });
+                        added++;
+                    }
+                }
+                console.log(`🌱 Seed-fil: ${seeds.length} URL:er → ${added} nya i extraktionskön.`);
+            }
+        } catch (seedErr) {
+            console.log(`⚠️ Kunde inte läsa fb-seed-urls.json: ${(seedErr as Error)?.message}`);
         }
 
         // === STATISTIK-SAMMANSTÄLLNING ===
@@ -430,7 +517,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         let extractFailed = 0;
         let extractNewlySaved = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
-            const { expectedDay, city } = itemData;
+            const { expectedDay, city, requiresParsedDate } = itemData;
             processed++;
             console.log(`\n📊 [${processed}/${totalToProcess}] Behandlar event (sparade hittills: ${scrapedEventsLog.length})`);
             try {
@@ -641,6 +728,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     }
                 }
 
+                if (!hasValidDate && requiresParsedDate) {
+                    // Sid-/seed-event utan datum från eventsidan: "idag"-fallbacken
+                    // vore en ren gissning (inget sökdatumfilter bakom) — skippa.
+                    console.log(`    ⏩ Skippar sid-/seed-event utan parsbart datum: ${details.title}`);
+                    extractSkippedDate++;
+                    continue;
+                }
+
                 if (!hasValidDate) {
                     if (expectedDay === 'i morgon') eventTime.setDate(eventTime.getDate() + 1);
                     if (details.exactTime) {
@@ -649,16 +744,20 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     }
                 }
 
-                // Range validation (Today to 7 days ahead)
-                const oneWeekFromNow = new Date();
-                oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-                oneWeekFromNow.setHours(23, 59, 59, 999);
+                // Range-validering: betrott datum (parsat från eventsidan) får
+                // standard-fönstrets 30 dagar — behövs för sidbevakningar vars
+                // event ofta ligger längre fram än sökets vecka. Gissade datum
+                // (expectedDay-heuristiken) behåller den snäva 7-dagarsgränsen.
+                const horizonDays = hasValidDate ? 30 : 7;
+                const horizonEnd = new Date();
+                horizonEnd.setDate(horizonEnd.getDate() + horizonDays);
+                horizonEnd.setHours(23, 59, 59, 999);
 
                 const todayStart = new Date();
                 todayStart.setHours(0, 0, 0, 0);
 
-                if (eventTime > oneWeekFromNow || eventTime < todayStart) {
-                    console.log(`    ⏩ Skippar event (utanför 1-veckas intervall): ${details.title} (${eventTime.toLocaleDateString()})`);
+                if (eventTime > horizonEnd || eventTime < todayStart) {
+                    console.log(`    ⏩ Skippar event (utanför ${horizonDays}-dagars intervall): ${details.title} (${eventTime.toLocaleDateString()})`);
                     extractSkippedDate++;
                     continue;
                 }
