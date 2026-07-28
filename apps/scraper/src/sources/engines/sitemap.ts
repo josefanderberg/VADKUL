@@ -523,6 +523,27 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         }
     }
 
+    // 1b) Zonlöst attribut som egentligen är UTC. Vissa sajter (landskrona.se
+    //     m.fl. React-renderade) skriver UTC i datetime men LOKAL tid i texten:
+    //         <time datetime="2026-07-29T17:00">29 juli 2026 19:00</time>
+    //     new Date() tolkar en zonlös sträng som LOKAL tid → hela sajtens
+    //     events hamnade två timmar för tidigt ("Film i parken" kl 17 istället
+    //     för 19). Vi rör bara datumet när textens klockslag är EXAKT det som
+    //     attributet ger om det läses som UTC — då vet vi att attributet är
+    //     UTC. Sajter där attribut och text redan stämmer lämnas orörda.
+    if (startDate && hasSpecificTime && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(microStr)) {
+        const textClock = $(`time[datetime="${microStr}"]`).first().text()
+            .match(/\b(\d{1,2})[:.](\d{2})\b/);
+        if (textClock) {
+            const asUtc = new Date(`${microStr}Z`);
+            if (!isNaN(asUtc.getTime()) &&
+                asUtc.getHours() === parseInt(textClock[1], 10) &&
+                asUtc.getMinutes() === parseInt(textClock[2], 10)) {
+                startDate = asUtc;
+            }
+        }
+    }
+
     // 2) Svensk text-fallback — skanna body-text efter datumtext.
     //    Körs när (a) ingen strukturerad datum hittades, ELLER (b) den
     //    strukturerade datumen ligger i DET FÖRFLUTNA. Många SiteVision-

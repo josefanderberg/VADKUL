@@ -12,8 +12,17 @@ egen stadssida (djuplänk ok); `vadkul.se` = ingen sida, länka till startsidan.
 när Josef bekräftat att inlägget faktiskt lagts upp — aldrig när utkastet
 skrivs. Utkast märks "utkast klart, EJ postat".
 
+**ÄMNESBEGRÄNSADE GRUPPER (ny regel 28/7):** vissa grupper släpper bara in
+vissa ämnen — Gotlandsgruppen kräver kultur/konst/sång och förbjuder
+sport/yoga, och vårt rekordinlägg där raderades som "reklam" trots 72 likes.
+**Läs regelrutan innan du skriver utkastet**, skriv in begränsningen i
+gruppnamnskolumnen, och välj bara eventrader inom gruppens ämne.
+
 **Postat-kolumnen:** fyll i `datum · metod · utfall` när du postat, så
 3-veckorsregeln och A/B-testet (länk-i-inlägg vs länk-i-kommentar) hålls koll.
+**Utfallet ska följas upp efter en vecka, inte ett dygn** — Gotland låg uppe i
+två dygn och samlade rekord innan det plockades. Notera både reaktioner och
+om inlägget lever.
 Tomrad = orörd. Flera grupper för samma ort (t.ex. 2 Halmstad, 4 Ängelholm,
 flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 
@@ -77,7 +86,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
 | 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
-| 54 | Vad Händer På Gotland? | /evenemang/visby | 26/7 · länk i inlägg (V1, utan stjärnrad) · KRÄVDE GODKÄNNANDE → ✅ godkänt/uppe · **39 likes, 11 komm., 3 delningar** |
+| 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
 | 55 | Vad händer i Majorna | vadkul.se |  |
 | 56 | Vad händer i Linné? | vadkul.se |  |
 | 57 | Vad händer i Sundsvall? | /evenemang/sundsvall |  |

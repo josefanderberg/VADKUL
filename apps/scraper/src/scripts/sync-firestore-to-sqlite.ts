@@ -42,6 +42,12 @@ async function main() {
                 isHostVerified:     !!data.isHostVerified,
                 hidden:             !!data.hidden,
                 firestoreId:        doc.id,
+                // Bär med fälten som annars bara finns i SQLite: utan dem får
+                // varje NY rad hasSpecificTime=NULL (webben tappar klockslaget)
+                // och status='published' (default) oavsett vad Firestore säger.
+                hasSpecificTime:    data.hasSpecificTime,
+                price:              data.price ?? undefined,
+                status:             data.status,
             });
             written++;
         } catch (err) {

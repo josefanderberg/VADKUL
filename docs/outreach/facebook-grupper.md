@@ -1,5 +1,46 @@
 # FB-grupperna — logg + inlägg
 
+## 🚨 LÄRDOM 2026-07-28: högt engagemang skyddar INTE — Gotland togs bort som reklam
+
+Rekordinlägget i **Vad Händer På Gotland?** (postat 26/7, godkänt av modde,
+V1 med länken i inlägget) hann få **72 likes** — och togs sedan **bort med
+motiveringen reklam**. Det är alltså inte bara nya medlemmars kalla inlägg som
+plockas (17/7-lärdomen nedan): ett inlägg kan ligga uppe i FLERA DYGN, samla
+rekordengagemang, och ändå raderas i efterhand.
+
+**Tre saker detta ändrar:**
+
+1. **"Inget har tagits bort sedan 17/7" gäller inte längre.** Godkännande
+   från en moderator = inget skydd; någon kan flagga inlägget senare.
+2. **Bevaka inläggen i minst en vecka**, inte första dygnet. Loggar man bara
+   dag 1 ser statistiken bättre ut än verkligheten. Notera reaktioner OCH om
+   inlägget lever — likessiffran utan överlevnad är en halv sanning.
+3. **LÄS GRUPPENS REGLER OCH MATCHA EVENTMIXEN MOT DEM** innan du skriver.
+   Se nedan.
+
+### Gruppregler styr vilka event som får nämnas
+
+**Vad Händer På Gotland?** kräver att innehållet handlar om **kultur, konst
+och sång/musik** — **sport, yoga o.dyl. är inte tillåtet**. En bred
+"allt som händer"-karta krockar med en sådan smal regel: både kartans
+beskrivning och eventraderna måste hålla sig inom gruppens ämne, annars
+läser modden inlägget som allmän reklam för en tjänst i stället för som ett
+kulturtips.
+
+**Regel framåt:** innan ett utkast skrivs — läs gruppens regelruta och notera
+temat i masterlistan. Är gruppen ämnesbegränsad:
+
+- välj BARA eventrader inom gruppens ämne (kultur/konst/musik — inte
+  sportmatcher, loppisar, yogapass, träffar)
+- beskriv kartan i gruppens språk ("allt inom kultur och musik i trakten"),
+  inte som en generell tjänst
+- överväg admin-DM först (se nedan) — i en viktig grupp är ett ja värt mer
+  än ett snabbt inlägg
+
+**Gotland är en viktig grupp** (bäst engagemang av alla hittills). Nästa
+försök där: DM:a admin först, be om lov, och kör en ren kultur/musik-lista.
+Posta inte kallt igen.
+
 ## ⚠️ LÄRDOM 2026-07-18: rakt-på-inlägg med länk fungerade INTE
 
 Alla tre första inläggen (Byske/Norrtälje/Svalöv) togs bort eller nekades av
@@ -86,7 +127,7 @@ be Claude räkna om den först.
 | Vad som händer i Stockholm | Stockholm | 25/7-E | 2026-07-25 | KRÄVDE GODKÄNNANDE (enda av dagens tre) — variant 1, länk i inlägget | 2026-08-15 |
 | Vad händer i Malmö? | Malmö | 25/7-F | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
-| Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | KRÄVDE GODKÄNNANDE → ✅ godkänt/uppe · **39 likes, 11 komm., 3 delningar — NYTT REKORD** (V1, utan stjärnrad, → /evenemang/visby) | 2026-08-16 |
+| Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | godkänt → **72 likes (rekord)** → ❌ **BORTTAGET 28/7 som "reklam"**. Gruppregel: bara kultur/konst/sång, EJ sport/yoga | admin-DM först, posta inte kallt |
 
 ---
 
@@ -591,9 +632,26 @@ godkännande", annars V2 + kommentar DIREKT efter publicering. Utkast = EJ posta
 
 ### H. Vad Händer På Gotland? (→ /evenemang/visby — masterlistan uppdaterad, Visby har egen sida)
 
-**✅ POSTAT 26/7 (V1 — gruppen KRÄVDE GODKÄNNANDE, släpptes samma dygn).
-Resultat 27/7: 39 likes, 11 kommentarer, 3 delningar — bästa inlägget hittills,
-och det UTAN stjärnrad. Karens till 2026-08-16.**
+**❌ BORTTAGET 28/7 — "reklam". Postat 26/7 (V1, gruppen krävde godkännande
+och SLÄPPTE IGENOM det), 39 likes dag 1 → **72 likes** när det plockades.
+Bästa engagemanget av alla inlägg hittills — och det räddade det inte.**
+
+**Gruppens regler:** innehållet måste handla om **kultur, konst och sång/musik**
+— **sport, yoga och liknande är inte tillåtet**. Utkastet nedan höll sig i
+praktiken inom det (fyra konsertrader), men kartan presenterades som en
+generell "allt som händer"-tjänst, vilket är det som läses som reklam i en
+ämnesbegränsad grupp.
+
+**Nästa försök (viktig grupp — bäst engagemang vi haft):**
+
+1. Admin-DM först, be uttryckligen om lov. Posta INTE kallt igen.
+2. Vinkla kartan som ett KULTUR-verktyg, inte som en allmän evenemangstjänst:
+   "en gratis karta över konserter, teater och konst på Gotland".
+3. Bara kultur/konst/musik i eventraderna — inga matcher, loppisar eller
+   träningspass, hur bra de än ser ut i datat.
+4. Överväg V2 (länk i kommentaren) här trots att V1 är standard i övrigt —
+   det var en extern länk i själva inlägget som fanns kvar när någon
+   flaggade det.
 
 **H1 — länk i inlägget (godkännande-grupp):**
 
@@ -733,3 +791,163 @@ något att rätta i efterhand. Bevaka borttagning första dygnet.**
 > Vad ser ni mest fram emot?
 
 Första kommentaren: `Här är kartan: https://vadkul.se`
+
+---
+
+## Tisdag 28/7 — 3 orörda grupper × 2 varianter (skrivna 28/7 ur data synkad 27/7 22:01)
+
+**Urvalet:** räknade event 28/7–3/8 i alla orter med orörd grupp. Vinnare på
+utbud + spridning: **Mölndal** (454 event inom 25 km — Gunnebo, Åbybergsparken,
+Liseberg), **Helsingborg-systergruppen** (162 event; Miss Li + D-A-D i
+Ångfärjeparken — och systergruppen "Det händer i Helsingborg" gav 26 likes 24/7,
+staden är bevisad), **Västmanland** (~145 event runt länets orter). Bortvalda:
+Huddinge/Haninge (lokalt utbud = kyrkkaféer + PRO-boule, allt riktigt ligger i
+Stockholms city — och vi postade Stockholm 25/7 + Södermalm 27/7), Kungsbacka
+(bara 3 kvällsevent lokalt), Kristianstad/Sundsvall/Luleå (fortsatt svaga).
+
+**NYTT FORMAT: LÅNGT INLÄGG.** Utöver eventlistan ligger ett block med fyra
+medskapa-rader (lägg in eget event · tipsa · önska · tipsa om en sajt). Detta
+är ett TEST mot baslinjen korta inlägg (Gotland 39 likes, Helsingborg 26).
+**CTA-blocket är omformulerat i varje grupp** — identisk text i flera grupper
+triggar FB:s spamfilter (samma regel som systergruppsregeln).
+
+**Ingen stjärnlänk** (7 inlägg → 0 inlösta koder, avskriven sedan 26/7).
+
+**Godkännande-regeln:** ligger gruppen i godkännande-kö → använd V1 (länk i
+inlägget) OCH stryk onsdagsraderna (inlägget kan släppas efter att eventet
+varit). Publicerar gruppen direkt → V2 + kommentaren omedelbart efter.
+
+**⚠️ FÖRE POSTNING (tillagt 28/7 efter Gotland-raderingen): läs gruppens
+regelruta.** Är gruppen ämnesbegränsad (t.ex. bara kultur/musik) — plocka bort
+eventrader utanför ämnet och beskriv kartan i gruppens språk. Är reglerna
+strama eller gruppen viktig — DM:a admin i stället för att posta kallt. Följ
+upp alla tre efter en vecka, inte bara första dygnet.
+
+### M. VAD HÄNDER I MÖLNDAL ? (→ vadkul.se — ingen Mölndalssida; Göteborgssidan vore fel avsändare)
+
+**UTKAST — EJ POSTAT.**
+
+**M1 — länk i inlägget (godkännande-grupp; stryk onsdagsraden):**
+
+> Full fart i Mölndal med omnejd den här veckan 👇
+>
+> 🚶 Familjevandring i Kvarnbyn med Mölndals stadsmuseum (onsdag)
+> 🎤 Sommarkonsert med Clara Mae på Gunnebo Slott (fredag)
+> 🧒 Loranga, Masarin och Dartanjang i Åbybergsparken (fredag)
+> 🎸 D-A-D live på Liseberg (fredag)
+> 🎶 Dina Ögon på Liseberg (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten —
+> över 400 event inom en halvtimme från Mölndal bara den närmaste veckan:
+> https://vadkul.se
+>
+> Och kartan är inte bara min — den är vår:
+> ➕ Arrangerar du något? Lägg in det själv med plusknappen på kartan. Egna
+> event får en egen grön bricka och syns extra tydligt.
+> 💡 Vet du något som saknas? Tipsa om det — du behöver inte vara arrangör,
+> klistra bara in länken.
+> ✨ Önska ett event du skulle vilja se hända, så syns önskningen på kartan
+> för alla.
+> 🔗 Eller tipsa om en sajt eller sida där evenemangen redan listas — då ser
+> jag till att den hämtas in, och allt därifrån kommer med automatiskt i
+> fortsättningen.
+>
+> Vad går ni på i veckan? 👇
+
+**M2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i trakten —
+> över 400 event inom en halvtimme från Mölndal bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — säg till om något saknas i Mölndal, jag fyller på.`
+
+### N. Vad händer i Helsingborg? (#64 — SYSTERGRUPP till "Det händer i Helsingborg" som gav 26 likes 24/7 → helt annan text, annan vecka, andra event) (→ /evenemang/helsingborg)
+
+**UTKAST — EJ POSTAT.**
+
+**N1 — länk i inlägget (godkännande-grupp):**
+
+> Riktigt bra vecka i Helsingborg 👇
+>
+> 🎭 Sommarstandup på The Tivoli (torsdag)
+> 🎺 Musik under bar himmel med Olseröds badorkester i Råå (torsdag)
+> 🎤 Miss Li i Ångfärjeparken (fredag)
+> 🎸 D-A-D i Ångfärjeparken (lördag)
+> 💃 Tango by the sea vid Dunkers (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Helsingborgstrakten — över 150 event bara den närmaste veckan:
+> https://vadkul.se/evenemang/helsingborg
+>
+> Kartan lever på att folk fyller på den:
+> ➕ Arrangerar du något själv? Lägg in det med plusknappen på kartan — egna
+> event får en grön bricka och syns extra tydligt.
+> 💡 Saknas något? Tipsa om det. Du behöver inte vara arrangör, det räcker
+> med länken.
+> ✨ Önska ett event du skulle vilja se hända — önskningen syns på kartan för
+> alla andra också.
+> 🔗 Och känner du till en sajt eller sida där evenemangen redan listas? Tipsa
+> om den, så kopplar jag in den — då kommer allt därifrån med automatiskt
+> i fortsättningen.
+>
+> Vad går ni på i helgen? 👇
+
+**N2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Helsingborgstrakten — över 150 event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/helsingborg — tipsa gärna om det jag missat!`
+
+### O. Vad händer i Västmanland! (→ vadkul.se — länsgrupp, Västeråssidan vore för smal för Köping/Fagersta/Sala)
+
+**UTKAST — EJ POSTAT.** Eventen är medvetet spridda över länet (Västerås,
+Rytterne, Kolbäck, Surahammar) eftersom gruppen är länsövergripande.
+⚠️ Mary's Café Barbecue (2 Blyga Läppar 1/8) VALDES BORT — ligger i
+Eskilstuna, alltså Södermanland, fel län för den här gruppen.
+
+**O1 — länk i inlägget (godkännande-grupp; stryk onsdagsraderna och ta
+"🎻 Musik i sommarkväll – SiVa Guitar Duo i Lundby kyrka, Västerås (torsdag)"
+i stället):**
+
+> Mycket på gång runt om i Västmanland den här veckan 👇
+>
+> 🎤 Lars Demian, David Tallroth & Love Meyerson på Carlsson på Kajen,
+> Västerås (onsdag)
+> 🎸 Sommarkonsert med Stiko Per Larsson i Rytterne kyrka (onsdag)
+> 🤠 Qwarnfestivalen x Countryfest på Westerqwarn i Kolbäck (lördag)
+> 🎨 Vernissage: Jarl Hohenthals glas och Bo Fredrikssons måleri i
+> Surahammar (lördag)
+> 🎪 Karindagen på Vallby friluftsmuseum, Västerås (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 140 event
+> runt om i Västmanland bara den närmaste veckan:
+> https://vadkul.se
+>
+> Bäst blir kartan när fler fyller på den:
+> ➕ Arrangerar du något? Lägg in det själv med plusknappen på kartan — egna
+> event får en grön bricka och syns extra tydligt.
+> 💡 Vet du något som saknas? Tipsa om det, du behöver inte vara arrangör —
+> klistra bara in länken.
+> ✨ Önska ett event du skulle vilja se hända, så syns önskningen på kartan
+> för alla.
+> 🔗 Eller tipsa om en sajt där evenemangen redan listas — då kopplar jag in
+> den, och allt därifrån kommer med automatiskt i fortsättningen.
+>
+> Vad händer på er ort i veckan? 👇
+
+**O2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — över 140 event
+> runt om i Västmanland bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om orter jag har för lite på!`
