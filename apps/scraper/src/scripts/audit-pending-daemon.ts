@@ -27,6 +27,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
+import { db as firestoreDb } from '../config/firebase';
 import { runAggregation } from './aggregate-events';
 
 const args = (() => {
@@ -53,6 +54,7 @@ const TRANSIENT_REASONS = new Set(['LLM-anrop misslyckades', 'Kunde inte parsa L
 
 interface Row {
     url: string;
+    firestoreId: string | null;
     title: string;
     locationName: string | null;
     extractedAddress: string | null;
@@ -80,7 +82,7 @@ function fetchBatch(): Row[] {
     const rdb = new Database(DB_PATH, { readonly: true });
     try {
         return rdb.prepare<[], Row>(`
-            SELECT url, title, locationName, extractedAddress, description, hostName
+            SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName
             FROM link_events
             WHERE time >= datetime('now')
               AND hidden = 0
@@ -128,9 +130,24 @@ async function processBatch(rows: Row[]): Promise<number> {
                     emoji: result.emoji,
                     price: result.price,
                 });
-                if (result.verdict === 'junk' && (result.confidence === 'high' || !result.inSweden)) {
+                const autoHide = result.verdict === 'junk' && (result.confidence === 'high' || !result.inSweden);
+                if (autoHide) {
                     setHidden(r.url, true);
                     log(`           ↳ 🙈 auto-hidden`);
+                }
+                // Spegla till Firestore — audit-resultatet får inte vara
+                // maskinlokalt (aggregate från annan maskin tappar det annars).
+                if (firestoreDb && r.firestoreId) {
+                    try {
+                        await firestoreDb.collection('linkEvents').doc(r.firestoreId).update({
+                            category: result.category,
+                            emoji: result.emoji,
+                            ...(result.price ? { price: result.price } : {}),
+                            ...(autoHide ? { hidden: 1 } : {}),
+                        });
+                    } catch (err) {
+                        log(`           ↳ ⚠️ Firestore-spegling misslyckades: ${(err as Error).message}`);
+                    }
                 }
                 updated++;
             }
