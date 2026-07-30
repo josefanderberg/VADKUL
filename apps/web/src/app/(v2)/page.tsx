@@ -8,6 +8,7 @@ import { startEventBoostCheckout } from '@/services/boostService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
+import LatestCommentBubble from '@/components/v2/LatestCommentBubble';
 import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
@@ -1143,6 +1144,10 @@ export default function HomePage() {
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
             />
+
+            {/* 1b2. Senaste kommentaren på sajten — bubbla under navbaren.
+                Klick hoppar till kommentarens event (samma väg som sök/sparat). */}
+            <LatestCommentBubble events={events} onPick={jumpToEvent} />
 
             {/* 1c. Sökträffar (alla dagar) — klick hoppar till eventets dag */}
             <SearchResults

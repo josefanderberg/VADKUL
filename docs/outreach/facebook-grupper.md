@@ -1,5 +1,15 @@
 # FB-grupperna — logg + inlägg
 
+## 🚨 LÄRDOM 2026-07-30: utkast är färskvara — räkna om raderna samma dag
+
+Tre av 28/7-utkasten postades först 30/7. Västmanlandsinlägget gick därför upp
+med två av fem rader REDAN PASSERADE (onsdag 29/7). Mölndalsinlägget, som också
+hade en passerad rad, **avvisades helt**. Regeln gäller alltså inte bara
+godkännande-köer (Eskilstuna 26/7) utan varje återanvänt utkast: **skriv om
+raderna samma dag som du postar, eller skriv dem dag-agnostiskt** ("i helgen",
+"nästa vecka") och låt kartlänken bära detaljerna. Fullt utfall längst ner
+under "Torsdag 30/7".
+
 ## 🚨 LÄRDOM 2026-07-28: högt engagemang skyddar INTE — Gotland togs bort som reklam
 
 Rekordinlägget i **Vad Händer På Gotland?** (postat 26/7, godkänt av modde,
@@ -128,6 +138,14 @@ be Claude räkna om den först.
 | Vad händer i Malmö? | Malmö | 25/7-F | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | godkänt → **72 likes (rekord)** → ❌ **BORTTAGET 28/7 som "reklam"**. Gruppregel: bara kultur/konst/sång, EJ sport/yoga | admin-DM först, posta inte kallt |
+| Vad händer i Ängelholm Nöjen & Event | Ängelholm | 26/7-I1 | 2026-07-27 | 3 likes, 0 komm. — lågaktiv grupp, inte textens fel | 2026-08-17 |
+| Vad händer på Österlen | Österlen | 26/7-J | 2026-07-27 | publicerat direkt (länk i inlägget) | 2026-08-17 |
+| Vad händer på Södermalm | Stockholm/Söder | 27/7-söder | 2026-07-27 | publicerat direkt, Pride-vinklad text | 2026-08-17 |
+| Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | Landskrona | 27/7-L1 | 2026-07-27 | godkänt/uppe (15,5k medl.); första kommentaren ifrågasatte sommarbio-datumet → vår data var rätt | 2026-08-17 |
+| Vad händer i Helsingborg? (#64) | Helsingborg | 28/7-N2 | 2026-07-30 | uppe (länk i kommentar, långt format) — engagemang ej mätt | 2026-08-20 |
+| Vad händer i Västmanland! | Västmanland | 28/7-O | 2026-07-30 | uppe — ⚠️ två onsdagsrader hade redan passerat | 2026-08-20 |
+| Vad händer på Östermalm. | Stockholm/Östermalm | 30/7-V2 | 2026-07-30 | uppe enligt ägaren (text ej verifierad mot flödet) | 2026-08-20 |
+| VAD HÄNDER I MÖLNDAL ? | Mölndal | 28/7-M | 2026-07-30 | ❌ **AVVISAT — släpptes aldrig igenom** | admin-DM + regelkoll först |
 
 ---
 
@@ -825,7 +843,9 @@ upp alla tre efter en vecka, inte bara första dygnet.
 
 ### M. VAD HÄNDER I MÖLNDAL ? (→ vadkul.se — ingen Mölndalssida; Göteborgssidan vore fel avsändare)
 
-**UTKAST — EJ POSTAT.**
+**❌ POSTAT 30/7 — AVVISAT, släpptes aldrig igenom.** Se utfallssektionen för
+torsdag 30/7 längst ner. Onsdagsraden (Familjevandring i Kvarnbyn 29/7) hade
+dessutom redan passerat när inlägget skickades in.
 
 **M1 — länk i inlägget (godkännande-grupp; stryk onsdagsraden):**
 
@@ -866,7 +886,8 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### N. Vad händer i Helsingborg? (#64 — SYSTERGRUPP till "Det händer i Helsingborg" som gav 26 likes 24/7 → helt annan text, annan vecka, andra event) (→ /evenemang/helsingborg)
 
-**UTKAST — EJ POSTAT.**
+**✅ POSTAT 30/7 (N2 — länk i kommentar, långt format). Uppe. Karens 20/8.**
+Raderna höll ändå: torsdag = 30/7, Miss Li 31/7, D-A-D 1/8, Tango 2/8.
 
 **N1 — länk i inlägget (godkännande-grupp):**
 
@@ -912,6 +933,10 @@ Rytterne, Kolbäck, Surahammar) eftersom gruppen är länsövergripande.
 ⚠️ Mary's Café Barbecue (2 Blyga Läppar 1/8) VALDES BORT — ligger i
 Eskilstuna, alltså Södermanland, fel län för den här gruppen.
 
+**✅ POSTAT 30/7 (O-texten). Uppe. Karens 20/8. ⚠️ Onsdagsraderna ströks
+ALDRIG — Lars Demian och Stiko Per Larsson (båda 29/7) hade redan varit när
+inlägget gick upp. Åtgärd: toppkommentar med veckans aktuella rader.**
+
 **O1 — länk i inlägget (godkännande-grupp; stryk onsdagsraderna och ta
 "🎻 Musik i sommarkväll – SiVa Guitar Duo i Lundby kyrka, Västerås (torsdag)"
 i stället):**
@@ -951,3 +976,127 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — och tipsa gärna om orter jag har för lite på!`
+
+---
+
+## Torsdag 30/7 — UTFALL på 28/7-kön + Östermalm (4 grupper, 3 uppe, 1 avvisat)
+
+Alla fyra postades 30/7. **Tre av dem med 28/7-utkasten** (M, N, O) — som var
+skrivna två dygn tidigare, vilket kostade två passerade rader i
+Västmanlandsinlägget. Loggat i Firestore: `post-vad-hander-i-helsingborg-2026-07-30`,
+`post-vad-hander-i-vastmanland-2026-07-30`, `post-vad-hander-pa-ostermalm-2026-07-30`,
+`post-vad-hander-i-molndal-2026-07-30`. Karens för de tre uppe: **2026-08-20**.
+
+| Grupp | Text | Utfall |
+|---|---|---|
+| Vad händer i Helsingborg? (#64) | 28/7-N2, länk i kommentar, långt format | ✅ uppe — raderna råkade stämma (torsdag = 30/7) |
+| Vad händer i Västmanland! (#60) | 28/7-O | ✅ uppe — ⚠️ 2 av 5 rader passerade |
+| Vad händer på Östermalm. (#50) | 30/7-utkastet (Skansen/Grönan/Thielska) | ✅ uppe enligt ägaren — text ej verifierad mot flödet |
+| VAD HÄNDER I MÖLNDAL ? (#72) | 28/7-M | ❌ **AVVISAT** |
+
+**LÄRDOM 1 — utkast äldre än ett dygn måste räknas om.** Västmanlandsinlägget
+gick upp med Lars Demian (29/7) och Stiko Per Larsson i Rytterne (29/7) som två
+av fem rader — båda redan passerade. Samma fälla som Eskilstuna 26/7, men här
+var det INTE godkännande-kön utan att utkastet återanvändes två dygn senare.
+Regel: **skriv om raderna samma dag som du postar**, eller skriv dem
+dag-agnostiskt ("nästa vecka", "i helgen").
+Åtgärd på det liggande inlägget: fäst en toppkommentar med veckans aktuella
+rader — Viktor Norén på Kvarnfallet i Arboga (fre 31/7), Sweeney Todd på
+Hagateatern i Köping (lö 1/8), Björn Rosenström i Sala Folkets Park (lö 1/8),
+Qwarnfestivalen i Kolbäck (lö 1/8), Karindagen på Vallby (sö 2/8).
+
+**LÄRDOM 2 — Mölndal avvisades.** Första avvisningen sedan 17/7-trion
+(Byske/Norrtälje/Svalöv) och den första på det LÅNGA formatet. Orsaken är okänd
+(moderator vs FB:s spamfilter). Mölndal har bäst utbud av alla orörda grupper
+(485 event inom 25 km 30/7) — så gruppen är värd ett andra försök, men då via
+**admin-DM + regelkoll först**, aldrig kallt igen. Notera också att inlägget
+hade en passerad rad, vilket kan ha bidragit.
+
+**Statusbild efter 30/7:** 24 av 83 grupper körda. Kvar med bra utbud:
+Värmlandsgruppen (#19), Ängelholms tre systergrupper (#14/#37/#68),
+Göteborgs distriktsgrupper (#55 Majorna, #56 Linné, #62 Frölunda, #74 Lundby,
+#79 Hisingen, #61 Kungsladugård, #18 Högsbohöjd), Vänersborg (#35),
+Landskrona lilla (#52, varierad text ligger klar sedan 27/7).
+
+## Torsdag 30/7 (kväll) / fredag 31/7 — 3 nya utkast (skrivna 30/7 ur data uppdaterad 09:19Z)
+
+**Urvalet:** räknade event 30/7–6/8 kring alla orörda grupper.
+**Värmland** 156 event i länets orter (Ane Brun på Alma Löv, Sofia Karlsson på
+Mårbacka, Arvika Hamnfest), **Ängelholm #37** 159 inom 25 km (Sommarglitter +
+ABBA-party 8/8, Krapperup 7/8 — medvetet ANDRA event än 27/7-inlägget i
+Nöjen & Event), **Majorna #55** 195 inom 4 km (Musikens Hus, Röda Sten,
+Slottsskogen, Oscar Fredriks kyrka).
+**Bortvalda:** Kungsbacka (bara 8 riktiga event lokalt av 57 — bekräftat två
+gånger nu), Åstorp (163 event men det ÄR Helsingborgs utbud → krockar med #64
+som ligger uppe), Kristianstad/Sundsvall/Luleå (fortsatt svaga).
+
+**Alla tre = V2 (länk i första kommentaren).** Raderna är dag-agnostiska där
+det går, så ett godkännande som dröjer inte spräcker inlägget (Eskilstuna- och
+Västmanlands-lärdomarna). Ligger gruppen i godkännande-kö → flytta länken till
+inlägget och stryk fredagsraderna.
+
+### P. På gång i Värmland - Vi tipsar om vad som händer, när det händer... (#19 → vadkul.se — länsgrupp, Karlstadssidan vore för smal)
+
+**UTKAST — EJ POSTAT.** Karlstadsgruppen (#22) postades 24/7 men det är en
+ANNAN grupp; raderna här är medvetet spridda utanför Karlstad.
+
+> Det händer mer i Värmland den här veckan än man tror 👇
+>
+> 🎤 Caroline af Ugglas på Trossen i Kristinehamn (fredag)
+> 🎹 Synth i Molkom på folkhögskolan (fredag)
+> 🎶 Ane Brun, Martin Hederos och Klara Goliger på Alma Löv Museum (söndag)
+> 🌾 Sofia Karlsson – "En sång till Selma" på Mårbacka (måndag)
+> ⚓ Och nästa fredag drar Arvika Hamnfest igång
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 150 event runt
+> om i Värmland bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+>
+> Vad händer på er ort? 👇
+
+Första kommentaren: `Här är kartan: https://vadkul.se — vi hämtar in det mesta automatiskt, men allt slinker inte med. Tipsa gärna om orter jag har för lite på!`
+
+### Q. Vad händer i Ängelholm? (#37 → vadkul.se — ingen Ängelholmssida; SYSTERGRUPP till #20 som postades 27/7, därför helt andra event)
+
+**UTKAST — EJ POSTAT.** ⚠️ Lisa Nilsson, Sommarfesten på Enkegården,
+hantverksmarknaden och Arilds Jazzfestival användes i 27/7-inlägget — bara
+Arilds jazz återanvänds här (det är samma helg), resten är nya rader.
+
+> Massor på gång i Ängelholm med omnejd 👇
+>
+> 🎸 Pidde P och Brandsta City Släckers på Bläsinge Gård i Kullabygden (fredag)
+> 🎷 Arilds Jazzfestival nere i hamnen (lördag)
+> 🎭 Gatuteater med Miss Margherita utanför Höganäs bibliotek (fredag)
+> 🎶 Märk Väl på Krapperups Musikhall (fredag 7/8)
+> ✨ Sommarglitter i Hembygdsparken och ABBA-party med The Visitors på
+> Enkegården (lördag 8/8)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — över 150
+> event inom en halvtimme från Ängelholm bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+>
+> Vad ser ni mest fram emot? 👇
+
+Första kommentaren: `Här är kartan: https://vadkul.se — saknas något i Ängelholm? Säg till, eller lägg in det själv med plusknappen.`
+
+### R. Vad händer i Majorna (#55 → /evenemang/goteborg — Göteborgsgruppen #73 postades 25/7, men det är en annan grupp och andra event)
+
+**UTKAST — EJ POSTAT.** Raderna är Majorna/Linné-lokala (Musikens Hus, Röda
+Sten, Slottsskogen, Oscar Fredriks kyrka) — inga Liseberg/Ullevi-rader, de hör
+till centrumgruppen.
+
+> Fin vecka i Majorna och runt Linné 👇
+>
+> 🎹 Synthmattan på Musikens Hus (lördag)
+> 🛍️ Bakluckeloppisen vid Slottsskogen (lördag)
+> 🎨 Sommar på Röda Sten – barnverkstad i Draken och Verkstan (lördag)
+> 🎺 Johan Johanssons Trio med gäster på Musikens Hus (söndag)
+> 🎼 Releasekonsert med Ars Veritas i Oscar Fredriks kyrka (tisdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — närmare 200 event
+> inom en kvart från Majorna bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+>
+> Vad går ni på? 👇
+
+Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som händer i Majorna och Linné, jag fyller på.`

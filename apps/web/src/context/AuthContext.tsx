@@ -20,8 +20,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   /** E-post + lösenord — samma flöde som gamla login-sidan, fast i modal. */
   signIn: (email: string, password: string) => Promise<void>;
-  /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd). */
-  register: (name: string, email: string, password: string) => Promise<void>;
+  /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd).
+   *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore. */
+  register: (name: string, email: string, password: string, stats?: { age?: number; gender?: string }) => Promise<void>;
   /** Byt visningsnamn (profilpanelen). Speglas lokalt direkt. */
   updateDisplayName: (name: string) => Promise<void>;
   /** Byt profilbild (URL från Storage). Uppdaterar Auth-profilen + speglas lokalt. */
@@ -58,12 +59,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string }) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (name.trim()) {
       await updateProfile(cred.user, { displayName: name.trim() });
       // onAuthStateChanged fyrar före updateProfile hinner slå igenom — spegla lokalt.
       setUser({ ...cred.user, displayName: name.trim() } as User);
+    }
+    // Spegla profilen (inkl. ålder/kön — statistikunderlag) till users/{uid}.
+    // Best-effort: kontot ÄR redan skapat — ett Firestore-hicka får inte få
+    // registreringen att se misslyckad ut.
+    try {
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebase');
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        uid: cred.user.uid,
+        email,
+        displayName: name.trim(),
+        ...(typeof stats?.age === 'number' && Number.isFinite(stats.age) ? { age: stats.age } : {}),
+        ...(stats?.gender ? { gender: stats.gender } : {}),
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Kunde inte spara profildata (ålder/kön):', e);
     }
   };
 

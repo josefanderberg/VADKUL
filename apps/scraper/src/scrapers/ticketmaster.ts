@@ -2,10 +2,10 @@
  * TicketMaster Discovery API scraper
  *
  * Strategi:
- *   1. Hämta events från REST API (countryCode=SE, nästa 7 dagar)
+ *   1. Hämta events från REST API (countryCode SE+NO+DK, 30 dagar framåt)
  *   2. Paginera tills alla sidor är hämtade (max 10 sidor = 2 000 events)
  *   3. Koordinater hämtas direkt från API-svaret (ingen geocoding behövs)
- *   4. Affiliate-URL: ?c=8469859&ac=1 läggs till på varje event-URL
+ *   4. Event-URL sparas REN — ingen affiliate-parameter (se cleanEventUrl)
  *
  * Miljövariabler:
  *   TICKETMASTER_API_KEY  — Consumer Key från developer.ticketmaster.com
@@ -20,8 +20,28 @@ import { classifyEvent } from '../utils/classify';
 const API_KEY  = process.env.TICKETMASTER_API_KEY || '';
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
 
-// ── Affiliate URL ────────────────────────────────────────────────────────────
-function buildAffiliateUrl(rawUrl: string): string {
+// ── Affiliate-taggning: AVSTÄNGD ─────────────────────────────────────────────
+// Tidigare klistrades ?c=8469859&ac=1 på varje TM-URL. Den koden är INTE vår
+// (vårt Impact-publisher-konto är 7528311, skapat 2026-07-28 — parametern låg i
+// scrapern sedan 31 maj). Att köra främmande affiliate-taggar mot Ticketmaster
+// utan godkänt program är precis vad TM/Impact-compliance underkänner, så
+// länkarna sparas rena tills programansökan är godkänd. När den går igenom:
+// ersätt med den riktiga spårningslänken Impact genererar för programmet —
+// inte den här parametern.
+function cleanEventUrl(rawUrl: string): string {
+    try {
+        const u = new URL(rawUrl);
+        u.searchParams.delete('c');
+        u.searchParams.delete('ac');
+        return u.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+// Gamla taggade formen — används BARA för dedup, så att de ~220 event som redan
+// ligger i databasen med ?c=8469859 inte återkommer som dubbletter med ren URL.
+function legacyAffiliateUrl(rawUrl: string): string {
     try {
         const u = new URL(rawUrl);
         u.searchParams.set('c',  '8469859');
@@ -182,10 +202,14 @@ export async function scrapeTicketmaster(): Promise<number> {
 
     for (const event of allEvents) {
         try {
-            const affiliateUrl = buildAffiliateUrl(event.url);
+            const eventUrl = cleanEventUrl(event.url);
 
-            // Dedup — kolla både affiliate-URL och ren URL
-            if (await eventExistsInDb(affiliateUrl) || await eventExistsInDb(event.url)) continue;
+            // Dedup — kolla ren URL, rå URL och den gamla taggade formen
+            if (
+                await eventExistsInDb(eventUrl) ||
+                await eventExistsInDb(event.url) ||
+                await eventExistsInDb(legacyAffiliateUrl(event.url))
+            ) continue;
 
             // Datum
             const { localDate, localTime } = event.dates.start;
@@ -215,7 +239,7 @@ export async function scrapeTicketmaster(): Promise<number> {
 
             await addEventToDb({
                 title:             event.name,
-                url:               affiliateUrl,
+                url:               eventUrl,
                 time:              eventDate,
                 hasSpecificTime:   !!localTime,
                 locationName,

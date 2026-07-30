@@ -264,6 +264,39 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
 
+    // 8d. LIVEBILDER (per kart-event, eventKey är URL-enkodat event-id — samma
+    // trick som eventChats). Alla kan titta; ladda upp kräver konto med sig
+    // själv som avsändare och tom voters-mapp. Röstning: uppdateringen får BARA
+    // röra ens EGEN uid-nyckel i voters (värde 1/-1, eller borttagen = ångrad
+    // röst) — Map.diff låser detta, så man varken kan rösta åt andra eller
+    // rösta flera gånger. Poängen härleds ur mappen på klienten (ingen räknare
+    // som kan driva isär). Radera: bara sin egen bild, eller admin (moderering).
+    match /eventPhotos/{photoId} {
+      allow read: if true;
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.eventKey is string
+        && request.resource.data.eventKey.size() >= 1
+        && request.resource.data.eventKey.size() <= 1400
+        && request.resource.data.eventId is string
+        && request.resource.data.url is string
+        && request.resource.data.url.size() <= 1000
+        && request.resource.data.url.matches('https://.*')
+        && request.resource.data.voters is map
+        && request.resource.data.voters.size() == 0
+        && request.resource.data.keys().hasOnly([
+            'eventKey', 'eventId', 'eventTitle', 'uid', 'userName',
+            'userImage', 'url', 'voters', 'createdAt'
+        ]);
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voters'])
+        && request.resource.data.voters.diff(resource.data.voters).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data.voters)
+            || request.resource.data.voters[request.auth.uid] in [1, -1]);
+      allow delete: if isAuthenticated()
+        && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
     // 8b. EVENT-CHATT (per kart-event, nyckeln är URL-enkodat event-id).
     // Läsning öppen (chatten syns för alla) — skrivning kräver konto och
     // formbegränsas mot spam/spoofing (senderId måste vara ens eget uid).
@@ -453,5 +486,29 @@ service cloud.firestore {
     match /outreachContacts/{docId} { allow read, write: if false; }
     match /outreachLog/{docId}      { allow read, write: if false; }
     match /outreachNotes/{docId}    { allow read, write: if false; }
+
+    // 22. SENASTE AKTIVITET — ETT välkänt dokument (latestComment) som kartans
+    // "senaste kommentaren"-bubbla lyssnar på. Speglas av chattens sendMessage
+    // (en collectionGroup-query över alla messages skulle även öppna privata
+    // chats/*/messages — därför spegeln). Alla läser (1 doc — ingen
+    // egress-fälla); skriva kräver konto med sig själv som avsändare,
+    // formlåst. Rasering: nej — dokumentet skrivs bara över.
+    match /latestActivity/{docId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated()
+        && docId == 'latestComment'
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.eventId is string
+        && request.resource.data.eventId.size() <= 1400
+        && request.resource.data.eventTitle is string
+        && request.resource.data.eventTitle.size() <= 200
+        && request.resource.data.keys().hasOnly([
+            'senderId', 'senderName', 'text', 'eventId', 'eventTitle', 'createdAt'
+        ]);
+      allow delete: if false;
+    }
   }
 }

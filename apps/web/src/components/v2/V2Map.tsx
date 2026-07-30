@@ -855,6 +855,29 @@ export default function V2Map({
     // Sätts av dagbyte + kort-navigering (Nästa/Föregående/svep) — INTE av kart-
     // klicket (där ska den valda brickan tvärtom få bli synlig via recenter).
     const suppressAutoRecenterUntilRef = useRef(0);
+    // FÖRSTA event-klicket per sidladdning zoomar in på eventet — man landar
+    // lokalt där nyfikenheten är, i stället för att bli kvar i Sverige-vyn.
+    // Bara en gång: senare klick står still som vanligt (recenter-logiken).
+    // Zoomar aldrig UT (Math.max) och önske-klick räknas inte som event-klick.
+    const firstClickZoomDoneRef = useRef(false);
+    const zoomInOnFirstEventClick = (ev: { lat?: number | null; lng?: number | null }) => {
+        if (firstClickZoomDoneRef.current) return;
+        firstClickZoomDoneRef.current = true;
+        const map = mapRef.current;
+        if (!map || !isValidLatLng(ev.lat, ev.lng)) return;
+        // Val-effektens recenter (körs efter klick-rendern) får inte avbryta
+        // flygningen — ge den ett suppress-fönster som täcker animationen.
+        suppressAutoRecenterUntilRef.current = performance.now() + 1200;
+        // Lägg eventet på 40%-höjd (samma yta recenter siktar på) så brickan
+        // hamnar ovanför kortet som öppnas av valet.
+        const yOffset = map.getContainer().clientHeight * (0.40 - 0.5);
+        map.flyTo({
+            center: [ev.lng!, ev.lat!],
+            zoom: Math.max(map.getZoom(), 13),
+            offset: [0, yOffset],
+            duration: 900,
+        });
+    };
 
     // Baka (eller återanvänd) brick-bilderna som en uppsättning features faktiskt
     // pekar på (properties.icon). Under den streamade påfyllnaden kallas den per
@@ -2027,11 +2050,13 @@ export default function V2Map({
                 }
                 setGroupList(group);
                 onSelectEventRef.current(rep);
+                zoomInOnFirstEventClick(rep);
                 return;
             }
             setGroupList(null);
             setGroupListAnchor(null);
             onSelectEventRef.current(group[0]);
+            zoomInOnFirstEventClick(group[0]);
         };
         const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
         const clearPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = ''; };
@@ -2490,6 +2515,7 @@ export default function V2Map({
                     }
                     // Ingen sticky (hopade en bricka per klick) — vald visas via DOM-markör.
                     onSelectEventRef.current(rep);
+                    zoomInOnFirstEventClick(rep);
                 };
 
                 // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från
