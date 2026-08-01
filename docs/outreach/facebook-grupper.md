@@ -132,6 +132,7 @@ be Claude räkna om den först.
 | Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
+| Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** (inget godkännande) — variant obekräftad (V2 enligt plan; kolla att länkkommentaren postades) | 2026-08-23 |
 
 ---
 
@@ -1289,8 +1290,14 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### T-2/8. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna)
 
-**UTKAST — EJ POSTAT.** Ersätter 1/8-versionen ovan. Kolla fortfarande om
-Eskilstuna-inlägget från 24/7 släppts ur sin kö innan postning.
+**✅ POSTAT 2/8 — publicerades DIREKT, inget godkännande krävdes (bekräftat
+av Josef 2/8; han skrev "Torslanda" men det tolkas som Torshälla — ingen
+Torslanda-grupp finns i masterlistan). Variant obekräftad: V2 var planen vid
+direktpublicering — KOLLA att första kommentaren med
+vadkul.se/evenemang/eskilstuna-länken postades direkt efter; postades V1-
+texten (länk i inlägget) i stället, låt den vara (27/7-beslutet: redigera
+inte in/ut länkar i efterhand). Karens till 2026-08-23. Bevaka första dygnet
++ uppföljning efter en vecka.** Ersätter 1/8-versionen ovan.
 
 **T1 — länk i inlägget (godkännande-grupp):**
 

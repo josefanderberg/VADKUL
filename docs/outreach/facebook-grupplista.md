@@ -66,7 +66,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 31 | Vad händer i Haninge | vadkul.se |  |
 | 32 | Vad händer i östra Göteborg? | /evenemang/goteborg |  |
 | 33 | Vad händer i Svalövs Kommun | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 34 | Du vet vad som händer i Torshälla | vadkul.se |  |
+| 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt (variant obekräftad, V2 var planen) · utfall ? |
 | 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 36 | Vad händer i Kristianstad | /evenemang/kristianstad |  |
 | 37 | Vad händer i Ängelholm? | vadkul.se |  |
