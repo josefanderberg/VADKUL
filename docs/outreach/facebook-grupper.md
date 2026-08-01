@@ -951,3 +951,168 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — och tipsa gärna om orter jag har för lite på!`
+
+---
+
+## ⚠️ ODOKUMENTERAT 29–31/7 — luckan måste fyllas i efterhand
+
+Inget loggfört mellan 28/7 (M/N/O-utkasten ovan, märkta EJ POSTAT) och 1/8.
+Josef bekräftade 1/8 att postningar GJORDES minst en av dagarna men inte
+dokumenterades. Mest sannolika kandidater om kön följdes: **M (Mölndal),
+N (Vad händer i Helsingborg? #64), O (Västmanland!), L2 (VAD HÄNDER I
+LANDSKRONA)** — men det är gissning, inte facit.
+
+**Så fylls luckan (två källor):**
+
+1. **FB:s aktivitetslogg** — profilen → Aktivitetslogg → "Inlägg" (eller resp.
+   grupps "Ditt innehåll"). Visar exakt vilka grupper som fick inlägg 29–31/7.
+2. **Firestore `outreachLog`** — admin-konsolen `/admin/outreach` (TodayPanel)
+   om inläggen loggades där vid postning.
+
+Fyll sedan i: Loggen-tabellen ovan + Postat-kolumnen i masterlistan
+(karensdatum +3 v!). Tills det är gjort är karenskollen för alla orörda
+grupper OSÄKER — kolla aktivitetsloggen innan något ur dagens kö postas.
+
+---
+
+## Lördag 1/8 — 3 grupper × 2 varianter (skrivna 1/8 ur nattaggregatet 31/7)
+
+**Urvalet:** räknade event 2/8–8/8 inom 25 km för varje ort med orörd grupp.
+Topplistan toppades av VG-länsgruppen (652), Stockholm! (496) och
+Gbg-förorterna (411) — **alla bortvalda**: Stockholm/Södermalm postades 25+27/7
+(veckoregeln), Göteborgsområdet krockar med Mölndal-utkastet som kan ha
+postats i den odokumenterade luckan. Valda i stället på utbud + dragplåster +
+noll kollisionsrisk mot 29–31/7-kandidaterna: **Tjörn** (54 event, Ebbot på
+Åstol + Orup/Danny Saucedo på Stenungsbaden — semesterö = aktiv sommargrupp),
+**Nynäshamn** (53 event, Nynäskalaset + Sabina Ddumba på Idala),
+**Vänersborg** (83 event inkl. Trollhättan, helt orört område).
+
+**RESERV om någon av de tre visar sig vara postad 29–31/7:** På gång i
+Värmland (#19) — 139 event i länet, Karlstadgruppen fri sedan 24/7 (>1 vecka).
+⚠️ Håll raderna inom Värmlands län — datat drar in Grythyttan (Örebro län),
+samma fälla som Eskilstuna-raden i Västmanlandsutkastet.
+
+**Format:** långa formatet från 28/7 (medskapa-block, omformulerat per grupp —
+identisk text triggar spamfiltret). Ingen stjärnlänk. Godkännande-regeln:
+V1 = bara söndag och framåt; V2 = länk + kommentar direkt efter publicering.
+**Läs regelrutan i varje grupp före postning** (ämnesbegränsning = anpassa
+eventmixen, se Gotland-lärdomen).
+
+Ingen av de tre orterna har egen stadssida → länken är `vadkul.se` i alla.
+
+### P. Tjörn vad händer (#3 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Flera rader ligger på Orust/Stenungsund (grannöarna) —
+därför "på och runt Tjörn"-framing. Åstol och Klädesholmen ÄR Tjörns kommun.
+
+**P1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka det blir på och runt Tjörn 👇
+>
+> 🎸 Inte en sommar utan Ebbot! — Ebbot Lundberg på Åstols Rökeri (tisdag)
+> ☕ Kyrkguidning med kaffe på Klädesholmen (onsdag–fredag)
+> 🎤 Orup + Danny Saucedo på Stenungsbaden (fredag)
+> 🎶 Triple & Touch i Flatö kyrka på Orust (fredag)
+> 🚶 Guidad vandring genom gamla Skärhamn (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — drygt 50 event
+> på öarna och runt fjorden bara den närmaste veckan:
+> https://vadkul.se
+>
+> Och den blir bättre ju fler som hjälps åt:
+> ➕ Ordnar du något själv? Lägg in det med plusknappen — egna event får en
+> grön bricka och syns extra tydligt.
+> 💡 Saknas något på kartan? Släng in en länk i kommentarerna så lägger jag
+> in det.
+> 🔗 Finns det en sida där Tjörn-eventen redan samlas? Tipsa, så hämtas allt
+> därifrån automatiskt i fortsättningen.
+>
+> Vad hittar ni på i veckan? 👇
+
+**P2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — drygt 50 event
+> på öarna och runt fjorden bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas på Tjörn!`
+
+### Q. Vad händer i Nynäshamn (#39 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Nynäskalaset (fre 7/8, Svandammsparken — med nattbuss
+hem enligt datat) + Sabina Ddumba (lör 8/8, Idala Trädgårdsscen) är veckans
+dragplåster. Ikväll (lör 1/8) spelar Timo Räisänen + AlvaMarit & The Sails på
+Idala — får BARA nämnas i V2 (direktpublicering), aldrig i V1.
+
+**Q1 — länk i inlägget (godkännande-grupp):**
+
+> Nynäshamn laddar för en riktig festvecka 👇
+>
+> 🎉 Nynäskalaset i Svandammsparken (fredag)
+> 🎤 Sabina Ddumba på Idala Trädgårdsscen (lördag)
+> 🎶 Musik i sommarkväll i Nynäshamns kyrka — musikal, opera & sagofilm (torsdag)
+> 🎷 Sommarmusik i Sorunda kyrka (torsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Nynäshamnstrakten — drygt 50 event bara den närmaste veckan:
+> https://vadkul.se
+>
+> Kartan fylls på av oss som använder den:
+> ➕ Arrangerar du något? Plusknappen på kartan lägger in det — egna event
+> får en grön bricka som syns extra.
+> 💡 Vet du något jag missat? Kommentera med en länk så läggs det in.
+> 🔗 Eller tipsa om en sajt där Nynäshamns-eventen redan listas — då kopplas
+> den in och allt kommer med automatiskt framöver.
+>
+> Vad går ni på? 👇
+
+**Q2 — länk i kommentaren (direktpublicerande grupp):** samma text, men lägg
+till raden `🎸 Timo Räisänen + AlvaMarit & The Sails på Idala Trädgårdsscen
+(ikväll!)` överst i eventlistan, och byt kartstycket mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Nynäshamnstrakten — drygt 50 event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — säg till om något saknas i Nynäshamn!`
+
+### R. Vad händer i Vänersborg? (#35 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Helt orört område (närmaste tidigare inlägg: Borås
+23/7). Trollhättan-raderna är medvetna — 15 min bort och gruppen bevakar hela
+Tvåstad i praktiken.
+
+**R1 — länk i inlägget (godkännande-grupp):**
+
+> Mycket på gång kring Vänersborg den här veckan 👇
+>
+> 🧺 Hembygdens dag på Vänersnäs (imorgon söndag)
+> 🎸 Sommarkonsert "Grand Finale" på Solliden, Kvarntorp (onsdag)
+> 🎶 Nordic Opera Choir i Trollhättans kyrka (fredag)
+> 🛍️ Mat- och hantverksdag i Brålanda (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 80 event
+> runt Vänersborg och Trollhättan bara den närmaste veckan:
+> https://vadkul.se
+>
+> Bäst blir den när fler är med och fyller på:
+> ➕ Eget arrangemang? Lägg in det via plusknappen — egna event märks med en
+> grön bricka och syns extra tydligt.
+> 💡 Något som fattas? Tipsa i kommentarerna, en länk räcker.
+> 🔗 Känner du till en sida som redan listar det som händer i Vänersborg?
+> Säg till — då hämtas den in automatiskt i fortsättningen.
+>
+> Vad blir det för er i veckan? 👇
+
+**R2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — över 80 event
+> runt Vänersborg och Trollhättan bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Vänersborg!`
