@@ -131,6 +131,7 @@ be Claude räkna om den först.
 | Tjörn vad händer | Tjörn | 1/8-P | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
 | Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
+| På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
 
 ---
 
@@ -1159,7 +1160,12 @@ Karlskoga = Örebro län, Tösse = Dalsland, Toni Holgersson-raden = Öland
 
 ### S. På gång i Värmland - Vi tipsar om vad som händer, när det händer... (#19 → vadkul.se)
 
-**UTKAST — EJ POSTAT.** Länsgrupp → raderna medvetet spridda:
+**✅ POSTAT 1/8 (V1 — korta formatet, länk i inlägget). KRÄVDE GODKÄNNANDE —
+låg kvar i kön 2/8 (bekräftat av Josef). Karens till 2026-08-22.
+⚠️ BEVAKNINGSPUNKT: första raden (Alma Löv, söndag 2/8) passerar om inlägget
+släpps efter söndag — kommentera/redigera vid behov. Detta är också första
+testet av korta V1-formatet i en godkännandekö (formathypotesen ovan) —
+logga utfallet.** Länsgrupp → raderna medvetet spridda:
 Sunne/Karlstad/Kristinehamn/Hammarö/Säffle/Grums.
 
 **S1 — länk i inlägget (godkännande-grupp — KORTA formatet):**
@@ -1197,7 +1203,9 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### T. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna — Torshälla är Eskilstuna kommun, djuplänken är rätt avsändare här trots vadkul.se i masterlistan)
 
-**UTKAST — EJ POSTAT.** Systerort till "Du vet vad som händer i Eskilstuna"
+**UTKAST 1/8 — EJ POSTAT, ERSATT av 2/8-versionen nedan (veckodagarna
+uppdaterade + Eskilstunafesten visade sig vara tors–lör).** Systerort till
+"Du vet vad som händer i Eskilstuna"
 (postat 24/7, låg då i godkännandekö — **kolla om det inlägget någonsin
 släpptes**; ligger det uppe nu, skjut T till imorgon och variera mer).
 Stadsveckoregeln ok: Eskilstuna 24/7 → 1/8 = 8 dagar.
@@ -1230,3 +1238,117 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se/evenemang/eskilstuna — tipsa gärna om det jag missat i Torshälla!`
+
+---
+
+## Söndag 2/8 — Sundsvall + Torshälla + Nykvarn (Josefs val ur runda 2-kandidaterna)
+
+**Läget:** Värmland (S) postades 1/8 och står kvar i godkännandekön 2/8.
+Josef valde att köra vidare på andraplats-kandidaterna från igår: Sundsvall,
+Torshälla (T-utkastet uppdaterat med rätt veckodagar) och Nykvarn. Sundsvall
+och Nykvarn är svagare på utbud än gårdagens val — förväntningsläget är
+lägre, logga utfallet mot det. **Korta V1-formatet gäller** (formathypotesen
+1/8). Event = måndag och framåt i V1; V2 får ta dagens/kvällens.
+
+**Datakoll gjord 2/8:** Eskilstunafesten är TORS–LÖR (Strömsholmen tors +
+fullt program Fristadstorget lör). "Valsta kyrka"-raden i Nykvarnsunderlaget
+var felgeokodad (Märsta) — struken. Rock The Night-raderna i Öbackaparken är
+Umeå — Sundsvallsupplagan är den på Ungdomsfältet lör 8/8.
+
+### U. Vad händer i Sundsvall? (#57 → /evenemang/sundsvall)
+
+**UTKAST — EJ POSTAT.**
+
+**U1 — länk i inlägget (godkännande-grupp):**
+
+> Mer på gång i Sundsvall i veckan än man kan tro 👇
+>
+> 🏛️ Guidningar av Alnö gamla kyrka (vardagar hela veckan)
+> 🎸 Ronny & Ragge — "Sista Pöket med Gänget" på Himlabadet (torsdag)
+> 🎸 Rock The Night Festival på Ungdomsfältet (lördag)
+> 🎷 Sommarmusik "Elda för kråkorna" vid Café Kyrkstugan, Skön (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Sundsvallstrakten — ett 70-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/sundsvall
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på i veckan? 👇
+
+**U2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎷 Psalmer i jazzton med Tre:Tonus på Bänkåsvikens sommargård (idag)` överst
+i eventlistan, och kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Sundsvallstrakten — ett 70-tal event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/sundsvall — tipsa gärna om det jag missat!`
+
+### T-2/8. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna)
+
+**UTKAST — EJ POSTAT.** Ersätter 1/8-versionen ovan. Kolla fortfarande om
+Eskilstuna-inlägget från 24/7 släppts ur sin kö innan postning.
+
+**T1 — länk i inlägget (godkännande-grupp):**
+
+> Bra vecka på gång i Torshälla och Eskilstuna 👇
+>
+> 🎭 Kärleksdrycken — Eskilstuna Moderna Operan på Jädersgården (måndag)
+> 🎶 Vilsta Musikcafé (onsdag)
+> 🎸 Rock n Roll Machine hyllar Ted & Kenneth Gärdestad på Mary's Café (onsdag)
+> 🎉 Eskilstunafesten — Strömsholmen & Fristadstorget (torsdag–lördag)
+> 🎨 Vernissage: "Bönor & blues" på Rademachersmedjorna (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/eskilstuna
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**T2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎻 Musik i sommarkväll i Torshälla kyrka (ikväll)` överst i eventlistan, och
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/eskilstuna — tipsa gärna om det jag missat i Torshälla!`
+
+### V. Vad Händer I Nykvarn (#5 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Utbudet ligger i praktiken i Åkers bergslag/Järna/
+Mariefred — "trakten"-framing. Skottvångs Grufva är dragplåstret (två
+konsertkvällar samma vecka).
+
+**V1 — länk i inlägget (godkännande-grupp):**
+
+> Kolla vad som händer i Nykvarnstrakten den här veckan 👇
+>
+> 🎸 Nynningen & DagVag på Skottvångs Grufva (onsdag)
+> 🎶 Sommarmusik i Överjärna kyrka (torsdag)
+> 🎤 Åsa Jinder på Skottvångs Grufva (fredag)
+> 🎶 Trädgårdslive med Maria Jane Smith på Eldtomta, Hölö (fredag)
+> 🎹 Gustaviansk orgelmusik i Mariefreds kyrka (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — ett 40-tal
+> event i trakten bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något i Nykvarn? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad hittar ni på i veckan? 👇
+
+**V2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — ett 40-tal
+> event i trakten bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det som saknas i Nykvarn!`

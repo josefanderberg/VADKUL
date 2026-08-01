@@ -51,7 +51,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 16 | Vad händer på Yxlan | vadkul.se |  |
 | 17 | Älmhultsbor, vad händer? | vadkul.se |  |
 | 18 | Vad händer på Högsbohöjd? | vadkul.se |  |
-| 19 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | vadkul.se |  |
+| 19 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | vadkul.se | 1/8 · länk i inlägg (V1, korta formatet) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 2/8 |
 | 20 | Vad händer i Ängelholm Nöjen & Event | vadkul.se |  |
 | 21 | Vad händer i Piteå? | vadkul.se |  |
 | 22 | Händer i Karlstad-Tipsa om vad som händer i stan! | /evenemang/karlstad | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 5 likes |
