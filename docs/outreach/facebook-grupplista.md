@@ -67,11 +67,11 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 32 | Vad händer i östra Göteborg? | /evenemang/goteborg |  |
 | 33 | Vad händer i Svalövs Kommun | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
 | 34 | Du vet vad som händer i Torshälla | vadkul.se |  |
-| 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
+| 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 36 | Vad händer i Kristianstad | /evenemang/kristianstad |  |
 | 37 | Vad händer i Ängelholm? | vadkul.se |  |
 | 38 | Vad händer i Tierps kommun? | vadkul.se |  |
-| 39 | Vad händer i Nynäshamn | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
+| 39 | Vad händer i Nynäshamn | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 40 | Vad händer i Harads? | vadkul.se |  |
 | 41 | Vad händer i Nyköping med omnejd. | /evenemang/nykoping | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 6 likes, 2 komm. |
 | 42 | Vad händer i Malmö? | /evenemang/malmo | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |

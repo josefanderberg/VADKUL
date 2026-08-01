@@ -129,8 +129,8 @@ be Claude räkna om den först.
 | Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | godkänt → **72 likes (rekord)** → ❌ **BORTTAGET 28/7 som "reklam"**. Gruppregel: bara kultur/konst/sång, EJ sport/yoga | admin-DM först, posta inte kallt |
 | Tjörn vad händer | Tjörn | 1/8-P | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
-| Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
-| Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
+| Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
+| Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 
 ---
 
@@ -1047,9 +1047,9 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### Q. Vad händer i Nynäshamn (#39 → vadkul.se)
 
-**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
-ännu (bekräftat av Josef 1/8). Karens till 2026-08-22. Timo-raden (ikväll 1/8)
-användes alltså INTE — helt rätt, den var V2-exklusiv.** Nynäskalaset (fre
+**❌ NEKAD i godkännandekön 1/8 (V1 — långa formatet, länk i inlägget).
+Publicerades aldrig. Nästa försök: admin-DM, inte kallt — och se
+formathypotesen under "Runda 2" nedan.** Nynäskalaset (fre
 7/8, Svandammsparken — med nattbuss hem enligt datat) + Sabina Ddumba (lör
 8/8, Idala Trädgårdsscen) är veckans dragplåster.
 
@@ -1088,11 +1088,9 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### R. Vad händer i Vänersborg? (#35 → vadkul.se)
 
-**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
-ännu (bekräftat av Josef 1/8). Karens till 2026-08-22.
-⚠️ BEVAKNINGSPUNKT: raden "Hembygdens dag på Vänersnäs (imorgon söndag)"
-stämmer bara om inlägget släpps senast söndag 2/8 — släpps det senare, lägg
-en kommentar som uppdaterar ("i söndags") eller redigera raden.** Helt orört
+**❌ NEKAD i godkännandekön 1/8 (V1 — långa formatet, länk i inlägget).
+Publicerades aldrig. Nästa försök: admin-DM, inte kallt — och se
+formathypotesen under "Runda 2" nedan.** Helt orört
 område (närmaste tidigare inlägg: Borås 23/7). Trollhättan-raderna är
 medvetna — 15 min bort och gruppen bevakar hela Tvåstad i praktiken.
 
@@ -1127,3 +1125,108 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Vänersborg!`
+
+---
+
+## Lördag 1/8 — RUNDA 2 (efter två nekanden): Värmland + Torshälla
+
+**Facit runda 1:** alla tre krävde godkännande. Nynäshamn + Vänersborg
+**NEKADES i kön**, Tjörn låg kvar och väntade. Första rena nekandena sedan
+17/7-eran — och båda kom på **långa V1-formatet** (medskapa-blocket).
+
+**FORMATHYPOTES (n=2, obekräftad):** det långa medskapa-blocket kan läsas som
+"tjänstereklam" av granskande admins — fyra CTA-rader om plusknappar och
+inkoppling av sajter låter mer som en produkt än som ett grannskapstips.
+**Beslut runda 2: V1 = KORTA formatet** (eventrader + karta + en enkel
+tipsa-mening). Medskapa-blocket lever kvar bara i V2 (direktpublicering, där
+ingen admin granskar). Utvärdera när Tjörn (långt V1) fått sitt utslag.
+
+**⚠️ Spamdisciplin:** detta blir försök 4 och 5 samma dag (max-regeln är
+2–3). Två av tre publicerades aldrig, så det publika avtrycket är litet, men
+FB räknar aktivitet — **posta den ena nu och den andra ikväll**, inte båda
+direkt efter varandra.
+
+**Urvalet:** Värmland (#19) var utsedd reserv (169 event 2–10/8, Karlstad
+fri sedan 24/7). Andraplatsen stod mellan Torshälla, Sundsvall och Nykvarn —
+**Torshälla vann på dragplåster** (Eskilstunafesten på Strömsholmen tors +
+Gärdestad-hyllningen på Mary's + Eskilstuna Moderna Operan; Sundsvall är
+fortsatt bara kyrkomusik + Ronny & Ragge, Nykvarns utbud ligger i
+Gnesta/Mariefred 3 mil bort).
+
+**Geo-fällor rensade ur Värmlandsraderna:** Loka Brunn (Magnus Carlson) och
+Karlskoga = Örebro län, Tösse = Dalsland, Toni Holgersson-raden = Öland
+(felgeokodad). Bara verifierade Värmlandsorter i utkastet.
+
+### S. På gång i Värmland - Vi tipsar om vad som händer, när det händer... (#19 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Länsgrupp → raderna medvetet spridda:
+Sunne/Karlstad/Kristinehamn/Hammarö/Säffle/Grums.
+
+**S1 — länk i inlägget (godkännande-grupp — KORTA formatet):**
+
+> Massor på gång runt om i Värmland den här veckan 👇
+>
+> 🎸 Martin Hederos, Ane Brun & Klara Goliger på Alma Löv utanför Sunne (söndag)
+> 🎶 Sofia Karlsson sjunger "En sång till Selma" på Mårbacka (måndag)
+> 🎻 Musik i sommarkväll i Österviks kapell, Kristinehamn (tisdag)
+> 🎸 Andreas Jonsson & The Pink Cadillac Band på Hammarö (onsdag)
+> 🎤 Allsångskväll i Säffle (onsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 130 event
+> runt om i Värmland bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något från din ort? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad händer där ni bor i veckan? 👇
+
+**S2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎸 Ebbot Lundberg på Borgviks Gård (måndag 10/8)` sist i eventlistan, och
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — över 130 event
+> runt om i Värmland bara den närmaste veckan. Länken ligger i
+> kommentarerna 👇
+>
+> Och kartan är inte bara min: arrangerar du något kan du lägga in det själv
+> med plusknappen (egna event får en grön bricka), och finns det en sida där
+> din orts event redan listas — tipsa, så hämtas den in automatiskt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om orter jag har för lite på!`
+
+### T. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna — Torshälla är Eskilstuna kommun, djuplänken är rätt avsändare här trots vadkul.se i masterlistan)
+
+**UTKAST — EJ POSTAT.** Systerort till "Du vet vad som händer i Eskilstuna"
+(postat 24/7, låg då i godkännandekö — **kolla om det inlägget någonsin
+släpptes**; ligger det uppe nu, skjut T till imorgon och variera mer).
+Stadsveckoregeln ok: Eskilstuna 24/7 → 1/8 = 8 dagar.
+
+**T1 — länk i inlägget (godkännande-grupp — KORTA formatet):**
+
+> Bra vecka på gång i Torshälla och Eskilstuna 👇
+>
+> 🎻 Musik i sommarkväll i Torshälla kyrka (söndag)
+> 🎭 Kärleksdrycken — Eskilstuna Moderna Operan på Jädersgården (måndag)
+> 🎸 Rock n Roll Machine hyllar Ted & Kenneth Gärdestad på Mary's Café (onsdag)
+> 🎉 Eskilstunafesten drar igång på Strömsholmen (torsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/eskilstuna
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**T2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+>
+> Psst: arrangerar du något själv kan du lägga in det direkt på kartan med
+> plusknappen — egna event får en grön bricka och syns extra tydligt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/eskilstuna — tipsa gärna om det jag missat i Torshälla!`
