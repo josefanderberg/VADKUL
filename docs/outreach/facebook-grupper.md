@@ -128,6 +128,9 @@ be Claude räkna om den först.
 | Vad händer i Malmö? | Malmö | 25/7-F | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad händer i Göteborg? | Göteborg | 25/7-G | 2026-07-25 | publicerat direkt — variant 2, länk i kommentar | 2026-08-15 |
 | Vad Händer På Gotland? | Visby/Gotland | 26/7-H | 2026-07-26 | godkänt → **72 likes (rekord)** → ❌ **BORTTAGET 28/7 som "reklam"**. Gruppregel: bara kultur/konst/sång, EJ sport/yoga | admin-DM först, posta inte kallt |
+| Tjörn vad händer | Tjörn | 1/8-P | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
+| Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
+| Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
 
 ---
 
@@ -1002,7 +1005,10 @@ Ingen av de tre orterna har egen stadssida → länken är `vadkul.se` i alla.
 
 ### P. Tjörn vad händer (#3 → vadkul.se)
 
-**UTKAST — EJ POSTAT.** Flera rader ligger på Orust/Stenungsund (grannöarna) —
+**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
+ännu (bekräftat av Josef 1/8). Karens till 2026-08-22. Bevaka när det släpps
+och logga utfallet; eventraderna är söndag-och-framåt så inget hinner bli
+inaktuellt i kön.** Flera rader ligger på Orust/Stenungsund (grannöarna) —
 därför "på och runt Tjörn"-framing. Åstol och Klädesholmen ÄR Tjörns kommun.
 
 **P1 — länk i inlägget (godkännande-grupp):**
@@ -1041,10 +1047,11 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### Q. Vad händer i Nynäshamn (#39 → vadkul.se)
 
-**UTKAST — EJ POSTAT.** Nynäskalaset (fre 7/8, Svandammsparken — med nattbuss
-hem enligt datat) + Sabina Ddumba (lör 8/8, Idala Trädgårdsscen) är veckans
-dragplåster. Ikväll (lör 1/8) spelar Timo Räisänen + AlvaMarit & The Sails på
-Idala — får BARA nämnas i V2 (direktpublicering), aldrig i V1.
+**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
+ännu (bekräftat av Josef 1/8). Karens till 2026-08-22. Timo-raden (ikväll 1/8)
+användes alltså INTE — helt rätt, den var V2-exklusiv.** Nynäskalaset (fre
+7/8, Svandammsparken — med nattbuss hem enligt datat) + Sabina Ddumba (lör
+8/8, Idala Trädgårdsscen) är veckans dragplåster.
 
 **Q1 — länk i inlägget (godkännande-grupp):**
 
@@ -1081,9 +1088,13 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### R. Vad händer i Vänersborg? (#35 → vadkul.se)
 
-**UTKAST — EJ POSTAT.** Helt orört område (närmaste tidigare inlägg: Borås
-23/7). Trollhättan-raderna är medvetna — 15 min bort och gruppen bevakar hela
-Tvåstad i praktiken.
+**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
+ännu (bekräftat av Josef 1/8). Karens till 2026-08-22.
+⚠️ BEVAKNINGSPUNKT: raden "Hembygdens dag på Vänersnäs (imorgon söndag)"
+stämmer bara om inlägget släpps senast söndag 2/8 — släpps det senare, lägg
+en kommentar som uppdaterar ("i söndags") eller redigera raden.** Helt orört
+område (närmaste tidigare inlägg: Borås 23/7). Trollhättan-raderna är
+medvetna — 15 min bort och gruppen bevakar hela Tvåstad i praktiken.
 
 **R1 — länk i inlägget (godkännande-grupp):**
 
