@@ -1,5 +1,28 @@
 # FB-grupperna — logg + inlägg
 
+## 🚨 LÄRDOM 2026-08-03: radien ljuger för småorter — kolla utbudet i SJÄLVA orten
+
+Nykvarn-inlägget (3/8) listade fem event "i Nykvarnstrakten" — **noll av dem
+låg i Nykvarn** (0 event inom 8 km i datat; raderna låg 15–19 km bort,
+fågelvägen). Lokalborna såg det direkt: _"Inget av det är i närheten. Du
+kunde lika väl skrivit ut AIK–Örgryte på Friends"_ / _"Ingenting i trakten
+med andra ord"_. 11 likes och 4 kommentarer, men förtroendeskadan är
+poängen — kartan framstod som att den överdriver.
+
+**Regeln framåt (obligatorisk i urvalssteget):**
+
+1. Räkna ALLTID eventen **inom ~8 km från tätorten** separat, inte bara
+   25 km-radien. Radien funkar för städer (folk pendlar in) — för småorter
+   betyder "trakten" tätorten plus närmaste milen.
+2. **< 5 event i själva orten → Malå-formatet** (ärligt "kartan har tunt
+   just nu för [ort] — vad borde vara med? Tipsa!") **eller skippa gruppen.**
+   Aldrig en "kolla vad som händer hos er"-lista byggd på grannorter.
+3. Skriv ortnamn på VARJE eventrad när raderna inte ligger i gruppens ort —
+   låt läsaren se avstånden själv i stället för att upptäcka dem.
+
+Räddningen när det ändå hänt: äg det i kommentarerna + vänd till
+tips-frågan (svarstexten för Nykvarn ligger i V-sektionen).
+
 ## 🚨 LÄRDOM 2026-07-28: högt engagemang skyddar INTE — Gotland togs bort som reklam
 
 Rekordinlägget i **Vad Händer På Gotland?** (postat 26/7, godkänt av modde,
@@ -134,7 +157,7 @@ be Claude räkna om den först.
 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
 | Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
 | Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
-| Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (inget godkännande) — variant obekräftad (V2 enligt plan; kolla att länkkommentaren postades) | 2026-08-24 |
+| Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (V2) — dag 1: **11 likes, 4 komm. varav LOKALKRITIK** ("inget av det är i närheten") — 0 event i själva Nykvarn, se lärdom 3/8. Svar postat, vänd till tips-fråga | 2026-08-24 |
 
 ---
 
@@ -1341,13 +1364,25 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### V. Vad Händer I Nykvarn (#5 → vadkul.se)
 
-**✅ POSTAT 3/8 — publicerades DIREKT, inget godkännande krävdes. Variant
-obekräftad: V2 var planen — KOLLA att första kommentaren med vadkul.se-länken
-postades direkt efter (utan den pekar inlägget ingenstans); postades V1-
-texten i stället, låt den vara. Karens till 2026-08-24. Bevaka första dygnet
-+ uppföljning efter en vecka.** Utbudet ligger i praktiken i Åkers bergslag/
-Järna/Mariefred — "trakten"-framing. Skottvångs Grufva är dragplåstret (två
-konsertkvällar samma vecka).
+**✅ POSTAT 3/8 (V2 — länk i kommentar, publicerat direkt). DAG 1 (19:52):
+11 likes, 4 kommentarer — varav två med LOKALKRITIK: "Inget av det är i
+närheten av Nykvarn... AIK–Örgryte på Friends" och "Ingenting i trakten med
+andra ord". Kritiken är KORREKT — efterkontroll visade 0 event inom 8 km
+från Nykvarn; raderna låg 15–19 km bort. Detta födde lärdomen 3/8 överst i
+filen (radien ljuger för småorter → Malå-format vid tomt lokalutbud).
+Karens till 2026-08-24.**
+
+**Svar postat på kritiken (äg det + vänd till tips-frågan):**
+
+> Helt rättvis kritik 😅 Ska vara ärlig: kartan har just nu pinsamt lite i
+> själva Nykvarn — det närmaste som fanns var Järna, Mariefred och Skottvång,
+> och det var det jag listade. Men det är precis det jag vill ändra på: vad
+> händer i Nykvarn som borde vara med? Loppisar, föreningar, marknader,
+> spelningar — tipsa här så lägger jag in det. AIK–Örgryte på Friends lägger
+> jag in som reservplan 😄
+
+Kommer det tips i kommentarerna: **lägg in dem på kartan inom ett dygn** och
+svara med länk — det är hela poängen med räddningen.
 
 **V1 — länk i inlägget (godkännande-grupp):**
 

@@ -37,7 +37,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 2 | Vad händer i Tierp kommun | vadkul.se | 19/7 · länk i kommentar · ? |
 | 3 | Tjörn vad händer | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
 | 4 | Vad Händer I Åker. | vadkul.se |  |
-| 5 | Vad Händer I Nykvarn | vadkul.se | 3/8 · publicerat direkt (variant obekräftad, V2 var planen) · utfall ? |
+| 5 | Vad Händer I Nykvarn | vadkul.se | 3/8 · publicerat direkt (V2) · dag 1: 11 likes, 4 komm. varav lokalkritik (0 event i själva Nykvarn — lärdom 3/8) |
 | 6 | Vad händer i Eksjö | vadkul.se |  |
 | 7 | Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | vadkul.se |  |
 | 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad | 22/7 · länk i inlägg (variant A) · ? |
