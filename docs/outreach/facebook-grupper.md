@@ -1409,6 +1409,26 @@ precis Malå-mekaniken. Att fånga upp:
 
 Svar postade på samtliga sex kommentarer 3/8 kväll.
 
+**TAKTIK (beslut 3/8): styr tips → SJÄLVSERVICE via plusknappen, lägg inte in
+manuellt som default.** När ett eventtips kommer — särskilt från arrangören
+själv (som Juni Juli Augusti här) — svara med "lägg in det själv med
+plusknappen på kartan" i stället för "tipsa så fixar jag". Varför:
+
+- skalar (Josef blir inte flaskhals per event),
+- arrangören äger + uppdaterar sitt eget event, får grön bricka = syns extra,
+- arrangörer delar gärna sin egen kartlänk vidare → mer spridning + inlänkar
+  (precis SEO-målet i outreach/README).
+
+**Undantag — behåll "annars fixar jag det" när tipset är för värdefullt att
+tappa** (t.ex. 15/8-eventet: crown jewel i den här tråden, håll kvar
+fallback så det inte faller om arrangören inte orkar självservice).
+Plusknappen tar även icke-arrangörers tips (klistra in länk) → även
+"vad saknas"-kritikerna kan hänvisas dit.
+
+Karaoke-spåret (Olle): vänd medlemsförslag till arrangörshandling — "drar
+någon igång en karaokekväll, lägg in den på kartan" — flywheelen är att en
+kommentar blir ett riktigt event någon annan lägger in.
+
 **V1 — länk i inlägget (godkännande-grupp):**
 
 > Kolla vad som händer i Nykvarnstrakten den här veckan 👇
