@@ -192,9 +192,22 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // höger/öster, höj zoom = mer inzoomat.
 const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
 const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
-// Nivån första event-klicket flyger till. 11 ≈ 20 km tvärs över skärmen: nog för
-// att se trakten och grannevenemangen. 13 (gamla värdet) landade på kvartersnivå.
-const FIRST_CLICK_ZOOM = 11;
+// Hur brett fältet ska vara efter första event-klicket: 10 mil tvärs över
+// skärmen. Anges i meter i stället för som zoom-nivå eftersom samma zoom täcker
+// helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
+// men ≈ 8 km på mobil) — se zoomForSpan nedan.
+const FIRST_CLICK_SPAN_M = 100_000;
+
+/**
+ * Zoom-nivån som visar ungefär spanMeters tvärs över kartans BREDD vid en given
+ * latitud. MapLibre räknar zoom mot 512 px breda rutor, och en longitudgrad
+ * krymper med cos(lat) — båda ligger i formeln.
+ */
+const zoomForSpan = (widthPx: number, lat: number, spanMeters: number) => {
+    const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
+    const metersPerWorldPx = (EARTH_CIRCUMFERENCE_M * Math.cos((lat * Math.PI) / 180)) / 512;
+    return Math.log2((metersPerWorldPx * widthPx) / spanMeters);
+};
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -862,8 +875,8 @@ export default function V2Map({
     // lokalt där nyfikenheten är, i stället för att bli kvar i Sverige-vyn.
     // Bara en gång: senare klick står still som vanligt (recenter-logiken).
     // Zoomar aldrig UT (Math.max) och önske-klick räknas inte som event-klick.
-    // Nivån är medvetet lagom (~20 km tvärs över) — zoom 13 landade på
-    // kvartersnivå, vilket klippte bort omgivningen och grannevenemangen.
+    // Landar på FIRST_CLICK_SPAN_M tvärs över skärmen — brett nog att trakten och
+    // grannevenemangen syns, i stället för den kvartersnivå zoom 13 gav.
     const firstClickZoomDoneRef = useRef(false);
     const zoomInOnFirstEventClick = (ev: { lat?: number | null; lng?: number | null }) => {
         if (firstClickZoomDoneRef.current) return;
@@ -875,10 +888,12 @@ export default function V2Map({
         suppressAutoRecenterUntilRef.current = performance.now() + 1200;
         // Lägg eventet på 40%-höjd (samma yta recenter siktar på) så brickan
         // hamnar ovanför kortet som öppnas av valet.
-        const yOffset = map.getContainer().clientHeight * (0.40 - 0.5);
+        const container = map.getContainer();
+        const yOffset = container.clientHeight * (0.40 - 0.5);
+        const targetZoom = zoomForSpan(container.clientWidth, ev.lat!, FIRST_CLICK_SPAN_M);
         map.flyTo({
             center: [ev.lng!, ev.lat!],
-            zoom: Math.max(map.getZoom(), FIRST_CLICK_ZOOM),
+            zoom: Math.max(map.getZoom(), targetZoom),
             offset: [0, yOffset],
             duration: 900,
         });
