@@ -132,7 +132,9 @@ be Claude räkna om den först.
 | Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
-| Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** (inget godkännande) — variant obekräftad (V2 enligt plan; kolla att länkkommentaren postades) | 2026-08-23 |
+| Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
+| Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
+| Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (inget godkännande) — variant obekräftad (V2 enligt plan; kolla att länkkommentaren postades) | 2026-08-24 |
 
 ---
 
@@ -1258,7 +1260,11 @@ Umeå — Sundsvallsupplagan är den på Ungdomsfältet lör 8/8.
 
 ### U. Vad händer i Sundsvall? (#57 → /evenemang/sundsvall)
 
-**UTKAST — EJ POSTAT.**
+**✅ POSTAT (bekräftat 3/8; exakt datum 2 el. 3/8). KRÄVDE GODKÄNNANDE — i kö
+3/8. Karens till 2026-08-24.
+⚠️ BEVAKNINGSPUNKT: raderna toppar tors–lör (Ronny & Ragge 6/8, Rock The
+Night + Elda för kråkorna 8/8) — släpps inlägget efter lördag 8/8 är hela
+listan passé; kommentera/uppdatera i så fall.**
 
 **U1 — länk i inlägget (godkännande-grupp):**
 
@@ -1299,6 +1305,12 @@ texten (länk i inlägget) i stället, låt den vara (27/7-beslutet: redigera
 inte in/ut länkar i efterhand). Karens till 2026-08-23. Bevaka första dygnet
 + uppföljning efter en vecka.** Ersätter 1/8-versionen ovan.
 
+**DAG 1-FACIT (3/8): 0 reaktioner.** Innan slutsats dras om texten: skumma
+gruppens flöde — ligger övriga inlägg också på 0–3 likes är det en lågaktiv
+grupp (samma mönster som Ängelholm 27/7, `insikt-gruppaktivitet-2026-07-27`),
+inte textens fel. Festivalraderna (Eskilstunafesten tors–lör) kan dessutom
+dra reaktioner senare i veckan. Uppföljning 9/8.
+
 **T1 — länk i inlägget (godkännande-grupp):**
 
 > Bra vecka på gång i Torshälla och Eskilstuna 👇
@@ -1329,8 +1341,12 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### V. Vad Händer I Nykvarn (#5 → vadkul.se)
 
-**UTKAST — EJ POSTAT.** Utbudet ligger i praktiken i Åkers bergslag/Järna/
-Mariefred — "trakten"-framing. Skottvångs Grufva är dragplåstret (två
+**✅ POSTAT 3/8 — publicerades DIREKT, inget godkännande krävdes. Variant
+obekräftad: V2 var planen — KOLLA att första kommentaren med vadkul.se-länken
+postades direkt efter (utan den pekar inlägget ingenstans); postades V1-
+texten i stället, låt den vara. Karens till 2026-08-24. Bevaka första dygnet
++ uppföljning efter en vecka.** Utbudet ligger i praktiken i Åkers bergslag/
+Järna/Mariefred — "trakten"-framing. Skottvångs Grufva är dragplåstret (två
 konsertkvällar samma vecka).
 
 **V1 — länk i inlägget (godkännande-grupp):**

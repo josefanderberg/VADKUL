@@ -37,7 +37,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 2 | Vad händer i Tierp kommun | vadkul.se | 19/7 · länk i kommentar · ? |
 | 3 | Tjörn vad händer | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
 | 4 | Vad Händer I Åker. | vadkul.se |  |
-| 5 | Vad Händer I Nykvarn | vadkul.se |  |
+| 5 | Vad Händer I Nykvarn | vadkul.se | 3/8 · publicerat direkt (variant obekräftad, V2 var planen) · utfall ? |
 | 6 | Vad händer i Eksjö | vadkul.se |  |
 | 7 | Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | vadkul.se |  |
 | 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad | 22/7 · länk i inlägg (variant A) · ? |
@@ -66,7 +66,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 31 | Vad händer i Haninge | vadkul.se |  |
 | 32 | Vad händer i östra Göteborg? | /evenemang/goteborg |  |
 | 33 | Vad händer i Svalövs Kommun | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt (variant obekräftad, V2 var planen) · utfall ? |
+| 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt · dag 1: 0 reaktioner (kolla gruppaktivitet; uppföljning 9/8) |
 | 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 36 | Vad händer i Kristianstad | /evenemang/kristianstad |  |
 | 37 | Vad händer i Ängelholm? | vadkul.se |  |
@@ -89,7 +89,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
 | 55 | Vad händer i Majorna | vadkul.se |  |
 | 56 | Vad händer i Linné? | vadkul.se |  |
-| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall |  |
+| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall | 2–3/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö 3/8 |
 | 58 | Vad händer i Uppsala | /evenemang/uppsala | 23/7 · länk i kommentar · publicerat direkt |
 | 59 | Vad händer i Gränna | vadkul.se | 19/7 · länk i kommentar · ? |
 | 60 | Vad händer i Västmanland! | vadkul.se |  |
