@@ -1384,6 +1384,15 @@ Karens till 2026-08-24.**
 Kommer det tips i kommentarerna: **lägg in dem på kartan inom ett dygn** och
 svara med länk — det är hela poängen med räddningen.
 
+**Kommentar 3 (Gun-Britt, 3/8): "Eldtomta ligger i Grödinge i Botkyrka
+kommun" — HON HAR RÄTT.** Verifierat i datat: PRO Tumba (Botkyrka) har eget
+event på Eldtomta Café. Två fel i ett: (1) "Hölö" i inläggsraden var vår
+felgissning, (2) 🔧 **DATAÅTGÄRD: Tickster-eventen på Eldtomta Café & Butik
+(Trädgårdslive Maria Jane Smith 7/8 + Tommy Nilsson 14/8) är geokodade till
+59.106, 17.732 — ska vara Grödinge ~59.19–59.20, ~17.79** (jfr PRO Tumbas
+59.203, 17.855). Felet är dessutom orsaken till att raden alls kom med i
+Nykvarn-radien. Korta tack-svar postade på alla tre kommentarerna (3/8).
+
 **V1 — länk i inlägget (godkännande-grupp):**
 
 > Kolla vad som händer i Nykvarnstrakten den här veckan 👇
