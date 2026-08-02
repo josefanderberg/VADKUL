@@ -192,6 +192,9 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // höger/öster, höj zoom = mer inzoomat.
 const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
 const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
+// Nivån första event-klicket flyger till. 11 ≈ 20 km tvärs över skärmen: nog för
+// att se trakten och grannevenemangen. 13 (gamla värdet) landade på kvartersnivå.
+const FIRST_CLICK_ZOOM = 11;
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -859,6 +862,8 @@ export default function V2Map({
     // lokalt där nyfikenheten är, i stället för att bli kvar i Sverige-vyn.
     // Bara en gång: senare klick står still som vanligt (recenter-logiken).
     // Zoomar aldrig UT (Math.max) och önske-klick räknas inte som event-klick.
+    // Nivån är medvetet lagom (~20 km tvärs över) — zoom 13 landade på
+    // kvartersnivå, vilket klippte bort omgivningen och grannevenemangen.
     const firstClickZoomDoneRef = useRef(false);
     const zoomInOnFirstEventClick = (ev: { lat?: number | null; lng?: number | null }) => {
         if (firstClickZoomDoneRef.current) return;
@@ -873,7 +878,7 @@ export default function V2Map({
         const yOffset = map.getContainer().clientHeight * (0.40 - 0.5);
         map.flyTo({
             center: [ev.lng!, ev.lat!],
-            zoom: Math.max(map.getZoom(), 13),
+            zoom: Math.max(map.getZoom(), FIRST_CLICK_ZOOM),
             offset: [0, yOffset],
             duration: 900,
         });
