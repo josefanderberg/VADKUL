@@ -1393,6 +1393,22 @@ felgissning, (2) 🔧 **DATAÅTGÄRD: Tickster-eventen på Eldtomta Café & Buti
 59.203, 17.855). Felet är dessutom orsaken till att raden alls kom med i
 Nykvarn-radien. Korta tack-svar postade på alla tre kommentarerna (3/8).
 
+**TRÅDEN VÄNDE (3/8 kväll, ~4 h efter postning):** tipsen och förslagen kom —
+precis Malå-mekaniken. Att fånga upp:
+
+1. 🎯 **EVENTTIPS: "Juni Juli Augusti – AUGUSTI", 15/8 i Nykvarn** (tips av
+   Stina Björklund; bandets/arrangörens sida svarade själv i tråden: "Vi ser
+   fram emot att se HELA NYKVARN där"). Josef har frågat efter plats + tid i
+   tråden. **MÅSTE läggas in på kartan när svaret kommer** — det är löftet
+   som räddar hela tråden, och Nykvarns första riktiga kartpost.
+2. 💡 **Funktionsförslag (Frank Roghem):** (a) filtrera på tidsperiod i
+   stället för en specifik dag (t.ex. en vecka), (b) avstånd från "min
+   plats". Loggas som produktfeedback — första spontana funktionsönskemålen
+   från en gruppkommentar.
+3. 🎤 **Karaoke-idé (Olle Hasserud)** — följdfråga ställd om vilket ställe.
+
+Svar postade på samtliga sex kommentarer 3/8 kväll.
+
 **V1 — länk i inlägget (godkännande-grupp):**
 
 > Kolla vad som händer i Nykvarnstrakten den här veckan 👇
