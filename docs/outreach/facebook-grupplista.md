@@ -68,7 +68,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 33 | Vad händer i Svalövs Kommun | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
 | 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt · dag 1: 0 reaktioner (kolla gruppaktivitet; uppföljning 9/8) |
 | 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
-| 36 | Vad händer i Kristianstad | /evenemang/kristianstad | utkast klart (4/8-X), EJ postat |
+| 36 | Vad händer i Kristianstad | /evenemang/kristianstad | ⏸️ avvald 4/8 (lugn vecka) — utkast sparat till senare |
 | 37 | Vad händer i Ängelholm? | vadkul.se |  |
 | 38 | Vad händer i Tierps kommun? | vadkul.se |  |
 | 39 | Vad händer i Nynäshamn | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
@@ -87,7 +87,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
 | 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
 | 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
-| 55 | Vad händer i Majorna | /evenemang/goteborg | utkast klart (4/8-W), EJ postat |
+| 55 | Vad händer i Majorna | /evenemang/goteborg | 4/8 · POSTAT (variant/utfall obekräftat) · karens 25/8 |
 | 56 | Vad händer i Linné? | vadkul.se |  |
 | 57 | Vad händer i Sundsvall? | /evenemang/sundsvall | 2–3/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö 3/8 |
 | 58 | Vad händer i Uppsala | /evenemang/uppsala | 23/7 · länk i kommentar · publicerat direkt |
@@ -96,7 +96,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 61 | Vad händer i Kungsladugård | vadkul.se |  |
 | 62 | Vad händer i Frölunda? | /evenemang/goteborg |  |
 | 63 | Vad händer i Örnsköldsvik? | vadkul.se |  |
-| 64 | Vad händer i Helsingborg? | /evenemang/helsingborg |  |
+| 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | utkast klart (4/8-Ä, Veronica Maggio + World Choir Games), EJ postat |
 | 65 | Vad händer i Torsås? | vadkul.se |  |
 | 66 | Du vet vad som händer i Eskilstuna | /evenemang/eskilstuna | 24/7 · länk i inlägg (m. stjärnlänk) · KRÄVDE GODKÄNNANDE (enda av dagens fyra) · ej släppt 25/7 |
 | 67 | Vad händer i kalmar! | /evenemang/kalmar | 23/7 · länk i kommentar · publicerat direkt |

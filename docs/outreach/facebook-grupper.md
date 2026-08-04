@@ -158,8 +158,9 @@ be Claude räkna om den först.
 | Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
 | Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
 | Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (V2) — dag 1: **11 likes, 4 komm. varav LOKALKRITIK** ("inget av det är i närheten") — 0 event i själva Nykvarn, se lärdom 3/8. Svar postat, vänd till tips-fråga | 2026-08-24 |
-| Vad händer i Majorna | Majorna/Göteborg | 4/8-W | ____ | UTKAST — EJ POSTAT | +3 v |
-| Vad händer i Kristianstad | Kristianstad | 4/8-X | ____ | UTKAST — EJ POSTAT | +3 v |
+| Vad händer i Majorna | Majorna/Göteborg | 4/8-W | 2026-08-04 | **POSTAT** (variant + utfall obekräftat — kolla länkkommentaren om V2) | 2026-08-25 |
+| Vad händer i Kristianstad | Kristianstad | 4/8-X | — | ⏸️ AVVALD 4/8 — lugn kulturvecka, inget dragplåster i stan; utkast (varierad version) sparat till senare vecka | — |
+| Vad händer i Helsingborg? (#64) | Helsingborg | 4/8-Ä | ____ | UTKAST — EJ POSTAT (ersätter Kristianstad; headliner-veckan: Veronica Maggio + World Choir Games) | +3 v |
 | Norrtälje - Vad händer på byn? | Norrtälje | 4/8-Y | ____ | UTKAST — EJ POSTAT | +3 v |
 | Vad händer i Piteå? | Piteå | 4/8-Z | ____ | UTKAST — EJ POSTAT | +3 v |
 
@@ -1616,6 +1617,137 @@ kartstycket byts mot:
 
 > Jag har byggt en gratis karta som samlar allt som händer i Piteåtrakten —
 > bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
+
+---
+
+## Tisdag 4/8 — REVIDERAT (nytt budskap: syftet + medlemsnyttan)
+
+Ändringar mot första 4/8-urvalet ovan:
+- **Majorna (W) postad** → utgår ur kön.
+- **Kristianstad (X) avvald** — efter kvalitetskoll var det en lugn kulturvecka
+  utan dragplåster i stan; de "bättre" alternativen låg fel (Hällevik
+  jazzfestival 27 km i Blekinge, "Nordic Championship"-festen hörde till ett
+  BASTU-mästerskap i Helsingborg, C4 Rocks overifierad venue). Utkastet sparas.
+- **Helsingborg? (#64) IN som ersättare** — starkaste headliner-veckan av alla
+  orörda grupper: **Veronica Maggio på Sofiero (lör) + World Choir Games**
+  (körsångs-VM i centrum 6–10/8) + Helsingborg Pride. Systergrupp till "Det
+  händer i Helsingborg" (24/7, 26 likes) → helt annan text/vecka, ok.
+
+**NYTT BUDSKAP (Josefs instruktion 4/8) — gäller alla framtida utkast:**
+1. **Skriv ut SYFTET:** allt som händer samlas på EN karta, så man enkelt ser
+   vad som är på gång oavsett var man är.
+2. **Medlemsnyttan (gratis konto):** ➕ lägga in eget event · 💡 tipsa ·
+   ✨ önska event · 🔔 **få notis när något man gillat börjar** (nytt).
+
+Format: event = onsdag och framåt (postat tisdag). Godkännandekö → V1;
+direktpublicering → V2 + kommentar direkt efter. Läs regelrutan per grupp.
+
+### Ä. Vad händer i Helsingborg? (#64 → /evenemang/helsingborg)
+
+**UTKAST — EJ POSTAT.** Ersätter Kristianstad. Veronica Maggio spelar på
+**Sofiero** (INTE "Nya Studenternas" — den raden i datat är felgeokodad
+Uppsala-dubblett).
+
+**Ä1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka Helsingborg har framför sig 👇
+>
+> 🎤 Veronica Maggio på Sofiero (lördag)
+> 🎶 World Choir Games – körsångs-VM i centrum (torsdag–måndag)
+> 🏳️‍🌈 Helsingborg Pride drar igång (helgen)
+> 🎸 Reggae på Vagnhall 16 (lördag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Bara den närmaste veckan finns över 140
+> event i Helsingborgstrakten:
+> https://vadkul.se/evenemang/helsingborg
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad går ni på i helgen? 👇
+
+**Ä2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — över 140 event i Helsingborgstrakten
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/helsingborg — tipsa gärna om det jag missat!`
+
+### Y-rev. Norrtälje - Vad händer på byn? (#11 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Omskrivet med nytt budskap. Annan grupp än #48
+(borttagen 17/7). Norrtälje saknar egen sida → vadkul.se.
+
+**Y1 — länk i inlägget (godkännande-grupp):**
+
+> Somrig vecka i Norrtälje 👇
+>
+> 🎶 Folkmusik från Roslagen (onsdag)
+> 🥊 Skuggboxare på Norrtälje Sommarscen, Societetsparken (onsdag)
+> 🍹 Sommarfest i sommarbaren, Societetsparken (torsdag)
+> 🎤 Norrtälje Countrybrudar på ångfartyget Blidösund (lördag)
+> 🏳️‍🌈 Cinema Pride: Tom of Finland (måndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — runt 30 event i Norrtälje med omnejd
+> bara den närmaste veckan:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad hittar ni på i veckan? 👇
+
+**Y2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — runt 30 event i Norrtälje med omnejd
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Norrtälje!`
+
+### Z-rev. Vad händer i Piteå? (#21 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Omskrivet med nytt budskap. Bärs av Noliamässan
+(pågår hela veckan); tunn i övrigt — Kungsbacka finns som byte. Piteå saknar
+egen sida → vadkul.se.
+
+**Z1 — länk i inlägget (godkännande-grupp):**
+
+> Noliaveckan i Piteå! 👇
+>
+> 🎪 Noliamässan pågår på Nolia hela veckan — norra Sveriges största mötesplats
+> 🎶 Musik i sommarkväll i Norrfjärdens kyrka (onsdag)
+> 🎶 Musikprogram med Stefan B Andersson (tisdag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — allt i Piteåtrakten bara den närmaste
+> veckan:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad mer händer i stan som borde vara med? Tipsa så lägger jag in det! 👇
+
+**Z2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — allt i Piteåtrakten bara den närmaste
+> veckan. Länken ligger i kommentarerna 👇
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
