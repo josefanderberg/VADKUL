@@ -1751,3 +1751,28 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
+
+---
+
+### PRODUKTFEEDBACK — Piteå-tråden 4/8 (Elin Johansson, skarp UX-QA)
+
+En kommentar gav tre konkreta, äkta problem (verifierade i koden). Logga som
+buggar/att-göra — värdefullare än själva outreach-utfallet:
+
+1. **"+"-ikonen läses som zoom, inte "lägg in event".** Plus på en karta =
+   universellt "zooma in". Vår Skapa-event-knapp är en `<Plus>`
+   (`apps/web/src/components/v2/V2Map.tsx:2864`). → byt ikon (t.ex.
+   penna/kalender-plus) eller tydligare etikett/tooltip.
+2. **"Nästa" hoppar till annan ort.** `pickNext`
+   (`apps/web/src/components/v2/EventCard.tsx:1081`) tar geografiskt närmaste
+   OBESÖKTA event; när ortens event är slut skuttar den till nästa ort.
+   Användaren förväntar sig "nästa datum/tillfälle på SAMMA plats"
+   (`handleSameSpotNext` finns redan för samma koordinat men är inte det
+   "Nästa" gör). → överväg att döpa om knappen, eller låt "Nästa" prioritera
+   samma ort/plats innan den lämnar orten.
+3. **Kartan "rycker och låser ner på olika platser fast man inte klickat".**
+   Oönskad kamerarörelse/auto-val av markör. → reproducera; trolig källa är
+   kamera-follow/auto-select (jfr `onNavigate`/`flyTo`-logiken i V2Map).
+
+Svar postat till Elin 4/8 (bekräftade alla tre + bjöd in till mer). Bra
+kandidat att följa upp med — engagerad testare.
