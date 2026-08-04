@@ -2298,22 +2298,15 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent, cardExpanded]);
 
-    // 2a. Håll den valda brickan synlig LÖPANDE — inte bara en gång vid valet.
-    //     Panorerar man iväg så brickan hamnar bakom kortet (eller utanför vyn)
-    //     dras den fram igen var 5:e sekund. Kollen står still om brickan redan
-    //     syns (recenterOnSelected returnerar tidigt) och hoppar över pågående
-    //     gest/animation så vi inte rycker kartan ur handen på användaren.
-    useEffect(() => {
-        if (!selectedEvent) return;
-        const t = setInterval(() => {
-            if (performance.now() < suppressAutoRecenterUntilRef.current) return;
-            const map = mapRef.current;
-            if (!map || map.isMoving()) return;
-            recenterOnSelected();
-        }, 5000);
-        return () => clearInterval(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent, cardExpanded]);
+    // 2a. BORTTAGEN (5/8): "håll valda brickan synlig löpande" — en 5-sekunders
+    //     interval som panorerade tillbaka till valt event så fort kartan stod
+    //     still. Lät rimlig, men i praktiken RYCKTE den kartan ur händerna på
+    //     användare som panorerat iväg för att utforska: varje paus i dragningen
+    //     → hopp tillbaka till det (ofta auto-valda) eventet, upplevt som att
+    //     kartan "hoppar tillbaka till bas-vyn" (buggrapport från Piteå-testare,
+    //     Firefox/desktop). Att panorera bort från sitt valda event är ett
+    //     medvetet val. Engångs-panoreringen vid VALET (effekt 2 ovan) och
+    //     Fokus-knappen täcker behovet att hitta tillbaka.
 
     // 2b. Zoom-knappen i Nästa-pillen: flyg till det valda eventet och zooma IN
     //     (vanliga val står still — detta är den explicita inzoomningen). Klicket i
