@@ -158,6 +158,10 @@ be Claude räkna om den först.
 | Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
 | Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
 | Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (V2) — dag 1: **11 likes, 4 komm. varav LOKALKRITIK** ("inget av det är i närheten") — 0 event i själva Nykvarn, se lärdom 3/8. Svar postat, vänd till tips-fråga | 2026-08-24 |
+| Vad händer i Majorna | Majorna/Göteborg | 4/8-W | ____ | UTKAST — EJ POSTAT | +3 v |
+| Vad händer i Kristianstad | Kristianstad | 4/8-X | ____ | UTKAST — EJ POSTAT | +3 v |
+| Norrtälje - Vad händer på byn? | Norrtälje | 4/8-Y | ____ | UTKAST — EJ POSTAT | +3 v |
+| Vad händer i Piteå? | Piteå | 4/8-Z | ____ | UTKAST — EJ POSTAT | +3 v |
 
 ---
 
@@ -1455,3 +1459,163 @@ kartstycket byts mot:
 
 Första kommentaren (postas DIREKT efter publicering):
 `Här är kartan: https://vadkul.se — och tipsa gärna om det som saknas i Nykvarn!`
+
+---
+
+## Tisdag 4/8 — 4 orörda grupper (första urvalet EFTER Nykvarn-läxan)
+
+**Urvalsmetoden uppgraderad (lärdom 3/8):** räknade event **inom 8 km från
+själva orten**, inte bara 25 km-radien — och kollade KVALITETEN (bio +
+kyrkkaffe/PRO-brus bortfiltrerat), inte bara antalet. Flera högsiffriga
+kandidater föll på kvalitet: Luleå (23 lokalt men mest barnkör + bibelsamtal),
+Haninge (43 men nästan bara sagostund/pyssel — "riktiga grejen ligger i
+Stockholm city", 28/7-noteringen bekräftad), Piteå (43 men 28 av dem bio).
+
+**Valda på ÄKTA lokala dragplåster inom 8 km:**
+- **Majorna** (Göteborg väster, 200+ lokalt) — Sommarjazz, blues, Rigmor
+  Gustafsson, Liseberg. Systergrupp till "Vad händer i Göteborg?" (25/7, 10
+  dagar sedan) → helt annan text, väster-vinklad.
+- **Kristianstad** (egen sida, ~20 lokalt men varierat) — Regionmuseet,
+  Filmmuseet, Keith Jarrett-hyllning.
+- **Norrtälje - Vad händer på byn? (#11)** (24 lokalt, sommarstad) —
+  Sommarscen, Countrybrudar, Cinema Pride. OBS annan grupp än "Vad händer i
+  Norrtälje?" (#48, borttagen 17/7).
+- **Piteå** (SVAGAST — bärs av Noliamässan, som pågår hela veckan och ÄR
+  stans pratämne). Ärligt tunn i övrigt; överväg Kungsbacka som byte.
+
+**Format:** korta V1 (formathypotesen efter 1/8-nekandena — medskapa-blocket
+kan läsa som tjänstereklam i granskningskö; ligger kvar bara i V2). Ingen
+stjärnlänk. Event = onsdag och framåt (postas tisdag). Läs regelrutan i varje
+grupp före postning.
+
+### W. Vad händer i Majorna (→ /evenemang/goteborg)
+
+**UTKAST — EJ POSTAT.** Väster-/centrumvinklad; alla rader inom 3 km.
+
+**W1 — länk i inlägget (godkännande-grupp):**
+
+> Full fart i Göteborg den här veckan 👇
+>
+> 🎷 Sommarjazz i Flunsåsparken (onsdag)
+> 🎸 Wednesdays: Blues at Sommarkajen, Kajskjul 8 (onsdag)
+> 🎤 Rigmor Gustafsson – Toner på verandan, Hôtel Eggers (onsdag)
+> 🎢 Live at Liseberg – konserter hela veckan
+>
+> Jag har byggt en gratis karta som samlar allt som händer i stan —
+> hundratals event bara den närmaste veckan:
+> https://vadkul.se/evenemang/goteborg
+>
+> Saknas något i din del av stan? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på i veckan? 👇
+
+**W2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i stan —
+> hundratals event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+>
+> Och kartan är inte bara min: arrangerar du något kan du lägga in det själv
+> med plusknappen (egna event får en grön bricka), och finns det en sida där
+> dina event redan listas — tipsa, så hämtas den in automatiskt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det jag missat!`
+
+### X. Vad händer i Kristianstad (→ /evenemang/kristianstad)
+
+**UTKAST — EJ POSTAT.**
+
+**X1 — länk i inlägget (godkännande-grupp):**
+
+> Bra kulturvecka i Kristianstad 👇
+>
+> 🎨 Utställningen "Fake for Real" på Regionmuseet (hela veckan)
+> 🎬 Film på terrassen: This is Spinal Tap på Filmmuseet (torsdag)
+> 🎬 Stumfilm: Fänrik Ståls sägner på Filmmuseet (fredag)
+> 🎷 "My Song" – en hyllning till Keith Jarrett i Heliga Trefaldighets kyrka (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Kristianstadstrakten — bara den närmaste veckan:
+> https://vadkul.se/evenemang/kristianstad
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**X2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Kristianstadstrakten — bara den närmaste veckan. Länken ligger i
+> kommentarerna 👇
+>
+> Psst: arrangerar du något själv kan du lägga in det direkt på kartan med
+> plusknappen — egna event får en grön bricka och syns extra tydligt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/kristianstad — tipsa gärna om det jag missat!`
+
+### Y. Norrtälje - Vad händer på byn? (#11 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** OBS: annan grupp än "Vad händer i Norrtälje?" (#48,
+borttagen 17/7). Norrtälje saknar egen stadssida → länk = vadkul.se.
+
+**Y1 — länk i inlägget (godkännande-grupp):**
+
+> Somrig vecka i Norrtälje 👇
+>
+> 🎶 Folkmusik från Roslagen (onsdag)
+> 🥊 Skuggboxare på Norrtälje Sommarscen, Societetsparken (onsdag)
+> 🍹 Sommarfest i sommarbaren, Societetsparken (torsdag)
+> 🎤 Norrtälje Countrybrudar på ångfartyget Blidösund (lördag)
+> 🏳️‍🌈 Cinema Pride: Tom of Finland (måndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Norrtälje med
+> omnejd — bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad hittar ni på i veckan? 👇
+
+**Y2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i Norrtälje med
+> omnejd — bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Norrtälje!`
+
+### Z. Vad händer i Piteå? (#21 → vadkul.se)
+
+**UTKAST — EJ POSTAT. SVAGAST av de fyra** — utan Noliamässan vore den
+Malå-format. Noliamässan (Nolia Piteå) pågår hela veckan och ÄR veckans
+händelse i stan, så den bär inlägget. Byt gärna mot Kungsbacka (Tjolöholm +
+Kulturhuset Fyren) om du hellre vill ha bredd. Piteå saknar egen sida →
+vadkul.se.
+
+**Z1 — länk i inlägget (godkännande-grupp):**
+
+> Noliaveckan i Piteå! 👇
+>
+> 🎪 Noliamässan pågår på Nolia hela veckan — Sveriges nord största mötesplats
+> 🎶 Musik i sommarkväll i Norrfjärdens kyrka (onsdag)
+> 🎶 Musikprogram med Stefan B Andersson (tisdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Piteåtrakten —
+> bara den närmaste veckan:
+> https://vadkul.se
+>
+> Vad mer händer i stan som borde vara med? Tipsa i kommentarerna så lägger
+> jag in det! 👇
+
+**Z2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i Piteåtrakten —
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
