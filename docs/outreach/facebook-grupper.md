@@ -1756,23 +1756,41 @@ Första kommentaren (postas DIREKT efter publicering):
 
 ### PRODUKTFEEDBACK — Piteå-tråden 4/8 (Elin Johansson, skarp UX-QA)
 
-En kommentar gav tre konkreta, äkta problem (verifierade i koden). Logga som
-buggar/att-göra — värdefullare än själva outreach-utfallet:
+En kommentar gav tre konkreta observationer. **Josefs bedömning (4/8) efter
+diskussion: två av tre är MEDVETNA designval, inte buggar** — ändra inte
+beteendet, på sin höjd förtydliga:
 
-1. **"+"-ikonen läses som zoom, inte "lägg in event".** Plus på en karta =
-   universellt "zooma in". Vår Skapa-event-knapp är en `<Plus>`
-   (`apps/web/src/components/v2/V2Map.tsx:2864`). → byt ikon (t.ex.
-   penna/kalender-plus) eller tydligare etikett/tooltip.
-2. **"Nästa" hoppar till annan ort.** `pickNext`
-   (`apps/web/src/components/v2/EventCard.tsx:1081`) tar geografiskt närmaste
-   OBESÖKTA event; när ortens event är slut skuttar den till nästa ort.
-   Användaren förväntar sig "nästa datum/tillfälle på SAMMA plats"
-   (`handleSameSpotNext` finns redan för samma koordinat men är inte det
-   "Nästa" gör). → överväg att döpa om knappen, eller låt "Nästa" prioritera
-   samma ort/plats innan den lämnar orten.
-3. **Kartan "rycker och låser ner på olika platser fast man inte klickat".**
-   Oönskad kamerarörelse/auto-val av markör. → reproducera; trolig källa är
-   kamera-follow/auto-select (jfr `onNavigate`/`flyTo`-logiken i V2Map).
+1. **"+"-ikonen** (`apps/web/src/components/v2/V2Map.tsx:2864`) läses av
+   vissa som zoom — men plus för "skapa nytt" är lika etablerat. **Behåll.**
+   Ev. åtgärd: tooltip/label "Skapa event" syns tydligare.
+2. **"Nästa" = geografiskt närmaste obesökta event** (`pickNext`,
+   `apps/web/src/components/v2/EventCard.tsx:1081`) är KÄRNMEKANIKEN i
+   bläddringen (bilder förladdas t.o.m. för kommande hopp) — att den vandrar
+   vidare till nästa ort när områdets event är slut är avsett. **Behåll.**
+   Ev. åtgärd: mikrotext/tooltip som sätter förväntan.
+3. **Kartan "rycker och låser ner på olika platser fast man inte klickat"** —
+   detta är den ÄKTA buggen att jaga. Reproducera (mobil? vid last? hela
+   tiden?); trolig källa kamera-follow/auto-val (jfr `onNavigate`/`flyTo`-
+   logiken i V2Map). Fråga Elin om enhet + när det händer.
 
-Svar postat till Elin 4/8 (bekräftade alla tre + bjöd in till mer). Bra
-kandidat att följa upp med — engagerad testare.
+Svar postat till Elin 4/8 (bekräftade + bjöd in till mer). Engagerad testare
+— värd att återkomma till.
+
+### FUNKTIONSSKISS — periodfilter (Franks önskan 3/8, design 4/8)
+
+**Upptäckt:** intervallrendering FINNS redan — "I helgen" är `days:3`, och
+URL:en läser `?dag=&dagar=` (`page.tsx:973`) → `vadkul.se/?dagar=7` ger
+veckovy IDAG (odokumenterat). Problemet: dagfiltret är rent tidsbaserat utan
+geo-avgränsning och kartan kör medvetet INGEN klustring (`V2Map.tsx:1201`) →
+vecka × hela Sverige = tusentals brickor.
+
+**Vald riktning (Josefs idé): zoom-gatad period** — "ju närmare du zoomar i
+rummet, desto längre får du zooma ut i tiden":
+- Utzoomad (land/region): bara dag + helg (som idag).
+- Inzoomad (stadsnivå): "Hela veckan" låses upp i DayPicker, och i veckoläge
+  bounds-filtreras `filteredEvents` till synligt område + marginal.
+- Zoom ut i veckoläge → fall tillbaka till dagvy (eller hint).
+
+Byggbitar: zoomnivå/bounds upp från V2Map (kartcentrum rapporteras redan),
+upplåsbart val i DayPicker, bounds-villkor i `filteredEvents`. Testa tätheten
+först med `?dagar=7` innan bygget prioriteras.
