@@ -1,5 +1,28 @@
 # FB-grupperna — logg + inlägg
 
+## 🚨 LÄRDOM 2026-08-03: radien ljuger för småorter — kolla utbudet i SJÄLVA orten
+
+Nykvarn-inlägget (3/8) listade fem event "i Nykvarnstrakten" — **noll av dem
+låg i Nykvarn** (0 event inom 8 km i datat; raderna låg 15–19 km bort,
+fågelvägen). Lokalborna såg det direkt: _"Inget av det är i närheten. Du
+kunde lika väl skrivit ut AIK–Örgryte på Friends"_ / _"Ingenting i trakten
+med andra ord"_. 11 likes och 4 kommentarer, men förtroendeskadan är
+poängen — kartan framstod som att den överdriver.
+
+**Regeln framåt (obligatorisk i urvalssteget):**
+
+1. Räkna ALLTID eventen **inom ~8 km från tätorten** separat, inte bara
+   25 km-radien. Radien funkar för städer (folk pendlar in) — för småorter
+   betyder "trakten" tätorten plus närmaste milen.
+2. **< 5 event i själva orten → Malå-formatet** (ärligt "kartan har tunt
+   just nu för [ort] — vad borde vara med? Tipsa!") **eller skippa gruppen.**
+   Aldrig en "kolla vad som händer hos er"-lista byggd på grannorter.
+3. Skriv ortnamn på VARJE eventrad när raderna inte ligger i gruppens ort —
+   låt läsaren se avstånden själv i stället för att upptäcka dem.
+
+Räddningen när det ändå hänt: äg det i kommentarerna + vänd till
+tips-frågan (svarstexten för Nykvarn ligger i V-sektionen).
+
 ## 🚨 LÄRDOM 2026-07-30: utkast är färskvara — räkna om raderna samma dag
 
 Tre av 28/7-utkasten postades först 30/7. Västmanlandsinlägget gick därför upp
@@ -146,6 +169,19 @@ be Claude räkna om den först.
 | Vad händer i Västmanland! | Västmanland | 28/7-O | 2026-07-30 | uppe — ⚠️ två onsdagsrader hade redan passerat | 2026-08-20 |
 | Vad händer på Östermalm. | Stockholm/Östermalm | 30/7-V2 | 2026-07-30 | uppe enligt ägaren (text ej verifierad mot flödet) | 2026-08-20 |
 | VAD HÄNDER I MÖLNDAL ? | Mölndal | 28/7-M | 2026-07-30 | ❌ **AVVISAT — släpptes aldrig igenom** | admin-DM + regelkoll först |
+
+| Tjörn vad händer | Tjörn | 1/8-P | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, länk i inlägget) — i kö, ej släppt ännu (1/8) | 2026-08-22 |
+| Vad händer i Nynäshamn | Nynäshamn | 1/8-Q | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
+| Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
+| På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
+| Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
+| Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
+| Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (V2) — dag 1: **11 likes, 4 komm. varav LOKALKRITIK** ("inget av det är i närheten") — 0 event i själva Nykvarn, se lärdom 3/8. Svar postat, vänd till tips-fråga | 2026-08-24 |
+| Vad händer i Majorna | Majorna/Göteborg | 4/8-W | 2026-08-04 | **POSTAT** (variant + utfall obekräftat — kolla länkkommentaren om V2) | 2026-08-25 |
+| Vad händer i Kristianstad | Kristianstad | 4/8-X | — | ⏸️ AVVALD 4/8 — lugn kulturvecka, inget dragplåster i stan; utkast (varierad version) sparat till senare vecka | — |
+| Vad händer i Helsingborg? (#64) | Helsingborg | 4/8-Ä | — | ⚠️ **UTKAST TILLBAKADRAGET** — gruppen var INTE orörd (N2 postad 30/7, se raden ovan); felval pga osynkad main-logg. Posta EJ före 20/8 | — |
+| Norrtälje - Vad händer på byn? | Norrtälje | 4/8-Y | ____ | UTKAST — EJ POSTAT | +3 v |
+| Vad händer i Piteå? | Piteå | 4/8-Z | 2026-08-04 | **publicerat direkt** (Z2, länk i kommentar) — dag 1: 1 like, 4 komm. = UX-GULD (Elin: ryck-buggen hittad+fixad, Nästa/plus-diskussion, periodönskemål) | 2026-08-25 |
 
 ---
 
@@ -1100,3 +1136,835 @@ till centrumgruppen.
 > Vad går ni på? 👇
 
 Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som händer i Majorna och Linné, jag fyller på.`
+
+## ⚠️ ODOKUMENTERAT 29–31/7 — ✅ LÖST vid main-mergen 5/8
+
+**Facit (fanns i main:s logg, se "Torsdag 30/7"-sektionen):** 30/7 postades
+Mölndal (M — ❌ avvisad), Helsingborg #64 (N2 — uppe), Västmanland (O — uppe,
+två passerade rader) och Östermalm (uppe). Karens för de tre uppe: 20/8.
+**Konsekvens:** 4/8-utkastet Ä (Helsingborg #64) var ett FELVAL — skrevs i
+tro att gruppen var orörd. LÄRDOM: synka main före varje gruppurval;
+loggen kan ligga före på en annan branch. Ursprungliga varningstexten nedan
+behålls som historik.
+
+Inget loggfört mellan 28/7 (M/N/O-utkasten ovan, märkta EJ POSTAT) och 1/8.
+Josef bekräftade 1/8 att postningar GJORDES minst en av dagarna men inte
+dokumenterades. Mest sannolika kandidater om kön följdes: **M (Mölndal),
+N (Vad händer i Helsingborg? #64), O (Västmanland!), L2 (VAD HÄNDER I
+LANDSKRONA)** — men det är gissning, inte facit.
+
+**Så fylls luckan (två källor):**
+
+1. **FB:s aktivitetslogg** — profilen → Aktivitetslogg → "Inlägg" (eller resp.
+   grupps "Ditt innehåll"). Visar exakt vilka grupper som fick inlägg 29–31/7.
+2. **Firestore `outreachLog`** — admin-konsolen `/admin/outreach` (TodayPanel)
+   om inläggen loggades där vid postning.
+
+Fyll sedan i: Loggen-tabellen ovan + Postat-kolumnen i masterlistan
+(karensdatum +3 v!). Tills det är gjort är karenskollen för alla orörda
+grupper OSÄKER — kolla aktivitetsloggen innan något ur dagens kö postas.
+
+---
+
+## Lördag 1/8 — 3 grupper × 2 varianter (skrivna 1/8 ur nattaggregatet 31/7)
+
+**Urvalet:** räknade event 2/8–8/8 inom 25 km för varje ort med orörd grupp.
+Topplistan toppades av VG-länsgruppen (652), Stockholm! (496) och
+Gbg-förorterna (411) — **alla bortvalda**: Stockholm/Södermalm postades 25+27/7
+(veckoregeln), Göteborgsområdet krockar med Mölndal-utkastet som kan ha
+postats i den odokumenterade luckan. Valda i stället på utbud + dragplåster +
+noll kollisionsrisk mot 29–31/7-kandidaterna: **Tjörn** (54 event, Ebbot på
+Åstol + Orup/Danny Saucedo på Stenungsbaden — semesterö = aktiv sommargrupp),
+**Nynäshamn** (53 event, Nynäskalaset + Sabina Ddumba på Idala),
+**Vänersborg** (83 event inkl. Trollhättan, helt orört område).
+
+**RESERV om någon av de tre visar sig vara postad 29–31/7:** På gång i
+Värmland (#19) — 139 event i länet, Karlstadgruppen fri sedan 24/7 (>1 vecka).
+⚠️ Håll raderna inom Värmlands län — datat drar in Grythyttan (Örebro län),
+samma fälla som Eskilstuna-raden i Västmanlandsutkastet.
+
+**Format:** långa formatet från 28/7 (medskapa-block, omformulerat per grupp —
+identisk text triggar spamfiltret). Ingen stjärnlänk. Godkännande-regeln:
+V1 = bara söndag och framåt; V2 = länk + kommentar direkt efter publicering.
+**Läs regelrutan i varje grupp före postning** (ämnesbegränsning = anpassa
+eventmixen, se Gotland-lärdomen).
+
+Ingen av de tre orterna har egen stadssida → länken är `vadkul.se` i alla.
+
+### P. Tjörn vad händer (#3 → vadkul.se)
+
+**✅ POSTAT 1/8 (V1 — länk i inlägget). KRÄVDE GODKÄNNANDE — i kö, ej släppt
+ännu (bekräftat av Josef 1/8). Karens till 2026-08-22. Bevaka när det släpps
+och logga utfallet; eventraderna är söndag-och-framåt så inget hinner bli
+inaktuellt i kön.** Flera rader ligger på Orust/Stenungsund (grannöarna) —
+därför "på och runt Tjörn"-framing. Åstol och Klädesholmen ÄR Tjörns kommun.
+
+**P1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka det blir på och runt Tjörn 👇
+>
+> 🎸 Inte en sommar utan Ebbot! — Ebbot Lundberg på Åstols Rökeri (tisdag)
+> ☕ Kyrkguidning med kaffe på Klädesholmen (onsdag–fredag)
+> 🎤 Orup + Danny Saucedo på Stenungsbaden (fredag)
+> 🎶 Triple & Touch i Flatö kyrka på Orust (fredag)
+> 🚶 Guidad vandring genom gamla Skärhamn (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — drygt 50 event
+> på öarna och runt fjorden bara den närmaste veckan:
+> https://vadkul.se
+>
+> Och den blir bättre ju fler som hjälps åt:
+> ➕ Ordnar du något själv? Lägg in det med plusknappen — egna event får en
+> grön bricka och syns extra tydligt.
+> 💡 Saknas något på kartan? Släng in en länk i kommentarerna så lägger jag
+> in det.
+> 🔗 Finns det en sida där Tjörn-eventen redan samlas? Tipsa, så hämtas allt
+> därifrån automatiskt i fortsättningen.
+>
+> Vad hittar ni på i veckan? 👇
+
+**P2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — drygt 50 event
+> på öarna och runt fjorden bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas på Tjörn!`
+
+### Q. Vad händer i Nynäshamn (#39 → vadkul.se)
+
+**❌ NEKAD i godkännandekön 1/8 (V1 — långa formatet, länk i inlägget).
+Publicerades aldrig. Nästa försök: admin-DM, inte kallt — och se
+formathypotesen under "Runda 2" nedan.** Nynäskalaset (fre
+7/8, Svandammsparken — med nattbuss hem enligt datat) + Sabina Ddumba (lör
+8/8, Idala Trädgårdsscen) är veckans dragplåster.
+
+**Q1 — länk i inlägget (godkännande-grupp):**
+
+> Nynäshamn laddar för en riktig festvecka 👇
+>
+> 🎉 Nynäskalaset i Svandammsparken (fredag)
+> 🎤 Sabina Ddumba på Idala Trädgårdsscen (lördag)
+> 🎶 Musik i sommarkväll i Nynäshamns kyrka — musikal, opera & sagofilm (torsdag)
+> 🎷 Sommarmusik i Sorunda kyrka (torsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Nynäshamnstrakten — drygt 50 event bara den närmaste veckan:
+> https://vadkul.se
+>
+> Kartan fylls på av oss som använder den:
+> ➕ Arrangerar du något? Plusknappen på kartan lägger in det — egna event
+> får en grön bricka som syns extra.
+> 💡 Vet du något jag missat? Kommentera med en länk så läggs det in.
+> 🔗 Eller tipsa om en sajt där Nynäshamns-eventen redan listas — då kopplas
+> den in och allt kommer med automatiskt framöver.
+>
+> Vad går ni på? 👇
+
+**Q2 — länk i kommentaren (direktpublicerande grupp):** samma text, men lägg
+till raden `🎸 Timo Räisänen + AlvaMarit & The Sails på Idala Trädgårdsscen
+(ikväll!)` överst i eventlistan, och byt kartstycket mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Nynäshamnstrakten — drygt 50 event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — säg till om något saknas i Nynäshamn!`
+
+### R. Vad händer i Vänersborg? (#35 → vadkul.se)
+
+**❌ NEKAD i godkännandekön 1/8 (V1 — långa formatet, länk i inlägget).
+Publicerades aldrig. Nästa försök: admin-DM, inte kallt — och se
+formathypotesen under "Runda 2" nedan.** Helt orört
+område (närmaste tidigare inlägg: Borås 23/7). Trollhättan-raderna är
+medvetna — 15 min bort och gruppen bevakar hela Tvåstad i praktiken.
+
+**R1 — länk i inlägget (godkännande-grupp):**
+
+> Mycket på gång kring Vänersborg den här veckan 👇
+>
+> 🧺 Hembygdens dag på Vänersnäs (imorgon söndag)
+> 🎸 Sommarkonsert "Grand Finale" på Solliden, Kvarntorp (onsdag)
+> 🎶 Nordic Opera Choir i Trollhättans kyrka (fredag)
+> 🛍️ Mat- och hantverksdag i Brålanda (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 80 event
+> runt Vänersborg och Trollhättan bara den närmaste veckan:
+> https://vadkul.se
+>
+> Bäst blir den när fler är med och fyller på:
+> ➕ Eget arrangemang? Lägg in det via plusknappen — egna event märks med en
+> grön bricka och syns extra tydligt.
+> 💡 Något som fattas? Tipsa i kommentarerna, en länk räcker.
+> 🔗 Känner du till en sida som redan listar det som händer i Vänersborg?
+> Säg till — då hämtas den in automatiskt i fortsättningen.
+>
+> Vad blir det för er i veckan? 👇
+
+**R2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — över 80 event
+> runt Vänersborg och Trollhättan bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Vänersborg!`
+
+---
+
+## Lördag 1/8 — RUNDA 2 (efter två nekanden): Värmland + Torshälla
+
+**Facit runda 1:** alla tre krävde godkännande. Nynäshamn + Vänersborg
+**NEKADES i kön**, Tjörn låg kvar och väntade. Första rena nekandena sedan
+17/7-eran — och båda kom på **långa V1-formatet** (medskapa-blocket).
+
+**FORMATHYPOTES (n=2, obekräftad):** det långa medskapa-blocket kan läsas som
+"tjänstereklam" av granskande admins — fyra CTA-rader om plusknappar och
+inkoppling av sajter låter mer som en produkt än som ett grannskapstips.
+**Beslut runda 2: V1 = KORTA formatet** (eventrader + karta + en enkel
+tipsa-mening). Medskapa-blocket lever kvar bara i V2 (direktpublicering, där
+ingen admin granskar). Utvärdera när Tjörn (långt V1) fått sitt utslag.
+
+**⚠️ Spamdisciplin:** detta blir försök 4 och 5 samma dag (max-regeln är
+2–3). Två av tre publicerades aldrig, så det publika avtrycket är litet, men
+FB räknar aktivitet — **posta den ena nu och den andra ikväll**, inte båda
+direkt efter varandra.
+
+**Urvalet:** Värmland (#19) var utsedd reserv (169 event 2–10/8, Karlstad
+fri sedan 24/7). Andraplatsen stod mellan Torshälla, Sundsvall och Nykvarn —
+**Torshälla vann på dragplåster** (Eskilstunafesten på Strömsholmen tors +
+Gärdestad-hyllningen på Mary's + Eskilstuna Moderna Operan; Sundsvall är
+fortsatt bara kyrkomusik + Ronny & Ragge, Nykvarns utbud ligger i
+Gnesta/Mariefred 3 mil bort).
+
+**Geo-fällor rensade ur Värmlandsraderna:** Loka Brunn (Magnus Carlson) och
+Karlskoga = Örebro län, Tösse = Dalsland, Toni Holgersson-raden = Öland
+(felgeokodad). Bara verifierade Värmlandsorter i utkastet.
+
+### S. På gång i Värmland - Vi tipsar om vad som händer, när det händer... (#19 → vadkul.se)
+
+**✅ POSTAT 1/8 (V1 — korta formatet, länk i inlägget). KRÄVDE GODKÄNNANDE —
+låg kvar i kön 2/8 (bekräftat av Josef). Karens till 2026-08-22.
+⚠️ BEVAKNINGSPUNKT: första raden (Alma Löv, söndag 2/8) passerar om inlägget
+släpps efter söndag — kommentera/redigera vid behov. Detta är också första
+testet av korta V1-formatet i en godkännandekö (formathypotesen ovan) —
+logga utfallet.** Länsgrupp → raderna medvetet spridda:
+Sunne/Karlstad/Kristinehamn/Hammarö/Säffle/Grums.
+
+**S1 — länk i inlägget (godkännande-grupp — KORTA formatet):**
+
+> Massor på gång runt om i Värmland den här veckan 👇
+>
+> 🎸 Martin Hederos, Ane Brun & Klara Goliger på Alma Löv utanför Sunne (söndag)
+> 🎶 Sofia Karlsson sjunger "En sång till Selma" på Mårbacka (måndag)
+> 🎻 Musik i sommarkväll i Österviks kapell, Kristinehamn (tisdag)
+> 🎸 Andreas Jonsson & The Pink Cadillac Band på Hammarö (onsdag)
+> 🎤 Allsångskväll i Säffle (onsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — över 130 event
+> runt om i Värmland bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något från din ort? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad händer där ni bor i veckan? 👇
+
+**S2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎸 Ebbot Lundberg på Borgviks Gård (måndag 10/8)` sist i eventlistan, och
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — över 130 event
+> runt om i Värmland bara den närmaste veckan. Länken ligger i
+> kommentarerna 👇
+>
+> Och kartan är inte bara min: arrangerar du något kan du lägga in det själv
+> med plusknappen (egna event får en grön bricka), och finns det en sida där
+> din orts event redan listas — tipsa, så hämtas den in automatiskt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om orter jag har för lite på!`
+
+### T. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna — Torshälla är Eskilstuna kommun, djuplänken är rätt avsändare här trots vadkul.se i masterlistan)
+
+**UTKAST 1/8 — EJ POSTAT, ERSATT av 2/8-versionen nedan (veckodagarna
+uppdaterade + Eskilstunafesten visade sig vara tors–lör).** Systerort till
+"Du vet vad som händer i Eskilstuna"
+(postat 24/7, låg då i godkännandekö — **kolla om det inlägget någonsin
+släpptes**; ligger det uppe nu, skjut T till imorgon och variera mer).
+Stadsveckoregeln ok: Eskilstuna 24/7 → 1/8 = 8 dagar.
+
+**T1 — länk i inlägget (godkännande-grupp — KORTA formatet):**
+
+> Bra vecka på gång i Torshälla och Eskilstuna 👇
+>
+> 🎻 Musik i sommarkväll i Torshälla kyrka (söndag)
+> 🎭 Kärleksdrycken — Eskilstuna Moderna Operan på Jädersgården (måndag)
+> 🎸 Rock n Roll Machine hyllar Ted & Kenneth Gärdestad på Mary's Café (onsdag)
+> 🎉 Eskilstunafesten drar igång på Strömsholmen (torsdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/eskilstuna
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**T2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+>
+> Psst: arrangerar du något själv kan du lägga in det direkt på kartan med
+> plusknappen — egna event får en grön bricka och syns extra tydligt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/eskilstuna — tipsa gärna om det jag missat i Torshälla!`
+
+---
+
+## Söndag 2/8 — Sundsvall + Torshälla + Nykvarn (Josefs val ur runda 2-kandidaterna)
+
+**Läget:** Värmland (S) postades 1/8 och står kvar i godkännandekön 2/8.
+Josef valde att köra vidare på andraplats-kandidaterna från igår: Sundsvall,
+Torshälla (T-utkastet uppdaterat med rätt veckodagar) och Nykvarn. Sundsvall
+och Nykvarn är svagare på utbud än gårdagens val — förväntningsläget är
+lägre, logga utfallet mot det. **Korta V1-formatet gäller** (formathypotesen
+1/8). Event = måndag och framåt i V1; V2 får ta dagens/kvällens.
+
+**Datakoll gjord 2/8:** Eskilstunafesten är TORS–LÖR (Strömsholmen tors +
+fullt program Fristadstorget lör). "Valsta kyrka"-raden i Nykvarnsunderlaget
+var felgeokodad (Märsta) — struken. Rock The Night-raderna i Öbackaparken är
+Umeå — Sundsvallsupplagan är den på Ungdomsfältet lör 8/8.
+
+### U. Vad händer i Sundsvall? (#57 → /evenemang/sundsvall)
+
+**✅ POSTAT (bekräftat 3/8; exakt datum 2 el. 3/8). KRÄVDE GODKÄNNANDE — i kö
+3/8. Karens till 2026-08-24.
+⚠️ BEVAKNINGSPUNKT: raderna toppar tors–lör (Ronny & Ragge 6/8, Rock The
+Night + Elda för kråkorna 8/8) — släpps inlägget efter lördag 8/8 är hela
+listan passé; kommentera/uppdatera i så fall.**
+
+**U1 — länk i inlägget (godkännande-grupp):**
+
+> Mer på gång i Sundsvall i veckan än man kan tro 👇
+>
+> 🏛️ Guidningar av Alnö gamla kyrka (vardagar hela veckan)
+> 🎸 Ronny & Ragge — "Sista Pöket med Gänget" på Himlabadet (torsdag)
+> 🎸 Rock The Night Festival på Ungdomsfältet (lördag)
+> 🎷 Sommarmusik "Elda för kråkorna" vid Café Kyrkstugan, Skön (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Sundsvallstrakten — ett 70-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/sundsvall
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på i veckan? 👇
+
+**U2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎷 Psalmer i jazzton med Tre:Tonus på Bänkåsvikens sommargård (idag)` överst
+i eventlistan, och kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Sundsvallstrakten — ett 70-tal event bara den närmaste veckan.
+> Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/sundsvall — tipsa gärna om det jag missat!`
+
+### T-2/8. Du vet vad som händer i Torshälla (#34 → /evenemang/eskilstuna)
+
+**✅ POSTAT 2/8 — publicerades DIREKT, inget godkännande krävdes (bekräftat
+av Josef 2/8; han skrev "Torslanda" men det tolkas som Torshälla — ingen
+Torslanda-grupp finns i masterlistan). Variant obekräftad: V2 var planen vid
+direktpublicering — KOLLA att första kommentaren med
+vadkul.se/evenemang/eskilstuna-länken postades direkt efter; postades V1-
+texten (länk i inlägget) i stället, låt den vara (27/7-beslutet: redigera
+inte in/ut länkar i efterhand). Karens till 2026-08-23. Bevaka första dygnet
++ uppföljning efter en vecka.** Ersätter 1/8-versionen ovan.
+
+**DAG 1-FACIT (3/8): 0 reaktioner.** Innan slutsats dras om texten: skumma
+gruppens flöde — ligger övriga inlägg också på 0–3 likes är det en lågaktiv
+grupp (samma mönster som Ängelholm 27/7, `insikt-gruppaktivitet-2026-07-27`),
+inte textens fel. Festivalraderna (Eskilstunafesten tors–lör) kan dessutom
+dra reaktioner senare i veckan. Uppföljning 9/8.
+
+**T1 — länk i inlägget (godkännande-grupp):**
+
+> Bra vecka på gång i Torshälla och Eskilstuna 👇
+>
+> 🎭 Kärleksdrycken — Eskilstuna Moderna Operan på Jädersgården (måndag)
+> 🎶 Vilsta Musikcafé (onsdag)
+> 🎸 Rock n Roll Machine hyllar Ted & Kenneth Gärdestad på Mary's Café (onsdag)
+> 🎉 Eskilstunafesten — Strömsholmen & Fristadstorget (torsdag–lördag)
+> 🎨 Vernissage: "Bönor & blues" på Rademachersmedjorna (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan:
+> https://vadkul.se/evenemang/eskilstuna
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**T2 — länk i kommentaren (direktpublicerande grupp):** samma text plus raden
+`🎻 Musik i sommarkväll i Torshälla kyrka (ikväll)` överst i eventlistan, och
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i trakten — ett
+> 50-tal event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/eskilstuna — tipsa gärna om det jag missat i Torshälla!`
+
+### V. Vad Händer I Nykvarn (#5 → vadkul.se)
+
+**✅ POSTAT 3/8 (V2 — länk i kommentar, publicerat direkt). DAG 1 (19:52):
+11 likes, 4 kommentarer — varav två med LOKALKRITIK: "Inget av det är i
+närheten av Nykvarn... AIK–Örgryte på Friends" och "Ingenting i trakten med
+andra ord". Kritiken är KORREKT — efterkontroll visade 0 event inom 8 km
+från Nykvarn; raderna låg 15–19 km bort. Detta födde lärdomen 3/8 överst i
+filen (radien ljuger för småorter → Malå-format vid tomt lokalutbud).
+Karens till 2026-08-24.**
+
+**Svar postat på kritiken (äg det + vänd till tips-frågan):**
+
+> Helt rättvis kritik 😅 Ska vara ärlig: kartan har just nu pinsamt lite i
+> själva Nykvarn — det närmaste som fanns var Järna, Mariefred och Skottvång,
+> och det var det jag listade. Men det är precis det jag vill ändra på: vad
+> händer i Nykvarn som borde vara med? Loppisar, föreningar, marknader,
+> spelningar — tipsa här så lägger jag in det. AIK–Örgryte på Friends lägger
+> jag in som reservplan 😄
+
+Kommer det tips i kommentarerna: **lägg in dem på kartan inom ett dygn** och
+svara med länk — det är hela poängen med räddningen.
+
+**Kommentar 3 (Gun-Britt, 3/8): "Eldtomta ligger i Grödinge i Botkyrka
+kommun" — HON HAR RÄTT.** Verifierat i datat: PRO Tumba (Botkyrka) har eget
+event på Eldtomta Café. Två fel i ett: (1) "Hölö" i inläggsraden var vår
+felgissning, (2) 🔧 **DATAÅTGÄRD: Tickster-eventen på Eldtomta Café & Butik
+(Trädgårdslive Maria Jane Smith 7/8 + Tommy Nilsson 14/8) är geokodade till
+59.106, 17.732 — ska vara Grödinge ~59.19–59.20, ~17.79** (jfr PRO Tumbas
+59.203, 17.855). Felet är dessutom orsaken till att raden alls kom med i
+Nykvarn-radien. Korta tack-svar postade på alla tre kommentarerna (3/8).
+
+**TRÅDEN VÄNDE (3/8 kväll, ~4 h efter postning):** tipsen och förslagen kom —
+precis Malå-mekaniken. Att fånga upp:
+
+1. 🎯 **EVENTTIPS: "Juni Juli Augusti – AUGUSTI", 15/8 i Nykvarn** (tips av
+   Stina Björklund; bandets/arrangörens sida svarade själv i tråden: "Vi ser
+   fram emot att se HELA NYKVARN där"). Josef har frågat efter plats + tid i
+   tråden. **MÅSTE läggas in på kartan när svaret kommer** — det är löftet
+   som räddar hela tråden, och Nykvarns första riktiga kartpost.
+2. 💡 **Funktionsförslag (Frank Roghem):** (a) filtrera på tidsperiod i
+   stället för en specifik dag (t.ex. en vecka), (b) avstånd från "min
+   plats". Loggas som produktfeedback — första spontana funktionsönskemålen
+   från en gruppkommentar.
+3. 🎤 **Karaoke-idé (Olle Hasserud)** — följdfråga ställd om vilket ställe.
+
+Svar postade på samtliga sex kommentarer 3/8 kväll.
+
+**TAKTIK (beslut 3/8): styr tips → SJÄLVSERVICE via plusknappen, lägg inte in
+manuellt som default.** När ett eventtips kommer — särskilt från arrangören
+själv (som Juni Juli Augusti här) — svara med "lägg in det själv med
+plusknappen på kartan" i stället för "tipsa så fixar jag". Varför:
+
+- skalar (Josef blir inte flaskhals per event),
+- arrangören äger + uppdaterar sitt eget event, får grön bricka = syns extra,
+- arrangörer delar gärna sin egen kartlänk vidare → mer spridning + inlänkar
+  (precis SEO-målet i outreach/README).
+
+**Undantag — behåll "annars fixar jag det" när tipset är för värdefullt att
+tappa** (t.ex. 15/8-eventet: crown jewel i den här tråden, håll kvar
+fallback så det inte faller om arrangören inte orkar självservice).
+Plusknappen tar även icke-arrangörers tips (klistra in länk) → även
+"vad saknas"-kritikerna kan hänvisas dit.
+
+Karaoke-spåret (Olle): vänd medlemsförslag till arrangörshandling — "drar
+någon igång en karaokekväll, lägg in den på kartan" — flywheelen är att en
+kommentar blir ett riktigt event någon annan lägger in.
+
+**V1 — länk i inlägget (godkännande-grupp):**
+
+> Kolla vad som händer i Nykvarnstrakten den här veckan 👇
+>
+> 🎸 Nynningen & DagVag på Skottvångs Grufva (onsdag)
+> 🎶 Sommarmusik i Överjärna kyrka (torsdag)
+> 🎤 Åsa Jinder på Skottvångs Grufva (fredag)
+> 🎶 Trädgårdslive med Maria Jane Smith på Eldtomta, Hölö (fredag)
+> 🎹 Gustaviansk orgelmusik i Mariefreds kyrka (söndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer — ett 40-tal
+> event i trakten bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något i Nykvarn? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad hittar ni på i veckan? 👇
+
+**V2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer — ett 40-tal
+> event i trakten bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det som saknas i Nykvarn!`
+
+---
+
+## Tisdag 4/8 — 4 orörda grupper (första urvalet EFTER Nykvarn-läxan)
+
+**Urvalsmetoden uppgraderad (lärdom 3/8):** räknade event **inom 8 km från
+själva orten**, inte bara 25 km-radien — och kollade KVALITETEN (bio +
+kyrkkaffe/PRO-brus bortfiltrerat), inte bara antalet. Flera högsiffriga
+kandidater föll på kvalitet: Luleå (23 lokalt men mest barnkör + bibelsamtal),
+Haninge (43 men nästan bara sagostund/pyssel — "riktiga grejen ligger i
+Stockholm city", 28/7-noteringen bekräftad), Piteå (43 men 28 av dem bio).
+
+**Valda på ÄKTA lokala dragplåster inom 8 km:**
+- **Majorna** (Göteborg väster, 200+ lokalt) — Sommarjazz, blues, Rigmor
+  Gustafsson, Liseberg. Systergrupp till "Vad händer i Göteborg?" (25/7, 10
+  dagar sedan) → helt annan text, väster-vinklad.
+- **Kristianstad** (egen sida, ~20 lokalt men varierat) — Regionmuseet,
+  Filmmuseet, Keith Jarrett-hyllning.
+- **Norrtälje - Vad händer på byn? (#11)** (24 lokalt, sommarstad) —
+  Sommarscen, Countrybrudar, Cinema Pride. OBS annan grupp än "Vad händer i
+  Norrtälje?" (#48, borttagen 17/7).
+- **Piteå** (SVAGAST — bärs av Noliamässan, som pågår hela veckan och ÄR
+  stans pratämne). Ärligt tunn i övrigt; överväg Kungsbacka som byte.
+
+**Format:** korta V1 (formathypotesen efter 1/8-nekandena — medskapa-blocket
+kan läsa som tjänstereklam i granskningskö; ligger kvar bara i V2). Ingen
+stjärnlänk. Event = onsdag och framåt (postas tisdag). Läs regelrutan i varje
+grupp före postning.
+
+### W. Vad händer i Majorna (→ /evenemang/goteborg)
+
+**UTKAST — EJ POSTAT.** Väster-/centrumvinklad; alla rader inom 3 km.
+
+**W1 — länk i inlägget (godkännande-grupp):**
+
+> Full fart i Göteborg den här veckan 👇
+>
+> 🎷 Sommarjazz i Flunsåsparken (onsdag)
+> 🎸 Wednesdays: Blues at Sommarkajen, Kajskjul 8 (onsdag)
+> 🎤 Rigmor Gustafsson – Toner på verandan, Hôtel Eggers (onsdag)
+> 🎢 Live at Liseberg – konserter hela veckan
+>
+> Jag har byggt en gratis karta som samlar allt som händer i stan —
+> hundratals event bara den närmaste veckan:
+> https://vadkul.se/evenemang/goteborg
+>
+> Saknas något i din del av stan? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på i veckan? 👇
+
+**W2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i stan —
+> hundratals event bara den närmaste veckan. Länken ligger i kommentarerna 👇
+>
+> Och kartan är inte bara min: arrangerar du något kan du lägga in det själv
+> med plusknappen (egna event får en grön bricka), och finns det en sida där
+> dina event redan listas — tipsa, så hämtas den in automatiskt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det jag missat!`
+
+### X. Vad händer i Kristianstad (→ /evenemang/kristianstad)
+
+**UTKAST — EJ POSTAT.**
+
+**X1 — länk i inlägget (godkännande-grupp):**
+
+> Bra kulturvecka i Kristianstad 👇
+>
+> 🎨 Utställningen "Fake for Real" på Regionmuseet (hela veckan)
+> 🎬 Film på terrassen: This is Spinal Tap på Filmmuseet (torsdag)
+> 🎬 Stumfilm: Fänrik Ståls sägner på Filmmuseet (fredag)
+> 🎷 "My Song" – en hyllning till Keith Jarrett i Heliga Trefaldighets kyrka (lördag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Kristianstadstrakten — bara den närmaste veckan:
+> https://vadkul.se/evenemang/kristianstad
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad går ni på? 👇
+
+**X2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i
+> Kristianstadstrakten — bara den närmaste veckan. Länken ligger i
+> kommentarerna 👇
+>
+> Psst: arrangerar du något själv kan du lägga in det direkt på kartan med
+> plusknappen — egna event får en grön bricka och syns extra tydligt.
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/kristianstad — tipsa gärna om det jag missat!`
+
+### Y. Norrtälje - Vad händer på byn? (#11 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** OBS: annan grupp än "Vad händer i Norrtälje?" (#48,
+borttagen 17/7). Norrtälje saknar egen stadssida → länk = vadkul.se.
+
+**Y1 — länk i inlägget (godkännande-grupp):**
+
+> Somrig vecka i Norrtälje 👇
+>
+> 🎶 Folkmusik från Roslagen (onsdag)
+> 🥊 Skuggboxare på Norrtälje Sommarscen, Societetsparken (onsdag)
+> 🍹 Sommarfest i sommarbaren, Societetsparken (torsdag)
+> 🎤 Norrtälje Countrybrudar på ångfartyget Blidösund (lördag)
+> 🏳️‍🌈 Cinema Pride: Tom of Finland (måndag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Norrtälje med
+> omnejd — bara den närmaste veckan:
+> https://vadkul.se
+>
+> Saknas något? Säg till i kommentarerna så lägger jag in det!
+>
+> Vad hittar ni på i veckan? 👇
+
+**Y2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i Norrtälje med
+> omnejd — bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Norrtälje!`
+
+### Z. Vad händer i Piteå? (#21 → vadkul.se)
+
+**UTKAST — EJ POSTAT. SVAGAST av de fyra** — utan Noliamässan vore den
+Malå-format. Noliamässan (Nolia Piteå) pågår hela veckan och ÄR veckans
+händelse i stan, så den bär inlägget. Byt gärna mot Kungsbacka (Tjolöholm +
+Kulturhuset Fyren) om du hellre vill ha bredd. Piteå saknar egen sida →
+vadkul.se.
+
+**Z1 — länk i inlägget (godkännande-grupp):**
+
+> Noliaveckan i Piteå! 👇
+>
+> 🎪 Noliamässan pågår på Nolia hela veckan — Sveriges nord största mötesplats
+> 🎶 Musik i sommarkväll i Norrfjärdens kyrka (onsdag)
+> 🎶 Musikprogram med Stefan B Andersson (tisdag)
+>
+> Jag har byggt en gratis karta som samlar allt som händer i Piteåtrakten —
+> bara den närmaste veckan:
+> https://vadkul.se
+>
+> Vad mer händer i stan som borde vara med? Tipsa i kommentarerna så lägger
+> jag in det! 👇
+
+**Z2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Jag har byggt en gratis karta som samlar allt som händer i Piteåtrakten —
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
+
+---
+
+## Tisdag 4/8 — REVIDERAT (nytt budskap: syftet + medlemsnyttan)
+
+Ändringar mot första 4/8-urvalet ovan:
+- **Majorna (W) postad** → utgår ur kön.
+- **Kristianstad (X) avvald** — efter kvalitetskoll var det en lugn kulturvecka
+  utan dragplåster i stan; de "bättre" alternativen låg fel (Hällevik
+  jazzfestival 27 km i Blekinge, "Nordic Championship"-festen hörde till ett
+  BASTU-mästerskap i Helsingborg, C4 Rocks overifierad venue). Utkastet sparas.
+- **Helsingborg? (#64) IN som ersättare** — starkaste headliner-veckan av alla
+  orörda grupper: **Veronica Maggio på Sofiero (lör) + World Choir Games**
+  (körsångs-VM i centrum 6–10/8) + Helsingborg Pride. Systergrupp till "Det
+  händer i Helsingborg" (24/7, 26 likes) → helt annan text/vecka, ok.
+
+**NYTT BUDSKAP (Josefs instruktion 4/8) — gäller alla framtida utkast:**
+1. **Skriv ut SYFTET:** allt som händer samlas på EN karta, så man enkelt ser
+   vad som är på gång oavsett var man är.
+2. **Medlemsnyttan (gratis konto):** ➕ lägga in eget event · 💡 tipsa ·
+   ✨ önska event · 🔔 **få notis när något man gillat börjar** (nytt).
+
+Format: event = onsdag och framåt (postat tisdag). Godkännandekö → V1;
+direktpublicering → V2 + kommentar direkt efter. Läs regelrutan per grupp.
+
+### Ä. Vad händer i Helsingborg? (#64 → /evenemang/helsingborg)
+
+**⚠️ TILLBAKADRAGET 5/8 — POSTA INTE.** Main-mergen visade att gruppen INTE
+var orörd: N2 postades där 30/7 (karens till 20/8). Utkastet skrevs i tro
+att gruppen var fri — felet var en osynkad logg, inte urvalsmetoden. Texten
+sparas nedan och kan återanvändas EFTER 20/8 med omräknade event (Veronica
+Maggio/World Choir Games har passerat då — skriv om raderna).
+Datanotis som fortfarande gäller: Veronica Maggio spelar på **Sofiero**
+(INTE "Nya Studenternas" — den raden i datat är felgeokodad
+Uppsala-dubblett).
+
+**Ä1 — länk i inlägget (godkännande-grupp):**
+
+> Vilken vecka Helsingborg har framför sig 👇
+>
+> 🎤 Veronica Maggio på Sofiero (lördag)
+> 🎶 World Choir Games – körsångs-VM i centrum (torsdag–måndag)
+> 🏳️‍🌈 Helsingborg Pride drar igång (helgen)
+> 🎸 Reggae på Vagnhall 16 (lördag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Bara den närmaste veckan finns över 140
+> event i Helsingborgstrakten:
+> https://vadkul.se/evenemang/helsingborg
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad går ni på i helgen? 👇
+
+**Ä2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — över 140 event i Helsingborgstrakten
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se/evenemang/helsingborg — tipsa gärna om det jag missat!`
+
+### Y-rev. Norrtälje - Vad händer på byn? (#11 → vadkul.se)
+
+**UTKAST — EJ POSTAT.** Omskrivet med nytt budskap. Annan grupp än #48
+(borttagen 17/7). Norrtälje saknar egen sida → vadkul.se.
+
+**Y1 — länk i inlägget (godkännande-grupp):**
+
+> Somrig vecka i Norrtälje 👇
+>
+> 🎶 Folkmusik från Roslagen (onsdag)
+> 🥊 Skuggboxare på Norrtälje Sommarscen, Societetsparken (onsdag)
+> 🍹 Sommarfest i sommarbaren, Societetsparken (torsdag)
+> 🎤 Norrtälje Countrybrudar på ångfartyget Blidösund (lördag)
+> 🏳️‍🌈 Cinema Pride: Tom of Finland (måndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — runt 30 event i Norrtälje med omnejd
+> bara den närmaste veckan:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad hittar ni på i veckan? 👇
+
+**Y2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — runt 30 event i Norrtälje med omnejd
+> bara den närmaste veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Norrtälje!`
+
+### Z-rev. Vad händer i Piteå? (#21 → vadkul.se)
+
+**✅ POSTAT 4/8 (Z2 — länk i kommentar, publicerat direkt). Dag 1: 1 like,
+4 kommentarer — men GULD i innehållet: Elins UX-genomgång gav ryck-buggen
+(hittad + fixad: 5-sek auto-recentern borttagen), Nästa/plus-diskussionen
+och periodönskemålet. Svar postade. Karens till 2026-08-25.** Bars av
+Noliamässan; tunn i övrigt — precis som väntat lågt engagemang, men
+feedbackvärdet översteg det.
+
+**Z1 — länk i inlägget (godkännande-grupp):**
+
+> Noliaveckan i Piteå! 👇
+>
+> 🎪 Noliamässan pågår på Nolia hela veckan — norra Sveriges största mötesplats
+> 🎶 Musik i sommarkväll i Norrfjärdens kyrka (onsdag)
+> 🎶 Musikprogram med Stefan B Andersson (tisdag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — allt i Piteåtrakten bara den närmaste
+> veckan:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad mer händer i stan som borde vara med? Tipsa så lägger jag in det! 👇
+
+**Z2 — länk i kommentaren (direktpublicerande grupp):** samma text, men
+kartstycket byts mot:
+
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — allt i Piteåtrakten bara den närmaste
+> veckan. Länken ligger i kommentarerna 👇
+
+Första kommentaren (postas DIREKT efter publicering):
+`Här är kartan: https://vadkul.se — och tipsa gärna om det jag missat i Piteå!`
+
+---
+
+### PRODUKTFEEDBACK — Piteå-tråden 4/8 (Elin Johansson, skarp UX-QA)
+
+En kommentar gav tre konkreta observationer. **Josefs bedömning (4/8) efter
+diskussion: två av tre är MEDVETNA designval, inte buggar** — ändra inte
+beteendet, på sin höjd förtydliga:
+
+1. **"+"-ikonen** (`apps/web/src/components/v2/V2Map.tsx:2864`) läses av
+   vissa som zoom — men plus för "skapa nytt" är lika etablerat. **Behåll.**
+   Ev. åtgärd: tooltip/label "Skapa event" syns tydligare.
+2. **"Nästa" = geografiskt närmaste obesökta event** (`pickNext`,
+   `apps/web/src/components/v2/EventCard.tsx:1081`) är KÄRNMEKANIKEN i
+   bläddringen (bilder förladdas t.o.m. för kommande hopp) — att den vandrar
+   vidare till nästa ort när områdets event är slut är avsett. **Behåll.**
+   Ev. åtgärd: mikrotext/tooltip som sätter förväntan.
+3. **Kartan "rycker och låser ner på olika platser fast man inte klickat"** —
+   detta är den ÄKTA buggen att jaga. Reproducera (mobil? vid last? hela
+   tiden?); trolig källa kamera-follow/auto-val (jfr `onNavigate`/`flyTo`-
+   logiken i V2Map). Fråga Elin om enhet + när det händer.
+
+Svar postat till Elin 4/8 (bekräftade + bjöd in till mer). Engagerad testare
+— värd att återkomma till.
+
+### FUNKTIONSSKISS — periodfilter (Franks önskan 3/8, design 4/8) — ✅ BYGGD 4/8
+
+**Implementerad på branchen** (V2Map rapporterar zoom → page gate:ar +
+geo-avgränsar veckoläget till 60 km kring kartmitten → DayPicker visar
+"Hela veckan" upplåst/låst med hint "zooma in först"). Zoomtröskel 9
+(stadsnivå), hysteres 0.5 steg, helgen (3 dgr) opåverkad. OBS: gamla
+smyg-URL:en `?dag=0&dagar=7` gate:as numera OCKSÅ — på Sverigenivå faller
+den tillbaka till en dag; zooma in först. Mikrofixar i samma sväng:
+plusknappen fick title/aria "Lägg in eget event på kartan", Nästa-knappens
+tooltip säger "Närmaste härifrån: …". Typecheck + next build gröna;
+VISUELL TEST ÅTERSTÅR (Josef).
+
+**Upptäckt:** intervallrendering FINNS redan — "I helgen" är `days:3`, och
+URL:en läser `?dag=&dagar=` (`page.tsx:973`) → `vadkul.se/?dagar=7` ger
+veckovy IDAG (odokumenterat). Problemet: dagfiltret är rent tidsbaserat utan
+geo-avgränsning och kartan kör medvetet INGEN klustring (`V2Map.tsx:1201`) →
+vecka × hela Sverige = tusentals brickor.
+
+**Vald riktning (Josefs idé): zoom-gatad period** — "ju närmare du zoomar i
+rummet, desto längre får du zooma ut i tiden":
+- Utzoomad (land/region): bara dag + helg (som idag).
+- Inzoomad (stadsnivå): "Hela veckan" låses upp i DayPicker, och i veckoläge
+  bounds-filtreras `filteredEvents` till synligt område + marginal.
+- Zoom ut i veckoläge → fall tillbaka till dagvy (eller hint).
+
+Byggbitar: zoomnivå/bounds upp från V2Map (kartcentrum rapporteras redan),
+upplåsbart val i DayPicker, bounds-villkor i `filteredEvents`. Testa tätheten
+först med `?dagar=7` innan bygget prioriteras.

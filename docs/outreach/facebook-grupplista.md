@@ -35,15 +35,15 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 |---|---|---|---|
 | 1 | Vad händer i Åstorp | vadkul.se |  |
 | 2 | Vad händer i Tierp kommun | vadkul.se | 19/7 · länk i kommentar · ? |
-| 3 | Tjörn vad händer | vadkul.se |  |
+| 3 | Tjörn vad händer | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
 | 4 | Vad Händer I Åker. | vadkul.se |  |
-| 5 | Vad Händer I Nykvarn | vadkul.se |  |
+| 5 | Vad Händer I Nykvarn | vadkul.se | 3/8 · publicerat direkt (V2) · dag 1: 11 likes, 4 komm. varav lokalkritik (0 event i själva Nykvarn — lärdom 3/8) |
 | 6 | Vad händer i Eksjö | vadkul.se |  |
 | 7 | Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | vadkul.se | 27/7 · länk i inlägg (V1) · ✅ godkänt/uppe (15,5k medl.) |
 | 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad | 22/7 · länk i inlägg (variant A) · ? |
 | 9 | Vad händer i Sorsele? | vadkul.se |  |
 | 10 | Händer i Hudiksvall! 🌞 | vadkul.se |  |
-| 11 | Norrtälje - Vad händer på byn? | vadkul.se |  |
+| 11 | Norrtälje - Vad händer på byn? | vadkul.se | utkast klart (4/8-Y), EJ postat |
 | 12 | Det händer i Helsingborg | /evenemang/helsingborg | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · **26 likes, 15 komm., 1 delning** |
 | 13 | Vad händer i Skogås, Trångsund och Länna | vadkul.se |  |
 | 14 | Det händer i Ängelholm | vadkul.se |  |
@@ -51,9 +51,9 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 16 | Vad händer på Yxlan | vadkul.se |  |
 | 17 | Älmhultsbor, vad händer? | vadkul.se |  |
 | 18 | Vad händer på Högsbohöjd? | vadkul.se |  |
-| 19 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | vadkul.se |  |
+| 19 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | vadkul.se | 1/8 · länk i inlägg (V1, korta formatet) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 2/8 |
 | 20 | Vad händer i Ängelholm Nöjen & Event | vadkul.se | 27/7 · länk i inlägg (I1) · uppe · **3 likes, 0 komm. — LÅGAKTIV GRUPP** (gruppens övriga inlägg lika låga) |
-| 21 | Vad händer i Piteå? | vadkul.se |  |
+| 21 | Vad händer i Piteå? | vadkul.se | 4/8 · publicerat direkt (Z2, länk i kommentar) · dag 1: 1 like, 4 komm. — UX-guldfeedback (Elin: ryck-bugg + Nästa/plus) · karens 25/8 |
 | 22 | Händer i Karlstad-Tipsa om vad som händer i stan! | /evenemang/karlstad | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 5 likes |
 | 23 | Vad händer i Malå? | vadkul.se |  |
 | 24 | Vad händer i Kungsbacka ? | vadkul.se |  |
@@ -66,12 +66,12 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 31 | Vad händer i Haninge | vadkul.se |  |
 | 32 | Vad händer i östra Göteborg? | /evenemang/goteborg |  |
 | 33 | Vad händer i Svalövs Kommun | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 34 | Du vet vad som händer i Torshälla | vadkul.se |  |
-| 35 | Vad händer i Vänersborg? | vadkul.se |  |
-| 36 | Vad händer i Kristianstad | /evenemang/kristianstad |  |
+| 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt · dag 1: 0 reaktioner (kolla gruppaktivitet; uppföljning 9/8) |
+| 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
+| 36 | Vad händer i Kristianstad | /evenemang/kristianstad | ⏸️ avvald 4/8 (lugn vecka) — utkast sparat till senare |
 | 37 | Vad händer i Ängelholm? | vadkul.se |  |
 | 38 | Vad händer i Tierps kommun? | vadkul.se |  |
-| 39 | Vad händer i Nynäshamn | vadkul.se |  |
+| 39 | Vad händer i Nynäshamn | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 40 | Vad händer i Harads? | vadkul.se |  |
 | 41 | Vad händer i Nyköping med omnejd. | /evenemang/nykoping | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 6 likes, 2 komm. |
 | 42 | Vad händer i Malmö? | /evenemang/malmo | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
@@ -87,16 +87,16 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
 | 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
 | 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
-| 55 | Vad händer i Majorna | vadkul.se |  |
+| 55 | Vad händer i Majorna | /evenemang/goteborg | 4/8 · POSTAT (variant/utfall obekräftat) · karens 25/8 |
 | 56 | Vad händer i Linné? | vadkul.se |  |
-| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall |  |
+| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall | 2–3/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö 3/8 |
 | 58 | Vad händer i Uppsala | /evenemang/uppsala | 23/7 · länk i kommentar · publicerat direkt |
 | 59 | Vad händer i Gränna | vadkul.se | 19/7 · länk i kommentar · ? |
 | 60 | Vad händer i Västmanland! | vadkul.se | 30/7 · 28/7-texten (O) · uppe · ⚠️ 2 av 5 rader (onsdag 29/7) hade redan passerat |
 | 61 | Vad händer i Kungsladugård | vadkul.se |  |
 | 62 | Vad händer i Frölunda? | /evenemang/goteborg |  |
 | 63 | Vad händer i Örnsköldsvik? | vadkul.se |  |
-| 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | 30/7 · länk i kommentar (28/7-texten N2, långt format) · uppe |
+| 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | 30/7 · länk i kommentar (N2) · uppe · **karens till 20/8** — ⚠️ 4/8-utkastet Ä skrevs i tro att gruppen var orörd (osynkad main); POSTA EJ Ä före 20/8 |
 | 65 | Vad händer i Torsås? | vadkul.se |  |
 | 66 | Du vet vad som händer i Eskilstuna | /evenemang/eskilstuna | 24/7 · länk i inlägg (m. stjärnlänk) · KRÄVDE GODKÄNNANDE (enda av dagens fyra) · ej släppt 25/7 |
 | 67 | Vad händer i kalmar! | /evenemang/kalmar | 23/7 · länk i kommentar · publicerat direkt |
