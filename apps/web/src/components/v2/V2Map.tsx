@@ -192,6 +192,22 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // höger/öster, höj zoom = mer inzoomat.
 const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
 const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
+// Hur brett fältet ska vara efter första event-klicket: 10 mil tvärs över
+// skärmen. Anges i meter i stället för som zoom-nivå eftersom samma zoom täcker
+// helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
+// men ≈ 8 km på mobil) — se zoomForSpan nedan.
+const FIRST_CLICK_SPAN_M = 100_000;
+
+/**
+ * Zoom-nivån som visar ungefär spanMeters tvärs över kartans BREDD vid en given
+ * latitud. MapLibre räknar zoom mot 512 px breda rutor, och en longitudgrad
+ * krymper med cos(lat) — båda ligger i formeln.
+ */
+const zoomForSpan = (widthPx: number, lat: number, spanMeters: number) => {
+    const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
+    const metersPerWorldPx = (EARTH_CIRCUMFERENCE_M * Math.cos((lat * Math.PI) / 180)) / 512;
+    return Math.log2((metersPerWorldPx * widthPx) / spanMeters);
+};
 
 interface V2MapProps {
     events: LinkEvent[];
@@ -857,6 +873,33 @@ export default function V2Map({
     // Sätts av dagbyte + kort-navigering (Nästa/Föregående/svep) — INTE av kart-
     // klicket (där ska den valda brickan tvärtom få bli synlig via recenter).
     const suppressAutoRecenterUntilRef = useRef(0);
+    // FÖRSTA event-klicket per sidladdning zoomar in på eventet — man landar
+    // lokalt där nyfikenheten är, i stället för att bli kvar i Sverige-vyn.
+    // Bara en gång: senare klick står still som vanligt (recenter-logiken).
+    // Zoomar aldrig UT (Math.max) och önske-klick räknas inte som event-klick.
+    // Landar på FIRST_CLICK_SPAN_M tvärs över skärmen — brett nog att trakten och
+    // grannevenemangen syns, i stället för den kvartersnivå zoom 13 gav.
+    const firstClickZoomDoneRef = useRef(false);
+    const zoomInOnFirstEventClick = (ev: { lat?: number | null; lng?: number | null }) => {
+        if (firstClickZoomDoneRef.current) return;
+        firstClickZoomDoneRef.current = true;
+        const map = mapRef.current;
+        if (!map || !isValidLatLng(ev.lat, ev.lng)) return;
+        // Val-effektens recenter (körs efter klick-rendern) får inte avbryta
+        // flygningen — ge den ett suppress-fönster som täcker animationen.
+        suppressAutoRecenterUntilRef.current = performance.now() + 1200;
+        // Lägg eventet på 40%-höjd (samma yta recenter siktar på) så brickan
+        // hamnar ovanför kortet som öppnas av valet.
+        const container = map.getContainer();
+        const yOffset = container.clientHeight * (0.40 - 0.5);
+        const targetZoom = zoomForSpan(container.clientWidth, ev.lat!, FIRST_CLICK_SPAN_M);
+        map.flyTo({
+            center: [ev.lng!, ev.lat!],
+            zoom: Math.max(map.getZoom(), targetZoom),
+            offset: [0, yOffset],
+            duration: 900,
+        });
+    };
 
     // Baka (eller återanvänd) brick-bilderna som en uppsättning features faktiskt
     // pekar på (properties.icon). Under den streamade påfyllnaden kallas den per
@@ -2029,11 +2072,13 @@ export default function V2Map({
                 }
                 setGroupList(group);
                 onSelectEventRef.current(rep);
+                zoomInOnFirstEventClick(rep);
                 return;
             }
             setGroupList(null);
             setGroupListAnchor(null);
             onSelectEventRef.current(group[0]);
+            zoomInOnFirstEventClick(group[0]);
         };
         const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
         const clearPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = ''; };
@@ -2485,6 +2530,7 @@ export default function V2Map({
                     }
                     // Ingen sticky (hopade en bricka per klick) — vald visas via DOM-markör.
                     onSelectEventRef.current(rep);
+                    zoomInOnFirstEventClick(rep);
                 };
 
                 // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från

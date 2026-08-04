@@ -1,6 +1,8 @@
 import {
   collection,
   addDoc,
+  doc,
+  setDoc,
   query,
   orderBy,
   onSnapshot,
@@ -62,10 +64,27 @@ export const linkEventChatService = {
     });
   },
 
-  sendMessage: async (eventId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>) => {
+  sendMessage: async (eventId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>, eventTitle?: string) => {
     await addDoc(collection(db, 'eventChats', chatKeyFor(eventId), 'messages'), {
       ...message,
       createdAt: serverTimestamp()
     });
+    // Spegla till latestActivity/latestComment — kart-bubblan "senaste
+    // kommentaren" lyssnar på DET dokumentet (en collectionGroup-query över
+    // alla messages skulle kräva en group-regel som även öppnar privata
+    // chats/*/messages — därför denna spegel i stället). Best-effort:
+    // meddelandet ÄR redan skickat, spegeln får aldrig fälla det.
+    try {
+      await setDoc(doc(db, 'latestActivity', 'latestComment'), {
+        senderId: message.senderId,
+        senderName: message.senderName || 'Deltagare',
+        text: message.text,
+        eventId,
+        eventTitle: eventTitle || '',
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('Kunde inte uppdatera senaste-kommentaren:', e);
+    }
   }
 };

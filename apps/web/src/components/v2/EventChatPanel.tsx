@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 
 interface Props {
     eventId: string;
+    /** Eventtiteln — följer med till senaste-kommentar-bubblan på kartan. */
+    eventTitle?: string;
     /** Öppna inloggningsmodalen (utan att lämna sidan). */
     onRequireLogin: () => void;
 }
@@ -17,7 +19,7 @@ interface Props {
  * Kompakt chatt för ett kart-event — bor i eventkortets utfällda läge.
  * Alla kan läsa; skriva kräver konto (CTA öppnar auth-modalen).
  */
-export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
+export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: Props) {
     const { user } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -47,7 +49,7 @@ export default function EventChatPanel({ eventId, onRequireLogin }: Props) {
                 senderName: user.displayName || user.email || 'Anonym',
                 senderImage: user.photoURL || null,
                 text: newMessage.trim(),
-            });
+            }, eventTitle);
             setNewMessage('');
         } catch (error) {
             console.error(error);

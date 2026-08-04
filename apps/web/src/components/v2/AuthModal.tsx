@@ -39,12 +39,16 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    // Ålder + kön (statistikunderlag) — samlas in vid registrering och speglas
+    // till users/{uid}. Kön har alltid "Vill inte ange" som utväg.
+    const [age, setAge] = useState('');
+    const [gender, setGender] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Rensa felet när användaren ändrar input, byter läge eller öppnar modalen på nytt
     // — så att ett gammalt fel aldrig hänger kvar.
-    useEffect(() => { setError(null); }, [email, password, name, mode, open]);
+    useEffect(() => { setError(null); }, [email, password, name, age, gender, mode, open]);
 
     // Escape stänger modalen — standardbeteende för dialoger (tangentbord/SR).
     useEffect(() => {
@@ -79,7 +83,10 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
         setError(null);
         try {
             if (mode === 'login') await signIn(email, password);
-            else await register(name, email, password);
+            else await register(name, email, password, {
+                age: age.trim() ? Number(age) : undefined,
+                gender: gender || undefined,
+            });
             toast.success(mode === 'login' ? 'Inloggad!' : 'Välkommen till VADKUL!');
             onClose();
         } catch (err: any) {
@@ -112,16 +119,48 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
 
                 <form onSubmit={submit} className="flex flex-col gap-3">
                     {mode === 'register' && (
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Visningsnamn"
-                            aria-label="Visningsnamn"
-                            autoComplete="nickname"
-                            required
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
-                        />
+                        <>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Visningsnamn"
+                                aria-label="Visningsnamn"
+                                autoComplete="nickname"
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                            />
+                            {/* Ålder + kön sida vid sida — statistikunderlag ("vilka
+                                använder VADKUL"). Kön kan alltid lämnas som
+                                "Vill inte ange"; ålder krävs (13+). */}
+                            <div className="flex gap-3">
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={age}
+                                    onChange={(e) => setAge(e.target.value)}
+                                    placeholder="Ålder"
+                                    aria-label="Ålder"
+                                    required
+                                    min={13}
+                                    max={120}
+                                    className="w-28 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                                />
+                                <select
+                                    value={gender}
+                                    onChange={(e) => setGender(e.target.value)}
+                                    aria-label="Kön"
+                                    required
+                                    className={`flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-[#006AA7] focus:outline-none ${gender ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'}`}
+                                >
+                                    <option value="" disabled>Kön</option>
+                                    <option value="kvinna">Kvinna</option>
+                                    <option value="man">Man</option>
+                                    <option value="annat">Annat</option>
+                                    <option value="vill_ej_ange">Vill inte ange</option>
+                                </select>
+                            </div>
+                        </>
                     )}
                     <input
                         type="email"

@@ -7,6 +7,7 @@ import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
+import EventPhotosPanel from './EventPhotosPanel';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -1728,10 +1729,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
-                    {/* Chatt per event — alla kan läsa, skriva kräver konto. */}
+                    {/* Livebilder + chatt per event — alla kan titta/läsa,
+                        dela bilder/skriva kräver konto. */}
                     {onRequireLogin && (
-                        <div className="px-4 md:px-6 pb-4">
-                            <EventChatPanel eventId={selectedEvent.id} onRequireLogin={onRequireLogin} />
+                        <div className="px-4 md:px-6 pb-4 flex flex-col gap-3">
+                            <EventPhotosPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
+                            <EventChatPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
                         </div>
                     )}
                     {/* Direkt till närhetslistan — "Tips för dig"-sektionen togs
@@ -1750,11 +1753,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     )}
                 </div>
 
-                {/* Scroll-coach: "scrolla ner"-pil (fas 2). Visas på varje kort
-                    tills man scrollat ner till närhetslistan och sett ≥4 event —
-                    engångs, aldrig igen när man klarat det en gång. Ligger nedtill
-                    på kortet, pointer-events-none så den inte fångar scroll/tap. */}
-                {coachStage === 'hint' && (
+                {/* Scroll-coach: "scrolla ner"-pilen visas DIREKT när ett kort är
+                    öppet (både nudge- och hint-fasen — ägarbeslut 2026-07-29:
+                    bannern ska synas från början, inte först efter första
+                    scrollen). Släcks när man scrollat ner till närhetslistan och
+                    sett ≥4 event — engångs, aldrig igen när man klarat det en
+                    gång. Pointer-events-none så den inte fångar scroll/tap. */}
+                {coachStage !== 'off' && (
                     <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center gap-2 rounded-full bg-[#006AA7] text-white text-xs font-black px-4 py-2 shadow-lg">
                             <span>Scrolla ner — fler event i närheten</span>
