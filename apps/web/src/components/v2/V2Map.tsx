@@ -200,7 +200,9 @@ interface V2MapProps {
     savedEventIds?: Set<string>;
     discardedEventIds?: Set<string>;
     cardExpanded?: boolean;
-    onCenterChange?: (lat: number, lng: number) => void;
+    /** Rapporterar kartans mitt + zoomnivå efter varje rörelse (throttlat).
+     *  Zoomen driver bl.a. upplåsningen av veckovyn i dagväljaren. */
+    onCenterChange?: (lat: number, lng: number, zoom?: number) => void;
     onMapDrag?: () => void;
     /** True så fort första event-svaret från databasen kommit. Default true
      *  (bakåtkompat). */
@@ -2074,7 +2076,7 @@ export default function V2Map({
             setMapBounds(map.getBounds());
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
-                onCenterChangeRef.current(center.lat, center.lng);
+                onCenterChangeRef.current(center.lat, center.lng, map.getZoom());
             }
         };
         const handleMoveEnd = () => {
@@ -2097,7 +2099,7 @@ export default function V2Map({
             syncPlainLayerRef.current();
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
-                onCenterChangeRef.current(center.lat, center.lng);
+                onCenterChangeRef.current(center.lat, center.lng, map.getZoom());
             }
             // Startvy: hämta användarens plats (platstjänst) men ZOOMA INTE in dit —
             // vi vill se HELA Sverige när sidan öppnas. Vi sätter bara userPos så den

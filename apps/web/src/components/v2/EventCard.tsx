@@ -1556,8 +1556,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerMove={onButtonPointerMove}
                                 onPointerUp={onButtonPointerUp}
                                 onPointerCancel={onButtonPointerUp}
-                                aria-label={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
-                                title={nextEvent ? `Nästa: ${nextEvent.title}` : 'Nästa event'}
+                                aria-label={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
+                                title={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
                                 className="group/nasta relative min-w-0 h-[38px] box-border rounded-full text-[#006AA7]
                                     flex items-center justify-end gap-2 pr-1.5 flex-1 bg-transparent"
                             >

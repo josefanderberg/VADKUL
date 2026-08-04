@@ -1776,7 +1776,17 @@ beteendet, på sin höjd förtydliga:
 Svar postat till Elin 4/8 (bekräftade + bjöd in till mer). Engagerad testare
 — värd att återkomma till.
 
-### FUNKTIONSSKISS — periodfilter (Franks önskan 3/8, design 4/8)
+### FUNKTIONSSKISS — periodfilter (Franks önskan 3/8, design 4/8) — ✅ BYGGD 4/8
+
+**Implementerad på branchen** (V2Map rapporterar zoom → page gate:ar +
+geo-avgränsar veckoläget till 60 km kring kartmitten → DayPicker visar
+"Hela veckan" upplåst/låst med hint "zooma in först"). Zoomtröskel 9
+(stadsnivå), hysteres 0.5 steg, helgen (3 dgr) opåverkad. OBS: gamla
+smyg-URL:en `?dag=0&dagar=7` gate:as numera OCKSÅ — på Sverigenivå faller
+den tillbaka till en dag; zooma in först. Mikrofixar i samma sväng:
+plusknappen fick title/aria "Lägg in eget event på kartan", Nästa-knappens
+tooltip säger "Närmaste härifrån: …". Typecheck + next build gröna;
+VISUELL TEST ÅTERSTÅR (Josef).
 
 **Upptäckt:** intervallrendering FINNS redan — "I helgen" är `days:3`, och
 URL:en läser `?dag=&dagar=` (`page.tsx:973`) → `vadkul.se/?dagar=7` ger

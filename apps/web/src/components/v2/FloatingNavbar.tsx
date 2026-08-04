@@ -25,6 +25,9 @@ interface FloatingNavbarProps {
     dayOffset?: number;
     dayRangeDays?: number;
     onDayRangeChange?: (offset: number, days: number) => void;
+    /** True när kartan är inzoomad till stadsnivå → "Hela veckan" låses upp i
+     *  dagväljaren (utzoomad vecka = tusentals brickor, ingen klustring). */
+    weekUnlocked?: boolean;
     dayCount?: number;
     eventsLoaded?: boolean;
     /** Sant först när aggregaten (de scrapade eventen) landat. Innan dess visar
@@ -68,6 +71,7 @@ export default function FloatingNavbar({
     dayOffset = 0,
     dayRangeDays = 1,
     onDayRangeChange,
+    weekUnlocked = false,
     dayCount = 0,
     eventsLoaded = true,
     dayCountReady = true,
@@ -215,6 +219,7 @@ export default function FloatingNavbar({
                                     <DayPicker
                                         dayOffset={dayOffset}
                                         dayRangeDays={dayRangeDays}
+                                        weekUnlocked={weekUnlocked}
                                         anchorRef={dayChipRef}
                                         onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
                                         onClose={() => setDayPickerOpen(false)}
@@ -278,7 +283,8 @@ export default function FloatingNavbar({
                                 type="button"
                                 onClick={handlePlusClick}
                                 disabled={plusDropping}
-                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa nytt event'}
+                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
+                                title={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
                                 className="bg-[#006AA7] hover:bg-[#005590] w-10 h-10 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
                             >
                                 <Plus size={20} className="text-white" />

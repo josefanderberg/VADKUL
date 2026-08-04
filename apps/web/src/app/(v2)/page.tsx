@@ -88,6 +88,20 @@ const pickNearestToPoint = (point: { lat: number; lng: number } | null, dayEvent
     return nearest ?? dayEvents[0];
 };
 
+// ── Veckovyn (zoom-gatad period) ─────────────────────────────────────────────
+// Principen: "ju närmare du zoomar i rummet, desto längre får du zooma ut i
+// tiden". Veckoalternativet i dagväljaren låses upp först på stadsnivå, och i
+// veckoläge geo-avgränsas eventlistan kring kartans mitt — annars vore en
+// vecka × hela Sverige tusentals brickor (kartan kör medvetet ingen
+// klustring). Zoom 9 ≈ en stad med omnejd i mobilviewporten.
+const WEEK_VIEW_MIN_ZOOM = 9;
+// Intervall från så här många dagar räknas som "veckoläge" (helgen = 3 dagar
+// ska INTE geo-avgränsas eller zoom-gatas — den har alltid funkat nationellt).
+const WEEK_RANGE_MIN_DAYS = 5;
+// Radie kring kartans mitt i veckoläge. 60 km täcker viewporten vid zoom 9
+// med marginal ("staden + omnejd").
+const WEEK_AREA_RADIUS_KM = 60;
+
 export default function HomePage() {
     const [events, setEvents] = useState<LinkEvent[]>([]);
     // True så fort första Firestore-svaret kommit in. Molnet (som visar
@@ -131,6 +145,11 @@ export default function HomePage() {
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
     const mapCenterRef = useRef(mapCenter);
     mapCenterRef.current = mapCenter;
+    // Kartans zoomnivå (null tills kartan rapporterat). Driver veckovyns
+    // upplåsning: "ju närmare du zoomar i rummet, desto längre får du zooma
+    // ut i tiden" — veckan över hela Sverige vore tusentals brickor (kartan
+    // kör medvetet ingen klustring).
+    const [mapZoom, setMapZoom] = useState<number | null>(null);
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
@@ -376,6 +395,15 @@ export default function HomePage() {
     // samma render. Annars fanns ett mellanläge där eventsLoaded blivit true men
     // dagens lista ännu var tom → "Inga event" hann blinka förbi innan datan
     // filtrerats klart.
+    //
+    // VECKOVYN är geo-avgränsad: från WEEK_RANGE_MIN_DAYS dagar filtreras
+    // eventen dessutom till en radie kring kartans mitt. Utan avgränsningen
+    // vore en vecka × hela Sverige tusentals brickor (ingen klustring).
+    // Centrum rundas till ~5 km-rutor (weekAreaKey) så listan inte räknas om
+    // — och markörerna inte omsyncas — för varje liten panorering.
+    const weekAreaKey = dayRangeDays >= WEEK_RANGE_MIN_DAYS && mapCenter
+        ? `${Math.round(mapCenter.lat * 20) / 20}:${Math.round(mapCenter.lng * 20) / 20}`
+        : null;
     const filteredEvents = useMemo(() => {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayOffset);
@@ -387,8 +415,26 @@ export default function HomePage() {
         endOfDay.setDate(endOfDay.getDate() + (dayRangeDays - 1));
         endOfDay.setHours(23, 59, 59, 999);
 
-        return events.filter(evt => evt.time >= startOfDay && evt.time <= endOfDay);
-    }, [events, dayOffset, dayRangeDays]);
+        const inRange = events.filter(evt => evt.time >= startOfDay && evt.time <= endOfDay);
+        if (!weekAreaKey) return inRange;
+
+        // Veckoläge: behåll bara event inom radien kring kartans (rundade)
+        // mitt. Event utan koordinater släpps igenom — de kan ändå inte ritas
+        // som brickor och ska inte försvinna ur sök/listor.
+        const [cLat, cLng] = weekAreaKey.split(':').map(Number);
+        return inRange.filter(evt =>
+            !hasValidCoords(evt) || haversineKm(cLat, cLng, evt.lat, evt.lng) <= WEEK_AREA_RADIUS_KM
+        );
+    }, [events, dayOffset, dayRangeDays, weekAreaKey]);
+
+    // Zoomar man ut ur områdesvyn medan veckoläget är på → tillbaka till en
+    // dag (offset behålls). 0.5 zoomstegs hysteres mot upplåsningsgränsen så
+    // det inte flappar precis på tröskeln.
+    useEffect(() => {
+        if (dayRangeDays >= WEEK_RANGE_MIN_DAYS && mapZoom !== null && mapZoom < WEEK_VIEW_MIN_ZOOM - 0.5) {
+            setDayRangeDays(1);
+        }
+    }, [mapZoom, dayRangeDays]);
 
     // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
     // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
@@ -1065,9 +1111,14 @@ export default function HomePage() {
         : -1;
 
     // Stabil referens så V2Map:s useEffect inte loopar.
-    const handleMapCenterChange = useCallback((lat: number, lng: number) => {
+    const handleMapCenterChange = useCallback((lat: number, lng: number, zoom?: number) => {
         setMapCenter({ lat, lng });
+        if (typeof zoom === 'number') setMapZoom(zoom);
     }, []);
+
+    // Veckoalternativet i dagväljaren låses upp först när man zoomat in till
+    // stadsnivå (se konstantblocket ovanför HomePage).
+    const weekUnlocked = mapZoom !== null && mapZoom >= WEEK_VIEW_MIN_ZOOM;
 
     const handleDiscardEvent = (eventId: string) => {
         setDiscardedEventIds(prev => {
@@ -1130,6 +1181,7 @@ export default function HomePage() {
                 dayOffset={dayOffset}
                 dayRangeDays={dayRangeDays}
                 onDayRangeChange={handleDayRangeChange}
+                weekUnlocked={weekUnlocked}
                 dayCount={dayTotalCount}
                 eventsLoaded={eventsLoaded}
                 dayCountReady={dayCountReady}

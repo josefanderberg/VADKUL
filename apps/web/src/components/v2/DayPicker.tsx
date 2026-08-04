@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { CalendarDays, Check } from 'lucide-react';
+import { CalendarDays, Check, Lock } from 'lucide-react';
 
 export interface DayRange { offset: number; days: number; }
 
@@ -19,6 +19,10 @@ export function weekendRange(): DayRange {
 interface DayPickerProps {
     dayOffset: number;
     dayRangeDays: number;
+    /** True när kartan är inzoomad till stadsnivå — då låses "Hela veckan"
+     *  upp. Utzoomad visas raden låst med hint (vecka × hela Sverige =
+     *  tusentals brickor; kartan kör medvetet ingen klustring). */
+    weekUnlocked?: boolean;
     /** Knappen som öppnade popovern — klick på den ska INTE räknas som
      *  "utanför" (annars stänger mousedown + återöppnar click = toggle-race). */
     anchorRef?: React.RefObject<HTMLElement | null>;
@@ -28,10 +32,10 @@ interface DayPickerProps {
 
 /**
  * Popover ovanför dagchippen: kommande veckan dag för dag (Idag, Imorgon +
- * veckodagarna med datum), "I helgen" som intervall, plus fritt datum.
- * Inget "Hela veckan"-val — varje dag visas för sig.
+ * veckodagarna med datum), "I helgen" som intervall, "Hela veckan"
+ * (zoom-gatad — låses upp på stadsnivå), plus fritt datum.
  */
-export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, onClose }: DayPickerProps) {
+export default function DayPicker({ dayOffset, dayRangeDays, weekUnlocked = false, anchorRef, onPick, onClose }: DayPickerProps) {
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const onDown = (e: MouseEvent) => {
@@ -103,20 +107,57 @@ export default function DayPicker({ dayOffset, dayRangeDays, anchorRef, onPick, 
                     </button>
                 );
             })}
-            {showWeekend && (() => {
-                const active = dayOffset === weekend.offset && dayRangeDays === weekend.days;
+            {(() => {
+                const weekendActive = dayOffset === weekend.offset && dayRangeDays === weekend.days;
+                const weekActive = dayOffset === 0 && dayRangeDays === 7;
+                // "Hela veckan"-radens datumspann (idag–om 6 dagar) som sub-etikett.
+                const weekEnd = new Date();
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
                 return (
                     <div className="border-t border-slate-100 dark:border-slate-800 mt-1.5 pt-1.5">
-                        <button
-                            type="button"
-                            onClick={() => onPick(weekend.offset, weekend.days)}
-                            className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
-                                active ? 'bg-[#006AA7] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                            }`}
-                        >
-                            <span>I helgen</span>
-                            {active && <Check size={15} className="shrink-0" />}
-                        </button>
+                        {showWeekend && (
+                            <button
+                                type="button"
+                                onClick={() => onPick(weekend.offset, weekend.days)}
+                                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
+                                    weekendActive ? 'bg-[#006AA7] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <span>I helgen</span>
+                                {weekendActive && <Check size={15} className="shrink-0" />}
+                            </button>
+                        )}
+                        {weekUnlocked ? (
+                            <button
+                                type="button"
+                                onClick={() => onPick(0, 7)}
+                                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold transition-colors ${
+                                    weekActive ? 'bg-[#006AA7] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <span>Hela veckan</span>
+                                <span className="flex items-center gap-1.5">
+                                    <span className={`text-[11px] font-semibold tabular-nums ${weekActive ? 'text-white/80' : 'text-slate-400'}`}>
+                                        {fmt(new Date())}–{fmt(weekEnd)}
+                                    </span>
+                                    {weekActive && <Check size={15} className="shrink-0" />}
+                                </span>
+                            </button>
+                        ) : (
+                            // Låst: veckan visar bara området man zoomat in på —
+                            // utzoomad vecka vore tusentals brickor på en gång.
+                            <div
+                                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm font-bold text-slate-400 dark:text-slate-500 cursor-default select-none"
+                                title="Zooma in på ett område för att se hela veckan där"
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <Lock size={13} className="shrink-0" />
+                                    Hela veckan
+                                </span>
+                                <span className="text-[11px] font-semibold">zooma in först</span>
+                            </div>
+                        )}
                     </div>
                 );
             })()}
