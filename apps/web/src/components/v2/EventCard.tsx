@@ -7,7 +7,6 @@ import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
-import EventPhotosPanel from './EventPhotosPanel';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -1729,11 +1728,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
-                    {/* Livebilder + chatt per event — alla kan titta/läsa,
-                        dela bilder/skriva kräver konto. */}
+                    {/* Chatt per event — alla kan läsa, skriva kräver konto.
+                        (Livebilder-panelen borttagen 5/8 på ägarens beslut.) */}
                     {onRequireLogin && (
                         <div className="px-4 md:px-6 pb-4 flex flex-col gap-3">
-                            <EventPhotosPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
                             <EventChatPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
                         </div>
                     )}

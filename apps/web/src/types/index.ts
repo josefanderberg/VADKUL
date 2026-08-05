@@ -51,24 +51,6 @@ export interface ChatMessage {
   createdAt: Timestamp; // Firestore timestamp
 }
 
-/** Livebild från ett event — uppladdad av en inloggad besökare.
- *  voters: uid → 1 (upp) / -1 (ned); poängen härleds ur mappen (ingen räknare
- *  som kan driva isär). Bor i kollektionen eventPhotos (flat — event-id:n är
- *  URL:er och ogiltiga som doc-id, så eventKey är URL-enkodad precis som
- *  eventChats-nyckeln). */
-export interface EventPhoto {
-  id: string;
-  eventKey: string;
-  eventId: string;
-  eventTitle?: string;
-  uid: string;
-  userName?: string;
-  userImage?: string | null;
-  url: string;
-  voters: Record<string, 1 | -1>;
-  createdAt: Timestamp;
-}
-
 export interface ChatRoom {
   id: string;
   participants: string[]; // ['mitt-uid', 'annat-uid']
