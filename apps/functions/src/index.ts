@@ -491,11 +491,13 @@ export const applyEventBoost = region.firestore
                     return;
                 }
                 const data = snap.data() || {};
-                // Försvar på djupet: boosta bara event som betalaren faktiskt äger.
-                // UI:t erbjuder bara boost på egna event, så detta fångar manipulation.
+                // 5/8: boosten är öppen — VEM SOM HELST (inloggad) får betala för att
+                // lyfta ett event, inte bara ägaren (fans/föreningar/arrangörer utan
+                // eget konto för eventet). Betalningen är redan Stripe-verifierad och
+                // boost ger bara synlighet, så ägarkravet togs bort. Betalare + ägare
+                // loggas för spårbarhet.
                 if (data.hostUid !== uid) {
-                    console.error(`[boost] ${uid} betalade för event ${eventId} men hostUid=${data.hostUid}. Applicerar EJ.`);
-                    return;
+                    console.log(`[boost] ${uid} boostar annans event ${eventId} (hostUid=${data.hostUid ?? 'okänd'}).`);
                 }
                 // Förläng från det senare av "nu" och en ev. pågående boost.
                 const now = Date.now();

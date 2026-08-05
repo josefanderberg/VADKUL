@@ -698,7 +698,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             Rapportera event
                                         </button>
                                     )}
-                                    {canDelete && onBoost && (
+                                    {/* Boost är öppen för ALLA (5/8) — man får lyfta någon annans
+                                        event också. Föräldern skickar bara onBoost när eventet är
+                                        boostbart (användarskapat). */}
+                                    {onBoost && (
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
