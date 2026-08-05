@@ -1091,7 +1091,19 @@ export default function V2Map({
             pushedCountRef.current = next;
             sent = next;
             waveSize = Math.min(waveSize * 2, STREAM_CHUNK_MAX);
-            if (sent >= ordered.length) { arm(); return; }
+            if (sent >= ordered.length) {
+                // NORMALISERING (5/8): tiles byggda av updateData-diffarna har
+                // visat sig lämna trasiga interna index — queryRenderedFeatures
+                // kastade "Out of bounds"/"feature index out of bounds" vid
+                // mousemove/hover och setFeatureState vid tile-laddning, vilket
+                // kunde upplevas som att kartan hakade/låste sig. En avslutande
+                // FULL setData med exakt samma innehåll bygger om källans
+                // buckets från rent läge; visuellt en no-op (gamla tiles ligger
+                // kvar tills de nya är klara).
+                liveSrc.setData({ type: 'FeatureCollection', features: ordered as unknown as GeoJSON.Feature[] });
+                arm();
+                return;
+            }
             // Vänta tills vågen är INNE (källan laddad) + kort paus → nästa våg.
             // Timeout-fallback så en utebliven signal aldrig strandar streamen.
             let fired = false;
