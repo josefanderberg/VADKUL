@@ -24,6 +24,8 @@ import { classifySource } from '@/utils/sources';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { getNotisStatus, enableEventReminders } from '@/utils/fcm';
 import toast from 'react-hot-toast';
 
@@ -134,6 +136,14 @@ export default function HomePage() {
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tom set = visa alla kategorier.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+    // Sparade kartfilter (inloggade): users/{uid}.mapCategories. catPrefsUid =
+    // uid vars sparade filter hydrerats (läses EN gång per konto);
+    // lastSavedCatsRef = senast sparade/laddade värdet (sorterad nyckel) så vi
+    // bara skriver vid faktiska ändringar; urlHadCategoriesRef = en delad
+    // ?kategori=-länk vinner över det sparade.
+    const [catPrefsUid, setCatPrefsUid] = useState<string | null>(null);
+    const lastSavedCatsRef = useRef<string | null>(null);
+    const urlHadCategoriesRef = useRef(false);
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -1020,7 +1030,10 @@ export default function HomePage() {
         const kategori = params.get('kategori');
         if (kategori) {
             const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k));
-            if (valid.length) setSelectedCategories(new Set(valid));
+            if (valid.length) {
+                setSelectedCategories(new Set(valid));
+                urlHadCategoriesRef.current = true;
+            }
         }
         const dag = parseInt(params.get('dag') ?? '', 10);
         const dagar = parseInt(params.get('dagar') ?? '', 10);
@@ -1072,6 +1085,51 @@ export default function HomePage() {
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
     }, [dayOffset, dayRangeDays, selectedCategories]);
+
+    // ── Sparade kategorifilter (inloggade) ──────────────────────────────────
+    // Aktiverar man t.ex. Svenska kyrkan eller PRO ska valet överleva nästa
+    // besök — annars "försvinner" de eventen varje gång (Sundsvall-tråden 6/8).
+    // Hydrering: läs users/{uid}.mapCategories EN gång per konto, efter att en
+    // ev. inkommande ?kategori=-länk applicerats (länken vinner och blir då
+    // baslinje — den skriver INTE över det sparade förrän man själv ändrar).
+    useEffect(() => {
+        if (!user || !eventsLoaded || catPrefsUid === user.uid) return;
+        let cancelled = false;
+        (async () => {
+            let baseline = [...selectedCategories].sort().join(',');
+            try {
+                if (!urlHadCategoriesRef.current) {
+                    const snap = await getDoc(doc(db, 'users', user.uid));
+                    const saved = snap.exists() ? (snap.data() as { mapCategories?: unknown }).mapCategories : null;
+                    if (Array.isArray(saved)) {
+                        const valid = saved.filter((k): k is string =>
+                            typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
+                        baseline = [...valid].sort().join(',');
+                        if (!cancelled && valid.length) setSelectedCategories(new Set(valid));
+                    }
+                }
+            } catch { /* best-effort — kartan störs aldrig av prefs */ }
+            if (!cancelled) {
+                lastSavedCatsRef.current = baseline;
+                setCatPrefsUid(user.uid);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [user, eventsLoaded, catPrefsUid, selectedCategories]);
+
+    // Spara (debounce): först efter hydrering, och bara när valet faktiskt
+    // skiljer sig från senast sparade — även tömning sparas (aktivt avval).
+    useEffect(() => {
+        if (!user || catPrefsUid !== user.uid) return;
+        const key = [...selectedCategories].sort().join(',');
+        if (key === lastSavedCatsRef.current) return;
+        const t = setTimeout(() => {
+            setDoc(doc(db, 'users', user.uid), { mapCategories: [...selectedCategories] }, { merge: true })
+                .then(() => { lastSavedCatsRef.current = key; })
+                .catch(() => { /* best-effort */ });
+        }, 1200);
+        return () => clearTimeout(t);
+    }, [selectedCategories, user, catPrefsUid]);
 
     // ── Auto-hopp till Imorgon när dagens tidssatta utbud redan varit ────────
     // Sent på kvällen är nästan alla "Idag"-event släckta (past-dämpade 50 %-

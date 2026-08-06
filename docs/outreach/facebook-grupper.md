@@ -175,7 +175,7 @@ be Claude räkna om den först.
 | Vad händer i Vänersborg? | Vänersborg | 1/8-R | 2026-08-01 | ❌ **NEKAD i godkännandekön** (V1, långa formatet) | — admin-DM före nytt försök |
 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | Värmland (län) | 1/8-S | 2026-08-01 | KRÄVDE GODKÄNNANDE (V1, korta formatet) — i kö, ej släppt ännu (2/8) | 2026-08-22 |
 | Du vet vad som händer i Torshälla | Torshälla/Eskilstuna | 2/8-T | 2026-08-02 | **publicerat direkt** — dag 1 (3/8): **0 reaktioner**. Kolla gruppens allmänna aktivitet (jfr Ängelholm-insikten) + följ upp efter en vecka — festivalraderna (tors–lör) kan dra sent | 2026-08-23 |
-| Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | KRÄVDE GODKÄNNANDE — i kö (3/8). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
+| Vad händer i Sundsvall? | Sundsvall | 2/8-U | 2026-08-03* | ✅ GODKÄNT — UPPE (upptäckt 6/8 via kommentarstråd). 4+ kommentarer (Eva ×2, Amanda, Cecilia). *exakt postdatum obekräftat, 2 el. 3/8 | 2026-08-24 |
 | Vad Händer I Nykvarn | Nykvarn | 2/8-V | 2026-08-03 | **publicerat direkt** (V2) — dag 1: **11 likes, 4 komm. varav LOKALKRITIK** ("inget av det är i närheten") — 0 event i själva Nykvarn, se lärdom 3/8. Svar postat, vänd till tips-fråga | 2026-08-24 |
 | Vad händer i Majorna | Majorna/Göteborg | 4/8-W | 2026-08-04 | **POSTAT** (variant + utfall obekräftat — kolla länkkommentaren om V2) | 2026-08-25 |
 | Vad händer i Kristianstad | Kristianstad | 4/8-X | — | ⏸️ AVVALD 4/8 — lugn kulturvecka, inget dragplåster i stan; utkast (varierad version) sparat till senare vecka | — |
@@ -2104,9 +2104,33 @@ EFTER fredag har de raderna passerat — kommentera/uppdatera då, annars blir
 det Västmanland-läxan (30/7) igen.
 
 📊 **MÖNSTER VÄRT ATT SE: godkännande-köerna börjar bli svarta hål.** I kö
-utan känt utsläpp: Tjörn (1/8, 5 dygn), Värmland (1/8, 5 dygn), Sundsvall
-(2–3/8), Eskilstuna (24/7, aldrig bekräftat släppt!) — och nu fyra till.
+utan känt utsläpp: Tjörn (1/8, 5 dygn), Värmland (1/8, 5 dygn), Eskilstuna
+(24/7, aldrig bekräftat släppt!) — och nu fyra till (AA–AD 6/8).
+~~Sundsvall (2–3/8)~~ → SLÄPPT, se loggen: köerna är alltså inte alltid
+svarta hål, de är bara långsamma (Sundsvall tog ~3 dygn).
 **Att göra:** gå igenom "Dina inlägg"/gruppernas flöden och kolla vilka som
 faktiskt släpptes, nekades tyst eller ligger kvar — logga utfallet. Blir
 tysta nekanden ett mönster är admin-DM-spåret (18/7-planen) rätt väg i
 godkännande-grupper, inte fler kalla V1:or.
+
+### Sundsvall-tråden 6/8 — utfall, buggfynd och två produktbeslut
+
+Inlägget (U, 2–3/8) släpptes ur kön och fick en riktig tråd: Eva Groth
+(tipsar om kyrkomusikprogram ur ST, skulpturutställning Vigge bygdegård fr.
+8/8, spelmansstämma Torkarlsberget; "behövs nog en grupp för att samla ihop
+allt"), Amanda Haglund och Cecilia Mossberg ("Kul initiativ", försvarade
+sajten). Tre saker kom ur den:
+
+1. **GEODATA-BUGG (Eva/Amanda):** "Katarina kyrka" och "Rödön" ligger på
+   Sundsvallskartan. Verifierat i datat: Stockholms Katarina församlings
+   event (Konst i Katarina, Lunchmusik) ligger på 62.40/17.32 (söder om
+   Sundsvall) och Rödöns församlings "Kul i parken" (Krokom) på 62.39/17.57.
+   Klassisk församlings-geokodning — fixas med `npm run repair-geo` från
+   Josefs dator (samma klass som Eldtomta 3/8).
+2. **Kyrkomusiken Eva saknar finns sannolikt i datat men är OPT-IN:** Svenska
+   kyrkan (och PRO/Korpen) är avstängda som standard bakom ⋯ i
+   kategorifiltret. Delvis därför "saknas" program hon vet om.
+3. **PRODUKTBESLUT (byggt 6/8):** inloggade får sina kategorifilter sparade
+   (users/{uid}.mapCategories) — aktiverar man Svenska kyrkan/PRO en gång
+   ligger valet kvar nästa besök. Det gör opt-in-källorna nåbara för sina
+   målgrupper på riktigt.

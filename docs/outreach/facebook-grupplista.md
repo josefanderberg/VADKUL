@@ -89,7 +89,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
 | 55 | Vad händer i Majorna | /evenemang/goteborg | 4/8 · POSTAT (variant/utfall obekräftat) · karens 25/8 |
 | 56 | Vad händer i Linné? | vadkul.se |  |
-| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall | 2–3/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö 3/8 |
+| 57 | Vad händer i Sundsvall? | /evenemang/sundsvall | 2–3/8 · länk i inlägg (V1) · ✅ GODKÄNT/UPPE (6/8), **4+ komm.** |
 | 58 | Vad händer i Uppsala | /evenemang/uppsala | 23/7 · länk i kommentar · publicerat direkt |
 | 59 | Vad händer i Gränna | vadkul.se | 19/7 · länk i kommentar · ? |
 | 60 | Vad händer i Västmanland! | vadkul.se | 30/7 · 28/7-texten (O) · uppe · ⚠️ 2 av 5 rader (onsdag 29/7) hade redan passerat |
