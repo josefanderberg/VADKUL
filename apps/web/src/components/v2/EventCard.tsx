@@ -712,7 +712,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // Gester som börjar på interaktiva element (chattens input,
             // knappar, länkar) lämnas helt åt webbläsaren.
             const target = e.target as HTMLElement;
-            startedAtTop = sc.scrollTop <= 0
+            // < 1: scrollTop kan vara bråkdel nära toppen (Firefox/iOS).
+            startedAtTop = sc.scrollTop < 1
                 && !target.closest('button, a, input, textarea, select');
             touchStartY = e.touches[0].clientY;
             pulling = false;
@@ -721,7 +722,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (!startedAtTop) return;
             const dy = e.touches[0].clientY - touchStartY;
             if (!pulling) {
-                if (dy > 4 && sc.scrollTop <= 0) pulling = true;       // neddrag vid toppen → ta över
+                if (dy > 4 && sc.scrollTop < 1) pulling = true;        // neddrag vid toppen → ta över
                 else if (dy < -4) { startedAtTop = false; return; }    // uppdrag → vanlig innehållsscroll
             }
             if (pulling && e.cancelable) e.preventDefault();
@@ -747,7 +748,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!sc) return;
         const onWheel = (e: WheelEvent) => {
             const h = heightVhRef.current;
-            const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY; // rad-läge (mus) → px
+            // deltaMode: 0 = px, 1 = rader (Firefox med mus), 2 = sidor.
+            const px = e.deltaMode === 1 ? e.deltaY * 16
+                : e.deltaMode === 2 ? e.deltaY * window.innerHeight
+                : e.deltaY;
             const deltaVh = (px / window.innerHeight) * 100;
             // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
             if (deltaVh > 0 && h < MAX_HEIGHT_VH) {
@@ -757,7 +761,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 return;
             }
             // Scrolla tillbaka vid innehållets topp → krymp kortet (ner mot peek).
-            if (deltaVh < 0 && sc.scrollTop <= 0 && h > collapsedVhRef.current) {
+            // < 1 (inte <= 0): Firefox rapporterar BRÅKDELS-scrollTop (0.5 osv)
+            // nära toppen — med <= 0 fastnade hjulet i en död zon där varken
+            // innehållet eller kortet rörde sig.
+            if (deltaVh < 0 && sc.scrollTop < 1 && h > collapsedVhRef.current) {
                 e.preventDefault();
                 setIsAnimating(false);
                 updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh));
@@ -1132,6 +1139,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const target = e.target as HTMLElement;
         if (target.closest('button') || target.closest('a') || target.closest('input')) {
             return;
+        }
+
+        // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
+        // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens
+        // tumme samtidigt ett kortdrag: innehållet scrollade OCH kortet ändrade
+        // höjd ("scrollen ur synk, rutan komprimeras" — Firefox/desktop-rapport
+        // 6/8). Scrollbar-klick träffar det scrollbara elementet självt, i
+        // gutter-zonen UTANFÖR client-ytan → släpp gesten till scrollbaren.
+        if (target.scrollHeight > target.clientHeight || target.scrollWidth > target.clientWidth) {
+            const r = target.getBoundingClientRect();
+            if (e.clientX >= r.left + target.clientLeft + target.clientWidth
+                || e.clientY >= r.top + target.clientTop + target.clientHeight) {
+                return;
+            }
         }
 
         e.currentTarget.setPointerCapture(e.pointerId);
