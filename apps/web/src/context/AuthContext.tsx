@@ -22,7 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd).
    *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore. */
-  register: (name: string, email: string, password: string, stats?: { age?: number; gender?: string }) => Promise<void>;
+  register: (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual' }) => Promise<void>;
   /** Byt visningsnamn (profilpanelen). Speglas lokalt direkt. */
   updateDisplayName: (name: string) => Promise<void>;
   /** Byt profilbild (URL från Storage). Uppdaterar Auth-profilen + speglas lokalt. */
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string }) => {
+  const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual' }) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (name.trim()) {
       await updateProfile(cred.user, { displayName: name.trim() });
@@ -78,6 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: name.trim(),
         ...(typeof stats?.age === 'number' && Number.isFinite(stats.age) ? { age: stats.age } : {}),
         ...(stats?.gender ? { gender: stats.gender } : {}),
+        ...(stats?.city && stats?.citySlug ? {
+          city: stats.city,
+          citySlug: stats.citySlug,
+          citySource: stats.citySource ?? 'manual',
+          cityUpdatedAt: serverTimestamp(),
+        } : {}),
         createdAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {

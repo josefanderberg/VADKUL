@@ -79,7 +79,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 44 | Vad händer I Åmål och Säffle | vadkul.se |  |
 | 45 | Vad händer i Kvänum, Vara, Skara med omnejd | vadkul.se |  |
 | 46 | VAD HÄNDER I GÖTEBORG - Bara bilder! | /evenemang/goteborg |  |
-| 47 | VAD HÄNDER I VÄSTRA GÖTALAND | vadkul.se |  |
+| 47 | VAD HÄNDER I VÄSTRA GÖTALAND | vadkul.se | 6/8 · publicerat direkt — ingen godkännandekö (helg-utkastet: Asperö/Borås/Tjörn/Kungälv) · karens 27/8 |
 | 48 | Vad händer i Norrtälje? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
 | 49 | Vad händer i Stockholm! | /evenemang/stockholm |  |
 | 50 | Vad händer på Östermalm. | /evenemang/stockholm | 30/7 · länk i kommentar (Skansen/Grönan/Thielska) · uppe (text ej verifierad mot flödet) |

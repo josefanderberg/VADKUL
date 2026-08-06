@@ -7,9 +7,12 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
+import { doc, getDoc, setDoc, deleteField, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { CITIES, getCity } from '@/lib/cityUtils';
 
 interface ProfilePanelProps {
     open: boolean;
@@ -44,12 +47,62 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [notisStatus, setNotisStatus] = useState<NotisStatus>('unsupported');
     const [notisBusy, setNotisBusy] = useState(false);
+    // Min stad (stadssegmenterade utskick). '' = ingen stad vald/sparad.
+    const [citySlug, setCitySlug] = useState('');
+    const [cityBusy, setCityBusy] = useState(false);
 
     // Läs av notis-läget varje gång panelen öppnas (kan ha ändrats i
     // webbläsarens inställningar sedan sist).
     useEffect(() => {
         if (open) setNotisStatus(getNotisStatus());
     }, [open]);
+
+    // Hämta sparad stad när panelen öppnas (kan ha GPS-härletts sedan sist).
+    useEffect(() => {
+        if (!open || !user) return;
+        let stale = false;
+        getDoc(doc(db, 'users', user.uid))
+            .then(snap => { if (!stale) setCitySlug(snap.exists() ? (snap.data().citySlug ?? '') : ''); })
+            .catch(() => { /* visa tomt — valet funkar ändå */ });
+        return () => { stale = true; };
+    }, [open, user]);
+
+    const handleCityChange = async (slug: string) => {
+        if (!user || cityBusy) return;
+        const prev = citySlug;
+        setCitySlug(slug);
+        setCityBusy(true);
+        try {
+            const ref = doc(db, 'users', user.uid);
+            if (!slug) {
+                // Rensat = aktivt val: citySource 'manual' hindrar GPS-vägen
+                // från att fylla i staden igen.
+                await setDoc(ref, {
+                    city: deleteField(),
+                    citySlug: deleteField(),
+                    citySource: 'manual',
+                    cityUpdatedAt: serverTimestamp(),
+                }, { merge: true });
+                toast.success('Stad borttagen — vi gissar den inte åt dig igen.');
+            } else {
+                const city = getCity(slug);
+                if (!city) throw new Error(`Okänd stad: ${slug}`);
+                await setDoc(ref, {
+                    city: city.name,
+                    citySlug: city.slug,
+                    citySource: 'manual',
+                    cityUpdatedAt: serverTimestamp(),
+                }, { merge: true });
+                toast.success(`Din stad är ${city.name}!`);
+            }
+        } catch (err) {
+            console.error(err);
+            setCitySlug(prev);
+            toast.error('Kunde inte spara staden. Försök igen.');
+        } finally {
+            setCityBusy(false);
+        }
+    };
 
     const handleEnableNotiser = async () => {
         if (!user || notisBusy) return;
@@ -397,6 +450,24 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                         <span className="flex-1">Byt lösenord</span>
                                         <span className="text-[10px] font-bold text-slate-400">via e-post</span>
                                     </button>
+                                    {/* Min stad — styr vilka event vi lyfter fram i utskick.
+                                        GPS fyller i den automatiskt; ett val här vinner alltid. */}
+                                    <div className="w-full flex items-center gap-3 px-4 py-3">
+                                        <MapPin size={16} className="text-[#006AA7] shrink-0" />
+                                        <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Min stad</span>
+                                        <select
+                                            value={citySlug}
+                                            disabled={cityBusy}
+                                            onChange={(e) => handleCityChange(e.target.value)}
+                                            aria-label="Min stad"
+                                            className="max-w-[45%] px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 focus:border-[#006AA7] focus:outline-none disabled:opacity-50"
+                                        >
+                                            <option value="">Ingen stad</option>
+                                            {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
+                                                <option key={c.slug} value={c.slug}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
                                         <ShieldCheck size={16} className="text-slate-500 shrink-0" />
                                         <span className="flex-1">Integritet</span>

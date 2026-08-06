@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { X, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { CITIES, getCity } from '@/lib/cityUtils';
+import { DERIVED_CITY_KEY } from '@/hooks/useSaveUserCity';
 import toast from 'react-hot-toast';
 
 interface AuthModalProps {
@@ -43,8 +45,24 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     // till users/{uid}. Kön har alltid "Vill inte ange" som utväg.
     const [age, setAge] = useState('');
     const [gender, setGender] = useState('');
+    // Stad (valfri) — förifylls från kartans GPS-härledning (localStorage).
+    // cityTouched skiljer "godkände förslaget" (gps → fortsätter auto-
+    // uppdateras) från "valde själv" (manual → GPS rör den aldrig).
+    const [citySlug, setCitySlug] = useState('');
+    const [cityTouched, setCityTouched] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!open || cityTouched || citySlug) return;
+        try {
+            const raw = localStorage.getItem(DERIVED_CITY_KEY);
+            if (!raw) return;
+            const derived = JSON.parse(raw);
+            // Validera mot CITIES — stashen kan vara gammal/korrupt.
+            if (derived?.slug && getCity(derived.slug)) setCitySlug(derived.slug);
+        } catch { /* ingen prefill */ }
+    }, [open, cityTouched, citySlug]);
 
     // Rensa felet när användaren ändrar input, byter läge eller öppnar modalen på nytt
     // — så att ett gammalt fel aldrig hänger kvar.
@@ -83,10 +101,18 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
         setError(null);
         try {
             if (mode === 'login') await signIn(email, password);
-            else await register(name, email, password, {
-                age: age.trim() ? Number(age) : undefined,
-                gender: gender || undefined,
-            });
+            else {
+                const city = citySlug ? getCity(citySlug) : null;
+                await register(name, email, password, {
+                    age: age.trim() ? Number(age) : undefined,
+                    gender: gender || undefined,
+                    ...(city ? {
+                        city: city.name,
+                        citySlug: city.slug,
+                        citySource: (cityTouched ? 'manual' : 'gps') as 'gps' | 'manual',
+                    } : {}),
+                });
+            }
             toast.success(mode === 'login' ? 'Inloggad!' : 'Välkommen till VADKUL!');
             onClose();
         } catch (err: any) {
@@ -160,6 +186,19 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     <option value="vill_ej_ange">Vill inte ange</option>
                                 </select>
                             </div>
+                            {/* Stad (valfri) — gör att utskicken kan visa event nära
+                                användaren. Förifylls från GPS-härledningen. */}
+                            <select
+                                value={citySlug}
+                                onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
+                                aria-label="Stad"
+                                className={`w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-[#006AA7] focus:outline-none ${citySlug ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'}`}
+                            >
+                                <option value="">Stad (valfritt)</option>
+                                {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
+                                    <option key={c.slug} value={c.slug}>{c.name}</option>
+                                ))}
+                            </select>
                         </>
                     )}
                     <input

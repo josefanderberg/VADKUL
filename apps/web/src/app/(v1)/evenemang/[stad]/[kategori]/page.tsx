@@ -8,6 +8,7 @@ import {
 } from '../../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
+import CityMapHero, { cityMapHref } from '../../CityMapHero';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -111,11 +112,21 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 backHref={`/evenemang/${city.slug}`}
                 backLabel={`Alla evenemang i ${city.name}`}
                 ctaLabel="Se allt på kartan"
+                ctaHref={cityMapHref(city)}
             />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
                 <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     <span aria-hidden>{cat.emoji}</span> {cat.h1(city.name)}
                 </h1>
+                {/* Samma kart-hero som stadssidan, men bara kategorins event
+                    som brickor (ingen Rekommenderat-ranking här — bildsatta
+                    event prioriteras av pickBricks fallbacken). */}
+                <CityMapHero
+                    city={city}
+                    events={events}
+                    recommended={[]}
+                    ctaLabel={`Öppna kartan över ${city.name}`}
+                />
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
                     Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> med
                     {' '}{cat.intro(city.name)} i {city.name} med omnejd på VADKUL

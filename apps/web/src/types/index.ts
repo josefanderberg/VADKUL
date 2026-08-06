@@ -29,6 +29,14 @@ export interface UserProfile {
   starGift?: 'unused' | 'placed';
   /** Eventet stjärnan sitter på (satt när starGift === 'placed'). */
   starEventId?: string;
+  /** Användarens stad (för stadssegmenterade utskick). city = visningsnamn,
+   *  citySlug = slug ur CITIES (cityUtils). */
+  city?: string;
+  citySlug?: string;
+  /** 'gps' = härledd ur kartpositionen (uppdateras automatiskt),
+   *  'manual' = valt/rensat i profilen eller vid registrering — skrivs
+   *  aldrig över av GPS-vägen. */
+  citySource?: 'gps' | 'manual';
 }
 
 export interface UserReview {

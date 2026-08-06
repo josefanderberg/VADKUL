@@ -43,7 +43,7 @@ export const CITIES: City[] = [
     { slug: 'karlstad',      name: 'Karlstad',      lat: 59.3793, lng: 13.5036, region: 'varmland', population: 95000 },
     { slug: 'kristianstad',  name: 'Kristianstad',  lat: 56.0294, lng: 14.1567, region: 'skane', population: 85000 },
     { slug: 'lulea',         name: 'Luleå',         lat: 65.5848, lng: 22.1547, region: 'norrbotten', population: 80000 },
-    { slug: 'mölndal',       name: 'Mölndal',       lat: 57.6554, lng: 12.0140, region: 'vastra-gotaland', population: 70000 },
+    { slug: 'molndal',       name: 'Mölndal',       lat: 57.6554, lng: 12.0140, region: 'vastra-gotaland', population: 70000 },
     { slug: 'kalmar',        name: 'Kalmar',        lat: 56.6634, lng: 16.3613, region: 'kalmar', population: 72000 },
     { slug: 'falun',         name: 'Falun',         lat: 60.6066, lng: 15.6355, region: 'dalarna', population: 60000 },
     // Andra med dedikerad källa eller hög event-volym
@@ -54,7 +54,6 @@ export const CITIES: City[] = [
     { slug: 'uddevalla',     name: 'Uddevalla',     lat: 58.3498, lng: 11.9419, region: 'vastra-gotaland', population: 56000 },
     { slug: 'borlange',      name: 'Borlänge',      lat: 60.4858, lng: 15.4371, region: 'dalarna', population: 53000 },
     { slug: 'motala',        name: 'Motala',        lat: 58.5371, lng: 15.0366, region: 'ostergotland', population: 45000 },
-    { slug: 'helsingborg',   name: 'Helsingborg',   lat: 56.0465, lng: 12.6945, region: 'skane', population: 150000 },
     { slug: 'landskrona',    name: 'Landskrona',    lat: 55.8703, lng: 12.8307, region: 'skane', population: 47000 },
     { slug: 'nykoping',      name: 'Nyköping',      lat: 58.7531, lng: 17.0085, region: 'sodermanland', population: 60000 },
     { slug: 'falkenberg',    name: 'Falkenberg',    lat: 56.9055, lng: 12.4912, region: 'halland', population: 47000 },
@@ -86,6 +85,21 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
     const a = Math.sin(dLat / 2) ** 2 +
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Närmaste stad ur CITIES, eller null om ingen ligger inom maxKm.
+ * Används för att härleda "din stad" ur en GPS-position — maxKm skyddar mot
+ * att en användare på fjället eller utomlands får en godtycklig storstad.
+ */
+export function nearestCity(lat: number, lng: number, maxKm: number = 60): City | null {
+    let best: City | null = null;
+    let bestDist = Infinity;
+    for (const c of CITIES) {
+        const d = haversineKm(lat, lng, c.lat, c.lng);
+        if (d < bestDist) { bestDist = d; best = c; }
+    }
+    return bestDist <= maxKm ? best : null;
 }
 
 /**

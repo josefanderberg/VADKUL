@@ -7,6 +7,7 @@ import {
 } from '../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
+import CityMapHero, { cityMapHref } from '../CityMapHero';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -109,11 +110,19 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-            <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" />
+            <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" ctaHref={cityMapHref(city)} />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
                 <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     Vad händer i {city.name}?
                 </h1>
+                {/* Kart-heron direkt under H1: sidans "startskärms-krok" — man
+                    ser kartan och stadens brickor innan man läser något alls. */}
+                <CityMapHero
+                    city={city}
+                    events={events}
+                    recommended={recommended}
+                    ctaLabel={`Öppna kartan över ${city.name}`}
+                />
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
                     Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> i
                     {' '}{city.name} med omnejd på VADKUL

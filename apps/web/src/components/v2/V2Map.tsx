@@ -1785,6 +1785,25 @@ export default function V2Map({
     useEffect(() => {
         if (!mapContainerRef.current) return;
 
+        // Djuplänk från stadssidornas kart-hero: ?plats=<lat>,<lng>[,zoom]
+        // öppnar kartan inzoomad på staden i stället för Sverige-vyn. Punkten
+        // sätts också som avslöjnings-ANKARE (samma ref som tap-avslöjningen)
+        // så brickorna kring staden tänds direkt vid load — och en senare
+        // GPS-fix reseedar inte iväg vyn till där besökaren råkar stå.
+        let startCenter = START_CENTER;
+        let startZoom = START_ZOOM;
+        {
+            const plats = new URLSearchParams(window.location.search).get('plats');
+            if (plats) {
+                const [la, ln, z] = plats.split(',').map(Number);
+                if (Number.isFinite(la) && Number.isFinite(ln)) {
+                    startCenter = [ln, la];
+                    startZoom = Number.isFinite(z) ? Math.min(Math.max(z, 4), 16) : 11;
+                    revealAnchorPtRef.current = { lng: ln, lat: la };
+                }
+            }
+        }
+
         let map: maplibregl.Map;
         try {
         map = new maplibregl.Map({
@@ -1798,8 +1817,9 @@ export default function V2Map({
             // Startvy: södra Sverige (Skåne syns), mer inzoomad — se START_CENTER/_ZOOM.
             // Vid start finns ändå inga avslöjade event, så en tightare sydlig vy känns
             // mindre tom och landar nära där de flesta användarna faktiskt är.
-            center: START_CENTER,
-            zoom: START_ZOOM,
+            // (?plats=-djuplänken ovan skriver över med stadens vy.)
+            center: startCenter,
+            zoom: startZoom,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om

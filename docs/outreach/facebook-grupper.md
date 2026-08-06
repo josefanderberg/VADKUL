@@ -182,6 +182,7 @@ be Claude räkna om den först.
 | Vad händer i Helsingborg? (#64) | Helsingborg | 4/8-Ä | — | ⚠️ **UTKAST TILLBAKADRAGET** — gruppen var INTE orörd (N2 postad 30/7, se raden ovan); felval pga osynkad main-logg. Posta EJ före 20/8 | — |
 | Norrtälje - Vad händer på byn? | Norrtälje | 4/8-Y | ____ | UTKAST — EJ POSTAT | +3 v |
 | Vad händer i Piteå? | Piteå | 4/8-Z | 2026-08-04 | **publicerat direkt** (Z2, länk i kommentar) — dag 1: 1 like, 4 komm. = UX-GULD (Elin: ryck-buggen hittad+fixad, Nästa/plus-diskussion, periodönskemål) | 2026-08-25 |
+| VAD HÄNDER I VÄSTRA GÖTALAND | Västra Götaland (län) | 6/8-VG | 2026-08-06 | **publicerat direkt — ingen godkännandekö** (helg-utkastet 6/8: Asperö Blues/NOCCO Borås/Sundsby Tjörn/Holidays Kungälv; variant + utfall obekräftat) | 2026-08-27 |
 
 ---
 

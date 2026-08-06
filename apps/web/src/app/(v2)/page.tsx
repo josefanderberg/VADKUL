@@ -23,6 +23,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource } from '@/utils/sources';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
+import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { getNotisStatus, enableEventReminders } from '@/utils/fcm';
 import toast from 'react-hot-toast';
 
@@ -860,6 +861,10 @@ export default function HomePage() {
     // pricken; tyst hämtning vid start + "Min plats"-knappen). EventCard visar
     // avståndet från den till det valda eventet. null tills positionen är känd.
     const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+
+    // Spegla närmaste stad till users/{uid} (max 1 gång/dygn) — underlag för
+    // stadssegmenterade medlemsutskick. Manuellt vald stad i profilen vinner.
+    useSaveUserCity(userPos);
 
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.

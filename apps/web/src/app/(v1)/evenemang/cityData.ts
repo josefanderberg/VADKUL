@@ -55,6 +55,9 @@ export type CityEvent = {
     title: string;
     time: string; // ISO-sträng (UTC)
     hasSpecificTime: boolean;
+    /** Eventets koordinat — kart-heron placerar brickor med den. */
+    lat: number;
+    lng: number;
     locationName: string;
     category: string;
     emoji: string;
@@ -175,6 +178,8 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
                 title: e.title,
                 time: e.time,
                 hasSpecificTime: !!e.hasSpecificTime,
+                lat: e.lat,
+                lng: e.lng,
                 locationName: e.locationName,
                 category: e.category,
                 emoji: e.emoji,

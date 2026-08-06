@@ -322,6 +322,21 @@
   .city-cta::before { animation: none; }
 }
 
+/* Stadssidornas kart-hero: brickorna poppar in staggrat (delay sätts inline
+   per bricka) — samma "kartan vaknar"-känsla som startskärmens avslöjning.
+   OBS: animationen får INTE röra transform — brickans rotate(45deg)+translate
+   ligger där (inline) — så intåget görs med opacity + scale-registret. */
+@keyframes hero-bricka-in {
+  from { opacity: 0; scale: 0.3; }
+  to   { opacity: 1; scale: 1; }
+}
+.hero-bricka {
+  animation: hero-bricka-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bricka { animation: none; }
+}
+
 /* Exit: kortet zoomar "ner i kartan" medan backdropen tonar bort.
    Längden styrs av --welcome-exit-ms som komponenten sätter (håller JS-timeouten
    och animationen i synk från ETT ställe: EXIT_MS i WelcomeOverlay.tsx). */

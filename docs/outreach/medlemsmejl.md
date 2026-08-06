@@ -1,5 +1,29 @@
 # Medlemsutskicket — stjärnan till de första 167
 
+## ✅ SKICKAT 2026-07-28 kl 18:20 — facit
+
+Kampanjen (Zoho-id 292391000000033959) byggdes och schemalades 28/7 till
+18:20, fastnade en stund i Zohos compliance-granskning ("Ska granskas") men
+**levererades 2026-07-28 kl 18:20** till listan "Medlemmar" — **166
+kontakter** (admin@admin.com avvisades som gruppadress; ämne/brödtext säger
+167 enligt ägarbeslut). Leverans bekräftad mot mottaget mejl. Dokumenterat i
+efterhand 2026-08-06.
+
+- **Avsändare `hej@vadkul.se`** ("Josef på VADKUL") — medvetet val: enda
+  verifierade avsändaren i Campaigns (info@ hade krävt ny verifiering).
+  Nästa utskick: samma avsändare (domänrykte + igenkänning).
+- **Ämnesraden**: FNAME-varianten plus stjärna — "[Namn], du är en av de
+  första 167 på VADKUL ⭐".
+- Brödtexten ≈ utkastet nedan med små justeringar (knappen "Hämta min
+  guldstjärna ⭐", "över 22 000 evenemang", stjärnlänken bakom texten
+  "Öppna vadkul.se med din stjärna").
+
+**Utfall per 2026-08-06** (Firestore `users`, `starGiftCode == 'MEDLEM1'`):
+**6 inlösta** (3,6 % av 166) — varav **2 placerade** stjärnor och 4 ännu
+oanvända. Öppnings-/klickstatistik finns i Zoho Campaigns-rapporten.
+
+---
+
 Skickas via **Zoho Campaigns** (INTE vanliga Zoho Mail — bulk bryter mot deras
 policy och riskerar domänryktet som arrangörsmejlen behöver). Kampanjkod:
 **MEDLEM1** (egen kod ⇒ attributionen kan skilja medlemsmejl från FB-inläggens
@@ -23,10 +47,16 @@ profilens `displayName`: första ordet, avslutande siffror bort ("Malin81" →
 "Malin"), versal begynnelsebokstav. Mejladresser som namn och initialer på 1–2
 tecken lämnas blanka — hellre ingen hälsning än "Hej MP!".
 
-**⬜ Deployen — kör före utskicket (Josef, manuellt):** MEDLEM1-koden
-committades 17/7 (e5dae06) men senast VERIFIERADE functions-deployen är från
-12/7 — utan deploy säger stjärnlänken "Ogiltig gåvolänk". Kommandot är
-idempotent (gör inget om koden redan råkar vara live):
+**Sedan 2026-08-06 har CSV:n en tredje kolumn: `city`** — medlemmens stad ur
+`users/{uid}.city` (GPS-härledd via kartan, eller vald i profilen/
+registreringen; hämtas med `apps/scraper/service-account.json`). Tom stad =
+medlemmen har inte varit inne sedan funktionen deployades → ge dem det
+nationella utskicket. Kolumnen fylls på av sig själv i takt med att folk
+besöker kartan igen — bygg om listan strax före varje utskick.
+
+**✅ Deployen — bevisligen live:** MEDLEM1-koden committades 17/7 (e5dae06);
+att 6 inlösen registrerats efter utskicket bevisar att redeemStarGift var
+deployad och fungerade. Kommandot (idempotent) om det någonsin behövs igen:
 
 ```bash
 firebase deploy --only functions:redeemStarGift

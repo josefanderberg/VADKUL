@@ -1,0 +1,11 @@
+{
+  "projects": {},
+  "targets": {},
+  "etags": {
+    "vadkul-f2cb2": {
+      "extensionInstances": {
+        "firestore-stripe-payments": "0cfc9deca3eda2534bd9621120db1059553ac58e0565ae4a60d1681aa1fcd846"
+      }
+    }
+  }
+}
