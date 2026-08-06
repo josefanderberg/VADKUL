@@ -13,7 +13,8 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { LogOutcome, QueueResponse, TodayAction } from '@/types/outreach';
 import {
-    AlertCircle, Check, CheckCircle2, ChevronDown, Clock3, Copy, ExternalLink, Eye, Mail, MessageCircle,
+    AlertCircle, Check, CheckCircle2, ChevronDown, Clock3, Copy, ExternalLink, Eye, Loader2, Mail,
+    MessageCircle, Sparkles,
 } from 'lucide-react';
 
 const DAY_MS = 86_400_000;
@@ -155,7 +156,103 @@ function CandidateCard({ item }: { item: import('@/types/outreach').QueueItem })
             </div>
             <p className="text-[11px] font-bold text-slate-500">{last}</p>
             <p className="text-[11px] font-bold text-slate-400">{item.scoreExplanation}</p>
+            <DraftGenerator contactId={c.id} mode={c.postingMode} />
         </li>
+    );
+}
+
+/* ── Utkastgeneratorn — Claude skriver V1/V2 direkt i konsolen ───────────── */
+
+type DraftResponse = {
+    drafts: { v1: string; v2Post: string; v2FirstComment: string };
+    mentionedEvents: { title: string; day: string; place: string; emoji: string }[];
+    angle: string;
+    meta: {
+        linkTarget: string; weekCount: number; nearCount: number; radiusKm: number;
+        dataUpdatedAt: string; source: 'live' | 'snapshot';
+    };
+};
+
+function DraftGenerator({ contactId, mode }: { contactId: string; mode: 'approval' | 'direct' | 'unknown' }) {
+    const { user } = useAuth();
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [result, setResult] = useState<DraftResponse | null>(null);
+
+    const generate = async () => {
+        if (!user || busy) return;
+        setBusy(true);
+        setError(null);
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/admin/outreach/draft', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contactId }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                setError(json?.error ?? `Generering misslyckades (${res.status}).`);
+                return;
+            }
+            setResult(json as DraftResponse);
+        } catch {
+            setError('Nätverksfel — försök igen.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-2 pt-1">
+            <div className="flex items-center gap-2">
+                <button type="button" onClick={generate} disabled={busy}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#006AA7] text-white text-[11px] font-black hover:bg-[#005590] transition-colors disabled:opacity-50">
+                    {busy ? <><Loader2 size={12} className="animate-spin" /> Skriver utkast… (~30 s)</>
+                          : <><Sparkles size={12} /> {result ? 'Generera om' : 'Generera utkast'}</>}
+                </button>
+                {error && <p className="text-[11px] font-bold text-rose-600">{error}</p>}
+            </div>
+
+            {result && (
+                <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                    <p className="text-[11px] font-bold text-slate-500">
+                        {result.meta.weekCount} event inom {result.meta.radiusKm} km · {result.meta.nearCount} inom 8 km
+                        · data: {result.meta.source === 'live' ? 'live' : '⚠ snapshot'}
+                        {result.angle && <> · {result.angle}</>}
+                    </p>
+
+                    {(mode === 'approval' || mode === 'unknown') && (
+                        <DraftBlock label="V1 — länk i inlägget (godkännandekö)" text={result.drafts.v1} />
+                    )}
+                    {(mode === 'direct' || mode === 'unknown') && (
+                        <>
+                            <DraftBlock label="V2 — inlägget (utan länk)" text={result.drafts.v2Post} />
+                            <DraftBlock label="V2 — första kommentaren (länken)" text={result.drafts.v2FirstComment} />
+                        </>
+                    )}
+                    {mode === 'approval' && (
+                        <p className="text-[11px] font-semibold text-slate-400">
+                            Publicerade den direkt ändå? Generera om — eller ta V1:an som den är, länken gör jobbet.
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DraftBlock({ label, text }: { label: string; text: string }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+                <span className="text-[11px] font-black text-slate-600">{label}</span>
+                <CopyButton text={text} title={`Kopiera: ${label}`} />
+            </div>
+            <pre className="whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-2.5 text-xs font-medium leading-relaxed text-slate-800 max-h-72 overflow-y-auto font-[inherit]">
+                {text}
+            </pre>
+        </div>
     );
 }
 
