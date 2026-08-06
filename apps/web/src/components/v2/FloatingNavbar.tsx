@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, Heart, Calendar, ChevronDown } from 'lucide-react';
+import { User, Plus, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DayPicker from './DayPicker';
 
@@ -151,12 +151,16 @@ export default function FloatingNavbar({
 
                 {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
                     höger åt kategorifiltret som då hoppar upp på den här raden
-                    (CategoryFilter, samma max-w-[1400px]-container). */}
-                <div className="relative flex items-center gap-2 w-full 2xl:pr-[56px]">
+                    (CategoryFilter, samma max-w-[1400px]-container).
+                    items-start (inte center): vänsterkolumnen är två knappar hög
+                    sedan hjärtat flyttade ner under profilen — övriga kontroller
+                    ska ligga kvar i topplinjen, inte mittcentreras mot kolumnen. */}
+                <div className="relative flex items-start gap-2 w-full 2xl:pr-[56px]">
 
-                    {/* Vänster: profil + hjärtat (sparade) direkt höger om profilen.
-                        Väskan/funktioner ligger under, renderade i V2Map. */}
-                    <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+                    {/* Vänster: profil med hjärtat (sparade) UNDER — frigör plats i
+                        topplinjen för dagväljarens bläddringspilar (6/8, Josefs
+                        önskemål: allt ska få plats utan att det blir trångt). */}
+                    <div className="flex flex-col items-start gap-2 pointer-events-auto shrink-0">
                         <button
                             type="button"
                             onClick={handleProfileClick}
@@ -196,34 +200,64 @@ export default function FloatingNavbar({
                     </div>
 
                     {/* Dagväljaren — CENTRERAD högst upp på skärmen (absolut, så den
-                        ligger mitt i vyn oavsett knapparna till vänster/höger). */}
+                        ligger mitt i vyn oavsett knapparna till vänster/höger).
+                        top-0 (inte top-1/2): raden är högre än 40px sedan hjärtat
+                        flyttade ner — chipen ska ligga i topplinjen med sök/plus.
+                        Pilarna bläddrar en dag i taget (bara i endagsläge — för en
+                        period är "nästa dag" tvetydigt): höger alltid, vänster
+                        först när man bläddrat framåt (osynlig platshållare innan,
+                        så chipen inte hoppar i sidled när pilen dyker upp). */}
                     {onDayRangeChange && (
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-10">
-                            <div className="relative">
-                                <button
-                                    ref={dayChipRef}
-                                    type="button"
-                                    onClick={() => setDayPickerOpen(o => !o)}
-                                    aria-expanded={dayPickerOpen}
-                                    aria-label="Välj dag eller period"
-                                    className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
-                                >
-                                    <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                                    <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
-                                    <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
-                                    {eventsLoaded && dayCountReady ? dayCount : '…'}
-                                </span>
-                                {dayPickerOpen && (
-                                    <DayPicker
-                                        dayOffset={dayOffset}
-                                        dayRangeDays={dayRangeDays}
-                                        weekUnlocked={weekUnlocked}
-                                        anchorRef={dayChipRef}
-                                        onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
-                                        onClose={() => setDayPickerOpen(false)}
-                                    />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10">
+                            <div className="flex items-center gap-1.5">
+                                {dayRangeDays === 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => dayOffset > 0 && onDayRangeChange(dayOffset - 1, 1)}
+                                        aria-label="Föregående dag"
+                                        title="Föregående dag"
+                                        className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayOffset > 0 ? '' : 'invisible'}`}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                )}
+                                <div className="relative">
+                                    <button
+                                        ref={dayChipRef}
+                                        type="button"
+                                        onClick={() => setDayPickerOpen(o => !o)}
+                                        aria-expanded={dayPickerOpen}
+                                        aria-label="Välj dag eller period"
+                                        className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
+                                    >
+                                        <Calendar size={15} className="text-[#006AA7] shrink-0" />
+                                        <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
+                                        <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
+                                        {eventsLoaded && dayCountReady ? dayCount : '…'}
+                                    </span>
+                                    {dayPickerOpen && (
+                                        <DayPicker
+                                            dayOffset={dayOffset}
+                                            dayRangeDays={dayRangeDays}
+                                            weekUnlocked={weekUnlocked}
+                                            anchorRef={dayChipRef}
+                                            onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
+                                            onClose={() => setDayPickerOpen(false)}
+                                        />
+                                    )}
+                                </div>
+                                {dayRangeDays === 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onDayRangeChange(dayOffset + 1, 1)}
+                                        aria-label="Nästa dag"
+                                        title="Nästa dag"
+                                        className="h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
                                 )}
                             </div>
                         </div>
