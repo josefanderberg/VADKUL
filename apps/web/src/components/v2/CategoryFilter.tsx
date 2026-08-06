@@ -123,10 +123,12 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         // viewportkanten på breda skärmar. Tom container = pointer-events-none.
         <div className="fixed top-6 left-0 right-0 px-4 z-[1150] pointer-events-none">
             <div className="relative max-w-[1400px] mx-auto">
-                {/* Högerkolumnen (under sök/+ som standard). På största brytpunkten (2xl)
-                    HOPPAR den upp på navbarens rad, längst åt höger (navbaren får
-                    2xl:pr för att lämna plats — se FloatingNavbar). */}
-                <div className="absolute right-0 top-[46px] 2xl:top-0 pointer-events-auto">
+                {/* Högerkolumnen: TREDJE knappen under sök (top 0) och skapa event
+                    (top 48) — top-[96px] = 2 × (40px knapp + 8px gap). På största
+                    brytpunkten (2xl) HOPPAR den upp på navbarens rad, längst åt
+                    höger (navbaren får 2xl:pr för att lämna plats — se
+                    FloatingNavbar). */}
+                <div className="absolute right-0 top-[96px] 2xl:top-0 pointer-events-auto">
                     {/* Rund knapp. Badge = antal aktiva filter. */}
                     <button
                         ref={btnRef}

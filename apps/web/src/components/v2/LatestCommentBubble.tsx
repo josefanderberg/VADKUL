@@ -59,7 +59,7 @@ export default function LatestCommentBubble({ events, onPick }: Props) {
     return (
         // z-[990] < navbarens 1000: en öppen dagväljar-dropdown ska ligga ÖVER
         // bubblan, inte tvärtom (de kan överlappa på smala skärmar).
-        <div className="fixed top-[4.5rem] left-16 right-4 z-[990] flex justify-start pointer-events-none">
+        <div className="fixed top-[4.5rem] left-16 right-16 z-[990] flex justify-start pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-1 max-w-sm rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 pl-3 pr-1.5 py-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                 <button
                     type="button"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Plus, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DayPicker from './DayPicker';
 
@@ -263,18 +263,20 @@ export default function FloatingNavbar({
                         </div>
                     )}
 
-                    {/* Höger: expanderbar sök + skapa event. Containern är
-                        pointer-events-none (den är flex-1 + justify-end → dess TOMMA
-                        vänsterdel täckte kartbandet under navbaren och slukade klick).
-                        Varje faktisk kontroll nedan sätter pointer-events-auto själv. */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end pointer-events-none">
+                    {/* Höger: en KOLUMN längst ut i kanten (6/8, Josef): sök överst,
+                        skapa event-knappen under, och kategorifiltret (renderas i
+                        CategoryFilter, top-[96px]) som tredje knapp — tre i rad
+                        lodrätt. Containern är pointer-events-none (dess TOMMA
+                        vänsterdel täcker annars kartbandet och slukar klick) —
+                        varje faktisk kontroll sätter pointer-events-auto själv. */}
+                    <div className="flex flex-col items-end gap-2 flex-1 min-w-0 pointer-events-none">
                         {/* Sök. Öppet läge expanderar från högerkanten som förut,
                             men ligger ÖVER allt annat i navbaren (z-[1200] >
-                            plussets 1100 > dagchipens 10) med SOLID vit bakgrund —
-                            förut hamnade fältet under dagväljaren så man inte såg
-                            det man skrev; nu täcker det chipen medan man söker. */}
+                            skapa-knappens 1100 > dagchipens 10) med SOLID vit
+                            bakgrund — förut hamnade fältet under dagväljaren så man
+                            inte såg det man skrev; nu täcker det chipen. */}
                         {searchOpen ? (
-                            <div className="relative z-[1200] flex items-center flex-1 min-w-0 max-w-[520px] bg-white rounded-full shadow-xl border border-white/50 px-4 h-10 pointer-events-auto">
+                            <div className="relative z-[1200] flex items-center w-full max-w-[520px] bg-white rounded-full shadow-xl border border-white/50 px-4 h-10 pointer-events-auto">
                                 <Search size={16} className="text-slate-400 shrink-0 mr-2" />
                                 <input
                                     ref={searchInputRef}
@@ -293,9 +295,6 @@ export default function FloatingNavbar({
                                 </button>
                             </div>
                         ) : (
-                            // Hopfälld sök: samma 40px-storlek som övriga runda knappar.
-                            // Ligger VÄNSTER om plusset — plusset är ytterst i hörnet,
-                            // rakt ovanför kategorifilter-knappen (i linje med kolumnen).
                             <button
                                 onClick={() => setSearchOpen(true)}
                                 className="bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
@@ -305,12 +304,13 @@ export default function FloatingNavbar({
                             </button>
                         )}
 
-                        {/* +-knappen (ytterst i hörnet) döljs medan söket är öppet —
-                            input-fältet får hela bredden och man råkar inte starta
-                            skapa-event-flödet när man siktar på sökfältet.
-                            UNDANTAG: i placerings-läget är plusset bekräfta-knappen
-                            och måste alltid synas, och mitt i drop-animationen får
-                            den inte unmountas (då fastnar plusDropping-låset). */}
+                        {/* Skapa event — kartnål-med-plus (bytt från rent plus 6/8:
+                            Elin läste + som zoom; nålen säger "lägg in på kartan").
+                            Döljs medan söket är öppet så man inte råkar starta
+                            skapa-flödet när man siktar på fältet. UNDANTAG: i
+                            placerings-läget är den bekräfta-knappen (✓) och måste
+                            alltid synas, och mitt i drop-animationen får den inte
+                            unmountas (då fastnar plusDropping-låset). */}
                         {creationMode !== 'editing' && createEventEnabled && (!searchOpen || creationMode === 'placing' || plusDropping) && (
                             <button
                                 ref={plusBtnRef}
@@ -321,7 +321,9 @@ export default function FloatingNavbar({
                                 title={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
                                 className="bg-[#006AA7] hover:bg-[#005590] w-10 h-10 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
                             >
-                                <Plus size={20} className="text-white" />
+                                {creationMode === 'placing'
+                                    ? <Check size={20} className="text-white" />
+                                    : <MapPinPlus size={20} className="text-white" />}
                             </button>
                         )}
                     </div>
