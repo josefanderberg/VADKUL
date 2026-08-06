@@ -1994,7 +1994,7 @@ Strawberry Arena, The Ark/Uggla = Rörstrand Center Lidköping (21 km, ok i
 syftesmening + medlemsrader (4/8-budskapet). Spamdisciplin: posta 2 idag
 (tor) + 2 fredag förmiddag — inte alla fyra på en gång.
 
-### AA. Vad händer i Stockholm! (#49 → /evenemang/stockholm) — UTKAST, EJ POSTAT
+### AA. Vad händer i Stockholm! (#49 → /evenemang/stockholm) — ✅ POSTAT 6/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 V1 (godkännande):
 
@@ -2019,7 +2019,7 @@ V1 (godkännande):
 V2 (direkt): samma, kartstycket utan länk + "Länken ligger i kommentarerna 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/stockholm — tipsa gärna om det jag missat!`
 
-### AB. Vad händer i Kvänum, Vara, Skara med omnejd (#45 → vadkul.se) — UTKAST, EJ POSTAT
+### AB. Vad händer i Kvänum, Vara, Skara med omnejd (#45 → vadkul.se) — ✅ POSTAT 6/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 V1:
 
@@ -2045,7 +2045,7 @@ V1:
 V2: kartstycke utan länk + kommentar. Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Kvänum, Vara och Skara!`
 
-### AC. Det händer i Ängelholm (#14 → vadkul.se) — UTKAST, EJ POSTAT
+### AC. Det händer i Ängelholm (#14 → vadkul.se) — ✅ POSTAT 6/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 V1:
 
@@ -2069,7 +2069,7 @@ V1:
 V2: kartstycke utan länk + kommentar. Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Ängelholm!`
 
-### AD. Vad händer i Nora (#26 → vadkul.se) — UTKAST, EJ POSTAT
+### AD. Vad händer i Nora (#26 → vadkul.se) — ✅ POSTAT 6/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 V1:
 
@@ -2093,3 +2093,19 @@ V1:
 
 V2: kartstycke utan länk + kommentar. Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Nora!`
+
+**FACIT 6/8 (bekräftat av Josef): alla fyra postades samma dag — och ALLA
+FYRA KRÄVDE GODKÄNNANDE.** Karens till 2026-08-27 för samtliga.
+
+⚠️ **BEVAKNINGSPUNKT (fredagsraderna):** V1-texterna innehåller fredagsevent
+(Ledin, Refreshments, Uggla, vernissagen, Stadra). Släpps ett inlägg ur kön
+EFTER fredag har de raderna passerat — kommentera/uppdatera då, annars blir
+det Västmanland-läxan (30/7) igen.
+
+📊 **MÖNSTER VÄRT ATT SE: godkännande-köerna börjar bli svarta hål.** I kö
+utan känt utsläpp: Tjörn (1/8, 5 dygn), Värmland (1/8, 5 dygn), Sundsvall
+(2–3/8), Eskilstuna (24/7, aldrig bekräftat släppt!) — och nu fyra till.
+**Att göra:** gå igenom "Dina inlägg"/gruppernas flöden och kolla vilka som
+faktiskt släpptes, nekades tyst eller ligger kvar — logga utfallet. Blir
+tysta nekanden ett mönster är admin-DM-spåret (18/7-planen) rätt väg i
+godkännande-grupper, inte fler kalla V1:or.
