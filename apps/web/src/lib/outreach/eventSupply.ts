@@ -35,8 +35,9 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-/** Koordinat för kontakten: egen lat/lng vinner, annars stadssidans stad. */
-function coordFor(c: OutreachContact): { lat: number; lng: number; radiusKm: number } | null {
+/** Koordinat för kontakten: egen lat/lng vinner, annars stadssidans stad.
+ *  Exporterad — eventPicker (utkastgeneratorn) använder samma upplösning. */
+export function coordForContact(c: OutreachContact): { lat: number; lng: number; radiusKm: number } | null {
     if (c.lat !== undefined && c.lng !== undefined) {
         return { lat: c.lat, lng: c.lng, radiusKm: c.radiusKm ?? 25 };
     }
@@ -50,7 +51,7 @@ function coordFor(c: OutreachContact): { lat: number; lng: number; radiusKm: num
 /** Antal kommande event inom radien de närmaste 7 dygnen, eller undefined om
  *  kontakten saknar koordinat (⚠-markering i kön i stället för en gissning). */
 export async function eventSupplyForContact(c: OutreachContact): Promise<number | undefined> {
-    const coord = coordFor(c);
+    const coord = coordForContact(c);
     if (!coord) return undefined;
     const dests = await loadDests();
     if (dests.length === 0) return undefined;

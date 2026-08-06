@@ -586,7 +586,17 @@ Loopen blir: *utfall loggas → Claude läser loggen → föreslår vad som funk
 
 **Levererar redan här:** de två källorna som glidit isär blir en. De 5 okända utfallen, de 3 kölagda och de 10 förfallna mejluppföljningarna dyker upp som konkreta att-göra-rader. Kön säger vilka av de 63 orörda grupperna som är värda mest idag. Inget utkast behövs för att det ska vara nyttigt.
 
-### Etapp 2 — Utkast med riktiga event (~1–2 dagar)
+### Etapp 2 — Utkast med riktiga event (~1–2 dagar) — ✅ POST-delen BYGGD 6/8
+
+Levererat 6/8: `eventPicker.ts` (live aggregatedEvents + snapshot-fallback,
+geo per kontakt, 8 km-räknare, biovakt, datumfönster per postingMode,
+helg-garanti i kandidattaket) + `POST /api/admin/outreach/draft` (Claude
+`claude-opus-5`, strukturerad JSON-output, formatreglerna ur
+facebook-grupper.md i systemprompten, de 5 senaste inläggen som
+"skriv inte likadant"-underlag) + ✨-knapp på kandidatkorten i TodayPanel
+med V1/V2-kopieringsrutor. Kräver `ANTHROPIC_API_KEY` (server-only, se
+.env.example). ÅTERSTÅR ur etappen: PATCH spara utkast till outreachLog,
+DraftPanel, duplikatvarningen (bodyHash/trigram) och Bekräfta postat-flödet.
 `eventPicker.ts` (aggregatedEvents + linkEvents, geo per kontakt, bio-filter, datumfönster) · `templates.ts` · `linkTarget.ts` · `draft`-routen · DraftPanel med kopieringsknappar, duplikat-/färskvaru-/datumvarningar · Bekräfta-postat-flödet med transaktionen mot kontakten.
 
 Fyll i `lat/lng` för orterna utan stadssida löpande i konsolen — det är detta som gör utkasten lokala även för de 60.

@@ -26,9 +26,11 @@ interface Props {
 }
 
 /**
- * Bubbla längst upp på kartan med den SENASTE chattkommentaren på sajten och
- * vilket event den hör till. Klick → hoppa till det eventet. Krysset döljer
- * just den kommentaren; nästa nya kommentar väcker bubblan igen.
+ * Bubbla längst upp till VÄNSTER på kartan med den SENASTE chattkommentaren på
+ * sajten och vilket event den hör till. Klick → hoppa till det eventet.
+ * Krysset döljer just den kommentaren; nästa nya kommentar väcker bubblan igen.
+ * Vänsterställd (6/8, Josef): mittplacerad täckte den dagväljaren och kartans
+ * mitt. left-16 = höger om profil/hjärt-kolumnen (left-4 + 40px + gap).
  */
 export default function LatestCommentBubble({ events, onPick }: Props) {
     const [comment, setComment] = useState<LatestComment | null>(null);
@@ -55,7 +57,9 @@ export default function LatestCommentBubble({ events, onPick }: Props) {
     if (dismissedAt !== null && createdMs <= dismissedAt) return null;
 
     return (
-        <div className="fixed top-[4.5rem] inset-x-0 z-[1040] flex justify-center px-4 pointer-events-none">
+        // z-[990] < navbarens 1000: en öppen dagväljar-dropdown ska ligga ÖVER
+        // bubblan, inte tvärtom (de kan överlappa på smala skärmar).
+        <div className="fixed top-[4.5rem] left-16 right-4 z-[990] flex justify-start pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-1 max-w-sm rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 pl-3 pr-1.5 py-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                 <button
                     type="button"
