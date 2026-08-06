@@ -38,6 +38,17 @@ const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 400;
 
 const PARISH_SUFFIX = /^(.+?)\s+(pastorat|församling|distrikt|domkyrkoförsamling|kyrkliga samfällighet)$/i;
 
+/** Församlingar vars namn INTE är en känd stad (eller är en ort någon
+ *  annanstans) — mappas manuellt till närmaste stad i SWEDISH_GEO_CITIES så
+ *  valideringen når dem alls. Upptäckta via buggrapporter; utan raden här är
+ *  församlingen "icke härledbar" och skriptet tittar aldrig på dess event.
+ *  Sundsvall-tråden 6/8: Stockholms Katarina församling och Rödöns församling
+ *  (Krokom) låg båda geokodade i Sundsvallstrakten. */
+const PARISH_CITY_ALIAS: Record<string, string> = {
+    'katarina': 'Stockholm',   // Katarina församling, Södermalm
+    'rödön': 'Östersund',      // Rödöns församling, Krokoms kommun
+};
+
 interface Row {
     url: string;
     firestoreId: string | null;
@@ -104,9 +115,11 @@ export function deriveExpectedCity(
             const m = part.match(PARISH_SUFFIX);
             if (m) {
                 const town = deriveTown(m[1].trim());
-                // Bara otvetydiga (kända) städer — småorter kan heta samma
-                // sak på flera ställen i landet.
-                const known = town ? knownGeoCity(town) : null;
+                // Aliastabellen först (församlingsnamn som inte är städer),
+                // sedan bara otvetydiga (kända) städer — småorter kan heta
+                // samma sak på flera ställen i landet.
+                const alias = town ? PARISH_CITY_ALIAS[town.toLowerCase()] : undefined;
+                const known = alias ?? (town ? knownGeoCity(town) : null);
                 return known;   // känd stad ELLER null — aldrig vidare till svagare signal
             }
         }

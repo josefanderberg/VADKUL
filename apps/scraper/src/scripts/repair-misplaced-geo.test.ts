@@ -26,6 +26,12 @@ describe('deriveExpectedCity', () => {
         expect(deriveExpectedCity(null, null, null)).toBeNull();
     });
 
+    it('alias-församlingar (namn ≠ stad) mappas till sin riktiga stad', () => {
+        // Sundsvall-tråden 6/8: båda låg geokodade i Sundsvallstrakten.
+        expect(deriveExpectedCity('Katarina kyrka, Katarina församling', null, null)).toBe('Stockholm');
+        expect(deriveExpectedCity(null, 'Rödöns församling', null)).toBe('Östersund');
+    });
+
     it('tvetydiga småorter avvisas — bara kända städer godkänns', () => {
         // "Stenkyrka" finns både på Tjörn och Gotland; "Edsberg" i Närke och
         // Sollentuna. Centroid-geokodning av dem träffar fel → ingen reparation.
