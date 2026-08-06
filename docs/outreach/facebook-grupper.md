@@ -1968,3 +1968,128 @@ rummet, desto längre får du zooma ut i tiden":
 Byggbitar: zoomnivå/bounds upp från V2Map (kartcentrum rapporteras redan),
 upplåsbart val i DayPicker, bounds-villkor i `filteredEvents`. Testa tätheten
 först med `?dagar=7` innan bygget prioriteras.
+
+---
+
+## Torsdag 6/8 — HELGKÖN: 4 grupper valda på bästa helgevent (fre 7/8–sön 9/8)
+
+**Metod:** main synkad före urvalet (5/8-regeln), 8 km-regeln + kvalitetsfilter
+på HELGENS event. Bortvalda trots höga råsiffror: Huddinge/Haninge/Skogås
+(0 dragvärda — bara barnpyssel/bibliotek), Luleå (1 loppis), Kristianstad
+(samma museivecka som fick den avvald 4/8). Göteborgsförorterna vilar
+(Majorna 4/8, stadsveckoregeln).
+
+**Valda:** Stockholm! #49 (The Weeknd på Strawberry Arena lör + Tomas Ledin
+på Skansen fre; staden fri sedan 30/7), Kvänum/Vara/Skara #45 (The Ark +
+Magnus Uggla på Rörstrand Center Lidköping, The Refreshments & Larz-Kristerz
++ Comedy Carnival på Botan i Skara), Det händer i Ängelholm #14 (ABBA Party
+på Enkegården + Sommarglitter — OBS Ängelholmsgrupper var lågaktiva 27/7,
+förväntan därefter; ALDRIG samma text som N&E-inlägget), Nora #26 (Stadra
+Teater, Larsmäss i Järnboås, (K)örhängen i Nora kyrka — liten men helt äkta
+lokal helg).
+
+**Verifierat:** Tomas Ledin = Skansen (event-URL:en bekräftar), The Weeknd =
+Strawberry Arena, The Ark/Uggla = Rörstrand Center Lidköping (21 km, ok i
+"med omnejd"-gruppen, ortnamn på raden per 3/8-regeln). Format: kort V1,
+syftesmening + medlemsrader (4/8-budskapet). Spamdisciplin: posta 2 idag
+(tor) + 2 fredag förmiddag — inte alla fyra på en gång.
+
+### AA. Vad händer i Stockholm! (#49 → /evenemang/stockholm) — UTKAST, EJ POSTAT
+
+V1 (godkännande):
+
+> Vilken helg Stockholm har framför sig 👇
+>
+> 🎤 The Weeknd på Strawberry Arena (lördag)
+> 🎸 Tomas Ledin på Skansen (fredag)
+> 🛍️ The Hornstull Market vid Hornstulls strand (lördag)
+> 🎶 Filharmonikerna i det gröna på Hötorget (söndag)
+> 🎺 Gatukonsert med Storstan Street Brass (söndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — över 200 event i stan bara i helgen:
+> https://vadkul.se/evenemang/stockholm
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er i helgen? 👇
+
+V2 (direkt): samma, kartstycket utan länk + "Länken ligger i kommentarerna 👇".
+Första kommentaren: `Här är kartan: https://vadkul.se/evenemang/stockholm — tipsa gärna om det jag missat!`
+
+### AB. Vad händer i Kvänum, Vara, Skara med omnejd (#45 → vadkul.se) — UTKAST, EJ POSTAT
+
+V1:
+
+> Vilken helg det blir här i trakten 👇
+>
+> 🎉 The Ark på Rörstrand Center i Lidköping (lördag)
+> 🎸 The Refreshments & Larz-Kristerz på Botan i Skara (fredag)
+> 🎭 Magnus Uggla på Rörstrand Center i Lidköping (fredag)
+> 🎤 Standup med Comedy Carnival på Botan i Skara (lördag)
+> 🏃 Istrun — Skaras snabba halvmara (lördag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — ett 30-tal event runt Kvänum, Vara
+> och Skara bara i helgen:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad går ni på? 👇
+
+V2: kartstycke utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Kvänum, Vara och Skara!`
+
+### AC. Det händer i Ängelholm (#14 → vadkul.se) — UTKAST, EJ POSTAT
+
+V1:
+
+> Härlig helg på gång i Ängelholm 👇
+>
+> 🎉 ABBA Party med The Visitors på Enkegården (lördag)
+> 🎶 Sommarglitter i Hembygdsparken (lördag)
+> 🎨 Vernissage "Immortal animals" på Galleri AM (fredag)
+> 🎨 Finissage på Bjäre Konsthall, Bjärehalvön (söndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — hela helgens utbud i trakten finns där:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad hittar ni på i helgen? 👇
+
+V2: kartstycke utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Ängelholm!`
+
+### AD. Vad händer i Nora (#26 → vadkul.se) — UTKAST, EJ POSTAT
+
+V1:
+
+> Fin helg på gång i Norabygden 👇
+>
+> 🎭 Stadra Teater — ett resande teatersällskap, Gyttorp (fredag)
+> 🛍️ Larsmäss i Järnboås (lördag)
+> 🎶 (K)örhängen — konsert i Nora kyrka (lördag)
+> 🧺 Hembygdsgårdarnas dag (söndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — hela helgens utbud i Norabygden finns
+> där:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er i helgen? 👇
+
+V2: kartstycke utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Nora!`

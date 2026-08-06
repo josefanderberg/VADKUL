@@ -46,7 +46,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 11 | Norrtälje - Vad händer på byn? | vadkul.se | utkast klart (4/8-Y), EJ postat |
 | 12 | Det händer i Helsingborg | /evenemang/helsingborg | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · **26 likes, 15 komm., 1 delning** |
 | 13 | Vad händer i Skogås, Trångsund och Länna | vadkul.se |  |
-| 14 | Det händer i Ängelholm | vadkul.se |  |
+| 14 | Det händer i Ängelholm | vadkul.se | utkast klart (6/8-AC, ABBA Party/Sommarglitter), EJ postat |
 | 15 | Vad händer i Kungsör 2.0 | vadkul.se | 22/7 · länk i inlägg · ? |
 | 16 | Vad händer på Yxlan | vadkul.se |  |
 | 17 | Älmhultsbor, vad händer? | vadkul.se |  |
@@ -58,7 +58,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 23 | Vad händer i Malå? | vadkul.se |  |
 | 24 | Vad händer i Kungsbacka ? | vadkul.se |  |
 | 25 | Vad händer i Söderhamn (Söderhamns Nytt) | vadkul.se |  |
-| 26 | Vad händer i Nora | vadkul.se |  |
+| 26 | Vad händer i Nora | vadkul.se | utkast klart (6/8-AD, Larsmäss/Stadra), EJ postat |
 | 27 | Vad händer i Byske? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
 | 28 | Vad händer i Gagnefs kommun | vadkul.se |  |
 | 29 | Vad händer på Österlen | vadkul.se | 27/7 · länk i inlägg (J-texten, V1) · publicerat direkt |
@@ -77,11 +77,11 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 42 | Vad händer i Malmö? | /evenemang/malmo | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
 | 43 | Det händer i Dellenbygden | vadkul.se |  |
 | 44 | Vad händer I Åmål och Säffle | vadkul.se |  |
-| 45 | Vad händer i Kvänum, Vara, Skara med omnejd | vadkul.se |  |
+| 45 | Vad händer i Kvänum, Vara, Skara med omnejd | vadkul.se | utkast klart (6/8-AB, The Ark/Uggla-helgen), EJ postat |
 | 46 | VAD HÄNDER I GÖTEBORG - Bara bilder! | /evenemang/goteborg |  |
 | 47 | VAD HÄNDER I VÄSTRA GÖTALAND | vadkul.se |  |
 | 48 | Vad händer i Norrtälje? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 49 | Vad händer i Stockholm! | /evenemang/stockholm |  |
+| 49 | Vad händer i Stockholm! | /evenemang/stockholm | utkast klart (6/8-AA, The Weeknd/Ledin-helgen), EJ postat |
 | 50 | Vad händer på Östermalm. | /evenemang/stockholm | 30/7 · länk i kommentar (Skansen/Grönan/Thielska) · uppe (text ej verifierad mot flödet) |
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
