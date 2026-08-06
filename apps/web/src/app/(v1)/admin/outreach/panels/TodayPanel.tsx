@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { LogOutcome, QueueResponse, TodayAction } from '@/types/outreach';
 import {
-    AlertCircle, CheckCircle2, ChevronDown, Clock3, ExternalLink, Eye, Mail, MessageCircle,
+    AlertCircle, Check, CheckCircle2, ChevronDown, Clock3, Copy, ExternalLink, Eye, Mail, MessageCircle,
 } from 'lucide-react';
 
 const DAY_MS = 86_400_000;
@@ -73,27 +73,130 @@ export default function TodayPanel({ data, onChanged }: { data: QueueResponse; o
                 )}
             </section>
 
-            {/* Dagens bästa kandidater — smakprov ur kön */}
+            {/* Dagens grupper — DET man kom hit för: vilka, kräver de godkännande,
+                hur gick det sist, kopiera namnen/prompten och kör. */}
             <section>
-                <h2 className="text-base font-black text-slate-900 mb-3">
-                    Bästa kandidaterna just nu
-                    {quotaLeft === 0 && <span className="ml-2 text-xs font-black text-rose-500">dagskvoten full</span>}
-                </h2>
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <h2 className="text-base font-black text-slate-900">
+                        Dagens grupper att posta i
+                        {quotaLeft === 0 && <span className="ml-2 text-xs font-black text-rose-500">dagskvoten full</span>}
+                    </h2>
+                    {queue.length > 0 && <CopyPromptButton items={queue.slice(0, 4)} />}
+                </div>
                 {queue.length === 0 ? (
                     <p className="text-sm font-semibold text-slate-400">Inga mogna grupper — kolla fliken Kön för nedräkningar.</p>
                 ) : (
                     <ul className="flex flex-col gap-2">
-                        {queue.slice(0, Math.max(quotaLeft, 3)).map(item => (
-                            <li key={item.contact.id} className="rounded-xl border border-slate-200 bg-white p-3.5">
-                                <p className="text-sm font-black text-slate-800">{item.contact.name}</p>
-                                <p className="text-[11px] font-bold text-slate-400 mt-0.5">{item.scoreExplanation}</p>
-                            </li>
+                        {queue.slice(0, 4).map(item => (
+                            <CandidateCard key={item.contact.id} item={item} />
                         ))}
                     </ul>
                 )}
             </section>
         </div>
     );
+}
+
+/* ── Dagens kandidatkort — allt man behöver veta FÖRE postningen ─────────── */
+
+const fmtDate = (ms?: number) =>
+    ms ? new Date(ms).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : null;
+
+const OUTCOME_LABEL: Record<string, string> = {
+    'publicerat-direkt': '✅ publicerades direkt',
+    'krävde-godkännande': '🔒 hamnade i godkännandekö',
+    'godkänt-uppe': '✅ godkändes och kom upp',
+    'borttagen': '❌ togs bort',
+    'nekad': '❌ nekades',
+    'okänt': '❓ okänt utfall',
+};
+
+/** Badge + instruktion utifrån postingMode — svarar direkt på "V1 eller V2?". */
+function ModeBadge({ mode }: { mode: 'approval' | 'direct' | 'unknown' }) {
+    if (mode === 'approval') return (
+        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[11px] font-black">
+            🔒 Kräver godkännande → V1, länk i inlägget
+        </span>
+    );
+    if (mode === 'direct') return (
+        <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[11px] font-black">
+            ⚡ Publicerar direkt → V2, länk i första kommentaren
+        </span>
+    );
+    return (
+        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[11px] font-black">
+            ❓ Okänt läge — avgör i composern (kö = V1, direkt = V2)
+        </span>
+    );
+}
+
+function CandidateCard({ item }: { item: import('@/types/outreach').QueueItem }) {
+    const c = item.contact;
+    const last = c.lastPostedAt
+        ? `Senast: ${fmtDate(c.lastPostedAt)} — ${OUTCOME_LABEL[c.lastOutcome ?? 'okänt'] ?? c.lastOutcome}`
+        : 'Aldrig postad — jungfrugrupp';
+    return (
+        <li className="rounded-xl border border-slate-200 bg-white p-3.5 flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+                <p className="text-sm font-black text-slate-800 min-w-0 flex-1">{c.name}</p>
+                <CopyButton text={c.name} title="Kopiera gruppnamnet" />
+                {c.groupUrl && (
+                    <a href={c.groupUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#006AA7] hover:underline shrink-0">
+                        <ExternalLink size={11} /> Öppna
+                    </a>
+                )}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+                <ModeBadge mode={c.postingMode} />
+                {typeof c.memberCount === 'number' && (
+                    <span className="text-[11px] font-bold text-slate-400">{c.memberCount.toLocaleString('sv-SE')} medl.</span>
+                )}
+            </div>
+            <p className="text-[11px] font-bold text-slate-500">{last}</p>
+            <p className="text-[11px] font-bold text-slate-400">{item.scoreExplanation}</p>
+        </li>
+    );
+}
+
+/** Kopiera-knapp med "✓ Kopierad"-kvitto. */
+function CopyButton({ text, title }: { text: string; title: string }) {
+    const [done, setDone] = useState(false);
+    return (
+        <button type="button" title={title}
+            onClick={async () => {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    setDone(true);
+                    setTimeout(() => setDone(false), 1500);
+                } catch { /* clipboard nekad — inget att göra */ }
+            }}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black border transition-colors shrink-0 ${
+                done ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+            }`}>
+            {done ? <><Check size={11} /> Kopierad</> : <><Copy size={11} /> Kopiera</>}
+        </button>
+    );
+}
+
+/** Bygger HELA dags-prompten (klistras rakt in i Claude-chatten):
+ *  gruppnamnen + läge + senaste utfall — så utkasten kan skrivas utan
+ *  följdfrågor. */
+function CopyPromptButton({ items }: { items: import('@/types/outreach').QueueItem[] }) {
+    const prompt = [
+        'Skriv dagens FB-inlägg för de här grupperna (följ alla regler i docs/outreach/facebook-grupper.md — synka main först, 8 km-regeln, kolla karens):',
+        ...items.map((it, i) => {
+            const c = it.contact;
+            const mode = c.postingMode === 'approval' ? 'kräver godkännande (V1)'
+                : c.postingMode === 'direct' ? 'publicerar direkt (V2)' : 'okänt läge';
+            const last = c.lastPostedAt
+                ? `senast ${fmtDate(c.lastPostedAt)}: ${c.lastOutcome ?? 'okänt'}`
+                : 'aldrig postad';
+            return `${i + 1}. ${c.name} — ${mode}; ${last}`;
+        }),
+    ].join('\n');
+    return <CopyButton text={prompt} title="Kopiera färdig prompt för dagens utkast" />;
 }
 
 /* ── Klickbara att-göra-rader ───────────────────────────────────────────── */
