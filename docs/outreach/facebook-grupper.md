@@ -2252,3 +2252,203 @@ V1:
 
 V2: utan länkstycket → "Luleåsidan ligger i första kommentaren 👇".
 Första kommentaren: `Här är Luleå-kartan: https://vadkul.se/evenemang/lulea — tipsa om det som saknas!`
+
+## Fredag 7/8 (omgång 2) — 🆕 NYTT FORMAT: långa listan ("L-formatet")
+
+> ⚠️ **VÄLJ EN AV DAGENS TVÅ OMGÅNGAR.** AE–AH (helgurvalet ovan) och AI–AL
+> nedan är BÅDA daterade 7/8. Postar du alla åtta samma dag spränger du
+> spamdisciplinen (max 2–4 grupper/dag). L-formatet nedan är det Josef bad om
+> — posta det, och låt AE–AH ligga kvar som råmaterial. Ska AE–AH ändå
+> användas senare måste raderna räknas om (helgspecifika, färskvara enligt
+> 30/7-lärdomen).
+
+**Idén (Josef 7/8):** de tidigare inläggen är korta eventlistor + ett
+kartstycke + funktionslistan (➕💡✨🔔). Kvoten "reklam per inlägg" blir hög,
+och det är exakt vad moderatorer plockar (Gotland 28/7, Mölndal 30/7).
+L-formatet vänder på proportionerna:
+
+1. **10 event i närtid** i stället för 4–5 helgrader — inlägget blir en
+   tjänst för gruppen i sig, läsvärt även för den som aldrig klickar.
+2. **Kartan nämns i ETT stycke, en mening.** Funktionslistan (➕💡✨🔔) är
+   struken helt — det var det mest reklamlika elementet.
+3. **Avslutet är en riktig fråga, inte en uppmaning.** Josef ber om feedback
+   och förbättringsförslag på kartan. Ett inlägg som ber om hjälp läses som
+   deltagande, inte som annons — och ger dessutom det vi faktiskt behöver
+   (Piteå 4/8 gav UX-guld, Sundsvall 6/8 gav en geobugg + två produktbeslut).
+4. **Bonus mot köproblemet:** raderna spänner ~10 dygn i stället för en helg,
+   så ett inlägg som ligger i godkännandekö i två dygn är fortfarande giltigt.
+   Varje rad har veckodag + datum, så läsaren ser själv vad som passerat.
+
+**Regler som gäller precis som förut:** ortnamn på varje rad utanför gruppens
+ort (3/8-lärdomen), fyra olika öppningar/frågor, aldrig identisk copy-paste,
+och rader FÅR räknas om samma dag som inlägget postas.
+
+### Urvalet (eventdata = snapshot 6/8 10:04, main synkad ✅)
+
+Räknat på fönstret **lör 8/8 – sön 17/8** över alla orörda grupper. Krav för
+L-formatet: minst ~10 rader av verklig kvalitet inom rimligt avstånd.
+
+| Grupp | ≤8 km | ≤15 km | Varför vald |
+|---|---|---|---|
+| #24 Vad händer i Kungsbacka ? | 29 | 59 | Tätast av alla orörda. Fyren/biblioteken + Tjolöholm = riktig bredd |
+| #1 Vad händer i Åstorp | 10 | 49 | Klippanfesten, Attentat på Tomarps Kungsgård, Bjuvs konsthall — bästa kvaliteten i urvalet |
+| #10 Händer i Hudiksvall! 🌞 | 11 | 13 | Finflo-Cup, Ronny Eriksson på Ystegårn, trav på Hagmyren |
+| #25 Vad händer i Söderhamn (Söderhamns Nytt) | 10 | 12 | Tunnast — får därför den ärliga "vad missar kartan?"-varianten |
+
+**Bortvalda trots hög täthet:** Huddinge (212), Skogås (161), Haninge (25) —
+#49 Vad händer i Stockholm! postades 6/8, Stockholmsnära grupper får vila.
+Alla Göteborgsgrupper (Majorna 4/8). Ängelholm #37/#68 (#14 postad 6/8).
+Landskrona #52 (utkast AF ligger redan i kön ovan). Örnsköldsvik (12 rader
+men två av dem geobuggade, se nedan). Älmhult (16 rader varav 8 är
+Osby-event som ligger geokodade 6,8 km från Älmhult i stället för sina ~21).
+
+### 🐛 Geodatafynd vid faktakollen 7/8 (samma klass som Sundsvall 6/8)
+
+Alla rader nedan lästes mot `events-descriptions.json` innan de skrevs in —
+tre fel fångades och plockades bort ur utkasten:
+
+1. **"The Burning Flakmoppe" – Hede** ligger på Hede i Kungsbacka
+   (57.508/12.082) men är ett ABF Jämtland-Härjedalen-arrangemang, alltså
+   Hede i Härjedalen (62.42/13.51). Venue-namn utan ort → Nominatim tar den
+   mest prominenta namnen. **Utesluten ur Kungsbacka-listan.**
+2. **Örnsköldsvik:** "Bara kyrka, Värby församling" (Bara, Svedala kommun)
+   och "Stenungsunds kapell, Norums församling" låg 3,9 respektive 18,8 km
+   från Övik. Klassisk församlingsgeokodning → **båda tillagda i
+   `PARISH_CITY_ALIAS`** (repair-misplaced-geo.ts) i samma commit.
+3. **Osby kommuns event** ligger på 56.49/14.11 och 56.42/14.08 — inte i Osby
+   tätort (56.38/13.99). ~15 km fel, under repair-skriptets 60 km-tröskel, så
+   det repareras inte. Konsekvens: Osby-rader ser ut att ligga 6,8 km från
+   Älmhult när de i verkligheten ligger ~21 km bort. **Därför valdes Älmhult
+   bort** — hade raderna använts vore det Nykvarn 3/8 om igen.
+
+Falskt alarm värt att notera: **"Disclosure Day"** finns som två separata
+Tickster-event (Kino 3 i Lund 6/8 OCH Salong 1 i Söderhamn 14/8). Söderhamns-
+raden är korrekt — kontrollerad mot beskrivningen, inte antagen.
+
+### AI. Vad händer i Kungsbacka ? (#24 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1 (länk i inlägget):
+
+> Jag satte mig och gick igenom vad som faktiskt händer i Kungsbacka den
+> närmaste veckan. Det blev en hel del 👇
+>
+> 🏰 Hela veckan – Tjolöholms slott, guidad visning kl 11.15 varje dag (på engelska kl 15)
+> 🧘 Sön 9/8 kl 10 – Meditation på bryggan vid Onsala Herrgård
+> 🏡 Sön 9/8 kl 13 – Hembygdsgårdens dag hos Älvsåkers Hembygdsgille, friluftsgudstjänst med kyrkkaffe kl 16
+> 📚 Mån 10/8 kl 16 – Bokbubblans sommarträff på Fjärås bibliotek (12–14 år)
+> ☕ Tis 11/8 kl 12 – Tisdagsträff i Varlakyrkan, lunch och kaffe för 40 kr
+> 🗣️ Tis 11/8 kl 16 – Språkcafé på Kulturhuset Fyren, drop-in
+> 🧶 Ons 12/8 kl 13.30 – Stickcafé i Onsala församlingshem
+> ✏️ Tors 13/8 kl 13 – Teckna fabeldjur med illustratören Julia Szulc, Esteten
+> 💻 Tors 13/8 kl 17 – Torsdagslabbet på Fyren: bilderböcker, animation och AI
+> 🎈 Fre 14/8 kl 13 – Sommarboken avslutas på Fyren, och Framtidslabbet kör samtidigt
+>
+> Listan är plockad från vadkul.se — en gratis evenemangskarta jag har byggt,
+> där allt som händer hamnar på samma ställe: https://vadkul.se
+>
+> Och det är egentligen därför jag skriver: jag vill ha feedback. Vad saknas i
+> listan? Blev något fel? Och om du klickar in på kartan — säg rakt ut vad som
+> är krångligt eller onödigt. Jag har byggt om flera saker efter tips från folk
+> i såna här grupper, så det landar verkligen. 🙏
+
+V2 (länk i första kommentaren): samma lista, men kartstycket blir
+_"Listan är plockad från en gratis evenemangskarta jag har byggt — den ligger
+i första kommentaren 👇"_ och länken utelämnas ur inlägget.
+Första kommentaren: `Här är kartan: https://vadkul.se — och säg gärna vad som saknas för Kungsbacka!`
+
+### AJ. Vad händer i Åstorp (#1 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1 (länk i inlägget):
+
+> Vad händer egentligen i Åstorp med omnejd just nu? Jag gick igenom veckan som
+> kommer — här är allt jag hittade. Ortnamnen står utsatta, en del ligger i
+> grannbyarna 👇
+>
+> 🎶 Lör 8/8 kl 15 – Andy och Monica spelar och sjunger, Billesholm
+> ✈️ Lör 8/8 kl 18 – Fly 'n Ride för flyg- och motorintresserade, Klippan
+> 🚗 Sön 9/8 kl 18 – Bilbingo vid Forsby idrottsplats, Klippan
+> 🎱 Mån 10/8 kl 14 – Bingo hos PRO Åstorp
+> 🎤 Tis 11/8 kl 19 – "Sommarpärlor" med Marie Andersson och Marie Rönn Rosengren, Kvidinge kyrka
+> 🎹 Ons 12/8 kl 19 – Musik i sommarkväll med Flora-Ensemblen, Västra Broby kyrka i Åstorp
+> 👭 Tors 13/8 kl 18 – "Systersång i sommarkväll" med systrarna Ljungström, Billesholms kyrka
+> 🎪 Fre 14/8 kl 18 – Klippanfesten smygstartar i Norrehus trädgård (drar på stort på lördag)
+> 🔨 Lör 15/8 kl 12 – Pop-up: Heavy metal art med smeden Carl Anders Andersson, Bjuvs konsthall
+> 🤘 Lör 15/8 kl 19 – Attentat, "Punkare på Slottet", Tomarps Kungsgård i Kvidinge
+>
+> Allt kommer från vadkul.se, en gratis karta jag har byggt där evenemang från
+> hela trakten samlas på ett ställe: https://vadkul.se
+>
+> Nu vill jag ha er hjälp: vad har jag missat? Åstorp är en av orterna där jag
+> misstänker att kartan inte fångar allt föreningarna drar igång. Skriv gärna
+> vad som saknas — eller vad som är dåligt med kartan, den kritiken är minst
+> lika användbar. 👇
+
+V2 (länk i första kommentaren): kartstycket byts mot _"Allt kommer från en
+gratis karta jag har byggt — den ligger i första kommentaren 👇"_.
+Första kommentaren: `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Åstorp, Kvidinge och Hyllinge!`
+
+### AK. Händer i Hudiksvall! 🌞 (#10 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1 (länk i inlägget):
+
+> Glada Hudik den närmaste veckan — det här är vad jag hittar på gång 👇
+>
+> 🎉 Lör 8/8 – Kul på Berget, Köpmanberget fest & event
+> 🎪 Mån 10/8 kl 14 – Träna med Cirkus Cirkör, Iggesunds Folkets Hus
+> 🎯 Tis 11/8 kl 10 – Boule med PRO Iggesund
+> 🎺 Tis 11/8 kl 19.30 – Sommarmusik "Härlig är jorden" i Jakobs kyrka, brasskonsert med Ellinor Bengtsson (P2) och Vilgot Eklund
+> 🥏 Ons 12/8 kl 18 – Onsdagskastet, discgolf på Hedebackens bana
+> 🍽️ Fre 14/8 kl 17 – Finflo-Cup 35 år, bankett på Köpmanberget
+> 🕺 Fre 14/8 kl 21 – …och eftersläppet samma kväll
+> 🎂 Lör 15/8 kl 14 – Högs Sockens Hembygdsförening fyller 75 år, Hög
+> 🎙️ Sön 16/8 kl 20 – Ronny Eriksson på Ystegårn Café & Bistro i Forsa
+> 🐎 Mån 17/8 – Travtävlingar på Hagmyren
+>
+> Listan är hämtad från vadkul.se — en gratis evenemangskarta jag har byggt,
+> där allt som händer i trakten ligger samlat: https://vadkul.se
+>
+> Det jag verkligen skulle bli glad för är feedback: vad fattas i listan, och
+> vad tycker ni är dåligt med kartan? Jag bygger om den efter sånt folk säger
+> i grupperna — hellre ärligt än artigt. 👇
+
+V2 (länk i första kommentaren): kartstycket byts mot _"Listan är hämtad från
+en gratis evenemangskarta jag har byggt — den ligger i första kommentaren 👇"_.
+Första kommentaren: `Här är kartan: https://vadkul.se — säg gärna till om något saknas för Hudiksvall med omnejd!`
+
+### AL. Vad händer i Söderhamn (Söderhamns Nytt) (#25 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1 (länk i inlägget):
+
+> Här är vad jag hittar på gång i Söderhamn den kommande veckan 👇
+>
+> 🏭 Lör 8/8 kl 13 – Guidning på Ljusne Bruksmuseum
+> 🧵 Mån 10/8 kl 13 – Handarbete i sommar, Söderhamn-Sandarne församling
+> 🌷 Tis 11/8 kl 10 – PRO Stråtjära-Holmsveden åker till en trädgård i Tönnånger
+> ✈️ Tis 11/8 kl 10 och tors 13/8 kl 12 – Guidning på F15 Flygmuseum
+> 🦉 Tis 11/8 kl 18 – Fågelskådning vid Stenötornet med Söderhamns Fågelklubb
+> 🥾 Ons 12/8 kl 8.30 – "Lär känna din kommun": vandring i Styvje, 6,9 km, samling vid CFL
+> ⚽ Ons 12/8 kl 14 – Gåfotboll med PRO Ljusne
+> ☕ Tors 13/8 kl 12.30 – Östanboträff i Östanbo bönhus, varje torsdag hela sommaren
+> 🎬 Fre 14/8 – Disclosure Day på Salong 1
+> 🎲 Sön 16/8 kl 18 – "I fantasins värld", en kväll om rollspel och berättelser, Källvik
+>
+> Listan kommer från vadkul.se, en gratis evenemangskarta jag har byggt:
+> https://vadkul.se
+>
+> Och nu det jag faktiskt vill fråga om: kartan är tunnare i Söderhamn än den
+> borde vara. Vad missar den? Tipsa gärna om föreningar, scener och arrangörer
+> som borde finnas med — och säg till om något i listan blev fel, då rättar
+> jag det direkt. 👇
+
+V2 (länk i första kommentaren): kartstycket byts mot _"Listan kommer från en
+gratis evenemangskarta jag har byggt — den ligger i första kommentaren 👇"_.
+Första kommentaren: `Här är kartan: https://vadkul.se — tipsa om vad den missar i Söderhamn, jag lägger in det!`
+
+### Att följa upp på L-formatet (mät det som skiljer det från V1/V2)
+
+- **Överlever inlägget en vecka?** Hela poängen är lägre reklamkvot → färre
+  borttagningar. Ett dygn säger ingenting (Gotland låg uppe i två).
+- **Kommer det FEEDBACK, inte bara likes?** Frågan är inlägget. Blir det noll
+  svar på "vad saknas" är formatet inte bättre än V1, bara längre.
+- **Släpps det ur godkännandekön snabbare?** Fyra av fyra hamnade i kö 6/8 med
+  det gamla formatet — jämför utfallet.

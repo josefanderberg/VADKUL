@@ -33,7 +33,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 
 | # | Grupp (exakt namn) | Länk | Postat · metod · utfall |
 |---|---|---|---|
-| 1 | Vad händer i Åstorp | vadkul.se |  |
+| 1 | Vad händer i Åstorp | vadkul.se | utkast klart (7/8-AJ, L-formatet), EJ postat |
 | 2 | Vad händer i Tierp kommun | vadkul.se | 19/7 · länk i kommentar · ? |
 | 3 | Tjörn vad händer | vadkul.se | 1/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 1/8 |
 | 4 | Vad Händer I Åker. | vadkul.se |  |
@@ -42,7 +42,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 7 | Vad händer i Landskrona och Kävlinge kommun 🇸🇪 | vadkul.se | 27/7 · länk i inlägg (V1) · ✅ godkänt/uppe (15,5k medl.) |
 | 8 | Halmstad - Vad händer i stan med omnejd | /evenemang/halmstad | 22/7 · länk i inlägg (variant A) · ? |
 | 9 | Vad händer i Sorsele? | vadkul.se |  |
-| 10 | Händer i Hudiksvall! 🌞 | vadkul.se |  |
+| 10 | Händer i Hudiksvall! 🌞 | vadkul.se | utkast klart (7/8-AK, L-formatet), EJ postat |
 | 11 | Norrtälje - Vad händer på byn? | vadkul.se | utkast klart (4/8-Y), EJ postat |
 | 12 | Det händer i Helsingborg | /evenemang/helsingborg | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · **26 likes, 15 komm., 1 delning** |
 | 13 | Vad händer i Skogås, Trångsund och Länna | vadkul.se |  |
@@ -56,8 +56,8 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 21 | Vad händer i Piteå? | vadkul.se | 4/8 · publicerat direkt (Z2, länk i kommentar) · dag 1: 1 like, 4 komm. — UX-guldfeedback (Elin: ryck-bugg + Nästa/plus) · karens 25/8 |
 | 22 | Händer i Karlstad-Tipsa om vad som händer i stan! | /evenemang/karlstad | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 5 likes |
 | 23 | Vad händer i Malå? | vadkul.se |  |
-| 24 | Vad händer i Kungsbacka ? | vadkul.se |  |
-| 25 | Vad händer i Söderhamn (Söderhamns Nytt) | vadkul.se |  |
+| 24 | Vad händer i Kungsbacka ? | vadkul.se | utkast klart (7/8-AI, L-formatet), EJ postat |
+| 25 | Vad händer i Söderhamn (Söderhamns Nytt) | vadkul.se | utkast klart (7/8-AL, L-formatet), EJ postat |
 | 26 | Vad händer i Nora | vadkul.se | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 27 | Vad händer i Byske? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
 | 28 | Vad händer i Gagnefs kommun | vadkul.se | utkast klart (7/8-AG), EJ postat |

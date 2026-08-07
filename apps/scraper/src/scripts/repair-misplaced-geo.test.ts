@@ -30,6 +30,9 @@ describe('deriveExpectedCity', () => {
         // Sundsvall-tråden 6/8: båda låg geokodade i Sundsvallstrakten.
         expect(deriveExpectedCity('Katarina kyrka, Katarina församling', null, null)).toBe('Stockholm');
         expect(deriveExpectedCity(null, 'Rödöns församling', null)).toBe('Östersund');
+        // Faktakoll 7/8: båda låg på Örnsköldsviks-koordinater.
+        expect(deriveExpectedCity('Bara kyrka, Värby församling', null, null)).toBe('Malmö');
+        expect(deriveExpectedCity('Stenungsunds kapell, Norums församling', null, null)).toBe('Göteborg');
     });
 
     it('tvetydiga småorter avvisas — bara kända städer godkänns', () => {

@@ -47,6 +47,9 @@ const PARISH_SUFFIX = /^(.+?)\s+(pastorat|församling|distrikt|domkyrkoförsamli
 const PARISH_CITY_ALIAS: Record<string, string> = {
     'katarina': 'Stockholm',   // Katarina församling, Södermalm
     'rödön': 'Östersund',      // Rödöns församling, Krokoms kommun
+    // Faktakoll inför Örnsköldsviks-utkastet 7/8: båda låg på Öviks-koordinater.
+    'värby': 'Malmö',          // Värby församling — Bara, Svedala kommun
+    'norum': 'Göteborg',       // Norums församling — Stenungsund (ej i SWEDISH_GEO_CITIES)
 };
 
 interface Row {
