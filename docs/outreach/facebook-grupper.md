@@ -2113,6 +2113,11 @@ faktiskt släpptes, nekades tyst eller ligger kvar — logga utfallet. Blir
 tysta nekanden ett mönster är admin-DM-spåret (18/7-planen) rätt väg i
 godkännande-grupper, inte fler kalla V1:or.
 
+> ➡️ **Uppdaterat 7/8:** även AI–AL (L-formatet) hamnade i kö — 8 av 8 på två
+> dagar med två olika format. Slutsatsen är att kön är en gruppinställning,
+> inte en dom över texten. Hela köläget ligger nu i EN tabell längst ned:
+> "📋 Godkännandekön — allt som väntar just nu".
+
 ### Sundsvall-tråden 6/8 — utfall, buggfynd och två produktbeslut
 
 Inlägget (U, 2–3/8) släpptes ur kön och fick en riktig tråd: Eva Groth
@@ -2255,12 +2260,11 @@ Första kommentaren: `Här är Luleå-kartan: https://vadkul.se/evenemang/lulea 
 
 ## Fredag 7/8 (omgång 2) — 🆕 NYTT FORMAT: långa listan ("L-formatet")
 
-> ⚠️ **VÄLJ EN AV DAGENS TVÅ OMGÅNGAR.** AE–AH (helgurvalet ovan) och AI–AL
-> nedan är BÅDA daterade 7/8. Postar du alla åtta samma dag spränger du
-> spamdisciplinen (max 2–4 grupper/dag). L-formatet nedan är det Josef bad om
-> — posta det, och låt AE–AH ligga kvar som råmaterial. Ska AE–AH ändå
-> användas senare måste raderna räknas om (helgspecifika, färskvara enligt
-> 30/7-lärdomen).
+> ✅ **AVGJORT 7/8: AI–AL postades, AE–AH gjorde det inte.** Båda omgångarna
+> skrevs samma dag; att posta alla åtta hade sprängt spamdisciplinen (max 2–4
+> grupper/dag). AE–AH ligger kvar som RÅMATERIAL — men de är helgspecifika och
+> därmed passerade. Ska de grupperna användas måste raderna räknas om från
+> grunden (30/7-lärdomen), inte kopieras.
 
 **Idén (Josef 7/8):** de tidigare inläggen är korta eventlistor + ett
 kartstycke + funktionslistan (➕💡✨🔔). Kvoten "reklam per inlägg" blir hög,
@@ -2452,3 +2456,71 @@ Första kommentaren: `Här är kartan: https://vadkul.se — tipsa om vad den mi
   svar på "vad saknas" är formatet inte bättre än V1, bara längre.
 - **Släpps det ur godkännandekön snabbare?** Fyra av fyra hamnade i kö 6/8 med
   det gamla formatet — jämför utfallet.
+
+### FACIT 7/8 (bekräftat av Josef): alla fyra postade — och ALLA FYRA KRÄVDE GODKÄNNANDE
+
+AI (Kungsbacka), AJ (Åstorp), AK (Hudiksvall) och AL (Söderhamn) lades upp 7/8
+och hamnade samtliga i godkännandekö. **Karens till 2026-08-28** för alla fyra.
+
+> 📝 **Ofyllt:** vilken variant som postades (V1 länk-i-inlägg eller V2
+> länk-i-kommentar) är inte angivet. A/B-testet i masterlistan kan inte
+> summeras förrän det står — fyll i per grupp när du vet.
+
+**Läs inte detta som ett underkännande av L-formatet.** "Kräver godkännande"
+är en GRUPPINSTÄLLNING (admin har slagit på granskning för alla icke-admins),
+inte moderatorns dom över texten. Åtta av åtta inlägg 6/8 + 7/8 hamnade i kö
+med två helt olika format — det bekräftar att kön beror på gruppen, inte på
+oss. Vad L-formatet kan påverka är vad som händer EFTER kön: att inlägget
+släpps, överlever veckan och genererar svar. Den mätningen är fortfarande
+öppen.
+
+**Tre saker detta ändrar i rutinen:**
+
+1. **Notera köläget FÖRE posten, inte efter.** Facebook visar "Inlägg granskas
+   av gruppadministratörer" redan i skrivrutan. Skriv in det i masterlistan i
+   urvalssteget. Då kan vi välja köfria grupper när vi vill ha snabb feedback,
+   och spara köade grupper till admin-DM-spåret.
+2. **Admin-DM-spåret (18/7-planen) är nu huvudspåret, inte plan B.** Med 8/8 i
+   kö är flaskhalsen admins uppmärksamhet, inte textens kvalitet. Ett ja i DM
+   ger både snabbare släpp och skydd mot efterhandsradering (Gotland 28/7).
+3. **Raderna åldras i kön — men L-formatet åldras långsamt.** Det är formatets
+   ena bevisade fördel idag: helgutkasten (AE–AH) hade varit döda på måndag,
+   L-listorna lever till 17/8. Utgångsschema om kön drar ut:
+
+| Utkast | Första raden dör | Halva listan kvar till | Sista raden |
+|---|---|---|---|
+| AI Kungsbacka | sön 9/8 (två rader) | 12/8 | fre 14/8 |
+| AJ Åstorp | lör 8/8 (två rader) | 12/8 | lör 15/8 |
+| AK Hudiksvall | lör 8/8 | 13/8 | mån 17/8 |
+| AL Söderhamn | lör 8/8 | 12/8 | sön 16/8 |
+
+**Släpps ett inlägg efter att rader passerat:** kommentera i egen tråd med de
+rader som fortfarande gäller — radera inte inlägget. Det blir en naturlig
+uppföljning och räddar trovärdigheten (Västmanland-läxan 30/7).
+
+### 📋 Godkännandekön — allt som väntar just nu (uppdaterad 7/8)
+
+| Grupp | Postat | Status |
+|---|---|---|
+| #77 Vad händer i Gävle? | 23/7 | i kö, aldrig bekräftat släppt |
+| #66 Du vet vad som händer i Eskilstuna | 24/7 | i kö, aldrig bekräftat släppt |
+| #30 Vad som händer i Stockholm | 25/7 | i kö, aldrig bekräftat släppt |
+| #3 Tjörn vad händer | 1/8 | i kö |
+| #19 På gång i Värmland | 1/8 | i kö |
+| #14 Det händer i Ängelholm | 6/8 | i kö |
+| #26 Vad händer i Nora | 6/8 | i kö |
+| #45 Kvänum, Vara, Skara | 6/8 | i kö |
+| #49 Vad händer i Stockholm! | 6/8 | i kö |
+| #1 Vad händer i Åstorp | 7/8 | i kö (AJ) |
+| #10 Händer i Hudiksvall! 🌞 | 7/8 | i kö (AK) |
+| #24 Vad händer i Kungsbacka ? | 7/8 | i kö (AI) |
+| #25 Vad händer i Söderhamn | 7/8 | i kö (AL) |
+
+Släppta ur kö hittills: **#57 Sundsvall** (2–3/8 → släppt 6/8, ~3 dygn) och
+**#53 Vad händer i Halmstad?** (22/7). Nekade: #35 Vänersborg, #39 Nynäshamn
+(båda 1/8), #72 Mölndal (30/7).
+
+**Nästa konkreta steg:** gå igenom "Dina inlägg" i Facebook och stäm av de
+tretton raderna ovan. Tre av dem är två veckor gamla — ligger de fortfarande
+i kö är det i praktiken tysta nekanden, och då ska de grupperna byta spår till
+admin-DM i stället för fler kalla inlägg.
