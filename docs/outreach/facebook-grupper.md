@@ -2134,3 +2134,121 @@ sajten). Tre saker kom ur den:
    (users/{uid}.mapCategories) — aktiverar man Svenska kyrkan/PRO en gång
    ligger valet kvar nästa besök. Det gör opt-in-källorna nåbara för sina
    målgrupper på riktigt.
+
+## Fredag 7/8 — fyra nya grupper (helgurval: Åmål/Säffle, Landskrona, Gagnef, Luleå)
+
+**Urvalet (main synkad före urval ✅, eventdata = snapshot 6/8 10:04):**
+helgeventräkning (fre 7/8–sön 9/8) över alla orörda grupper utan stadskrock.
+Uteslutna: alla Göteborgsgrupper (Majorna 4/8, <7 d), Ängelholm #37/#68
+(#14 postad 6/8), Stockholmsnära #13/#31/#70 (#49 postad 6/8). Vinnarna:
+
+| Grupp | Inom 8 km | Inom 25 km | Kommentar |
+|---|---|---|---|
+| #52 VAD HÄNDER I LANDSKRONA | 13 | 58 | Trädgårdsgillet = dragplåster. Landskrona/Kävlinge #7 postad 27/7 = 11 d — utanför krockfönstret |
+| #44 Vad händer I Åmål och Säffle | 4+10 | 17 | Åmålskalaset! Gruppen täcker BÅDA orterna — dubbelt utbud. ⚠️ mjuk notis: Värmland-gruppen (1/8) ligger ännu i kö, liten publiköverlapp Säffle |
+| #28 Vad händer i Gagnefs kommun | 4 | 21 | Kvalitet: bygdespel 3 kvällar + Årabrot i Djura + kyrkokonsert |
+| #81 Vad händer i Luleå? | 5 | 8 | Tunt (5 st) → ärliga tipsformatet. EGEN STADSSIDA /evenemang/lulea, aldrig postad |
+
+**Disciplin:** okänt godkännandeläge i alla fyra → ENDAST lör/sön-rader
+(24/7-regeln: kölagda inlägg får inte hinna bli inaktuella), ortnamn på rader
+utanför huvudorten, fyra OLIKA hälsningar/frågor.
+
+### AE. Vad händer I Åmål och Säffle (#44 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1:
+
+> Helgen bjuder på riktiga godbitar i både Åmål och Säffle 👇
+>
+> 🎉 Åmålskalaset i centrum (lördag) — med efterfest på Dalslands Skafferi
+> 🏇 Travtävlingar på Åmålstravet (söndag)
+> 🎸 Hembygdsdag med mopperally i Säffle (lördag)
+> 🎶 Sommarkvällsmusik i Edsleskogs kyrka (söndag)
+>
+> Hela grejen med vadkul.se: allt som händer hamnar på EN karta, så du ser
+> direkt vad som är på gång runt både Åmål och Säffle — hela helgens utbud
+> finns där:
+> https://vadkul.se
+>
+> Med ett gratis konto kan du dessutom:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er — kalaset eller travet? 👇
+
+V2: samma utan länkstycket → "Kartan ligger i första kommentaren 👇".
+Första kommentaren: `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Åmål och Säffle!`
+
+### AF. VAD HÄNDER I LANDSKRONA (#52 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1:
+
+> Fullspäckad helg i Landskrona 👇
+>
+> 🌸 Trädgårdsgillet i centrum (lördag) — med Nell & Draken för barnen
+> 🎓 Tychotalk om Uraniborg (lördag)
+> 🐴 Prova på ridning (söndag)
+> 🎨 Fladdergång av Thale Vangen (söndag)
+>
+> Grejen med vadkul.se: allt som händer samlas på EN karta så du slipper leta
+> i tio flöden — hela helgens utbud i Landskronatrakten ligger där:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event   🔔 få en notis när något du gillat börjar
+>
+> Ses på Trädgårdsgillet? 👇
+
+V2: utan länk + "Kartan ligger i första kommentaren 👇".
+Första kommentaren: `Här är kartan: https://vadkul.se — säg till om något saknas i Landskrona!`
+
+### AG. Vad händer i Gagnefs kommun (#28 → vadkul.se) — utkast klart 7/8, EJ postat
+
+V1:
+
+> Kolla vilken helg det blir i Gagnefsbygden 👇
+>
+> 🎭 Där älvarna samman flyta — bygdespelet spelas både lördag och söndag kväll
+> 🎸 Årabrot live i Djura missionshus (lördag)
+> 🎻 Rumänskt gästspel med Franck & Lindblad i Gagnefs kyrka (lördag)
+> 🥾 Slåtter i Färmsnäs med Friluftsfrämjandet (söndag)
+>
+> Vadkul.se samlar allt som händer på EN karta — så ser du direkt vad som är
+> på gång i bygden och runt omkring:
+> https://vadkul.se
+>
+> Gratis konto ger dig mer:
+> ➕ lägg in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event   🔔 notis när något du gillat drar igång
+>
+> Vem hinner med både bygdespelet och Årabrot? 👇
+
+V2: utan länk + "Kartan ligger i första kommentaren 👇".
+Första kommentaren: `Här är kartan: https://vadkul.se — tipsa om det jag missat i Gagnef med omnejd!`
+
+### AH. Vad händer i Luleå? (#81 → /evenemang/lulea) — utkast klart 7/8, EJ postat
+
+Ärliga tipsformatet (5 event inom 8 km — under tröskeln, ingen skrytlista):
+
+V1:
+
+> Lite helgtips i Luleå 👇
+>
+> 🎨 Kreativ lördag — akvarell & collage på Café Allegro (lördag)
+> 🎉 Björkskatans sommardag med loppis och hantverk (söndag)
+> ⛪ Nederluleå kyrka öppen hela helgen i Gammelstad (lör–sön)
+> 🚴 Söndagscykeltur med Friluftsfrämjandet (söndag)
+>
+> Ärligt talat är kartan tunnare i Luleå än den borde vara — därför postar
+> jag här. Vadkul.se samlar allt som händer på EN karta, och Luleåsidan
+> ligger här:
+> https://vadkul.se/evenemang/lulea
+>
+> Med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event   🔔 få en notis när något du gillat börjar
+>
+> Vad har jag missat i Luleå i helgen? Tipsa så hamnar det på kartan 👇
+
+V2: utan länkstycket → "Luleåsidan ligger i första kommentaren 👇".
+Första kommentaren: `Här är Luleå-kartan: https://vadkul.se/evenemang/lulea — tipsa om det som saknas!`

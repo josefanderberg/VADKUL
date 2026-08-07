@@ -60,7 +60,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 25 | Vad händer i Söderhamn (Söderhamns Nytt) | vadkul.se |  |
 | 26 | Vad händer i Nora | vadkul.se | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 27 | Vad händer i Byske? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 28 | Vad händer i Gagnefs kommun | vadkul.se |  |
+| 28 | Vad händer i Gagnefs kommun | vadkul.se | utkast klart (7/8-AG), EJ postat |
 | 29 | Vad händer på Österlen | vadkul.se | 27/7 · länk i inlägg (J-texten, V1) · publicerat direkt |
 | 30 | Vad som händer i Stockholm | /evenemang/stockholm | 25/7 · länk i inlägg (m. stjärnlänk) · KRÄVDE GODKÄNNANDE (enda av dagens tre) |
 | 31 | Vad händer i Haninge | vadkul.se |  |
@@ -76,7 +76,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 41 | Vad händer i Nyköping med omnejd. | /evenemang/nykoping | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 6 likes, 2 komm. |
 | 42 | Vad händer i Malmö? | /evenemang/malmo | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
 | 43 | Det händer i Dellenbygden | vadkul.se |  |
-| 44 | Vad händer I Åmål och Säffle | vadkul.se |  |
+| 44 | Vad händer I Åmål och Säffle | vadkul.se | utkast klart (7/8-AE), EJ postat |
 | 45 | Vad händer i Kvänum, Vara, Skara med omnejd | vadkul.se | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 46 | VAD HÄNDER I GÖTEBORG - Bara bilder! | /evenemang/goteborg |  |
 | 47 | VAD HÄNDER I VÄSTRA GÖTALAND | vadkul.se | 6/8 · publicerat direkt — ingen godkännandekö (helg-utkastet: Asperö/Borås/Tjörn/Kungälv) · karens 27/8 |
@@ -84,7 +84,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 49 | Vad händer i Stockholm! | /evenemang/stockholm | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 50 | Vad händer på Östermalm. | /evenemang/stockholm | 30/7 · länk i kommentar (Skansen/Grönan/Thielska) · uppe (text ej verifierad mot flödet) |
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
-| 52 | VAD HÄNDER I LANDSKRONA | vadkul.se |  |
+| 52 | VAD HÄNDER I LANDSKRONA | vadkul.se | utkast klart (7/8-AF), EJ postat |
 | 53 | Vad händer i Halmstad? | /evenemang/halmstad | 22/7 · länk i inlägg (variant B) · ✅ GODKÄNT/uppe |
 | 54 | Vad Händer På Gotland? ⚠️ ENDAST kultur/konst/sång — EJ sport/yoga | /evenemang/visby | 26/7 · länk i inlägg (V1) · godkänt · **72 likes** · ❌ **BORTTAGET 28/7 "reklam"** → admin-DM krävs före nytt försök |
 | 55 | Vad händer i Majorna | /evenemang/goteborg | 4/8 · POSTAT (variant/utfall obekräftat) · karens 25/8 |
@@ -113,6 +113,6 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 78 | Vad händer i Kville? | vadkul.se | 22/7 · länk i inlägg · ? |
 | 79 | Vad händer på Hisingen? | vadkul.se |  |
 | 80 | Vad händer i Sölvesborg och på Lister? | vadkul.se |  |
-| 81 | Vad händer i Luleå? | /evenemang/lulea |  |
+| 81 | Vad händer i Luleå? | /evenemang/lulea | utkast klart (7/8-AH), EJ postat |
 | 82 | VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland | /evenemang/goteborg |  |
 | 83 | Händer i Borås | /evenemang/boras | 23/7 · länk i inlägg (Dolly Style) · publicerat direkt |
