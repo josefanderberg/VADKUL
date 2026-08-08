@@ -481,7 +481,11 @@ const safeReturnUrl = (raw: unknown): string => {
 };
 
 export const createBoostCheckout = functions
-    .runWith({ secrets: ['STRIPE_API_KEY'] })
+    // invoker: 'public' — nya Gen1-funktioner får INTE allUsers-invoker
+    // automatiskt längre, och utan den svarar Google 403 innan koden startar
+    // (de äldre callables i filen har bindningen sedan tidigare). Anropet är
+    // fortfarande skyddat: auth-kontrollen sker i koden via context.auth.
+    .runWith({ secrets: ['STRIPE_API_KEY'], invoker: 'public' })
     .region('europe-west1')
     .https.onCall(async (data: any, context: functions.https.CallableContext) => {
         if (!context.auth) {
