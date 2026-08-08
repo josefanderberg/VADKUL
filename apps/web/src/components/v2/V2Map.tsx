@@ -216,9 +216,16 @@ interface V2MapProps {
     savedEventIds?: Set<string>;
     discardedEventIds?: Set<string>;
     cardExpanded?: boolean;
-    /** Rapporterar kartans mitt + zoomnivå efter varje rörelse (throttlat).
-     *  Zoomen driver bl.a. upplåsningen av veckovyn i dagväljaren. */
-    onCenterChange?: (lat: number, lng: number, zoom?: number) => void;
+    /** Rapporterar kartans mitt + zoomnivå + synliga bounds efter varje rörelse
+     *  (throttlat). Zoomen driver bl.a. upplåsningen av veckovyn i dagväljaren;
+     *  bounds låter sidan svara på "syns det något i vyn just nu?" utan att
+     *  gissa en radie ur zoomnivån. */
+    onCenterChange?: (
+        lat: number,
+        lng: number,
+        zoom?: number,
+        bounds?: { west: number; south: number; east: number; north: number },
+    ) => void;
     onMapDrag?: () => void;
     /** True så fort första event-svaret från databasen kommit. Default true
      *  (bakåtkompat). */
@@ -274,6 +281,11 @@ interface V2MapProps {
      *  cards/descriptions börjar hämtas — de ska inte konkurrera med tiles +
      *  prickar om bandbredden på smala nät. */
     onFirstPaint?: () => void;
+    /** Speglar symbolsPainted-latchen (till skillnad från onFirstPaint, som
+     *  fyrar en enda gång): true = prickarna är faktiskt utritade, false =
+     *  en målningsrunda är på väg mot skärmen. Sidan använder den för att
+     *  hålla tyst med "inget här"-prompten så länge kartan fortfarande ritar. */
+    onPaintedChange?: (painted: boolean) => void;
 }
 
 export default function V2Map({
@@ -299,6 +311,7 @@ export default function V2Map({
     onSelectWish,
     starredEventIds = new Set(),
     onFirstPaint,
+    onPaintedChange,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1624,6 +1637,10 @@ export default function V2Map({
         // pushPlainEvents ÅTERÖPPNAR då latchen när första riktiga datan landar.
     }, [eventsSettled, paintDoneNonce, symbolsPainted]);
 
+    // Spegla latchen uppåt (se onPaintedChange). Egen effekt så den fångar
+    // ÅTERÖPPNINGEN också, inte bara första målningen som onFirstPaint.
+    useEffect(() => { onPaintedChange?.(symbolsPainted); }, [symbolsPainted, onPaintedChange]);
+
     // Håll reveal-systemet i synk med datan: rensa bort nycklar som inte längre
     // finns (inkl. MapLibres interna feature-state, så en återanvänd nyckel börjar
     // dold) och välj om seed via recomputeRevealSeed.
@@ -2150,10 +2167,13 @@ export default function V2Map({
         let moveEndLastAt = 0;
         const applyBounds = () => {
             moveEndLastAt = performance.now();
-            setMapBounds(map.getBounds());
+            const b = map.getBounds();
+            setMapBounds(b);
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
-                onCenterChangeRef.current(center.lat, center.lng, map.getZoom());
+                onCenterChangeRef.current(center.lat, center.lng, map.getZoom(), {
+                    west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth(),
+                });
             }
         };
         const handleMoveEnd = () => {
@@ -2170,13 +2190,16 @@ export default function V2Map({
 
         // Rapportera initialt läge
         map.once('load', () => {
-            setMapBounds(map.getBounds());
+            const b0 = map.getBounds();
+            setMapBounds(b0);
             updateCloudPosition();
             // Installera GL-markörlagret + pusha första datan.
             syncPlainLayerRef.current();
             if (onCenterChangeRef.current) {
                 const center = map.getCenter();
-                onCenterChangeRef.current(center.lat, center.lng, map.getZoom());
+                onCenterChangeRef.current(center.lat, center.lng, map.getZoom(), {
+                    west: b0.getWest(), south: b0.getSouth(), east: b0.getEast(), north: b0.getNorth(),
+                });
             }
             // Startvy: hämta användarens plats (platstjänst) men ZOOMA INTE in dit —
             // vi vill se HELA Sverige när sidan öppnas. Vi sätter bara userPos så den

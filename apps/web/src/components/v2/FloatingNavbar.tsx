@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X, Heart, Calendar, CalendarRange, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DayPicker from './DayPicker';
 
@@ -208,7 +208,7 @@ export default function FloatingNavbar({
                         först när man bläddrat framåt (osynlig platshållare innan,
                         så chipen inte hoppar i sidled när pilen dyker upp). */}
                     {onDayRangeChange && (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10 flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-1.5">
                                 {dayRangeDays === 1 && (
                                     <button
@@ -260,6 +260,31 @@ export default function FloatingNavbar({
                                     </button>
                                 )}
                             </div>
+                            {/* Genväg UNDER dagchipen (8/8, Josefs önskemål — låg
+                                förut till vänster om pilarna): hoppa till hela
+                                veckan. I en småstad ligger det ofta 0–1 event på
+                                en enskild dag medan veckan har ett tiotal — utan
+                                den här knappen ser kartan tom ut fast den inte är
+                                det, och "Hela veckan" låg gömd inne i dagväljarens
+                                popover. Visas bara när veckovyn är upplåst
+                                (inzoomad); i veckoläge blir den vägen tillbaka
+                                till Idag. */}
+                            {weekUnlocked && (
+                                <button
+                                    type="button"
+                                    onClick={() => onDayRangeChange(0, dayRangeDays === 7 ? 1 : 7)}
+                                    aria-label={dayRangeDays === 7 ? 'Visa bara idag' : 'Visa hela veckan'}
+                                    title={dayRangeDays === 7 ? 'Visa bara idag' : 'Visa hela veckan'}
+                                    className={`h-8 rounded-full backdrop-blur-md shadow-lg border transition-colors flex items-center gap-1 px-2.5 shrink-0 text-xs font-bold ${
+                                        dayRangeDays === 7
+                                            ? 'bg-[#006AA7] text-white border-[#006AA7] hover:bg-[#00589a]'
+                                            : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
+                                    }`}
+                                >
+                                    <CalendarRange size={14} className="shrink-0" />
+                                    <span>{dayRangeDays === 7 ? 'Idag' : 'Veckan'}</span>
+                                </button>
+                            )}
                         </div>
                     )}
 
