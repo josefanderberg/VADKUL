@@ -20,6 +20,16 @@ export const PERIODS: { key: Period; label: string; unit: string }[] = [
     { key: 'weekend', label: 'I helgen', unit: 'i helgen' },
 ];
 
+/** "Idag"/"Imorgon" för en dagnyckel, annars null (t.ex. "Lör"). Klockberoende
+ *  precis som periodKeys — får bara kallas EFTER mount, annars kan byggdagens
+ *  "idag" krocka med besökarens och hydreringen spricka. */
+export function relativeDayLabel(key: string): string | null {
+    const now = new Date();
+    if (key === dateKey(now)) return 'Idag';
+    if (key === dateKey(addDays(now, 1))) return 'Imorgon';
+    return null;
+}
+
 /** Vilka 'YYYY-MM-DD'-nycklar (svensk tid) perioden motsvarar just nu.
  *  null = ingen dagbegränsning (Alla). */
 export function periodKeys(period: Period): string[] | null {

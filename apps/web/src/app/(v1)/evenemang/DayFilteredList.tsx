@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users } from 'lucide-react';
-import { PERIODS, periodKeys, type Period } from './periods';
+import { PERIODS, periodKeys, relativeDayLabel, type Period } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 
 // Klientdelen av stads-/kategorisidornas eventsektion. Filterraden ligger
@@ -598,12 +598,43 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
 
             {children}
 
-            <div className="mt-6 flex flex-col gap-8">
-                {renderDays.map(day => {
+            <div className="mt-6 flex flex-col gap-10">
+                {renderDays.map((day, di) => {
                     const pastOpen = openPast.has(day.key);
+                    // "Idag"/"Imorgon" är klockberoende → bara efter mount.
+                    const rel = nowTs === 0 ? null : relativeDayLabel(day.key);
                     return (
                         <section key={day.key}>
-                            <h2 className="text-base font-black text-slate-900 mb-2 capitalize">{day.label}</h2>
+                            {/* DAGRUBRIKEN: klistrad under toppnaven (57 px) så länge
+                                dagens egna rader rullar förbi, och knuffas sedan upp
+                                av nästa dags rubrik. Man ska aldrig kunna scrolla in
+                                i en ny dag utan att se vilken dag man är på. Bakgrunden
+                                går ut till kolumnens kanter (-mx-5 px-5) så raderna
+                                inte skymtar bakom rubriken när de passerar. */}
+                            {/* Avgränsare mot dagen ovanför — ligger UTANFÖR den
+                                klistrade rutan så den rullar bort som vanligt
+                                (annars hänger en lös linje kvar under naven).
+                                Första dagen har filterraden över sig i stället. */}
+                            {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200" />}
+                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 backdrop-blur-sm">
+                                <h2 className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#006AA7] text-white text-sm font-black shadow-sm">
+                                        {rel && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[#FECC02] text-[10px] font-black uppercase tracking-wider text-slate-900">
+                                                {rel}
+                                            </span>
+                                        )}
+                                        {/* first-letter, inte capitalize: svenska skriver
+                                            "lördag 8 augusti", inte "Lördag 8 Augusti". */}
+                                        <span className="first-letter:uppercase">{day.label}</span>
+                                    </span>
+                                    {day.upcoming.length > 0 && (
+                                        <span className="text-[11px] font-black text-slate-400 tabular-nums">
+                                            {day.upcoming.length} event
+                                        </span>
+                                    )}
+                                </h2>
+                            </div>
                             {/* Historik: det som redan varit ligger hopfällt överst. */}
                             {day.past.length > 0 && (
                                 <button

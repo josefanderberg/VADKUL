@@ -1528,6 +1528,7 @@ export default function HomePage() {
                 starredEventIds={starredEventIds}
                 wishes={wishes}
                 onSelectWish={handleSelectWish}
+                wishCardOpen={!!selectedWish}
             />
 
 

@@ -271,6 +271,10 @@ interface V2MapProps {
     /** Klick på en önske-bricka → önskan; klick på tom karta → null (stäng
      *  önske-kortet). Sidan renderar det lilla önske-kortet. */
     onSelectWish?: (wish: EventWish | null) => void;
+    /** Är önske-kortet öppet just nu? Kartan behöver veta det av samma skäl som
+     *  den får selectedEvent: ett klick som STÄNGER ett kort ska bara stänga,
+     *  inte också flytta avslöjningen. */
+    wishCardOpen?: boolean;
     /** Stjärn-gåvan ⭐: eventId:n som fått en stjärna (läses live ur eventStars).
      *  Stjärnmärkta event får guld-bricka, force-reveal (alltid tända, som
      *  userCreated) och blir representant i sin multi-event-grupp — tills
@@ -309,6 +313,7 @@ export default function V2Map({
     onUserPosChange,
     wishes = [],
     onSelectWish,
+    wishCardOpen = false,
     starredEventIds = new Set(),
     onFirstPaint,
     onPaintedChange,
@@ -339,6 +344,11 @@ export default function V2Map({
     // titel + tid) så man kan välja vilket event i högen man vill öppna. null = ingen.
     // (Man kan ALTERNATIVT bläddra via pagern "3/7" på kortets platsrad.)
     const [groupList, setGroupList] = useState<LinkEvent[] | null>(null);
+    // Live-spegel: kart-klickhandlern (registrerad en gång) måste kunna se om
+    // listan är öppen just nu — ett klick som STÄNGER något ska inte också
+    // flytta avslöjningen (se "tom karta-tap" nedan).
+    const groupListRef = useRef<LinkEvent[] | null>(null);
+    groupListRef.current = groupList;
     // Geo-ankaret (lng/lat) för den klickade multi-event-brickan + dess projicerade
     // skärmposition. Listan placeras i brickans ÖVRE HÖGRA hörn och följer punkten
     // när kartan pannas/zoomas (uppdateras i updateCloudPosition på move/zoom).
@@ -559,6 +569,8 @@ export default function V2Map({
     wishesRef.current = wishes;
     const onSelectWishRef = useRef(onSelectWish);
     onSelectWishRef.current = onSelectWish;
+    const wishCardOpenRef = useRef(wishCardOpen);
+    wishCardOpenRef.current = wishCardOpen;
 
     const onCenterChangeRef = useRef(onCenterChange);
     onCenterChangeRef.current = onCenterChange;
@@ -2039,10 +2051,19 @@ export default function V2Map({
             // Tom karta-tap (eller bara dolda brickor under fingret) = ny utgångspunkt:
             // bron byter ut den avslöjade uppsättningen mot de N närmast klicket. Klick
             // PÅ tom karta (ej på en markör) STÄNGER också ev. öppet eventkort + listan.
+            //
+            // MEN: ett klick som stänger något gör BARA det. Man klickar ofta bort
+            // eventkortet för att se kartan igen — då vill man ha kvar exakt de
+            // brickor man redan tittade på, inte 50 nya kring där fingret råkade
+            // landa. Först NÄSTA klick (med allt stängt) flyttar avslöjningen.
+            const closedSomething = !!selectedEventValRef.current
+                || !!groupListRef.current
+                || !!wishCardOpenRef.current;
             setGroupList(null);            // stäng ev. öppen multi-event-lista
             setGroupListAnchor(null);
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort
+            if (closedSomething) return;
             startRevealTravelRef.current(e.lngLat.lng, e.lngLat.lat);
         });
 

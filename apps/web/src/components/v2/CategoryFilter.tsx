@@ -76,9 +76,9 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
     // kategorinamnet som en pill till vänster om cirkeln (peer-hover — native
     // title är för långsam/osynlig på touch); antal ligger kvar i aria-label.
     // Raden är flex-row-reverse så pillen kan ligga EFTER knappen i DOM (krav
-    // för peer-selektorn) men ändå visas till vänster. Pillen tar layoutplats
-    // osynligt — därför är hela kolumnen pointer-events-none och bara knapparna
-    // pointer-events-auto, så ytan bredvid cirklarna inte blockerar kartan.
+    // för peer-selektorn) men ändå visas till vänster. Pillen ligger KVAR i
+    // flödet (tar osynlig layoutplats) — den måste rymmas innanför kolumnens
+    // padding-box, annars klipper scroll-containern bort den vågrätt.
     const renderCircle = (cat: { id: string; label: string; emoji: string; markerHex: string }) => {
         const active = selected.has(cat.id);
         // Cirkeln bär SAMMA brick-gradient som eventmarkörerna på kartan
@@ -97,7 +97,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     aria-pressed={active}
                     aria-label={`${cat.label} — ${count} event idag`}
                     style={{ background: sourceGradientCss(cat.markerHex) }}
-                    className={`peer pointer-events-auto h-10 w-10 shrink-0 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
+                    className={`peer h-10 w-10 shrink-0 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
                         active
                             ? 'border-transparent ring-2 ring-[#006AA7]'
                             : shownOnMap
@@ -147,13 +147,34 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     </button>
 
                     {/* Cirkelkolumn — under knappen, höger-justerad. p-1/-m-1 så
-                        ringar och skuggor inte klipps av scroll-containern. */}
+                        ringar och skuggor inte klipps av scroll-containern.
+
+                        Scroll: kolumnen är pointer-events-auto (INTE none som
+                        förr) — en pointer-events-none-container tar inte emot
+                        touch-draget, så listan gick inte att scrolla på mobil.
+                        Priset är att ytan bredvid cirklarna (osynliga pillar)
+                        inte längre släpper igenom till kartan; därför stänger
+                        ett tryck på just den ytan panelen i stället (onClick
+                        nedan), så beteendet utåt blir detsamma som förut.
+
+                        Takhöjd: 100dvh (INTE vh — mobilens adressfält gör vh
+                        större än synlig yta, vilket var precis det som gömde de
+                        nedersta kategorierna) minus kolumnens topp (24px
+                        container + 96px knapp + 52px offset ≈ 172px) + luft. */}
                     {open && (() => {
                         const hasMore = visibleSpecial.length > 0;
                         return (
                             <div
                                 ref={panelRef}
-                                className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[72vh] overflow-y-auto no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200"
+                                onClick={(e) => {
+                                    // Allt som INTE är en cirkel (dvs. den osynliga pill-ytan
+                                    // bredvid dem) räknas som "utanför" och stänger panelen.
+                                    if (!(e.target as HTMLElement).closest('button')) {
+                                        setOpen(false);
+                                        setShowMore(false);
+                                    }
+                                }}
+                                className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-196px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200"
                             >
                                 {/* Rensa-kryss — bara ett kryss, samma cirkel som resten.
                                     Betydelsen ("visa alla") ligger i tooltip/aria. */}
@@ -163,7 +184,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                                         onClick={onClear}
                                         aria-label="Rensa filter — visa alla kategorier"
                                         title="Visa alla"
-                                        className="pointer-events-auto h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
+                                        className="h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
                                     >
                                         <X size={18} strokeWidth={2.5} />
                                     </button>
@@ -184,7 +205,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                                         aria-expanded={showMore}
                                         aria-label={showMore ? 'Dölj Korpen/Svenska kyrkan/PRO' : 'Visa Korpen/Svenska kyrkan/PRO'}
                                         title={showMore ? 'Visa färre' : 'Visa mer'}
-                                        className="pointer-events-auto h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
+                                        className="h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
                                     >
                                         {showMore ? <ChevronUp size={18} /> : <MoreHorizontal size={18} />}
                                     </button>

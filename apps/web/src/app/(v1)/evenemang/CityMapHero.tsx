@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { City, CityEvent } from './cityData';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
+import CityMapHeroCanvas from './CityMapHeroCanvas';
 
 // Klickbar kart-förhandsvisning överst på stads-/kategorisidorna: en äkta,
 // inzoomad kartbit över staden med riktiga VADKUL-brickor på riktiga event-
@@ -9,15 +10,26 @@ import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
 // (?plats=lat,lng,zoom — läses i V2Maps init). Poängen är att sidorna ska
 // kännas som sajten (kartan ÄR produkten), inte som ett textindex.
 //
-// Helt statisk: kakelbilderna är Cartos raster-Voyager (samma kartografi som
-// kartans vektor-Voyager, ingen API-nyckel) som vanliga <img>, och brickorna
-// är absolut positionerade <span> vars offset räknas ut vid BUILD med samma
-// webbmercator som kartan. Noll klient-JS — SEO-sidorna förblir lätta.
+// Två lager kartbotten, i den ordningen:
+//   1. Serverrenderade kakelbilder — Cartos raster-Voyager (samma kartografi
+//      som kartans vektor-Voyager, ingen API-nyckel) som vanliga <img>. Syns
+//      direkt, finns i HTML:en, kräver noll JS.
+//   2. CityMapHeroCanvas — en riktig, passiv MapLibre-karta i huvudkartans
+//      "nöjesfälts"-stil som tonas in ovanpå kaklen efter hydreringen. Utan
+//      den ser heron ut som en helt annan produkt: Voyagers raster är grå-
+//      beige medan kartan man landar på har grönt land och blått vatten.
+// Brickorna ligger överst och är absolut positionerade <span> vars offset
+// räknas ut vid BUILD med samma webbmercator som kartan.
 
 const TILE = 256;
-/** Kartzoom för både förhandsvisningen och kartan man landar på. 12 ≈ hela
- *  stadskärnan med igenkännbara gator/kvarter i en ~670 px bred hero. */
+/** Kakel-zoom (256 px-kakel) för förhandsvisningen. 12 ≈ hela stadskärnan med
+ *  igenkännbara gator/kvarter i en ~670 px bred hero. */
 const HERO_ZOOM = 12;
+/** Samma skala uttryckt som MapLibre-zoom. MapLibres värld är 512·2^zoom px
+ *  bred medan kakelrutnätet ovan är 256·2^HERO_ZOOM — samma upplösning kräver
+ *  därför ett snäpp lägre siffra. Går den isär hamnar brickorna (som räknas i
+ *  kakel-zoom) dubbelt så långt ut som kartbilden under dem. */
+const HERO_GL_ZOOM = HERO_ZOOM - 1;
 /** Halva hero-ytan i px som brickor får placeras inom. Bredden är fluid
  *  (max ~672 px innehållsbredd) — 320/110 håller brickorna synliga även på
  *  desktop utan att mobilen känns tom (overflow klipps ändå av kartytan). */
@@ -38,10 +50,12 @@ function worldPx(lat: number, lng: number, zoom: number) {
 }
 
 /** Länken hero:n (och stadssidornas kart-CTA:er) öppnar: kartan centrerad på
- *  staden. Zoomen dras ner ett snäpp mot heron — på kartan vill man se lite
- *  mer omland än i den lilla förhandsbilden. */
+ *  staden i EXAKT heron's skala, så klicket känns som att man zoomar in i
+ *  bilden man tittade på. Man ser ändå mer omland än i förhandsbilden — kartan
+ *  fyller hela skärmen medan heron bara är ~630×238 px. (?plats-zoomen går
+ *  rakt in i MapLibre → HERO_GL_ZOOM, inte kakel-zoomen.) */
 export function cityMapHref(city: City): string {
-    return `/?plats=${city.lat},${city.lng},${HERO_ZOOM - 0.5}`;
+    return `/?plats=${city.lat},${city.lng},${HERO_GL_ZOOM}`;
 }
 
 /** Brick-bakgrund ur kategorin — samma markerHex + gradient som kartans
@@ -137,8 +151,15 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 />
             ))}
 
+            {/* Riktiga kartan i huvudkartans stil, tonas in ovanpå kaklen. */}
+            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} />
+
             {/* Brickorna: samma nål-droppe som kartan (tre runda hörn + spets
-                nedåt via rotate) med kategori-gradienten, poppar in staggrat. */}
+                nedåt via rotate) med kategori-gradienten, poppar in staggrat.
+                Måtten speglar GL-brickans (makeBrickaImageData): hörnradien är
+                HALVA kroppen — droppen ska se rund ut med ett enda spetsigt
+                hörn, inte som en rundad kvadrat — kanten är svagt vit och
+                emojin ~0,6 av kroppen. */}
             {bricks.map((b, i) => (
                 <span
                     key={b.id}
@@ -147,10 +168,10 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                     style={{ left: `calc(50% + ${b.dx}px)`, top: `calc(50% + ${b.dy}px)` }}
                 >
                     <span
-                        className="hero-bricka block w-[30px] h-[30px] rounded-[10px] rounded-br-none border border-white/70 shadow-md"
+                        className="hero-bricka block w-[32px] h-[32px] rounded-full rounded-br-none border-[1.5px] border-white/30 shadow-md"
                         style={{ background: b.bg, transform: 'translate(-50%, -92%) rotate(45deg)', animationDelay: `${120 + i * 70}ms` }}
                     >
-                        <span className="flex items-center justify-center w-full h-full -rotate-45 text-[15px] leading-none">
+                        <span className="flex items-center justify-center w-full h-full -rotate-45 text-[19px] leading-none">
                             {b.emoji}
                         </span>
                     </span>
