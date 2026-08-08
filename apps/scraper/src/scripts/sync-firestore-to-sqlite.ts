@@ -20,8 +20,15 @@ async function main() {
 
     let written = 0;
     let failed = 0;
+    let skippedNoUrl = 0;
     snap.forEach(doc => {
         const data = doc.data() as any;
+        // SQLite (och aggregatet) nycklar på url. Event UTAN url — VADKUL-värdade
+        // användarevent — skulle därför skriva över varandra på den tomma nyckeln
+        // och bara den sist synkade skulle överleva. De hör hemma i live-spåret
+        // (fetchUserCreatedEvents läser dem direkt ur Firestore vid varje poll)
+        // och ska aldrig in i den skrapade pipelinen.
+        if (!data.url) { skippedNoUrl++; return; }
         try {
             upsertEvent({
                 url:                data.url,
@@ -57,6 +64,9 @@ async function main() {
     });
 
     console.log(`\n✅ Klar. ${written} skrivna, ${failed} misslyckade.`);
+    if (skippedNoUrl > 0) {
+        console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (live-spåret, inte aggregatet).`);
+    }
     console.log(`📦 SQLite-fil: ${getSqlitePath()}`);
     console.log(`📊 Totalt i SQLite nu: ${countSqliteEvents()}`);
 }

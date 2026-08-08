@@ -76,8 +76,15 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         return [0, 0];
     };
 
+    let skippedNoUrl = 0;
     rows.forEach(row => {
         const id = row.url; // Use url as unique identifier
+        // Utan url finns ingen nyckel: alla sådana rader delar id "" och skriver
+        // över varandra i descriptions-mappen — och en tom mapp-nyckel avvisas
+        // dessutom av Firestore ("Element at index 0 should not be an empty
+        // string"), vilket fällde HELA descriptions-uppladdningen. VADKUL-värdade
+        // event saknar url by design och läses live, inte härifrån.
+        if (!id) { skippedNoUrl++; return; }
         const [safeLat, safeLng] = safeCoord(Number(row.lat) || 0, Number(row.lng) || 0);
         // NULL (legacy-rad som inte backfillats) tolkas som "har tid" bara om
         // klockslaget inte är midnatt — samma heuristik som webben använt.
@@ -118,6 +125,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         descriptions[id] = row.description || '';
     });
 
+    if (skippedNoUrl > 0) {
+        console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (saknar aggregat-nyckel).`);
+    }
     if (droppedCoords > 0) {
         console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
     }
