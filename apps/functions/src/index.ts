@@ -442,6 +442,132 @@ export const eventReminders = region.pubsub
 // ==============================
 
 /**
+ * Skapar Checkout-sessionen för en boost — vår EGEN, i stället för den som
+ * `firestore-stripe-payments`-extensionen skapar från customers/{uid}/checkout_sessions.
+ *
+ * VARFÖR egen: Stripe slår på Managed Payments (Stripe/Link som merchant of
+ * record) som default på kontot, och den kräver att produkten har en tax code
+ * ur listan för DIGITALA VAROR. En boost är betald synlighet — annonsering —
+ * som dessutom säljs via en plattform, alltså två saker Managed Payments
+ * uttryckligen inte stödjer. Enda dokumenterade avstängningen är per session
+ * (`managed_payments.enabled = false`), och extensionen bygger sessionen från
+ * en FAST fältlista och kastar okända fält. Därför skapar vi sessionen själva.
+ *
+ * Resten av kedjan är orörd: vi återanvänder kundkopplingen extensionen redan
+ * håller (`customers/{uid}.stripeId`), så dess webhook skriver fortfarande
+ * customers/{uid}/payments när betalningen går igenom — och `applyEventBoost`
+ * nedan gör jobbet precis som förut.
+ */
+
+/** Priset (Stripe Price-ID) sätts i apps/functions/.env — aldrig av klienten. */
+const BOOST_PRICE_ID = process.env.STRIPE_BOOST_PRICE_ID || '';
+/** Speglar BOOST_DURATION_DAYS i webbens boostService.ts. */
+const BOOST_DAYS = 7;
+/**
+ * Vart Stripe får skicka tillbaka webbläsaren. Klienten skickar sin egen URL,
+ * men den valideras mot den här listan — annars vore funktionen en öppen
+ * redirect med Stripes namn framför.
+ */
+const RETURN_ORIGINS = ['https://vadkul.se', 'https://www.vadkul.se', 'http://localhost:3000'];
+
+const safeReturnUrl = (raw: unknown): string => {
+    if (typeof raw !== 'string' || !raw) return 'https://vadkul.se';
+    try {
+        const url = new URL(raw);
+        return RETURN_ORIGINS.includes(url.origin) ? url.toString() : 'https://vadkul.se';
+    } catch {
+        return 'https://vadkul.se';
+    }
+};
+
+export const createBoostCheckout = functions
+    .runWith({ secrets: ['STRIPE_API_KEY'] })
+    .region('europe-west1')
+    .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError('unauthenticated', 'Du måste vara inloggad för att boosta ett event.');
+        }
+        // Anonym tips-session räknas inte som inloggad: betalningen ska knytas
+        // till ett konto personen kan komma tillbaka till (och kvittot mailas dit).
+        if (context.auth.token?.firebase?.sign_in_provider === 'anonymous') {
+            throw new functions.https.HttpsError('unauthenticated', 'Du måste vara inloggad för att boosta ett event.');
+        }
+        if (!BOOST_PRICE_ID) {
+            console.error('[boost] STRIPE_BOOST_PRICE_ID saknas i functions-miljön.');
+            throw new functions.https.HttpsError('failed-precondition', 'Boost är inte tillgängligt ännu.');
+        }
+
+        const uid = context.auth.uid;
+        const rawEventId = typeof data?.eventId === 'string' ? data.eventId.trim() : '';
+        if (!rawEventId) {
+            throw new functions.https.HttpsError('invalid-argument', 'Inget event angivet.');
+        }
+        // Ett tillfälle i en veckoserie har id "<docId>__2026-08-13" och motsvarar
+        // inget eget dokument — dokumentet är seriens bas (samma avskalning som
+        // vid radering). Boosten hamnar alltså på serien, vilket är rätt: alla
+        // tillfällen lyfts. Utan den här raden skulle varje serie-tillfälle
+        // avvisas som "finns inte".
+        const eventId = rawEventId.split('__')[0];
+
+        // Boosten sätts på linkEvents/{eventId}. Finns inte dokumentet kan
+        // `applyEventBoost` aldrig applicera den — då ska ingen betala heller.
+        // (Det är därför skrapade event inte går att boosta: de bor inte här.)
+        const eventSnap = await db.collection('linkEvents').doc(eventId).get();
+        if (!eventSnap.exists) {
+            throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+        }
+
+        const returnUrl = safeReturnUrl(data?.returnUrl);
+        const { default: Stripe } = await import('stripe');
+        const stripe = new Stripe(process.env.STRIPE_API_KEY as string, { apiVersion: '2026-07-29.dahlia' });
+
+        // Kundkopplingen: extensionen skriver `stripeId` på customers/{uid} vid
+        // första köpet. Saknas den skapar vi kunden på samma form (metadata
+        // firebaseUID + fältet stripeId), annars hittar inte extensionens
+        // webhook tillbaka till uid:t och betalningen landar aldrig i Firestore.
+        const customerRef = db.collection('customers').doc(uid);
+        const customerSnap = await customerRef.get();
+        let stripeId = customerSnap.get('stripeId') as string | undefined;
+        if (!stripeId) {
+            const authUser = await admin.auth().getUser(uid);
+            const customer = await stripe.customers.create({
+                email: authUser.email || undefined,
+                metadata: { firebaseUID: uid },
+            });
+            stripeId = customer.id;
+            await customerRef.set({ stripeId, stripeLink: `https://dashboard.stripe.com/customers/${stripeId}` }, { merge: true });
+        }
+
+        // Samma metadata på både sessionen och payment_intent: extensionens
+        // payments-dokument speglar payment_intent, och det är den `applyEventBoost` läser.
+        const metadata = { eventId, boostDays: String(BOOST_DAYS), firebaseUID: uid };
+
+        try {
+            const session = await stripe.checkout.sessions.create({
+                mode: 'payment',
+                customer: stripeId,
+                line_items: [{ price: BOOST_PRICE_ID, quantity: 1 }],
+                success_url: returnUrl,
+                cancel_url: returnUrl,
+                allow_promotion_codes: true,
+                // Kärnan i hela den här funktionen — se blocket överst.
+                managed_payments: { enabled: false },
+                metadata,
+                payment_intent_data: { metadata },
+            });
+            if (!session.url) {
+                throw new functions.https.HttpsError('internal', 'Fick ingen betalningslänk från Stripe.');
+            }
+            console.log(`[boost] Checkout ${session.id} skapad för event ${eventId} (user ${uid}).`);
+            return { url: session.url };
+        } catch (err) {
+            if (err instanceof functions.https.HttpsError) throw err;
+            console.error('[boost] Kunde inte skapa checkout-session:', err);
+            throw new functions.https.HttpsError('internal', 'Kunde inte starta betalningen. Försök igen om en stund.');
+        }
+    });
+
+/**
  * Applicerar en betald "boost" på ett event.
  *
  * Förutsätter Firebase-extensionen `firestore-stripe-payments` (Invertase/Stripe),

@@ -7,26 +7,30 @@ period (default **7 dagar**). Bygger på Firebase-extensionen
 ## Hur det hänger ihop
 
 ```
-Ägaren klickar "Boosta eventet"  (LinkEventCard)
+Vem som helst (inloggad) klickar "Boosta eventet"  (LinkEventCard)
         │
         ▼
 startEventBoostCheckout()         boostService.ts
-   skriver customers/{uid}/checkout_sessions/{id}
-   (mode:'payment', price, metadata.eventId + boostDays)
+   anropar callable createBoostCheckout({ eventId, returnUrl })
         │
         ▼
-firestore-stripe-payments-extensionen
-   skapar Stripe Checkout Session → skriver tillbaka `url`
+createBoostCheckout  (Cloud Function, apps/functions/src/index.ts)
+   verifierar konto + att linkEvents/{eventId} finns,
+   hämtar/skapar customers/{uid}.stripeId,
+   skapar Checkout Session med managed_payments.enabled = false
+   → returnerar `url`
         │
         ▼
 Webbläsaren redirectas till Stripe → användaren betalar
         │
         ▼
-Extensionen skriver customers/{uid}/payments/{id} (status: succeeded)
+Extensionens webhook skriver customers/{uid}/payments/{id} (status: succeeded)
+   (den hittar användaren via `where('stripeId','==',payment.customer)` —
+    därför MÅSTE sessionen skapas med `customer: stripeId`)
         │
         ▼
 applyEventBoost  (Cloud Function, apps/functions/src/index.ts)
-   läser metadata.eventId/boostDays, verifierar hostUid == uid,
+   läser metadata.eventId/boostDays,
    sätter featuredUntil på linkEvents/{eventId}
         │
         ▼
@@ -67,16 +71,57 @@ linkEvents-`update`). En ägare kan alltså **inte** själv-boosta gratis.
    sista steg). Events som behövs minst: `checkout.session.completed`,
    `payment_intent.succeeded`.
 
-5. **Env-variabel** – lägg Price-ID:t i webbappens miljö:
+5. **Price-ID till backend** – priset ägs av Cloud-funktionen, aldrig av
+   klienten. Ligger i `apps/functions/.env.vadkul-f2cb2` (committad, eftersom
+   `.env` är gitignorerad och deployen körs från `main` på Mac minin):
    ```
-   NEXT_PUBLIC_STRIPE_BOOST_PRICE_ID=price_XXXXXXXXXXXX
+   STRIPE_BOOST_PRICE_ID=price_XXXXXXXXXXXX
    ```
-   (Saknas den döljs/avaktiveras boost-knappen – se `isBoostConfigured()`.)
+   Saknas den svarar `createBoostCheckout` "Boost är inte tillgängligt ännu".
 
-6. **Deploya** funktioner + regler:
+6. **Stripe-nyckeln till Secret Manager** – `createBoostCheckout` skapar
+   sessionen själv och behöver därför sin egen kopia av secret key:
    ```bash
-   firebase deploy --only functions:applyEventBoost,firestore:rules
+   firebase functions:secrets:set STRIPE_API_KEY --project=vadkul-f2cb2
    ```
+   (Extensionens egen nyckel ligger kvar orörd – den används av dess webhook.)
+
+7. **Deploya** funktioner + regler:
+   ```bash
+   firebase deploy --only functions:createBoostCheckout,functions:applyEventBoost,firestore:rules
+   ```
+
+## Varför vi skapar sessionen själva (Managed Payments)
+
+Extensionen kan skapa Checkout-sessioner åt oss via
+`customers/{uid}/checkout_sessions` – och det var så det fungerade från början.
+Det gick sönder när Stripe slog på **Managed Payments** (Stripe/Link som
+merchant of record) som default på kontot:
+
+```
+Invalid line_items[0]: the product tax code is missing.
+```
+
+Managed Payments kräver en `tax_code` ur listan för **digitala varor**. En boost
+är betald synlighet – annonsering – och säljs dessutom via en plattform; båda
+står uttryckligen som *icke* stödda i Stripes eligibility-krav. Att sätta en
+digital-vara-kod bara för att tysta felet vore att felklassa produkten
+skattemässigt.
+
+Enda dokumenterade avstängningen är **per session**:
+`managed_payments[enabled]=false`. Extensionen bygger sin session från en fast
+fältlista (`mode`, `line_items`, `payment_intent_data`, `automatic_tax`, …) och
+kastar okända fält – den kan alltså inte skicka flaggan. Därför skapar
+`createBoostCheckout` sessionen själv.
+
+Konsekvensen: **VADKUL är säljare**, inte Link. Momsen är vår att redovisa
+(eller Stripe Tax:s att räkna), kontoutdraget säger `VADKUL` och inte
+`LINK.COM*`, och ingen kan återbetala över huvudet på oss.
+
+Fulfillment är oförändrad. Extensionens webhook hittar användaren med
+`where('stripeId','==',payment.customer)`, så sessionen **måste** skapas med
+`customer: <customers/{uid}.stripeId>` – gör den inte det landar betalningen
+aldrig i Firestore och boosten appliceras aldrig.
 
 ## Testa (testläge)
 
@@ -84,13 +129,26 @@ linkEvents-`update`). En ägare kan alltså **inte** själv-boosta gratis.
 2. Betala med Stripes testkort `4242 4242 4242 4242`, valfritt framtida datum/CVC.
 3. Efter redirect tillbaka: inom någon sekund skriver `applyEventBoost`
    `featuredUntil` och pinnen blir amber/guld med ⭐ och hamnar överst i listan.
-4. Logg: `firebase functions:log --only applyEventBoost`.
+4. Logg: `firebase functions:log --only createBoostCheckout,applyEventBoost`.
+
+Ser du checkout-sessionen men aldrig någon boost: kontrollera att webhooken i
+Stripe har **`payment_intent.succeeded`** påslagen (steg 4). Det är den som gör
+att extensionen skriver payments-dokumentet `applyEventBoost` lyssnar på.
 
 ## Att tänka på / framtida
 
-- **Pris och längd** bor i Stripe (pris) resp. `BOOST_DURATION_DAYS` i
-  `boostService.ts` + `boostDays`-metadata (default 7, backend klampar 1–90).
-  Vill du ha flera nivåer: skapa flera Priser och skicka olika `boostDays`.
+- **Pris och längd** bor i Stripe (pris, via `STRIPE_BOOST_PRICE_ID`) resp.
+  `BOOST_DAYS` i `createBoostCheckout` (speglas av `BOOST_DURATION_DAYS` i
+  `boostService.ts`; backend klampar 1–90). Vill du ha flera nivåer: skapa flera
+  Priser och skicka olika `boostDays`.
+- **Skrapade event går inte att boosta.** Knappen visas bara för `userCreated`
+  (se `EventCard.tsx`) och `createBoostCheckout` avvisar allt som saknar
+  dokument i `linkEvents`. Skulle man släppa på det betalar kunden för en boost
+  som aldrig kan appliceras. Att öppna vägen kräver en egen collection som
+  kartan/aggregatet slår ihop – inte gjort.
+- **Klienten kan fortfarande skriva `customers/{uid}/checkout_sessions`**
+  (reglerna tillåter det, extensionen lyssnar). Vi använder inte den vägen
+  längre; vill man stänga den helt är det en regel-ändring.
 - **Go live:** byt till Stripes live-nycklar och live Price-ID. Inget i koden
   behöver ändras.
 - **Återbetalning** tar inte bort boosten automatiskt – lägg vid behov till en

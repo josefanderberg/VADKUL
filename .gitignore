@@ -42,6 +42,10 @@ vadkul-*-firebase-adminsdk-*.json
 .env
 .env.*
 !.env.example
+# Undantag: Cloud Functions per-projekt-env. Deployen körs från main på Mac
+# minin, så allt som functions behöver vid deploy MÅSTE vara committat.
+# Bara icke-hemligheter här (Price-ID o.dyl.) — nycklar går i Secret Manager.
+!apps/functions/.env.vadkul-f2cb2
 
 # Generated / auto-updated data files
 **/events.db
