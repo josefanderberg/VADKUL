@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
-import { startEventBoostCheckout } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, BOOST_DURATION_DAYS } from '@/services/boostService';
 import FloatingNavbar from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -1098,6 +1098,48 @@ export default function HomePage() {
         }).catch(err => console.warn('Kunde inte läsa stjärn-status:', err));
         return () => { cancelled = true; };
     }, [user]);
+
+    // ── Återkomst från Stripe: /?boost_session=cs_… ─────────────────────────
+    // Stripe skickar tillbaka webbläsaren hit efter betalningen. confirmBoost
+    // hämtar sessionen från Stripe, kräver payment_status === 'paid' och sätter
+    // featuredUntil — betalningen verifieras alltså i backend, aldrig här.
+    // Parametern städas ur URL:en direkt (kvittot i backend gör en omladdning
+    // ofarlig, men en ren adress är bättre att dela vidare).
+    const pendingBoostSessionRef = useRef<string | null>(null);
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('boost_session');
+        if (!sessionId) return;
+        pendingBoostSessionRef.current = sessionId;
+        params.delete('boost_session');
+        const qs = params.toString();
+        window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    }, []);
+    useEffect(() => {
+        const sessionId = pendingBoostSessionRef.current;
+        if (!sessionId) return;
+        // Vänta tills Firebase återställt sessionen — anropet kräver inloggning,
+        // och `user` är null under restoren.
+        if (authLoading || !user) return;
+        pendingBoostSessionRef.current = null;
+        const t = toast.loading('Aktiverar boosten…');
+        confirmEventBoost(sessionId)
+            .then(res => {
+                toast.dismiss(t);
+                if (res.applied) {
+                    toast.success(`Boostat! Eventet lyfts fram i ${BOOST_DURATION_DAYS} dagar. 🚀`);
+                } else if (res.alreadyApplied) {
+                    toast.success('Boosten är redan aktiverad. 🚀');
+                } else {
+                    toast('Betalningen är inte klar än — boosten aktiveras så fort den går igenom.');
+                }
+            })
+            .catch(err => {
+                toast.dismiss(t);
+                console.error(err);
+                toast.error(err instanceof Error ? err.message : 'Kunde inte aktivera boosten.');
+            });
+    }, [user, authLoading]);
 
     // Gåvolänken läses EN gång vid mount (samma anda som ?event=-hanteringen
     // nedan, men oberoende av eventsLoaded — inlösen behöver ingen eventdata).

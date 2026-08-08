@@ -41,3 +41,24 @@ export async function startEventBoostCheckout(eventId: string): Promise<void> {
     if (!url) throw new Error('Kunde inte starta betalningen. Försök igen om en stund.');
     window.location.assign(url);
 }
+
+/**
+ * Applicerar boosten efter återkomsten från Stripe (?boost_session=cs_…).
+ *
+ * Detta är den primära fulfillment-vägen: backend hämtar sessionen från Stripe
+ * och kräver payment_status === 'paid' innan featuredUntil sätts — betalningen
+ * verifieras alltså aldrig på klientens ord. Ett kvitto per session gör att en
+ * omladdning av success-URL:en inte förlänger boosten en gång till.
+ *
+ * `applied: false` utan fel betyder att betalningen inte var klar (avbruten
+ * eller fördröjd betalmetod) eller att boosten redan var applicerad.
+ */
+export async function confirmEventBoost(sessionId: string): Promise<{ applied: boolean; alreadyApplied?: boolean }> {
+    const { httpsCallable } = await import('firebase/functions');
+    const confirm = httpsCallable<{ sessionId: string }, { applied: boolean; alreadyApplied?: boolean }>(
+        functions,
+        'confirmBoost',
+    );
+    const res = await confirm({ sessionId });
+    return res.data ?? { applied: false };
+}

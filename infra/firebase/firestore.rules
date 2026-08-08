@@ -505,6 +505,12 @@ service cloud.firestore {
     match /outreachLog/{docId}      { allow read, write: if false; }
     match /outreachNotes/{docId}    { allow read, write: if false; }
 
+    // Boost-kvitton: ett dokument per inlöst Stripe-session, skrivs ENBART av
+    // confirmBoost (admin-SDK) i samma transaction som featuredUntil. Det är
+    // dubbelapplicerings-spärren — kunde klienten röra den vore boosten gratis
+    // att förlänga genom att ladda om success-URL:en.
+    match /boostPayments/{sessionId} { allow read, write: if false; }
+
     // 22. SENASTE AKTIVITET — ETT välkänt dokument (latestComment) som kartans
     // "senaste kommentaren"-bubbla lyssnar på. Speglas av chattens sendMessage
     // (en collectionGroup-query över alla messages skulle även öppna privata

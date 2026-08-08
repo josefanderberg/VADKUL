@@ -522,6 +522,16 @@ export const createBoostCheckout = functions
         }
 
         const returnUrl = safeReturnUrl(data?.returnUrl);
+        // Stripe ersätter {CHECKOUT_SESSION_ID} i success_url. Klammrarna får INTE
+        // url-kodas, så parametern läggs på råtext efter serialiseringen — det är
+        // den `confirmBoost` läser när användaren kommer tillbaka.
+        const successUrl = (() => {
+            const u = new URL(returnUrl);
+            u.searchParams.delete('boost_session');
+            const qs = u.searchParams.toString();
+            return `${u.origin}${u.pathname}${qs ? `?${qs}&` : '?'}boost_session={CHECKOUT_SESSION_ID}`;
+        })();
+
         const { default: Stripe } = await import('stripe');
         const stripe = new Stripe(process.env.STRIPE_API_KEY as string, { apiVersion: '2026-07-29.dahlia' });
 
@@ -551,7 +561,7 @@ export const createBoostCheckout = functions
                 mode: 'payment',
                 customer: stripeId,
                 line_items: [{ price: BOOST_PRICE_ID, quantity: 1 }],
-                success_url: returnUrl,
+                success_url: successUrl,
                 cancel_url: returnUrl,
                 allow_promotion_codes: true,
                 // Kärnan i hela den här funktionen — se blocket överst.
@@ -569,6 +579,94 @@ export const createBoostCheckout = functions
             console.error('[boost] Kunde inte skapa checkout-session:', err);
             throw new functions.https.HttpsError('internal', 'Kunde inte starta betalningen. Försök igen om en stund.');
         }
+    });
+
+/**
+ * Applicerar boosten när användaren kommer tillbaka från Stripe.
+ *
+ * Detta är den PRIMÄRA fulfillment-vägen. `applyEventBoost` nedan (via
+ * extensionens webhook) ligger kvar som skyddsnät, men förutsätter att Stripe
+ * faktiskt ringer extensionen — och den webhooken har aldrig avfyrats.
+ *
+ * Betalningen verifieras hos Stripe, aldrig på klientens ord: vi hämtar
+ * sessionen och kräver payment_status === 'paid'. Dubbelapplicering hindras av
+ * kvittot `boostPayments/{sessionId}` som skrivs i SAMMA transaction som
+ * featuredUntil — utan det skulle en omladdning av success-URL:en förlänga
+ * boosten gratis, om och om igen.
+ */
+export const confirmBoost = functions
+    .runWith({ secrets: ['STRIPE_API_KEY'], invoker: 'public' })
+    .region('europe-west1')
+    .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError('unauthenticated', 'Du måste vara inloggad.');
+        }
+        const uid = context.auth.uid;
+        const sessionId = typeof data?.sessionId === 'string' ? data.sessionId.trim() : '';
+        if (!sessionId.startsWith('cs_') || sessionId.length > 200) {
+            throw new functions.https.HttpsError('invalid-argument', 'Ogiltig betalning.');
+        }
+
+        const { default: Stripe } = await import('stripe');
+        const stripe = new Stripe(process.env.STRIPE_API_KEY as string, { apiVersion: '2026-07-29.dahlia' });
+
+        let session: any;
+        try {
+            session = await stripe.checkout.sessions.retrieve(sessionId);
+        } catch (err) {
+            console.error('[boost] Kunde inte hämta session:', err);
+            throw new functions.https.HttpsError('not-found', 'Betalningen kunde inte hittas.');
+        }
+
+        // Obetald (t.ex. avbruten, eller en fördröjd betalmetod som ännu inte
+        // klarnat) → inget fel, bara "inte klar än".
+        if (session.payment_status !== 'paid') {
+            console.log(`[boost] Session ${sessionId} har status ${session.payment_status} — ingen boost.`);
+            return { applied: false, status: session.payment_status };
+        }
+
+        const metadata = (session.metadata || {}) as Record<string, string>;
+        // Sessionen måste tillhöra den som anropar: annars kunde någon som fått
+        // tag på ett session-id lösa in en annans betalning.
+        if (metadata.firebaseUID !== uid) {
+            throw new functions.https.HttpsError('permission-denied', 'Betalningen tillhör ett annat konto.');
+        }
+        const eventId = metadata.eventId;
+        if (!eventId) {
+            throw new functions.https.HttpsError('failed-precondition', 'Betalningen saknar event.');
+        }
+        const boostDays = Math.max(1, Math.min(90, parseInt(metadata.boostDays || '7', 10) || 7));
+        const paymentId = typeof session.payment_intent === 'string' ? session.payment_intent : sessionId;
+
+        const receiptRef = db.collection('boostPayments').doc(sessionId);
+        const eventRef = db.collection('linkEvents').doc(eventId);
+
+        const result = await db.runTransaction(async (tx) => {
+            const [receipt, evt] = await Promise.all([tx.get(receiptRef), tx.get(eventRef)]);
+            if (receipt.exists) return { applied: false, alreadyApplied: true };
+            if (!evt.exists) {
+                throw new functions.https.HttpsError('not-found', 'Eventet finns inte längre.');
+            }
+            const evtData = evt.data() || {};
+            const now = Date.now();
+            const currentUntilMs =
+                evtData.featuredUntil instanceof admin.firestore.Timestamp ? evtData.featuredUntil.toMillis() : 0;
+            const until = new Date(Math.max(now, currentUntilMs) + boostDays * 24 * 60 * 60 * 1000);
+            tx.set(receiptRef, {
+                uid, eventId, boostDays, paymentId, sessionId,
+                appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            tx.update(eventRef, {
+                featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                featuredPaymentId: paymentId,
+            });
+            return { applied: true, until: until.toISOString() };
+        });
+
+        if (result.applied) {
+            console.log(`[boost] Event ${eventId} boostat ${boostDays} dagar via confirmBoost (session ${sessionId}, user ${uid}).`);
+        }
+        return result;
     });
 
 /**
@@ -621,6 +719,13 @@ export const applyEventBoost = region.firestore
                     return;
                 }
                 const data = snap.data() || {};
+                // Redan applicerad av confirmBoost när användaren kom tillbaka från
+                // Stripe (samma payment_intent-id på båda vägarna). Utan den här
+                // kollen skulle en fungerande webhook lägga på boosten en gång till.
+                if (data.featuredPaymentId === paymentId) {
+                    console.log(`[boost] Betalning ${paymentId} redan applicerad på ${eventId} — hoppar över.`);
+                    return;
+                }
                 // 5/8: boosten är öppen — VEM SOM HELST (inloggad) får betala för att
                 // lyfta ett event, inte bara ägaren (fans/föreningar/arrangörer utan
                 // eget konto för eventet). Betalningen är redan Stripe-verifierad och

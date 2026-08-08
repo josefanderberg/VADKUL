@@ -24,24 +24,41 @@ createBoostCheckout  (Cloud Function, apps/functions/src/index.ts)
 Webbläsaren redirectas till Stripe → användaren betalar
         │
         ▼
-Extensionens webhook skriver customers/{uid}/payments/{id} (status: succeeded)
-   (den hittar användaren via `where('stripeId','==',payment.customer)` —
-    därför MÅSTE sessionen skapas med `customer: stripeId`)
+Stripe skickar tillbaka till success_url  ?boost_session=cs_…
         │
         ▼
-applyEventBoost  (Cloud Function, apps/functions/src/index.ts)
-   läser metadata.eventId/boostDays,
-   sätter featuredUntil på linkEvents/{eventId}
+confirmBoost  (Cloud Function)          ← PRIMÄR FULFILLMENT
+   hämtar sessionen från Stripe, kräver payment_status === 'paid',
+   skriver kvitto boostPayments/{sessionId} + featuredUntil i SAMMA
+   transaction
         │
+        ├──▼ (skyddsnät, om extensionens webhook någon gång börjar ringa)
+        │  Extensionens webhook → customers/{uid}/payments/{id} (succeeded)
+        │  → applyEventBoost, som hoppar över när featuredPaymentId redan
+        │    är samma payment_intent (annars dubbelboost)
         ▼
 Kartan visar pinnen guld/amber + ⭐ och prioriterar den i listan
    tills featuredUntil passerats (ingen städning behövs).
 ```
 
-**Säkerhet:** `featuredUntil` kan bara skrivas av `applyEventBoost` (admin-SDK,
-kringgår reglerna). Firestore-reglerna förbjuder uttryckligen klienten att sätta
-`featuredUntil`/`featuredPaymentId` (se `infra/firebase/firestore.rules`,
-linkEvents-`update`). En ägare kan alltså **inte** själv-boosta gratis.
+**Varför inte webhook som primär väg:** extensionens webhook har aldrig
+avfyrats i det här projektet, och dess Stripe-nyckel är utgången ("Expired API
+Key provided", 5/8). `confirmBoost` behöver ingen webhook alls — den frågar
+Stripe direkt. Priset är att någon som stänger fliken mitt i betalningen får
+sin boost först när de återvänder med länken; skyddsnätet ovan täcker det den
+dagen webhooken börjar fungera.
+
+**Säkerhet:** `featuredUntil` skrivs bara av `confirmBoost`/`applyEventBoost`
+(admin-SDK, kringgår reglerna). Firestore-reglerna förbjuder uttryckligen
+klienten att sätta `featuredUntil`/`featuredPaymentId` (se
+`infra/firebase/firestore.rules`, linkEvents-`update`), och `boostPayments` är
+helt stängd för klienten. En ägare kan alltså **inte** själv-boosta gratis.
+
+Två spärrar mot dubbelapplicering: kvittot `boostPayments/{sessionId}` (skrivs
+i samma transaction som boosten, så en omladdning av success-URL:en inte
+förlänger gratis) och `featuredPaymentId`-kollen i `applyEventBoost`. Sessionen
+kan dessutom bara lösas in av det konto som betalade — `metadata.firebaseUID`
+måste matcha anroparen.
 
 ## Engångs-setup (det du behöver göra)
 
@@ -65,11 +82,13 @@ linkEvents-`update`). En ägare kan alltså **inte** själv-boosta gratis.
    - Customer details collection: default `customers`.
    - Sätt extensionens region till **europe-west1** (matchar övriga functions).
 
-4. **Webhook** – extensionens setup skriver ut en webhook-URL. Lägg till den i
-   Stripe Dashboard → *Developers → Webhooks*, kopiera signing secret och kör
-   `firebase ext:configure` för att klistra in den (eller följ install-guidens
-   sista steg). Events som behövs minst: `checkout.session.completed`,
-   `payment_intent.succeeded`.
+4. **Webhook** – behövs INTE för boosten (se `confirmBoost` ovan), bara om du
+   vill ha skyddsnätet. Extensionens setup skriver ut en webhook-URL; lägg till
+   den i Stripe → *Developers → Webhooks* (nya vyn: **Workbench → Webhooks**,
+   och testläget har egna endpoints — `dashboard.stripe.com/test/webhooks`).
+   Event-listan dyker bara upp när man skapar/redigerar en endpoint. Events:
+   `checkout.session.completed`, `payment_intent.succeeded`. Signing secret
+   klistras in med `firebase ext:configure`.
 
 5. **Price-ID till backend** – priset ägs av Cloud-funktionen, aldrig av
    klienten. Ligger i `apps/functions/.env.vadkul-f2cb2` (committad, eftersom
@@ -86,10 +105,14 @@ linkEvents-`update`). En ägare kan alltså **inte** själv-boosta gratis.
    ```
    (Extensionens egen nyckel ligger kvar orörd – den används av dess webhook.)
 
-7. **Deploya** funktioner + regler:
+7. **Deploya** funktioner + regler + webben (klienten läser `?boost_session`):
    ```bash
-   firebase deploy --only functions:createBoostCheckout,functions:applyEventBoost,firestore:rules
+   firebase deploy --only functions:createBoostCheckout,functions:confirmBoost,functions:applyEventBoost,firestore:rules,hosting
    ```
+   OBS: nya Gen1-funktioner får inte `allUsers`-invoker automatiskt längre —
+   därför `invoker: 'public'` i koden. Fastnar den ändå (403 innan koden
+   startar) sätts den för hand i Cloud Console → funktionen → *Permissions* →
+   `allUsers` + **Cloud Functions Invoker**.
 
 ## Varför vi skapar sessionen själva (Managed Payments)
 
@@ -127,13 +150,13 @@ aldrig i Firestore och boosten appliceras aldrig.
 
 1. Logga in, skapa ett eget event, öppna det → klicka **Boosta eventet**.
 2. Betala med Stripes testkort `4242 4242 4242 4242`, valfritt framtida datum/CVC.
-3. Efter redirect tillbaka: inom någon sekund skriver `applyEventBoost`
-   `featuredUntil` och pinnen blir amber/guld med ⭐ och hamnar överst i listan.
-4. Logg: `firebase functions:log --only createBoostCheckout,applyEventBoost`.
+3. Efter redirect tillbaka landar du på `?boost_session=cs_…`, en toast säger
+   "Aktiverar boosten…" och pinnen blir amber/guld med ⭐ överst i listan.
+4. Logg: `firebase functions:log --only createBoostCheckout,confirmBoost,applyEventBoost`.
 
-Ser du checkout-sessionen men aldrig någon boost: kontrollera att webhooken i
-Stripe har **`payment_intent.succeeded`** påslagen (steg 4). Det är den som gör
-att extensionen skriver payments-dokumentet `applyEventBoost` lyssnar på.
+Ser du `[boost] Checkout … skapad` men ingen boost: kolla `confirmBoost` i
+loggen. `payment_status` som inte är `paid` betyder att betalningen aldrig gick
+igenom; `permission-denied` att sessionen tillhör ett annat konto.
 
 ## Att tänka på / framtida
 
