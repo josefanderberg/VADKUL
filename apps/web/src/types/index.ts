@@ -184,6 +184,31 @@ export interface LinkEvent {
    */
   userCreated?: boolean;
   /**
+   * Uttryckligt tips ("jag vet att det här händer men arrangerar inte").
+   * Behövdes när tips slutade kräva länk: url-fältet ensamt kunde inte längre
+   * skilja ett länklöst TIPS från ett EGET event, och ett tips som råkade
+   * klassas som eget hade fått grön VADKUL-profil med anmälan på sidan —
+   * precis det som aldrig får hända (tipsaren är inte arrangör).
+   * Äldre tips saknar fältet men har url, så url-regeln nedan täcker dem.
+   */
+  isTip?: boolean;
+  /**
+   * Återkommer varje vecka på samma veckodag och klockslag som `time`.
+   * Lagras som en REGEL på ett enda dokument — inte som N kopior. Klienten
+   * veckla ut den till konkreta tillfällen vid inläsning (expandWeekly), så
+   * en ändring av tid eller titel slår igenom på alla framtida tillfällen och
+   * kartan slipper tolv dokument per pubquiz.
+   */
+  repeatWeekly?: boolean;
+  /**
+   * Sätts BARA på utvecklade tillfällen av en veckoserie: id:t på dokumentet
+   * tillfället kommer från. Tillfällena har egna id ("<docId>__2026-08-13")
+   * eftersom kartan, dedupen i emit() och React-nycklarna kräver unika id —
+   * men allt som rör själva dokumentet (ta bort, äga, redigera) måste gå på
+   * seriesId, annars pekar det på ett dokument som inte finns.
+   */
+  seriesId?: string;
+  /**
    * Boostat ("featured") event: visas prioriterat på kartan t.o.m. denna tid.
    * Sätts ENBART av servern (Cloud Function) efter en verifierad Stripe-betalning —
    * aldrig av klienten. Saknas/passerat datum = vanligt event.
@@ -198,8 +223,8 @@ export interface LinkEvent {
  * (badge, brickfärg, värd-avatar, platsradens layout) — ägarskap (ta bort/boosta)
  * går däremot fortsatt på userCreated + hostUid.
  */
-export function isVadkulHostedEvent(e: Pick<LinkEvent, 'userCreated' | 'url'>): boolean {
-  return !!e.userCreated && !e.url;
+export function isVadkulHostedEvent(e: Pick<LinkEvent, 'userCreated' | 'url' | 'isTip'>): boolean {
+  return !!e.userCreated && !e.url && !e.isTip;
 }
 
 export interface FirestoreLinkEventData extends Omit<LinkEvent, 'id' | 'time' | 'createdAt' | 'featuredUntil'> {

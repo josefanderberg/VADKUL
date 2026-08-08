@@ -26,7 +26,9 @@ export function usePublishPresence(isVisible: boolean) {
 
     const publish = useCallback(async (lat: number, lng: number) => {
         const user = auth.currentUser;
-        if (!user) return;
+        // Anonyma tips-sessioner är inte medlemmar — de ska aldrig dyka upp som
+        // en prick bland de närvarande (de har varken namn eller profilbild).
+        if (!user || user.isAnonymous) return;
         posRef.current = { lat, lng };
         await setDoc(doc(db, 'presence', user.uid), {
             lat,

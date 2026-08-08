@@ -7,13 +7,15 @@ import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
 // Hur långt fram i tiden "Snart" gäller.
 const SOON_WINDOW_MS = 60 * 60 * 1000;
 const NEARBY_PAGE_SIZE = 20;
+// Kommer ihåg om användaren stängt av bilderna i närhetslistan (kompakt läge).
+const NEARBY_IMAGES_KEY = 'vadkul_narhetslista_bilder';
 // Börjar eventet inom 1 timme (Pågår/Snart) hinner man inte längre än så här —
 // då döljer vi event som ligger längre bort (7 mil = 70 km).
 const MAX_IMMINENT_DISTANCE_KM = 70;
@@ -253,11 +255,14 @@ function LazyRowImage({ src, alt, className, onFailed }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect }: {
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
     onSelect: (evt: LinkEvent) => void;
+    /** False = användaren har slagit av bilderna i listhuvudet → alla rader
+     *  renderas i den kompakta bildlösa layouten. */
+    showImages?: boolean;
 }) {
     const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
@@ -265,7 +270,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
     const attendees = evt.attendees ?? 0;
     // Trasig bildlänk → rendera den kompakta bildlösa raden i stället.
     const [imgFailed, setImgFailed] = useState(false);
-    const hasImage = !!evt.coverImage && !imgFailed;
+    const hasImage = showImages && !!evt.coverImage && !imgFailed;
 
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
     // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
@@ -381,22 +386,53 @@ function NearbyRow({ evt, distanceKm, now, onSelect }: {
 
 function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
+    // Bilder på/av i listan. Av = varje rad blir den kompakta emoji-raden, så
+    // man ser många fler event per skärm. Valet minns mellan besök.
+    const [showImages, setShowImages] = useState(true);
+    useEffect(() => {
+        try {
+            if (localStorage.getItem(NEARBY_IMAGES_KEY) === 'off') setShowImages(false);
+        } catch { /* privat läge / blockad storage — kör vidare med bilder på */ }
+    }, []);
+    const toggleImages = () => {
+        setShowImages(prev => {
+            const next = !prev;
+            try {
+                localStorage.setItem(NEARBY_IMAGES_KEY, next ? 'on' : 'off');
+            } catch { /* ignorera */ }
+            return next;
+        });
+    };
     // Ankaret sätts efter det 4:e eventet (0-indexerat: 3) — eller sista raden
     // om listan är kortare — så "ser minst 4"-villkoret blir sant först när man
     // scrollat ända ner hit.
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
         <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
-            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10">
+            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Fler event i närheten · {upcomingTotal}
                 </span>
+                <button
+                    type="button"
+                    onClick={toggleImages}
+                    aria-pressed={showImages}
+                    title={showImages ? 'Dölj bilderna — kompakt lista' : 'Visa bilderna'}
+                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                        showImages
+                            ? 'bg-[#006AA7] text-white'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    }`}
+                >
+                    {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
+                    Bilder
+                </button>
             </div>
 
             <ul className="divide-y divide-border">
                 {upcomingItems.map(({ evt, distanceKm }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -436,7 +472,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
                             {pastItems.map(({ evt, distanceKm }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} />
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
                             ))}
                         </ul>
                     )}

@@ -676,6 +676,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             💡 Tipsat av en VADKUL-användare
                                         </p>
                                     )}
+                                    {/* Veckoserie: utan den här raden ser tolv utvecklade
+                                        tillfällen ut som tolv separata event. */}
+                                    {linkEvent.repeatWeekly && (
+                                        <p className="text-[10px] font-semibold text-slate-400 py-0.5">
+                                            🔁 Varje {linkEvent.time.toLocaleDateString('sv-SE', { weekday: 'long' })}
+                                        </p>
+                                    )}
                                     {reportSent ? (
                                         <p className="text-xs font-bold text-emerald-600 py-1.5">Tack! Vi tittar på det. 🙏</p>
                                     ) : reportOpen ? (

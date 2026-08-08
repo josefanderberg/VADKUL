@@ -9,6 +9,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Anonym session (signInAnonymously) — någon som tipsar utan konto.
+    // Räknas som autentiserad (har ett uid som går att spärra och spåra) men
+    // får BARA lämna tips: att arrangera i eget namn och att önska kräver ett
+    // riktigt konto, eftersom båda visar upp en person för andra användare.
+    function isAnonymous() {
+      return isAuthenticated()
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     // Är man ägare till datat? (t.ex. sin egen profil)
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -171,12 +180,17 @@ service cloud.firestore {
 
       // Inloggade får skapa EGNA event — hårt formbegränsade så de inte kan
       // låtsas vara scrapade event eller skriva godtyckliga fält.
-      // url: '' för egna arrangemang; TIPS-flödet ("jag arrangerar inte själv")
-      // sätter en http(s)-länk till källan — då presenteras eventet som ett
-      // vanligt länk-event. Valideringen stoppar javascript:-/data:-URL:er.
+      // url: '' för egna arrangemang. TIPS-flödet ("jag arrangerar inte själv")
+      // markeras av isTip och FÅR ha en http(s)-länk till källan, men måste inte
+      // längre ha en — de flesta tips som kommer in (återkommande pubquiz,
+      // bygdegårdsfester) har ingen sida att peka på. Med länk presenteras
+      // tipset som ett vanligt länk-event. Valideringen stoppar
+      // javascript:-/data:-URL:er.
       allow create: if isAuthenticated()
         && request.resource.data.userCreated == true
         && request.resource.data.hostUid == request.auth.uid
+        // Utan konto får man tipsa, inte arrangera i eget namn.
+        && (!isAnonymous() || request.resource.data.isTip == true)
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3
         && request.resource.data.title.size() <= 120
@@ -191,7 +205,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
-            'description', 'createdAt', 'isLocationVerified', 'coverImage'
+            'description', 'createdAt', 'isLocationVerified', 'coverImage',
+            'isTip', 'repeatWeekly'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de
@@ -238,6 +253,9 @@ service cloud.firestore {
     match /eventWishes/{wishId} {
       allow read: if true;
       allow create: if isAuthenticated()
+        // Önskningar kräver riktigt konto: brickan ligger kvar på kartan för
+        // alla och har en avsändare — det ska finnas en person bakom.
+        && !isAnonymous()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3

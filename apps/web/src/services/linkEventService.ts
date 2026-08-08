@@ -20,6 +20,50 @@ export interface RsvpAttendee {
 }
 
 /**
+ * Hur långt fram en veckoserie vecklas ut. Måste täcka hur långt man kan
+ * bläddra framåt i dagvyn utan att bli absurt — tolv veckor är ett kvartals
+ * pubquiz, vilket räcker gott och håller nere antalet brickor på kartan.
+ */
+const WEEKLY_HORIZON_WEEKS = 12;
+
+/**
+ * Veckla ut ett veckovis återkommande event till konkreta tillfällen.
+ *
+ * Serien lagras som EN regel (repeatWeekly på dokumentet); veckodag och
+ * klockslag kommer från basens `time`. Här produceras tillfällena från och med
+ * dagens datum och WEEKLY_HORIZON_WEEKS framåt.
+ *
+ * Varje tillfälle får ett EGET id ("<docId>__2026-08-13"): kartan, dedupen i
+ * emit() och React-nycklarna kräver unika id, och med delat id hade bara ett
+ * enda tillfälle ritats ut. Kopplingen tillbaka till dokumentet bär `seriesId`.
+ */
+function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
+    const out: LinkEvent[] = [];
+    const horizon = new Date(from);
+    horizon.setDate(horizon.getDate() + WEEKLY_HORIZON_WEEKS * 7);
+
+    // Starta på basens tid och stega en vecka i taget fram till `from` —
+    // serier som startade i våras ska börja vid nästa kommande tillfälle,
+    // inte spamma kartan med varje passerat datum.
+    const cursor = new Date(base.time);
+    while (cursor < from) cursor.setDate(cursor.getDate() + 7);
+
+    while (cursor <= horizon) {
+        const y = cursor.getFullYear();
+        const m = String(cursor.getMonth() + 1).padStart(2, '0');
+        const d = String(cursor.getDate()).padStart(2, '0');
+        out.push({
+            ...base,
+            id: `${base.id}__${y}-${m}-${d}`,
+            seriesId: base.id,
+            time: new Date(cursor),
+        });
+        cursor.setDate(cursor.getDate() + 7);
+    }
+    return out;
+}
+
+/**
  * Användarskapade event bor BARA i Firestore (scraper-pipelinens aggregat
  * byggs från SQLite och känner inte till dem) — de hämtas i samma 30s-poll
  * som lagren och slås ihop med kartdatat.
@@ -50,17 +94,27 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     hostName: v.hostName || 'VADKUL-användare',
                     category: v.category || 'other',
                     emoji: v.emoji || undefined,
-                    coverImage: '',
+                    coverImage: v.coverImage || '',
                     description: v.description || '',
+                    // Lästes inte tidigare: entré/pris på ett användarskapat
+                    // event föll bort tyst hela vägen till kortet.
+                    price: v.price ?? undefined,
                     attendees: 0,
                     isLocationVerified: true,
                     hasSpecificTime: deriveHasSpecificTime(time),
                     userCreated: true,
+                    isTip: !!v.isTip,
+                    repeatWeekly: !!v.repeatWeekly,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
                 } as LinkEvent;
             })
-            .filter((e) => e.title && e.time >= cutoff && !(e as any).hidden);
+            // Serier filtreras INTE på cutoff här: en veckoserie som startade
+            // för ett halvår sedan är fortfarande aktuell, det är bara basens
+            // datum som ligger bakåt. expandWeekly hoppar fram till nästa
+            // kommande tillfälle. Engångsevent filtreras som förut.
+            .filter((e) => e.title && !(e as any).hidden && (e.repeatWeekly || e.time >= cutoff))
+            .flatMap((e) => (e.repeatWeekly ? expandWeekly(e, cutoff) : [e]));
     } catch (e) {
         console.warn('Kunde inte hämta användarskapade event:', e);
         return [];
@@ -329,6 +383,7 @@ export const linkEventService = {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
         hostName: string; hostUid: string; coverImage?: string; url?: string;
+        isTip?: boolean; repeatWeekly?: boolean;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -351,6 +406,10 @@ export const linkEventService = {
         // Lägg bara med coverImage när det faktiskt finns en bild — då fungerar
         // event UTAN bild även innan de uppdaterade Firestore-reglerna deployats.
         if (input.coverImage) payload.coverImage = input.coverImage;
+        // Bara på faktiska tips — annars skulle varje eget event bära ett
+        // isTip: false som reglernas hasOnly-lista måste känna till i onödan.
+        if (input.isTip) payload.isTip = true;
+        if (input.repeatWeekly) payload.repeatWeekly = true;
         const ref = await addDoc(collection(db, 'linkEvents'), payload);
         return ref.id;
     },

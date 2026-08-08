@@ -99,6 +99,24 @@ const pickNearestToPoint = (point: { lat: number; lng: number } | null, dayEvent
 // vecka × hela Sverige tusentals brickor (kartan kör medvetet ingen
 // klustring). Zoom 9 ≈ en stad med omnejd i mobilviewporten.
 const WEEK_VIEW_MIN_ZOOM = 9;
+/**
+ * "Varje torsdag kl 19:00" — veckodagen och tiden en serie skulle ärva från
+ * det valda datumet. Tar datetime-local-strängen rakt av (den är redan lokal
+ * tid); ogiltig sträng ger tom text så etiketten aldrig visar "Invalid Date".
+ */
+const weeklyLabelFor = (datetimeLocal: string): string => {
+    const d = new Date(datetimeLocal);
+    if (isNaN(d.getTime())) return '';
+    const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' });
+    const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    return `Varje ${weekday} kl ${time}`;
+};
+// Radie för "i närheten" i tom-läget: hur långt bort ett event får ligga och
+// ändå räknas som att det händer något där man tittar. 2,5 mil ≈ en småstad
+// med kringliggande byar (Hudiksvall + Forsa/Hög/Iggesund). Används numera BARA
+// som golv i tom-läget — själva frågan ställs mot kartans faktiska vy, se
+// eventInView nedan.
+const NEARBY_EMPTY_KM = 25;
 // Intervall från så här många dagar räknas som "veckoläge" (helgen = 3 dagar
 // ska INTE geo-avgränsas eller zoom-gatas — den har alltid funkat nationellt).
 const WEEK_RANGE_MIN_DAYS = 5;
@@ -162,6 +180,14 @@ export default function HomePage() {
     // ut i tiden" — veckan över hela Sverige vore tusentals brickor (kartan
     // kör medvetet ingen klustring).
     const [mapZoom, setMapZoom] = useState<number | null>(null);
+    // Kartans SYNLIGA ruta (null tills kartan rapporterat). Tom-läget frågar mot
+    // den i stället för en fast radie: "inget här" ska betyda "jag ser inget",
+    // och vad man ser beror på hur långt man zoomat.
+    const [mapBounds, setMapBounds] = useState<{ west: number; south: number; east: number; north: number } | null>(null);
+    // True när kartan faktiskt MÅLAT ut prickarna (speglar V2Map:s symbolsPainted).
+    // Tom-läget håller tyst tills dess — annars hann prompten påstå "inget här"
+    // medan ladda-pillen fortfarande sa "Ritar ut eventen…".
+    const [mapPainted, setMapPainted] = useState(false);
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
@@ -176,7 +202,8 @@ export default function HomePage() {
     // sparas med länk till källan och presenteras som ett vanligt länk-event —
     // tipsaren står ALDRIG som arrangör/värd. 'host' = eget event som förut.
     const [newEventRole, setNewEventRole] = useState<'host' | 'tip'>('host');
-    const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (krävs)
+    const [newEventRepeatWeekly, setNewEventRepeatWeekly] = useState(false); // veckovis serie
+    const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (valfri)
     const [newEventHost, setNewEventHost] = useState('');  // tips: arrangörens namn (valfritt)
     // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
     // Modalen har två lägen: skapa ett riktigt event ELLER önska ett ("någon
@@ -215,6 +242,7 @@ export default function HomePage() {
         setNewEventImage(null);
         setNewEventImagePreview('');
         setNewEventRole('host');
+        setNewEventRepeatWeekly(false);
         setNewEventUrl('');
         setNewEventHost('');
         setCreateKind('event');
@@ -237,7 +265,7 @@ export default function HomePage() {
     }, [creationMode, repicking, resetCreateFlow]);
 
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, ensureTipIdentity } = useAuth();
     const [authModal, setAuthModal] = useState<{ open: boolean; reason?: string }>({ open: false });
     const openLogin = useCallback((reason?: string) => setAuthModal({ open: true, reason }), []);
 
@@ -515,31 +543,46 @@ export default function HomePage() {
         return () => clearTimeout(t);
     }, [savedEventIds, user]);
 
-    // Skapa event på riktigt: kräver konto, skrivs till Firestore (reglerna
-    // begränsar formen) och dyker upp direkt på kartan via optimistisk insättning
-    // (pollen plockar sedan upp samma event från Firestore inom 30 s).
+    // Skapa event på riktigt: skrivs till Firestore (reglerna begränsar formen)
+    // och dyker upp direkt på kartan via optimistisk insättning (pollen plockar
+    // sedan upp samma event från Firestore inom 30 s).
+    //
+    // KONTO krävs för att ARRANGERA (man visas upp som värd). Att TIPSA går
+    // utan — då hämtas ett uid från en anonym session i stället. Det var den
+    // enskilt största spärren: nästan alla tips som kommer in i FB-grupperna
+    // skrivs av folk som aldrig hade skapat ett konto för att lämna dem.
     const handleCreateEvent = useCallback(async () => {
         if (!pickedLocation || !newEventTitle.trim() || !newEventTime) return;
-        // Tips ("jag arrangerar inte själv") kräver en giltig länk till källan —
-        // det är länken som gör att eventet presenteras som ett vanligt länk-
-        // event i stället för med tipsaren som värd.
+        // Tips FÅR ha en länk till källan men måste inte — de flesta tips
+        // (återkommande pubquiz, bygdegårdsfester) har ingen sida att peka på.
+        // Är fältet ifyllt men obegripligt säger vi till i stället för att tyst
+        // slänga det.
         const isTip = newEventRole === 'tip';
         const tipUrl = isTip ? normalizeTipUrl(newEventUrl) : null;
-        if (isTip && !tipUrl) { toast.error('Lägg in en giltig länk till eventet — t.ex. arrangörens sida.'); return; }
-        if (!user) { openLogin(isTip ? 'Logga in för att tipsa om event' : 'Logga in för att skapa event'); return; }
+        if (isTip && newEventUrl.trim() && !tipUrl) {
+            toast.error('Länken går inte att tolka — ta bort den eller skriv hela adressen.');
+            return;
+        }
+        if (!isTip && !user) { openLogin('Logga in för att skapa event'); return; }
+
         setCreatingEvent(true);
         try {
+            // Tips utan konto → anonymt uid. Reglerna kräver fortfarande
+            // hostUid == request.auth.uid, så formkraven är oförändrade.
+            const authorUid = isTip ? await ensureTipIdentity() : user!.uid;
             const time = new Date(newEventTime);
             // Tips: värden är arrangören man tipsar om (angivet namn, annars
-            // länkens domän) — aldrig tipsarens eget namn. Eget event: som förut.
+            // länkens domän, annars okänd) — ALDRIG tipsarens eget namn.
+            // Eget event: som förut.
             const hostName = isTip
-                ? (newEventHost.trim() || new URL(tipUrl!).hostname.replace(/^www\./, ''))
-                : (user.displayName || user.email || 'VADKUL-användare');
+                ? (newEventHost.trim()
+                    || (tipUrl ? new URL(tipUrl).hostname.replace(/^www\./, '') : 'Okänd arrangör'))
+                : (user!.displayName || user!.email || 'VADKUL-användare');
             // Ladda upp ev. eventbild först så URL:en kan sparas på eventet.
             let coverImage = '';
             if (newEventImage) {
                 try {
-                    coverImage = await storageService.uploadFile(`event-images/${user.uid}/`, newEventImage);
+                    coverImage = await storageService.uploadFile(`event-images/${authorUid}/`, newEventImage);
                 } catch (e) {
                     console.warn('Kunde inte ladda upp eventbilden — skapar utan bild:', e);
                 }
@@ -553,16 +596,19 @@ export default function HomePage() {
                 description: newEventDescription,
                 category: newEventCategory,
                 hostName,
-                hostUid: user.uid,
+                hostUid: authorUid,
                 coverImage,
                 url: tipUrl ?? '',
+                isTip,
+                repeatWeekly: newEventRepeatWeekly,
             });
             const created: LinkEvent = {
                 id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
                 locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
                 hostName,
                 category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
-                isLocationVerified: true, userCreated: true, hostUid: user.uid,
+                isLocationVerified: true, userCreated: true, isTip,
+                repeatWeekly: newEventRepeatWeekly, hostUid: authorUid,
             } as LinkEvent;
             // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
             myCreatedRef.current = [...myCreatedRef.current, created];
@@ -601,7 +647,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, user, openLogin, fulfillingWish, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -636,15 +682,24 @@ export default function HomePage() {
     // verifierar ägarskap) + optimistisk borttagning ur kartan/kortleken.
     const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
         try {
-            await linkEventService.deleteUserEvent(eventId);
-            myCreatedRef.current = myCreatedRef.current.filter(e => e.id !== eventId);
-            lastUserEventsRef.current = lastUserEventsRef.current.filter(e => e.id !== eventId);
-            setEvents(prev => prev.filter(e => e.id !== eventId));
-            setSelectedEvent(prev => (prev?.id === eventId ? null : prev));
+            // Ett tillfälle i en veckoserie har id "<docId>__2026-08-13" och
+            // motsvarar inget eget dokument — dokumentet är seriens bas. Skala
+            // av datumsuffixet före raderingen, annars försöker vi ta bort ett
+            // dokument som inte finns och hela serien blir kvar på kartan.
+            const docId = eventId.split('__')[0];
+            await linkEventService.deleteUserEvent(docId);
+            // ...och städa bort ALLA tillfällen som hör till dokumentet, inte
+            // bara det man råkade ha framme.
+            const belongsToDeleted = (id: string) => id === docId || id.startsWith(`${docId}__`);
+            myCreatedRef.current = myCreatedRef.current.filter(e => !belongsToDeleted(e.id));
+            lastUserEventsRef.current = lastUserEventsRef.current.filter(e => !belongsToDeleted(e.id));
+            setEvents(prev => prev.filter(e => !belongsToDeleted(e.id)));
+            setSelectedEvent(prev => (prev && belongsToDeleted(prev.id) ? null : prev));
             setSavedEventIds(prev => {
-                if (!prev.has(eventId)) return prev;
+                const stale = [...prev].filter(belongsToDeleted);
+                if (stale.length === 0) return prev;
                 const next = new Set(prev);
-                next.delete(eventId);
+                stale.forEach(id => next.delete(id));
                 return next;
             });
             toast.success('Eventet är borttaget.');
@@ -654,9 +709,14 @@ export default function HomePage() {
         }
     }, []);
 
-    // Boosta sitt EGET event: startar Stripe Checkout (redirect). featuredUntil
-    // sätts först av backend efter genomförd betalning — aldrig härifrån.
+    // Boosta ett event: startar Stripe Checkout (redirect). featuredUntil sätts
+    // först av backend efter genomförd betalning — aldrig härifrån.
     const handleBoostOwnEvent = useCallback(async (eventId: string) => {
+        // Utloggad (eller anonym tips-session — `user` är null då) → inloggnings-
+        // modalen, inte ett rött fel. Köpet måste knytas till ett konto man kan
+        // komma tillbaka till, men den som just tryckt "Boosta" är den mest
+        // köpbenägna personen på sajten — hen ska inte mötas av en återvändsgränd.
+        if (!user) { openLogin('Logga in för att boosta eventet'); return; }
         try {
             const t = toast.loading('Öppnar betalning…');
             await startEventBoostCheckout(eventId); // redirectar vid succé
@@ -665,7 +725,7 @@ export default function HomePage() {
             console.error(err);
             toast.error(err instanceof Error ? err.message : 'Kunde inte starta boost.');
         }
-    }, []);
+    }, [user, openLogin]);
 
     // Notis-nudge vid första gillningen (en gång per enhet): påminnelserna når
     // bara konton med en sparad FCM-token, och tillstånds-frågan måste komma
@@ -774,6 +834,111 @@ export default function HomePage() {
 
     // Antal synliga event för dagen (efter kategori-/källfilter). Speglar kartan.
     const dayEventCount = visibleEvents.length;
+
+    /**
+     * "Syns det något i vyn?" — enda geo-testet tom-läget behöver. Ett event
+     * räknas som synligt om det ligger i kartans ruta ELLER inom NEARBY_EMPTY_KM
+     * från mitten. Golvet finns för att en hårt inzoomad vy (kvarteret) annars
+     * skulle skrika "inget här" fast spelningen ligger tre gator bort.
+     */
+    const eventInView = useCallback((evt: LinkEvent) => {
+        if (!hasValidCoords(evt)) return false;
+        if (mapCenter && haversineKm(mapCenter.lat, mapCenter.lng, evt.lat, evt.lng) <= NEARBY_EMPTY_KM) return true;
+        if (!mapBounds) return false;
+        return evt.lat >= mapBounds.south && evt.lat <= mapBounds.north
+            && evt.lng >= mapBounds.west && evt.lng <= mapBounds.east;
+    }, [mapCenter, mapBounds]);
+
+    /**
+     * "Här händer ingenting"-läget: noll synliga event i den vy man tittar på.
+     * Det är i den sekunden en uppmaning att tipsa faktiskt biter — besvikelsen
+     * är precis nyss uppstådd och gäller en konkret plats och dag. En permanent
+     * banner eller ringar runt knappar blir folk blinda för på tre besök; det
+     * här syns bara när det är sant.
+     *
+     * Frågan ställs mot kartans FAKTISKA ruta (eventInView), inte mot en fast
+     * radie. Den fasta radien var fel åt båda hållen: i nationell översikt låg
+     * det per definition inget inom 2,5 mil från mitten, så prompten slog till
+     * direkt när sidan öppnades — mitt över en karta full av markörer; och en
+     * zoomgrind i stället gjorde att den aldrig dök upp där den behövs.
+     *
+     * Laddningsgrinden är två signaler, inte en: eventsSettled (det DEFINITIVA
+     * "aggregaten är hämtade"-beskedet — dayCountReady duger inte, den tänds
+     * redan vid första delbatchen) OCH mapPainted (prickarna är utritade).
+     * Utan den andra hann prompten påstå "inget här" medan ladda-pillen
+     * fortfarande sa "Ritar ut eventen…". Utöver det: håll tyst så fort något
+     * annat pågår — skapa-flödet, ett öppet kort eller en aktiv sökning.
+     */
+    const nearbyIsEmpty = useMemo(() => {
+        if (!eventsSettled || !mapPainted) return false;
+        if (!mapCenter && !mapBounds) return false;
+        if (creationMode !== 'idle' || selectedEvent || selectedWish) return false;
+        if (searchQuery.trim()) return false;
+        return !visibleEvents.some(eventInView);
+    }, [eventsSettled, mapPainted, mapCenter, mapBounds, eventInView, creationMode, selectedEvent, selectedWish, searchQuery, visibleEvents]);
+
+    // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
+    // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
+    // konstantblocket ovanför HomePage. Definieras här uppe eftersom
+    // nearbyThisWeekCount/canOfferWeek nedan läser den.
+    const weekUnlocked = mapZoom !== null && mapZoom >= WEEK_VIEW_MIN_ZOOM;
+
+    /**
+     * Hur många event finns i närheten den KOMMANDE VECKAN, oavsett vald dag?
+     * Det är skillnaden mellan "här händer ingenting" och "här händer inget
+     * just idag" — i en småstad är dagsvyn ofta tom medan veckan har ett
+     * tiotal, och då är rätt svar att vidga tiden, inte att be om tips.
+     * Räknas på samma källfilter som kartan, så siffran vi lovar är den man
+     * faktiskt får se.
+     */
+    const nearbyThisWeekCount = useMemo(() => {
+        const from = Date.now();
+        const to = from + 7 * 86_400_000;
+        return events.filter(evt =>
+            evt.time.getTime() >= from && evt.time.getTime() <= to
+            && matchesFilter(evt)
+            && eventInView(evt),
+        ).length;
+    }, [events, eventInView, matchesFilter]);
+
+    /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren). */
+    const canOfferWeek = weekUnlocked && dayRangeDays !== 7 && nearbyThisWeekCount > 0;
+
+    /** Dagen prompten pratar om — "idag"/"imorgon", annars veckodagen. */
+    const promptDayLabel = useMemo(() => {
+        if (dayOffset === 0) return 'idag';
+        if (dayOffset === 1) return 'imorgon';
+        const d = new Date();
+        d.setDate(d.getDate() + dayOffset);
+        return `på ${d.toLocaleDateString('sv-SE', { weekday: 'long' })}`;
+    }, [dayOffset]);
+
+    /**
+     * Öppna skapa-modalen direkt i TIPS-läge på den plats man tittar på.
+     * Går via 'editing' (inte 'placing') — platsen är redan känd, och ett
+     * extra placerings-varv mellan besvikelse och formulär tappar folk.
+     */
+    const startTipHere = useCallback(() => {
+        if (!mapCenterRef.current) return;
+        setFulfillingWish(null);
+        setCreateKind('event');
+        setNewEventRole('tip');
+        setPickedLocation(mapCenterRef.current);
+        setNewEventTitle('');
+        setNewEventPlace('');
+        setNewEventDescription('');
+        setNewEventUrl('');
+        setNewEventHost('');
+        setNewEventCategory('other');
+        const t = new Date();
+        t.setDate(t.getDate() + dayOffset);
+        t.setMinutes(0, 0, 0);
+        if (dayOffset !== 0) t.setHours(18);
+        else t.setHours(t.getHours() + 1);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        setCreationMode('editing');
+    }, [dayOffset]);
 
     // Antal event totalt för idag (oavsett filter) för välkomstmodalen
     const todayEventCount = useMemo(() => {
@@ -1175,14 +1340,16 @@ export default function HomePage() {
         : -1;
 
     // Stabil referens så V2Map:s useEffect inte loopar.
-    const handleMapCenterChange = useCallback((lat: number, lng: number, zoom?: number) => {
+    const handleMapCenterChange = useCallback((
+        lat: number,
+        lng: number,
+        zoom?: number,
+        bounds?: { west: number; south: number; east: number; north: number },
+    ) => {
         setMapCenter({ lat, lng });
         if (typeof zoom === 'number') setMapZoom(zoom);
+        if (bounds) setMapBounds(bounds);
     }, []);
-
-    // Veckoalternativet i dagväljaren låses upp först när man zoomat in till
-    // stadsnivå (se konstantblocket ovanför HomePage).
-    const weekUnlocked = mapZoom !== null && mapZoom >= WEEK_VIEW_MIN_ZOOM;
 
     const handleDiscardEvent = (eventId: string) => {
         setDiscardedEventIds(prev => {
@@ -1306,6 +1473,8 @@ export default function HomePage() {
                 // Första prick-rundan målad → släpp cards/descriptions-hämtningen
                 // (de ska inte konkurrera med tiles + prickar om bandbredden).
                 onFirstPaint={linkEventService.releaseHeavyLayers}
+                // Prickarna utritade → tom-läget får äntligen uttala sig.
+                onPaintedChange={setMapPainted}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}
@@ -1325,7 +1494,13 @@ export default function HomePage() {
                 (kräver konto). Göms under "Ändra plats"-varvet (repicking) så
                 kartan går att panorera; formulär-staten lever kvar. */}
             {creationMode === 'editing' && pickedLocation && !repicking && (
-                <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+                    // Klick på bakgrunden stänger modalen (samma städning som
+                    // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —
+                    // klick inuti dialogen bubblar hit men filtreras bort här.
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) resetCreateFlow(); }}
+                >
                     <div
                         role="dialog"
                         aria-modal="true"
@@ -1394,8 +1569,8 @@ export default function HomePage() {
                                 {newEventRole === 'tip' && (
                                     <p className="text-xs text-slate-500">
                                         Tipsa om ett event som redan finns — du står inte som
-                                        arrangör. Eventet visas som ett vanligt event med din
-                                        länk som källa, och anmälan sker där.
+                                        arrangör. Kräver inget konto, och länk behövs bara om
+                                        det finns en sida att peka på.
                                     </p>
                                 )}
                             </div>
@@ -1424,17 +1599,17 @@ export default function HomePage() {
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                         />
-                        {/* Tips: länken till källan (obligatorisk — det är den som gör
-                            eventet till ett vanligt länk-event) + arrangörens namn
-                            (valfritt; annars visas länkens domän som värd). */}
+                        {/* Tips: länken till källan (VALFRI — de flesta tips som kommer
+                            in har ingen sida att peka på) + arrangörens namn (valfritt;
+                            annars visas länkens domän, eller "Okänd arrangör"). */}
                         {createKind === 'event' && newEventRole === 'tip' && (
                             <>
                                 <input
                                     type="url"
                                     value={newEventUrl}
                                     onChange={e => setNewEventUrl(e.target.value)}
-                                    placeholder="Länk till eventet — t.ex. arrangörens sida"
-                                    aria-label="Länk till eventet"
+                                    placeholder="Länk till eventet (valfritt)"
+                                    aria-label="Länk till eventet (valfritt)"
                                     inputMode="url"
                                     autoCapitalize="none"
                                     autoCorrect="off"
@@ -1467,6 +1642,29 @@ export default function HomePage() {
                                     onChange={e => setNewEventTime(e.target.value)}
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-base focus:border-green-500 focus:outline-none"
                                 />
+                            </label>
+                        )}
+                        {/* Veckovis serie. Veckodag och klockslag ärvs från "När?",
+                            så rutan visas först när en tid är vald — annars går det
+                            inte att säga vilken dag den återkommer. */}
+                        {createKind === 'event' && newEventTime && (
+                            <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    checked={newEventRepeatWeekly}
+                                    onChange={e => setNewEventRepeatWeekly(e.target.checked)}
+                                    className="mt-0.5 h-4 w-4 accent-green-600 shrink-0"
+                                />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-bold text-slate-800">
+                                        Återkommer varje vecka
+                                    </span>
+                                    <span className="block text-xs font-normal text-slate-500">
+                                        {weeklyLabelFor(newEventTime)} — t.ex. pubquiz eller
+                                        träningstider. Ändrar du tiden senare gäller det alla
+                                        kommande gånger.
+                                    </span>
+                                </span>
                             </label>
                         )}
                         <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
@@ -1541,14 +1739,20 @@ export default function HomePage() {
                             )}
                         </div>
                         )}
+                        {/* Tips går utan konto — då är detta en lugnande upplysning
+                            i stället för en spärr, och tonas ner därefter. */}
                         {!user && (
-                            <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                                {createKind === 'wish'
-                                    ? 'Du behöver logga in för att önska — det fixar vi i nästa steg.'
-                                    : newEventRole === 'tip'
-                                    ? 'Du behöver logga in för att tipsa — det fixar vi i nästa steg.'
-                                    : 'Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.'}
-                            </p>
+                            createKind === 'event' && newEventRole === 'tip' ? (
+                                <p className="text-xs font-semibold text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                                    Du behöver inget konto för att tipsa. 💡
+                                </p>
+                            ) : (
+                                <p className="text-xs font-semibold text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                                    {createKind === 'wish'
+                                        ? 'Du behöver logga in för att önska — det fixar vi i nästa steg.'
+                                        : 'Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.'}
+                                </p>
+                            )
                         )}
                         <div className="flex justify-end gap-2 mt-2">
                             <button
@@ -1562,18 +1766,80 @@ export default function HomePage() {
                                 type="button"
                                 disabled={!newEventTitle.trim()
                                     || (createKind === 'event' && !newEventTime)
-                                    || (createKind === 'event' && newEventRole === 'tip' && !normalizeTipUrl(newEventUrl))
+                                    // Länken är valfri för tips — men är fältet ifyllt
+                                    // med något otolkbart ska man rätta det först.
+                                    || (createKind === 'event' && newEventRole === 'tip'
+                                        && !!newEventUrl.trim() && !normalizeTipUrl(newEventUrl))
                                     || creatingEvent}
                                 onClick={createKind === 'wish' ? handleCreateWish : handleCreateEvent}
                                 className={`px-5 py-2 rounded-full text-white font-bold disabled:opacity-40 transition-colors ${createKind === 'wish' ? 'bg-violet-600 hover:bg-violet-500' : 'bg-green-600 hover:bg-green-500'}`}
                             >
+                                {/* Tips kräver inget konto → aldrig "Logga in &"-varianten
+                                    där. Önska och arrangera gör det fortfarande. */}
                                 {creatingEvent
                                     ? (createKind === 'wish' ? 'Önskar…' : 'Skapar…')
+                                    : createKind === 'event' && newEventRole === 'tip'
+                                    ? 'Tipsa 💡'
                                     : user
-                                    ? (createKind === 'wish' ? 'Önska ✨' : createKind === 'event' && newEventRole === 'tip' ? 'Tipsa 💡' : 'Skapa')
-                                    : (createKind === 'wish' ? 'Logga in & önska' : createKind === 'event' && newEventRole === 'tip' ? 'Logga in & tipsa' : 'Logga in & skapa')}
+                                    ? (createKind === 'wish' ? 'Önska ✨' : 'Skapa')
+                                    : (createKind === 'wish' ? 'Logga in & önska' : 'Logga in & skapa')}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tomt här: noll event inom 2,5 mil från det man tittar på. Frågan
+                ställs bara i det läget — se nearbyIsEmpty. Sitter ovanför
+                navbaren så den inte skymmer kartan man just letade i. */}
+            {nearbyIsEmpty && (
+                <div className="fixed inset-x-0 bottom-24 z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
+                        <span className="text-2xl" aria-hidden>{canOfferWeek ? '📅' : '🤷'}</span>
+                        <div className="min-w-0">
+                            {/* Finns det event i närheten senare i veckan är det svaret
+                                — inte en tiggarfråga om tips. Först när veckan OCKSÅ
+                                är tom är platsen faktiskt otäckt, och då är tipset
+                                det enda vettiga att be om. */}
+                            {canOfferWeek ? (
+                                <>
+                                    <p className="text-sm font-bold text-slate-800">
+                                        Inget här {promptDayLabel} — men {nearbyThisWeekCount} i veckan.
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Kartan visar en dag i taget. Vidga till hela veckan
+                                        så syns de direkt.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-bold text-slate-800">
+                                        Inget här {promptDayLabel}.
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Vet du något som händer? Tipsa — det tar en halvminut
+                                        och kräver inget konto.
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                        {canOfferWeek ? (
+                            <button
+                                type="button"
+                                onClick={() => handleDayRangeChange(0, 7)}
+                                className="shrink-0 px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
+                            >
+                                Visa veckan
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={startTipHere}
+                                className="shrink-0 px-4 py-2 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-500 transition-colors"
+                            >
+                                Tipsa 💡
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
