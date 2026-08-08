@@ -2252,3 +2252,157 @@ V1:
 
 V2: utan länkstycket → "Luleåsidan ligger i första kommentaren 👇".
 Första kommentaren: `Här är Luleå-kartan: https://vadkul.se/evenemang/lulea — tipsa om det som saknas!`
+
+## Lördag 8/8 — GOTLANDSSATSNINGEN: 3 grupper samma dag, ALLA i godkännandekö
+
+**Ägarbeslut 8/8:** fokusera helt på Gotland i stället för fyra spridda orter,
+och **10 eventrader per inlägg** — överlapp mellan grupperna är uttryckligen
+ok ("gör inget om de bästa är på allas lista"). Det som skiljer inläggen åt är
+ordning, vinkel och ingress, inte eventurvalet.
+
+**Två nya grupper tillagda i masterlistan:** #84 Vi som älskar Gotland
+(38,2t medl.) och #85 Evenemang på Gotland (22,1t medl., har medlemsfråga vid
+ansökan). Tillsammans med #54 = tre Gotlandsgrupper med stort medlemsöverlapp.
+
+**Urvalsläget (färsk prod-data 8/8 14:27Z):** Medeltidsveckan slutade 9/8, så
+ALLA rader skrevs från måndag 10/8 och framåt — inget hinner passera även om
+inläggen ligger några dygn i kö. Hela ön kommande veckan: 92 event i lagret,
+varav **46 på källor som syns utan filter** (resten PRO/kyrkan/Korpen = opt-in
+och dolda som standard). Efter rensning av geokodningsfel: **30 rena synliga
+event 10–18/8**. Räknesiffran i texterna blev därför "ett 30-tal", inte "över
+90" — det är vad en klickare faktiskt hittar (Hudiksvallsläxan, se
+memory `hudiksvall-tom-karta-diagnos`).
+
+### 🚨 DATAFYND 8/8 — Bio Roy-spökeventen på Gotland
+
+Sju biografevent från **Bio Roy (Kungsportsavenyen 45, GÖTEBORG)** låg
+utplacerade på **57.8640316, 19.0505192 = mitt på Gotland**, ~52 km nordost om
+Visby: Met: GLADA ÄNKAN, Sing Along: THE GREATEST SHOWMAN, Almodóvars
+Autofiktion, THIEF, CAROLA, Håkan-besök & samtal, HOPPER. Mönstret: de
+FB-hämtade eventen vars `locationName` bara är venue-namnet ("Bio Roy") får fel
+koordinat, medan de med full adress hamnar rätt (57.6978, 11.9781). Fyra av dem
+hade annars hamnat i Gotlandsinläggen = Nykvarn-läxan igen fast värre (52 km ut
+i havet räknat från gruppens ort). **Task-chip lagd för scraper-fixen + svep
+efter fler arrangörer med spridda koordinatkluster.**
+
+Två dubbletter hittade i samma svep: "Föreläsning: Stark på insidan" ligger
+både på Region Gotland (Visby, rätt) och Gotland Kommun (28 km bort), och
+"Gudstjänst på Snäckan" har en FB-version geokodad till Stockholmstrakten
+medan gotland.com-versionen ligger rätt i Sanda. Ingen av dem användes.
+
+### AE. Evenemang på Gotland (#85 → vadkul.se) — ✅ POSTAT 8/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
+
+Postades först — renodlad evenemangsgrupp = lägst risk. Bred lista, hela ön.
+
+> Medeltidsveckan är slut — men ön går inte i ide 👇
+>
+> 🏰 Stadsvandring: Bakom låsta dörrar, Gotlands Museum (måndag 10/8 kl 14)
+> 🎷 Gotlands Jazzband i Bunge (måndag 10/8 kl 19)
+> 🕯️ Konrad — dramatiserad visning av domkyrkans vind, Visby (måndag 10/8 kl 21)
+> 🎬 Casablanca på Bergmancenter, Fårö (tisdag 11/8 kl 16)
+> 🖼️ "Ute skiner solen" — utställningen tillägnad Sonja Åkesson, Strandgatan 14 (onsdag 12/8 kl 11)
+> 🎤 Releasekonsert med GotlandsMusiken, Clarion Hotel Wisby (torsdag 13/8 kl 15)
+> 🎹 Pianomusik i sensommarkväll på Fridhem vid Högklint (fredag 14/8 kl 19)
+> 🧒 Barndagen i Almedalen (lördag 15/8 kl 10)
+> 💡 Internationella fyrdagar runt om på ön (lördag 15/8)
+> 🎶 "Musikalisk Mosaik" — Krister Dahlström i Visby domkyrka (lördag 15/8 kl 20)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var på ön du än är — ett 30-tal event den närmaste
+> veckan: https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er i veckan? 👇
+
+**MEDLEMSFRÅGA VID ANSÖKAN** ("av vilken anledning vill du gå med?") — svaret
+som användes, kort format eftersom textrutan är liten:
+`Jag driver vadkul.se, en gratis evenemangskarta som täcker Gotland. Vill hålla
+koll på vad som händer — och gärna få med sånt som saknas.`
+**LÄRDOM: var öppen med vem du är i medlemsfrågan.** Admins i spamkänsliga
+grupper straffar den som smyger in och sedan postar länkar; den som frågar om
+lov får dessutom ett förhandsgodkännande att luta sig mot.
+
+### AF. Vi som älskar Gotland (#84 → vadkul.se) — ✅ POSTAT 8/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
+
+Största gruppen (38,2t) och en "älskar ön"-grupp, inte en anslagstavla. Vinkeln
+är därför UTANFÖR RINGMUREN — det gör listan självklart annorlunda även för
+den som ser alla tre inläggen.
+
+> Tio saker att göra på ön nästa vecka — och bara två av dem ligger i Visby 👇
+>
+> 🎷 Gotlands Jazzband i Bunge (måndag 10/8 kl 19)
+> 🚲 Cykelsafari i Bergmanland, Fårö (tisdag 11/8 kl 11)
+> 🎬 Casablanca på Bergmancenter, Fårö (tisdag 11/8 kl 16)
+> 🥾 Samtal: Att vandra 80 mil kust — Östergarns bygdegård (tisdag 11/8 kl 20)
+> 🎞️ Östergarns Bio: Grannfejden (torsdag 13/8 kl 20)
+> 🎹 Pianomusik i sensommarkväll på Fridhem vid Högklint (fredag 14/8 kl 19)
+> 🎨 Konst på Ljugarn (lördag 15/8 kl 12)
+> 🎪 Buskul på Snäckan i Sanda (lördag 15/8 kl 15)
+> 🇫🇷 Fransk afton på Brucebo i Själsö (lördag 15/8 kl 17)
+> 🎭 Shakespeares dotter — av och med Görel Crona, Bottarve i Vamlingbo (lördag 15/8 kl 19)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta — och det fina
+> är att den funkar lika bra i Burgsvik och på Fårö som i Visby, inte bara i
+> innerstan: https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad är det bästa som händer på er del av ön just nu? 👇
+
+### AG. Vad Händer På Gotland? (#54 → /evenemang/visby) — ✅ OMTAG POSTAT 8/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
+
+**Omtaget efter borttagningen 28/7** (72 likes, ändå raderat som "reklam").
+Två ändringar mot 26/7-inlägget, båda riktade mot gruppens regelruta:
+1. **Ingen säljmening.** "Jag har byggt en gratis karta som samlar allt…" är
+   ersatt av en neutral kalenderrad: "Fler kulturevent på ön den här veckan
+   finns samlade på kartan: <länk>". Ingen medlemsnytto-block heller.
+2. **Bara kultur.** Konsert, teater, utställning, visning, bio, guidning.
+   Uttryckligen bortvalda: Awake Shakti Yoga Retreat (yoga), Barndagen i
+   Almedalen och Internationella fyrdagarna — gruppen förbjuder sport och yoga.
+
+> Veckans kultur på Gotland 👇
+>
+> ⛪ Visning av Visby domkyrkas kyrkorum (måndag 10/8 kl 16.30)
+> 🎷 Gotlands Jazzband i Bunge (måndag 10/8 kl 19)
+> 🕯️ Konrad — en dramatiserad visning av domkyrkans vind (måndag 10/8 kl 21)
+> 🎬 Casablanca på Bergmancenter, Fårö (tisdag 11/8 kl 16)
+> 🖼️ "Ute skiner solen" — utställningen tillägnad Sonja Åkesson, Strandgatan 14 (onsdag 12/8 kl 11)
+> 🏰 A walk through Medieval Visby — guidad vandring från Gotlands Museum (onsdag 12/8 kl 13)
+> 🎹 Pianomusik i sensommarkväll på Fridhem vid Högklint (fredag 14/8 kl 19)
+> 🎨 Konst på Ljugarn (lördag 15/8 kl 12)
+> 🎭 Shakespeares dotter — av och med Görel Crona, Bottarve i Vamlingbo (lördag 15/8 kl 19)
+> 🎶 "Musikalisk Mosaik" — konsert med Krister Dahlström i Visby domkyrka (lördag 15/8 kl 20)
+>
+> Fler kulturevent på ön den här veckan finns samlade på kartan:
+> https://vadkul.se/evenemang/visby
+>
+> Vad går ni på? 👇
+
+Reservrad om något behöver bytas ut: 🎵 Le Silence — franska sånger utan tid,
+Strandgatan 10 (söndag 16/8 kl 17).
+
+**FACIT 8/8 (bekräftat av Josef): alla tre publicerade samma dag — och ALLA TRE
+KRÄVDE GODKÄNNANDE.** Karens till 2026-08-29 för samtliga.
+
+⚠️ **BEVAKNINGSPUNKTER:**
+- **Rekommendationen var en grupp per dag, alla tre gick samma dag.** Medlems-
+  överlappet mellan Gotlandsgrupper är stort — dyker samma person upp i två
+  flöden samma dygn är det så det ser ut. Ingen skada skedd om de släpps
+  utspritt i tid av respektive admin (troligt), men läs av reaktionerna.
+- **Måndagsraderna (10/8) är de första som passerar.** Släpps ett inlägg ur kön
+  efter måndag: kommentera bort de passerade raderna direkt, inte redigera i
+  efterhand (Eskilstunaläxan 28/7).
+- **#54 är den som ska bevakas hårdast** — den togs bort en gång trots 72 likes.
+  Godkänt ≠ säkert; följ upp efter en vecka, inte ett dygn.
+- Admin-DM:t till #54 skrevs men **skickades inte** före omtaget.
+
+📊 **KÖLÄGET VÄXER:** i godkännandekö utan känt utsläpp per 8/8 — Gränna (19/7,
+**20 dygn**), Eskilstuna (24/7), Tjörn (1/8), Värmland (1/8), Sundsvall (2–3/8),
+Stockholm/Kvänum-Vara-Skara/Ängelholm/Nora (6/8) och nu Gotlandstrion (8/8).
+**Elva inlägg i kö.** Gränna är i praktiken förlorad — bluegrassfestivalen som
+inlägget vilade på går av stapeln 15/8.
