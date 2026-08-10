@@ -191,6 +191,18 @@ service cloud.firestore {
         && request.resource.data.hostUid == request.auth.uid
         // Utan konto får man tipsa, inte arrangera i eget namn.
         && (!isAnonymous() || request.resource.data.isTip == true)
+        // anonTip märker tipset som herrelöst — det är den märkningen som
+        // öppnar raderingen nedan. BARA en anonym session får sätta den: ett
+        // riktigt konto kan varken göra sitt eget event fritt vilt eller märka
+        // någon annans.
+        //
+        // Att märkningen SAKNAS är däremot tillåtet, även för en anonym. Kravet
+        // "anonym ⇒ märkt" hade varit renare, men reglerna deployas före den
+        // nya bundlen och varje redan öppen flik kör den gamla — de hade slutat
+        // kunna tipsa i samma sekund. Omärkta tips beter sig som förut (bara
+        // ägaren raderar); nya klienter märker alltid. När den gamla bundlen är
+        // ute ur omlopp kan villkoret skärpas till == isAnonymous().
+        && (isAnonymous() || request.resource.data.get('anonTip', false) == false)
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3
         && request.resource.data.title.size() <= 120
@@ -206,7 +218,7 @@ service cloud.firestore {
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
-            'isTip', 'repeatWeekly'
+            'isTip', 'anonTip', 'repeatWeekly'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de
@@ -219,10 +231,18 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
              .hasAny(['featuredUntil', 'featuredPaymentId']);
 
-      // Radera: bara sitt eget användarskapade event.
+      // Radera: sitt eget användarskapade event — ELLER vilket tips som helst
+      // som lämnats UTAN konto. Ett anonymt tips har ingen ägare som kan städa
+      // upp efter sig: spammar någon är den enda som kan plocka bort skräpet
+      // den som råkar se det. Priset är att ärliga anonyma tips också kan
+      // raderas i illvilja — vill man ha kontroll över sitt tips får man logga
+      // in när man lämnar det, då gäller ägarskapet på raden ovanför.
+      // Kravet på uid står kvar även för den öppna vägen: en radering ska gå
+      // att spåra till en session som går att spärra.
       allow delete: if isAuthenticated()
         && resource.data.userCreated == true
-        && resource.data.hostUid == request.auth.uid;
+        && (resource.data.hostUid == request.auth.uid
+            || resource.data.get('anonTip', false) == true);
 
       // …eller admin (scrapade event förblir admin-only).
       allow create, update, delete: if isAuthenticated()

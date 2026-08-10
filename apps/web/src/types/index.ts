@@ -193,6 +193,17 @@ export interface LinkEvent {
    */
   isTip?: boolean;
   /**
+   * Tipset lämnades UTAN konto (anonym session). Sätts av reglerna i takt med
+   * sessionen — den som är inloggad kan inte märka sitt tips som anonymt, och
+   * den som inte är det kan inte slippa märkningen.
+   *
+   * Konsekvensen är att VEM SOM HELST får radera tipset: ett anonymt tips har
+   * ingen ägare som kan städa upp efter sig, så spam måste kunna plockas bort
+   * av den som råkar se den. Vill man ha kontroll över sitt eget tips får man
+   * logga in när man lämnar det — då gäller vanligt ägarskap.
+   */
+  anonTip?: boolean;
+  /**
    * Återkommer varje vecka på samma veckodag och klockslag som `time`.
    * Lagras som en REGEL på ett enda dokument — inte som N kopior. Klienten
    * veckla ut den till konkreta tillfällen vid inläsning (expandWeekly), så

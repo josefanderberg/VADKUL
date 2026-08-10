@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X, Heart, Calendar, CalendarRange, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DayPicker from './DayPicker';
 
@@ -14,6 +14,10 @@ interface FloatingNavbarProps {
     onConfirmPlacement?: () => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
+    /** Bumpas när sökrutan ska fällas ihop utifrån — t.ex. när man valt en stad
+     *  ur träfflistan och kartan flyger dit. Ett tomt searchQuery duger inte
+     *  som signal: då skulle fältet stängas mitt i att man backar bort texten. */
+    closeSearchNonce?: number;
     /** Öppna inloggningsmodalen (utan att lämna kartan). */
     onLoginClick?: () => void;
     /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
@@ -34,9 +38,16 @@ interface FloatingNavbarProps {
      *  badgen "…" — annars stod det "1 event" (bara sajtens egna, som kommer via
      *  en snabbare poll) i flera sekunder innan riktiga antalet hoppade in. */
     dayCountReady?: boolean;
+    /** Play-knappen: starta bildspelet igen där man står. Visas bara när det
+     *  står still — det finns ingen "nästa stad"-knapp (se vägskyltarna). */
+    onStartTour?: () => void;
+    /** Sant medan stads-bildspelet rullar → play-knappen göms helt. */
+    tourPlaying?: boolean;
 }
 
-const getDayLabel = (offset: number, days = 1) => {
+/** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
+ *  Exporterad: bildspelets stadsruta visar samma text som chipen skulle ha gjort. */
+export const getDayLabel = (offset: number, days = 1) => {
     const capitalize = (s: string) => s.replace(/^\w/, (c) => c.toUpperCase());
     if (days > 1) {
         const start = new Date(); start.setDate(start.getDate() + offset);
@@ -57,6 +68,24 @@ const getDayLabel = (offset: number, days = 1) => {
     return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'long' }));
 };
 
+/**
+ * Namn-etikett som tonar in vid hover/fokus — exakt samma formspråk som
+ * kategoricirklarnas etiketter i CategoryFilter. Måste ligga som peer-syskon
+ * EFTER knappen i DOM (krav för peer-selektorn); raden runtomkring avgör sedan
+ * om den hamnar till höger (flex-row) eller vänster (flex-row-reverse) om
+ * knappen. Ligger kvar i flödet men är pointer-events-none, och raden runt om
+ * är också pointer-events-none så den osynliga etikettytan inte slukar
+ * kartklick.
+ */
+const HoverLabel = ({ children }: { children: React.ReactNode }) => (
+    <span
+        aria-hidden
+        className="pointer-events-none opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 shadow-lg border border-white/50"
+    >
+        {children}
+    </span>
+);
+
 export default function FloatingNavbar({
     creationMode = 'idle',
     createEventEnabled = true,
@@ -64,6 +93,7 @@ export default function FloatingNavbar({
     onConfirmPlacement,
     searchQuery,
     setSearchQuery,
+    closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
     savedCount = 0,
@@ -75,6 +105,8 @@ export default function FloatingNavbar({
     dayCount = 0,
     eventsLoaded = true,
     dayCountReady = true,
+    onStartTour,
+    tourPlaying = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -91,6 +123,12 @@ export default function FloatingNavbar({
             setTimeout(() => searchInputRef.current?.focus(), 50);
         }
     }, [searchOpen]);
+
+    // Sidan bad oss stänga (man valde en stad ur träfflistan) — fäll ihop
+    // fältet så kartan syns när den landar. 0 = startvärdet, inget att göra.
+    useEffect(() => {
+        if (closeSearchNonce) setSearchOpen(false);
+    }, [closeSearchNonce]);
 
     // Avbryt plus-animation när creationMode återgår till idle
     useEffect(() => {
@@ -140,6 +178,16 @@ export default function FloatingNavbar({
         }
     };
 
+    // Dubbelklick på dagchipen = snabbväxling dag ↔ hela veckan (ersätter den
+    // borttagna vecko-genvägen). De två klicken har redan hunnit öppna och
+    // stänga popovern innan dblclick landar, så den står stängd — vi stänger
+    // ändå explicit ifall något ändrar den ordningen.
+    const handleDayChipDoubleClick = () => {
+        if (!weekUnlocked || !onDayRangeChange) return;
+        setDayPickerOpen(false);
+        onDayRangeChange(0, dayRangeDays === 7 ? 1 : 7);
+    };
+
     const handleCloseSearch = () => {
         setSearchOpen(false);
         setSearchQuery('');
@@ -160,42 +208,69 @@ export default function FloatingNavbar({
                     {/* Vänster: profil med hjärtat (sparade) UNDER — frigör plats i
                         topplinjen för dagväljarens bläddringspilar (6/8, Josefs
                         önskemål: allt ska få plats utan att det blir trångt). */}
-                    <div className="flex flex-col items-start gap-2 pointer-events-auto shrink-0">
-                        <button
-                            type="button"
-                            onClick={handleProfileClick}
-                            className={`bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
-                            aria-label={user ? 'Min profil' : 'Logga in'}
-                        >
-                            {user?.photoURL ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
-                            ) : (
-                                <User size={20} className="text-slate-700" />
-                            )}
-                            {user && !user.photoURL && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
-                            )}
-                        </button>
-                        {/* Sparade event (hjärtan) — direkt höger om profilen */}
-                        {onToggleSaved && (
+                    <div className="flex flex-col items-start gap-2 shrink-0">
+                        <div className="flex items-center gap-2 pointer-events-none">
                             <button
                                 type="button"
-                                onClick={onToggleSaved}
-                                aria-label="Sparade event"
-                                className="relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                onClick={handleProfileClick}
+                                className={`peer pointer-events-auto bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
+                                aria-label={user ? 'Min profil' : 'Logga in'}
                             >
-                                <Heart
-                                    size={19}
-                                    className="text-rose-500"
-                                    fill={savedCount > 0 ? 'currentColor' : 'none'}
-                                />
-                                {savedCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-[#006AA7] text-white text-[10px] font-black tabular-nums min-w-[18px] h-[18px] px-1 rounded-full border-2 border-white flex items-center justify-center leading-none">
-                                        {savedCount > 99 ? '99+' : savedCount}
-                                    </span>
+                                {user?.photoURL ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                ) : (
+                                    <User size={20} className="text-slate-700" />
+                                )}
+                                {user && !user.photoURL && (
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
                                 )}
                             </button>
+                            <HoverLabel>{user ? 'Min profil' : 'Logga in'}</HoverLabel>
+                        </div>
+                        {/* Sparade event (hjärtan) — direkt höger om profilen */}
+                        {onToggleSaved && (
+                            <div className="flex items-center gap-2 pointer-events-none">
+                                <button
+                                    type="button"
+                                    onClick={onToggleSaved}
+                                    aria-label="Sparade event"
+                                    className="peer pointer-events-auto relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                >
+                                    <Heart
+                                        size={19}
+                                        className="text-rose-500"
+                                        fill={savedCount > 0 ? 'currentColor' : 'none'}
+                                    />
+                                    {savedCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 bg-[#006AA7] text-white text-[10px] font-black tabular-nums min-w-[18px] h-[18px] px-1 rounded-full border-2 border-white flex items-center justify-center leading-none">
+                                            {savedCount > 99 ? '99+' : savedCount}
+                                        </span>
+                                    )}
+                                </button>
+                                <HoverLabel>Sparade</HoverLabel>
+                            </div>
+                        )}
+                        {/* Play-knappen — dyker upp under hjärtat, men BARA när
+                            bildspelet står still. Ingen "nästa stad"-knapp
+                            längre (Josef 9/8): städer byter man genom
+                            vägskyltarna ute på kartan, som pekar mot de
+                            närmaste städerna. Medan bildspelet rullar finns
+                            alltså ingen knapp alls här — man stoppar det genom
+                            att röra kartan. */}
+                        {onStartTour && !tourPlaying && (
+                            <div className="flex items-center gap-2 pointer-events-none">
+                                <button
+                                    type="button"
+                                    onClick={onStartTour}
+                                    aria-label="Starta bildspelet"
+                                    className="peer pointer-events-auto relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                >
+                                    {/* Play ligger optiskt lite vänstertungt i en cirkel — nudge höger. */}
+                                    <Play size={18} className="text-[#006AA7] translate-x-[1px]" fill="currentColor" />
+                                </button>
+                                <HoverLabel>Starta bildspelet</HoverLabel>
+                            </div>
                         )}
                     </div>
 
@@ -205,33 +280,44 @@ export default function FloatingNavbar({
                         flyttade ner — chipen ska ligga i topplinjen med sök/plus.
                         Pilarna bläddrar en dag i taget (bara i endagsläge — för en
                         period är "nästa dag" tvetydigt): höger alltid, vänster
-                        först när man bläddrat framåt (osynlig platshållare innan,
-                        så chipen inte hoppar i sidled när pilen dyker upp). */}
-                    {onDayRangeChange && (
+                        först när man bläddrat framåt. De göms som OSYNLIGA
+                        platshållare i stället för att plockas bort — chipen ska
+                        stå still i sidled när man växlar dag↔vecka (bildspelets
+                        blink gör det med några sekunders mellanrum).
+                        UNDER BILDSPELET göms hela dagväljaren: stadsrutan (som
+                        tar samma plats i topplinjen) visar då stad + dag +
+                        antal. Så fort man klickar på kartan och bildspelet
+                        stannar är chipen tillbaka. */}
+                    {onDayRangeChange && !tourPlaying && (
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10 flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-1.5">
-                                {dayRangeDays === 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => dayOffset > 0 && onDayRangeChange(dayOffset - 1, 1)}
-                                        aria-label="Föregående dag"
-                                        title="Föregående dag"
-                                        className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayOffset > 0 ? '' : 'invisible'}`}
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => dayOffset > 0 && onDayRangeChange(dayOffset - 1, 1)}
+                                    aria-label="Föregående dag"
+                                    title="Föregående dag"
+                                    className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayRangeDays === 1 && dayOffset > 0 ? '' : 'invisible pointer-events-none'}`}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
                                 <div className="relative">
                                     <button
                                         ref={dayChipRef}
                                         type="button"
                                         onClick={() => setDayPickerOpen(o => !o)}
+                                        onDoubleClick={handleDayChipDoubleClick}
                                         aria-expanded={dayPickerOpen}
                                         aria-label="Välj dag eller period"
-                                        className="bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
+                                        title={weekUnlocked ? (dayRangeDays === 7 ? 'Dubbelklick: tillbaka till en dag' : 'Dubbelklick: hela veckan') : undefined}
+                                        className="select-none bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
                                     >
                                         <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                                        <span>{getDayLabel(dayOffset, dayRangeDays)}</span>
+                                        {/* Fast bredd + centrerad text: etiketten byts på
+                                            plats ("Idag" ↔ "Hela veckan") utan att chipen
+                                            växer och krymper — bildspelets blink gör det
+                                            byten var annan sekund. Bredden rymmer den
+                                            längsta etiketten ("Hela veckan"). */}
+                                        <span className="min-w-[92px] text-center">{getDayLabel(dayOffset, dayRangeDays)}</span>
                                         <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
                                     </button>
                                     <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
@@ -248,43 +334,24 @@ export default function FloatingNavbar({
                                         />
                                     )}
                                 </div>
-                                {dayRangeDays === 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onDayRangeChange(dayOffset + 1, 1)}
-                                        aria-label="Nästa dag"
-                                        title="Nästa dag"
-                                        className="h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                )}
-                            </div>
-                            {/* Genväg UNDER dagchipen (8/8, Josefs önskemål — låg
-                                förut till vänster om pilarna): hoppa till hela
-                                veckan. I en småstad ligger det ofta 0–1 event på
-                                en enskild dag medan veckan har ett tiotal — utan
-                                den här knappen ser kartan tom ut fast den inte är
-                                det, och "Hela veckan" låg gömd inne i dagväljarens
-                                popover. Visas bara när veckovyn är upplåst
-                                (inzoomad); i veckoläge blir den vägen tillbaka
-                                till Idag. */}
-                            {weekUnlocked && (
                                 <button
                                     type="button"
-                                    onClick={() => onDayRangeChange(0, dayRangeDays === 7 ? 1 : 7)}
-                                    aria-label={dayRangeDays === 7 ? 'Visa bara idag' : 'Visa hela veckan'}
-                                    title={dayRangeDays === 7 ? 'Visa bara idag' : 'Visa hela veckan'}
-                                    className={`h-8 rounded-full backdrop-blur-md shadow-lg border transition-colors flex items-center gap-1 px-2.5 shrink-0 text-xs font-bold ${
-                                        dayRangeDays === 7
-                                            ? 'bg-[#006AA7] text-white border-[#006AA7] hover:bg-[#00589a]'
-                                            : 'bg-white/90 text-slate-700 border-white/50 hover:bg-white'
-                                    }`}
+                                    onClick={() => onDayRangeChange(dayOffset + 1, 1)}
+                                    aria-label="Nästa dag"
+                                    title="Nästa dag"
+                                    className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayRangeDays === 1 ? '' : 'invisible pointer-events-none'}`}
                                 >
-                                    <CalendarRange size={14} className="shrink-0" />
-                                    <span>{dayRangeDays === 7 ? 'Idag' : 'Veckan'}</span>
+                                    <ChevronRight size={16} />
                                 </button>
-                            )}
+                            </div>
+                            {/* (Emoji-sammanfattningen som stod här är BORTTAGEN
+                                9/8: utan bildspel gäller siffran hela Sverige,
+                                och en rikstotal per aktivitetstyp säger inget.
+                                Den bor bara i bildspelets stadsruta, där den
+                                gäller EN stad. Vecko-genvägen som låg här är
+                                också borta — den blinkade mellan "Veckan" och
+                                "Idag"; vägen till veckan är dagväljarens
+                                "Hela veckan"-rad.) */}
                         </div>
                     )}
 
@@ -308,8 +375,8 @@ export default function FloatingNavbar({
                                     type="text"
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    placeholder="Sök event..."
-                                    aria-label="Sök event"
+                                    placeholder="Sök stad eller event…"
+                                    aria-label="Sök stad eller event"
                                     className="flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400 min-w-0"
                                 />
                                 <button
@@ -320,13 +387,22 @@ export default function FloatingNavbar({
                                 </button>
                             </div>
                         ) : (
-                            <button
-                                onClick={() => setSearchOpen(true)}
-                                className="bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
-                                aria-label="Sök event"
-                            >
-                                <Search size={20} className="text-slate-700" />
-                            </button>
+                            // flex-row-reverse: etiketten ligger EFTER knappen i DOM
+                            // (peer-krav) men visas till vänster om den.
+                            <div className="flex flex-row-reverse items-center gap-2">
+                                <button
+                                    onClick={() => setSearchOpen(true)}
+                                    className="peer bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
+                                    aria-label="Sök stad eller event"
+                                    title="Sök stad eller event"
+                                >
+                                    <Search size={20} className="text-slate-700" />
+                                </button>
+                                {/* "Stad" står först i etiketten med flit: knappen lästes
+                                    som ren eventsökning (användarkommentar 10/8) och man
+                                    letade efter en egen sökruta för orter. */}
+                                <HoverLabel>Sök stad eller event</HoverLabel>
+                            </div>
                         )}
 
                         {/* Skapa event — kartnål-med-plus (bytt från rent plus 6/8:
@@ -337,19 +413,21 @@ export default function FloatingNavbar({
                             alltid synas, och mitt i drop-animationen får den inte
                             unmountas (då fastnar plusDropping-låset). */}
                         {creationMode !== 'editing' && createEventEnabled && (!searchOpen || creationMode === 'placing' || plusDropping) && (
-                            <button
-                                ref={plusBtnRef}
-                                type="button"
-                                onClick={handlePlusClick}
-                                disabled={plusDropping}
-                                aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
-                                title={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
-                                className="bg-[#006AA7] hover:bg-[#005590] w-10 h-10 rounded-full shadow-lg border border-white/20 active:scale-95 transition-all flex items-center justify-center relative z-[1100] shrink-0 pointer-events-auto"
-                            >
-                                {creationMode === 'placing'
-                                    ? <Check size={20} className="text-white" />
-                                    : <MapPinPlus size={20} className="text-white" />}
-                            </button>
+                            <div className="flex flex-row-reverse items-center gap-2 relative z-[1100]">
+                                <button
+                                    ref={plusBtnRef}
+                                    type="button"
+                                    onClick={handlePlusClick}
+                                    disabled={plusDropping}
+                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
+                                    className="peer emerald-glow-pulse bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 w-10 h-10 rounded-full shadow-lg border-2 border-[#FECC02] active:scale-95 hover:scale-105 transition-all duration-200 flex items-center justify-center relative shrink-0 pointer-events-auto group"
+                                >
+                                    {creationMode === 'placing'
+                                        ? <Check size={20} className="text-white shrink-0" />
+                                        : <MapPinPlus size={20} className="text-[#FECC02] shrink-0 group-hover:scale-110 transition-transform duration-200" />}
+                                </button>
+                                <HoverLabel>{creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eller tipsa'}</HoverLabel>
+                            </div>
                         )}
                     </div>
                 </div>

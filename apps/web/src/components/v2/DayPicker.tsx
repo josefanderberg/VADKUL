@@ -38,13 +38,23 @@ interface DayPickerProps {
 export default function DayPicker({ dayOffset, dayRangeDays, weekUnlocked = false, anchorRef, onPick, onClose }: DayPickerProps) {
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        const onDown = (e: MouseEvent) => {
+        // Klick/tapp utanför stänger. touchstart också: kartan äter ofta
+        // touch-eventen så den syntetiska mousedown aldrig kommer på mobil, och
+        // då gick popovern inte att stänga genom att peka bredvid.
+        const onDown = (e: MouseEvent | TouchEvent) => {
             const t = e.target as Node;
             if (ref.current?.contains(t) || anchorRef?.current?.contains(t)) return;
             onClose();
         };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('mousedown', onDown);
-        return () => document.removeEventListener('mousedown', onDown);
+        document.addEventListener('touchstart', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('touchstart', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
     }, [onClose, anchorRef]);
 
     const capitalize = (s: string) => s.replace(/^\w/, (c) => c.toUpperCase());

@@ -13,17 +13,24 @@ interface CategoryFilterProps {
     selected: Set<string>;
     onToggle: (categoryId: string) => void;
     onClear: () => void;
+    /** Under stads-bildspelet: visa opt-in-källorna (Svenska
+     *  kyrkan/PRO) som en egen liten kolumn under filterknappen, utanför den
+     *  vanliga kategorikolumnen. De ligger annars två klick bort (öppna filtret
+     *  → ⋯) och hinner aldrig upptäckas medan bildspelet rullar. Försvinner så
+     *  fort bildspelet stoppas — då är kartan användarens och toppraden ska bli
+     *  ren igen. */
+    showSourceShortcuts?: boolean;
 }
 
 /**
  * Kategorifilter i samma formspråk som navbar-knapparna: lager-knappen fäller
  * ut en KOLUMN av runda emoji-cirklar (en per kategori, mest event överst) —
  * ett tryck togglar filtret direkt. ALLA kategorier med event visas direkt
- * (kolumnen scrollar vid behov); bara opt-in-källorna (Korpen/Svenska kyrkan/
+ * (kolumnen scrollar vid behov); bara opt-in-källorna (Svenska kyrkan/
  * PRO) ligger bakom ⋯"visa mer"-cirkeln längst ner.
  * Namn + antal finns som tooltip/aria-label. Flerval; tom selection = alla.
  */
-export default function CategoryFilter({ events, selected, onToggle, onClear }: CategoryFilterProps) {
+export default function CategoryFilter({ events, selected, onToggle, onClear, showSourceShortcuts = false }: CategoryFilterProps) {
     const [open, setOpen] = useState(false);
     const [showMore, setShowMore] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -46,7 +53,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
     const counts = useMemo(() => {
         const c = new Map<string, number>();
         for (const evt of events) {
-            // Opt-in-källor (Korpen/Svenska kyrkan/PRO) räknas i sin egen hink,
+            // Opt-in-källor (Svenska kyrkan/PRO) räknas i sin egen hink,
             // inte i sin LLM-kategori — så raden visar exakt vad som dyker upp
             // när man kryssar i den (och normal-kategorierna inte blåses upp).
             const src = classifySource(evt.url || evt.id);
@@ -86,7 +93,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         // 100-nyanserna. Färgstark = syns på kartan just nu, urblekt =
         // bortfiltrerad, blå ring = uttryckligen vald. Tom selection betyder
         // "alla PÅ" för vanliga kategorier, men opt-in-källorna
-        // (Korpen/Svenska kyrkan/PRO) är bara på när de är ikryssade.
+        // (Svenska kyrkan/PRO) är bara på när de är ikryssade.
         const shownOnMap = active || (selected.size === 0 && !SPECIAL_CATEGORY_KEYS.has(cat.id));
         const count = counts.get(cat.id) ?? 0;
         return (
@@ -129,22 +136,51 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                     höger (navbaren får 2xl:pr för att lämna plats — se
                     FloatingNavbar). */}
                 <div className="absolute right-0 top-[96px] 2xl:top-0 pointer-events-auto">
-                    {/* Rund knapp. Badge = antal aktiva filter. */}
-                    <button
-                        ref={btnRef}
-                        type="button"
-                        onClick={() => { setOpen(o => !o); setShowMore(false); }}
-                        aria-expanded={open}
-                        aria-label="Filtrera på kategori"
-                        className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors relative"
-                    >
-                        <Layers size={20} className="text-slate-700 dark:text-slate-200" />
-                        {selected.size > 0 && (
-                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
-                                {selected.size}
-                            </span>
-                        )}
-                    </button>
+                    {/* Rund knapp. Badge = antal aktiva filter. Namn-pill vid hover,
+                        samma som kategoricirklarna nedanför (raden är
+                        flex-row-reverse så pillen kan ligga efter knappen i DOM
+                        men visas till vänster; raden själv är pointer-events-none
+                        så den osynliga pill-ytan inte slukar kartklick). */}
+                    <div className="flex flex-row-reverse items-center gap-2 pointer-events-none">
+                        <button
+                            ref={btnRef}
+                            type="button"
+                            onClick={() => { setOpen(o => !o); setShowMore(false); }}
+                            aria-expanded={open}
+                            aria-label="Filtrera på kategori"
+                            // Vit även i mörkt läge: knappen står i samma topplinje
+                            // som navbarens (profil/hjärta/sök/skapa), och de är
+                            // vita utan dark:-variant. Med dark:bg-slate-900 blev
+                            // den här ensam mörk i raden.
+                            className="peer pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                        >
+                            <Layers size={20} className="text-slate-700" />
+                            {selected.size > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
+                                    {selected.size}
+                                </span>
+                            )}
+                        </button>
+                        <span
+                            aria-hidden
+                            className="pointer-events-none opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 shadow-lg border border-white/50"
+                        >
+                            Filtrera
+                        </span>
+                    </div>
+
+                    {/* Bildspels-genvägen: opt-in-källorna som en egen kolumn
+                        direkt under filterknappen, utanför kategorikolumnen.
+                        Alla tre visas ALLTID (inte bara de med event idag) —
+                        annars skulle de poppa in och ut när bildspelet byter
+                        stad, och det är just den rörelsen vi vill bort från
+                        toppraden. Göms när det riktiga filtret är öppet, annars
+                        skulle de två kolumnerna ligga på varandra. */}
+                    {showSourceShortcuts && !open && (
+                        <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 pointer-events-auto p-1 -m-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                            {SPECIAL_CATEGORY_LIST.map((cat) => renderCircle(cat))}
+                        </div>
+                    )}
 
                     {/* Cirkelkolumn — under knappen, höger-justerad. p-1/-m-1 så
                         ringar och skuggor inte klipps av scroll-containern.
@@ -190,7 +226,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                                     </button>
                                 )}
                                 {visible.map((id) => renderCircle(EVENT_CATEGORIES[id]))}
-                                {/* ⋯ visar ENBART opt-in-källorna (Korpen/Svenska
+                                {/* ⋯ visar ENBART opt-in-källorna (Svenska
                                     kyrkan/PRO), avgränsade med ett litet streck. */}
                                 {showMore && visibleSpecial.length > 0 && (
                                     <>
@@ -203,7 +239,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                                         type="button"
                                         onClick={() => setShowMore(m => !m)}
                                         aria-expanded={showMore}
-                                        aria-label={showMore ? 'Dölj Korpen/Svenska kyrkan/PRO' : 'Visa Korpen/Svenska kyrkan/PRO'}
+                                        aria-label={showMore ? 'Dölj Svenska kyrkan/PRO' : 'Visa Svenska kyrkan/PRO'}
                                         title={showMore ? 'Visa färre' : 'Visa mer'}
                                         className="h-10 w-10 shrink-0 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/50 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
                                     >

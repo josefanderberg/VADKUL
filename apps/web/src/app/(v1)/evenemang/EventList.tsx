@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { dayKey, dayLabel, shortDayLabel, clockLabel, hourOf, type CityEvent } from './cityData';
-import DayFilteredList, { type ListedDay, type ListedRec } from './DayFilteredList';
+import DayFilteredList, { type ListedDay } from './DayFilteredList';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 
 // Delade byggstenar för stads- och kategorisidorna: dag-grupperad eventlista
@@ -146,40 +146,15 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
     );
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** Förbygg Rekommenderat-korten till rena strängar för klientkomponenten
- *  (cityData är server-only). Tidssorteras närmast-först — defaulten ska
- *  visa idag/det nästkommande. Färre än 3 kandidater = ingen sektion alls
- *  (hellre ingen lista än en utfylld). Själva karusellen renderas i
- *  DayFilteredList så att filterraden överst styr även den. */
-function buildRecRows(recommended: CityEvent[], cityName: string): ListedRec[] {
-    if (recommended.length < 3) return [];
-    return [...recommended]
-        .sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
-        .map(e => ({
-            id: e.id,
-            href: mapHref(e.id),
-            title: e.title,
-            coverImage: e.coverImage,
-            emoji: e.emoji || '📍',
-            when: cap(dayLabel(e.time)) + (e.hasSpecificTime ? ` · kl ${clockLabel(e.time)}` : ''),
-            place: e.locationName || cityName,
-            dayKey: dayKey(e.time),
-            hour: e.hasSpecificTime ? hourOf(e.time) : null,
-            t: Date.parse(e.time),
-        }));
-}
-
 /** Hela eventsektionen: filterrad överst (Idag/Imorgon/I helgen + timstaplar),
- *  därefter Rekommenderat (om `recommended` skickas med), `children` (t.ex.
- *  kategorichips) och den dag-grupperade listan. Servern förbygger raderna
- *  till rena strängar här — cityData (fs) kan inte importeras från
- *  klientkomponenter. */
-export function EventDayList({ events, cityName, recommended = [], children }: {
+ *  därefter `children` (t.ex. kategorichips) och den dag-grupperade listan.
+ *  Servern förbygger raderna till rena strängar här — cityData (fs) kan inte
+ *  importeras från klientkomponenter.
+ *  (Rekommenderat-karusellen låg här tidigare — borttagen 9/8 på ägarbeslut:
+ *  urvalet höll inte måttet. Lägg inte tillbaka den utan ett bättre urval.) */
+export function EventDayList({ events, cityName, children }: {
     events: CityEvent[];
     cityName: string;
-    recommended?: CityEvent[];
     children?: ReactNode;
 }) {
     const byDay = new Map<string, CityEvent[]>();
@@ -229,7 +204,7 @@ export function EventDayList({ events, cityName, recommended = [], children }: {
     const restCount = events.length - listed;
 
     return (
-        <DayFilteredList days={shownDays} recs={buildRecRows(recommended, cityName)} restCount={restCount} cityName={cityName}>
+        <DayFilteredList days={shownDays} restCount={restCount} cityName={cityName}>
             {children}
         </DayFilteredList>
     );

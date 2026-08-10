@@ -82,6 +82,27 @@ type RawCard = { id: string; hostName?: string; coverImage?: string; price?: str
 
 const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').trim();
 
+/**
+ * Duger omslagsbilden att skicka vidare (till <img>, till schema.org)?
+ * Skrapade kort bär två sorters skräp som annars läcker rakt ut:
+ *   • ROTRELATIVA sökvägar ("/images/…") — de pekar på källans domän, inte vår,
+ *     så de 404:ar hos oss och Google svarar "Ogiltig webbadress i fältet image"
+ *     (Search Console 9/8, /evenemang/ostersund/konserter).
+ *   • data:-URI:er — lazy-load-platshållare (tomma 0×0-SVG:er) som scrapern
+ *     råkat ta i stället för den riktiga bilden.
+ * Bara absoluta http(s)-adresser släpps igenom; resten behandlas som "ingen
+ * bild" och faller tillbaka på sajtens OG-kort.
+ */
+function usableImageUrl(raw: string | undefined): string | undefined {
+    if (!raw) return undefined;
+    try {
+        const u = new URL(raw);
+        return u.protocol === 'http:' || u.protocol === 'https:' ? raw : undefined;
+    } catch {
+        return undefined; // relativ sökväg eller trasig sträng
+    }
+}
+
 // Modulnivå-cache: JSON-filerna (~21k event) läses en gång per build-process,
 // inte en gång per stad.
 let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; descs: Map<string, string>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
@@ -184,7 +205,7 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
                 category: e.category,
                 emoji: e.emoji,
                 hostName: card?.hostName || undefined,
-                coverImage: card?.coverImage || undefined,
+                coverImage: usableImageUrl(card?.coverImage),
                 price: card?.price || undefined,
                 attendees: card?.attendees || undefined,
                 description: descs.get(e.id),

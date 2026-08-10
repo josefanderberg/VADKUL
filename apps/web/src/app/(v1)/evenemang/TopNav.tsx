@@ -22,7 +22,7 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
                 </Link>
                 <Link
                     href={ctaHref}
-                    className="city-cta relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-md transition-colors shrink-0"
+                    className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-md hover:scale-105 transition-all shrink-0"
                 >
                     {ctaLabel}
                 </Link>

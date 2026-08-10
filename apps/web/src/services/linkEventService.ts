@@ -104,6 +104,7 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     hasSpecificTime: deriveHasSpecificTime(time),
                     userCreated: true,
                     isTip: !!v.isTip,
+                    anonTip: !!v.anonTip,
                     repeatWeekly: !!v.repeatWeekly,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
@@ -383,7 +384,7 @@ export const linkEventService = {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
         hostName: string; hostUid: string; coverImage?: string; url?: string;
-        isTip?: boolean; repeatWeekly?: boolean;
+        isTip?: boolean; anonTip?: boolean; repeatWeekly?: boolean;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -409,6 +410,10 @@ export const linkEventService = {
         // Bara på faktiska tips — annars skulle varje eget event bära ett
         // isTip: false som reglernas hasOnly-lista måste känna till i onödan.
         if (input.isTip) payload.isTip = true;
+        // Måste sättas exakt när sessionen är anonym — reglerna jämför fältet
+        // mot sign_in_provider och avvisar skrivningen om de inte stämmer.
+        // Det är märkningen som gör tipset raderbart för vem som helst.
+        if (input.anonTip) payload.anonTip = true;
         if (input.repeatWeekly) payload.repeatWeekly = true;
         const ref = await addDoc(collection(db, 'linkEvents'), payload);
         return ref.id;

@@ -18,12 +18,19 @@ import {
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
-    BRICKA_DARK_BG, WISH_DOT_HEX,
+    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, WISH_DOT_HEX,
     brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
     makeBrickaImageData, sourceGradientCss,
 } from './v2MapBricka';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import V2MapGroupList from './V2MapGroupList';
+import CitySignposts, { type SignpostCity } from './CitySignposts';
+
+// Hover-bubblan över en bricka med flera event: hur högt ovanför geopunkten den
+// hänger (brickans kropp sitter en bit ovanför punkten) och hur många olika
+// emojis som får plats innan resten blir "+N".
+const HOVER_PEEK_LIFT_PX = 62;
+const HOVER_PEEK_MAX_EMOJI = 8;
 
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
@@ -56,7 +63,9 @@ type PlainFeature = {
     // ritas ALLTID överst i GL-lagret (gäller både multi-event och enskilda).
     // past = ALLA event i gruppen har redan varit → brickan släcks helt och
     // gruppen visas som sin nål-prick (dämpad till 50 %).
-    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean };
+    // dim = gruppen matchar INTE den emoji man klickat fram i emoji-raden under
+    // stadsrutan → tonas ned och hamnar under de matchande i staplingen.
+    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean };
 };
 
 // En cyklande multibrickas rotation: den EGNA cykel-bildens id + frames i tur-
@@ -85,13 +94,26 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // "+N"-badgen) släcks HELT och gruppen står kvar som sin nål-prick, dämpad till
 // 50 %. Uttrycken delas av lager-skapandet (syncPlainLayer) och återställningen
 // efter zoom (hideNeedleDotsWhenRendered) så vilo-looken aldrig glider isär.
+// GL-brickornas icon-size vid stads-/gatuzoom (lagrets översta interpolate-steg).
+// Delas med DOM-markörens offsetberäkning: klick zoomar alltid in (se
+// zoomInOnFirstEventClick), så det är vid detta värde de två lagren ska
+// sammanfalla.
+const GL_ICON_SIZE_TOP = 0.98;
 const IS_PAST_EXPR: maplibregl.ExpressionSpecification =
     ['boolean', ['get', 'past'], false];
 const REVEAL_STATE_EXPR: maplibregl.ExpressionSpecification =
     ['coalesce', ['feature-state', 'reveal'], 0];
+// Hur mycket en bricka som INTE hör till den framklickade emojin tonas ned.
+// Inte 0: man ska fortfarande se ATT det ligger annat i staden — de ska bara
+// backa undan så den valda sorten kan läsas av på en gång.
+const DIMMED_BRICKA_OPACITY = 0.16;
+const DIM_FACTOR_EXPR: maplibregl.ExpressionSpecification =
+    ['case', ['boolean', ['get', 'dim'], false], DIMMED_BRICKA_OPACITY, 1];
 // Bricka + "+N"-badge: följer reveal-state, men ALDRIG för passerade grupper.
+// Nedtoningen multipliceras ovanpå — en släckt bricka förblir släckt, en tänd
+// men bortvald hamnar på DIMMED_BRICKA_OPACITY.
 const BRICKA_OPACITY_EXPR: maplibregl.ExpressionSpecification =
-    ['case', IS_PAST_EXPR, 0, REVEAL_STATE_EXPR];
+    ['case', IS_PAST_EXPR, 0, ['*', REVEAL_STATE_EXPR, DIM_FACTOR_EXPR]];
 // Nål-pricken i vila: passerade grupper ALLTID prick (50 %), övriga bara när
 // brickan är släckt (1 − reveal).
 const DOT_REST_OPACITY_EXPR: maplibregl.ExpressionSpecification =
@@ -112,7 +134,8 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
     for (let i = 0; i < a.length; i++) {
         const pa = a[i].properties, pb = b[i].properties;
         if (pa.key !== pb.key || pa.icon !== pb.icon || pa.count !== pb.count ||
-            pa.color !== pb.color || pa.sortKey !== pb.sortKey || pa.past !== pb.past) return false;
+            pa.color !== pb.color || pa.sortKey !== pb.sortKey || pa.past !== pb.past ||
+            pa.dim !== pb.dim) return false;
         const ca = a[i].geometry.coordinates, cb = b[i].geometry.coordinates;
         if (ca[0] !== cb[0] || ca[1] !== cb[1]) return false;
     }
@@ -260,6 +283,24 @@ interface V2MapProps {
      *  använder det för att tillfälligt gömma poäng-brickan som annars ligger i
      *  samma vänsterkolumn och skulle krocka med utfällningen. */
     onFuncBagOpenChange?: (open: boolean) => void;
+    /** Fyrar när multi-event-listan (den som fälls ut vid en bricka med flera
+     *  event) öppnas/stängs. Sidan gömmer då vägskyltarna — de ligger fritt över
+     *  kartan och skulle annars hamna ovanpå listan. */
+    onGroupListOpenChange?: (open: boolean) => void;
+    /** Fyrar vid ett bart kartklick (inte på en bricka, inte en dragning).
+     *  Sidan växlar vald dag ↔ hela veckan med den. */
+    onMapTap?: () => void;
+    /** Städerna vägskyltarna kan peka mot (bildspelets rutt). Skyltarna bor
+     *  inuti kartan för att kunna ankras i marken — se CitySignposts. */
+    signpostCities?: SignpostCity[];
+    onPickSignpost?: (city: SignpostCity, index: number) => void;
+    /** Göm vägskyltarna (bildspelet står still, utzoomat, öppna paneler). */
+    signpostsHidden?: boolean;
+    /** Emoji som klickats fram i emoji-raden under stadsrutan. Grupper som
+     *  INTE innehåller ett (ej passerat) event med den emojin tonas ned och
+     *  hamnar under de matchande i staplingen — så man ser direkt VAR i staden
+     *  den sorten ligger. null = ingen framhävning, allt ritas normalt. */
+    highlightEmoji?: string | null;
     /** Fyrar när användarens GPS-position blir känd/uppdateras (samma position
      *  som den blå plats-pricken — hämtas tyst vid start + "Min plats"-knappen).
      *  Sidan skickar den vidare till EventCard som visar avstånd till valt event. */
@@ -290,6 +331,12 @@ interface V2MapProps {
      *  en målningsrunda är på väg mot skärmen. Sidan använder den för att
      *  hålla tyst med "inget här"-prompten så länge kartan fortfarande ritar. */
     onPaintedChange?: (painted: boolean) => void;
+    /** Styr stads-bildspelet: sätts till ett nytt objekt (ny nyckel) för varje
+     *  stad → kartan flyger dit smidigt. null = inget flyg pågår. */
+    cityTourTarget?: { lat: number; lng: number; zoom: number; key: number; cityName: string } | null;
+    /** Fyrar när användaren aktivt interagerar med kartan (drag, zoom, klick) —
+     *  sidan stoppar bildspelet vid det. */
+    onUserInteraction?: () => void;
 }
 
 export default function V2Map({
@@ -310,6 +357,12 @@ export default function V2Map({
     onFeatureFlagsChange,
     onActivateMultiplayer,
     onFuncBagOpenChange,
+    onGroupListOpenChange,
+    onMapTap,
+    signpostCities = [],
+    onPickSignpost,
+    signpostsHidden = false,
+    highlightEmoji = null,
     onUserPosChange,
     wishes = [],
     onSelectWish,
@@ -317,9 +370,14 @@ export default function V2Map({
     starredEventIds = new Set(),
     onFirstPaint,
     onPaintedChange,
+    cityTourTarget = null,
+    onUserInteraction,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
+    // Samma karta som mapRef, men som state — overlays som behöver projicera
+    // geo-punkter (vägskyltarna) måste renderas om när kartan finns.
+    const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
     // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
     // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
@@ -339,6 +397,11 @@ export default function V2Map({
         return () => clearInterval(id);
     }, []);
 
+    // Stads-bildspel övergång:
+    const [transitionCityName, setTransitionCityName] = useState<string | null>(null);
+    const [overlayVisible, setOverlayVisible] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
     // Klick på en MULTI-event-markör (grupp med >1 event) öppnar en lista (emoji +
     // titel + tid) så man kan välja vilket event i högen man vill öppna. null = ingen.
@@ -356,6 +419,15 @@ export default function V2Map({
     const groupListAnchorRef = useRef<{ lng: number; lat: number } | null>(null);
     groupListAnchorRef.current = groupListAnchor;
     const [groupListPos, setGroupListPos] = useState<{ x: number; y: number } | null>(null);
+    // Hover-bubblan: alla emojis i brickan man håller musen över, utan att
+    // öppna den. x/y = brickans geopunkt projicerad när man förde dit musen.
+    const [hoverPeek, setHoverPeek] = useState<{
+        key: string;
+        items: { emoji: string; count: number }[];
+        total: number;
+        x: number;
+        y: number;
+    } | null>(null);
     // True medan användaren aktivt zoomar (zoomstart→zoomend). Under gesten ritas
     // multi-event-grupper som lätta GL-prickar; i vila som fulla DOM-brickor. De två
     // är ÖMSESIDIGT UTESLUTANDE — aldrig bägge synliga. Ref:en speglar staten så att
@@ -486,6 +558,24 @@ export default function V2Map({
         onFuncBagOpenChangeRef.current?.(funcBagOpen);
     }, [funcBagOpen]);
 
+    // Kartklick-callbacken läses ur en ref: den installeras en gång i kartans
+    // init-effekt och ska inte kräva att lyssnaren sätts om vid varje render.
+    const onMapTapRef = useRef(onMapTap);
+    onMapTapRef.current = onMapTap;
+    // Sätts av tomma-kartan-klicket när det STÄNGDE ett eventkort/en multi-event-
+    // lista/ett önskekort. Ett sådant klick ska inte också växla dag/vecka —
+    // man klickade bort kortet, inte på kartan. Nollas när tap-handlern läst den.
+    const suppressMapTapRef = useRef(false);
+
+    // Samma sak för multi-event-listan: sidan gömmer vägskyltarna medan den är
+    // uppe, så de inte lägger sig över listan man just öppnat.
+    const onGroupListOpenChangeRef = useRef(onGroupListOpenChange);
+    onGroupListOpenChangeRef.current = onGroupListOpenChange;
+    const groupListOpen = !!groupList && groupList.length > 0;
+    useEffect(() => {
+        onGroupListOpenChangeRef.current?.(groupListOpen);
+    }, [groupListOpen]);
+
     // Shop-flaggor: vilka funktioner som är "påslagna". Funktioner med egen
     // state i V2Map (globe/terräng/kartstil) hanteras separat i setFeatureActive
     // så väskan har en enda gemensam UI-modell; resten (createEvent/multiplayer/
@@ -578,6 +668,17 @@ export default function V2Map({
     const onMapDragRef = useRef(onMapDrag);
     onMapDragRef.current = onMapDrag;
 
+    const onUserInteractionRef = useRef(onUserInteraction);
+    onUserInteractionRef.current = onUserInteraction;
+
+    const handleMapUserInteraction = useCallback(() => {
+        setIsTransitioning(false);
+        setOverlayVisible(false);
+        onUserInteractionRef.current?.();
+    }, []);
+    const handleMapUserInteractionRef = useRef(handleMapUserInteraction);
+    handleMapUserInteractionRef.current = handleMapUserInteraction;
+
     // (Emoji-/färgväxlingen för grupper med flera event på samma plats sköts av
     //  GL-cykelpumpen längre ner — se effekten efter visibleGroups.)
 
@@ -650,7 +751,7 @@ export default function V2Map({
     // den uppsättning brick-bilder (emoji × ev. källfärg) som behöver bakas. Hela
     // världen ligger i källan — MapLibre kullar och avkrockar själv på GPU:n
     // (icon-allow-overlap false), så vi behöver ingen egen viewport-gallring här.
-    // Event från en "stor" källa (PRO/Korpen/Svenska kyrkan) får standard mörk bricka;
+    // Event från en "stor" källa (PRO/Svenska kyrkan) får standard mörk bricka;
     // alla övriga event färgas efter sin kategori.
     const plainData = useMemo(() => {
         const nowMs = Date.now();
@@ -686,7 +787,7 @@ export default function V2Map({
             const rep = starredRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const emoji = eventEmoji(rep);
-            // Stor källa (PRO/Korpen/Svenska kyrkan) → ingen färg (mörk standard);
+            // Stor källa (PRO/Svenska kyrkan) → ingen färg (mörk standard);
             // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
             // DOM-färgen aldrig glider isär.
             const color = brickaBodyHex(rep) ?? undefined;
@@ -740,6 +841,14 @@ export default function V2Map({
                     finalIcon = cycleId;
                 }
             }
+            // Emoji-raden under stadsrutan: matchar gruppen den framklickade
+            // sorten? Vi frågar hela gruppen, inte bara brickans visade emoji —
+            // en multibricka cyklar mellan sina emojis, och den ska räknas som
+            // träff så länge sorten finns någonstans i den. Passerade event
+            // räknas inte (de ligger ändå bara som prickar) — samma urval som
+            // emoji-raden själv räknar på.
+            const hit = highlightEmoji == null ||
+                group.some(e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji);
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
@@ -747,7 +856,19 @@ export default function V2Map({
                 // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
                 // Användarskapade event boostas också (under valt) — de är alltid
                 // tända (sticky) och ska vinna staplingen mot importerade grannar.
-                properties: { icon: finalIcon, key, count: group.length, color: color ?? '#1e293b', sortKey: group.length + (group.some(e => e.userCreated) ? 100_000 : 0) + (drawStar ? 200_000 : 0) + (isSel ? 1_000_000 : 0), past: groupIsPast(group, nowMs) },
+                // Träff i emoji-raden lyfts på samma sätt (över stjärna, under
+                // valt): annars kunde en nedtonad granne ligga kvar ovanpå den
+                // sort man just bett om att få se.
+                properties: {
+                    icon: finalIcon, key, count: group.length, color: color ?? '#1e293b',
+                    sortKey: group.length
+                        + (group.some(e => e.userCreated) ? 100_000 : 0)
+                        + (drawStar ? 200_000 : 0)
+                        + (highlightEmoji != null && hit ? 400_000 : 0)
+                        + (isSel ? 1_000_000 : 0),
+                    past: groupIsPast(group, nowMs),
+                    dim: !hit,
+                },
             });
         }
         // ÖNSKNINGARNA (eventWishes) — egna features i SAMMA källa, nyckel
@@ -765,7 +886,10 @@ export default function V2Map({
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
-                properties: { icon: iconId, key: `wish:${w.id}`, count: 1, color: WISH_DOT_HEX, sortKey: 100_000, past: false },
+                // Önskningar är ingen "sort" i emoji-raden (de räknas inte där)
+                // och tonas därför aldrig ned — de är alltid tända och ska
+                // fortsätta vara det även när man tittar närmare på en kategori.
+                properties: { icon: iconId, key: `wish:${w.id}`, count: 1, color: WISH_DOT_HEX, sortKey: 100_000, past: false, dim: false },
             });
         }
         // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
@@ -777,7 +901,7 @@ export default function V2Map({
         // uppdateras "har varit"-statusen bara när datan råkar byggas om. Oförändrade
         // minuter kortsluts av samePlainFeatures-vakten → ingen onödig setData.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick]);
+    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick, highlightEmoji]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
@@ -1190,7 +1314,7 @@ export default function V2Map({
                         'icon-ignore-placement': true,
                         // Storlek matchad mot DOM-brickorna (~38px kropp) så enskilda
                         // GL-event och fler-event-grupper (DOM) ser lika stora ut.
-                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, 0.98],
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, GL_ICON_SIZE_TOP],
                         // Fler-event-brickor (count>1) ritas ÖVERST och hamnar först i
                         // queryRenderedFeatures — sort-key = antal event → ju fler, desto
                         // högre upp i staplingen (och lättast att träffa). Den VALDA
@@ -1708,8 +1832,8 @@ export default function V2Map({
         // Användarskapade event (sajtens kärna) hålls ALLTID tända — samma force-
         // reveal som gillade event. Så deras (smaragdgröna) bricka syns överallt,
         // oavsett avslöjning/närhet, viewport-panorering, zoomnivå eller kategori-
-        // val. De ligger aldrig i opt-in-källorna, så de tre opt-in-kategorierna
-        // (Korpen/Svenska kyrkan/PRO) behåller sitt opt-in-beteende oförändrat.
+        // val. De ligger aldrig i opt-in-källorna, så opt-in-kategorierna
+        // (Svenska kyrkan/PRO) behåller sitt opt-in-beteende oförändrat.
         for (const [key, group] of groupsRef.current) {
             if (group.some(e => e.userCreated)) sticky.add(key);
         }
@@ -1881,6 +2005,9 @@ export default function V2Map({
         }
 
         mapRef.current = map;
+        // Speglas som state åt de overlays som behöver kartan själv (vägskyltarna
+        // projicerar sina geo-ankare vid varje 'move').
+        setMapInstance(map);
 
         // Egen attribution: alltid compact (en liten ⓘ-knapp i hörnet i stället för
         // en utfälld textrad). Attributionen MÅSTE finnas kvar — CARTO och
@@ -2059,6 +2186,10 @@ export default function V2Map({
             const closedSomething = !!selectedEventValRef.current
                 || !!groupListRef.current
                 || !!wishCardOpenRef.current;
+            // Samma sak gäller dag/vecka-växeln: ett klick som stänger kortet/
+            // listan ska BARA stänga — inte också byta period. Tap-handlern
+            // nedan kollar (och nollar) den här flaggan.
+            suppressMapTapRef.current = closedSomething;
             setGroupList(null);            // stäng ev. öppen multi-event-lista
             setGroupListAnchor(null);
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
@@ -2069,6 +2200,35 @@ export default function V2Map({
 
         // GL-markör/prick klickad → välj eventet (eller gissa i spelläget). Handlern
         // registreras en gång; den matchar lagret så fort det (åter)installerats.
+        /**
+         * Vilken brickas nyckel ligger under pekaren? Samma urval som klicket
+         * (se onGlMarkerClick nedan): bara avslöjade brickor är valbara, och
+         * bland dem vinner den vars mitt ligger närmast pekaren — ikonens
+         * träffyta är större än den synliga romben, så hit-boxarna överlappar i
+         * ett kluster. Delas av klicket och hover-bubblan.
+         */
+        const pickHoverKey = (m: maplibregl.Map, e: maplibregl.MapLayerMouseEvent): string | undefined => {
+            const candidates = (e.features ?? []).filter(f => {
+                const lid = f.layer?.id;
+                if (lid === 'plain-events' || lid === 'plain-events-dots') {
+                    const k = f.properties?.key as string | undefined;
+                    return !!k && ((m.getFeatureState({ source: 'plain-events', id: k }).reveal as number ?? 0) > 0.5);
+                }
+                return true;
+            });
+            if (candidates.length === 0) return undefined;
+            const ANCHOR_LIFT_PX = 28;
+            const qx = e.point.x, qy = e.point.y + ANCHOR_LIFT_PX;
+            const ranked = candidates.map(f => {
+                const c = (f.geometry as GeoJSON.Point | undefined)?.coordinates;
+                const pp = c ? m.project([c[0], c[1]]) : null;
+                const d = pp ? Math.hypot(pp.x - qx, pp.y - qy) : 1e9;
+                return { f, d, count: Number(f.properties?.count) || 1 };
+            });
+            ranked.sort((a, b) => (Math.abs(a.d - b.d) > 3 ? a.d - b.d : b.count - a.count));
+            return ranked[0].f.properties?.key as string | undefined;
+        };
+
         const onGlMarkerClick = (e: maplibregl.MapLayerMouseEvent) => {
             // Plocka rätt bricka bland ALLA träffar under fingret — inte bara
             // features[0] (då snodde en dold/enskild granne klicket: den "döda
@@ -2079,32 +2239,11 @@ export default function V2Map({
             //   2) bland de valbara vinner den med FLEST event (count) — samma
             //      prioritet som z-staplingen, så en fler-event-bricka aldrig
             //      förlorar klicket till en enskild bricka som råkar ligga under.
-            const candidates = (e.features ?? []).filter(f => {
-                const lid = f.layer?.id;
-                if (lid === 'plain-events' || lid === 'plain-events-dots') {
-                    const k = f.properties?.key as string | undefined;
-                    return !!k && ((map.getFeatureState({ source: 'plain-events', id: k }).reveal as number ?? 0) > 0.5);
-                }
-                return true;
-            });
-            // Bara dolda brickor under fingret → låt det allmänna klicket avslöja.
-            if (candidates.length === 0) return;
-            // Ikonens träffyta (omslutande kvadrat) är STÖRRE än den synliga romb-brickan,
-            // så tätt packade brickor får överlappande hit-boxar. Välj den vars MITT
-            // ligger närmast där man faktiskt tryckte → varje bricka går att peta på,
-            // även i ett kluster. Brickan är botten-ankrad (kroppen sitter en bit OVANFÖR
-            // geopunkten), så jämför mot en punkt en bit ned från brick-kroppen.
-            const ANCHOR_LIFT_PX = 28;
-            const qx = e.point.x, qy = e.point.y + ANCHOR_LIFT_PX;
-            const ranked = candidates.map(f => {
-                const c = (f.geometry as GeoJSON.Point | undefined)?.coordinates;
-                const pp = c ? map.project([c[0], c[1]]) : null;
-                const d = pp ? Math.hypot(pp.x - qx, pp.y - qy) : 1e9;
-                return { f, d, count: Number(f.properties?.count) || 1 };
-            });
-            // Närmast vinner; ligger två i princip lika nära (≤3px) avgör flest event.
-            ranked.sort((a, b) => (Math.abs(a.d - b.d) > 3 ? a.d - b.d : b.count - a.count));
-            const key = ranked[0].f.properties?.key as string | undefined;
+            // Urvalet (avslöjade brickor, närmast pekaren vinner) ligger i
+            // pickHoverKey ovan — hover-bubblan måste peka ut exakt samma bricka
+            // som klicket öppnar. Inga kandidater = bara dolda brickor under
+            // fingret → låt det allmänna klicket avslöja dem i stället.
+            const key = pickHoverKey(map, e);
             // ÖNSKE-bricka (nyckel "wish:<id>") → öppna det lilla önske-kortet
             // (renderas av sidan) i stället för ett eventkort. Önskningar finns
             // aldrig i groups, så de måste fångas FÖRE grupp-uppslaget.
@@ -2152,17 +2291,82 @@ export default function V2Map({
         };
         const setPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = 'pointer'; };
         const clearPointer = () => { const c = map.getCanvas(); if (c) c.style.cursor = ''; };
+
+        // Håll musen över en bricka med flera event → en liten avlång bubbla med
+        // ALLA emojis brickan innehåller (Josef 9/8). Då ser man vad som ligger
+        // under utan att behöva öppna listan. Samma emoji flera gånger visas en
+        // gång med "×N". Följer musen mellan brickor; försvinner när man lämnar.
+        const hoverPeek = (e: maplibregl.MapLayerMouseEvent) => {
+            const key = pickHoverKey(map, e);
+            if (!key) { setHoverPeek(null); return; }
+            const group = groupsRef.current.get(key);
+            if (!group || group.length < 2) { setHoverPeek(null); return; }
+            // Räkna ihop emojis i gruppens ordning (först påträffad först).
+            const tally: { emoji: string; count: number }[] = [];
+            for (const ev of group) {
+                const emoji = eventEmoji(ev);
+                const hit = tally.find(t => t.emoji === emoji);
+                if (hit) hit.count += 1; else tally.push({ emoji, count: 1 });
+            }
+            const anchor = group.find(ev => isValidLatLng(ev.lat, ev.lng));
+            if (!anchor) { setHoverPeek(null); return; }
+            // Skärmläget räcker att räkna en gång: bubblan tas bort så fort
+            // kartan börjar röra sig (movestart nedan).
+            const p = map.project([anchor.lng!, anchor.lat!]);
+            setHoverPeek({ key, items: tally, total: group.length, x: p.x, y: p.y });
+        };
+        const clearHoverPeek = () => setHoverPeek(null);
+
         glHitLayers.forEach(id => {
             map.on('click', id, onGlMarkerClick);
             map.on('mouseenter', id, setPointer);
             map.on('mouseleave', id, clearPointer);
+            map.on('mousemove', id, hoverPeek);
+            map.on('mouseleave', id, clearHoverPeek);
         });
+        // Panorering/zoom får inte lämna kvar en bubbla vid fel bricka.
+        map.on('movestart', clearHoverPeek);
 
-        map.on('drag', () => {
+        /** Tvåfingersgest = nyp/zoom. Räknas inte som "användaren tog över
+         *  kartan", så bildspelet får rulla vidare medan man zoomar. */
+        const isPinch = (ev?: MouseEvent | TouchEvent | WheelEvent) =>
+            !!ev && 'touches' in ev && ev.touches.length >= 2;
+
+        map.on('drag', (e) => {
             if (onMapDragRef.current) {
                 onMapDragRef.current();
             }
+            if (isPinch(e.originalEvent)) return;
+            handleMapUserInteractionRef.current();
         });
+
+        // ZOOM STOPPAR INTE BILDSPELET (Josef 9/8): siffrorna räknar det som
+        // syns i vyn, så att zooma ut och in ÄR att utforska — man ser talen
+        // och brickorna växa och krympa. Därför ingen 'wheel'/'dblclick'-
+        // avstängning längre, och en tvåfingersnyp (pinch) räknas som zoom.
+        // Ett enfingerstouch är däremot början på en panorering eller en tapp
+        // och stoppar som förut.
+        map.on('touchstart', (e) => {
+            if (isPinch(e.originalEvent)) return;
+            handleMapUserInteractionRef.current();
+        });
+        map.on('click', (e) => {
+            handleMapUserInteractionRef.current();
+            // Ett BART kartklick (inte på en bricka, och inte en dragning —
+            // maplibre skickar ingen 'click' efter en pan) växlar vald dag ↔
+            // hela veckan: ligger inget i vägen är kartan i sig växeln.
+            //
+            // MEN: stängde samma klick ett eventkort/en multi-event-lista gör det
+            // bara det — perioden byts inte förrän man klickar på kartan med allt
+            // stängt (flaggan sätts i tomma-kartan-handlern ovan, som kör först).
+            const suppressed = suppressMapTapRef.current;
+            suppressMapTapRef.current = false;
+            if (suppressed) return;
+            if (!onMapTapRef.current) return;
+            const hits = map.queryRenderedFeatures(e.point, { layers: glHitLayers.filter(id => layerExists(map, id)) });
+            if (hits.length === 0) onMapTapRef.current();
+        });
+        // (Ingen 'dblclick'/'wheel'-avstängning — båda är ren zoom, se ovan.)
 
         // Real-time projection updater: håller multi-event-listan fastnitad vid
         // sin brickas geo-punkt när kartan pannas/zoomas.
@@ -2223,15 +2427,35 @@ export default function V2Map({
                 });
             }
             // Startvy: hämta användarens plats (platstjänst) men ZOOMA INTE in dit —
-            // vi vill se HELA Sverige när sidan öppnas. Vi sätter bara userPos så den
-            // blå plats-pricken visar var man är; kameran står kvar på standardvyn
-            // (mitt-Sverige, zoom 5). Nekad/timeout → ingen prick, samma vy.
+            // kameran styrs av sidan (bildspelet). Vi sätter bara userPos; den blå
+            // plats-pricken visar var man är och bildspelet hoppar dit när svaret
+            // kommer. Nekad → ingen prick, vyn står kvar.
+            //
+            // TIMEOUT 30 s, inte 8: klockan börjar ticka medan webbläsarens
+            // "tillåt plats?"-ruta fortfarande står uppe, och hinner man inte
+            // trycka ja i tid får vi TIMEOUT trots att man sagt ja (Josef 9/8 —
+            // man blev kvar i bildspelets startstad i stället för att flyttas hem).
             if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
+                const askPosition = () => navigator.geolocation.getCurrentPosition(
                     (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                    () => { /* nekad/timeout → ingen plats-prick, behåll Sverige-vyn */ },
-                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+                    () => { /* nekad/timeout → ingen plats-prick, behåll vyn */ },
+                    { enableHighAccuracy: true, timeout: 30_000, maximumAge: 60_000 },
                 );
+                askPosition();
+                // Livrem: svarar man JA långt efter att frågan dök upp (eller
+                // släpper på plats i webbläsarens inställningar) frågar vi igen
+                // så positionen ändå landar — utan en ny prompt, tillståndet är
+                // ju redan givet. Permissions-API:t saknas i äldre Safari; då
+                // får den enda långa timeouten ovan räcka.
+                navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+                    .then(status => {
+                        status.onchange = () => {
+                            // mapRef nollas i effektens städning — då är kartan
+                            // avmonterad och det finns ingen att flytta.
+                            if (status.state === 'granted' && mapRef.current) askPosition();
+                        };
+                    })
+                    .catch(() => { /* API:t finns inte — strunt samma */ });
             }
             // INGEN reseed på moveend. Avslöjningen drivs BARA av tryck (map 'click' →
             // startRevealTravel) + ett initialt seed nedan. Förut reseedade moveend till
@@ -2259,6 +2483,7 @@ export default function V2Map({
             if (paintRoundRef.current) { paintRoundRef.current.canceled = true; paintRoundRef.current = null; }
             map.remove();
             mapRef.current = null;
+            setMapInstance(null);
         };
     }, []);
 
@@ -2472,6 +2697,83 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
+    // 2d. Stads-bildspelet med mjuk övergång:
+    //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
+    //     hoppar direkt dit (jumpTo), väntar på att MapLibre ska ladda färdigt alla
+    //     tiles (map.once('idle')), och tonar sedan in kartan igen.
+    const prevCityTourKeyRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (!cityTourTarget) return;
+        if (cityTourTarget.key === prevCityTourKeyRef.current) return;
+        prevCityTourKeyRef.current = cityTourTarget.key;
+
+        const map = mapRef.current;
+        if (!map) return;
+
+        setTransitionCityName(cityTourTarget.cityName);
+        setIsTransitioning(true);
+        setOverlayVisible(true);
+
+        // Vänta tills överläggsfadern täckt skärmen innan vi hoppar
+        const jumpTimer = setTimeout(() => {
+            map.jumpTo({
+                center: [cityTourTarget.lng, cityTourTarget.lat],
+                zoom: cityTourTarget.zoom,
+            });
+
+            // En PÅGÅENDE tap-migration (startRevealTravel) marscherar mot en
+            // punkt i staden vi just lämnat, och dess sista bildruta skriver om
+            // både tändningen och revealSeedRef till den GAMLA destinationen.
+            // Landar den efter hoppet står nya staden kvar med bara nål-prickar
+            // tills något annat råkar räkna om seedet (t.ex. ett klick i
+            // stadsrutan) — därför avbryts den här: stadshoppet äger
+            // avslöjningen. Migrationen tar ~700 ms och hoppet ligger 300 ms
+            // bakom klicket, så ett kartklick strax före ett skylt-/play-hopp
+            // hann annars precis kollidera med det.
+            if (revealTweenRef.current != null) {
+                cancelAnimationFrame(revealTweenRef.current);
+                revealTweenRef.current = null;
+            }
+            // Avslöjningen är annars förankrad vid ANVÄNDARENS plats — flyger
+            // bildspelet till Göteborg medan besökaren sitter i Stockholm står
+            // staden kvar med bara nål-prickar. Flytta ankaret till staden och
+            // räkna om seedet direkt (inget vandrings-tween: kartan hoppade,
+            // och överlägget täcker ändå omställningen) → brickorna kring
+            // stadens centrum är tända när överlägget tonar bort. Samma
+            // omräkning körs sedan automatiskt vid varje datauppdatering, så
+            // vecko-blinket tänder sina extra brickor på samma ställe.
+            revealAnchorPtRef.current = { lng: cityTourTarget.lng, lat: cityTourTarget.lat };
+            revealMarchPtRef.current = { lng: cityTourTarget.lng, lat: cityTourTarget.lat };
+            recomputeRevealSeedRef.current();
+
+            let done = false;
+            const onIdle = () => {
+                if (done) return;
+                done = true;
+                clearTimeout(safetyTimer);
+                // Nu är kartan laddad! Tona ut överlägget.
+                setOverlayVisible(false);
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                }, 400); // matchar CSS transition duration (300-400ms)
+            };
+
+            // Sätt upp en lyssnare för när kartan är helt redo/idle
+            map.once('idle', onIdle);
+
+            // Säkerhetstimer om idle-eventet tar för lång tid (t.ex. vid nätverksproblem)
+            const safetyTimer = setTimeout(() => {
+                map.off('idle', onIdle);
+                onIdle();
+            }, 3000);
+        }, 300);
+
+        return () => {
+            clearTimeout(jumpTimer);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cityTourTarget]);
+
 
     // 3. Uppdatera markörer i DOM:en när data eller synliga gränser förändras
     useEffect(() => {
@@ -2609,7 +2911,7 @@ export default function V2Map({
                     zoomInOnFirstEventClick(rep);
                 };
 
-                // "Stor" källa (PRO/Korpen/Svenska kyrkan) exkluderas från
+                // "Stor" källa (PRO/Svenska kyrkan) exkluderas från
                 // kategorifärgningen → standardmörk bricka; övriga får sin kategori-
                 // färg. Speciella tillstånd (vald/featured/sparad) går alltid före nedan.
                 const catColorHex = brickaBodyHex(rep);
@@ -2665,6 +2967,19 @@ export default function V2Map({
                 // eller skifta plats (scale 1.2 gjorde båda). Behåll normal storlek.
                 const baseScale = count > 1 ? 0.91 : 1;
                 const scaleStyle = `scale(${baseScale})`;
+
+                // Den valda gruppen ritas i BÅDA lagren (GL-brickan ligger kvar
+                // under DOM-markören, se plainData) — då måste de ligga exakt på
+                // varandra, annars sticker GL-brickan upp ovanför den DOM-bricka
+                // som poppar fram vid klick. Räkna fram mellanskillnaden:
+                //   GL:  kroppens mitt = BRICKA_CENTER_ABOVE_COORD × icon-size
+                //        ovanför koordinaten (bildens nederkant på koordinaten).
+                //   DOM: 'bottom'-anchor + transform-origin bottom center →
+                //        kroppens mitt = 30 × scale ovanför elementets nederkant
+                //        (.pin-element är 52 px hög, 44 px-kroppen sitter i top:0).
+                // Utan offseten låg DOM-brickan ~7 px för lågt.
+                const DOM_BODY_CENTER_ABOVE_BOTTOM = 30;
+                markerData.marker.setOffset([0, -(BRICKA_CENTER_ABOVE_COORD * GL_ICON_SIZE_TOP - DOM_BODY_CENTER_ABOVE_BOTTOM * baseScale)]);
                 const opacityStyle = isDiscarded ? 'opacity: 0.25; filter: grayscale(1);' : '';
 
                 const emoji = eventEmoji(rep);
@@ -2764,6 +3079,51 @@ export default function V2Map({
 
     return (
         <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, background: containerBg }}>
+            {/* Vägskyltarna mot närmaste städer. Bor INUTI kartan för att kunna
+                ankras i marken (de projiceras om vid varje 'move' i stället för
+                att räknas om — annars hoppar de vid varje kartrörelse). */}
+            {signpostCities.length > 0 && onPickSignpost && (
+                <CitySignposts
+                    map={mapInstance}
+                    cities={signpostCities}
+                    onPick={onPickSignpost}
+                    hidden={signpostsHidden}
+                    // Bildspelets stadshopp är den enda kamerarörelse som får
+                    // sätta ut skyltarna på nytt — egen panorering ska aldrig
+                    // flytta dem (se CitySignposts).
+                    placeKey={cityTourTarget?.key ?? 0}
+                />
+            )}
+            {/* Hover-bubblan: vad ligger i den här brickan? En avlång platta med
+                gruppens emojis (dubletter som "emoji ×N") ovanför brickan, så
+                man kan svepa över kartan och se innehållet utan att klicka.
+                pointer-events-none — den ska aldrig stjäla klicket på brickan. */}
+            {hoverPeek && (
+                <div
+                    className="absolute z-[880] pointer-events-none"
+                    style={{ left: hoverPeek.x, top: hoverPeek.y - HOVER_PEEK_LIFT_PX, transform: 'translate(-50%, -100%)' }}
+                >
+                    {/* flex-wrap + max-w: många olika emojis rann annars rakt ut
+                        ur plattan. Nu bryter de rad och bubblan växer på höjden
+                        i stället (rundad ruta i stället för pill när det blir
+                        mer än en rad). */}
+                    <div className="flex max-w-[236px] flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-2xl bg-slate-900/85 backdrop-blur-md px-3 py-1.5 shadow-2xl border border-white/15 animate-in fade-in duration-150">
+                        {hoverPeek.items.slice(0, HOVER_PEEK_MAX_EMOJI).map(({ emoji, count }) => (
+                            <span key={emoji} className="flex shrink-0 items-center gap-0.5 whitespace-nowrap leading-none">
+                                <span className="text-base">{emoji}</span>
+                                {count > 1 && (
+                                    <span className="text-[10px] font-black tabular-nums text-white/70">×{count}</span>
+                                )}
+                            </span>
+                        ))}
+                        {hoverPeek.items.length > HOVER_PEEK_MAX_EMOJI && (
+                            <span className="shrink-0 text-[10px] font-black tabular-nums text-white/70">
+                                +{hoverPeek.items.length - HOVER_PEEK_MAX_EMOJI}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
             {/* Multi-event-lista: egen komponent (V2MapGroupList). Ankras vid den
                 klickade brickans övre högra hörn; groupListPos projiceras om på
                 move/zoom (updateCloudPosition) så den följer kartan. */}
@@ -2944,6 +3304,27 @@ export default function V2Map({
 
             `}</style>
             <div ref={mapContainerRef} className="absolute inset-0 map-state-full" style={{ width: '100%', height: '100%' }} />
+
+            {isTransitioning && (
+                <div
+                    onClick={handleMapUserInteraction}
+                    className={`absolute inset-0 z-[1500] flex flex-col items-center justify-center backdrop-blur-md bg-slate-900/60 dark:bg-slate-950/70 transition-opacity duration-300 pointer-events-auto cursor-pointer ${
+                        overlayVisible ? 'opacity-100' : 'opacity-0'
+                    }`}
+                >
+                    <div className="flex flex-col items-center gap-4 text-center px-6">
+                        <span className="w-8 h-8 rounded-full border-4 border-white/20 border-t-[#FECC02] animate-spin" />
+                        <div className="flex flex-col gap-1">
+                            <p className="text-lg font-black text-white tracking-wide">
+                                Blickar över {transitionCityName}
+                            </p>
+                            <p className="text-[11px] text-white/60 font-bold uppercase tracking-wider animate-pulse">
+                                Klicka på kartan för att stanna
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Fallback om WebGL inte gick att initiera (t.ex. blockerad efter en
                 tidigare kontextförlust) — sidan kraschar inte, man kan ladda om. */}

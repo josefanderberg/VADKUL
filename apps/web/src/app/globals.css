@@ -320,6 +320,26 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .city-cta::before { animation: none; }
+  .gold-glow-pulse { animation: none; }
+  .emerald-glow-pulse { animation: none; }
+}
+
+/* Subtil pulserande guld-glöd för "Evenemang stad för stad"-knappen */
+@keyframes gold-glow-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(0, 106, 167, 0.4), 0 0 0 0 rgba(254, 204, 2, 0.3); }
+  50%      { box-shadow: 0 6px 20px rgba(0, 106, 167, 0.5), 0 0 0 3.5px rgba(254, 204, 2, 0.65); }
+}
+.gold-glow-pulse {
+  animation: gold-glow-pulse 3.5s ease-in-out infinite;
+}
+
+/* Subtil pulserande emerald-glöd för "Skapa event"-knappen */
+@keyframes emerald-glow-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35), 0 0 0 0 rgba(254, 204, 2, 0.35); }
+  50%      { box-shadow: 0 6px 20px rgba(5, 150, 105, 0.55), 0 0 0 3.5px rgba(254, 204, 2, 0.7); }
+}
+.emerald-glow-pulse {
+  animation: emerald-glow-pulse 3.5s ease-in-out infinite;
 }
 
 /* Stadssidornas kart-hero: brickorna poppar in staggrat (delay sätts inline

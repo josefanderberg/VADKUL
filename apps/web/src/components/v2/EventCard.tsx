@@ -1776,7 +1776,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 ? onUnsaveEvent(selectedEvent.id)
                                 : onSaveEvent(selectedEvent.id))
                             : undefined}
-                        canDelete={!!(currentUserUid && selectedEvent.userCreated && selectedEvent.hostUid === currentUserUid)}
+                        // Sitt eget event — eller ett tips som lämnats utan konto.
+                        // Anonyma tips saknar ägare som kan städa upp efter sig,
+                        // så vem som helst får plocka bort dem om någon spammar.
+                        canDelete={!!(selectedEvent.userCreated
+                            && (selectedEvent.anonTip
+                                || (currentUserUid && selectedEvent.hostUid === currentUserUid)))}
                         onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
                         // Boost: alla inloggade får boosta ALLA användarskapade event
                         // (5/8 — inte längre bara sina egna). Skrapade event kan inte

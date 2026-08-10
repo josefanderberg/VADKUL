@@ -12,6 +12,10 @@ interface WelcomeOverlayProps {
     todayEventCount?: number;
     /** Antal event som börjar inom 1 timme */
     soonEventCount?: number;
+    /** Fyrar när rutan stängts klart. Föräldern avmonterar den då — overlayn
+     *  visas inte längre automatiskt vid sidladdning utan öppnas från
+     *  info-knappen, och måste kunna öppnas igen efteråt. */
+    onClose?: () => void;
 }
 
 /** Exit-animationens längd — skickas till CSS via --welcome-exit-ms så de inte kan glida isär. */
@@ -73,7 +77,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonEventCount }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonEventCount, onClose }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -81,6 +85,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonE
     const cardRef = useRef<HTMLDivElement>(null);
     const onCreateAccountRef = useRef(onCreateAccount);
     onCreateAccountRef.current = onCreateAccount;
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
 
     const shownCount = useCountUp(todayEventCount ?? 0);
 
@@ -103,6 +109,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonE
         setClosing(true);
         window.setTimeout(() => {
             setOpen(false);
+            onCloseRef.current?.();
             if (thenCreateAccount) onCreateAccountRef.current();
         }, EXIT_MS);
     }, []);

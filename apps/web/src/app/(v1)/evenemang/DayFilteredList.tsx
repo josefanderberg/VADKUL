@@ -7,7 +7,7 @@ import { PERIODS, periodKeys, relativeDayLabel, type Period } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 
 // Klientdelen av stads-/kategorisidornas eventsektion. Filterraden ligger
-// ÖVERST och styr allt under den: Rekommenderat-karusellen, och daglistan.
+// ÖVERST och styr allt under den (kategorichipsen och daglistan).
 // Filter i två dimensioner:
 //  - DAG: Alla/Idag/Imorgon/I helgen (räknas mot användarens riktiga klocka,
 //    periods.ts) + en chip per listad dag ("Lör 11/7"), + "Nästa timmen".
@@ -66,22 +66,6 @@ export type ListedDay = {
     events: ListedEvent[];
     /** Antal event per starttimme 0–23 för dagen — histogrammets staplar. */
     hourCounts: number[];
-};
-
-/** Rekommenderat-kort, förbyggt på servern (cityData är server-only). */
-export type ListedRec = {
-    id: string;
-    href: string;
-    title: string;
-    coverImage?: string;
-    emoji: string;
-    /** T.ex. "Torsdag 9 juli · kl 18.30" (byggd på servern). */
-    when: string;
-    place: string;
-    /** 'YYYY-MM-DD' (svensk tid) — matchas mot periodKeys. */
-    dayKey: string;
-    hour: number | null;
-    t: number;
 };
 
 type Sel =
@@ -302,13 +286,11 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     );
 }
 
-export default function DayFilteredList({ days, recs = [], restCount, cityName, children }: {
+export default function DayFilteredList({ days, restCount, cityName, children }: {
     days: ListedDay[];
-    /** Rekommenderade kort (tidssorterade, närmast först). Tom = ingen sektion. */
-    recs?: ListedRec[];
     restCount: number;
     cityName: string;
-    /** Renderas mellan Rekommenderat och daglistan (t.ex. kategorichips). */
+    /** Renderas mellan filterraden och daglistan (t.ex. kategorichips). */
     children?: ReactNode;
 }) {
     const [sel, setSel] = useState<Sel>({ kind: 'period', period: 'all' });
@@ -420,14 +402,6 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
         };
     }, [revealed, hasMoreDays, sel, hours]);
 
-    // Rekommenderat följer samma filter; passerade kort försvinner helt.
-    const shownRecs = recs.filter(r =>
-        (dayKeys ? dayKeys.includes(r.dayKey) : true)
-        && (sel.kind === 'nextHour' ? r.t >= now && r.t < now + HOUR_MS
-            : hours.length ? r.hour !== null && hours.includes(r.hour)
-            : true)
-        && !isPast(r));
-
     // Histogram = summan av de visade dagarnas hourCounts (sanna totaler).
     const hist = Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + (d.hourCounts[h] ?? 0), 0));
     const histMax = Math.max(...hist, 1);
@@ -538,64 +512,6 @@ export default function DayFilteredList({ days, recs = [], restCount, cityName, 
                     </div>
                 </div>
             )}
-
-            {/* Rekommenderat — tidssorterat (närmast först) och styrt av samma
-                filter som listan. Bildkarusell, ren CSS-scroll med snap. */}
-            {shownRecs.length > 0 && (
-                <section className="mt-8">
-                    <h2 className="text-base font-black text-slate-900 flex items-center gap-1.5">
-                        <span aria-hidden>⭐</span> Rekommenderat i {cityName}
-                    </h2>
-                    <p className="mt-1 text-xs font-medium text-slate-500">
-                        Utvalda händelser du inte vill missa — det närmaste i tid först.
-                    </p>
-                    <ul className="mt-3 flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 pb-1">
-                        {shownRecs.map(r => (
-                            <li key={r.id} className="shrink-0 snap-start">
-                                <Link
-                                    href={r.href}
-                                    className="relative block w-56 h-48 rounded-2xl overflow-hidden border-2 border-[#FECC02]/70 hover:border-[#FECC02] transition-colors"
-                                >
-                                    {/* Bakgrund: omslagsbild, annars emoji på mörk platta
-                                        (texten är vit — behöver mörk botten). */}
-                                    {r.coverImage ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={r.coverImage}
-                                            alt=""
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer"
-                                            className="absolute inset-0 w-full h-full object-cover bg-slate-200"
-                                        />
-                                    ) : (
-                                        <span className="absolute inset-0 bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-5xl" aria-hidden>
-                                            {r.emoji}
-                                        </span>
-                                    )}
-                                    {/* Läsbarhets-scrim upptill + nedtill. */}
-                                    <span aria-hidden className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
-                                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-                                    {/* Titel + tid på bilden. */}
-                                    <span className="absolute inset-x-0 top-0 p-3">
-                                        <span className="block text-sm font-black text-white leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
-                                            {r.title}
-                                        </span>
-                                        <span className="block mt-1 text-[11px] font-bold text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
-                                            {r.when}
-                                        </span>
-                                    </span>
-                                    {/* Platsen längst ner. */}
-                                    <span className="absolute inset-x-0 bottom-0 p-3 flex items-center gap-1 text-[11px] font-bold text-white/90">
-                                        <span aria-hidden>📍</span>
-                                        <span className="truncate">{r.place}</span>
-                                    </span>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            )}
-
             {children}
 
             <div className="mt-6 flex flex-col gap-10">

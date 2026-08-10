@@ -169,8 +169,16 @@ export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
 
 /**
  * Opt-in-"kategorier" som INTE är LLM-kategorier utan KÄLLOR med väldigt många
- * event (Korpen, Svenska kyrkan, PRO). De är avstängda som default och ingår
- * INTE i "visa alla" — deras event syns bara när användaren själv kryssar i dem.
+ * event (Svenska kyrkan, PRO). De är avstängda som default och ingår INTE i
+ * "visa alla" — deras event syns bara när användaren själv kryssar i dem.
+ *
+ * Hembygdsföreningarna låg här men är borttagna (9/8, ägarbeslut: de ska ingå
+ * med resten). Där togs även SOURCE_DEFS-raden bort — utan den klassas de inte
+ * som källa och faller in i sin vanliga LLM-kategori, alltid synliga.
+ *
+ * Korpen låg här förut men är borttaget (8/8, ägarbeslut: utbudet är i praktiken
+ * Stockholmsbundet). Källan finns KVAR i SOURCE_DEFS utan knapp — då förblir
+ * dess ~2 600 event dolda i stället för att falla tillbaka i "visa alla".
  *
  * Nycklarna måste matcha SOURCE_DEFS i ./sources (klassningen sker på event-
  * URL:ens värdnamn via classifySource, samma logik som markörfärgen på kartan).
@@ -179,14 +187,6 @@ export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
  * 500/600-kulörer (kyrkans violett vs Scens lila, PRO:s rosa vs Musiks rosa).
  */
 export const SPECIAL_CATEGORIES = {
-  korpen: {
-    id: 'korpen',
-    label: 'Korpen',
-    emoji: '🏃',
-    markerHex: '#15803d',
-    color: 'bg-green-100 text-green-700',
-    description: 'Korpen — motion & breddidrott',
-  },
   svenskakyrkan: {
     id: 'svenskakyrkan',
     label: 'Svenska kyrkan',
@@ -207,7 +207,7 @@ export const SPECIAL_CATEGORIES = {
 
 export type SpecialCategoryType = keyof typeof SPECIAL_CATEGORIES;
 
-/** Ordnad lista (Korpen, Svenska kyrkan, PRO) för opt-in-raderna i filtret. */
+/** Ordnad lista (Svenska kyrkan, PRO) för opt-in-raderna i filtret. */
 export const SPECIAL_CATEGORY_LIST = Object.values(SPECIAL_CATEGORIES);
 
 /** Snabb uppslagning: är ett filter-id en opt-in-källa (inte en LLM-kategori)? */

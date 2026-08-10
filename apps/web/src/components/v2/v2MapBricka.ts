@@ -22,6 +22,18 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 
+// ── Bakade brickans mått ───────────────────────────────────────────────────
+// Kroppen (S) och luften runt den (pad, för kant + skugga). Bilden ankras
+// 'bottom' i GL-lagret → BILDENS nederkant ligger på koordinaten och spetsen
+// hamnar `pad` px ovanför den. Avståndet från koordinaten upp till kroppens
+// MITT är därför pad + halva diagonalen. DOM-brickan (som ritas ovanpå GL-
+// brickan för den valda gruppen) måste räkna med samma tal för att hamna exakt
+// över — annars sticker GL-brickan upp ovanför den. Multipliceras med lagrets
+// icon-size.
+export const BRICKA_IMG_S = 40;
+export const BRICKA_IMG_PAD = 7;
+export const BRICKA_CENTER_ABOVE_COORD = BRICKA_IMG_PAD + (BRICKA_IMG_S * Math.SQRT2) / 2;
+
 // En grupp "börjar inom 1 timme" om något event startar i framtiden men inom en
 // timme. Samma villkor ger DOM-brickan dess orange ram och GL-pricken sin orange
 // fyllning — dela helpern så de aldrig glider isär.
@@ -86,7 +98,7 @@ export const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, 
 
 // Brick-kroppens kategori-/källfärg för ETT event i normaltillstånd → sin
 // kategoris markerHex (okänd kategori → mörk standardbricka via null). Opt-in-
-// källorna (PRO/Korpen/Svenska kyrkan) följer samma regel som allt annat: när
+// källorna (PRO/Svenska kyrkan) följer samma regel som allt annat: när
 // användaren aktiverat dem integreras de visuellt med sin vanliga kategorifärg
 // (ingen egen mörk källbricka längre). Delas av GL-lagret, DOM-synken, slideshow-
 // cyclern och vald-grupp-bläddringen så bakgrunden ALLTID matchar det event som
@@ -124,8 +136,8 @@ export const WISH_DOT_HEX = '#8b5cf6';
 export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
-    const S = 40;          // brickans kropp (logiska px), nära DOM:ens 44
-    const pad = 7;         // luft för kant + skugga
+    const S = BRICKA_IMG_S;      // brickans kropp (logiska px), nära DOM:ens 44
+    const pad = BRICKA_IMG_PAD;  // luft för kant + skugga
     const diag = S * Math.SQRT2;
     const W = Math.round(diag + pad * 2);
     const H = Math.round(diag + pad * 2);

@@ -2406,3 +2406,245 @@ KRÄVDE GODKÄNNANDE.** Karens till 2026-08-29 för samtliga.
 Stockholm/Kvänum-Vara-Skara/Ängelholm/Nora (6/8) och nu Gotlandstrion (8/8).
 **Elva inlägg i kö.** Gränna är i praktiken förlorad — bluegrassfestivalen som
 inlägget vilade på går av stapeln 15/8.
+
+## Måndag 10/8 — 4 orörda grupper, veckans event (10–16/8)
+
+Urval ur färsk prod-data (`/api/events/destinations` + `/cards`, uppdaterad
+10/8 09:50Z; 3 519 event i landet denna vecka med koordinater, opt-in-källor
+bortfiltrerade). **33 av 85 grupper är orörda.** Poängsatta på utbud denna
+vecka, med Nykvarn-regeln som filter (event i SJÄLVA orten, inte bara radien).
+
+**Radien ljög igen — nu dokumenterat med siffror.** Namnmatchning avslöjade
+falska träffar i tre av kandidaterna: "Backa" matchade Kungsbacka, Mårbacka
+(Värmland!) och Öbacka (Umeå); Huddinges 8 km-radie drog in Vitabergsparken,
+Hägersten och Farsta; Älmhults 15 km drog in Osby. Sant lokalt utbud:
+
+| grupp | ≤radie | verkligt lokalt | omdöme |
+|---|---|---|---|
+| #82 Göteborg ⭐ Västra Götaland | 323 | 323 | ✅ Way Out West-veckan |
+| #79 Vad händer på Hisingen? | — | 28 | ✅ nästan bara gratis sommarlov |
+| #31 Vad händer i Haninge | 28 | ~8 | ⚠️ tunnast av de fyra |
+| #10 Händer i Hudiksvall! 🌞 | 9 | 9 | ✅ få men bra |
+| #70 Huddinge | 31 | 6 | ❌ resten är Stockholm |
+| #37/#68 Ängelholm | 18 | 14 | ❌ systergrupp postad 6/8 (4 dygn) |
+| #38 Tierps kommun? | 8 | 8 | ❌ LOGGRISK, se nedan |
+| #24 Kungsbacka | 26 | 4 | ❌ bortvald tredje gången |
+
+**🚨 LOGGRISK Tierp:** masterlistan bokför 19/7-inlägget på **#2 "Vad händer i
+Tierp kommun"**, men utkastet i den här filen heter **"6. Vad händer i Tierps
+kommun?"** — exakt namnet på **#38**, som står som orörd. Antingen är #38 redan
+postad och bokförd på fel rad, eller tvärtom. Reds ut innan någon av dem används.
+
+### AI. VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland (#82 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+
+V1:
+
+> Way Out West-veckan i Göteborg 👇
+>
+> 🎪 Way Out West i Slottsskogen (torsdag–lördag 13–15/8)
+> 🎤 Daniela Rathana live på Liseberg (onsdag 12/8 kl 20)
+> 🎸 Klubb Död – WoW-preparty på Monument, Ringön (onsdag 12/8 kl 19)
+> 🎤 GBG Standup Tour på Vasaplatsen (tisdag 11/8 kl 20)
+> 🎸 Fria Fredagar – gratiskonsert på Monument (fredag 14/8 kl 17)
+> 🛍️ Canal Street Market, vintagemarknad på Grönsakstorget (lördag 15/8 kl 10)
+> 🛍️ Bakluckeloppis på Bananpiren i Frihamnen (lördag 15/8 kl 11)
+> 🚶 Guidad vandring: 400 år på 800 meter, Gustav Adolfs Torg (lördag 15/8 kl 15)
+> 🎶 Nick Mutiso live på Roys uteservering i Mölndal (lördag 15/8 kl 18)
+> ⚽ GAIS i allsvenskan på Gamla Ullevi (söndag 16/8 kl 16.30)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — över 300 event i Göteborg bara den
+> här veckan:
+> https://vadkul.se/evenemang/goteborg
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er den här veckan? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det jag missat!`
+
+### AJ. Vad händer på Hisingen? (#79 → vadkul.se) — ✅ POSTAT 10/8 · KRÄVDE GODKÄNNANDE, i kö
+
+Vinkel: nästan allt lokalt utbud på Hisingen den här veckan är GRATIS
+sommarlovsaktiviteter för barn — det är vad datat säger, så det är det
+inlägget handlar om. Ingen rad utanför Hisingen.
+
+V1:
+
+> Massor av gratis grejer för barnen på Hisingen den här veckan 👇
+>
+> 🥋 Sommarlovsäventyr med Kärra Taekwon-DO, Kärra Centrum (måndag 10/8 kl 9)
+> 🥾 Dagshajk och bad i Vättlefjäll, samling Tuve Torg (tisdag 11/8 kl 9.45)
+> 🎾 Tennis i Backa – Backa Röd/Backavallen (tisdag 11/8)
+> 🛼 Fritidsbanken på sommarturné, Vårväderstorget (tisdag 11/8 kl 12)
+> ⚽ Streetgames PopUp Brunnsbo, Kåserigatan (tisdag 11/8 kl 13)
+> 📚 Sagostund på arabiska och svenska, Selma Lagerlöfs Torg (tisdag 11/8 kl 16)
+> ✂️ Sommarpyssel på Tuve bibliotek (onsdag 12/8 kl 12)
+> 🥎 Brännboll och Superstar på Tuve Torg (onsdag 12/8 kl 14)
+> 🎬 Sommarfilmklubb 7–12 år, Selma Lagerlöfs Torg (onsdag 12/8 kl 15)
+> 💃 K-pop i Tuve + Grill & Chill på Tuve Torg (fredag 14/8 kl 15 och 16)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — ett 30-tal event på Hisingen den här
+> veckan, och betydligt fler över älven:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad gör ni med barnen den här veckan? 👇
+
+V2: kartstycket utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas på Hisingen!`
+
+### AK. Händer i Hudiksvall! 🌞 (#10 → vadkul.se) — ❌ MAKULERAT: gruppen var redan postad 7/8 (se rutan ovan)
+
+Bara 9 event i trakten denna vecka — över Nykvarn-tröskeln, men tunt. Därför
+kortare lista och TYNGRE tipsfråga. Iggesund och Forsa utskrivna på raden.
+
+V1:
+
+> Det här hittade jag i Hudiksvallstrakten den här veckan 👇
+>
+> 🤸 Träna med Cirkus Cirkör, Iggesunds Folkets Hus (måndag 10/8)
+> 🎷 Musik i sommarkväll – Härlig är jorden, Jakobs kyrka (tisdag 11/8)
+> 🥏 Onsdagskastet – discgolf med Friluftsfrämjandet (onsdag 12/8)
+> 🎉 Finflo-Cup 35-årsjubileum med bankett och eftersläpp, Köpmanberget (fredag 14/8)
+> 🪁 MFK-Hudik MAYHEM 2026, Galgbergsvägen (lördag 15/8)
+> 🦐 Räkfrossa på Hamnkrogen, Håstaholmen (lördag 15/8)
+> 🎤 Sommarkvällar på Ystegårn med Ronny Eriksson, Forsa (söndag 16/8)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt —
+> över 3 500 event i landet bara den här veckan — men allt slinker inte med,
+> och Hudiksvall är tunnare än det borde vara:
+> https://vadkul.se
+>
+> Så: vad missar jag? 👇 Med ett gratis konto kan du
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+
+V2: kartstycket utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — säg till om jag missat något i Hudiksvall!`
+
+### AL. Vad händer i Haninge (#31 → vadkul.se) — ✅ POSTAT 10/8 · inget godkännande krävdes, uppe direkt
+
+⚠️ TUNNAST av de fyra (~8 verkligt lokala). Tyresö och Ornö utskrivna på
+raderna. **Valupptakten med Socialdemokraterna är medvetet bortvald** — partipolitik
+i en ortsgrupp är fel ställe för ett VADKUL-inlägg.
+
+V1:
+
+> Det händer mer i Haninge den här veckan än man tror 👇
+>
+> 🎸 Freezone spelar på Jordbrofestivalen (lördag 15/8 kl 13)
+> 🛶 Måndagspaddling i kanadensare på Drevviken (måndag 10/8 kl 18)
+> 📚 Läsa tillsammans i Handen (tisdag 11/8 och onsdag 12/8 kl 11)
+> 🧗 Sportklättring i Nyckelviksberget (lördag 15/8 kl 9.30)
+> 🌿 Slåtter på Ornö, Lustehagen (söndag 16/8 kl 14)
+> 🧗 Klättra utomhus på Träskberget i Tyresö (söndag 16/8 kl 12.45)
+> 🧘 Prova-på-yoga på Vendelsövägen i Trollbäcken (tisdag, onsdag och söndag)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
+> men allt slinker inte med:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad borde stå på den här listan? 👇
+
+V2: kartstycket utan länk + kommentar. Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Haninge!`
+
+**Postningsordning:** #82 och #79 är båda Göteborg — lägg minst ett dygn mellan
+dem, medlemmarna överlappar. Hudiksvall och Haninge kan gå samma dag.
+
+## 🚨 LÄRDOM + REKORD 2026-08-10: Hudiksvall slog kommentarsrekordet — och var redan postad
+
+**Utfall Hudiksvall (#10), postat 7/8, rapporterat av Josef 10/8:**
+**47 likes · 40 kommentarer · 6 delningar.**
+
+Det är **projektets bästa engagemang hittills i kommentarer** — det gamla
+rekordet var Gotland 26/7 (72 likes men bara 13 kommentarer), och Helsingborg
+24/7 låg på 26/15. Fyrtio kommentarer i en ortsgrupp är en helt annan
+storleksordning än allt annat vi gjort. **Sex delningar är också först** —
+inget tidigare gruppinlägg har delats alls (och vi har aldrig bett om det,
+vilket är hela poängen med regeln att aldrig skriva "dela gärna").
+
+Värt att notera i ljuset av Nykvarn-läxan: Hudiksvall är en av de TUNNASTE
+orterna i hela listan — **9 event i trakten den veckan**. Det tunna utbudet
+var alltså inget hinder; om något verkar den ärliga "det här är vad jag
+hittade, vad missar jag?"-vinkeln vara det som drar kommentarer. Malå-formatet
+är inte en nödlösning för tunna orter — det kan vara det STARKASTE formatet.
+Följ upp: läs igenom de 40 kommentarerna, kolla lagret innan svar (RUTINEN),
+och se om tipsen går att skrapa.
+
+**🚨 LOGGLÄXAN — masterlistan låg efter verkligheten.** Urvalet 10/8 gjordes
+på `facebook-grupplista.md`, där #10 stod som **orörd**. Hudiksvall valdes
+därför ut och ett helt utkast (AK) skrevs för en grupp som redan var postad
+tre dagar tidigare och som ligger i karens till ~28/8. Utkastet är makulerat.
+Detta är samma feltyp som "ODOKUMENTERAT 29–31/7". **Regel: fyll i
+Postat-cellen samma dag du postar** — annars väljer nästa urval fel grupp, och
+i värsta fall postas det två gånger i samma grupp inom karensen.
+
+### Statusrapport 10/8
+
+| grupp | utkast | utfall |
+|---|---|---|
+| #10 Händer i Hudiksvall! 🌞 | (odokumenterat, 7/8) | **47 / 40 / 6** ⭐ rekord |
+| #79 Vad händer på Hisingen? | AJ | postat 10/8, **krävde godkännande** — i kö |
+| #31 Vad händer i Haninge | AL | postat 10/8, **inget godkännande** — uppe direkt |
+| #82 Göteborg ⭐ Västra Götaland | AI | ❓ status obekräftad |
+
+Godkännandemönstret hittills: de stora, breda grupperna har kö (Stockholm,
+Gotland, Ängelholm, Hisingen), de mindre ortsgrupperna släpper igenom direkt
+(Haninge, Torshälla, Nykvarn). Räkna med kö i allt som är storstad eller
+över ~10k medlemmar.
+
+### AM. Vad händer i östra Göteborg? (#32 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+
+Ersätter det makulerade Hudiksvallsutkastet. Vald på data: **28 unika event i
+själva nordöstra Göteborg** denna vecka (Angered, Bergsjön, Hammarkullen,
+Gårdsten, Hjällbo, Kortedala, Gamlestaden) — bäst kvarvarande utbud av alla
+orörda grupper. Huddinge (#70) föll på 5 verkligt lokala event, Ängelholm
+(#37/#68) på att systergruppen postades 6/8.
+
+⚠️ **TREDJE Göteborgsgruppen den här veckan** (#82 och #79 är redan uppe).
+Raderna delar inte ett enda event med de två andra — men lägg minst ett dygn
+emellan, medlemmarna kan överlappa.
+
+V1:
+
+> Nordöstra Göteborg har fullt program den här veckan — och nästan allt är gratis 👇
+>
+> 🏀 Basket och läsning i Gårdstensdalen (måndag 10/8 kl 14)
+> 🏺 Prova på att forma med lera, Angereds bibliotek (måndag 10/8 kl 14)
+> 📚 Saga och pyssel på franska och spanska, Bergsjöns kulturhus (måndag 10/8 kl 15)
+> 🐴 Ponnyridning på Hammarkullens parklek (tisdag 11/8 kl 13)
+> 🎬 Animera med stopmotion, Bergsjöns kulturhus (tisdag 11/8 kl 14)
+> 💃 Street och hiphop för dig 12–15 år, Bergsjöns kulturhus (tisdag 11/8 kl 16)
+> 🎨 Grafik och linoleumtryck, Bergsjöns kulturhus (tisdag 11/8 kl 14.45)
+> 💃 Orientalisk dans i Hjällbo, Kärnan (onsdag 12/8 kl 11)
+> 🎓 Föreläsning om psykisk hälsa, Kortedala Torg (onsdag 12/8 kl 14)
+> ☕ Öppet hus i Angered, Angereds Torg (måndag 10/8 och onsdag 12/8)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — ett 30-tal event i nordost bara den
+> här veckan, och över 300 i hela Göteborg:
+> https://vadkul.se/evenemang/goteborg
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad missar jag som borde stå på listan? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som saknas i nordost!`

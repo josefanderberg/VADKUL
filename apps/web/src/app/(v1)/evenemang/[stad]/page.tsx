@@ -58,8 +58,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         .map(cat => ({ cat, count: perKey.get(cat.dataKey) ?? 0 }))
         .filter(c => c.count >= MIN_CATEGORY_EVENTS);
 
-    // Rekommenderat = unika/påkostade händelser (rankingen i cityData), men
-    // visas närmast-i-tid-först och styrs av filterraden överst på sidan.
+    // Unika/påkostade händelser (rankingen i cityData) — går numera BARA till
+    // kart-heron, som väljer sina brickor ur dem. Den egna "Rekommenderat"-
+    // karusellen i listan är borttagen 9/8 (ägarbeslut: urvalet höll inte).
     const recommended = pickRecommended(events);
 
     // Idag/helg-siffror + vanligaste platserna — unik, sökfras-matchande text
@@ -136,9 +137,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
 
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
-                    i sektionen och styr allt under: Rekommenderat, kategori-
-                    chipsen (children) och dag-för-dag-listan. */}
-                <EventDayList events={events} cityName={city.name} recommended={recommended}>
+                    i sektionen och styr allt under: kategorichipsen (children)
+                    och dag-för-dag-listan. */}
+                <EventDayList events={events} cityName={city.name}>
                     {cityCategories.length > 0 && (
                         <div className="mt-8">
                             <h2 className="text-sm font-black text-slate-900 mb-2">Populärt i {city.name}</h2>
