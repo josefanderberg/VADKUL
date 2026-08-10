@@ -784,7 +784,18 @@ export default function V2Map({
             // (men inte alla) varit ska visa ett kommande event, inte ett gammalt.
             // Alla passerade → group[0] (brickan är ändå släckt via groupIsPast).
             const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
-            const rep = starredRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
+            // FRAMKLICKAD SORT VINNER REPRESENTANTEN (Josef 10/8). Har man
+            // klickat 🎪 i emoji-raden ska varje bricka som HAR en 🎪 visa den —
+            // annars "dök vissa inte upp": en multibricka cyklar mellan sina
+            // emojis, så en ensam 🎪 bland fyra 🎸 syntes bara en femtedel av
+            // tiden och gruppen såg ut att sakna sorten helt. Vinner även över
+            // stjärnan: valet är tillfälligt (klicka igen så är den tillbaka),
+            // och gruppen läses fortfarande som stjärnmärkt — guldet och ⭐-
+            // badgen sitter på gruppen (drawStar), inte på representanten.
+            const pickedRep = highlightEmoji == null ? undefined : group.find(
+                e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji && isValidLatLng(e.lat, e.lng),
+            );
+            const rep = pickedRep ?? starredRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const emoji = eventEmoji(rep);
             // Stor källa (PRO/Svenska kyrkan) → ingen färg (mörk standard);
@@ -810,8 +821,10 @@ export default function V2Map({
             let finalIcon = iconId;
             // Stjärnmärkta grupper cyklar INTE — det stjärnmärkta eventet ÄR
             // det som visas (beslutet för multi-event-brickor), så emoji-
-            // växlingen stängs av så länge stjärnan lyser.
-            if (group.length > 1 && !drawSel && !drawStar) {
+            // växlingen stängs av så länge stjärnan lyser. Samma sak när en sort
+            // är framklickad (pickedRep): brickan ska STÅ STILL på den sorten,
+            // annars hade den cyklat bort från det man just bad om att få se.
+            if (group.length > 1 && !drawSel && !drawStar && !pickedRep) {
                 const seenEmoji = new Set<string>();
                 const frames: CycleRotation['frames'] = [];
                 const frameIds: string[] = [];
@@ -1855,6 +1868,10 @@ export default function V2Map({
     // Count-badgen är ett eget textlager och ligger stilla under bytet.
     const selectedEventValRef = useRef(selectedEvent);
     selectedEventValRef.current = selectedEvent;
+    // Framklickad sort i emoji-raden — som ref, för klick/hover-handlarna som
+    // registreras EN gång och därför inte ser propp-värdet när det ändras.
+    const highlightEmojiRef = useRef(highlightEmoji);
+    highlightEmojiRef.current = highlightEmoji;
     useEffect(() => {
         const CYCLE_STEP_MS = 1000; // EN bricka byter per sekund
         const interval = setInterval(() => {
@@ -2164,6 +2181,12 @@ export default function V2Map({
             if (layers.length) {
                 const hits = map.queryRenderedFeatures(e.point, { layers });
                 const hitVisibleMarker = hits.some(h => {
+                    // Nedtonad bricka + framklickad sort = INTE en markör (samma
+                    // regel som pickHoverKey). Utan det här blev klicket dött:
+                    // lager-handlern öppnade inget, och den här returnerade ändå
+                    // tidigt — så ingenting alls hände. Nu faller det igenom till
+                    // kartan, precis som om brickan inte låg där.
+                    if (highlightEmojiRef.current != null && h.properties?.dim) return false;
                     if (h.layer.id === 'plain-events' || h.layer.id === 'plain-events-dots') {
                         const key = h.properties?.key as string | undefined;
                         // Faktiskt renderat tillstånd (ground truth), inte write-cachen —
@@ -2209,6 +2232,14 @@ export default function V2Map({
          */
         const pickHoverKey = (m: maplibregl.Map, e: maplibregl.MapLayerMouseEvent): string | undefined => {
             const candidates = (e.features ?? []).filter(f => {
+                // EN FRAMKLICKAD SORT GÖR RESTEN OKLICKBARA (Josef 10/8): är en
+                // emoji vald i raden under stadsrutan ska bara de brickor som
+                // HAR den sorten gå att öppna. De nedtonade grannarna snodde
+                // annars klicket i täta kluster — man siktade på den enda tända
+                // brickan och fick upp ett event av en helt annan sort. `dim`
+                // sätts i plainData och är exakt motsatsen till `hit` där.
+                // Önskningar och multi-prickar saknar `dim` → alltid klickbara.
+                if (highlightEmojiRef.current != null && f.properties?.dim) return false;
                 const lid = f.layer?.id;
                 if (lid === 'plain-events' || lid === 'plain-events-dots') {
                     const k = f.properties?.key as string | undefined;
@@ -2261,13 +2292,22 @@ export default function V2Map({
             // FLERA event på samma plats → öppna en LISTA (emoji + titel + tid) så man
             // kan välja vilket. Ett enda event → öppna direkt.
             if (group.length > 1) {
-                // Multibrickan cyklar: öppna det event vars frame VISAS just nu
-                // (pumpens frame-index via shownCycleEvent) — inte gruppens
-                // första. Saknas rotation (t.ex. alla frames samma emoji) →
-                // redan valt event i gruppen, sen första KOMMANDE (passerade
-                // ska inte öppnas av brick-klicket när kommande finns), sist
-                // group[0].
-                const rep = shownCycleEvent(key ? cycleRotationsRef.current.get(key) : undefined, cycleFrameIndexRef.current, group)
+                // FRAMKLICKAD SORT FÖRST (Josef 10/8): har man valt 🎪 i emoji-
+                // raden och öppnar en multibricka ska listan slå upp på 🎪:an —
+                // det var ju den man letade efter. Utan det landade man på
+                // gruppens visade frame, alltså vilken sort som helst av de
+                // andra i högen. Brickan står redan stilla på sorten (pickedRep
+                // i plainData), så listan säger samma sak som kartan.
+                const picked = highlightEmojiRef.current == null ? undefined : group.find(
+                    ev => !isEventPast(ev, Date.now()) && eventEmoji(ev) === highlightEmojiRef.current,
+                );
+                // Annars: det event vars frame VISAS just nu (pumpens frame-index
+                // via shownCycleEvent) — inte gruppens första. Saknas rotation
+                // (t.ex. alla frames samma emoji) → redan valt event i gruppen,
+                // sen första KOMMANDE (passerade ska inte öppnas av brick-klicket
+                // när kommande finns), sist group[0].
+                const rep = picked
+                    || shownCycleEvent(key ? cycleRotationsRef.current.get(key) : undefined, cycleFrameIndexRef.current, group)
                     || group.find(ev => ev.id === selectedEventValRef.current?.id)
                     || group.find(ev => !isEventPast(ev, Date.now()))
                     || group[0];
@@ -2298,6 +2338,12 @@ export default function V2Map({
         // gång med "×N". Följer musen mellan brickor; försvinner när man lämnar.
         const hoverPeek = (e: maplibregl.MapLayerMouseEvent) => {
             const key = pickHoverKey(map, e);
+            // Handen ska bara visas över det som FAKTISKT går att öppna:
+            // mouseenter tänder den för hela lagret, men med en framklickad sort
+            // är de nedtonade brickorna inte längre klickbara. Utan det här
+            // lovade pekaren ett klick som inte hände.
+            const cur = map.getCanvas();
+            if (cur) cur.style.cursor = key ? 'pointer' : '';
             if (!key) { setHoverPeek(null); return; }
             const group = groupsRef.current.get(key);
             if (!group || group.length < 2) { setHoverPeek(null); return; }
@@ -3141,10 +3187,15 @@ export default function V2Map({
                 symbolerna har inte målats klart än ("Ritar ut eventen…") — utan
                 fas 2 släcktes pillen vid hämtat-klart och kartan stod tom tills
                 tiling/rendering hunnit ikapp. symbolsPainted är latchen som
-                släcker för gott. Under navbar+kategorichips; pointer-events-none
-                så den aldrig blockerar kartan. */}
+                släcker för gott. pointer-events-none så den aldrig blockerar
+                kartan.
+                MITT PÅ SKÄRMEN (Josef 10/8): på top-[120px] hamnade den under
+                bildspelets stadsruta och dess emoji-rad och lästes som halv.
+                Mitten är den enda ytan som är fri i alla lägen — toppen har
+                navbar/stadsruta, botten har eventkortet. Den är dessutom det
+                man tittar på medan kartan fylls. */}
             {eventsLoaded && (!eventsSettled || !symbolsPainted) && (
-                <div className="absolute top-[120px] left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[900] pointer-events-none">
                     <div role="status" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 dark:border-slate-700 px-4 py-2 flex items-center gap-2 animate-in fade-in duration-300">
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
                         <p className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">{eventsSettled ? 'Ritar ut eventen…' : 'Laddar fler event…'}</p>

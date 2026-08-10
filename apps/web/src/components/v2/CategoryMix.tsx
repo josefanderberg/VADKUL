@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { EVENT_CATEGORIES } from '@/utils/categories';
-import { eventEmoji } from './v2MapBricka';
+import { eventEmoji, isEventPast } from './v2MapBricka';
 
 interface CategoryMixProps {
     /** Eventen raden sammanfattar. Ska vara PRECIS de som ligger på kartan —
@@ -25,7 +25,10 @@ interface CategoryMixProps {
 
 /**
  * Sammanfattningsraden under bildspelets stadsruta: VILKA event som ligger på
- * kartan just nu, och hur många av varje sort.
+ * kartan just nu, och hur många av varje sort. Bara sådant som ÄNNU INTE VARIT
+ * räknas — raden är en meny över vad man kan gå på, och ett klick pekar ut just
+ * de markörerna. Har allt i en sort varit försvinner sorten ur raden (se
+ * isEventPast i rows nedan); ett event som fortfarande pågår ligger kvar.
  *
  * Grupperas på `eventEmoji` — SAMMA emoji som brickan på kartan bär (eventets
  * egen LLM-valda emoji, med kategorins som fallback). Att i stället gruppera på
@@ -55,17 +58,44 @@ interface CategoryMixProps {
  *
  * FILTRERAR INTE bort något: allt ligger kvar på kartan, bara nedtonat, och
  * antalen i raden räknar fortfarande hela staden. Vill man verkligen filtrera
- * finns kategorifiltret uppe till höger. Raden är pointer-events-none så den
- * aldrig slukar ett kartklick — bara pillarna tar emot klick.
+ * finns kategorifiltret uppe till höger.
+ *
+ * SPRINGORNA SLUKAR KLICK (Josef 10/8). Pillarna är små, och satt bara de
+ * själva emot klick landade varje miss mellan två emojier i kartan i stället —
+ * man petade efter 🎪 och fick en bricka. Själva pill-blocket tar därför emot
+ * klick och släpper dem inte vidare. Det är en OSYNLIG yta som ligger exakt
+ * över raderna med pillar: den krymper till innehållet (ingen w-full) och
+ * sträcker sig aldrig ut över stadsrutans tomma bredd. Ytterhöljet är kvar
+ * pointer-events-none, så luften runt blocket och kategorinamnets rad under
+ * fortfarande är karta.
  */
 export default function CategoryMix({
     events, tone = 'light', ready = true, picked = null, onPick,
 }: CategoryMixProps) {
+    // Minut-klocka: "har varit"-gränsen (start + 1 h, kl 20 för event utan
+    // klockslag) passeras med klockan, inte med en omrendering. Utan den låg en
+    // sort kvar i raden efter att dess sista event hunnit bli gammalt.
+    // Tidsstämpeln ligger i state (inte en räknare + Date.now() i memon): då är
+    // den en ärlig dep och rows räknas inte om på ett värde den inte deklarerat.
+    // Komponenten finns bara medan bildspelet rullar, så intervallet lever kort.
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNowMs(Date.now()), 60_000);
+        return () => clearInterval(id);
+    }, []);
+
     const rows = useMemo(() => {
-        // Per emoji: antal + vilka kategorinamn den består av (det vanligaste
-        // blir etiketten i tooltip/uppläsning — själva emojin är visningen).
+        // PASSERADE EVENT RÄKNAS INTE (Josef 10/8). Ett klick på en sort pekar ut
+        // den på kartan, och kartans träfftest hoppar över det som varit
+        // (`!isEventPast` i V2Map:s plainData). En sort där allt redan varit gick
+        // därför att klicka på men tonade bara ned HELA kartan utan att peka ut
+        // något — ett alternativ som inte visar något ska inte erbjudas. Samma
+        // isEventPast som kartan, så raden och markörerna aldrig glider isär:
+        // ett event som fortfarande PÅGÅR (startat för under en timme sedan) är
+        // inte passerat och ligger kvar i raden.
         const buckets = new Map<string, { n: number; labels: Map<string, number> }>();
         for (const evt of events) {
+            if (isEventPast(evt, nowMs)) continue;
             const key = eventEmoji(evt);
             let b = buckets.get(key);
             if (!b) { b = { n: 0, labels: new Map() }; buckets.set(key, b); }
@@ -82,7 +112,18 @@ export default function CategoryMix({
                 label: [...b.labels.entries()].sort((a, c) => c[1] - a[1])[0]?.[0] ?? 'Event',
             }))
             .sort((a, b) => b.n - a.n);
-    }, [events]);
+    }, [events, nowMs]);
+
+    // Föll den valda sorten bort ur raden (sista eventet hann bli gammalt, eller
+    // man bytte period) ligger den ändå kvar i sidans mixEmoji — och då tonas
+    // HELA kartan ned utan att någon pill lyser, ett läge man inte kunde klicka
+    // sig ur eftersom pillen att avmarkera var borta. Släpp valet i stället.
+    // Bara när det FINNS rader: en tom rad är oftast glappet mitt i ett stadshopp
+    // (kartrutan hinner efter kameran), och där ska valet ligga kvar.
+    useEffect(() => {
+        if (!ready || picked == null || rows.length === 0) return;
+        if (!rows.some(r => r.emoji === picked)) onPick?.(null);
+    }, [ready, picked, rows, onPick]);
 
     if (!ready || rows.length === 0) return null;
 
@@ -109,8 +150,13 @@ export default function CategoryMix({
                 // uppläst. Varje pill har sedan sitt eget namn (knapp).
                 role="group"
                 aria-label={`Du tittar på: ${rows.map(r => `${r.n} ${r.label.toLowerCase()}`).join(', ')}`}
-                className={`flex w-full flex-wrap items-center justify-center gap-1 ${
-                    dark ? '' : 'max-w-[260px]'
+                // pointer-events-auto UTAN w-full: föräldern centrerar
+                // (items-center), så blocket krymper till pillarna och den
+                // osynliga klickytan blir aldrig bredare än de faktiskt är.
+                // Med w-full hade den spänt över hela stadsrutans bredd och
+                // ätit kartklick långt utanför sista emojin.
+                className={`pointer-events-auto flex flex-wrap items-center justify-center gap-1 ${
+                    dark ? 'max-w-full' : 'max-w-[260px]'
                 }`}
             >
                 {rows.map(r => {

@@ -257,17 +257,26 @@ export default function FloatingNavbar({
                             vägskyltarna ute på kartan, som pekar mot de
                             närmaste städerna. Medan bildspelet rullar finns
                             alltså ingen knapp alls här — man stoppar det genom
-                            att röra kartan. */}
+                            att röra kartan.
+                            SYNLIGARE ÄN GRANNARNA (Josef 10/8): som vit cirkel
+                            bland vita cirklar försvann den i raden — den läste
+                            som ännu en reglage-knapp fast den är det man ska
+                            trycka på för att något ska HÄNDA. Den bär därför
+                            sajtens primär-språk: blå gradient, gul kant och
+                            gold-glow-pulse, precis som "Evenemang stad för stad"
+                            och "Skapa event". Samma 40 px som grannarna — det är
+                            färgen som gör jobbet, så kolumnen står stilla.
+                            Pulsen tystas av prefers-reduced-motion (globals.css). */}
                         {onStartTour && !tourPlaying && (
                             <div className="flex items-center gap-2 pointer-events-none">
                                 <button
                                     type="button"
                                     onClick={onStartTour}
                                     aria-label="Starta bildspelet"
-                                    className="peer pointer-events-auto relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
+                                    className="peer gold-glow-pulse pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0"
                                 >
                                     {/* Play ligger optiskt lite vänstertungt i en cirkel — nudge höger. */}
-                                    <Play size={18} className="text-[#006AA7] translate-x-[1px]" fill="currentColor" />
+                                    <Play size={18} className="text-[#FECC02] translate-x-[1px]" fill="currentColor" />
                                 </button>
                                 <HoverLabel>Starta bildspelet</HoverLabel>
                             </div>
