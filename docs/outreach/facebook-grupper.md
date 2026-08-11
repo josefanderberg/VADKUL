@@ -2755,3 +2755,17 @@ V1:
 
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Övik!`
+
+### 🚨 RÄTTELSE 11/8 — Kungsbacka var redan postad (odokumenterad igen)
+
+Josef bekräftade 11/8: ett inlägg lades i "Vad händer i Kungsbacka ?" (#24)
+redan **8/8**, och det står **fortfarande i godkännandekön** efter 3 dygn.
+Masterlistan hade tomrad — **andra odokumenterade postningen efter
+Hudiksvall** (se 10/8-lärdomen). Text/metod obekräftade, raden i masterlistan
+uppdaterad. "Kungsbacka bortvald fjärde gången" i inledningen ovan skrevs i
+tro att gruppen var orörd — ingen skada skedd (gruppen valdes inte 11/8),
+men lärdomen står sig: **logga i samma stund som det postas.**
+
+Uppföljning: kolla godkännandekön ~15/8. Fortfarande inte släppt då →
+admin-DM eller släpp gruppen (jfr Gränna, 20 dygn i kö). Om/när inlägget
+släpps igenom: notera datum + utfall, karensen räknas från publiceringen.

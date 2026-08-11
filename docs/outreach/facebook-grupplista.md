@@ -57,7 +57,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 21 | Vad händer i Piteå? | vadkul.se | 4/8 · publicerat direkt (Z2, länk i kommentar) · dag 1: 1 like, 4 komm. — UX-guldfeedback (Elin: ryck-bugg + Nästa/plus) · karens 25/8 |
 | 22 | Händer i Karlstad-Tipsa om vad som händer i stan! | /evenemang/karlstad | 24/7 · länk i inlägg (m. stjärnlänk) · publicerat direkt · 5 likes |
 | 23 | Vad händer i Malå? | vadkul.se |  |
-| 24 | Vad händer i Kungsbacka ? | vadkul.se |  |
+| 24 | Vad händer i Kungsbacka ? | vadkul.se | 8/8 · metod/text obekräftad · KRÄVDE GODKÄNNANDE — ⏳ fortfarande i kö 11/8 (3 dygn; bekräftat av Josef 11/8, postningen var odokumenterad) |
 | 25 | Vad händer i Söderhamn (Söderhamns Nytt) | vadkul.se | ~7/8 (DATUM OBEKRÄFTAT) · länk i inlägg · **35 likes, 33 komm. = KOMMENTARSREKORD** (Helsingborg 15, Gotland 13) · ⚠️ 3 av 5 rader låg på dolda opt-in-källor (PRO/kyrkan) |
 | 26 | Vad händer i Nora | vadkul.se | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 27 | Vad händer i Byske? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
