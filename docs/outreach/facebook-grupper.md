@@ -2678,7 +2678,7 @@ sparas till ett senare, ANNAT utkast (aldrig samma text).
 
 V1:
 
-> Lördagen i Sölvesborg är typ trippelbokad 👇
+> Tre saker på samma lördag i Sölvesborg — och det är bara toppen 👇
 >
 > 🌸 Trädgårdsdagen i Slottsallén (lördag 15/8 kl 10)
 > 🎸 Pukaviksrocken på Alholmen i Pukavik (lördag 15/8 kl 12)
