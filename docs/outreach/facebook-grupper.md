@@ -2648,3 +2648,110 @@ V1:
 
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som saknas i nordost!`
+
+---
+
+## Tisdag 11/8 — tre orörda grupper (Sölvesborg, Älmhult, Örnsköldsvik)
+
+Urval ur repo-aggregatet från 10/8 (minins nattpush uteblev 11/8 — dubbelkolla
+mot kartan att raderna lever innan postning). Kandidater poängsatta på utbud
+11–17/8, Nykvarn-regeln som filter. Kungsbacka bortvald FJÄRDE gången (radien
+46, verkligt lokalt fortsatt tunt). Radien ljög igen, tre fynd bortfiltrerade:
+
+- **Älmhult:** 15 km drar in Osby (fel kommun + fel län) — alla Osby-rader strukna.
+- **Örnsköldsvik:** "Musik i Skymningen i Bara kyrka" (Värby församling, SKÅNE)
+  låg felgeokodad 4 km från Övik — struken. "Travdag på Dannero" (PRO-resa,
+  banan ligger vid Kramfors) — struken.
+- **Sölvesborg:** "Tour de Ringsjön" på Jeppavallen ser felplacerad ut
+  (Ringsjön ligger i mellersta Skåne) — struken.
+
+Trädgårdsdagen i Sölvesborg finns dubbelt i datan (kl 10 Slottsallén resp.
+kl 11 utan adress) — raden nedan använder kl 10-versionen som har gatuadress.
+
+**Postningsordning:** tre olika landsändar, kan gå samma dag — men det är
+dagsmaxet (2–3/dag), inga fler grupper 11/8.
+
+### AN. Vad händer i Sölvesborg (#76 → vadkul.se) — utkast klart 11/8, EJ postat
+
+Systergruppen #80 "Vad händer i Sölvesborg och på Lister?" är också orörd —
+sparas till ett senare, ANNAT utkast (aldrig samma text).
+
+V1:
+
+> Lördagen i Sölvesborg är typ trippelbokad 👇
+>
+> 🌸 Trädgårdsdagen i Slottsallén (lördag 15/8 kl 10)
+> 🎸 Pukaviksrocken på Alholmen i Pukavik (lördag 15/8 kl 12)
+> ⚽ Allsvenskan: Mjällby AIF–IK Sirius på Strandvallen (lördag 15/8 kl 15)
+> ☕ PRO:s café i Sternska villan (fredag 14/8 kl 13)
+> 🏃 Sweden Runners löparträning, start i Sölvesborg (tisdagar kl 18.15)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
+> men allt slinker inte med:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Trädgårdsdagen, Pukaviksrocken eller Strandvallen i lördag — vad väljer ni? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Sölvesborg!`
+
+### AO. Älmhultsbor, vad händer? (#17 → vadkul.se) — utkast klart 11/8, EJ postat
+
+Delary, Diö och Stenbrohult utskrivna på raderna (Älmhults kommun, men inte
+tätorten). Osby-raderna strukna — fel kommun.
+
+V1:
+
+> Lite av varje i Älmhultstrakten den här veckan 👇
+>
+> 🚲 Pop-up med bibliotekets lådcykel på Skolgatan (tisdag 11/8 kl 13)
+> 🎭 Berättarkväll: Otäcka äventyr på Stinsens Vävstuga (onsdag 12/8 kl 18)
+> 🚶 Historisk byavandring i Delary, samling vid Delarygården (onsdag 12/8 kl 18)
+> 🎲 Boule i Delary med PRO Göteryd (torsdag 13/8 kl 10)
+> 🌡️ Föredrag i Diö: Demokratin dör i hettan (måndag 17/8 kl 17)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
+> men allt slinker inte med:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad händer i byarna runtomkring som jag missat? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Älmhult med omnejd!`
+
+### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — utkast klart 11/8, EJ postat
+
+V1:
+
+> Veckan i Övik bjuder på mer än man tror 👇
+>
+> 💃 Refresherkurs i west coast swing på Gnistan (onsdag 12/8 kl 18.15)
+> 🧠 Sommarkväll med quiz i Sockenstugan i Arnäs (onsdag 12/8 kl 18)
+> 🐕 Aktivera din hund i Överhörnäs (torsdag 13/8 kl 14)
+> 🏺 Prova-på-dag i keramik (lördag 15/8 kl 10)
+> 🧶 Kurs i tenntrådsarmband på Centralesplanaden (lördag 15/8 kl 10)
+> 🛍️ Bagageloppis hos Örnsköldsviks församling (lördag 15/8 kl 11)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
+> men allt slinker inte med:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad mer borde synas på kartan i Övik? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Övik!`

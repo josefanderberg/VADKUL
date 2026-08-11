@@ -50,7 +50,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 14 | Det händer i Ängelholm | vadkul.se | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
 | 15 | Vad händer i Kungsör 2.0 | vadkul.se | 22/7 · länk i inlägg · ? |
 | 16 | Vad händer på Yxlan | vadkul.se |  |
-| 17 | Älmhultsbor, vad händer? | vadkul.se |  |
+| 17 | Älmhultsbor, vad händer? | vadkul.se | utkast klart (11/8-AO), EJ postat |
 | 18 | Vad händer på Högsbohöjd? | vadkul.se |  |
 | 19 | På gång i Värmland - Vi tipsar om vad som händer, när det händer... | vadkul.se | 1/8 · länk i inlägg (V1, korta formatet) · KRÄVDE GODKÄNNANDE — i kö, ej släppt 2/8 |
 | 20 | Vad händer i Ängelholm Nöjen & Event | vadkul.se | 27/7 · länk i inlägg (I1) · uppe · **3 likes, 0 komm. — LÅGAKTIV GRUPP** (gruppens övriga inlägg lika låga) |
@@ -96,7 +96,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 60 | Vad händer i Västmanland! | vadkul.se | 30/7 · 28/7-texten (O) · uppe · ⚠️ 2 av 5 rader (onsdag 29/7) hade redan passerat |
 | 61 | Vad händer i Kungsladugård | vadkul.se |  |
 | 62 | Vad händer i Frölunda? | /evenemang/goteborg |  |
-| 63 | Vad händer i Örnsköldsvik? | vadkul.se |  |
+| 63 | Vad händer i Örnsköldsvik? | vadkul.se | utkast klart (11/8-AP), EJ postat |
 | 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | 30/7 · länk i kommentar (N2) · uppe · **karens till 20/8** — ⚠️ 4/8-utkastet Ä skrevs i tro att gruppen var orörd (osynkad main); POSTA EJ Ä före 20/8 |
 | 65 | Vad händer i Torsås? | vadkul.se |  |
 | 66 | Du vet vad som händer i Eskilstuna | /evenemang/eskilstuna | 24/7 · länk i inlägg (m. stjärnlänk) · KRÄVDE GODKÄNNANDE (enda av dagens fyra) · ej släppt 25/7 |
@@ -109,7 +109,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 73 | Vad händer i Göteborg? | /evenemang/goteborg | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
 | 74 | Vad händer i Lundby (Hisingen) | /evenemang/goteborg |  |
 | 75 | Vad händer på Södermalm | /evenemang/stockholm | 27/7 · länk i inlägg (Pride-texten, V1) · publicerat direkt |
-| 76 | Vad händer i Sölvesborg | vadkul.se |  |
+| 76 | Vad händer i Sölvesborg | vadkul.se | utkast klart (11/8-AN), EJ postat |
 | 77 | Vad händer i Gävle? | /evenemang/gavle | 23/7 · länk i kommentar · KRÄVDE GODKÄNNANDE (enda av dagens fyra) |
 | 78 | Vad händer i Kville? | vadkul.se | 22/7 · länk i inlägg · ? |
 | 79 | Vad händer på Hisingen? | vadkul.se | 10/8 · utkast AJ · **KRÄVDE GODKÄNNANDE, i kö**, utfall följs upp 17/8 |
