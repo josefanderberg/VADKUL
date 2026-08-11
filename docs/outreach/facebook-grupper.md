@@ -2678,7 +2678,7 @@ utökningen — hålls under hälften av raderna per inlägg.
 **Postningsordning:** tre olika landsändar, kan gå samma dag — men det är
 dagsmaxet (2–3/dag), inga fler grupper 11/8.
 
-### AN. Vad händer i Sölvesborg (#76 → vadkul.se) — utkast klart 11/8, EJ postat
+### AN. Vad händer i Sölvesborg (#76 → vadkul.se) — ✅ POSTAT 11/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 Systergruppen #80 "Vad händer i Sölvesborg och på Lister?" är också orörd —
 sparas till ett senare, ANNAT utkast (aldrig samma text).
@@ -2710,7 +2710,7 @@ V1:
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Sölvesborg!`
 
-### AO. Älmhultsbor, vad händer? (#17 → vadkul.se) — utkast klart 11/8, EJ postat
+### AO. Älmhultsbor, vad händer? (#17 → vadkul.se) — ✅ POSTAT 11/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 Delary, Diö och Stenbrohult utskrivna på raderna (Älmhults kommun, men inte
 tätorten). Osby-raderna strukna — fel kommun.
@@ -2742,7 +2742,7 @@ V1:
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas i Älmhult med omnejd!`
 
-### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — utkast klart 11/8, EJ postat
+### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — ✅ POSTAT 11/8 (V1) · KRÄVDE GODKÄNNANDE, i kö
 
 V1:
 
@@ -2784,3 +2784,17 @@ men lärdomen står sig: **logga i samma stund som det postas.**
 Uppföljning: kolla godkännandekön ~15/8. Fortfarande inte släppt då →
 admin-DM eller släpp gruppen (jfr Gränna, 20 dygn i kö). Om/när inlägget
 släpps igenom: notera datum + utfall, karensen räknas från publiceringen.
+
+
+### Statusrapport 11/8 (kväll)
+
+Alla tre (AN Sölvesborg, AO Älmhult, AP Örnsköldsvik) postade 11/8 med V1
+(8-radersversionen, länk i inlägg) — **samtliga KRÄVDE GODKÄNNANDE**, bekräftat
+av Josef. 0 av 3 släppta direkt, jämfört med Haninge 10/8 som gick upp direkt.
+
+Godkännandeköer att bevaka (~15/8, tillsammans):
+- Kungsbacka (#24, postad 8/8) — 3 dygn i kö redan; Gränna-gränsen närmar sig
+- Sölvesborg (#76), Älmhult (#17), Örnsköldsvik (#63) — postade 11/8
+
+Släpps ett inlägg igenom: fyll i publiceringsdatum i masterlistan (karensen
+räknas därifrån) och följ upp utfallet efter en vecka, inte ett dygn.
