@@ -1482,7 +1482,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     return (
         <>
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
-        <div className="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
+        {/* z-[1250]: kortet ligger över ALLT kartkrom — kategorikolumnen (1150),
+            stadsrutan (1090), navbaren (1160). Bara modaler (1300) går över. */}
+        <div className="fixed bottom-0 left-0 right-0 z-[1250] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div className="w-full max-w-4xl flex justify-between items-center mb-4">
 
                 {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
@@ -1842,7 +1844,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         /* "Laddar event…" centreras mitt på skärmen (egen fixed-
                            overlay som bryter sig ur botten-arket) — 30vh-spacern
                            ovan står kvar så reglagets layout är oförändrad. */
-                        <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+                        <div className="fixed inset-0 z-[1250] flex items-center justify-center pointer-events-none">
                             <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex items-center gap-2.5 animate-in fade-in zoom-in duration-300">
                                 <span className="w-4 h-4 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
                                 <p className="text-sm font-bold text-slate-700">Laddar event…</p>

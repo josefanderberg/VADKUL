@@ -10,14 +10,15 @@ import CityMapHeroCanvas from './CityMapHeroCanvas';
 // (?plats=lat,lng,zoom — läses i V2Maps init). Poängen är att sidorna ska
 // kännas som sajten (kartan ÄR produkten), inte som ett textindex.
 //
-// Två lager kartbotten, i den ordningen:
+// Tre lager kartbotten, i den ordningen:
 //   1. Serverrenderade kakelbilder — Cartos raster-Voyager (samma kartografi
-//      som kartans vektor-Voyager, ingen API-nyckel) som vanliga <img>. Syns
-//      direkt, finns i HTML:en, kräver noll JS.
-//   2. CityMapHeroCanvas — en riktig, passiv MapLibre-karta i huvudkartans
-//      "nöjesfälts"-stil som tonas in ovanpå kaklen efter hydreringen. Utan
-//      den ser heron ut som en helt annan produkt: Voyagers raster är grå-
-//      beige medan kartan man landar på har grönt land och blått vatten.
+//      som kartans vektor-Voyager, ingen API-nyckel) som vanliga <img>. Finns
+//      i HTML:en, kräver noll JS — men är numera RESERVVÄG, inte förstabild.
+//   2. CityMapHeroCanvas täcker kaklen med en platta i kartans landfärg redan
+//      från server-HTML:en (Voyagers grå-beige såg ut som "en annan produkt"
+//      den sekund den syntes) och släpper fram dem bara om GL fallerar.
+//   3. Samma komponents riktiga, passiva MapLibre-karta i huvudkartans
+//      "nöjesfälts"-stil tonas in ovanpå när den laddat.
 // Brickorna ligger överst och är absolut positionerade <span> vars offset
 // räknas ut vid BUILD med samma webbmercator som kartan.
 

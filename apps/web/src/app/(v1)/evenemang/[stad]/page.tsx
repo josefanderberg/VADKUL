@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, pickRecommended, dayLabel,
-    todayKey, weekendKeys, countByDayKeys, topVenues, exampleTitles, svList,
+    todayKey, weekendKeys, weekKeys, countByDayKeys, topVenues, exampleTitles, svList,
 } from '../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
@@ -70,6 +70,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
     const wkKeys = weekendKeys();
     const todayCount = countByDayKeys(events, [tKey]);
     const weekendCount = countByDayKeys(events, wkKeys);
+    // Intro-raden visar VECKANS antal (Josef 11/8, ersatte helg-talet) —
+    // helg-siffran lever kvar i metadata/FAQ som matchar helg-sökfraserna.
+    const weekCount = countByDayKeys(events, weekKeys());
     const venues = topVenues(events, city.name);
     const todayEx = exampleTitles(events, [tKey]);
     const weekendEx = exampleTitles(events, wkKeys);
@@ -127,9 +130,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
                     Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> i
                     {' '}{city.name} med omnejd på VADKUL
-                    {(todayCount > 0 || weekendCount > 0) && (
+                    {(todayCount > 0 || weekCount > 0) && (
                         <> — <strong className="text-slate-900">{todayCount} idag</strong> och{' '}
-                        <strong className="text-slate-900">{weekendCount} i helgen</strong></>
+                        <strong className="text-slate-900">{weekCount} i veckan</strong></>
                     )}. Konserter, marknader, föreläsningar,
                     sport och saker att göra med barn. Allt är gratis att utforska, utan konto.
                     {venues.length >= 2 && <> Mest händer på {svList(venues)}.</>}

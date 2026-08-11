@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { THEMEPARK_LAND_COLOR_NEAR } from '@/components/v2/v2MapBaseStyles';
 
 // Den RIKTIGA VADKUL-kartan bakom stads-heron.
 //
@@ -8,9 +9,10 @@ import { useEffect, useRef, useState } from 'react';
 // huvudkartan kör "nöjesfält": samma Voyager-geometri men grönt land, blått
 // vatten, vita vägar och beiga hus. Stadssidorna ska kännas som kartan — därför
 // ritas samma stil här i en riktig MapLibre-canvas ovanpå kaklen och tonas in
-// när den är klar. Kaklen ligger kvar som serverrenderad grund: de syns direkt,
-// finns i HTML:en, och räddar heron om WebGL saknas eller stilen inte går att
-// hämta.
+// när den är klar. Kaklen är numera BARA reservväg: en platta i kartans
+// landfärg täcker dem redan i server-HTML:en (Voyagers grå-beige hann annars
+// synas en sekund och byttes sedan — "ett annat utseende", Josef 11/8) och
+// släpps fram enbart om WebGL saknas eller stilen inte går att hämta.
 //
 // Kartan är helt passiv (interactive:false) — inga event-lyssnare, ingen
 // tröghet, och hela heron förblir EN länk. maplibre-gl laddas dynamiskt när
@@ -27,6 +29,13 @@ export default function CityMapHeroCanvas({ lat, lng, zoom }: {
 }) {
     const holderRef = useRef<HTMLDivElement>(null);
     const [ready, setReady] = useState(false);
+    // GL gick inte att starta (ingen WebGL / stilen onåbar) → släpp fram
+    // Voyager-kaklen under. Tills dess täcker landfärgs-plattan dem, så heron
+    // ser ut som kartan REDAN FRÅN SERVER-HTML:EN (Josef 11/8: inget
+    // "annat utseende" som byts en sekund senare — samma knep som huvudkartans
+    // BOOTSTRAP_STYLE, fast den ljusa stadsnivå-tonen eftersom heron ligger på
+    // zoom 11).
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
         const el = holderRef.current;
@@ -54,7 +63,9 @@ export default function CityMapHeroCanvas({ lat, lng, zoom }: {
                 map = m;
                 m.on('load', () => { if (!cancelled) setReady(true); });
             } catch {
-                /* Ingen WebGL eller ingen stil — de statiska kaklen får stå kvar. */
+                // Ingen WebGL eller ingen stil — göm plattan så de statiska
+                // kaklen under blir synliga igen.
+                if (!cancelled) setFailed(true);
             }
         };
 
@@ -79,12 +90,24 @@ export default function CityMapHeroCanvas({ lat, lng, zoom }: {
     }, [lat, lng, zoom]);
 
     return (
-        <div
-            ref={holderRef}
-            aria-hidden
-            className={`absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-500 [&_canvas]:absolute [&_canvas]:left-0 [&_canvas]:top-0 ${
-                ready ? 'opacity-100' : 'opacity-0'
-            }`}
-        />
+        <>
+            {/* Landfärgs-plattan: ligger ÖVER rastret från första server-
+                renderade rutan (inget Voyager-blink), och tas bara bort om GL
+                fallerar. GL-canvasen tonas in ovanpå. */}
+            <div
+                aria-hidden
+                className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${
+                    failed ? 'opacity-0' : 'opacity-100'
+                }`}
+                style={{ backgroundColor: THEMEPARK_LAND_COLOR_NEAR }}
+            />
+            <div
+                ref={holderRef}
+                aria-hidden
+                className={`absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-500 [&_canvas]:absolute [&_canvas]:left-0 [&_canvas]:top-0 ${
+                    ready ? 'opacity-100' : 'opacity-0'
+                }`}
+            />
+        </>
     );
 }

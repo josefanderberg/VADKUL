@@ -27,11 +27,6 @@ import { PERIODS, periodKeys, type Period } from './periods';
 // inte beroende av period-filtret ovan (bildspelet är en generell försmak,
 // inte en del av den räknade listan).
 
-type SortMode = 'count' | 'perCapita';
-
-const fmtPerCapita = (n: number) =>
-    n.toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
 // Gemensam takt: var CASCADE_TICK_MS byter EN stads bildspel — uppifrån och
 // ned bland de synliga, runt och runt. Per kort blir det alltså tick × antal
 // synliga bildspel mellan bytena (lugnt, och aldrig två samtidigt).
@@ -208,7 +203,6 @@ function CityShowcase({ items, slug, registry }: {
 
 export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] }) {
     const [period, setPeriod] = useState<Period>('all');
-    const [sort, setSort] = useState<SortMode>('count');
     // Filterbyten sorterar om + renderar om hela topplistan (31 rader med
     // bildspel) — som transition blockerar det inte tappen (INP, mobil).
     const [, startTransition] = useTransition();
@@ -220,19 +214,17 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
     // efter hydreringen ska inte blockera besökarens första tapp.
     useEffect(() => startTransition(() => setMounted(true)), []);
 
+    // Invånarantal/per-capita borttaget (Josef 11/8) — listan sorterar bara
+    // på antal event.
     const rows = useMemo(() => {
         const keys = mounted ? periodKeys(period) : null;
         return cities
             .map(c => {
                 const count = keys ? keys.reduce((sum, k) => sum + (c.byDay[k] ?? 0), 0) : c.total;
-                return { ...c, count, perCapita: (count / c.population) * 1000 };
+                return { ...c, count };
             })
-            .sort((a, b) =>
-                sort === 'count'
-                    ? b.count - a.count || b.total - a.total
-                    : b.perCapita - a.perCapita || b.count - a.count,
-            );
-    }, [cities, period, sort, mounted]);
+            .sort((a, b) => b.count - a.count || b.total - a.total);
+    }, [cities, period, mounted]);
 
     // ── Bildspels-dirigenten ─────────────────────────────────────────────────
     // EN gemensam takt för alla städers bildspel: varje tick byter EN stad —
@@ -279,14 +271,6 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                         {p.label}
                     </button>
                 ))}
-                <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden />
-                <button
-                    type="button"
-                    onClick={() => startTransition(() => setSort(s => (s === 'count' ? 'perCapita' : 'count')))}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-black bg-white border border-[#FECC02] text-slate-700 hover:bg-[#FECC02]/10 transition-colors"
-                >
-                    {sort === 'count' ? 'Sortera: flest event' : 'Sortera: per 1\u00a0000 inv\u00e5nare'}
-                </button>
             </div>
 
             {/* Topplistan */}
@@ -310,17 +294,10 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                             </span>
                             <span className="min-w-0 flex-1">
                                 <span className="block text-sm font-bold text-slate-900">Vad händer i {c.name}?</span>
-                                <span className="block text-xs text-slate-400 font-medium mt-0.5">
-                                    ca {c.population.toLocaleString('sv-SE')} invånare
-                                </span>
                             </span>
                             <span className="text-right shrink-0">
                                 <span className={`block text-sm font-black tabular-nums ${c.count > 0 ? 'text-[#006AA7]' : 'text-slate-300'}`}>
                                     {c.count.toLocaleString('sv-SE')} <span className="text-[10px] font-bold text-slate-400">{unit}</span>
-                                </span>
-                                {/* Per-invånare-värdet visas alltid, inte bara i det sorteringsläget. */}
-                                <span className={`block text-[10px] font-bold tabular-nums ${sort === 'perCapita' ? 'text-[#006AA7]' : 'text-slate-400'}`}>
-                                    {fmtPerCapita(c.perCapita)} /1 000 inv.
                                 </span>
                             </span>
                         </Link>

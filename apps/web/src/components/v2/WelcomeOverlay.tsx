@@ -10,6 +10,9 @@ interface WelcomeOverlayProps {
     onCreateAccount: () => void;
     /** Antal event idag att visa inbakat i texten */
     todayEventCount?: number;
+    /** Antal event den närmaste veckan — HUVUDSIFFRAN (Josef 11/8): dags-
+     *  siffran sålde inte databasens storlek, veckovolymen gör det. */
+    weekEventCount?: number;
     /** Antal event som börjar inom 1 timme */
     soonEventCount?: number;
     /** Fyrar när rutan stängts klart. Föräldern avmonterar den då — overlayn
@@ -77,7 +80,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonEventCount, onClose }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, soonEventCount, onClose }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -88,7 +91,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonE
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
 
-    const shownCount = useCountUp(todayEventCount ?? 0);
+    const shownCount = useCountUp(weekEventCount ?? 0);
 
     // Före första målningen så snabbspåret inte flimrar fram ur intro-animationen.
     useIsoLayoutEffect(() => {
@@ -226,13 +229,20 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, soonE
                             ))}
                         </h2>
                         <span className="welcome-underline block h-[5px] w-24 rounded-full bg-[#FECC02]" style={{ animationDelay: '560ms' }} />
-                        {/* Samma mening med och utan siffra — bara "alla" byts mot talet när eventen laddat. */}
+                        {/* Samma mening med och utan siffra — bara "alla" byts mot talet
+                            när eventen laddat. VECKANS antal, inte dagens (Josef 11/8):
+                            besökaren ska direkt se hur mycket som faktiskt finns. Dagens
+                            antal följer med i bisatsen när det är känt. */}
                         <p className="text-[15px] font-bold text-slate-600 leading-snug px-2 mt-1">
                             Just nu hittar du{' '}
                             <span className="font-extrabold text-[#006AA7] tabular-nums">
                                 {shownCount > 0 ? `${shownCount.toLocaleString('sv-SE')} event` : 'alla event'}
                             </span>{' '}
-                            som händer idag — samlat på en karta.
+                            den närmaste veckan
+                            {todayEventCount && todayEventCount > 0
+                                ? ` — ${todayEventCount.toLocaleString('sv-SE')} av dem händer idag`
+                                : ''}
+                            , samlat på en karta.
                         </p>
                     </div>
 

@@ -215,6 +215,14 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // höger/öster, höj zoom = mer inzoomat.
 const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
 const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
+// Intro-gliden bakom välkomstrutan: långsam konstant zoom från START_ZOOM mot
+// användaren. Måls-zoomen stannar på regionsnivå — når gliden ända fram ska man
+// fortfarande se ett landskap av prickar, och stadshoppet efter stängd ruta
+// står för själva inzoomningen. 7/24s var för svagt för att ens uppfattas
+// (Josef 11/8: "jag ser ingen långsam zoom") — 3,3 nivåer på 14 s syns tydligt
+// men känns fortfarande ambient.
+const INTRO_GLIDE_ZOOM = 8.2;
+const INTRO_GLIDE_MS = 14_000;
 // Hur brett fältet ska vara efter första event-klicket: 10 mil tvärs över
 // skärmen. Anges i meter i stället för som zoom-nivå eftersom samma zoom täcker
 // helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
@@ -337,6 +345,10 @@ interface V2MapProps {
     /** Fyrar när användaren aktivt interagerar med kartan (drag, zoom, klick) —
      *  sidan stoppar bildspelet vid det. */
     onUserInteraction?: () => void;
+    /** Långsam ambient inzoomning mot punkten medan välkomstrutan är uppe
+     *  (Josef 11/8): Sverige-vyn med hela eventmängden ska hinna ses innan
+     *  stadshoppet. null = ingen glid (avbryter en pågående). */
+    introGlide?: { lat: number; lng: number } | null;
 }
 
 export default function V2Map({
@@ -372,6 +384,7 @@ export default function V2Map({
     onPaintedChange,
     cityTourTarget = null,
     onUserInteraction,
+    introGlide = null,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -435,6 +448,12 @@ export default function V2Map({
     // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
     const isZoomingRef = useRef<boolean>(false);
+    // Speglar introGlide-prop:en så map-init-effektens event-handlers (som bara
+    // skapas en gång) kan läsa den. Medan intron pågår (välkomstrutan uppe) ska
+    // kartan stanna i NÅL-läget — bara prickar, inga brickor (Josef 11/8:
+    // "det ska bara vara mer som ett intro").
+    const introActiveRef = useRef(false);
+    introActiveRef.current = introGlide != null;
     // Default = 'themepark' ("Nöjesfält"-kartan). Satellit m.fl. går fortfarande att
     // välja i Funktioner-väskan, men nöjesfält är förvald vid varje sidladdning.
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('themepark');
@@ -2097,6 +2116,9 @@ export default function V2Map({
             setGlLayer('plain-events-dots', true);
         };
         const showBricks = () => {
+            // Intro-gliden: rutan är uppe → stanna i nål-läget. Brickorna
+            // kommer först med stadshoppet efter att rutan klickats ner.
+            if (introActiveRef.current) return;
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
@@ -2137,6 +2159,11 @@ export default function V2Map({
         };
         const exitZooming = () => {
             zoomIdleTimer = null;
+            // Intro-gliden: gå INTE tillbaka till vilo-läget (DOM-brickor) i
+            // glid-pauserna eller när gliden nått fram — prickarna ska stå
+            // kvar tills välkomstrutan klickats ner. Stadshoppet efteråt kör
+            // markZooming→exitZooming på nytt och återställer allt normalt.
+            if (introActiveRef.current) return;
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
             setGlLayer('multi-event-dots', false);
@@ -2747,6 +2774,72 @@ export default function V2Map({
     //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
     //     hoppar direkt dit (jumpTo), väntar på att MapLibre ska ladda färdigt alla
     //     tiles (map.once('idle')), och tonar sedan in kartan igen.
+    // ── Intro-gliden bakom välkomstrutan ────────────────────────────────────
+    // Kartan startar nationellt (START_ZOOM) och glider LÅNGSAMT inåt mot
+    // användaren (eller Sveriges mitt) medan rutan är uppe — besökaren ska
+    // hinna se eventmängden över hela landet (Josef 11/8: "man fattar inte
+    // annars vilken databas vi har"). Konstant fart, låg måls-zoom: gliden är
+    // ambient, inte en transport. När prop:en blir null (rutan stängd, eller
+    // stadshoppet tar över) stoppar cleanup:en animationen där den står.
+    // Tvinga NÅL-läget under hela intron — bara prickar, inga brickor (Josef
+    // 11/8). zoomstart/zoomend-spärrarna räcker inte: brickorna hann tändas i
+    // boot-fönstren INNAN glidens första zoom-event, och stilbytet återskapar
+    // brick-lagret synligt. Körs vid glidstart och varje 'idle' (= efter varje
+    // stilbyte/datapush), så läget återställs hur lagren än ritas om.
+    const enforceIntroNeedles = useCallback(() => {
+        const map = mapRef.current;
+        const container = mapContainerRef.current;
+        if (!map || !container || !styleReady(map)) return;
+        container.classList.remove('map-state-full');
+        container.classList.add('map-state-needle');
+        if (layerExists(map, 'plain-events')) map.setLayoutProperty('plain-events', 'visibility', 'none');
+        if (layerExists(map, 'plain-events-dots')) {
+            map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
+            map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', ['*', 0.9, PAST_DIM_EXPR]);
+            map.setLayoutProperty('plain-events-dots', 'visibility', 'visible');
+        }
+        for (const id of ['multi-event-dots', 'multi-event-dots-count']) {
+            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'visible');
+        }
+        // DOM-brickorna göms av nål-CSS-klassen; state-flaggan håller övrig
+        // logik (t.ex. multi-event-DOM:en) i zoom-läget tills stadshoppet.
+        isZoomingRef.current = true;
+        setIsZooming(true);
+    }, []);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !introGlide) return;
+        const target = introGlide;
+        let disposed = false;
+        const glide = () => {
+            if (disposed || !styleReady(map)) return;
+            enforceIntroNeedles();
+            const remaining = INTRO_GLIDE_ZOOM - map.getZoom();
+            if (remaining <= 0.05) return; // framme — stå still tills rutan stängs
+            map.easeTo({
+                center: [target.lng, target.lat],
+                zoom: INTRO_GLIDE_ZOOM,
+                // Skala tiden efter kvarvarande zoom så en OMSTART fortsätter i
+                // samma lugna fart i stället för att smeta ut resten över hela
+                // INTRO_GLIDE_MS.
+                duration: (remaining / Math.max(0.1, INTRO_GLIDE_ZOOM - START_ZOOM)) * INTRO_GLIDE_MS,
+                easing: t => t,
+            });
+        };
+        // Starta direkt — och starta OM varje gång kartan stannar i förtid.
+        // Boot-stilbytet (bootstrap→nöjesfält) och GPS-målbytet avbryter en
+        // pågående ease, och med en engångs-easeTo blev kameran då stående
+        // (Josef 11/8: "jag ser ingen långsam zoom"). 'idle' fyrar bara när
+        // inget animeras, så en pågående glid triggar inga omstarter.
+        map.on('idle', glide);
+        glide();
+        return () => { disposed = true; map.off('idle', glide); map.stop(); };
+        // Bara koordinaterna — sidan bygger ett nytt objekt varje render, och
+        // med objektet i deps hade gliden startat om vid varje omritning.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [introGlide?.lat, introGlide?.lng]);
+
     const prevCityTourKeyRef = useRef<number | null>(null);
     useEffect(() => {
         if (!cityTourTarget) return;

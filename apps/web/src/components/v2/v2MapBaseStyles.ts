@@ -47,7 +47,9 @@ export const SATELLITE_STYLE: maplibregl.StyleSpecification = {
 // mörka) delas av bootstrap-stilen och container-bakgrunden i V2Map — de ska
 // matcha det UTZOOMADE läget eftersom kartan startar på zoom 5.
 export const THEMEPARK_LAND_COLOR = '#5b9b3b';
-const THEMEPARK_LAND_COLOR_NEAR = '#93c46c';
+// Exporteras: stadssidornas kart-hero (zoom 11 ≥ LAND_ZOOM_NEAR) använder den
+// ljusa tonen som väntplatta så GL-intoningen blir sömlös även där.
+export const THEMEPARK_LAND_COLOR_NEAR = '#93c46c';
 // Grönskan tonar i samma zoomintervall så den alltid ligger ett snäpp djupare
 // än landet — annars inverteras hierarkin halvvägs i tonövergången.
 const THEMEPARK_GREENERY_FAR = '#47822c';

@@ -510,6 +510,15 @@ export function weekendKeys(): string[] {
     return keys;
 }
 
+/** Kommande veckans dagnycklar: idag + 6 dagar framåt. Intro-raden på
+ *  stadssidorna säger "N i veckan" (Josef 11/8, ersatte "i helgen" —
+ *  veckotalet visar volymen bättre). */
+export function weekKeys(): string[] {
+    const keys: string[] = [];
+    for (let i = 0; i < 7; i++) keys.push(keyFmt.format(new Date(Date.now() + i * 86_400_000)));
+    return keys;
+}
+
 /** Antal event som infaller på någon av dagarna. */
 export function countByDayKeys(events: CityEvent[], keys: string[]): number {
     const set = new Set(keys);

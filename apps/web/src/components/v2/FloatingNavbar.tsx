@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X, Heart, Calendar, ChevronDown, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X, Heart, Signpost } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import DayPicker from './DayPicker';
 
 interface FloatingNavbarProps {
     creationMode?: 'idle' | 'placing' | 'editing';
@@ -26,23 +25,12 @@ interface FloatingNavbarProps {
     savedCount?: number;
     /** Öppna/stäng panelen med sparade event. */
     onToggleSaved?: () => void;
-    dayOffset?: number;
-    dayRangeDays?: number;
-    onDayRangeChange?: (offset: number, days: number) => void;
-    /** True när kartan är inzoomad till stadsnivå → "Hela veckan" låses upp i
-     *  dagväljaren (utzoomad vecka = tusentals brickor, ingen klustring). */
-    weekUnlocked?: boolean;
-    dayCount?: number;
-    eventsLoaded?: boolean;
-    /** Sant först när aggregaten (de scrapade eventen) landat. Innan dess visar
-     *  badgen "…" — annars stod det "1 event" (bara sajtens egna, som kommer via
-     *  en snabbare poll) i flera sekunder innan riktiga antalet hoppade in. */
-    dayCountReady?: boolean;
-    /** Play-knappen: starta bildspelet igen där man står. Visas bara när det
-     *  står still — det finns ingen "nästa stad"-knapp (se vägskyltarna). */
-    onStartTour?: () => void;
-    /** Sant medan stads-bildspelet rullar → play-knappen göms helt. */
-    tourPlaying?: boolean;
+    /** Skylt-knappen (gamla play-knappen, Josef 10/8): togglar vägskyltarna.
+     *  PÅ-slaget fäster också kameran vid närmsta stad med rätt inzoom — precis
+     *  som play gjorde; AV-slaget bara gömmer skyltarna, inget hopp. */
+    onToggleSigns?: () => void;
+    /** Sant när vägskyltarna är på (kartan fäst vid en stad). */
+    signsOn?: boolean;
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -98,15 +86,8 @@ export default function FloatingNavbar({
     onOpenProfile,
     savedCount = 0,
     onToggleSaved,
-    dayOffset = 0,
-    dayRangeDays = 1,
-    onDayRangeChange,
-    weekUnlocked = false,
-    dayCount = 0,
-    eventsLoaded = true,
-    dayCountReady = true,
-    onStartTour,
-    tourPlaying = false,
+    onToggleSigns,
+    signsOn = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -114,8 +95,6 @@ export default function FloatingNavbar({
     const plusBtnRef = useRef<HTMLButtonElement>(null);
     const animationRef = useRef<Animation | null>(null);
     const [plusDropping, setPlusDropping] = useState(false);
-    const [dayPickerOpen, setDayPickerOpen] = useState(false);
-    const dayChipRef = useRef<HTMLButtonElement>(null);
 
     // Fokusera sökfältet när det öppnas
     useEffect(() => {
@@ -178,23 +157,16 @@ export default function FloatingNavbar({
         }
     };
 
-    // Dubbelklick på dagchipen = snabbväxling dag ↔ hela veckan (ersätter den
-    // borttagna vecko-genvägen). De två klicken har redan hunnit öppna och
-    // stänga popovern innan dblclick landar, så den står stängd — vi stänger
-    // ändå explicit ifall något ändrar den ordningen.
-    const handleDayChipDoubleClick = () => {
-        if (!weekUnlocked || !onDayRangeChange) return;
-        setDayPickerOpen(false);
-        onDayRangeChange(0, dayRangeDays === 7 ? 1 : 7);
-    };
-
     const handleCloseSearch = () => {
         setSearchOpen(false);
         setSearchQuery('');
     };
 
     return (
-        <div className="absolute top-6 left-0 right-0 z-[1000] px-4 pointer-events-none">
+        // z-[1160]: över stadsrutan (1090) OCH kategorikolumnen (1150) — öppet
+        // sökfält + resultatpanel ska täcka båda. Eventkortet (1250) och
+        // modaler (1300) ligger fortfarande över.
+        <div className="absolute top-6 left-0 right-0 z-[1160] px-4 pointer-events-none">
             <div className="flex flex-col gap-3 w-full max-w-[1400px] mx-auto">
 
                 {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
@@ -251,118 +223,39 @@ export default function FloatingNavbar({
                                 <HoverLabel>Sparade</HoverLabel>
                             </div>
                         )}
-                        {/* Play-knappen — dyker upp under hjärtat, men BARA när
-                            bildspelet står still. Ingen "nästa stad"-knapp
-                            längre (Josef 9/8): städer byter man genom
-                            vägskyltarna ute på kartan, som pekar mot de
-                            närmaste städerna. Medan bildspelet rullar finns
-                            alltså ingen knapp alls här — man stoppar det genom
-                            att röra kartan.
-                            SYNLIGARE ÄN GRANNARNA (Josef 10/8): som vit cirkel
-                            bland vita cirklar försvann den i raden — den läste
-                            som ännu en reglage-knapp fast den är det man ska
-                            trycka på för att något ska HÄNDA. Den bär därför
-                            sajtens primär-språk: blå gradient, gul kant och
-                            gold-glow-pulse, precis som "Evenemang stad för stad"
-                            och "Skapa event". Samma 40 px som grannarna — det är
-                            färgen som gör jobbet, så kolumnen står stilla.
+                        {/* Skylt-knappen (gamla play-knappen, Josef 10/8) — under
+                            hjärtat, ALLTID synlig som toggle. PÅ = vägskyltarna
+                            ute + kameran fäst vid närmsta stad med rätt inzoom
+                            (samma hopp som play gjorde); AV = skyltarna gömda,
+                            inget hopp. Rör man kartan slås skyltarna av (de
+                            sitter fast i marken och skulle annars bli stående
+                            kvar utanför bild) — knappen hämtar tillbaka dem.
+                            AV-läget bär sajtens primär-språk (blå gradient, gul
+                            kant, gold-glow-pulse — som gamla play): det är då
+                            ett tryck får något att HÄNDA. PÅ-läget är samma
+                            cirkel utan puls, med gul ikon = läget lyser.
                             Pulsen tystas av prefers-reduced-motion (globals.css). */}
-                        {onStartTour && !tourPlaying && (
+                        {onToggleSigns && (
                             <div className="flex items-center gap-2 pointer-events-none">
                                 <button
                                     type="button"
-                                    onClick={onStartTour}
-                                    aria-label="Starta bildspelet"
-                                    className="peer gold-glow-pulse pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0"
+                                    onClick={onToggleSigns}
+                                    aria-pressed={signsOn}
+                                    aria-label={signsOn ? 'Göm vägskyltarna' : 'Visa vägskyltarna och åk till närmsta stad'}
+                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 ${signsOn ? '' : 'gold-glow-pulse'}`}
                                 >
-                                    {/* Play ligger optiskt lite vänstertungt i en cirkel — nudge höger. */}
-                                    <Play size={18} className="text-[#FECC02] translate-x-[1px]" fill="currentColor" />
+                                    <Signpost size={18} className={signsOn ? 'text-[#FECC02]' : 'text-white/80'} />
                                 </button>
-                                <HoverLabel>Starta bildspelet</HoverLabel>
+                                <HoverLabel>{signsOn ? 'Göm vägskyltarna' : 'Vägskyltar — åk till närmsta stad'}</HoverLabel>
                             </div>
                         )}
                     </div>
 
-                    {/* Dagväljaren — CENTRERAD högst upp på skärmen (absolut, så den
-                        ligger mitt i vyn oavsett knapparna till vänster/höger).
-                        top-0 (inte top-1/2): raden är högre än 40px sedan hjärtat
-                        flyttade ner — chipen ska ligga i topplinjen med sök/plus.
-                        Pilarna bläddrar en dag i taget (bara i endagsläge — för en
-                        period är "nästa dag" tvetydigt): höger alltid, vänster
-                        först när man bläddrat framåt. De göms som OSYNLIGA
-                        platshållare i stället för att plockas bort — chipen ska
-                        stå still i sidled när man växlar dag↔vecka (bildspelets
-                        blink gör det med några sekunders mellanrum).
-                        UNDER BILDSPELET göms hela dagväljaren: stadsrutan (som
-                        tar samma plats i topplinjen) visar då stad + dag +
-                        antal. Så fort man klickar på kartan och bildspelet
-                        stannar är chipen tillbaka. */}
-                    {onDayRangeChange && !tourPlaying && (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto z-10 flex flex-col items-center gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                                <button
-                                    type="button"
-                                    onClick={() => dayOffset > 0 && onDayRangeChange(dayOffset - 1, 1)}
-                                    aria-label="Föregående dag"
-                                    title="Föregående dag"
-                                    className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayRangeDays === 1 && dayOffset > 0 ? '' : 'invisible pointer-events-none'}`}
-                                >
-                                    <ChevronLeft size={16} />
-                                </button>
-                                <div className="relative">
-                                    <button
-                                        ref={dayChipRef}
-                                        type="button"
-                                        onClick={() => setDayPickerOpen(o => !o)}
-                                        onDoubleClick={handleDayChipDoubleClick}
-                                        aria-expanded={dayPickerOpen}
-                                        aria-label="Välj dag eller period"
-                                        title={weekUnlocked ? (dayRangeDays === 7 ? 'Dubbelklick: tillbaka till en dag' : 'Dubbelklick: hela veckan') : undefined}
-                                        className="select-none bg-white/90 backdrop-blur-md px-3 rounded-full shadow-lg border-2 border-[#FECC02] hover:bg-white transition-all font-semibold text-sm tracking-wide flex items-center gap-1.5 text-slate-700 h-10 box-border"
-                                    >
-                                        <Calendar size={15} className="text-[#006AA7] shrink-0" />
-                                        {/* Fast bredd + centrerad text: etiketten byts på
-                                            plats ("Idag" ↔ "Hela veckan") utan att chipen
-                                            växer och krymper — bildspelets blink gör det
-                                            byten var annan sekund. Bredden rymmer den
-                                            längsta etiketten ("Hela veckan"). */}
-                                        <span className="min-w-[92px] text-center">{getDayLabel(dayOffset, dayRangeDays)}</span>
-                                        <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dayPickerOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-[#006AA7] text-white text-[9px] font-black tabular-nums px-1.5 h-[16px] rounded-full shadow border border-white flex items-center justify-center leading-none pointer-events-none">
-                                        {eventsLoaded && dayCountReady ? dayCount : '…'}
-                                    </span>
-                                    {dayPickerOpen && (
-                                        <DayPicker
-                                            dayOffset={dayOffset}
-                                            dayRangeDays={dayRangeDays}
-                                            weekUnlocked={weekUnlocked}
-                                            anchorRef={dayChipRef}
-                                            onPick={(offset, days) => { onDayRangeChange(offset, days); setDayPickerOpen(false); }}
-                                            onClose={() => setDayPickerOpen(false)}
-                                        />
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => onDayRangeChange(dayOffset + 1, 1)}
-                                    aria-label="Nästa dag"
-                                    title="Nästa dag"
-                                    className={`h-8 w-8 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white transition-colors flex items-center justify-center text-slate-700 shrink-0 ${dayRangeDays === 1 ? '' : 'invisible pointer-events-none'}`}
-                                >
-                                    <ChevronRight size={16} />
-                                </button>
-                            </div>
-                            {/* (Emoji-sammanfattningen som stod här är BORTTAGEN
-                                9/8: utan bildspel gäller siffran hela Sverige,
-                                och en rikstotal per aktivitetstyp säger inget.
-                                Den bor bara i bildspelets stadsruta, där den
-                                gäller EN stad. Vecko-genvägen som låg här är
-                                också borta — den blinkade mellan "Veckan" och
-                                "Idag"; vägen till veckan är dagväljarens
-                                "Hela veckan"-rad.) */}
-                        </div>
-                    )}
+                    {/* (Dagväljar-chipen med popover som stod här är BORTTAGEN
+                        10/8: stadsrutan står numera ALLTID uppe i topplinjen och
+                        äger dag-navigeringen — pilarna stegar dag, klick växlar
+                        dag↔vecka och kalenderknappen öppnar månadskalendern
+                        direkt. Två dagväljare i samma linje vore en för mycket.) */}
 
                     {/* Höger: en KOLUMN längst ut i kanten (6/8, Josef): sök överst,
                         skapa event-knappen under, och kategorifiltret (renderas i

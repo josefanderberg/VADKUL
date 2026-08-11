@@ -138,7 +138,9 @@ export const EVENT_CATEGORIES = {
   family: {
     id: 'family',
     label: 'Familj & barn',
-    emoji: '👨‍👩‍👧',
+    // 🧸 i stället för familje-emojin (Josef 11/8): flerpersoners-glyfen blir
+    // grötig i 40px-cirkeln i kategorikolumnen; nallen läses direkt.
+    emoji: '🧸',
     markerColor: 'bg-cyan-500',
     markerHex: '#06b6d4',
     color: 'bg-cyan-100 text-cyan-600',
