@@ -1,16 +1,15 @@
 name: Deploy till Firebase
 
-# Deployar vid KOD-push till main. Kan även triggas manuellt under
+# Deployar vid KOD-push till main OCH varje morgon efter skraperns
+# 06:00-körning (svensk tid) — stadssidorna bakas vid build, så den dagliga
+# deployen ger Google dagsfärska sidor. Kan även triggas manuellt under
 # Actions-fliken (Run workflow).
 #
-# Morgon-cronen (06:00 UTC) är AVSTÄNGD tills senaste frontend-versionen
-# ligger på main — den byggde om sajten från main och skrev över manuella
-# deployer gjorda från arbetsmaskinen. Eventdatan är färsk ändå:
-# /api/events/[layer] läser live ur Firestore (1 h CDN-cache), så deployen
-# behövs bara för att baka om de statiska stadssidorna (SEO). Återaktivera
-# cronen när main är i kapp:
-#   schedule:
-#     - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
+# Cronen var avstängd 11–12/8 medan main låg efter arbetsmaskinen (den
+# skrev då över en manuell deploy). Återaktiverad 12/8 när main kom i kapp.
+# paths-ignore nedan behålls: minins datapushar behöver ingen egen deploy —
+# /api/events/[layer] läser live ur Firestore (1 h CDN-cache), och de
+# statiska stadssidorna fräschas upp av just morgon-cronen.
 #
 # Kräver två repo-secrets (Settings → Secrets and variables → Actions):
 #   FIREBASE_SERVICE_ACCOUNT — hela JSON-nyckeln från Firebase Console →
@@ -29,6 +28,8 @@ on:
       - 'apps/web/public/events-*.json'
       - 'apps/scraped_events.json'
       - 'apps/scraper/**'
+  schedule:
+    - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
   workflow_dispatch:
 
 concurrency:
