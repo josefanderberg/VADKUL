@@ -2660,13 +2660,20 @@ mot kartan att raderna lever innan postning). Kandidater poängsatta på utbud
 
 - **Älmhult:** 15 km drar in Osby (fel kommun + fel län) — alla Osby-rader strukna.
 - **Örnsköldsvik:** "Musik i Skymningen i Bara kyrka" (Värby församling, SKÅNE)
-  låg felgeokodad 4 km från Övik — struken. "Travdag på Dannero" (PRO-resa,
-  banan ligger vid Kramfors) — struken.
+  låg felgeokodad 4 km från Övik — struken. Vid 7–8-radersutökningen 11/8
+  hittades TVÅ till från samma felgeokodade källa ("Sommaröppethus" och
+  "Sommarcafé i Värbygården") — strukna. Värby församling bör geo-lagas i
+  källan. "Travdag på Dannero" (PRO-resa, banan ligger vid Kramfors) — struken.
 - **Sölvesborg:** "Tour de Ringsjön" på Jeppavallen ser felplacerad ut
   (Ringsjön ligger i mellersta Skåne) — struken.
 
 Trädgårdsdagen i Sölvesborg finns dubbelt i datan (kl 10 Slottsallén resp.
 kl 11 utan adress) — raden nedan använder kl 10-versionen som har gatuadress.
+
+**Utökning till 7–8 rader (11/8, Josefs önskan):** grannorts-rader tillåtna
+med orten utskriven (Haninge-praxis): Näsum/Bromölla för Sölvesborg, Osby för
+Älmhult. Fönstret vidgat t.o.m. ons 19/8. PRO-/församlingsandelen ökar med
+utökningen — hålls under hälften av raderna per inlägg.
 
 **Postningsordning:** tre olika landsändar, kan gå samma dag — men det är
 dagsmaxet (2–3/dag), inga fler grupper 11/8.
@@ -2683,8 +2690,11 @@ V1:
 > 🌸 Trädgårdsdagen i Slottsallén (lördag 15/8 kl 10)
 > 🎸 Pukaviksrocken på Alholmen i Pukavik (lördag 15/8 kl 12)
 > ⚽ Allsvenskan: Mjällby AIF–IK Sirius på Strandvallen (lördag 15/8 kl 15)
+> 🏛️ Gudahagens solkult, vikingar och Holjeåns hemligheter — kväll i Näsum (torsdag 13/8 kl 18)
 > ☕ PRO:s café i Sternska villan (fredag 14/8 kl 13)
 > 🏃 Sweden Runners löparträning, start i Sölvesborg (tisdagar kl 18.15)
+> 🚶 Tipspromenad vid församlingshemmet i Bromölla (tisdag 18/8 kl 10)
+> 🚴 Fixarkväll på pumptracken vid Bokelundsskolan (onsdag 19/8 kl 18)
 >
 > Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
 > ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
@@ -2710,10 +2720,13 @@ V1:
 > Lite av varje i Älmhultstrakten den här veckan 👇
 >
 > 🚲 Pop-up med bibliotekets lådcykel på Skolgatan (tisdag 11/8 kl 13)
+> 🎲 Boule med PRO Stenbrohult (tisdag 11/8 kl 14)
 > 🎭 Berättarkväll: Otäcka äventyr på Stinsens Vävstuga (onsdag 12/8 kl 18)
 > 🚶 Historisk byavandring i Delary, samling vid Delarygården (onsdag 12/8 kl 18)
 > 🎲 Boule i Delary med PRO Göteryd (torsdag 13/8 kl 10)
+> 🎷 Konsert: Almfjords Jazzkvartett i Osby (fredag 14/8 kl 19)
 > 🌡️ Föredrag i Diö: Demokratin dör i hettan (måndag 17/8 kl 17)
+> ⛳ Minigolf med PRO Stenbrohult (onsdag 19/8 kl 10)
 >
 > Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
 > ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
@@ -2736,11 +2749,13 @@ V1:
 > Veckan i Övik bjuder på mer än man tror 👇
 >
 > 💃 Refresherkurs i west coast swing på Gnistan (onsdag 12/8 kl 18.15)
+> 🎶 Lunchmusik i Sockenstugan i Arnäs (onsdag 12/8 kl 12)
 > 🧠 Sommarkväll med quiz i Sockenstugan i Arnäs (onsdag 12/8 kl 18)
 > 🐕 Aktivera din hund i Överhörnäs (torsdag 13/8 kl 14)
 > 🏺 Prova-på-dag i keramik (lördag 15/8 kl 10)
 > 🧶 Kurs i tenntrådsarmband på Centralesplanaden (lördag 15/8 kl 10)
 > 🛍️ Bagageloppis hos Örnsköldsviks församling (lördag 15/8 kl 11)
+> 🚶 AW-vandring i Gullviksområdet med Friluftsfrämjandet (tisdag 18/8 kl 17.30)
 >
 > Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
 > ser vad som är på gång var du än är. Vi hämtar in det mesta automatiskt,
