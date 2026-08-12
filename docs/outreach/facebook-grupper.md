@@ -2153,7 +2153,7 @@ Uteslutna: alla Göteborgsgrupper (Majorna 4/8, <7 d), Ängelholm #37/#68
 (24/7-regeln: kölagda inlägg får inte hinna bli inaktuella), ortnamn på rader
 utanför huvudorten, fyra OLIKA hälsningar/frågor.
 
-### AE. Vad händer I Åmål och Säffle (#44 → vadkul.se) — utkast klart 7/8, EJ postat
+### AE. Vad händer I Åmål och Säffle (#44 → vadkul.se) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (Åmålskalaset lör 8/8 m.fl.) hade passerat vid postning
 
 V1:
 
@@ -2178,7 +2178,7 @@ V1:
 V2: samma utan länkstycket → "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Åmål och Säffle!`
 
-### AF. VAD HÄNDER I LANDSKRONA (#52 → vadkul.se) — utkast klart 7/8, EJ postat
+### AF. VAD HÄNDER I LANDSKRONA (#52 → vadkul.se) — utkast MAKULERAT (gruppen var redan postad 27/7, upptäckt 8/8 — se masterlistan; karens 17/8)
 
 V1:
 
@@ -2202,7 +2202,7 @@ V1:
 V2: utan länk + "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — säg till om något saknas i Landskrona!`
 
-### AG. Vad händer i Gagnefs kommun (#28 → vadkul.se) — utkast klart 7/8, EJ postat
+### AG. Vad händer i Gagnefs kommun (#28 → vadkul.se) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (bygdespelet 8–9/8 m.fl.) hade passerat vid postning
 
 V1:
 
@@ -2226,7 +2226,7 @@ V1:
 V2: utan länk + "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — tipsa om det jag missat i Gagnef med omnejd!`
 
-### AH. Vad händer i Luleå? (#81 → /evenemang/lulea) — utkast klart 7/8, EJ postat
+### AH. Vad händer i Luleå? (#81 → /evenemang/lulea) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (8–9/8) hade passerat vid postning
 
 Ärliga tipsformatet (5 event inom 8 km — under tröskeln, ingen skrytlista):
 
@@ -2435,7 +2435,7 @@ Tierp kommun"**, men utkastet i den här filen heter **"6. Vad händer i Tierps
 kommun?"** — exakt namnet på **#38**, som står som orörd. Antingen är #38 redan
 postad och bokförd på fel rad, eller tvärtom. Reds ut innan någon av dem används.
 
-### AI. VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland (#82 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+### AI. VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland (#82 → /evenemang/goteborg) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9
 
 V1:
 
@@ -2601,14 +2601,14 @@ i värsta fall postas det två gånger i samma grupp inom karensen.
 | #10 Händer i Hudiksvall! 🌞 | (odokumenterat, 7/8) | **47 / 40 / 6** ⭐ rekord |
 | #79 Vad händer på Hisingen? | AJ | postat 10/8, **krävde godkännande** — i kö |
 | #31 Vad händer i Haninge | AL | postat 10/8, **inget godkännande** — uppe direkt |
-| #82 Göteborg ⭐ Västra Götaland | AI | ❓ status obekräftad |
+| #82 Göteborg ⭐ Västra Götaland | AI | ✅ postat 11/8 (bekräftat 12/8) |
 
 Godkännandemönstret hittills: de stora, breda grupperna har kö (Stockholm,
 Gotland, Ängelholm, Hisingen), de mindre ortsgrupperna släpper igenom direkt
 (Haninge, Torshälla, Nykvarn). Räkna med kö i allt som är storstad eller
 över ~10k medlemmar.
 
-### AM. Vad händer i östra Göteborg? (#32 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+### AM. Vad händer i östra Göteborg? (#32 → /evenemang/goteborg) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9
 
 Ersätter det makulerade Hudiksvallsutkastet. Vald på data: **28 unika event i
 själva nordöstra Göteborg** denna vecka (Angered, Bergsjön, Hammarkullen,
@@ -2820,6 +2820,24 @@ EJ postad.** Metod (V1/V2) och godkännandeläge obekräftade för alla tre —
 fyll i när det är känt. Karens till 2026-09-02. Tre grupper samma dag är över
 2-per-dag-rekommendationen — notera om det syns i utfallet. Uppföljning av
 reaktioner: efter en vecka, inte ett dygn (28/7-regeln).
+
+**FACIT 11/8 (bekräftat av Josef 12/8): hela gamla utkastkön postades 11/8** —
+AE Åmål/Säffle (#44), AG Gagnef (#28), AH Luleå (#81), AI Göteborg ⭐ VG
+(#82) och AM östra Göteborg (#32). Metod/utfall obekräftade; karens 1/9.
+Tre saker att hålla ögonen på:
+
+1. **7/8-trions rader hade passerat.** AE/AG/AH skrevs för helgen 8–9/8
+   (Åmålskalaset, bygdespelet, Björkskatans sommardag) — postade måndag 11/8
+   var de raderna historia. Om texterna INTE skrevs om före postning är det
+   Västmanland-läxan (30/7) i större skala: kolla kommentarerna efter
+   "det där har ju redan varit" och äg det i svaren. Notera i utfallskolumnen
+   om raderna var omskrivna eller ej.
+2. **Åtta grupper på två dygn** (fem 11/8 + tre 12/8) är långt över
+   spamdisciplinens 2–3/dag. Kontot verkar oflaggat — men följ upp extra
+   noga den här veckan.
+3. **Tre Göteborgsgrupper tätt** (#79 Hisingen 10/8 i kö, #82 + #32 11/8) —
+   dygnsregeln mellan Gbg-grupper hölls precis, men medlemsöverlappet är
+   stort; läs av reaktionerna per grupp innan nästa Gbg-varv.
 
 ## Luckor i medlemsregistret 12/8 — storstadsgrupperna som saknas
 
