@@ -2153,7 +2153,7 @@ Uteslutna: alla Göteborgsgrupper (Majorna 4/8, <7 d), Ängelholm #37/#68
 (24/7-regeln: kölagda inlägg får inte hinna bli inaktuella), ortnamn på rader
 utanför huvudorten, fyra OLIKA hälsningar/frågor.
 
-### AE. Vad händer I Åmål och Säffle (#44 → vadkul.se) — utkast klart 7/8, EJ postat
+### AE. Vad händer I Åmål och Säffle (#44 → vadkul.se) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (Åmålskalaset lör 8/8 m.fl.) hade passerat vid postning
 
 V1:
 
@@ -2178,7 +2178,7 @@ V1:
 V2: samma utan länkstycket → "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Åmål och Säffle!`
 
-### AF. VAD HÄNDER I LANDSKRONA (#52 → vadkul.se) — utkast klart 7/8, EJ postat
+### AF. VAD HÄNDER I LANDSKRONA (#52 → vadkul.se) — utkast MAKULERAT (gruppen var redan postad 27/7, upptäckt 8/8 — se masterlistan; karens 17/8)
 
 V1:
 
@@ -2202,7 +2202,7 @@ V1:
 V2: utan länk + "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — säg till om något saknas i Landskrona!`
 
-### AG. Vad händer i Gagnefs kommun (#28 → vadkul.se) — utkast klart 7/8, EJ postat
+### AG. Vad händer i Gagnefs kommun (#28 → vadkul.se) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (bygdespelet 8–9/8 m.fl.) hade passerat vid postning
 
 V1:
 
@@ -2226,7 +2226,7 @@ V1:
 V2: utan länk + "Kartan ligger i första kommentaren 👇".
 Första kommentaren: `Här är kartan: https://vadkul.se — tipsa om det jag missat i Gagnef med omnejd!`
 
-### AH. Vad händer i Luleå? (#81 → /evenemang/lulea) — utkast klart 7/8, EJ postat
+### AH. Vad händer i Luleå? (#81 → /evenemang/lulea) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9 — ⚠️ helgraderna (8–9/8) hade passerat vid postning
 
 Ärliga tipsformatet (5 event inom 8 km — under tröskeln, ingen skrytlista):
 
@@ -2435,7 +2435,7 @@ Tierp kommun"**, men utkastet i den här filen heter **"6. Vad händer i Tierps
 kommun?"** — exakt namnet på **#38**, som står som orörd. Antingen är #38 redan
 postad och bokförd på fel rad, eller tvärtom. Reds ut innan någon av dem används.
 
-### AI. VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland (#82 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+### AI. VAD HÄNDER I GÖTEBORG ⭐️ Västra Götaland (#82 → /evenemang/goteborg) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9
 
 V1:
 
@@ -2601,14 +2601,14 @@ i värsta fall postas det två gånger i samma grupp inom karensen.
 | #10 Händer i Hudiksvall! 🌞 | (odokumenterat, 7/8) | **47 / 40 / 6** ⭐ rekord |
 | #79 Vad händer på Hisingen? | AJ | postat 10/8, **krävde godkännande** — i kö |
 | #31 Vad händer i Haninge | AL | postat 10/8, **inget godkännande** — uppe direkt |
-| #82 Göteborg ⭐ Västra Götaland | AI | ❓ status obekräftad |
+| #82 Göteborg ⭐ Västra Götaland | AI | ✅ postat 11/8 (bekräftat 12/8) |
 
 Godkännandemönstret hittills: de stora, breda grupperna har kö (Stockholm,
 Gotland, Ängelholm, Hisingen), de mindre ortsgrupperna släpper igenom direkt
 (Haninge, Torshälla, Nykvarn). Räkna med kö i allt som är storstad eller
 över ~10k medlemmar.
 
-### AM. Vad händer i östra Göteborg? (#32 → /evenemang/goteborg) — utkast klart 10/8, EJ postat
+### AM. Vad händer i östra Göteborg? (#32 → /evenemang/goteborg) — ✅ POSTAT 11/8 (bekräftat 12/8; metod/utfall obekräftat) · karens 1/9
 
 Ersätter det makulerade Hudiksvallsutkastet. Vald på data: **28 unika event i
 själva nordöstra Göteborg** denna vecka (Angered, Bergsjön, Hammarkullen,
@@ -2648,3 +2648,349 @@ V1:
 
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som saknas i nordost!`
+
+## Onsdag 12/8 — 4 orörda grupper (Ängelholm, Väddö, Örnsköldsvik, Sölvesborg)
+
+**Urvalet (main synkad före urval ✅; eventdata = SNAPSHOT 10/8 14:34Z —
+färsk prod-data gick inte att hämta i den här sessionen, så per 30/7-regeln:
+**verifiera raderna mot kartan samma dag som du postar**):** eventräkning
+tors 13/8–ons 19/8 (dagen-efter-regeln — inga onsdagsrader 12/8), opt-in-källor
+(PRO/kyrkan/Korpen) bortfiltrerade, 8 km-räkning + namnkoll per Nykvarn-regeln.
+3 045 synliga event i landet i fönstret. 29 av 85 grupper orörda före dagens fyra.
+
+| grupp | ≤8 km | verkligt lokalt | omdöme |
+|---|---|---|---|
+| #37 Vad händer i Ängelholm? | 18 | ~16 | ✅ Rönne Å Rännet + Lergökarallyt + Bjäre Runt — allt PÅ 0 km |
+| #69 Vad händer på Väddö | 1 | 4 på ön | ✅ Visfestivalen + Grisslehamn (norra Väddö, 15 km) hör till ön |
+| #63 Vad händer i Örnsköldsvik? | 4 | 5 | ✅ tunt → ärliga tipsformatet (Hudiksvallsspåret — samma region!) |
+| #76 Vad händer i Sölvesborg | 4 | 3 äkta | ✅ Trädgårdsdagen + Pukaviksrocken (Pukavik = samma kommun) |
+
+**Bortvalda:** Huddinge #70 (24 inom radien men raderna är Vårby/Tullinge/
+Vitabergsparken/Mälarhöjden — tredje gången radien ljuger där) · Skogås #13
+(raderna är Brandbergen/Handen/Tyresö, och Haninge postades 10/8 =
+publiköverlapp två dagar senare) · Kungsbacka #24 (FJÄRDE gången — se
+geokodningsfyndet nedan: de enda dragvärda raderna ligger fel i datat, resten
+är biblioteksprogram på Fyren) · Älmhult #17 (5 rader varav 4 i OSBY — annan
+kommun; kvar = en Rotarylunch) · Malå #23 (två träffar = namnmatchningsfel:
+"Måla & skapa" i Vänersborg och "Måla klubbastugan" i Strömsnäsbruk!) ·
+Eksjö #6 (3 rader, 0 i helgen) · alla Göteborgsgrupper (#82/#79/#32 redan i
+omlopp denna vecka) · Ängelholm #68 (systergrupp — sparas, aldrig samma text)
+· Tierp #38 (loggrisken från 10/8 fortfarande olöst) · Sölvesborg/Lister #80
+(systergrupp — sparas; inga Listerlandet-event i datat just nu ändå).
+
+### 🚨 GEOKODNINGSFYND 12/8 — tre nya fel av Bio Roy-klassen (+ ett omvänt)
+
+1. **"Tour de Ringsjön" (FB-versionen) ligger i Sölvesborg** (56.051, 14.587)
+   — billetto-versionen av samma lopp ligger rätt vid Ringsjön i Skåne
+   (55.934, 13.555). Bortvald ur Sölvesborgsinlägget.
+2. **"The Burning Flakmoppe – Hede"** (ABF Jämtland-Härjedalens teaterturné:
+   Ytterhogdal/Sveg/Funäsdalen) är geokodad till **Hede i KUNGSBACKA**
+   (57.508, 12.082) — fel Hede, 60 mil fel.
+3. **"Mighty Queen … vid Östra Silvbergs gruva"** (Säter, Dalarna) ligger på
+   **Huddinge** (59.240, 18.024).
+4. **OMVÄNT FEL:** "Familjequiz" + "Allsång med mello-tema" med locationName
+   **Kungsbacka Torg** ligger ~20 km från Kungsbacka (mot Askim). Eventen är
+   äkta men syns på fel ställe på kartan — det avgjorde Kungsbackas bortval
+   (Hudiksvalls-läxan: lista aldrig rader läsaren inte hittar där hen tittar).
+
+Samma mönster som Bio Roy-fyndet 8/8 (venue-namn utan adress → fel ort).
+In i scraper-svepet.
+
+**Disciplin:** max 2 grupper/dag → posta 2 idag/imorgon + 2 dagen därpå.
+Okänt godkännandeläge i alla fyra → V1 om composern visar kö, annars V2 +
+kommentar direkt. Fyra OLIKA ingresser/kartstycken/frågor (spamfiltret).
+⚠️ **Ängelholmsnot:** systergruppen #14 postades 6/8 och ligger ännu i
+godkännandekö — släpps den samtidigt som AN går upp syns två
+Ängelholmsinlägg nära varandra. Acceptabelt (helt olika text och event), men
+posta AN tidigast 13/8 och håll koll. Ängelholmsgrupperna var dessutom
+lågaktiva 27/7 (3 likes) — sätt förväntan därefter.
+⚠️ **Fredagsraderna** (Rollspelskvällen, Garvet) passerar fredag kväll —
+släpps ett köat inlägg efter fredag: kommentera bort raden (Eskilstunaläxan).
+
+### AN. Vad händer i Ängelholm? (#37 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
+
+V1:
+
+> Vilken helg Ängelholm har framför sig 👇
+>
+> 🛶 Rönne Å Rännet — flotterännet genom stan (lördag 15/8 kl 10)
+> 🚚 Lergökarallyt och Sundets Pärla veteranlastbilsträff (lördag 15/8 kl 10)
+> 🚴 Bjäre Runt — cykelklassikern startar från Stortorget (söndag 16/8 kl 7)
+> 🎉 Sommargrill på Gård 57, Östergatan (lördag 15/8 kl 17.30)
+> 🛍️ Barnloppis i EFS-kyrkan (lördag 15/8 kl 13)
+> 🎲 Rollspelskväll på stadsbiblioteket, Gläntan (fredag 14/8 kl 17)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — över 100 event i Ängelholmstrakten
+> bara den här veckan:
+> https://vadkul.se
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er — rännet eller rallyt? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Ängelholm!`
+
+### AO. Vad händer på Väddö (#69 → vadkul.se) — utkast klart 12/8, EJ POSTAT (enda av dagens fyra som inte gick upp) — ⚠️ färskvara: Visfestivalen (lör 15/8) och Garvet (fre 14/8) bär utkastet; efter helgen måste raderna skrivas om ur färsk data
+
+Alla fyra raderna ligger PÅ ön (Grisslehamn = norra Väddö). Norrtäljes
+Pride-vecka (23–24 km, fastlandet) medvetet bortvald — Nykvarn-regeln.
+
+V1:
+
+> Ön levererar i helgen 👇
+>
+> 🎶 Väddö Visfestival på Kista hembygdsgård (lördag 15/8 kl 13)
+> 🎸 Grisslehamns Garvet — Janne Westerlund med vänner på Ångbåtsbryggan (fredag 14/8 kl 20)
+> 🎨 Guidad tur i Albert Engströms ateljé, Grisslehamn (torsdag 13/8 kl 13 och lördag 15/8 kl 11)
+>
+> Jag driver vadkul.se — en gratis karta som samlar allt som händer, från
+> Älmsta till Grisslehamn (och resten av Sverige när man drar i kartan):
+> https://vadkul.se
+>
+> Men jag vet att det händer mer på Väddö än kartan hittat — med ett gratis
+> konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad har jag missat på ön? 👇
+
+V2: länkstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det som saknas på Väddö!`
+
+### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
+
+Ärliga tipsformatet (5 verkligt lokala — under tröskeln, ingen skrytlista).
+Hudiksvall (47/40/6-rekordet) är grannstad och samma upplägg: "det här hittade
+jag — vad missar jag?"
+
+V1:
+
+> Det här hittade jag i Örnsköldsvik den närmaste veckan 👇
+>
+> 🏺 Keramik — prova på-dag (lördag 15/8 kl 10)
+> 💍 Lär dig göra tenntrådsarmband, Centralesplanaden (lördag 15/8 kl 10)
+> 🥾 AW-vandring i Gullviksområdet med Friluftsfrämjandet (tisdag 18/8 kl 17.30)
+> 🐕 Aktivera din hund, Överhörnäs (torsdag 13/8 kl 14)
+>
+> Och ärligt: det MÅSTE hända mer i Övik än så. Jag driver vadkul.se — allt
+> som händer samlas på EN karta, över 3 000 event i landet bara den här veckan
+> — men Örnsköldsvik är tunnare än det borde vara:
+> https://vadkul.se
+>
+> Så hjälp mig gärna: vad missar jag? 👇 Med ett gratis konto kan du
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+
+V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — säg till om jag missat något i Övik!`
+
+### AQ. Vad händer i Sölvesborg (#76 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
+
+Systergruppen #80 ("…och på Lister?") sparas till senare varv — aldrig samma
+text. "Tour de Ringsjön" bortvald (geokodningsfel, se ovan).
+
+V1:
+
+> Lördagen är räddad i Sölvesborg 👇
+>
+> 🌻 Trädgårdsdagen längs Slottsallén (lördag 15/8 kl 10)
+> 🎸 Pukaviksrocken på Alholmen i Pukavik (lördag 15/8 kl 12)
+> 🗿 Gudahagens solkult, vikingar och Holjeåns hemligheter — guidning i Näsum (torsdag 13/8 kl 18)
+> 🚴 Städ- och fixarkväll på pumptracken vid Bokelundsskolan (onsdag 19/8 kl 18)
+>
+> Grejen med vadkul.se: allt som händer hamnar på EN karta så du slipper leta
+> i tio olika flöden — hela veckans utbud i Sölvesborgstrakten ligger där:
+> https://vadkul.se
+>
+> Gratis konto ger dig mer:
+> ➕ lägg in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 notis när något du gillat drar igång
+>
+> Blir det Trädgårdsdagen eller Pukaviksrocken? 👇
+
+V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Sölvesborg!`
+
+**FACIT 12/8 (bekräftat av Josef samma dag): AN + AP + AQ postade — Väddö (AO)
+EJ postad.** Metod (V1/V2) och godkännandeläge obekräftade för alla tre —
+fyll i när det är känt. Karens till 2026-09-02. Tre grupper samma dag är över
+2-per-dag-rekommendationen — notera om det syns i utfallet. Uppföljning av
+reaktioner: efter en vecka, inte ett dygn (28/7-regeln).
+
+**FACIT 11/8 (bekräftat av Josef 12/8): hela gamla utkastkön postades 11/8** —
+AE Åmål/Säffle (#44), AG Gagnef (#28), AH Luleå (#81), AI Göteborg ⭐ VG
+(#82) och AM östra Göteborg (#32). Metod/utfall obekräftade; karens 1/9.
+Tre saker att hålla ögonen på:
+
+1. **7/8-trions rader hade passerat.** AE/AG/AH skrevs för helgen 8–9/8
+   (Åmålskalaset, bygdespelet, Björkskatans sommardag) — postade måndag 11/8
+   var de raderna historia. Om texterna INTE skrevs om före postning är det
+   Västmanland-läxan (30/7) i större skala: kolla kommentarerna efter
+   "det där har ju redan varit" och äg det i svaren. Notera i utfallskolumnen
+   om raderna var omskrivna eller ej.
+2. **Åtta grupper på två dygn** (fem 11/8 + tre 12/8) är långt över
+   spamdisciplinens 2–3/dag. Kontot verkar oflaggat — men följ upp extra
+   noga den här veckan.
+3. **Tre Göteborgsgrupper tätt** (#79 Hisingen 10/8 i kö, #82 + #32 11/8) —
+   dygnsregeln mellan Gbg-grupper hölls precis, men medlemsöverlappet är
+   stort; läs av reaktionerna per grupp innan nästa Gbg-varv.
+
+## Luckor i medlemsregistret 12/8 — storstadsgrupperna som saknas
+
+Fråga från Josef 12/8: "finns det någon större stadsgrupp jag missat bli
+medlem i?" Svar: JA — registret (85 grupper) korsat mot de 31 städerna med
+egen stadssida ger **15 städer med sida + starkt utbud men NOLL grupper**:
+
+**Största luckorna (topp-7, alla bland Sveriges ~15 största kommuner):**
+
+1. **Linköping** — ingen grupp alls
+2. **Västerås** — bara länsgruppen "Vad händer i Västmanland!" (postad 30/7);
+   en stadsgrupp skulle ge betydligt vassare urval än länsmixen
+3. **Örebro** — ingen grupp
+4. **Norrköping** — ingen grupp
+5. **Jönköping** — ingen grupp (Gränna #59 är samma kommun men fel publik)
+6. **Umeå** — ingen grupp
+7. **Lund** — ingen grupp (Landskrona/Kävlinge täcker inte Lundapubliken)
+
+**Andra raden:** Södertälje · Växjö · Karlskrona · Östersund · Falun ·
+Skellefteå (Byske #27 är samma kommun men en bygrupp) · Trollhättan
+(Vänersborgsinlägget 1/8 nekades — Trollhättan är orörd tvilling) · Skövde.
+
+Detta är precis städerna där 25/7-lärdomen slår: **utbudet driver
+reaktionen** (Helsingborg 305 event → 26 likes vs Karlstad 98 → 5). Alla sju
+i toppen har stadssida att djuplänka till.
+
+**Att göra (Josef):** sök i FB på mönstren "Vad händer i [stad]", "Det händer
+i [stad]", "[Stad] tipsar" och gå med i 1–2 grupper per stad. OBS:
+1. Gruppnamnen är ORDAGRANNA i registret — skriv in EXAKT namn + medlemsantal
+   som nya rader här när medlemskapen är godkända.
+2. Gå med i några åt gången, inte alla 15 på en kväll (spamfiltret ser även
+   ansökningsmönster).
+3. Svara ÖPPET på medlemsfrågor — 8/8-lärdomen från Evenemang på Gotland:
+   den som berättar att hen driver vadkul.se får förhandsgodkännande i stället
+   för spamflagg.
+4. Storstadsgrupper = räkna med godkännandekö på inläggen (10/8-mönstret) och
+   hårdast moderering (25/7-risknoten) — läs regelrutan och överväg admin-DM
+   i de största.
+
+## Onsdag 12/8, kväll — tre nya storstadsgrupper: Västerås, Norrköping, Jönköping (helginlägg)
+
+Josef gick med i tre av topp-7-luckorna samma dag (#86–88 i masterlistan —
+**exakta gruppnamn EJ ifyllda**, ordagrant-regeln gäller). Alla tre städerna
+har egen stadssida → djuplänk.
+
+**Urval ur snapshot 10/8** (färsk prod-data fortsatt blockerad — verifiera
+raderna mot kartan vid postning). Helgen 14–16/8 inom 10 km: **Norrköping 98
+event (AUGUSTIFESTEN kulminerar!)** · Jönköping 20 · Västerås 11. Veckan inom
+25 km: Norrköping 125 · Jönköping 53 · Västerås 22.
+
+**Disciplin:**
+
+- Okänt godkännandeläge + storstad = räkna med kö → **ENDAST lör/sön-rader**
+  (7/8-regeln). Fredagsgodbitarna (Danny Saucedo i Jönköping, Mikkey Dee i
+  Västerås, RIX FM/Götaparken i Norrköping) ligger som RESERVRADER — läggs
+  bara till om inlägget bevisligen är uppe före fredag kväll.
+- ⚠️ **NY MEDLEM-RISKEN (18/7 + Borås-noten 23/7):** nyinkommen medlem som
+  direktpostar länk = raderingsrisk. Engagera gärna i gruppen först (gilla/
+  kommentera något), posta tidigast imorgon 13/8, och överväg V2
+  (länk i kommentar) där gruppen publicerar direkt.
+- Max 2–3/dag: tre grupper redan postade idag (AN/AP/AQ) → posta dessa
+  **tors 13/8 (2 st) + fre förmiddag (1 st)**, inte ikväll.
+- Bortvalda Norrköpingsrader: "Henrik Jönsson, Jan Emanuel och Aron Flam
+  räddar Sverige" (politiskt laddat — partipolitikregeln från Haninge 10/8)
+  och "Folkfest för fred och klimat" (demonstration, inte evenemang).
+- Dubbletter rensade: Swimrun ×2 (fb/raceid), Järstorpsdagen ×2 (jonkoping.se-
+  versionen har dessutom centrum-koordinater — hembygdsgården ligger ~7 km NV;
+  in i geokodningssvepet).
+
+### AR. Västerås-gruppen (#86 → /evenemang/vasteras) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Vilken lördag Västerås har framför sig 👇
+>
+> 🎤 Diggiloo på Rocklunda (lördag 15/8 kl 18)
+> 🥕 Bondens egen marknad på Stora torget (lördag 15/8 kl 10)
+> 🏊 Västerås Swimrun — simlöpning genom stan (lördag 15/8)
+> 🎶 Orgelmatiné i domkyrkan (lördag 15/8 kl 12)
+> 🌍 Afrobeat Fiesta på Bierkeller, Stora Gatan (lördag 15/8 kl 20)
+> 🎸 Stiko Per Larsson & Kensie Coppin på Carlsson På Kajen (söndag 16/8 kl 18)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — Västeråssidan ligger här:
+> https://vadkul.se/evenemang/vasteras
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er i helgen? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/vasteras — tipsa gärna om det jag missat i Västerås!`
+
+Reservrad (bara om inlägget är UPPE före fredag kväll):
+🤘 Mikkey Dee & Friends plays Motörhead på Carlsson På Kajen (fredag 14/8 kl 18).
+
+### AS. Norrköpings-gruppen (#87 → /evenemang/norrkoping) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Augustifesten kulminerar i helgen — och det är svårt att välja 👇
+>
+> 🎸 Bluesfesten i Parken, Refvens Grund — tio band från lunch till midnatt (lördag 15/8)
+> 🎻 Norrköpings Symfoniorkester: Musik i det Gröna i Vasaparken (lördag 15/8 kl 17)
+> 🌭 Foodtruck Festival på Hamngatan + Knallemarknad på Gamla Rådstugugatan (lördag 15/8)
+> 👨‍👩‍👧 Familjedagen i Vasaparken och Familjedag i Skulpturparken (lördag 15/8 kl 11)
+> 🤘 Skraeckoedlan avslutar i Götaparken (lördag 15/8 kväll)
+> 🐕 Norrköping Dog Show på Himmelstalundsfältet (lördag 15/8 kl 9)
+> 🚶 Stadsvandring: Minnesvärda kvinnor, från Stadsmuseet (söndag 16/8 kl 14)
+> 🎶 Jubileumskonsert med Unga Symfoniker Öst i De Geerhallen (söndag 16/8 kl 16)
+>
+> Jag driver vadkul.se — en gratis karta som samlar allt som händer på ETT
+> ställe, så du ser hela festprogrammet och allt runtomkring — över 90 event
+> i stan bara i helgen:
+> https://vadkul.se/evenemang/norrkoping
+>
+> Med ett gratis konto kan du dessutom:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 få en notis när något du gillat drar igång
+>
+> Vad ser ni mest fram emot på festen? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/norrkoping — tipsa gärna om det jag missat!`
+
+### AT. Jönköpings-gruppen (#88 → /evenemang/jonkoping) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Helgen bjuder på både rock och hembygd i Jönköping 👇
+>
+> 🎸 Ronny och Ragge + support av Dotter, utescenen i Huskvarna Folkets Park (lördag 15/8 kl 18)
+> 🎬 Blödaren — kultfilmvisning med regissörsbesök på Sofiehof Underjord (lördag 15/8 kl 20)
+> 🛶 Jönköpings Kanotklubb firar 90 år (lördag 15/8 kl 10.30)
+> 📖 Berättarkväll: Sägner från Odensjö med omnejd (lördag 15/8 kl 15)
+> 🏡 Järstorpsdagen på Järstorps hembygdsgård (söndag 16/8 kl 11)
+> 🎨 Art Made in Europe — Dymlingens medlemsutställning (söndag 16/8 kl 15)
+>
+> Grejen med vadkul.se: allt som händer hamnar på EN karta så du slipper leta
+> i tio olika flöden — ett 50-tal event i Jönköpingstrakten bara den här
+> veckan:
+> https://vadkul.se/evenemang/jonkoping
+>
+> Gratis konto ger dig mer:
+> ➕ lägg in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 notis när något du gillat drar igång
+>
+> Blir det Ronny och Ragge eller Järstorpsdagen? 👇
+
+V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/jonkoping — tipsa gärna om det jag missat i Jönköping!`
+
+Reservrad (bara om inlägget är UPPE före fredag kväll):
+🎤 Danny Saucedo på Hasse på Sjökanten (fredag 14/8 kl 21).
