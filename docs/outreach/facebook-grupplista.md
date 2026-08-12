@@ -1,7 +1,8 @@
 # FB-grupper — masterlista (alla jag är medlem i)
 
-85 grupper (82 importerade 2026-07-22 + Händer i Borås tillagd 23/7 + två
-Gotlandsgrupper tillagda 8/8). Detta är
+88 grupper (82 importerade 2026-07-22 + Händer i Borås tillagd 23/7 + två
+Gotlandsgrupper tillagda 8/8 + tre storstadsgrupper tillagda 12/8 —
+⚠️ EXAKTA NAMN EJ IFYLLDA, se raderna 86–88). Detta är
 MEDLEMSKAPSREGISTRET — de färdiga inläggen bor i
 [facebook-grupper.md](facebook-grupper.md).
 
@@ -119,3 +120,6 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 83 | Händer i Borås | /evenemang/boras | 23/7 · länk i inlägg (Dolly Style) · publicerat direkt |
 | 84 | Vi som älskar Gotland (38,2t medl.) | vadkul.se | 8/8 · länk i inlägg (V1, 10 rader utanför ringmuren) · KRÄVDE GODKÄNNANDE — i kö |
 | 85 | Evenemang på Gotland (22,1t medl.) ⚠️ medlemsfråga vid ansökan | vadkul.se | 8/8 · länk i inlägg (V1, 10 rader hela ön) · KRÄVDE GODKÄNNANDE — i kö |
+| 86 | Västerås-gruppen — ⚠️ EXAKT NAMN EJ IFYLLT (ordagrant-regeln; Josef fyller i) | /evenemang/vasteras | utkast klart (12/8-AR), EJ postat |
+| 87 | Norrköpings-gruppen — ⚠️ EXAKT NAMN EJ IFYLLT (ordagrant-regeln; Josef fyller i) | /evenemang/norrkoping | utkast klart (12/8-AS), EJ postat |
+| 88 | Jönköpings-gruppen — ⚠️ EXAKT NAMN EJ IFYLLT (ordagrant-regeln; Josef fyller i) | /evenemang/jonkoping | utkast klart (12/8-AT), EJ postat |

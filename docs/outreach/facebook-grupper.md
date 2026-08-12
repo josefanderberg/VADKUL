@@ -2876,3 +2876,121 @@ i [stad]", "[Stad] tipsar" och gå med i 1–2 grupper per stad. OBS:
 4. Storstadsgrupper = räkna med godkännandekö på inläggen (10/8-mönstret) och
    hårdast moderering (25/7-risknoten) — läs regelrutan och överväg admin-DM
    i de största.
+
+## Onsdag 12/8, kväll — tre nya storstadsgrupper: Västerås, Norrköping, Jönköping (helginlägg)
+
+Josef gick med i tre av topp-7-luckorna samma dag (#86–88 i masterlistan —
+**exakta gruppnamn EJ ifyllda**, ordagrant-regeln gäller). Alla tre städerna
+har egen stadssida → djuplänk.
+
+**Urval ur snapshot 10/8** (färsk prod-data fortsatt blockerad — verifiera
+raderna mot kartan vid postning). Helgen 14–16/8 inom 10 km: **Norrköping 98
+event (AUGUSTIFESTEN kulminerar!)** · Jönköping 20 · Västerås 11. Veckan inom
+25 km: Norrköping 125 · Jönköping 53 · Västerås 22.
+
+**Disciplin:**
+
+- Okänt godkännandeläge + storstad = räkna med kö → **ENDAST lör/sön-rader**
+  (7/8-regeln). Fredagsgodbitarna (Danny Saucedo i Jönköping, Mikkey Dee i
+  Västerås, RIX FM/Götaparken i Norrköping) ligger som RESERVRADER — läggs
+  bara till om inlägget bevisligen är uppe före fredag kväll.
+- ⚠️ **NY MEDLEM-RISKEN (18/7 + Borås-noten 23/7):** nyinkommen medlem som
+  direktpostar länk = raderingsrisk. Engagera gärna i gruppen först (gilla/
+  kommentera något), posta tidigast imorgon 13/8, och överväg V2
+  (länk i kommentar) där gruppen publicerar direkt.
+- Max 2–3/dag: tre grupper redan postade idag (AN/AP/AQ) → posta dessa
+  **tors 13/8 (2 st) + fre förmiddag (1 st)**, inte ikväll.
+- Bortvalda Norrköpingsrader: "Henrik Jönsson, Jan Emanuel och Aron Flam
+  räddar Sverige" (politiskt laddat — partipolitikregeln från Haninge 10/8)
+  och "Folkfest för fred och klimat" (demonstration, inte evenemang).
+- Dubbletter rensade: Swimrun ×2 (fb/raceid), Järstorpsdagen ×2 (jonkoping.se-
+  versionen har dessutom centrum-koordinater — hembygdsgården ligger ~7 km NV;
+  in i geokodningssvepet).
+
+### AR. Västerås-gruppen (#86 → /evenemang/vasteras) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Vilken lördag Västerås har framför sig 👇
+>
+> 🎤 Diggiloo på Rocklunda (lördag 15/8 kl 18)
+> 🥕 Bondens egen marknad på Stora torget (lördag 15/8 kl 10)
+> 🏊 Västerås Swimrun — simlöpning genom stan (lördag 15/8)
+> 🎶 Orgelmatiné i domkyrkan (lördag 15/8 kl 12)
+> 🌍 Afrobeat Fiesta på Bierkeller, Stora Gatan (lördag 15/8 kl 20)
+> 🎸 Stiko Per Larsson & Kensie Coppin på Carlsson På Kajen (söndag 16/8 kl 18)
+>
+> Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt
+> ser vad som är på gång var du än är — Västeråssidan ligger här:
+> https://vadkul.se/evenemang/vasteras
+>
+> Och med ett gratis konto kan du:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se hända   🔔 få en notis när något du gillat drar igång
+>
+> Vad blir det för er i helgen? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/vasteras — tipsa gärna om det jag missat i Västerås!`
+
+Reservrad (bara om inlägget är UPPE före fredag kväll):
+🤘 Mikkey Dee & Friends plays Motörhead på Carlsson På Kajen (fredag 14/8 kl 18).
+
+### AS. Norrköpings-gruppen (#87 → /evenemang/norrkoping) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Augustifesten kulminerar i helgen — och det är svårt att välja 👇
+>
+> 🎸 Bluesfesten i Parken, Refvens Grund — tio band från lunch till midnatt (lördag 15/8)
+> 🎻 Norrköpings Symfoniorkester: Musik i det Gröna i Vasaparken (lördag 15/8 kl 17)
+> 🌭 Foodtruck Festival på Hamngatan + Knallemarknad på Gamla Rådstugugatan (lördag 15/8)
+> 👨‍👩‍👧 Familjedagen i Vasaparken och Familjedag i Skulpturparken (lördag 15/8 kl 11)
+> 🤘 Skraeckoedlan avslutar i Götaparken (lördag 15/8 kväll)
+> 🐕 Norrköping Dog Show på Himmelstalundsfältet (lördag 15/8 kl 9)
+> 🚶 Stadsvandring: Minnesvärda kvinnor, från Stadsmuseet (söndag 16/8 kl 14)
+> 🎶 Jubileumskonsert med Unga Symfoniker Öst i De Geerhallen (söndag 16/8 kl 16)
+>
+> Jag driver vadkul.se — en gratis karta som samlar allt som händer på ETT
+> ställe, så du ser hela festprogrammet och allt runtomkring — över 90 event
+> i stan bara i helgen:
+> https://vadkul.se/evenemang/norrkoping
+>
+> Med ett gratis konto kan du dessutom:
+> ➕ lägga in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 få en notis när något du gillat drar igång
+>
+> Vad ser ni mest fram emot på festen? 👇
+
+V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/norrkoping — tipsa gärna om det jag missat!`
+
+### AT. Jönköpings-gruppen (#88 → /evenemang/jonkoping) — utkast klart 12/8, EJ postat
+
+V1:
+
+> Helgen bjuder på både rock och hembygd i Jönköping 👇
+>
+> 🎸 Ronny och Ragge + support av Dotter, utescenen i Huskvarna Folkets Park (lördag 15/8 kl 18)
+> 🎬 Blödaren — kultfilmvisning med regissörsbesök på Sofiehof Underjord (lördag 15/8 kl 20)
+> 🛶 Jönköpings Kanotklubb firar 90 år (lördag 15/8 kl 10.30)
+> 📖 Berättarkväll: Sägner från Odensjö med omnejd (lördag 15/8 kl 15)
+> 🏡 Järstorpsdagen på Järstorps hembygdsgård (söndag 16/8 kl 11)
+> 🎨 Art Made in Europe — Dymlingens medlemsutställning (söndag 16/8 kl 15)
+>
+> Grejen med vadkul.se: allt som händer hamnar på EN karta så du slipper leta
+> i tio olika flöden — ett 50-tal event i Jönköpingstrakten bara den här
+> veckan:
+> https://vadkul.se/evenemang/jonkoping
+>
+> Gratis konto ger dig mer:
+> ➕ lägg in egna event   💡 tipsa om sånt som saknas
+> ✨ önska event du vill se   🔔 notis när något du gillat drar igång
+>
+> Blir det Ronny och Ragge eller Järstorpsdagen? 👇
+
+V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/jonkoping — tipsa gärna om det jag missat i Jönköping!`
+
+Reservrad (bara om inlägget är UPPE före fredag kväll):
+🎤 Danny Saucedo på Hasse på Sjökanten (fredag 14/8 kl 21).
