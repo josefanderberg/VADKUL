@@ -70,7 +70,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 34 | Du vet vad som händer i Torshälla | vadkul.se | 2/8 · publicerat direkt · dag 1: 0 reaktioner (kolla gruppaktivitet; uppföljning 9/8) |
 | 35 | Vad händer i Vänersborg? | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 36 | Vad händer i Kristianstad | /evenemang/kristianstad | ⏸️ avvald 4/8 (lugn vecka) — utkast sparat till senare |
-| 37 | Vad händer i Ängelholm? | vadkul.se | utkast klart (12/8-AN), EJ postat |
+| 37 | Vad händer i Ängelholm? | vadkul.se | 12/8 · postat (AN; metod/utfall obekräftat) · karens 2/9 |
 | 38 | Vad händer i Tierps kommun? | vadkul.se |  |
 | 39 | Vad händer i Nynäshamn | vadkul.se | 1/8 · länk i inlägg (V1, långa formatet) · ❌ NEKAD i godkännandekön — admin-DM före nytt försök |
 | 40 | Vad händer i Harads? | vadkul.se |  |
@@ -96,20 +96,20 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 60 | Vad händer i Västmanland! | vadkul.se | 30/7 · 28/7-texten (O) · uppe · ⚠️ 2 av 5 rader (onsdag 29/7) hade redan passerat |
 | 61 | Vad händer i Kungsladugård | vadkul.se |  |
 | 62 | Vad händer i Frölunda? | /evenemang/goteborg |  |
-| 63 | Vad händer i Örnsköldsvik? | vadkul.se | utkast klart (12/8-AP), EJ postat |
+| 63 | Vad händer i Örnsköldsvik? | vadkul.se | 12/8 · postat (AP; metod/utfall obekräftat) · karens 2/9 |
 | 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | 30/7 · länk i kommentar (N2) · uppe · **karens till 20/8** — ⚠️ 4/8-utkastet Ä skrevs i tro att gruppen var orörd (osynkad main); POSTA EJ Ä före 20/8 |
 | 65 | Vad händer i Torsås? | vadkul.se |  |
 | 66 | Du vet vad som händer i Eskilstuna | /evenemang/eskilstuna | 24/7 · länk i inlägg (m. stjärnlänk) · KRÄVDE GODKÄNNANDE (enda av dagens fyra) · ej släppt 25/7 |
 | 67 | Vad händer i kalmar! | /evenemang/kalmar | 23/7 · länk i kommentar · publicerat direkt |
 | 68 | Vad händer i Ängelholm | vadkul.se |  |
-| 69 | Vad händer på Väddö | vadkul.se | utkast klart (12/8-AO), EJ postat |
+| 69 | Vad händer på Väddö | vadkul.se | utkast klart (12/8-AO), EJ postat — ⚠️ färskvara: bygger på Visfestivalen 15/8, skrivs om efter helgen |
 | 70 | Vad händer i Huddinge | vadkul.se |  |
 | 71 | Vad händer i Arjeplog? | vadkul.se |  |
 | 72 | VAD HÄNDER I MÖLNDAL ? | vadkul.se | 30/7 · 28/7-texten (M) · ❌ **AVVISAT — släpptes aldrig igenom** → admin-DM + regelkoll före nytt försök |
 | 73 | Vad händer i Göteborg? | /evenemang/goteborg | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
 | 74 | Vad händer i Lundby (Hisingen) | /evenemang/goteborg |  |
 | 75 | Vad händer på Södermalm | /evenemang/stockholm | 27/7 · länk i inlägg (Pride-texten, V1) · publicerat direkt |
-| 76 | Vad händer i Sölvesborg | vadkul.se | utkast klart (12/8-AQ), EJ postat |
+| 76 | Vad händer i Sölvesborg | vadkul.se | 12/8 · postat (AQ; metod/utfall obekräftat) · karens 2/9 |
 | 77 | Vad händer i Gävle? | /evenemang/gavle | 23/7 · länk i kommentar · KRÄVDE GODKÄNNANDE (enda av dagens fyra) |
 | 78 | Vad händer i Kville? | vadkul.se | 22/7 · länk i inlägg · ? |
 | 79 | Vad händer på Hisingen? | vadkul.se | 10/8 · utkast AJ · **KRÄVDE GODKÄNNANDE, i kö**, utfall följs upp 17/8 |

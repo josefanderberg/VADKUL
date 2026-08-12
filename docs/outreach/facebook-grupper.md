@@ -2707,7 +2707,7 @@ lågaktiva 27/7 (3 likes) — sätt förväntan därefter.
 ⚠️ **Fredagsraderna** (Rollspelskvällen, Garvet) passerar fredag kväll —
 släpps ett köat inlägg efter fredag: kommentera bort raden (Eskilstunaläxan).
 
-### AN. Vad händer i Ängelholm? (#37 → vadkul.se) — utkast klart 12/8, EJ postat
+### AN. Vad händer i Ängelholm? (#37 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
 
 V1:
 
@@ -2734,7 +2734,7 @@ V1:
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Ängelholm!`
 
-### AO. Vad händer på Väddö (#69 → vadkul.se) — utkast klart 12/8, EJ postat
+### AO. Vad händer på Väddö (#69 → vadkul.se) — utkast klart 12/8, EJ POSTAT (enda av dagens fyra som inte gick upp) — ⚠️ färskvara: Visfestivalen (lör 15/8) och Garvet (fre 14/8) bär utkastet; efter helgen måste raderna skrivas om ur färsk data
 
 Alla fyra raderna ligger PÅ ön (Grisslehamn = norra Väddö). Norrtäljes
 Pride-vecka (23–24 km, fastlandet) medvetet bortvald — Nykvarn-regeln.
@@ -2761,7 +2761,7 @@ V1:
 V2: länkstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det som saknas på Väddö!`
 
-### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — utkast klart 12/8, EJ postat
+### AP. Vad händer i Örnsköldsvik? (#63 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
 
 Ärliga tipsformatet (5 verkligt lokala — under tröskeln, ingen skrytlista).
 Hudiksvall (47/40/6-rekordet) är grannstad och samma upplägg: "det här hittade
@@ -2788,7 +2788,7 @@ V1:
 V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — säg till om jag missat något i Övik!`
 
-### AQ. Vad händer i Sölvesborg (#76 → vadkul.se) — utkast klart 12/8, EJ postat
+### AQ. Vad händer i Sölvesborg (#76 → vadkul.se) — ✅ POSTAT 12/8 (metod/utfall obekräftat) · karens 2/9
 
 Systergruppen #80 ("…och på Lister?") sparas till senare varv — aldrig samma
 text. "Tour de Ringsjön" bortvald (geokodningsfel, se ovan).
@@ -2814,3 +2814,47 @@ V1:
 
 V2: kartstycket utan länk + "Kartan ligger i första kommentaren 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se — tipsa gärna om det jag missat i Sölvesborg!`
+
+**FACIT 12/8 (bekräftat av Josef samma dag): AN + AP + AQ postade — Väddö (AO)
+EJ postad.** Metod (V1/V2) och godkännandeläge obekräftade för alla tre —
+fyll i när det är känt. Karens till 2026-09-02. Tre grupper samma dag är över
+2-per-dag-rekommendationen — notera om det syns i utfallet. Uppföljning av
+reaktioner: efter en vecka, inte ett dygn (28/7-regeln).
+
+## Luckor i medlemsregistret 12/8 — storstadsgrupperna som saknas
+
+Fråga från Josef 12/8: "finns det någon större stadsgrupp jag missat bli
+medlem i?" Svar: JA — registret (85 grupper) korsat mot de 31 städerna med
+egen stadssida ger **15 städer med sida + starkt utbud men NOLL grupper**:
+
+**Största luckorna (topp-7, alla bland Sveriges ~15 största kommuner):**
+
+1. **Linköping** — ingen grupp alls
+2. **Västerås** — bara länsgruppen "Vad händer i Västmanland!" (postad 30/7);
+   en stadsgrupp skulle ge betydligt vassare urval än länsmixen
+3. **Örebro** — ingen grupp
+4. **Norrköping** — ingen grupp
+5. **Jönköping** — ingen grupp (Gränna #59 är samma kommun men fel publik)
+6. **Umeå** — ingen grupp
+7. **Lund** — ingen grupp (Landskrona/Kävlinge täcker inte Lundapubliken)
+
+**Andra raden:** Södertälje · Växjö · Karlskrona · Östersund · Falun ·
+Skellefteå (Byske #27 är samma kommun men en bygrupp) · Trollhättan
+(Vänersborgsinlägget 1/8 nekades — Trollhättan är orörd tvilling) · Skövde.
+
+Detta är precis städerna där 25/7-lärdomen slår: **utbudet driver
+reaktionen** (Helsingborg 305 event → 26 likes vs Karlstad 98 → 5). Alla sju
+i toppen har stadssida att djuplänka till.
+
+**Att göra (Josef):** sök i FB på mönstren "Vad händer i [stad]", "Det händer
+i [stad]", "[Stad] tipsar" och gå med i 1–2 grupper per stad. OBS:
+1. Gruppnamnen är ORDAGRANNA i registret — skriv in EXAKT namn + medlemsantal
+   som nya rader här när medlemskapen är godkända.
+2. Gå med i några åt gången, inte alla 15 på en kväll (spamfiltret ser även
+   ansökningsmönster).
+3. Svara ÖPPET på medlemsfrågor — 8/8-lärdomen från Evenemang på Gotland:
+   den som berättar att hen driver vadkul.se får förhandsgodkännande i stället
+   för spamflagg.
+4. Storstadsgrupper = räkna med godkännandekö på inläggen (10/8-mönstret) och
+   hårdast moderering (25/7-risknoten) — läs regelrutan och överväg admin-DM
+   i de största.
