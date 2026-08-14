@@ -136,6 +136,27 @@ export interface OutreachLogEntry {
     earliestMentionedEventISO?: string;
     filteredCategories?: string[];
 
+    /* --- delningskön (utkast som planerats fram automatiskt) --- */
+    // 'auto' = skapad av /api/admin/outreach/plan (morgonkörningen), 'manuell'
+    // = ✨-knappen i TodayPanel. Skiljer dem åt i loggen utan att gissa.
+    plannedBy?: 'auto' | 'manuell';
+    angle?: string;               // modellens en-mening om vald vinkel
+    // Andra varianten, sparad för det fall gruppens läge visar sig vara ett
+    // annat än postingMode påstod (godkännandekö som råkar publicera direkt).
+    alternate?: {
+        bodyText: string;
+        firstCommentText?: string;
+        linkPlacement: LinkPlacement;
+    };
+    // Titlar i texten som INTE gick att matcha mot kandidatlistan. Ska normalt
+    // vara tom — en icke-tom lista betyder att modellen skrivit något den inte
+    // hade underlag för, och raden får en varning i delningskön.
+    unmatchedTitles?: string[];
+    supplyWeekCount?: number;     // event inom radien i fönstret
+    supplyNearCount?: number;     // event inom 8 km (Nykvarn-läxan)
+    supplySource?: 'live' | 'snapshot';
+    model?: string;
+
     /* --- utfall --- */
     outcome: LogOutcome;
     outcomeCheckedAt?: number;    // null/frånvarande ⇒ TodayPanel påminner
@@ -211,4 +232,53 @@ export interface QueueResponse {
     queue: QueueItem[];           // mogna, sorterade på score desc
     blocked: QueueItem[];         // spärrade, med nedräkning via nextAllowedAt
     counts: { contacts: number; groups: number; organizers: number; logged: number };
+}
+
+/* ── DTO:er för delningskön (/api/admin/outreach/{plan,ready}) ──────────── */
+
+/** Ett färdigskrivet inlägg, redo att kopieras in i EN namngiven grupp. */
+export interface ReadyPost {
+    logId: string;
+    contactId: string;
+    contactName: string;          // ORDAGRANT gruppnamn — den du letar efter i FB
+    city?: string;
+    groupUrl?: string;
+    memberCount?: number;
+    postingMode: PostingMode;
+
+    variant: string;              // 'V1' | 'V2'
+    linkPlacement: LinkPlacement;
+    linkUrl?: string;
+    bodyText: string;             // DET HÄR klistras in i gruppen
+    firstCommentText?: string;    // V2: läggs som första kommentar direkt efter
+    alternate?: { bodyText: string; firstCommentText?: string; linkPlacement: LinkPlacement };
+
+    angle?: string;
+    mentionedEvents: { eventId?: string; title: string; timeISO: string; emoji?: string }[];
+
+    /** false ⇒ posta INTE som den är: någon eventrad har passerat, eller
+     *  utkastet är för gammalt för att stämma mot datat. */
+    fresh: boolean;
+    staleReason?: string;
+    warnings: string[];           // mjuka invändningar (tunt utbud, omatchad titel …)
+
+    draftCreatedAt: number;
+    plannedFor?: number;
+    plannedBy?: 'auto' | 'manuell';
+}
+
+export interface ReadyResponse {
+    generatedAt: number;
+    quota: { postedToday: number; maxPerDay: number };
+    ready: ReadyPost[];           // färska, sorterade på score-ordningen de skapades i
+    stale: ReadyPost[];           // passerade eventrader — generera om i stället
+}
+
+export interface PlanResponse {
+    generatedAt: number;
+    limit: number;                // hur många utkast körningen fick skapa
+    created: { logId: string; contactId: string; contactName: string; variant: string }[];
+    skipped: { contactId: string; contactName: string; reason: string }[];
+    failed: { contactId: string; contactName: string; error: string }[];
+    quota: { postedToday: number; maxPerDay: number; freshPending: number };
 }

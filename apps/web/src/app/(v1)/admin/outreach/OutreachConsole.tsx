@@ -1,7 +1,7 @@
 'use client';
 
-// Publiceringskonsolen — skalet med flikar. Etapp 1: Idag + Kön är levande;
-// Planering/Logg/Statistik är platshållare tills etapp 2–4.
+// Publiceringskonsolen — skalet med flikar. Idag + Kön + Att dela är levande;
+// Logg/Statistik är platshållare tills etapp 3–4.
 // All data via /api/admin/outreach/* med Bearer-token — klienten läser ALDRIG
 // outreach-collections direkt (de är stängda i firestore.rules).
 
@@ -9,16 +9,17 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import type { QueueResponse } from '@/types/outreach';
-import { Megaphone, RefreshCw, CalendarDays, ListTodo, ListOrdered, BarChart3, ScrollText } from 'lucide-react';
+import { Megaphone, RefreshCw, Share2, ListTodo, ListOrdered, BarChart3, ScrollText } from 'lucide-react';
 import TodayPanel from './panels/TodayPanel';
 import QueuePanel from './panels/QueuePanel';
+import SharePanel from './panels/SharePanel';
 
-type Tab = 'idag' | 'kon' | 'planering' | 'logg' | 'statistik';
+type Tab = 'idag' | 'kon' | 'dela' | 'logg' | 'statistik';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'idag', label: 'Idag', icon: <ListTodo size={14} /> },
     { id: 'kon', label: 'Kön', icon: <ListOrdered size={14} /> },
-    { id: 'planering', label: 'Planering', icon: <CalendarDays size={14} /> },
+    { id: 'dela', label: 'Att dela', icon: <Share2 size={14} /> },
     { id: 'logg', label: 'Logg', icon: <ScrollText size={14} /> },
     { id: 'statistik', label: 'Statistik', icon: <BarChart3 size={14} /> },
 ];
@@ -104,13 +105,7 @@ export default function OutreachConsole() {
 
             {data && tab === 'idag' && <TodayPanel data={data} onChanged={load} />}
             {data && tab === 'kon' && <QueuePanel data={data} />}
-            {tab === 'planering' && (
-                <ComingSoon>
-                    Månadsschemat: utkast för både grupperna och FB-sidan planeras upp till
-                    30 dagar framåt, med automatisk omkoll 7 dagar före publicering
-                    (eventen räknas om + betygsätts på nytt). Byggs i etapp 2.
-                </ComingSoon>
-            )}
+            {tab === 'dela' && <SharePanel onChanged={load} />}
             {tab === 'logg' && (
                 <ComingSoon>
                     Alla publiceringar med hela inläggstexten, utfall och engagemang. Byggs i etapp 3.
