@@ -13,9 +13,10 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { LogOutcome, QueueResponse, TodayAction } from '@/types/outreach';
 import {
-    AlertCircle, Check, CheckCircle2, ChevronDown, Clock3, Copy, ExternalLink, Eye, Loader2, Mail,
+    AlertCircle, CheckCircle2, ChevronDown, Clock3, ExternalLink, Eye, Loader2, Mail,
     MessageCircle, Sparkles,
 } from 'lucide-react';
+import CopyButton from './CopyButton';
 
 const DAY_MS = 86_400_000;
 
@@ -253,27 +254,6 @@ function DraftBlock({ label, text }: { label: string; text: string }) {
                 {text}
             </pre>
         </div>
-    );
-}
-
-/** Kopiera-knapp med "✓ Kopierad"-kvitto. */
-function CopyButton({ text, title }: { text: string; title: string }) {
-    const [done, setDone] = useState(false);
-    return (
-        <button type="button" title={title}
-            onClick={async () => {
-                try {
-                    await navigator.clipboard.writeText(text);
-                    setDone(true);
-                    setTimeout(() => setDone(false), 1500);
-                } catch { /* clipboard nekad — inget att göra */ }
-            }}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black border transition-colors shrink-0 ${
-                done ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-            }`}>
-            {done ? <><Check size={11} /> Kopierad</> : <><Copy size={11} /> Kopiera</>}
-        </button>
     );
 }
 

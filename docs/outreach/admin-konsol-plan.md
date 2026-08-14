@@ -30,12 +30,17 @@ apps/web/src/lib/outreach/hash.ts                               ← FNV-1a-textf
 apps/web/src/lib/outreach/rules.ts                              ← regelmotorn (mognad, tak, kollisioner, varningar)
 apps/web/src/lib/outreach/scoring.ts                            ← priorityScore + förklaringssträngar
 apps/web/src/lib/outreach/eventPicker.ts                        ← plocka RIKTIGA event för en ort (server-only)
+apps/web/src/lib/outreach/draftGenerator.ts                     ← Claude-motorn + persistDraft (delas av ✨ och cronen)
+apps/web/src/lib/outreach/planner.ts                            ← delningskön: urval, färskvara, dubblettflagg
+apps/web/src/lib/outreach/cronAuth.ts                           ← delad hemlighet för maskinanrop (plan/ready)
 apps/web/src/lib/outreach/templates.ts                          ← mallvarianter A/B/C/D + Östersund + tipsfrågan
 apps/web/src/lib/outreach/linkTarget.ts                         ← härledd länk + UTM + ref-parameter
 apps/web/src/lib/outreach/repo.ts                               ← Admin-SDK-CRUD mot outreach*-collections
 
 apps/web/src/app/api/admin/outreach/queue/route.ts              ← GET  kö + dagens kvot
-apps/web/src/app/api/admin/outreach/draft/route.ts              ← POST generera utkast · PATCH spara utkast
+apps/web/src/app/api/admin/outreach/draft/route.ts              ← POST generera + spara utkast för EN grupp
+apps/web/src/app/api/admin/outreach/plan/route.ts               ← POST morgonkörningen: dagens sats utkast
+apps/web/src/app/api/admin/outreach/ready/route.ts              ← GET  delningskön (färska + inaktuella)
 apps/web/src/app/api/admin/outreach/log/route.ts                ← POST bekräfta postat · PATCH utfall/engagemang
 apps/web/src/app/api/admin/outreach/contacts/route.ts           ← GET/PATCH kontaktfält (memberCount, postingMode…)
 apps/web/src/app/api/admin/outreach/stats/route.ts              ← GET aggregerad statistik
@@ -47,6 +52,8 @@ apps/web/src/app/(v1)/admin/outreach/page.tsx                   ← force-dynami
 apps/web/src/app/(v1)/admin/outreach/OutreachConsole.tsx        ← skal + flikar
 apps/web/src/app/(v1)/admin/outreach/panels/TodayPanel.tsx
 apps/web/src/app/(v1)/admin/outreach/panels/QueuePanel.tsx
+apps/web/src/app/(v1)/admin/outreach/panels/SharePanel.tsx      ← "Att dela": dagens färdiga inlägg
+apps/web/src/app/(v1)/admin/outreach/panels/CopyButton.tsx      ← delad kopiera-knapp
 apps/web/src/app/(v1)/admin/outreach/panels/DraftPanel.tsx
 apps/web/src/app/(v1)/admin/outreach/panels/LogPanel.tsx
 apps/web/src/app/(v1)/admin/outreach/panels/StatsPanel.tsx
@@ -456,6 +463,83 @@ Knappen heter medvetet *"Jag har postat det"* och inte *"Posta"* — det finns i
 
 ---
 
+## 6.5 Delningskön — utkasten skriver sig själva varje morgon (BYGGD)
+
+Målet är att öppna konsolen på morgonen och hitta dagens stadsinlägg färdiga,
+ett per grupp, redo att kopieras in. **Inget av detta postar något** — det är
+fortfarande copy-paste i Facebooks eget gränssnitt, precis som §0 kräver.
+
+### Varför samma morgon och inte ett månadsschema
+
+`plannedFor`/`recheckAt` i datamodellen ritade upp ett schema 30 dagar framåt.
+Loggen säger att det är fel form för just gruppinlägg: **LÄRDOM 30/7** — tre
+utkast skrivna 28/7 postades 30/7, Västmanlandsinlägget gick upp med två av
+fem rader redan passerade, och Mölndalsinlägget avvisades helt. Konkreta event
+är färskvara. Delningskön skriver därför en liten sats **samma morgon som den
+ska delas**, och märker allt som hunnit bli inaktuellt i stället för att låta
+det ligga kvar och se färdigt ut.
+
+(Månadsschemat är fortfarande rätt form för de EVIGA inläggen i
+[../social/inlagg-plan.md](../social/inlagg-plan.md) — de innehåller inga
+datum och kan schemaläggas veckor framåt på FB-sidan, etapp 5.)
+
+### Kedjan
+
+```
+GitHub Actions (06:00 UTC)  →  POST /api/admin/outreach/plan
+        │                             │  Bearer OUTREACH_CRON_SECRET
+        │                             ├─ buildQueueResponse: rankar de 83 grupperna
+        │                             ├─ selectForPlanning: dagens urval
+        │                             ├─ generateDraft × N (parallellt, claude-opus-5)
+        │                             └─ persistDraft → outreachLog (status 'utkast')
+        │
+        └─ ägaren öppnar /admin/outreach → "Att dela"
+                                      │  GET /api/admin/outreach/ready
+                                      ├─ Kopiera → Öppna gruppen → Postat ✓
+                                      └─ POST /api/admin/outreach/log → karens + kvot
+```
+
+### Urvalsreglerna (`selectForPlanning`)
+
+Hårda grindar gäller som vanligt (karens, avskriven, veckodag). Utöver dem
+hoppar den automatiska vägen över mer än den manuella gör, eftersom ingen
+människa tittar när den kör:
+
+| Hoppas över | Varför |
+|---|---|
+| Mjuka grindar som fälls (stadskrock, ny medlem, hög moderationsrisk) | I konsolen är de varningar man kan välja bort. Utan människa i loopen är de stopp. |
+| Grupp som redan har ett färskt oanvänt utkast | Gör körningen idempotent — kör den två gånger och andra gången skapar noll. |
+| Två grupper i samma ort samma morgon | Grinden ser bara *bekräftade* postningar, så satsen måste hålla reda på sig själv. |
+| `eventSupplyThisWeek < 3` | Tipsfrågeformatet (Malå) kan vara helt rätt — men det är ett ägarbeslut, inte något en cron tar en dagsplats för. Generera manuellt. |
+| Saknad koordinat | Utan lat/lng blir "i trakten" en gissning. Det var precis det Nykvarn-inlägget gjorde. |
+
+Satsens storlek: `MAX_POSTS_PER_DAY − postade idag − färska utkast i kön`.
+
+### Färskvarugrinden (`draftFreshness`)
+
+Ett utkast flyttas från **Att dela** till **Inaktuella** när:
+
+- någon eventrad ligger före **midnatt i dag** (inte före "nu" — ett
+  heldagsevent lagras kl 00:00 och är fortfarande aktuellt kl 09:00), eller
+- utkastet är äldre än **36 timmar** — då har kartdatat hunnit ändras oavsett
+  vad raderna säger.
+
+Varje rad kopplas tillbaka till kandidaten den kom ur (`resolveMentionedEvents`)
+— det är den kopplingen som bär `timeISO`, och samma steg fångar en titel som
+modellen skrivit utan underlag (`unmatchedTitles` ⇒ varning på kortet).
+
+### Uppsättning
+
+1. `openssl rand -hex 32` → lägg värdet **både** i `apps/web/.env`
+   (`OUTREACH_CRON_SECRET=…`) och som repo-secret `OUTREACH_CRON_SECRET`.
+2. `ANTHROPIC_API_KEY` måste finnas i `apps/web/.env` — annars svarar routen 503.
+3. Deploya webben (secreten följer med `.env` till SSR-funktionen).
+
+Utan steg 1 fungerar allt utom cronen: knappen **Skriv dagens utkast** i
+Att dela-fliken gör exakt samma sak manuellt.
+
+---
+
 ## 7. Utfall och statistik
 
 ### Utfallsloggning (`LogPanel.tsx` + `PATCH /api/admin/outreach/log`)
@@ -586,7 +670,7 @@ Loopen blir: *utfall loggas → Claude läser loggen → föreslår vad som funk
 
 **Levererar redan här:** de två källorna som glidit isär blir en. De 5 okända utfallen, de 3 kölagda och de 10 förfallna mejluppföljningarna dyker upp som konkreta att-göra-rader. Kön säger vilka av de 63 orörda grupperna som är värda mest idag. Inget utkast behövs för att det ska vara nyttigt.
 
-### Etapp 2 — Utkast med riktiga event (~1–2 dagar) — ✅ POST-delen BYGGD 6/8
+### Etapp 2 — Utkast med riktiga event — ✅ BYGGD (6/8 + 14/8)
 
 Levererat 6/8: `eventPicker.ts` (live aggregatedEvents + snapshot-fallback,
 geo per kontakt, 8 km-räknare, biovakt, datumfönster per postingMode,
@@ -595,11 +679,19 @@ helg-garanti i kandidattaket) + `POST /api/admin/outreach/draft` (Claude
 facebook-grupper.md i systemprompten, de 5 senaste inläggen som
 "skriv inte likadant"-underlag) + ✨-knapp på kandidatkorten i TodayPanel
 med V1/V2-kopieringsrutor. Kräver `ANTHROPIC_API_KEY` (server-only, se
-.env.example). ÅTERSTÅR ur etappen: PATCH spara utkast till outreachLog,
-DraftPanel, duplikatvarningen (bodyHash/trigram) och Bekräfta postat-flödet.
-`eventPicker.ts` (aggregatedEvents + linkEvents, geo per kontakt, bio-filter, datumfönster) · `templates.ts` · `linkTarget.ts` · `draft`-routen · DraftPanel med kopieringsknappar, duplikat-/färskvaru-/datumvarningar · Bekräfta-postat-flödet med transaktionen mot kontakten.
+.env.example).
 
-Fyll i `lat/lng` för orterna utan stadssida löpande i konsolen — det är detta som gör utkasten lokala även för de 60.
+Levererat 14/8 — **delningskön** (§6.5): motorn bruten ur routen till
+`draftGenerator.ts` och delad med `POST .../plan` (morgonkörningen via GitHub
+Actions) · `planner.ts` med urval, färskvarugrind och trigram-dubblettflagg ·
+utkasten SPARAS nu i `outreachLog` (`persistDraft`, båda vägarna) ·
+`GET .../ready` + **Att dela**-fliken · `POST .../log` = Bekräfta postat, med
+transaktionen mot kontakten (karens +21 d, `postCount++`, `usedVariants`).
+
+ÅTERSTÅR ur etappen: `templates.ts`/`linkTarget.ts` (UTM + ref-parameter hör
+ihop med etapp 4) och en redigerbar textruta — i dag kopieras texten som den är.
+
+Fyll i `lat/lng` för orterna utan stadssida löpande i konsolen — det är detta som gör utkasten lokala även för de 60. Grupper utan koordinat hoppas över av morgonkörningen.
 
 ### Etapp 3 — Utfall och statistik (~1 dag)
 LogPanel · `log`-routens PATCH · påminnelser vid +24 h/+72 h · `stats`-routen · StatsPanel med n-hygien och utbud-mot-engagemang-diagrammet · de två indexen.

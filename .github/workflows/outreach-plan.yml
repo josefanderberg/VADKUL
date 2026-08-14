@@ -1,0 +1,79 @@
+name: Delningskön — skriv dagens gruppinlägg
+
+# Fyller /admin/outreach → "Att dela" med färdiga stadsinlägg varje morgon,
+# ett per mogen grupp. Ägaren kopierar och postar dem för hand — grupper går
+# inte att posta till via API, och den här körningen försöker inte heller
+# (se §0 i docs/outreach/admin-konsol-plan.md).
+#
+# VARFÖR SAMMA DAG och inte veckor i förväg: LÄRDOM 30/7 i
+# docs/outreach/facebook-grupper.md — utkast skrivna 28/7 postades 30/7 med
+# passerade eventrader, och ett av inläggen avvisades. Konkreta event är
+# färskvara, alltså skrivs texten samma morgon som den ska delas.
+#
+# Kräver ett repo-secret (Settings → Secrets and variables → Actions):
+#   OUTREACH_CRON_SECRET — minst 32 tecken, samma värde som i apps/web/.env
+#     (`openssl rand -hex 32` ger ett lagom). Är den inte satt på servern är
+#     cron-vägen stängd och routen svarar 401 — då loggar man in i konsolen
+#     och trycker "Skriv dagens utkast" i stället.
+
+on:
+  schedule:
+    # 06:00 UTC → 08:00 svensk sommartid / 07:00 vintertid. Efter nattens
+    # aggregat, så utkasten byggs på färskt kartdata.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: outreach-plan
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Generera dagens utkast
+    runs-on: ubuntu-latest
+    steps:
+      - name: Anropa planeraren
+        env:
+          SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo '::error::OUTREACH_CRON_SECRET saknas som repo-secret — inget att autentisera med.'
+            exit 1
+          fi
+
+          code=$(curl -sS --max-time 300 \
+            -o response.json -w '%{http_code}' \
+            -X POST 'https://vadkul.se/api/admin/outreach/plan' \
+            -H "Authorization: Bearer $SECRET" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Planeraren svarade $code"
+            cat response.json
+            exit 1
+          fi
+
+          # Sammanfattningen hamnar i körningens Summary-flik.
+          {
+            echo "### Delningskön $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo
+            jq -r '"**\(.created | length) utkast skapade** · \(.skipped | length) överhoppade · \(.failed | length) misslyckade",
+                   "",
+                   "Kvot: \(.quota.postedToday)/\(.quota.maxPerDay) postade idag, \(.quota.freshPending) färska utkast låg redan i kön.",
+                   "",
+                   (if (.created | length) > 0 then "**Skapade**", (.created[] | "- \(.contactName) (\(.variant))") else empty end),
+                   "",
+                   (if (.failed | length) > 0 then "**Misslyckade**", (.failed[] | "- \(.contactName): \(.error)") else empty end),
+                   "",
+                   (if (.skipped | length) > 0 then "<details><summary>Överhoppade</summary>", "", (.skipped[] | "- \(.contactName): \(.reason)"), "", "</details>" else empty end)' response.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          jq -r '"\(.created | length) skapade, \(.skipped | length) överhoppade, \(.failed | length) misslyckade"' response.json
+
+          # Misslyckade genereringar ska synas som en röd körning (GitHub mejlar),
+          # men bara när INGET blev skrivet — en av tre som failar är inte ett haveri.
+          if [ "$(jq -r '(.created | length) == 0 and (.failed | length) > 0' response.json)" = "true" ]; then
+            echo '::error::Alla utkastgenereringar misslyckades'
+            exit 1
+          fi

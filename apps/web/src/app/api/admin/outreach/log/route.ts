@@ -1,18 +1,27 @@
-// /api/admin/outreach/log — PATCH utfall + engagemang för en loggrad.
+// /api/admin/outreach/log — utfall, engagemang och "postat"-bekräftelsen.
 //
-// Body: { logId, outcome?, likes?, comments?, shares?, ownRepliesCount?,
+// PATCH { logId, outcome?, likes?, comments?, shares?, ownRepliesCount?,
 // notes?, avskriv? }. outcome sätter status (mappningen nedan) +
 // outcomeCheckedAt — det enda som stänger de kroniska '?'-raderna i
 // TodayPanel. Engagemangssiffror sätter engagementCheckedAt. Utfallet
 // denormaliseras till kontakten (lastOutcome + status), och avskriv=true
 // sätter doNotPost — grinden 'doNotPost' i rules.ts tar sedan gruppen ur kön.
-// POST (bekräfta postat från utkast) byggs med utkastgeneratorn i etapp 2.
+//
+// POST { logId } = "jag har postat det här nu". Först då startar karensen och
+// först då räknas inlägget mot dagskvoten — loggregeln är att ingenting är
+// postat förrän ägaren säger det (konsolen kan inte se Facebook).
 
 import { NextResponse } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
-import type { ContactStatus, LogOutcome, LogStatus } from '@/types/outreach';
+import { KARENS_DAGAR } from '@/lib/outreach/rules';
+import type {
+    ContactStatus, LogOutcome, LogStatus, OutreachContact, OutreachLogEntry,
+} from '@/types/outreach';
 
 export const dynamic = 'force-dynamic';
+
+const DAY_MS = 86_400_000;
 
 const STATUS_BY_OUTCOME: Record<LogOutcome, LogStatus> = {
     'publicerat-direkt': 'postat',
@@ -34,6 +43,84 @@ const CONTACT_STATUS_BY_OUTCOME: Partial<Record<LogOutcome, ContactStatus>> = {
 
 const num = (v: unknown): number | undefined =>
     typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : undefined;
+
+/**
+ * POST — bekräfta att ett utkast ur delningskön nu ligger uppe i gruppen.
+ *
+ * Utfallet lämnas medvetet 'okänt': om det släpptes igenom, kölades eller
+ * plockades bort vet vi först när ägaren tittat. TodayPanel påminner om det
+ * efter 24 h (repo.ts), och PATCH stänger raden. Att gissa utfallet här vore
+ * att fylla statistiken med siffror ingen kontrollerat.
+ */
+export async function POST(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
+    let body: Record<string, unknown>;
+    try { body = await request.json(); } catch {
+        return NextResponse.json({ error: 'Ogiltig JSON' }, { status: 400 });
+    }
+    const logId = typeof body.logId === 'string' ? body.logId : '';
+    if (!logId) return NextResponse.json({ error: 'logId saknas' }, { status: 400 });
+
+    const now = Date.now();
+    const nextAllowedAt = now + KARENS_DAGAR * DAY_MS;
+
+    try {
+        const logRef = db.collection('outreachLog').doc(logId);
+
+        const result = await db.runTransaction(async tx => {
+            const logSnap = await tx.get(logRef);
+            if (!logSnap.exists) return { error: 'Loggraden finns inte', httpStatus: 404 } as const;
+
+            const entry = logSnap.data() as OutreachLogEntry;
+            if (entry.confirmedByOwner) {
+                return { error: 'Raden är redan bekräftad som postad', httpStatus: 409 } as const;
+            }
+
+            const contactRef = db.collection('outreachContacts').doc(entry.contactId);
+            const contactSnap = await tx.get(contactRef);
+            const contact = contactSnap.exists ? contactSnap.data() as OutreachContact : undefined;
+
+            // Godkännandekö ⇒ inlägget ligger osynligt tills en moderator
+            // släpper det. Direktläge ⇒ det är uppe nu.
+            const queued = (contact?.postingMode ?? 'unknown') !== 'direct';
+            const status: LogStatus = queued ? 'i-godkännandekö' : 'postat';
+
+            tx.set(logRef, {
+                postedAt: now,
+                confirmedByOwner: true,
+                status,
+                nextAllowedAt,
+            }, { merge: true });
+
+            if (contactSnap.exists) {
+                const contactStatus: ContactStatus = queued ? 'väntar-godkännande' : 'postad';
+                tx.set(contactRef, {
+                    lastPostedAt: now,
+                    nextAllowedAt,
+                    postCount: FieldValue.increment(1),
+                    status: contactStatus,
+                    updatedAt: now,
+                    ...(entry.variant ? { usedVariants: FieldValue.arrayUnion(entry.variant) } : {}),
+                }, { merge: true });
+            }
+
+            return { ok: true, status, nextAllowedAt } as const;
+        });
+
+        if ('error' in result) {
+            return NextResponse.json({ error: result.error }, { status: result.httpStatus });
+        }
+        return NextResponse.json(result);
+    } catch (e) {
+        console.error('[outreach/log POST]', e);
+        return NextResponse.json({ error: 'Bekräftelsen kunde inte sparas' }, { status: 500 });
+    }
+}
 
 export async function PATCH(request: Request) {
     const denied = await requireAdmin(request);

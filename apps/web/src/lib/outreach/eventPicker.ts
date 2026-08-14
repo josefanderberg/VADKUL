@@ -28,6 +28,7 @@ type RawEvent = {
 };
 
 export interface CandidateEvent {
+    id: string;               // aggregatets event-id — spåret tillbaka från en postad rad
     title: string;
     timeISO: string;
     weekday: string;          // 'fredag' — Europe/Stockholm, alltid
@@ -154,6 +155,7 @@ export async function pickEventsForContact(
         const d = distKm(coord.lat, coord.lng, e.lat, e.lng);
         if (d > coord.radiusKm) continue;
         within.push({
+            id: e.id,
             title: e.title.trim(),
             timeISO: e.time,
             weekday: fmtWeekday.format(new Date(t)),
