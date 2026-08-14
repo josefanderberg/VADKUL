@@ -208,21 +208,58 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
     try { return !!map.getLayer(id); } catch { return false; }
 };
 
-// Startvy: centrerad kring Mälardalen/södra Dalarna, mer inzoomad än hela
-// landet — nedflyttad en grad (60.5→59.5) så man ser längre NER i Sverige
-// direkt. (GPS flyger sedan dit man faktiskt står när den hunnit fram.)
+// Startvy: södra Sverige — samma trakt som intro-bilden börjar i, så
+// överlämningen bild → karta landar på samma ställe.
 // Tunbart: sänk lat = mer söderut, höj lat = längre upp, höj lng = åt
-// höger/öster, höj zoom = mer inzoomat.
-const START_CENTER: [number, number] = [15.8, 61.0]; // [lng, lat] — sänk lat = söderut
-const START_ZOOM = 4.9; // utzoomad från 5.2 — kartans minZoom är 4, gå inte under det
-// Intro-gliden bakom välkomstrutan: långsam konstant zoom från START_ZOOM mot
-// användaren. Måls-zoomen stannar på regionsnivå — når gliden ända fram ska man
-// fortfarande se ett landskap av prickar, och stadshoppet efter stängd ruta
-// står för själva inzoomningen. 7/24s var för svagt för att ens uppfattas
-// (Josef 11/8: "jag ser ingen långsam zoom") — 3,3 nivåer på 14 s syns tydligt
-// men känns fortfarande ambient.
-const INTRO_GLIDE_ZOOM = 8.2;
-const INTRO_GLIDE_MS = 14_000;
+// höger/öster.
+const START_CENTER: [number, number] = [14.3, 56.5]; // [lng, lat] — sänk lat = söderut
+// Höjden intron ligger på. Zoom-NIVÅN kan inte hårdkodas — samma zoom täcker
+// helt olika många kilometer på mobil och desktop — så vi räknar fram den ur
+// containerns mått (startZoomFor nedan). Breddmåttet styr normalt på desktop;
+// höjdtaket hindrar att en smal mobilskärm hamnar ute i rymden för att den ska
+// få plats med hela bredden.
+// Måtten drogs ner ett snäpp 14/8 (600→460 km brett): kust till kust rymdes,
+// men prickarna blev små och landet läste sig som en karta i stället för som
+// ett fält av event. Nu ligger vi närmare — på desktop ~460 km brett och
+// ~290 km högt.
+const START_SPAN_W_M = 460_000;   // meter tvärs över skärmens BREDD
+const START_SPAN_H_M = 850_000;   // meter över skärmens HÖJD (tak, annars ser mobilen hela landet)
+const START_ZOOM_MIN = 4.2;       // kartans minZoom är 4 — gå inte under den
+const START_ZOOM_MAX = 7.4;
+// Intro-resan bakom välkomstrutan: från START_CENTER rakt upp genom landet, med
+// OFÖRÄNDRAD zoom. Ingen inzoomning — den kändes seg (Josef 12/8: "det känns som
+// det laggar mer än om vi är på samma höjd") medan en ren panorering återanvänder
+// samma tile-nivå hela vägen. Målpunkten ligger österut i takt med att Sverige
+// lutar åt öster norrut, så landet håller sig i bild. (En variant där resan var
+// en förbakad BILD provades 13/8 och slopades — kartan i bild såg kass ut mot
+// den riktiga.)
+const INTRO_PAN_TO: [number, number] = [17.6, 63.6]; // [lng, lat] — Ångermanland/Höga kusten
+// Farten anges per SKÄRMHÖJD, inte som en total restid: en mobil ser nästan
+// hela landet på en gång (samma resa = under en skärmhöjd) medan en bred
+// desktop ser ett smalt band. Med en fast restid hade resan blivit omärklig på
+// mobilen och rusat på desktop.
+const INTRO_PAN_MS_PER_SCREEN = 26_000;
+// Resan görs i tre etapper: mjuk avfärd, marschfart, mjuk inbromsning i norr.
+// Sträckorna anges i skärmhöjder; etapptiderna räknas ur farten ovan så
+// skarvarna blir ryckfria (se `leg`).
+const INTRO_WARMUP_SCREENS = 0.1;
+const INTRO_BRAKE_SCREENS = 0.3;
+// INGEN väntan innan avfärd (Josef 14/8: "börja rörelsen uppåt direkt vid
+// start"). Resan startade förut först när de första prick-vågorna landat, med
+// en andhämtning ovanpå — men all väntan i början läses som tröghet, och
+// prickarna hinner ändå tändas medan kameran redan rullar. Den mjuka
+// accelerationen (etapp 1 nedan) gör att starten inte rycker till trots att den
+// sker direkt.
+// Nål-prickens storlek i vanligt läge …
+const DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
+    ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5];
+// … och under intron, där vi ligger på zoom ~5–7 och tittar på ett helt land
+// bakom välkomstrutans duk: en aning fetare prickar + glöd (nedan) gör
+// skillnaden mellan "dammkorn" och "landet lyser".
+const INTRO_DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
+    ['interpolate', ['linear'], ['zoom'], 4, 3.2, 7, 4, 10, 4.5];
+const INTRO_GLOW_RADIUS_EXPR: maplibregl.ExpressionSpecification =
+    ['interpolate', ['linear'], ['zoom'], 4, 8, 7, 11, 10, 13];
 // Hur brett fältet ska vara efter första event-klicket: 10 mil tvärs över
 // skärmen. Anges i meter i stället för som zoom-nivå eftersom samma zoom täcker
 // helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
@@ -238,6 +275,20 @@ const zoomForSpan = (widthPx: number, lat: number, spanMeters: number) => {
     const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
     const metersPerWorldPx = (EARTH_CIRCUMFERENCE_M * Math.cos((lat * Math.PI) / 180)) / 512;
     return Math.log2((metersPerWorldPx * widthPx) / spanMeters);
+};
+
+/**
+ * Zoomen som ger startvyns "lagom avstånd" på just den här skärmen: kust till
+ * kust på bredden, men aldrig så utzoomat att höjdtaket spricker. Max av de två
+ * kraven = det som binder hårdast vinner (högre zoom = närmare).
+ */
+const startZoomFor = (widthPx: number, heightPx: number) => {
+    const lat = START_CENTER[1];
+    const z = Math.max(
+        zoomForSpan(widthPx || 1280, lat, START_SPAN_W_M),
+        zoomForSpan(heightPx || 800, lat, START_SPAN_H_M),
+    );
+    return Math.min(START_ZOOM_MAX, Math.max(START_ZOOM_MIN, z));
 };
 
 interface V2MapProps {
@@ -345,10 +396,10 @@ interface V2MapProps {
     /** Fyrar när användaren aktivt interagerar med kartan (drag, zoom, klick) —
      *  sidan stoppar bildspelet vid det. */
     onUserInteraction?: () => void;
-    /** Långsam ambient inzoomning mot punkten medan välkomstrutan är uppe
-     *  (Josef 11/8): Sverige-vyn med hela eventmängden ska hinna ses innan
-     *  stadshoppet. null = ingen glid (avbryter en pågående). */
-    introGlide?: { lat: number; lng: number } | null;
+    /** Långsam ambient resa söder→norr på oförändrad zoom medan välkomstrutan
+     *  är uppe (Josef 11/8, 12/8): eventmängden över hela landet ska hinna ses
+     *  innan stadshoppet. false = ingen resa (avbryter en pågående). */
+    introGlide?: boolean;
 }
 
 export default function V2Map({
@@ -384,7 +435,7 @@ export default function V2Map({
     onPaintedChange,
     cityTourTarget = null,
     onUserInteraction,
-    introGlide = null,
+    introGlide = false,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -453,7 +504,7 @@ export default function V2Map({
     // kartan stanna i NÅL-läget — bara prickar, inga brickor (Josef 11/8:
     // "det ska bara vara mer som ett intro").
     const introActiveRef = useRef(false);
-    introActiveRef.current = introGlide != null;
+    introActiveRef.current = introGlide === true;
     // Default = 'themepark' ("Nöjesfält"-kartan). Satellit m.fl. går fortfarande att
     // välja i Funktioner-väskan, men nöjesfält är förvald vid varje sidladdning.
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('themepark');
@@ -1405,6 +1456,26 @@ export default function V2Map({
             // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
             // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
             // kräver inga glyph-/krock-beräkningar, så zoom-animationen blir billig.
+            // INTRO-GLÖDEN: en bred, suddig halo under varje prick. Tänds bara
+            // under intron (enforceIntroNeedles) och ligger släckt annars.
+            // Poängen är läsbarhet på håll: bakom välkomstrutans duk försvinner
+            // 3-pixelsprickar helt, och då syns aldrig det som ska säljas in —
+            // att hela landet är fullt av event. Halorna går ihop där det är
+            // tätt, så städerna brinner och glesbygden glimmar.
+            if (!map.getLayer('intro-glow')) {
+                map.addLayer({
+                    id: 'intro-glow',
+                    type: 'circle',
+                    source: 'plain-events',
+                    layout: { 'visibility': 'none' },
+                    paint: {
+                        'circle-radius': INTRO_GLOW_RADIUS_EXPR,
+                        'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
+                        'circle-opacity': 0.32,
+                        'circle-blur': 1,
+                    },
+                });
+            }
             if (!map.getLayer('plain-events-dots')) {
                 map.addLayer({
                     id: 'plain-events-dots',
@@ -1412,7 +1483,7 @@ export default function V2Map({
                     source: 'plain-events',
                     layout: { 'visibility': 'visible' },
                     paint: {
-                        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5],
+                        'circle-radius': DOT_RADIUS_EXPR,
                         // Nål-pricken får eventets KATEGORIFÄRG (mörk standard för stora källor).
                         'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
                         'circle-stroke-color': '#ffffff',
@@ -1429,6 +1500,10 @@ export default function V2Map({
             }
             if (map.getLayer('plain-events-dots') && map.getLayer('plain-events')) {
                 map.moveLayer('plain-events-dots', 'plain-events');
+            }
+            // Glöden UNDER prickarna (annars läggs suddet ovanpå och gör dem grumliga).
+            if (map.getLayer('intro-glow') && map.getLayer('plain-events-dots')) {
+                map.moveLayer('intro-glow', 'plain-events-dots');
             }
             // Pusha datan — stor initial påfyllnad streamas i delmängder (pö om
             // pö), små ändringar går som en enda setData. Ladda-pillen i JSX:en
@@ -1980,7 +2055,10 @@ export default function V2Map({
         // så brickorna kring staden tänds direkt vid load — och en senare
         // GPS-fix reseedar inte iväg vyn till där besökaren råkar stå.
         let startCenter = START_CENTER;
-        let startZoom = START_ZOOM;
+        let startZoom = startZoomFor(
+            mapContainerRef.current.clientWidth,
+            mapContainerRef.current.clientHeight,
+        );
         {
             const plats = new URLSearchParams(window.location.search).get('plats');
             if (plats) {
@@ -2003,9 +2081,8 @@ export default function V2Map({
             // matchar themeparken → bytet syns inte som ett hopp (jfr. tidigare
             // satellit-bootstrap som blixtrade förbi en satellitvy).
             style: BOOTSTRAP_STYLE,
-            // Startvy: södra Sverige (Skåne syns), mer inzoomad — se START_CENTER/_ZOOM.
-            // Vid start finns ändå inga avslöjade event, så en tightare sydlig vy känns
-            // mindre tom och landar nära där de flesta användarna faktiskt är.
+            // Startvy: södra Sverige på kust-till-kust-avstånd — se START_CENTER
+            // och startZoomFor. Härifrån reser intron norrut på samma höjd.
             // (?plats=-djuplänken ovan skriver över med stadens vy.)
             center: startCenter,
             zoom: startZoom,
@@ -2774,18 +2851,20 @@ export default function V2Map({
     //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
     //     hoppar direkt dit (jumpTo), väntar på att MapLibre ska ladda färdigt alla
     //     tiles (map.once('idle')), och tonar sedan in kartan igen.
-    // ── Intro-gliden bakom välkomstrutan ────────────────────────────────────
-    // Kartan startar nationellt (START_ZOOM) och glider LÅNGSAMT inåt mot
-    // användaren (eller Sveriges mitt) medan rutan är uppe — besökaren ska
-    // hinna se eventmängden över hela landet (Josef 11/8: "man fattar inte
-    // annars vilken databas vi har"). Konstant fart, låg måls-zoom: gliden är
-    // ambient, inte en transport. När prop:en blir null (rutan stängd, eller
-    // stadshoppet tar över) stoppar cleanup:en animationen där den står.
+    // ── Intro-resan bakom välkomstrutan ─────────────────────────────────────
+    // Kartan startar i södra Sverige och panorerar LÅNGSAMT norrut på samma
+    // höjd medan rutan är uppe — besökaren ska hinna se eventmängden över hela
+    // landet (Josef 11/8: "man fattar inte annars vilken databas vi har").
+    // Ingen zoom alls: det gamla inzoomande glidet kändes segt och kostade en
+    // ny tile-nivå hela vägen (Josef 12/8). Konstant fart, ambient tempo. När
+    // prop:en blir false (rutan stängd, eller stadshoppet tar över) stoppar
+    // cleanup:en animationen där den står.
+    //
     // Tvinga NÅL-läget under hela intron — bara prickar, inga brickor (Josef
     // 11/8). zoomstart/zoomend-spärrarna räcker inte: brickorna hann tändas i
-    // boot-fönstren INNAN glidens första zoom-event, och stilbytet återskapar
-    // brick-lagret synligt. Körs vid glidstart och varje 'idle' (= efter varje
-    // stilbyte/datapush), så läget återställs hur lagren än ritas om.
+    // boot-fönstren INNAN resans första rörelse, och stilbytet återskapar
+    // brick-lagret synligt. Körs vid start och vid varje styledata/idle (=
+    // efter varje stilbyte/datapush), så läget återställs hur lagren än ritas om.
     const enforceIntroNeedles = useCallback(() => {
         const map = mapRef.current;
         const container = mapContainerRef.current;
@@ -2796,7 +2875,11 @@ export default function V2Map({
         if (layerExists(map, 'plain-events-dots')) {
             map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
             map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', ['*', 0.9, PAST_DIM_EXPR]);
+            map.setPaintProperty('plain-events-dots', 'circle-radius', INTRO_DOT_RADIUS_EXPR);
             map.setLayoutProperty('plain-events-dots', 'visibility', 'visible');
+        }
+        if (layerExists(map, 'intro-glow')) {
+            map.setLayoutProperty('intro-glow', 'visibility', 'visible');
         }
         for (const id of ['multi-event-dots', 'multi-event-dots-count']) {
             if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'visible');
@@ -2810,35 +2893,131 @@ export default function V2Map({
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !introGlide) return;
-        const target = introGlide;
         let disposed = false;
-        const glide = () => {
-            if (disposed || !styleReady(map)) return;
-            enforceIntroNeedles();
-            const remaining = INTRO_GLIDE_ZOOM - map.getZoom();
-            if (remaining <= 0.05) return; // framme — stå still tills rutan stängs
+        let warmedUp = false;   // första etappen = mjuk acceleration från stillastående
+        let legEndsAt = 0;      // när etappen som rullar SKA vara framme (ms, performance.now)
+
+        // En etapp: åk `screens` skärmhöjder mot norr med given easing. `slow`
+        // = 2 betyder dubbla tiden mot marschfart, vilket är exakt vad en
+        // kvadratisk acceleration/inbromsning behöver för att SLUTA respektive
+        // BÖRJA i marschfart — annars rycker det till i skarven mellan etapperna.
+        const leg = (
+            fromPx: { x: number; y: number },
+            toPx: { x: number; y: number },
+            fraction: number,
+            screens: number,
+            easing: (t: number) => number,
+            slow = 1,
+        ) => {
+            // Skyddsnät mot noll-längds-etapper: en easeTo på ~0 ms fyrar ett
+            // nytt moveend direkt och kan snurra vidare i all oändlighet.
+            if (screens < 0.01) return;
+            const center = map.unproject([
+                fromPx.x + (toPx.x - fromPx.x) * fraction,
+                fromPx.y + (toPx.y - fromPx.y) * fraction,
+            ]);
+            const duration = screens * INTRO_PAN_MS_PER_SCREEN * slow;
+            legEndsAt = performance.now() + duration;
             map.easeTo({
-                center: [target.lng, target.lat],
-                zoom: INTRO_GLIDE_ZOOM,
-                // Skala tiden efter kvarvarande zoom så en OMSTART fortsätter i
-                // samma lugna fart i stället för att smeta ut resten över hela
-                // INTRO_GLIDE_MS.
-                duration: (remaining / Math.max(0.1, INTRO_GLIDE_ZOOM - START_ZOOM)) * INTRO_GLIDE_MS,
-                easing: t => t,
+                center,
+                // INGEN zoom här: easeTo behåller kartans nuvarande höjd, och
+                // det är hela poängen — resan går rakt norrut på samma nivå.
+                duration,
+                easing,
             });
         };
-        // Starta direkt — och starta OM varje gång kartan stannar i förtid.
-        // Boot-stilbytet (bootstrap→nöjesfält) och GPS-målbytet avbryter en
-        // pågående ease, och med en engångs-easeTo blev kameran då stående
-        // (Josef 11/8: "jag ser ingen långsam zoom"). 'idle' fyrar bara när
-        // inget animeras, så en pågående glid triggar inga omstarter.
-        map.on('idle', glide);
-        glide();
-        return () => { disposed = true; map.off('idle', glide); map.stop(); };
-        // Bara koordinaterna — sidan bygger ett nytt objekt varje render, och
-        // med objektet i deps hade gliden startat om vid varje omritning.
+
+        const travel = () => {
+            if (disposed || !styleReady(map)) return;
+            // Nål-läget + glöden ska gälla från första bildrutan.
+            enforceIntroNeedles();
+            // Redan på väg? Lägg inte en ease ovanpå en annan — MEN bara så
+            // länge etappen rimligen fortfarande pågår. isEasing() är bara
+            // `!!_easeFrameId`, så ett strandat id (avbruten animation, tappad
+            // WebGL-kontext) hade annars låst resan för gott. Tidsvillkoret gör
+            // spärren självläkande: easeTo röjer själv undan ett gammalt id.
+            if (map.isEasing() && performance.now() < legEndsAt) return;
+            const from = map.getCenter();
+            // Kvarvarande sträcka mätt i SKÄRMHÖJDER (via pixlar, så både zoom
+            // och skärmformat räknas in) → samma upplevda fart överallt.
+            const p0 = map.project(from);
+            const p1 = map.project(INTRO_PAN_TO);
+            const totalPx = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+            const screens = totalPx / Math.max(1, map.getContainer().clientHeight);
+            if (screens <= 0.02) return;                  // framme — stå still tills rutan stängs
+            if (!warmedUp) {
+                // 1. Avfärd: accelerera mjukt upp i marschfart (kvadratisk).
+                warmedUp = true;
+                const f = Math.min(0.5, INTRO_WARMUP_SCREENS / screens);
+                leg(p0, p1, f, screens * f, t => t * t, 2);
+                return;
+            }
+            // 3. Inbromsning: rulla ut till stillastående i norr. MARGINALEN är
+            // inte kosmetisk: marsch-etappen siktar på exakt den här gränsen, och
+            // utan slack landar kvarvarande sträcka en flyttalsgnutta OVANFÖR
+            // den → marsch-grenen igen, fast med noll längd. Resultatet var en
+            // evig moveend→easeTo(0 ms)-loop som stannade resan i Ångermanland.
+            if (screens <= INTRO_BRAKE_SCREENS + 0.02) {
+                leg(p0, p1, 1, screens, t => 1 - (1 - t) * (1 - t), 2);
+                return;
+            }
+            // 2. Marschfart: linjärt fram till inbromsningspunkten.
+            const f = (screens - INTRO_BRAKE_SCREENS) / screens;
+            leg(p0, p1, f, screens - INTRO_BRAKE_SCREENS, t => t);
+        };
+
+        // NÄSTA ETAPP STARTAS ALDRIG INIFRÅN MAPLIBRES EGNA CALLBACKS — den
+        // läggs på nästa bildruta. Det här är inte försiktighet, det är en
+        // buggfix (Josef 14/8: "this._onEaseFrame is not a function",
+        // "Attempting to run(), but is already running", och kameran hamnade
+        // inte i Växjö efteråt):
+        //   Camera._renderFrameCallback anropar this._onEaseFrame(...), och
+        //   Camera._stop() RADERAR _onEaseFrame innan den fyrar 'moveend'.
+        //   Startade vi en ny easeTo direkt i den moveend-handlern låg vi mitt
+        //   i den avslutande frame-callbacken → nästa bildruta hittade ett
+        //   _easeFrameId utan _onEaseFrame och kastade. Undantaget dödade
+        //   animationsloopen och lämnade kameran i ett halvt läge, så
+        //   stadshoppet efter välkomstrutan aldrig kom fram.
+        // En rAF räcker: då har MapLibre vecklat ur sin egen stack först.
+        let queued: number | null = null;
+        const scheduleTravel = () => {
+            if (disposed || queued !== null) return;
+            queued = requestAnimationFrame(() => { queued = null; travel(); });
+        };
+        // Skarven mellan etapperna går via 'moveend' — den fyrar så fort
+        // KAMERAN stannat. 'idle' väntar dessutom in alla tiles, och eftersom
+        // panoreringen laddar nya tiles hela vägen hade etappbytet då blivit en
+        // paus av okänd längd mitt i resan. 'idle' + 'styledata' är kvar som
+        // RÄDDNING: hela intron är spärrad bakom styleReady, och stilen laddas
+        // asynkront över nätet — utan de krokarna stod kartan kvar i brick-
+        // läget (där ingenting är avslöjat) tills första idle kom. Alla tre är
+        // ofarliga att få dubbelt: travel() räknar om kvarvarande sträcka varje
+        // gång och avstår om en ease redan pågår.
+        map.on('styledata', scheduleTravel);
+        map.on('moveend', scheduleTravel);
+        map.on('idle', scheduleTravel);
+        scheduleTravel();
+        return () => {
+            disposed = true;
+            if (queued !== null) cancelAnimationFrame(queued);
+            map.off('styledata', scheduleTravel);
+            map.off('moveend', scheduleTravel);
+            map.off('idle', scheduleTravel);
+            // Stoppa resan — men låt inte ett trasigt kameraläge fälla
+            // cleanupen: gör den inte klart ligger lyssnarna kvar och stör
+            // stadshoppet som ska ta över.
+            try { map.stop(); } catch { /* kameran redan nedmonterad */ }
+            // Släck intro-utstyrseln: glöden bort och prickarna tillbaka till
+            // sin vanliga storlek. Görs här (inte i stadshoppet) så den ALLTID
+            // städas — oavsett hur intron tog slut.
+            const m = mapRef.current;
+            if (m && styleReady(m)) {
+                if (layerExists(m, 'intro-glow')) m.setLayoutProperty('intro-glow', 'visibility', 'none');
+                if (layerExists(m, 'plain-events-dots')) m.setPaintProperty('plain-events-dots', 'circle-radius', DOT_RADIUS_EXPR);
+            }
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [introGlide?.lat, introGlide?.lng]);
+    }, [introGlide]);
 
     const prevCityTourKeyRef = useRef<number | null>(null);
     useEffect(() => {
@@ -3287,7 +3466,10 @@ export default function V2Map({
                 Mitten är den enda ytan som är fri i alla lägen — toppen har
                 navbar/stadsruta, botten har eventkortet. Den är dessutom det
                 man tittar på medan kartan fylls. */}
-            {eventsLoaded && (!eventsSettled || !symbolsPainted) && (
+            {/* Under intron (välkomstrutan uppe) visas INGET kartkrom alls —
+                inte ens laddpillen (Josef 13/8). Bakom rutan ska det bara ligga
+                karta och prickar. */}
+            {!introGlide && eventsLoaded && (!eventsSettled || !symbolsPainted) && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[900] pointer-events-none">
                     <div role="status" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 dark:border-slate-700 px-4 py-2 flex items-center gap-2 animate-in fade-in duration-300">
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
@@ -3520,6 +3702,10 @@ export default function V2Map({
 
                 const handleCrate = (it: CrateItem) => toggleFeature(it.key);
 
+                // Inget kartkrom under intron — lager-knappen och väskan med
+                // (Josef 13/8: "vi behöver inte ha några knappar eller något
+                // över kartan förrän welcome-modalen försvinner").
+                if (introGlide) return null;
                 return typeof document === 'undefined' ? null : createPortal(
                     <>
                         {/* Funktions-popup: liten meny-panel under lager-knappen. Varje rad =

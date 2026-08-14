@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, Hand, Heart, Zap } from 'lucide-react';
+import { ArrowRight, Hand, Heart } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 
@@ -147,40 +147,20 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
 
     if (!open) return null;
 
+    // Fyra rader generisk säljtext var det som stod här. Nu räcker TVÅ: siffran
+    // ovanför bär "vad är det här", och de tre sakerna man själv kan göra
+    // (tipsa/önska/skapa) har flyttat till ett EGET steg efter att rutan
+    // stängts — de trängdes ihjäl här inne (Josef 14/8: "det blir för mycket").
     const rows = [
         {
             chip: 'bg-[#006AA7]/10',
             icon: <Hand size={19} className="text-[#006AA7]" />,
-            text: <>Tryck <span className="font-bold text-slate-900">var som helst på kartan</span> för att upptäcka event nära dig.</>,
-        },
-        {
-            chip: 'bg-[#006AA7]/10',
-            icon: <CalendarDays size={19} className="text-[#006AA7]" />,
-            text: <>Konserter, marknader, sport &amp; kultur — <span className="font-bold text-slate-900">i hela Sverige</span>.</>,
-        },
-        {
-            chip: 'bg-amber-100',
-            icon: <Zap size={19} className="text-amber-500" />,
-            text: (
-                <>
-                    Se vad som händer <span className="font-bold text-slate-900">just nu</span>
-                    {soonEventCount && soonEventCount >= 1 ? (
-                        <>
-                            {' '}
-                            <span className="inline-flex items-center gap-1 align-middle whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5">
-                                <span className="welcome-live-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span className="text-amber-600 font-extrabold text-[12px]">{soonEventCount} st börjar inom 1&nbsp;h</span>
-                            </span>
-                        </>
-                    ) : null}
-                    , ikväll eller i helgen.
-                </>
-            ),
+            text: <>Tryck <span className="font-bold text-slate-900">var som helst på kartan</span> för att se vad som händer just där.</>,
         },
         {
             chip: 'bg-rose-100',
             icon: <Heart size={19} className="text-rose-500" />,
-            text: <>Spara favoriter, dela med vänner &amp; skapa egna event.</>,
+            text: <>Spara favoriter, dela med vänner &amp; håll koll på din stad.</>,
         },
     ];
 
@@ -192,8 +172,13 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
             className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
             style={{ '--welcome-exit-ms': `${EXIT_MS}ms` } as React.CSSProperties}
         >
-            {/* Ingen backdrop-blur: filter ovanpå WebGL-kartan är dyrt på svaga mobiler. */}
-            <div className="welcome-backdrop absolute inset-0 bg-black/60" onClick={() => { track('welcome_dismiss'); dismiss(); }} />
+            {/* Duken är MEDVETET tunn (Josef 13/8): bakom den reser kartan genom
+                Sverige med eventprickarna tända, och det är den resan som säljer
+                in tjänsten — 60 % svart gjorde den till en grå yta. 32 % räcker
+                för att kortet ska ha ro omkring sig, och prickarnas glöd
+                (intro-glow i V2Map) punchar igenom.
+                Ingen backdrop-blur: filter ovanpå WebGL-kartan är dyrt på svaga mobiler. */}
+            <div className="welcome-backdrop absolute inset-0 bg-black/[0.32]" onClick={() => { track('welcome_dismiss'); dismiss(); }} />
             <div
                 ref={cardRef}
                 className={`relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden bg-white rounded-[28px] shadow-2xl ${
@@ -229,27 +214,41 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             ))}
                         </h2>
                         <span className="welcome-underline block h-[5px] w-24 rounded-full bg-[#FECC02]" style={{ animationDelay: '560ms' }} />
-                        {/* Samma mening med och utan siffra — bara "alla" byts mot talet
-                            när eventen laddat. VECKANS antal, inte dagens (Josef 11/8):
-                            besökaren ska direkt se hur mycket som faktiskt finns. Dagens
-                            antal följer med i bisatsen när det är känt. */}
-                        <p className="text-[15px] font-bold text-slate-600 leading-snug px-2 mt-1">
-                            Just nu hittar du{' '}
-                            <span className="font-extrabold text-[#006AA7] tabular-nums">
-                                {shownCount > 0 ? `${shownCount.toLocaleString('sv-SE')} event` : 'alla event'}
-                            </span>{' '}
-                            den närmaste veckan
-                            {todayEventCount && todayEventCount > 0
-                                ? ` — ${todayEventCount.toLocaleString('sv-SE')} av dem händer idag`
-                                : ''}
-                            , samlat på en karta.
+                        {/* SIFFRAN ÄR RUBRIKEN. Den satt förut inbakad mitt i en
+                            mening och läste som brödtext; nu är den det första
+                            ögat landar på efter loggan. VECKANS antal, inte
+                            dagens (Josef 11/8) — veckovolymen är det som visar
+                            hur stor databasen faktiskt är. */}
+                        <p className="mt-1 flex items-baseline justify-center gap-2">
+                            <span className="text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
+                                {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
+                            </span>
+                            <span className="text-[15px] font-black uppercase tracking-[0.1em] text-slate-500">event</span>
                         </p>
+                        <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
+                            den närmaste veckan i hela Sverige
+                            {todayEventCount && todayEventCount > 0
+                                ? <> — <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} redan idag</span></>
+                                : null}
+                        </p>
+                        {soonEventCount && soonEventCount >= 1 ? (
+                            <span className="mt-0.5 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1">
+                                <span className="welcome-live-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span className="text-amber-700 font-extrabold text-[11.5px] uppercase tracking-wide">
+                                    {soonEventCount} börjar inom en timme
+                                </span>
+                            </span>
+                        ) : null}
                     </div>
+
+                    {/* (Här låg tre riktiga event ur datan. Borttaget 14/8: rutan
+                        blev för mycket att läsa, och det man SJÄLV kan göra tas
+                        nu i ett eget steg efter att rutan stängts.) */}
 
                     {/* ── Punkterna kaskadar in en och en ── */}
                     <ul className="flex flex-col gap-3.5">
                         {rows.map((row, i) => (
-                            <li key={i} className="welcome-row flex items-center gap-3" style={{ animationDelay: `${600 + i * 110}ms` }}>
+                            <li key={i} className="welcome-row flex items-center gap-3" style={{ animationDelay: `${640 + i * 110}ms` }}>
                                 <span className={`shrink-0 grid place-items-center w-9 h-9 rounded-xl ${row.chip}`}>{row.icon}</span>
                                 <span className="text-[13.5px] font-semibold text-slate-600 leading-snug">{row.text}</span>
                             </li>

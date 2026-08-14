@@ -30,6 +30,20 @@ export function relativeDayLabel(key: string): string | null {
     return null;
 }
 
+/** Dagens nyckel (svensk tid). Klockberoende — bara efter mount. */
+export function todayKey(): string {
+    return dateKey(new Date());
+}
+
+/** Kommande veckans dagnycklar: idag + 6 dagar framåt. Samma definition som
+ *  cityData.weekKeys — den är server-only (fs-import), och stadsindexets rader
+ *  ska visa exakt samma "i veckan"-tal som stadssidornas intro-rad. Ändras den
+ *  ena måste den andra följa med. */
+export function weekKeys(): string[] {
+    const now = new Date();
+    return Array.from({ length: 7 }, (_, i) => dateKey(addDays(now, i)));
+}
+
 /** Vilka 'YYYY-MM-DD'-nycklar (svensk tid) perioden motsvarar just nu.
  *  null = ingen dagbegränsning (Alla). */
 export function periodKeys(period: Period): string[] | null {

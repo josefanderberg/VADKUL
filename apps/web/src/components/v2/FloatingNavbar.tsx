@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X, Heart, Signpost } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X, Heart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface FloatingNavbarProps {
@@ -25,12 +25,12 @@ interface FloatingNavbarProps {
     savedCount?: number;
     /** Öppna/stäng panelen med sparade event. */
     onToggleSaved?: () => void;
-    /** Skylt-knappen (gamla play-knappen, Josef 10/8): togglar vägskyltarna.
-     *  PÅ-slaget fäster också kameran vid närmsta stad med rätt inzoom — precis
-     *  som play gjorde; AV-slaget bara gömmer skyltarna, inget hopp. */
-    onToggleSigns?: () => void;
-    /** Sant när vägskyltarna är på (kartan fäst vid en stad). */
-    signsOn?: boolean;
+    /* (Skylt-knappen och dess signsOn/onToggleSigns låg här. Borttagna 14/8 —
+       Josef: "we don't need that anymore". Skapa-knappen ärvde platsen.) */
+    /** Sant en kort stund efter att onboardingens actionruta flugit hem hit:
+     *  plusset blinkar till så man ser VAR tipsa/önska/skapa bor i
+     *  fortsättningen. Sidan äger tidtagningen (den startar flygningen). */
+    plusHint?: boolean;
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -86,8 +86,7 @@ export default function FloatingNavbar({
     onOpenProfile,
     savedCount = 0,
     onToggleSaved,
-    onToggleSigns,
-    signsOn = false,
+    plusHint = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -95,6 +94,7 @@ export default function FloatingNavbar({
     const plusBtnRef = useRef<HTMLButtonElement>(null);
     const animationRef = useRef<Animation | null>(null);
     const [plusDropping, setPlusDropping] = useState(false);
+
 
     // Fokusera sökfältet när det öppnas
     useEffect(() => {
@@ -223,30 +223,31 @@ export default function FloatingNavbar({
                                 <HoverLabel>Sparade</HoverLabel>
                             </div>
                         )}
-                        {/* Skylt-knappen (gamla play-knappen, Josef 10/8) — under
-                            hjärtat, ALLTID synlig som toggle. PÅ = vägskyltarna
-                            ute + kameran fäst vid närmsta stad med rätt inzoom
-                            (samma hopp som play gjorde); AV = skyltarna gömda,
-                            inget hopp. Rör man kartan slås skyltarna av (de
-                            sitter fast i marken och skulle annars bli stående
-                            kvar utanför bild) — knappen hämtar tillbaka dem.
-                            AV-läget bär sajtens primär-språk (blå gradient, gul
-                            kant, gold-glow-pulse — som gamla play): det är då
-                            ett tryck får något att HÄNDA. PÅ-läget är samma
-                            cirkel utan puls, med gul ikon = läget lyser.
-                            Pulsen tystas av prefers-reduced-motion (globals.css). */}
-                        {onToggleSigns && (
-                            <div className="flex items-center gap-2 pointer-events-none">
+                        {/* Skapa/tipsa — kartnål-med-plus. Bor SEDAN 14/8 här nere
+                            i vänsterkolumnen, på skylt-knappens gamla plats (den
+                            är borttagen), och bär dess formspråk: blå gradient,
+                            gul kant, gold-glow-pulse. Den gröna gradienten är
+                            borta — sajtens "något händer här"-språk är blått och
+                            guld, och två olika accentfärger på samma skärm sa
+                            inget extra.
+                            I placerings-läget är den bekräfta-knappen (✓) och
+                            måste alltid synas; mitt i drop-animationen får den
+                            inte unmountas (då fastnar plusDropping-låset). */}
+                        {creationMode !== 'editing' && createEventEnabled && (
+                            <div className="relative z-[1100] flex items-center gap-2 pointer-events-none">
                                 <button
+                                    ref={plusBtnRef}
                                     type="button"
-                                    onClick={onToggleSigns}
-                                    aria-pressed={signsOn}
-                                    aria-label={signsOn ? 'Göm vägskyltarna' : 'Visa vägskyltarna och åk till närmsta stad'}
-                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 ${signsOn ? '' : 'gold-glow-pulse'}`}
+                                    onClick={handlePlusClick}
+                                    disabled={plusDropping}
+                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
+                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 group ${plusHint ? 'plus-hint-pulse' : 'gold-glow-pulse'}`}
                                 >
-                                    <Signpost size={18} className={signsOn ? 'text-[#FECC02]' : 'text-white/80'} />
+                                    {creationMode === 'placing'
+                                        ? <Check size={20} className="text-white shrink-0" />
+                                        : <MapPinPlus size={20} className="text-[#FECC02] shrink-0 group-hover:scale-110 transition-transform duration-200" />}
                                 </button>
-                                <HoverLabel>{signsOn ? 'Göm vägskyltarna' : 'Vägskyltar — åk till närmsta stad'}</HoverLabel>
+                                <HoverLabel>{creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eller tipsa'}</HoverLabel>
                             </div>
                         )}
                     </div>
@@ -307,30 +308,11 @@ export default function FloatingNavbar({
                             </div>
                         )}
 
-                        {/* Skapa event — kartnål-med-plus (bytt från rent plus 6/8:
-                            Elin läste + som zoom; nålen säger "lägg in på kartan").
-                            Döljs medan söket är öppet så man inte råkar starta
-                            skapa-flödet när man siktar på fältet. UNDANTAG: i
-                            placerings-läget är den bekräfta-knappen (✓) och måste
-                            alltid synas, och mitt i drop-animationen får den inte
-                            unmountas (då fastnar plusDropping-låset). */}
-                        {creationMode !== 'editing' && createEventEnabled && (!searchOpen || creationMode === 'placing' || plusDropping) && (
-                            <div className="flex flex-row-reverse items-center gap-2 relative z-[1100]">
-                                <button
-                                    ref={plusBtnRef}
-                                    type="button"
-                                    onClick={handlePlusClick}
-                                    disabled={plusDropping}
-                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
-                                    className="peer emerald-glow-pulse bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 w-10 h-10 rounded-full shadow-lg border-2 border-[#FECC02] active:scale-95 hover:scale-105 transition-all duration-200 flex items-center justify-center relative shrink-0 pointer-events-auto group"
-                                >
-                                    {creationMode === 'placing'
-                                        ? <Check size={20} className="text-white shrink-0" />
-                                        : <MapPinPlus size={20} className="text-[#FECC02] shrink-0 group-hover:scale-110 transition-transform duration-200" />}
-                                </button>
-                                <HoverLabel>{creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eller tipsa'}</HoverLabel>
-                            </div>
-                        )}
+                        {/* (Skapa-knappen låg här i högerkolumnen fram till 14/8.
+                            Den bor nu i VÄNSTERKOLUMNEN, på skylt-knappens gamla
+                            plats — söket får därmed hela högerkanten för sig
+                            själv och behöver inte längre gömma knappen medan
+                            fältet är utfällt.) */}
                     </div>
                 </div>
             </div>

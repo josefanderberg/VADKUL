@@ -128,12 +128,14 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         // viewportkanten på breda skärmar. Tom container = pointer-events-none.
         <div className="fixed top-6 left-0 right-0 px-4 z-[1150] pointer-events-none">
             <div className="relative max-w-[1400px] mx-auto">
-                {/* Högerkolumnen: TREDJE knappen under sök (top 0) och skapa event
-                    (top 48) — top-[96px] = 2 × (40px knapp + 8px gap). På största
-                    brytpunkten (2xl) HOPPAR den upp på navbarens rad, längst åt
-                    höger (navbaren får 2xl:pr för att lämna plats — se
-                    FloatingNavbar). */}
-                <div className="absolute right-0 top-[96px] 2xl:top-0 pointer-events-auto">
+                {/* Högerkolumnen: ANDRA knappen, direkt under sök (top 0) —
+                    top-[48px] = 40px knapp + 8px gap. Flyttade upp ett steg 14/8
+                    när skapa-knappen lämnade högerkolumnen för vänsterkolumnens
+                    tredje plats; annars stod det ett tomt hål mellan sök och
+                    kategorier. På största brytpunkten (2xl) HOPPAR den upp på
+                    navbarens rad, längst åt höger (navbaren får 2xl:pr för att
+                    lämna plats — se FloatingNavbar). */}
+                <div className="absolute right-0 top-[48px] 2xl:top-0 pointer-events-auto">
                     {/* Rund knapp — VISAR/GÖMMER kolumnen. Badge = antal aktiva
                         filter. Namn-pill vid hover, samma som kategoricirklarna
                         nedanför (raden är flex-row-reverse så pillen kan ligga
@@ -183,9 +185,12 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                         Takhöjd: 100dvh (INTE vh — mobilens adressfält gör vh
                         större än synlig yta, vilket var precis det som gömde de
                         nedersta kategorierna) minus kolumnens topp (24px
-                        container + 96px knapp + 52px offset ≈ 172px) + luft. */}
+                        container + 48px knapp + 52px offset ≈ 124px) + luft.
+                        Taket följde med uppåt när knappen flyttade ett steg
+                        (14/8): annars hade listan fått 48px kortare utrymme än
+                        skärmen faktiskt erbjuder. */}
                     {!hidden && (
-                        <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-196px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-148px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
                             {/* Opt-in-källorna ALLTID överst, avstängda tills man
                                 kryssar i dem — och alltid samma rader, så toppen
                                 av kolumnen står still när vyn byter. */}
