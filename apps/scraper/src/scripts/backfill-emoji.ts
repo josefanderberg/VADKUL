@@ -20,6 +20,7 @@
 import { db } from '../config/firebase';
 import { sqlite } from '../utils/sqliteHelper';
 import { CATEGORY_EMOJI } from '../utils/llmAudit';
+import { stamped } from '../utils/firestoreStamp';
 
 const APPLY = process.argv.includes('--apply');
 const ALL = process.argv.includes('--all');
@@ -71,7 +72,7 @@ async function main() {
             // aggregate-events läser; Firestore-synken är best-effort.
             if (db && r.firestoreId) {
                 try {
-                    await db.collection('linkEvents').doc(r.firestoreId).update({ emoji });
+                    await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ emoji }));
                 } catch (e: any) {
                     if (e?.code !== 5) { fsFail++; console.error(`  ❌ Firestore ${r.url.slice(0, 50)}: ${e?.message}`); }
                 }
@@ -104,7 +105,7 @@ async function resyncFirestore() {
     console.log(`🔁 Synkar ${rows.length} linkEvents.emoji → Firestore (SQLite oförändrad).`);
     let ok = 0, fail = 0;
     for (const r of rows) {
-        try { await db.collection('linkEvents').doc(r.firestoreId).update({ emoji: r.emoji }); ok++; }
+        try { await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ emoji: r.emoji })); ok++; }
         catch (e: any) { if (e?.code !== 5) { fail++; if (fail <= 5) console.error(`  ❌ ${r.url.slice(0, 50)}: ${e?.message}`); } }
         if (ok % 500 === 0 && ok) console.log(`  …${ok} synkade`);
     }

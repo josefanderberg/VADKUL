@@ -20,6 +20,7 @@
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { setHidden } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -132,7 +133,7 @@ async function main() {
     let hidden = 0, gone = 0, errors = 0;
     for (const m of matches) {
         try {
-            await db.collection('linkEvents').doc(m.id).update({ hidden: true });
+            await db.collection('linkEvents').doc(m.id).update(stamped({ hidden: true }));
             hidden++;
             setHidden(m.url, true);
             if (hidden % 50 === 0) console.log(`  ...hidden ${hidden}/${matches.length}`);

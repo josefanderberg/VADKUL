@@ -116,6 +116,76 @@ describe('postToFacebook — kö med påfyllnad', () => {
     });
 });
 
+describe('postToFacebook — schemaläggning', () => {
+    const inDays = (d: number) => Date.now() + d * 86_400_000;
+
+    it('skickar published:false + scheduled_publish_time i SEKUNDER', async () => {
+        installFetchMock();
+        const when = inDays(3);
+        await postToFacebook('text', [], 10, { scheduledFor: when });
+        const feed = calls.find(c => c.url.includes('/PAGE/feed'))!;
+        expect(feed.body.published).toBe(false);
+        expect(feed.body.scheduled_publish_time).toBe(Math.floor(when / 1000));
+    });
+
+    it('schemalägger EN bild via /photos och gör aldrig multi-photo', async () => {
+        installFetchMock();
+        const when = inDays(3);
+        // Fem bilder i kön, men schemalagt ⇒ bara den första ska laddas upp
+        // och ingen feed-post med attached_media får skickas.
+        const id = await postToFacebook('text', urls(5), 10, { scheduledFor: when });
+        const photos = calls.filter(c => c.url.includes('/PAGE/photos'));
+        expect(photos).toHaveLength(1);
+        expect(photos[0].body.published).toBe(false);
+        expect(photos[0].body.scheduled_publish_time).toBe(Math.floor(when / 1000));
+        expect(calls.some(c => c.url.includes('/PAGE/feed'))).toBe(false);
+        expect(id).toBe('m0');
+    });
+
+    it('tar nästa bild ur kön när Meta avvisar den första', async () => {
+        installFetchMock({ failUpload: new Set([u(0)]) });
+        await postToFacebook('text', urls(3), 10, { scheduledFor: inDays(2) });
+        const photos = calls.filter(c => c.url.includes('/PAGE/photos'));
+        expect(photos).toHaveLength(2);
+        expect(photos[1].body.url).toBe(u(1));
+    });
+
+    it('faller tillbaka på schemalagt textinlägg när ingen bild går igenom', async () => {
+        installFetchMock({ failUpload: new Set(urls(3)) });
+        const when = inDays(2);
+        const id = await postToFacebook('text', urls(3), 10, { scheduledFor: when });
+        expect(id).toBe('feedpost');
+        const feed = calls.find(c => c.url.includes('/PAGE/feed'))!;
+        expect(feed.body.published).toBe(false);
+        expect(feed.body.scheduled_publish_time).toBe(Math.floor(when / 1000));
+    });
+
+    it('använder post_id (story) före photo-id när Meta ger båda', async () => {
+        installFetchMock();
+        vi.stubGlobal('fetch', vi.fn(async () => jsonRes({ id: 'photo123', post_id: 'PAGE_story456' })));
+        const id = await postToFacebook('text', [u(0)], 10, { scheduledFor: inDays(1) });
+        expect(id).toBe('PAGE_story456');
+    });
+
+    it('vägrar tider utanför fönstret 10 min – 30 dygn', async () => {
+        installFetchMock();
+        await expect(postToFacebook('t', [], 10, { scheduledFor: Date.now() + 60_000 }))
+            .rejects.toThrow(/minst 10 min/);
+        await expect(postToFacebook('t', [], 10, { scheduledFor: inDays(31) }))
+            .rejects.toThrow(/inom 30 dygn/);
+        // Inget nätanrop får ha gjorts för de avvisade tiderna.
+        expect(calls).toHaveLength(0);
+    });
+
+    it('postar direkt (utan schemafält) när scheduledFor utelämnas', async () => {
+        installFetchMock();
+        await postToFacebook('text', [], 10);
+        const feed = calls.find(c => c.url.includes('/PAGE/feed'))!;
+        expect(feed.body.published).toBeUndefined();
+        expect(feed.body.scheduled_publish_time).toBeUndefined();
+    });
+});
+
 describe('postToInstagram — karusell med påfyllnad', () => {
     it('ersätter avvisade bilder (creation + FINISHED) från kön tills target nås', async () => {
         // u0 avvisas vid skapandet; u1→c0, u2→c1, u3→c2 skapas (svep 1, target 3).

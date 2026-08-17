@@ -28,6 +28,7 @@ import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 import { db as firestoreDb } from '../config/firebase';
+import { stamped } from '../utils/firestoreStamp';
 import { runAggregation } from './aggregate-events';
 
 const args = (() => {
@@ -139,12 +140,12 @@ async function processBatch(rows: Row[]): Promise<number> {
                 // maskinlokalt (aggregate från annan maskin tappar det annars).
                 if (firestoreDb && r.firestoreId) {
                     try {
-                        await firestoreDb.collection('linkEvents').doc(r.firestoreId).update({
+                        await firestoreDb.collection('linkEvents').doc(r.firestoreId).update(stamped({
                             category: result.category,
                             emoji: result.emoji,
                             ...(result.price ? { price: result.price } : {}),
                             ...(autoHide ? { hidden: 1 } : {}),
-                        });
+                        }));
                     } catch (err) {
                         log(`           ↳ ⚠️ Firestore-spegling misslyckades: ${(err as Error).message}`);
                     }

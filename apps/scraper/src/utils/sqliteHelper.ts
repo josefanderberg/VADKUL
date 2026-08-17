@@ -93,6 +93,12 @@ sqlite.exec(`
         ok         INTEGER NOT NULL,
         checked_at TEXT    NOT NULL
     );
+
+    -- Sync-metadata (nyckel/värde): cursors för inkrementell Firestore→SQLite-sync.
+    CREATE TABLE IF NOT EXISTS sync_meta (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
 `);
 
 // ─── Additive migrations ────────────────────────────────────────────────────
@@ -549,6 +555,23 @@ export function geocodeCacheGet(query: string): GeocodeCacheHit | null {
 
 export function geocodeCacheSet(query: string, coords: [number, number] | null): void {
     geoCacheSetStmt.run(query, coords?.[0] ?? null, coords?.[1] ?? null, coords ? 1 : 0, new Date().toISOString());
+}
+
+// ─── Sync-metadata (cursors för inkrementell sync) ──────────────────────────
+
+const syncMetaGetStmt = sqlite.prepare('SELECT value FROM sync_meta WHERE key = ?');
+const syncMetaSetStmt = sqlite.prepare(`
+    INSERT INTO sync_meta (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+`);
+
+export function getSyncMeta(key: string): string | null {
+    const row = syncMetaGetStmt.get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+}
+
+export function setSyncMeta(key: string, value: string): void {
+    syncMetaSetStmt.run(key, value);
 }
 
 export { sqlite };

@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import type { LogOutcome, QueueResponse, TodayAction } from '@/types/outreach';
+import type { LogOutcome, PostMethod, QueueResponse, TodayAction } from '@/types/outreach';
 import {
     AlertCircle, Check, CheckCircle2, ChevronDown, Clock3, Copy, ExternalLink, Eye, Loader2, Mail,
     MessageCircle, Sparkles,
@@ -35,6 +35,11 @@ const OUTCOMES: { id: LogOutcome; label: string }[] = [
 ];
 // Släpp-kollen har bara tre rimliga svar — resten är redan avgjort.
 const RELEASE_OUTCOMES = new Set<LogOutcome>(['godkänt-uppe', 'nekad', 'borttagen']);
+
+const METHODS: { id: PostMethod; label: string }[] = [
+    { id: 'eget-inlägg', label: 'Eget inlägg' },
+    { id: 'delat-sidinlägg', label: 'Delat sidinlägg' },
+];
 
 export default function TodayPanel({ data, onChanged }: { data: QueueResponse; onChanged: () => void }) {
     const { quota, visits, actions, queue } = data;
@@ -390,11 +395,13 @@ function OutcomeEditor({ busy, compact, onSave }: {
     compact: boolean;
     onSave: (p: {
         outcome: LogOutcome;
+        method?: PostMethod;
         likes?: number; comments?: number; shares?: number; ownRepliesCount?: number;
         avskriv?: boolean;
     }) => void;
 }) {
     const [outcome, setOutcome] = useState<LogOutcome | null>(null);
+    const [method, setMethod] = useState<PostMethod | null>(null);
     const [nums, setNums] = useState({ likes: '', comments: '', shares: '', ownRepliesCount: '' });
     const [avskriv, setAvskriv] = useState(false);
 
@@ -418,6 +425,20 @@ function OutcomeEditor({ busy, compact, onSave }: {
                 ))}
             </div>
 
+            {/* A/B:t: skrevs inlägget i gruppen, eller delades sidinlägget dit?
+                Utan den här raden går de två metoderna inte att jämföra sen. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-black text-slate-400 mr-0.5">Metod:</span>
+                {METHODS.map(m => (
+                    <button key={m.id} type="button" onClick={() => setMethod(method === m.id ? null : m.id)}
+                        className={`px-2.5 py-1.5 rounded-full text-[11px] font-black transition-colors ${
+                            method === m.id ? 'bg-slate-700 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                        }`}>
+                        {m.label}
+                    </button>
+                ))}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2.5">
                 <NumField label="👍 likes" value={nums.likes} onChange={v => setNums(n => ({ ...n, likes: v }))} />
                 <NumField label="💬 komm." value={nums.comments} onChange={v => setNums(n => ({ ...n, comments: v }))} />
@@ -436,6 +457,7 @@ function OutcomeEditor({ busy, compact, onSave }: {
             <button type="button" disabled={!outcome || busy}
                 onClick={() => outcome && onSave({
                     outcome,
+                    method: method ?? undefined,
                     likes: parse(nums.likes),
                     comments: parse(nums.comments),
                     shares: parse(nums.shares),

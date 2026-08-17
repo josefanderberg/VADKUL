@@ -79,20 +79,73 @@ function validImagePairs(urls: string[]): { url: string; idx: number }[] {
 // ── Facebook ──────────────────────────────────────────────────────────────────
 
 /**
- * Publicera till Facebook-sidan.
+ * Schemaläggningsfönstret. Meta tillåter formellt mer, men konsolplanen
+ * (docs/outreach/admin-konsol-plan.md §0) har beslutat att bygga mot 30 dygn
+ * — det är vad Business Suite Planner visar, och ett inlägg som ligger längre
+ * fram än så hinner ändå bli inaktuellt.
+ */
+export const SCHEDULE_MIN_MS = 10 * 60 * 1000;
+export const SCHEDULE_MAX_MS = 30 * 24 * 60 * 60 * 1000;
+
+export interface FbPostOptions {
+    /**
+     * Epoch ms. Sätt för att SCHEMALÄGGA i stället för att publicera direkt.
+     *
+     * ⚠️ Facebook hämtar bilden vid SCHEMALÄGGNINGEN, inte vid publiceringen.
+     * En kartbild som läggs 30 dygn fram publiceras alltså med 30 dygn gamla
+     * prickar, och daterade eventrader i texten är då fel. Håll allt som
+     * innehåller konkreta datum inom ~7 dygn; skriv längre schemalägg tidlöst.
+     */
+    scheduledFor?: number;
+}
+
+/** Kastar med ett läsbart fel i stället för Metas kryptiska koder. */
+function assertScheduleWindow(scheduledFor: number): void {
+    const delta = scheduledFor - Date.now();
+    if (delta < SCHEDULE_MIN_MS) {
+        throw new Error(
+            `Schemaläggning måste ligga minst 10 min fram — fick ${Math.round(delta / 60000)} min. ` +
+            'Vill du posta direkt: utelämna scheduledFor.',
+        );
+    }
+    if (delta > SCHEDULE_MAX_MS) {
+        throw new Error(
+            `Schemaläggning måste ligga inom 30 dygn — fick ${Math.round(delta / 86400000)} dygn.`,
+        );
+    }
+}
+
+/**
+ * Publicera (eller schemalägg) till Facebook-sidan.
  *   0 bilder → feed-inlägg · 1 bild → /photos · 2+ → multi-photo feed.
  *
  * `imageUrls` behandlas som en KÖ: de första `target` som Facebook accepterar
  * blir inläggets bilder, resten är reserver. Skicka alltså med fler URL:er än
  * `target` så fylls det på när en uppladdning avvisas. `message` kan vara en
  * byggar-funktion (IgCaption) som får indexen för de bilder som faktiskt kom med.
+ *
+ * Med `opts.scheduledFor` satt läggs inlägget i Sidans schemakö i stället.
+ * OBS: multi-photo går INTE att schemalägga — den vägen använder redan
+ * `published: false` för att få media-id:n, och Graph API tar inte båda
+ * betydelserna samtidigt. Schemalagda inlägg får därför högst EN bild; extra
+ * URL:er används som reserver om den första avvisas.
  */
-export async function postToFacebook(message: IgCaption, imageUrls: string[], target = 10): Promise<string> {
+export async function postToFacebook(
+    message: IgCaption,
+    imageUrls: string[],
+    target = 10,
+    opts: FbPostOptions = {},
+): Promise<string> {
     const FB_PAGE_ID = fbPageId(), FB_PAGE_TOKEN = fbPageToken();
     const validPairs = validImagePairs(imageUrls);
+    const { scheduledFor } = opts;
+    if (scheduledFor !== undefined) assertScheduleWindow(scheduledFor);
+    const schedule = scheduledFor !== undefined
+        ? { published: false, scheduled_publish_time: Math.floor(scheduledFor / 1000) }
+        : {};
 
     const postFeed = async (msg: string, mediaIds: string[]): Promise<string> => {
-        const body: Record<string, unknown> = { message: msg, access_token: FB_PAGE_TOKEN };
+        const body: Record<string, unknown> = { message: msg, ...schedule, access_token: FB_PAGE_TOKEN };
         if (mediaIds.length > 0) body.attached_media = mediaIds.map((id) => ({ media_fbid: id }));
         const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/feed`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -103,20 +156,40 @@ export async function postToFacebook(message: IgCaption, imageUrls: string[], ta
         return data.id as string;
     };
 
-    if (validPairs.length === 0) return postFeed(resolveCaption(message, []), []);
-
-    if (validPairs.length === 1) {
-        const { url, idx } = validPairs[0];
+    /** En bild via /photos. Returnerar post-id, eller null om Meta avvisade. */
+    const postPhoto = async (url: string, caption: string): Promise<string | null> => {
         const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/photos`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caption: resolveCaption(message, [idx]), url, access_token: FB_PAGE_TOKEN }),
+            body: JSON.stringify({ caption, url, ...schedule, access_token: FB_PAGE_TOKEN }),
         });
         const data = await res.json() as any;
         if (data.error) {
-            console.warn(`[FB] Bildpost misslyckades (${data.error.message}) — postar utan bild`);
-            return postFeed(resolveCaption(message, [idx]), []);
+            console.warn(`[FB] Bildpost misslyckades (${data.error.message})`);
+            return null;
         }
-        return data.id as string;
+        // Bildinlägg svarar med både photo-id och story-id; story-id är det
+        // som går att dela och som permalinken byggs av.
+        return (data.post_id ?? data.id) as string;
+    };
+
+    if (validPairs.length === 0) return postFeed(resolveCaption(message, []), []);
+
+    // Schemalagt ⇒ högst en bild. Gå igenom kön tills en accepteras.
+    if (scheduledFor !== undefined) {
+        for (const { url, idx } of validPairs) {
+            const postId = await postPhoto(url, resolveCaption(message, [idx]));
+            if (postId) return postId;
+        }
+        console.warn('[FB] Ingen bild gick att schemalägga — schemalägger utan bild');
+        return postFeed(resolveCaption(message, []), []);
+    }
+
+    if (validPairs.length === 1) {
+        const { url, idx } = validPairs[0];
+        const postId = await postPhoto(url, resolveCaption(message, [idx]));
+        if (postId) return postId;
+        console.warn('[FB] Postar utan bild');
+        return postFeed(resolveCaption(message, [idx]), []);
     }
 
     // Multi-photo: gå igenom kön och ladda upp (unpublished) tills vi har
@@ -142,6 +215,30 @@ export async function postToFacebook(message: IgCaption, imageUrls: string[], ta
     const postId = await postFeed(resolveCaption(message, kept), mediaIds);
     console.log(`[FB] Multi-photo post med ${mediaIds.length} bilder`);
     return postId;
+}
+
+/**
+ * Publik permalink till ett sidinlägg — länken du klickar "Dela" på.
+ *
+ * Frågar Graph API först (`permalink_url`) och faller tillbaka på att bygga
+ * URL:en ur id:t `{sid-id}_{story-id}`. Ett SCHEMALAGT inlägg har ingen
+ * publik sida förrän det publicerats; länken fungerar alltså först efter
+ * publiceringstiden. Fram till dess ligger inlägget i Meta Business Suite →
+ * Planner.
+ */
+export async function getFacebookPostPermalink(postId: string): Promise<string> {
+    const FB_PAGE_TOKEN = fbPageToken();
+    try {
+        const res = await fetch(`${GRAPH}/${postId}?fields=permalink_url&access_token=${FB_PAGE_TOKEN}`);
+        const data = await res.json() as any;
+        if (data.permalink_url) return data.permalink_url as string;
+    } catch {
+        /* nätfel — falla igenom till den konstruerade länken */
+    }
+    const [pageId, storyId] = postId.split('_');
+    return storyId
+        ? `https://www.facebook.com/${pageId}/posts/${storyId}`
+        : `https://www.facebook.com/${postId}`;
 }
 
 // ── Instagram ─────────────────────────────────────────────────────────────────

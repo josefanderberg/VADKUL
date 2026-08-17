@@ -18,7 +18,7 @@ import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
-import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, Lock } from 'lucide-react';
+import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, ZoomIn, Lock } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
@@ -662,7 +662,13 @@ export default function HomePage() {
     // Sant när vi väntat klart på platstjänsten — då startar vi ändå.
     const [tourGpsWaitOver, setTourGpsWaitOver] = useState(false);
     useEffect(() => {
-        if (new URLSearchParams(window.location.search).has('plats')) {
+        // Gäller även ?event= (stadssidornas eventklick + delade länkar):
+        // användaren har redan valt vart hen ska, och auto-landningen ryckte
+        // annars bort vyn till hemstaden när välkomstrutan stängdes — eventet
+        // man just öppnat "försvann". Djuplänks-effekten landar i stället
+        // kameran vid eventet när det hittats.
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('plats') || params.has('event')) {
             tourAutoStartedRef.current = true;
             return;
         }
@@ -1590,6 +1596,13 @@ export default function HomePage() {
     /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren). */
     const canOfferWeek = weekUnlocked && dayRangeDays !== 7 && nearbyThisWeekCount > 0;
 
+    /**
+     * Är stadsrutans växel låst just nu? Sant bara på väg TILL veckan medan man
+     * är utzoomad — tillbaka till dagen går alltid. Styr hjälpraden i rutan:
+     * den ska inte lova "tryck för att växla" när klicket inte gör något.
+     */
+    const tourRangeToggleLocked = dayRangeDays < WEEK_RANGE_MIN_DAYS && !weekUnlocked;
+
     /** Dagen prompten pratar om — "idag"/"imorgon", annars veckodagen. */
     const promptDayLabel = useMemo(() => {
         if (dayOffset === 0) return 'idag';
@@ -2074,7 +2087,16 @@ export default function HomePage() {
         prevDayKey.current = `${offset}:1`;
         setDayOffset(offset);
         setSelectedEvent(target);
-    }, []);
+        // Landa där eventet ÄR — som ett skylt-hopp (samma kamerahopp OCH
+        // reveal-ankare, annars står staden med bara nål-prickar). Rundan är
+        // avstängd (?event= i auto-start-effekten), men pekas mot eventets
+        // stad så play/skyltarna fortsätter rätt om man trycker.
+        if (hasValidCoords(target)) {
+            const city = nearestCityPoint(target.lat!, target.lng!);
+            tourCityIndexRef.current = nearestTourCityIndex(city.lat, city.lng);
+            flyToPoint(target.lat!, target.lng!, city.name);
+        }
+    }, [flyToPoint]);
 
     useEffect(() => {
         if (!eventsLoaded || urlApplied.current) return;
@@ -2364,8 +2386,13 @@ export default function HomePage() {
                 onClick={handleToggleTourRange}
                 aria-label={dayRangeDays >= WEEK_RANGE_MIN_DAYS
                     ? `Visa bara ${getDayLabel(dayOffset, 1).toLowerCase()} i ${liveCityName}`
-                    : `Visa hela veckan i ${liveCityName}`}
-                title="Växla mellan dagen och hela veckan"
+                    : tourRangeToggleLocked
+                        ? `Zooma in för att visa hela veckan i ${liveCityName}`
+                        : `Visa hela veckan i ${liveCityName}`}
+                aria-disabled={tourRangeToggleLocked || undefined}
+                title={tourRangeToggleLocked
+                    ? 'Zooma in för att kunna visa hela veckan'
+                    : 'Växla mellan dagen och hela veckan'}
                 className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-9 py-3 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
             >
                 {/* 1. Stadsnamn högst upp — följer kartan (liveCityName) */}
@@ -2414,10 +2441,25 @@ export default function HomePage() {
                 </span>
 
                 {/* 3. Tryckhänvisningen. Liten och lugn, men uttalad — den är
-                       enda stället som säger att rutan är en växel. */}
+                       enda stället som säger att rutan är en växel.
+                       LOVA INTE EN VÄXEL SOM INTE FINNS (Josef 14/8): veckan är
+                       zoom-gatad (weekUnlocked), och utzoomad gör klicket
+                       ingenting — då säger raden i stället vad man ska göra för
+                       att få växeln, alltså zooma in. Står man redan på veckan
+                       går det alltid att gå tillbaka till dagen, så då är det
+                       bara vägen TILL veckan som kan vara låst. */}
                 <span className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.14em] text-white/45">
-                    <ArrowLeftRight size={11} strokeWidth={3} className="shrink-0" />
-                    Tryck för att växla
+                    {tourRangeToggleLocked ? (
+                        <>
+                            <ZoomIn size={11} strokeWidth={3} className="shrink-0" />
+                            Zooma in för att växla
+                        </>
+                    ) : (
+                        <>
+                            <ArrowLeftRight size={11} strokeWidth={3} className="shrink-0" />
+                            Tryck för att växla
+                        </>
+                    )}
                 </span>
             </button>
 

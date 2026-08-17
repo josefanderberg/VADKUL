@@ -14,6 +14,7 @@
 
 import { db } from '../config/firebase';
 import { sqlite } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -35,11 +36,11 @@ async function main() {
     for (let i = 0; i < rows.length; i += 450) {
         const batch = db.batch();
         for (const r of rows.slice(i, i + 450)) {
-            batch.update(db.collection('linkEvents').doc(r.firestoreId), {
+            batch.update(db.collection('linkEvents').doc(r.firestoreId), stamped({
                 category: r.category,
                 emoji: r.emoji,
                 ...(r.price ? { price: r.price } : {}),
-            });
+            }));
         }
         try {
             await batch.commit();
@@ -51,11 +52,11 @@ async function main() {
             console.warn(`  batch ${i} föll (${(err as Error).message.slice(0, 80)}) — kör per-dokument`);
             for (const r of rows.slice(i, i + 450)) {
                 try {
-                    await db.collection('linkEvents').doc(r.firestoreId).update({
+                    await db.collection('linkEvents').doc(r.firestoreId).update(stamped({
                         category: r.category,
                         emoji: r.emoji,
                         ...(r.price ? { price: r.price } : {}),
-                    });
+                    }));
                     written++;
                 } catch { /* rensat dokument — hoppa */ }
             }

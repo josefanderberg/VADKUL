@@ -70,6 +70,13 @@ export async function PATCH(request: Request) {
     if (hasEngagement) update.engagementCheckedAt = now;
     if (typeof body.notes === 'string' && body.notes.trim()) update.notes = body.notes.trim();
 
+    // A/B:t eget inlägg vs delat sidinlägg. Sätts i efterhand från
+    // utfallseditorn — utkastet vet inte alltid hur det till slut postades.
+    if (body.method === 'eget-inlägg' || body.method === 'delat-sidinlägg') {
+        update.method = body.method;
+        update.identity = body.method === 'delat-sidinlägg' ? 'sida' : 'privat';
+    }
+
     const avskriv = body.avskriv === true;
     if (Object.keys(update).length === 0 && !avskriv) {
         return NextResponse.json({ error: 'Inget att spara' }, { status: 400 });

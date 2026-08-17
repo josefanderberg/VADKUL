@@ -12,6 +12,7 @@
 
 import Database from 'better-sqlite3';
 import path from 'path';
+import { stamped } from './firestoreStamp';
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
@@ -78,7 +79,7 @@ export async function setEventImage(eventUrl: string, imageUrl: string): Promise
             const FS_TIMEOUT = 15_000;
             if (firestoreId) {
                 await withTimeout(
-                    firestore.collection('linkEvents').doc(firestoreId).update({ coverImage: img }),
+                    firestore.collection('linkEvents').doc(firestoreId).update(stamped({ coverImage: img })),
                     FS_TIMEOUT, 'Firestore update');
                 firestoreUpdated = true;
             } else {
@@ -87,7 +88,7 @@ export async function setEventImage(eventUrl: string, imageUrl: string): Promise
                     FS_TIMEOUT, 'Firestore query');
                 if (!snap.empty) {
                     await withTimeout(
-                        snap.docs[0].ref.update({ coverImage: img }),
+                        snap.docs[0].ref.update(stamped({ coverImage: img })),
                         FS_TIMEOUT, 'Firestore update');
                     firestoreId = snap.docs[0].id;
                     firestoreUpdated = true;

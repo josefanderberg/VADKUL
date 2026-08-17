@@ -9,6 +9,7 @@
 import puppeteer, { Page } from 'puppeteer';
 import { db } from '../config/firebase';
 import { searchGoogleImage } from '../utils/imageSearch';
+import { stamped } from '../utils/firestoreStamp';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -101,7 +102,7 @@ async function main() {
         const img = await searchGoogleImage(page, ev.title);
         if (img) {
             try {
-                await db.collection('linkEvents').doc(ev.id).update({ coverImage: img });
+                await db.collection('linkEvents').doc(ev.id).update(stamped({ coverImage: img }));
                 console.log(`    ✅ Uppdaterad med: ${img.slice(0, 80)}...`);
                 updated++;
             } catch (e) {

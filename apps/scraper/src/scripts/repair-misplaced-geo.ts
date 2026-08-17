@@ -26,6 +26,7 @@
 
 import { db } from '../config/firebase';
 import { sqlite, setEventCoords } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSweden, geocodeCityCentroid, distanceKm, reverseGeocode,
     SWEDISH_GEO_CITIES, NEAR_CITY_MAX_KM, knownGeoCity,
@@ -140,7 +141,7 @@ async function applyCoords(r: Row, lat: number, lng: number, query: string, veri
     if (db && r.firestoreId) {
         try {
             await db.collection('linkEvents').doc(r.firestoreId)
-                .update({ lat, lng, isLocationVerified: verified });
+                .update(stamped({ lat, lng, isLocationVerified: verified }));
         } catch (e: any) {
             if (e?.code !== 5) console.error(`  ❌ Firestore fail ${r.url.slice(0, 50)}: ${e?.message}`);
         }

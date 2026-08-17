@@ -25,6 +25,34 @@ export type LogOutcome =
     | 'borttagen' | 'nekad' | 'okänt';
 export type LinkPlacement = 'i-inlägget' | 'i-första-kommentaren' | 'ingen-länk';
 
+/**
+ * HUR inlägget hamnade i gruppen. 'delat-sidinlägg' = ett schemalagt inlägg på
+ * VADKUL-sidan som delats vidare (Dela → Dela i en grupp); 'eget-inlägg' = text
+ * skriven direkt i gruppen.
+ *
+ * De två körs parallellt och mäts mot varandra. Delning skalar (ett inlägg,
+ * många grupper) men landar som ett varumärkeskort — samma format som fällde
+ * Gotland ("reklam", 72 likes). Eget inlägg är det som satt rekorden
+ * (Hudiksvall 47/40/6). Vilket som faktiskt vinner avgörs av loggen, inte av
+ * tycke — därför fältet.
+ */
+export type PostMethod = 'eget-inlägg' | 'delat-sidinlägg';
+
+/** Avsändaren i gruppen: Josefs privata konto eller VADKUL-sidan. */
+export type PostIdentity = 'privat' | 'sida';
+
+/**
+ * Gruppens sekretess. Facebook exponerar den inte i något API — fältet fylls i
+ * för hand från kartan när man ändå besöker gruppen.
+ *
+ * OBS: 'öppen' styr SYNLIGHET (icke-medlemmar ser inläggen), inte
+ * medlemsgodkännande. En öppen grupp kan mycket väl ha godkännandekö.
+ */
+export type GroupPrivacy = 'öppen' | 'stängd' | 'okänd';
+
+/** Varifrån kontaktens koordinat kommer — styr om kartan ritar den som osäker. */
+export type GeoSource = 'manuell' | 'stadssida' | 'gissad-ur-namnet';
+
 // Stjärnkoden sätts ALLTID av kanalen (aldrig fritt val i UI): fb-* → STJARNA1,
 // email/messenger-dm → ARRANGOR1, campaign → MEDLEM1. Så hålls attributionen
 // ren per kanal (starGiftCode på users-dokumentet).
@@ -41,9 +69,12 @@ export interface OutreachContact {
     citySlug?: string | null;     // 'halmstad' | null — bara de 31 med egen /evenemang/<slug>
     hasCityPage: boolean;
     lat?: number; lng?: number;   // gör att även orter UTAN stadssida får lokala event i utkasten
+    geoSource?: GeoSource;        // 'gissad-ur-namnet' ⇒ streckad nål i kartan, be ägaren titta
     radiusKm?: number;
     groupUrl?: string;            // FB-URL — "Öppna gruppen"-knappen
     memberCount?: number;
+    groupPrivacy?: GroupPrivacy;
+    pagesAllowed?: boolean;       // släpper gruppadmin in Sidor som medlemmar?
 
     /* --- publiceringsregler --- */
     postingMode: PostingMode;     // styr länkplaceringen (approval → i inlägget)
@@ -115,6 +146,15 @@ export interface OutreachLogEntry {
 
     /* --- innehållet --- */
     variant?: string;             // 'A' | 'B' | … | 'ostersund' | '25/7-V1'
+    method?: PostMethod;          // eget inlägg vs delat sidinlägg — A/B:t
+    identity?: PostIdentity;      // privat konto vs Sidan
+
+    /* --- sidinlägget som delades (method === 'delat-sidinlägg') ---
+     * Ett schemalagt sidinlägg ger EN loggrad per grupp som ska dela det, så
+     * karens och kvittering räknas per grupp — men pagePostId är detsamma. */
+    pagePostId?: string;
+    pagePostUrl?: string;         // permalinken du klickar "Dela" på
+
     bodyText?: string;            // HELA inläggstexten — grunden för copy-paste-spärren
     bodyHash?: string;            // FNV-1a 16 hex av normaliserad bodyText
     firstCommentText?: string;

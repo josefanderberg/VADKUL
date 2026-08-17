@@ -23,6 +23,7 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { uploadEventImage, isOurStorageUrl, uploadStats, resetUploadStats } from '../utils/storageHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const args = (() => {
     const out: any = {};
@@ -109,7 +110,7 @@ async function main() {
 
         // Uppdatera Firestore — SQLite syncar sen via sync-to-sqlite
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update({ coverImage: newUrl });
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ coverImage: newUrl }));
             stats[r.hostName].ok++;
             totalOk++;
             console.log(`  ${progress} ✅ ${r.title.slice(0, 60)}`);

@@ -27,6 +27,7 @@ import { db } from '../config/firebase';
 // Delad anslutning via sqliteHelper — importen kör även schema-migrationerna
 // (hasSpecificTime/timeFixAttempts-kolumnerna) innan vi frågar på dem.
 import { sqlite } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const APPLY = process.argv.includes('--apply');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit='));
@@ -113,7 +114,7 @@ async function fetchHtml(url: string): Promise<string | null> {
 async function updateFirestoreTime(firestoreId: string | null, newDate: Date): Promise<'ok' | 'gone' | 'fail'> {
     if (!firestoreId || !db) return 'ok';
     try {
-        await db.collection('linkEvents').doc(firestoreId).update({ time: newDate });
+        await db.collection('linkEvents').doc(firestoreId).update(stamped({ time: newDate }));
         return 'ok';
     } catch (e) {
         const err = e as Error & { code?: number };

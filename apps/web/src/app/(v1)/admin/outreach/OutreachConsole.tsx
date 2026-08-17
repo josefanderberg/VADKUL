@@ -9,15 +9,17 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import type { QueueResponse } from '@/types/outreach';
-import { Megaphone, RefreshCw, CalendarDays, ListTodo, ListOrdered, BarChart3, ScrollText } from 'lucide-react';
+import { Megaphone, RefreshCw, CalendarDays, ListTodo, ListOrdered, BarChart3, ScrollText, Map as MapIcon } from 'lucide-react';
 import TodayPanel from './panels/TodayPanel';
 import QueuePanel from './panels/QueuePanel';
+import MapPanel from './panels/MapPanel';
 
-type Tab = 'idag' | 'kon' | 'planering' | 'logg' | 'statistik';
+type Tab = 'idag' | 'kon' | 'karta' | 'planering' | 'logg' | 'statistik';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'idag', label: 'Idag', icon: <ListTodo size={14} /> },
     { id: 'kon', label: 'Kön', icon: <ListOrdered size={14} /> },
+    { id: 'karta', label: 'Karta', icon: <MapIcon size={14} /> },
     { id: 'planering', label: 'Planering', icon: <CalendarDays size={14} /> },
     { id: 'logg', label: 'Logg', icon: <ScrollText size={14} /> },
     { id: 'statistik', label: 'Statistik', icon: <BarChart3 size={14} /> },
@@ -67,7 +69,8 @@ export default function OutreachConsole() {
     }
 
     return (
-        <Shell>
+        // Kartan behöver bredden — Sverige i en 4xl-spalt blir en tunn remsa.
+        <Shell wide={tab === 'karta'}>
             <div className="flex items-center justify-between gap-4 mb-1">
                 <div className="flex items-center gap-2">
                     <Megaphone size={22} className="text-[#006AA7]" />
@@ -104,6 +107,7 @@ export default function OutreachConsole() {
 
             {data && tab === 'idag' && <TodayPanel data={data} onChanged={load} />}
             {data && tab === 'kon' && <QueuePanel data={data} />}
+            {tab === 'karta' && <MapPanel />}
             {tab === 'planering' && (
                 <ComingSoon>
                     Månadsschemat: utkast för både grupperna och FB-sidan planeras upp till
@@ -126,10 +130,10 @@ export default function OutreachConsole() {
     );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
-            <div className="mx-auto px-5 py-10 max-w-4xl">
+            <div className={`mx-auto px-5 py-10 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
                 <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors mb-6">
                     ← Admin
                 </Link>

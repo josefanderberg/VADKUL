@@ -19,6 +19,7 @@ import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { bucket, STORAGE_BUCKET } from '../config/firebase';
 import { isOurStorageUrl } from '../utils/storageHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const args = (() => {
     const out: any = {};
@@ -100,7 +101,7 @@ async function main() {
             continue;
         }
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update({ coverImage: storageUrl });
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ coverImage: storageUrl }));
             synced++;
             if (synced <= 20 || synced % 50 === 0) {
                 console.log(`  [${i + 1}/${rows.length}] ✅ Synced: ${r.title.slice(0, 50)}`);

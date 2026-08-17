@@ -63,8 +63,8 @@ const EXTRA_PLACES: Record<string, CityPoint & { region?: true }> = {
     trangsund: { name: 'Trångsund', lat: 59.23, lng: 18.13 },
     lanna: { name: 'Länna', lat: 59.20, lng: 18.15 },
 
-    /* Mindre orter och bygder utanför CITY_POINTS */
-    tjorn: { name: 'Tjörn', lat: 58.00, lng: 11.55 },
+    /* Mindre orter och bygder utanför CITY_POINTS.
+     * (Tjörn ligger INTE här — CITY_POINTS har Skärhamn med alias 'tjörn'.) */
     aker: { name: 'Åkers styckebruk', lat: 59.24, lng: 17.00 },
     torshalla: { name: 'Torshälla', lat: 59.42, lng: 16.48 },
     byske: { name: 'Byske', lat: 64.94, lng: 21.20 },
@@ -150,37 +150,52 @@ function stripDecoration(s: string): string {
         .trim();
 }
 
-/**
- * Plockar isär ortfragmentet till ett rent ortnamn.
- * Returnerar även om vi behövde gissa (flera orter, riktningsord, region).
- */
-function trimPlace(fragment: string): { place: string; guessed: boolean } {
-    let s = fragment.trim();
-    let guessed = false;
+/** Invånarbeteckning: "Älmhultsbor" → "Älmhult", "Gotlänningar" lämnas. */
+const INVANARE = /(?:s)?(?:bor|borna|bo)$/i;
 
+const tidy = (s: string) =>
+    s.replace(/\s+/g, ' ').replace(/^[\s.,;:!?"'`´–—-]+|[\s.,;:!?"'`´–—-]+$/gu, '').trim();
+
+/**
+ * Kandidater att slå upp, bäst först. Den FÖRSTA är den bokstavliga läsningen;
+ * allt därefter är en gissning och flaggas som sådan.
+ *
+ * Varför en lista i stället för ett svar: "VAD HÄNDER I VÄSTRA GÖTALAND" måste
+ * få chansen att träffa regionen *Västra Götaland* innan riktningsordet
+ * "västra" strippas bort och lämnar "Götaland" som ingen känner igen.
+ */
+function placeCandidates(fragment: string): { value: string; guessed: boolean }[] {
+    let s = fragment.trim();
     for (const re of TAIL_NOISE) s = s.replace(re, ' ');
-    s = s.replace(/\s+/g, ' ').trim();
+    s = tidy(s.replace(KOMMUN, ' '));
+
+    const out: { value: string; guessed: boolean }[] = [];
+    const push = (value: string, guessed: boolean) => {
+        const v = tidy(value);
+        if (v.length >= 2 && !out.some(o => o.value.toLowerCase() === v.toLowerCase())) {
+            out.push({ value: v, guessed });
+        }
+    };
+
+    push(s, false);
 
     // Flera orter i namnet ("Kvänum, Vara, Skara", "Åmål och Säffle",
-    // "Landskrona och Kävlinge", "Sölvesborg och på Lister") → ta den första
-    // och flagga. Den första är gruppens huvudort i samtliga fall i listan.
-    const split = s.split(/\s*(?:,|\/|\boch\b|\bsamt\b)\s*/i);
-    if (split.length > 1 && split[0].trim().length >= 2) {
-        s = split[0];
-        guessed = true;
+    // "Landskrona och Kävlinge", "Sölvesborg och på Lister") → den första är
+    // gruppens huvudort i samtliga fall i listan.
+    const first = s.split(/\s*(?:,|\/|\boch\b|\bsamt\b)\s*/i)[0];
+
+    for (const base of [s, first]) {
+        const b = tidy(base.replace(KOMMUN, ' '));
+        if (!b) continue;
+        push(b, b.toLowerCase() !== s.toLowerCase());
+        if (DIRECTION.test(b)) push(b.replace(DIRECTION, ''), true);
+        if (INVANARE.test(b)) push(b.replace(INVANARE, ''), true);
+        // Sista utvägen: första ordet. Räddar svansar som Facebook-namn ofta
+        // har efter ortnamnet ("GÖTEBORG ⭐️ Västra Götaland").
+        push(b.split(' ')[0], true);
     }
 
-    s = s.replace(KOMMUN, ' ').replace(/\s+/g, ' ').trim();
-
-    if (DIRECTION.test(s)) {
-        s = s.replace(DIRECTION, '').trim();
-        guessed = true;
-    }
-
-    // Avslutande skiljetecken: "Åker.", "Kungsbacka ?", "Stockholm!"
-    s = s.replace(/[\s.,;:!?"'`´–—-]+$/u, '').trim();
-
-    return { place: s, guessed };
+    return out;
 }
 
 /** Slår upp ett rent ortnamn i CITY_POINTS, sedan i EXTRA_PLACES. */
@@ -218,17 +233,15 @@ export function cityFromGroupName(raw: string): GeoHit | null {
     fragments.push(cleaned);
 
     for (const fragment of fragments) {
-        const { place, guessed } = trimPlace(fragment);
-        if (place.length < 2) continue;
-
-        const found = lookup(place);
-        if (found) {
+        for (const { value, guessed } of placeCandidates(fragment)) {
+            const found = lookup(value);
+            if (!found) continue;
             return {
                 name: found.hit.name,
                 lat: found.hit.lat,
                 lng: found.hit.lng,
                 confidence: guessed || found.guessed ? 'gissad' : 'exakt',
-                matchedOn: place,
+                matchedOn: value,
             };
         }
     }

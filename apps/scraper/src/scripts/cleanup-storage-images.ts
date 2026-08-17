@@ -18,6 +18,7 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { deleteEventImage, isOurStorageUrl } from '../utils/storageHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const args = (() => {
     const out: any = { days: 7 };
@@ -65,7 +66,7 @@ async function main() {
             const ok = await deleteEventImage(r.url);
             if (ok) deleted++;
             // Nulla även i DB så vi inte länkar till en raderad URL
-            await db.collection('linkEvents').doc(r.firestoreId).update({ coverImage: '' });
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ coverImage: '' }));
             dbUpdated++;
             console.log(`  🗑️  ${r.time.slice(0, 10)} | ${r.title.slice(0, 60)}`);
         } catch (e) {

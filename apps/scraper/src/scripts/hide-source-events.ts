@@ -8,6 +8,7 @@
 import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
+import { stamped } from '../utils/firestoreStamp';
 
 const apply = process.argv.includes('--apply');
 const hostArg = process.argv.find((a) => a.startsWith('--host='));
@@ -30,7 +31,7 @@ async function main() {
 
     let fs = 0, miss = 0;
     if (db) for (const r of rows) {
-        try { await db.collection('linkEvents').doc(r.firestoreId).update({ hidden: 1 }); fs++; }
+        try { await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ hidden: 1 })); fs++; }
         catch (e: any) { if (e.code === 5 || /NOT_FOUND/.test(e.message ?? '')) miss++; else throw e; }
     }
     const stmt = sqlite.prepare(`UPDATE link_events SET hidden = 1 WHERE firestoreId = ?`);

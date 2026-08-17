@@ -1,6 +1,31 @@
 import { db } from '../config/firebase';
 import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime } from './sqliteHelper';
 import { normalizeDateOnlyTime } from './swedishDate';
+import { stamped } from './firestoreStamp';
+
+/**
+ * SQLite-spegeln delas av alla DB_TARGETs men innehåller PROD-data
+ * (firestoreId:n pekar på prod-dokument). Mot emulatorn (DB_TARGET 2/3) får
+ * spegeln därför inte kortsluta dubblettkollen — då skulle prod-id:n "bevisa"
+ * att dokument finns i en emulator som är tom.
+ */
+const TRUST_MIRROR = (process.env.DB_TARGET || '1').trim() === '1';
+
+/**
+ * Läsningsräknare: hur många dubblett-/existenskollar som besvarades gratis av
+ * SQLite-spegeln vs kostade en Firestore-query. Summeras vid processlut så
+ * varje körning visar vad spegeln sparade.
+ */
+export const readStats = { sqliteHits: 0, firestoreQueries: 0 };
+
+process.on('exit', () => {
+    const total = readStats.sqliteHits + readStats.firestoreQueries;
+    if (total === 0) return;
+    console.log(
+        `♻️  Dubblett-/existenskollar: ${total} st — ${readStats.sqliteHits} ur SQLite-spegeln (gratis), `
+        + `${readStats.firestoreQueries} Firestore-queries.`,
+    );
+});
 
 /**
  * "Bara datum"-event (hasSpecificTime=false) lagras annars som lokal midnatt,
@@ -19,19 +44,28 @@ console.log(`🗃️  SQLite-spegel: ${getSqlitePath()}`);
 
 export async function eventExistsInDb(url: string): Promise<boolean> {
     // Snabb lokal check först — undviker Firestore-läsning om vi redan har eventet.
-    if (sqliteEventExists(url)) return true;
+    if (sqliteEventExists(url)) { readStats.sqliteHits++; return true; }
     if (!db) return false;
-    const snapshot = await db.collection('linkEvents').where('url', '==', url).get();
+    readStats.firestoreQueries++;
+    const snapshot = await db.collection('linkEvents').where('url', '==', url).limit(1).get();
     return !snapshot.empty;
 }
 
 export async function getEventFromDb(url: string): Promise<any | null> {
-    // Föredra Firestore (auktoritativ källa) men fall tillbaka på SQLite om DB är otillgänglig.
+    // SQLite-spegeln först: FB-skrapern anropar detta för VARJE watchlist-URL
+    // varje natt — Firestore-först kostade en läsning per URL och natt.
+    // Spegeln hålls färsk av nattkedjans inkrementella sync; okända URL:er
+    // dubbelkollas fortfarande mot Firestore (täcker ofullständig spegel).
+    if (TRUST_MIRROR) {
+        const local = getSqliteEvent(url);
+        if (local) { readStats.sqliteHits++; return local; }
+    }
     if (db) {
+        readStats.firestoreQueries++;
         const snapshot = await db.collection('linkEvents').where('url', '==', url).limit(1).get();
         if (!snapshot.empty) return snapshot.docs[0].data();
     }
-    return getSqliteEvent(url);
+    return TRUST_MIRROR ? null : getSqliteEvent(url);
 }
 
 /**
@@ -75,7 +109,7 @@ export async function refreshEventTime(
     }
     if (db && row.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(row.firestoreId).update({ time: newTime });
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ time: newTime }));
         } catch (err: any) {
             // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
             if (err?.code !== 5) console.error('refreshEventTime: Firestore-uppdatering misslyckades:', err?.message);
@@ -103,6 +137,17 @@ export async function addEventToDb(eventData: any) {
     }
 
     try {
+        // Spegeln avgör dubblettkollen: upserten ovan bevarar firestoreId
+        // (COALESCE), så finns id:t vet vi att dokumentet redan ligger i
+        // Firestore — ingen query behövs. Bara rader UTAN id (nya event, eller
+        // id tappat) dubbelkollas mot Firestore.
+        if (TRUST_MIRROR && getSqliteEvent(eventData.url)?.firestoreId) {
+            readStats.sqliteHits++;
+            console.log(`Event already in Firestore: ${eventData.title}`);
+            return;
+        }
+
+        readStats.firestoreQueries++;
         const existing = await db.collection('linkEvents').where('url', '==', eventData.url).limit(1).get();
         if (!existing.empty) {
             console.log(`Event already in Firestore: ${eventData.title}`);
@@ -112,7 +157,7 @@ export async function addEventToDb(eventData: any) {
             return;
         }
 
-        const ref = await db.collection('linkEvents').add(eventData);
+        const ref = await db.collection('linkEvents').add(stamped(eventData));
         // Spara firestoreId tillbaka i SQLite så vi kan korsa referenser
         upsertEvent({ ...eventData, firestoreId: ref.id });
         console.log(`✅ Saved: ${eventData.title}`);
@@ -178,7 +223,7 @@ export async function addEventsBatch(
         const refs: { id: string; e: any }[] = [];
         for (const e of chunk) {
             const ref = db.collection('linkEvents').doc(); // auto-ID, ingen nätverkstrafik
-            batch.set(ref, e);
+            batch.set(ref, stamped(e));
             refs.push({ id: ref.id, e });
         }
         try {

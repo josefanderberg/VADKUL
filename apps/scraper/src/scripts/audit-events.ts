@@ -19,6 +19,7 @@ import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
 import { setHidden, setEventAuditWithCategory } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 
@@ -182,7 +183,7 @@ async function main() {
         }
 
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update(updates);
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped(updates));
             setEventAuditWithCategory(r.url, {
                 verdict: result.verdict,
                 confidence: result.confidence,

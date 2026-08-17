@@ -19,6 +19,14 @@ const VALIDATORS: Record<string, (v: unknown) => boolean> = {
     adminDmStatus: v => ['ej kontaktad', 'DM skickad', 'ja', 'nej', 'inget svar'].includes(v as string),
     adminDmSentAt: v => typeof v === 'number' && Number.isFinite(v),
     adminDmNote: v => typeof v === 'string',
+
+    // Kartan skriver dessa. Koordinaten sätts när ägaren rättar en gissad nål;
+    // sekretess/Pages-tillåtelse när hen ändå är inne i gruppen.
+    lat: v => typeof v === 'number' && v >= 55 && v <= 69.3,
+    lng: v => typeof v === 'number' && v >= 10.5 && v <= 24.6,
+    geoSource: v => ['manuell', 'stadssida', 'gissad-ur-namnet'].includes(v as string),
+    groupPrivacy: v => ['öppen', 'stängd', 'okänd'].includes(v as string),
+    pagesAllowed: v => typeof v === 'boolean',
 };
 
 export async function PATCH(request: Request) {

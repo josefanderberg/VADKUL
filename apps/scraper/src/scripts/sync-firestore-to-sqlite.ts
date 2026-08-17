@@ -1,12 +1,30 @@
 /**
- * Engångs-backfill: kopiera alla `linkEvents` från Firestore till lokal SQLite.
+ * Firestore→SQLite-sync av `linkEvents`.
+ *
+ * Default är INKREMENTELL: hämtar bara dokument med `updatedAt > cursor`
+ * (cursor = förra körningens starttid, sparad i sync_meta). Hel läsning av
+ * kollektionen (~29k dokument = ~29k reads) körs bara:
+ *   - första gången (ingen cursor),
+ *   - med flaggan --full,
+ *   - automatiskt var 7:e dag (självläkning mot ostämplade skrivningar,
+ *     t.ex. web-sidans attendees — se utils/firestoreStamp.ts).
+ *
+ * Mot emulatorn (DB_TARGET≠1) körs alltid hel sync och cursorn lämnas orörd —
+ * spegeln + cursorn hör till prod-datat.
  *
  * Användning:
- *   npm run sync-to-sqlite              # mot prod (DB_TARGET=1)
- *   DB_TARGET=2 npm run sync-to-sqlite  # mot lokal emulator
+ *   npm run sync-to-sqlite              # inkrementell mot prod
+ *   npm run sync-to-sqlite -- --full    # tvinga hel läsning
+ *   DB_TARGET=2 npm run sync-to-sqlite  # mot lokal emulator (alltid hel)
  */
 import { db } from '../config/firebase';
-import { upsertEvent, countSqliteEvents, getSqlitePath } from '../utils/sqliteHelper';
+import {
+    upsertEvent, countSqliteEvents, getSqlitePath, getSyncMeta, setSyncMeta,
+} from '../utils/sqliteHelper';
+import { planSync } from '../utils/syncPlan';
+
+const CURSOR_KEY      = 'linkEvents.lastSyncAt';
+const FULL_CURSOR_KEY = 'linkEvents.lastFullSyncAt';
 
 async function main() {
     if (!db) {
@@ -14,9 +32,26 @@ async function main() {
         process.exit(1);
     }
 
-    console.log(`📥 Hämtar alla linkEvents från Firestore...`);
-    const snap = await db.collection('linkEvents').get();
-    console.log(`   Hittade ${snap.size} dokument.`);
+    const isProd    = (process.env.DB_TARGET || '1').trim() === '1';
+    const forceFull = process.argv.includes('--full');
+    const runStart  = new Date();
+
+    const plan = isProd
+        ? planSync({
+            now: runStart,
+            lastSyncAt: getSyncMeta(CURSOR_KEY),
+            lastFullSyncAt: getSyncMeta(FULL_CURSOR_KEY),
+            forceFull,
+        })
+        : { mode: 'full' as const, reason: 'emulator-läge (cursor gäller bara prod)' };
+
+    console.log(`📥 Sync linkEvents → SQLite [${plan.mode}]: ${plan.reason}`);
+
+    const query = plan.mode === 'incremental'
+        ? db.collection('linkEvents').where('updatedAt', '>', plan.since!)
+        : db.collection('linkEvents');
+    const snap = await query.get();
+    console.log(`   Hämtade ${snap.size} dokument (${snap.size} Firestore-reads).`);
 
     let written = 0;
     let failed = 0;
@@ -63,15 +98,28 @@ async function main() {
         }
     });
 
+    // Cursor sätts till KÖRSTART (inte sluttid) så dokument som skrevs medan
+    // synken pågick fångas nästa gång. Bara vid lyckad körning, bara mot prod.
+    if (isProd && failed === 0) {
+        setSyncMeta(CURSOR_KEY, runStart.toISOString());
+        if (plan.mode === 'full') setSyncMeta(FULL_CURSOR_KEY, runStart.toISOString());
+    } else if (failed > 0) {
+        console.warn(`   ⚠️  ${failed} fel — cursorn flyttas INTE fram (nästa körning tar om samma fönster).`);
+    }
+
+    const mirrorCount = countSqliteEvents();
     console.log(`\n✅ Klar. ${written} skrivna, ${failed} misslyckade.`);
     if (skippedNoUrl > 0) {
         console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (live-spåret, inte aggregatet).`);
     }
+    if (plan.mode === 'incremental') {
+        console.log(`   ♻️  Inkrementell sync: ${snap.size} reads i stället för ~${mirrorCount} (hel läsning).`);
+    }
     console.log(`📦 SQLite-fil: ${getSqlitePath()}`);
-    console.log(`📊 Totalt i SQLite nu: ${countSqliteEvents()}`);
+    console.log(`📊 Totalt i SQLite nu: ${mirrorCount}`);
 }
 
 main().catch(err => {
-    console.error('❌ Backfill misslyckades:', err);
+    console.error('❌ Sync misslyckades:', err);
     process.exit(1);
 });
