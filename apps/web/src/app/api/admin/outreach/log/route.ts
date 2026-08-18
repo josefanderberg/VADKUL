@@ -1,6 +1,10 @@
-// /api/admin/outreach/log — PATCH utfall + engagemang för en loggrad.
+// /api/admin/outreach/log — GET hela loggen, PATCH utfall + engagemang.
 //
-// Body: { logId, outcome?, likes?, comments?, shares?, ownRepliesCount?,
+// GET → { generatedAt, entries } — nyaste först, tak 500 rader. Underlaget
+// för Logg- och Statistik-flikarna: allt vi redan VET (utfall, engagemang,
+// variant, länkplacering, inläggstexter) utan någon ny datamodell.
+//
+// PATCH-body: { logId, outcome?, likes?, comments?, shares?, ownRepliesCount?,
 // notes?, avskriv? }. outcome sätter status (mappningen nedan) +
 // outcomeCheckedAt — det enda som stänger de kroniska '?'-raderna i
 // TodayPanel. Engagemangssiffror sätter engagementCheckedAt. Utfallet
@@ -10,9 +14,32 @@
 
 import { NextResponse } from 'next/server';
 import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
-import type { ContactStatus, LogOutcome, LogStatus } from '@/types/outreach';
+import type { ContactStatus, LogOutcome, LogStatus, OutreachLogEntry } from '@/types/outreach';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
+    try {
+        const snap = await db.collection('outreachLog')
+            .orderBy('draftCreatedAt', 'desc').limit(500).get();
+        const entries = snap.docs.map(d => ({ ...(d.data() as OutreachLogEntry), id: d.id }));
+        // Visningsordningen är NÄR DET POSTADES — draftCreatedAt är bara
+        // fallback för utkast som aldrig bekräftades.
+        entries.sort((a, b) => (b.postedAt ?? b.draftCreatedAt) - (a.postedAt ?? a.draftCreatedAt));
+        return NextResponse.json({ generatedAt: Date.now(), entries }, {
+            headers: { 'Cache-Control': 'private, no-store' },
+        });
+    } catch (e) {
+        console.error('[outreach/log GET]', e);
+        return NextResponse.json({ error: 'Kunde inte hämta loggen' }, { status: 500 });
+    }
+}
 
 const STATUS_BY_OUTCOME: Record<LogOutcome, LogStatus> = {
     'publicerat-direkt': 'postat',

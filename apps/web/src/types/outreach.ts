@@ -243,10 +243,34 @@ export interface TodayAction {
     email?: string;               // mejluppföljning: mailto-länken i raden
 }
 
+export interface LogListResponse {
+    generatedAt: number;
+    entries: OutreachLogEntry[];
+}
+
+/**
+ * API-förbrukningen (outreachStats/apiUsage) — skrivs av draft-routen efter
+ * varje generering (fire-and-forget), visas i konsolens API-kort. Nyckeln går
+ * INTE ut av sig själv — keyCreatedAt driver en 30-dagars ROTATIONSPÅMINNELSE
+ * (nollställs med "Ny nyckel inlagd"-knappen när nyckeln bytts).
+ */
+export interface OutreachApiUsage {
+    keyCreatedAt: number;
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    estimatedCostUsd: number;     // Opus 5-listpriser, räknat server-side per anrop
+    lastCallAt?: number;
+    lastModel?: string;
+}
+
 export interface QueueResponse {
     generatedAt: number;
     quota: { postedToday: number; maxPerDay: number };
     visits: { today: number; yesterday: number };   // outreachStats/siteVisits (beacon)
+    apiUsage: OutreachApiUsage | null;              // null tills första utkastet genererats
     actions: TodayAction[];
     queue: QueueItem[];           // mogna, sorterade på score desc
     blocked: QueueItem[];         // spärrade, med nedräkning via nextAllowedAt

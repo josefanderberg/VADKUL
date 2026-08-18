@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
 import { pickEventsForContact } from '@/lib/outreach/eventPicker';
 import type { OutreachContact, OutreachLogEntry } from '@/types/outreach';
@@ -21,6 +22,45 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const MODEL = 'claude-opus-5';
+
+/**
+ * Opus 5-listpriser i USD per miljon tokens — för förbrukningskortet i
+ * konsolen. Cache-läsning är 0,1× input, cache-skrivning 1,25× (5 min-TTL).
+ * Uppskattning, inte faktura: facit finns i Anthropic-konsolens Usage.
+ */
+const PRICE_PER_MTOK = { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 };
+
+/**
+ * Räkna kostnaden och uppdatera outreachStats/apiUsage (fire-and-forget —
+ * bokföringen får aldrig sinka eller fälla själva utkastet). keyCreatedAt
+ * sätts vid FÖRSTA anropet och driver konsolens 30-dagars rotations-
+ * påminnelse; "Ny nyckel inlagd"-knappen nollställer den.
+ */
+function trackApiUsage(db: Firestore, usage: Anthropic.Usage): number {
+    const inTok = usage.input_tokens ?? 0;
+    const outTok = usage.output_tokens ?? 0;
+    const cacheRead = usage.cache_read_input_tokens ?? 0;
+    const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+    const costUsd = (
+        inTok * PRICE_PER_MTOK.input + outTok * PRICE_PER_MTOK.output +
+        cacheRead * PRICE_PER_MTOK.cacheRead + cacheWrite * PRICE_PER_MTOK.cacheWrite
+    ) / 1_000_000;
+
+    const ref = db.collection('outreachStats').doc('apiUsage');
+    ref.get().then(snap => ref.set({
+        ...(snap.exists ? {} : { keyCreatedAt: Date.now() }),
+        calls: FieldValue.increment(1),
+        inputTokens: FieldValue.increment(inTok),
+        outputTokens: FieldValue.increment(outTok),
+        cacheReadTokens: FieldValue.increment(cacheRead),
+        cacheWriteTokens: FieldValue.increment(cacheWrite),
+        estimatedCostUsd: FieldValue.increment(costUsd),
+        lastCallAt: Date.now(),
+        lastModel: MODEL,
+    }, { merge: true })).catch(e => console.warn('[outreach/draft] usage-bokföringen misslyckades:', e));
+
+    return costUsd;
+}
 
 // Alla fält required + additionalProperties:false — strikta scheman validerar
 // bäst; "tomt" uttrycks som tom sträng/array, aldrig som utelämnat fält.
@@ -203,6 +243,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Kunde inte tolka modellens svar — försök igen.' }, { status: 502 });
         }
 
+        // Bokför förbrukningen + skicka med den i svaret, så både API-kortet
+        // och den enskilda utkast-rutan visar vad genereringen faktiskt drog.
+        const costUsd = trackApiUsage(db, msg.usage);
+
         return NextResponse.json({
             drafts: { v1: draft.v1, v2Post: draft.v2Post, v2FirstComment: draft.v2FirstComment },
             mentionedEvents: draft.mentionedEvents,
@@ -219,6 +263,11 @@ export async function POST(request: Request) {
                 source: picked.source,
                 model: MODEL,
                 generatedAt: Date.now(),
+                usage: {
+                    inputTokens: msg.usage.input_tokens ?? 0,
+                    outputTokens: msg.usage.output_tokens ?? 0,
+                    costUsd: Math.round(costUsd * 10_000) / 10_000,
+                },
             },
         }, { headers: { 'Cache-Control': 'private, no-store' } });
     } catch (e) {

@@ -15,7 +15,8 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAuth } from '@/context/AuthContext';
 import { STREETS_STYLE_URL } from '@/components/v2/v2MapBaseStyles';
-import { ExternalLink, Image as ImageIcon, MapPin, RefreshCw, Search, Wand2 } from 'lucide-react';
+import { ExternalLink, Image as ImageIcon, MapPin, Plus, RefreshCw, Search, Wand2 } from 'lucide-react';
+import AddGroupForm from './AddGroupForm';
 
 /* ── Typer (speglar /api/admin/outreach/map) ──────────────────────────────── */
 
@@ -330,7 +331,7 @@ export default function MapPanel() {
                 </div>
             )}
 
-            {data && <Whitespace rows={data.vitflackar} onPick={flyTo} />}
+            {data && <Whitespace rows={data.vitflackar} onPick={flyTo} onSaved={load} />}
         </div>
     );
 }
@@ -406,32 +407,56 @@ function GroupCard({ g, onClose }: { g: GroupProps; onClose: () => void }) {
     );
 }
 
-function Whitespace({ rows, onPick }: { rows: Vitflack[]; onPick: (lat: number, lng: number) => void }) {
+function Whitespace({ rows, onPick, onSaved }: {
+    rows: Vitflack[];
+    onPick: (lat: number, lng: number) => void;
+    onSaved: () => void;
+}) {
     const [n, setN] = useState(15);
+    // Vilken vitfläcksrad som har spara-formuläret öppet (en i taget räcker).
+    const [addFor, setAddFor] = useState<string | null>(null);
 
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-3.5">
             <p className="text-sm font-black text-slate-800 mb-1">Vitfläckar — det händer saker, men vi saknar grupp</p>
             <p className="text-xs font-semibold text-slate-500 mb-3">
                 Orter med event kommande vecka och ingen grupp inom 25 km, mest event först.
-                Sökordet är färdigt att klistra in i Facebooks sökruta.
+                Sökordet är färdigt att klistra in i Facebooks sökruta — hittar du en grupp:
+                Spara grupp på raden, så följer ortens koordinat med och gruppen dyker upp i Städer.
             </p>
             <ul className="flex flex-col divide-y divide-slate-100">
                 {rows.slice(0, n).map(r => (
-                    <li key={r.name} className="flex items-center justify-between gap-3 py-2">
-                        <button onClick={() => onPick(r.lat, r.lng)}
-                            className="text-left text-xs font-bold text-slate-700 hover:text-[#006AA7] transition-colors">
-                            {r.name}
-                            <span className="font-semibold text-slate-400">
-                                {' · '}{r.eventSupply} event
-                                {r.närmasteGrupp !== null && ` · närmsta grupp ${r.närmasteGrupp} km bort`}
-                            </span>
-                        </button>
-                        <a href={`https://www.facebook.com/search/groups/?q=${encodeURIComponent(r.sokord)}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-[11px] hover:bg-slate-100 transition-colors">
-                            <Search size={11} /> Sök grupp
-                        </a>
+                    <li key={r.name} className="py-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <button onClick={() => onPick(r.lat, r.lng)}
+                                className="text-left text-xs font-bold text-slate-700 hover:text-[#006AA7] transition-colors">
+                                {r.name}
+                                <span className="font-semibold text-slate-400">
+                                    {' · '}{r.eventSupply} event
+                                    {r.närmasteGrupp !== null && ` · närmsta grupp ${r.närmasteGrupp} km bort`}
+                                </span>
+                            </button>
+                            <div className="shrink-0 flex items-center gap-1.5">
+                                <a href={`https://www.facebook.com/search/groups/?q=${encodeURIComponent(r.sokord)}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-[11px] hover:bg-slate-100 transition-colors">
+                                    <Search size={11} /> Sök grupp
+                                </a>
+                                <button onClick={() => setAddFor(v => v === r.name ? null : r.name)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#006AA7] text-white font-bold text-[11px] hover:bg-[#005590] transition-colors">
+                                    <Plus size={11} /> Spara grupp
+                                </button>
+                            </div>
+                        </div>
+                        {addFor === r.name && (
+                            <div className="mt-2">
+                                <AddGroupForm
+                                    initial={{ city: r.name, lat: r.lat, lng: r.lng }}
+                                    onSaved={() => { setAddFor(null); onSaved(); }}
+                                    onClose={() => setAddFor(null)}
+                                />
+                            </div>
+                        )}
                     </li>
                 ))}
                 {rows.length === 0 && (

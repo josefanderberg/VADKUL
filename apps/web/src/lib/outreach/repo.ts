@@ -7,7 +7,7 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import type {
-    OutreachContact, OutreachLogEntry, QueueItem, QueueResponse, TodayAction,
+    OutreachApiUsage, OutreachContact, OutreachLogEntry, QueueItem, QueueResponse, TodayAction,
 } from '@/types/outreach';
 import { gatesFor, isBlocked, MAX_POSTS_PER_DAY, STADSKROCK_DAGAR } from './rules';
 import { scoreContact } from './scoring';
@@ -32,16 +32,19 @@ export async function getRecentLog(db: Firestore, sinceMs: number): Promise<Outr
 /** Bygg hela kö-svaret: dagskvot, att-göra-lista, mogna + blockerade grupper. */
 export async function buildQueueResponse(db: Firestore): Promise<QueueResponse> {
     const now = Date.now();
-    const [contacts, recentLog, visitsSnap] = await Promise.all([
+    const [contacts, recentLog, visitsSnap, apiUsageSnap] = await Promise.all([
         getAllContacts(db),
         getRecentLog(db, now - 30 * DAY_MS),
         db.collection('outreachStats').doc(VISITS_DOC).get(),
+        db.collection('outreachStats').doc('apiUsage').get(),
     ]);
     const visitDays: Record<string, number> = (visitsSnap.data() as any)?.days ?? {};
     const visits = {
         today: visitDays[stockholmDayKey(now)] ?? 0,
         yesterday: visitDays[stockholmDayKey(now - DAY_MS)] ?? 0,
     };
+    // Skrivs av draft-routen efter varje generering; null tills första utkastet.
+    const apiUsage = apiUsageSnap.exists ? (apiUsageSnap.data() as OutreachApiUsage) : null;
 
     /* ── DayContext ur loggen ─────────────────────────────────────────────── */
     const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
@@ -132,6 +135,7 @@ export async function buildQueueResponse(db: Firestore): Promise<QueueResponse> 
         generatedAt: now,
         quota: { postedToday, maxPerDay: MAX_POSTS_PER_DAY },
         visits,
+        apiUsage,
         actions,
         queue,
         blocked,

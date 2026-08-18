@@ -1,24 +1,32 @@
 'use client';
 
-// Publiceringskonsolen — skalet med flikar. Etapp 1: Idag + Kön är levande;
-// Planering/Logg/Statistik är platshållare tills etapp 2–4.
+// Publiceringskonsolen — skalet med flikar, alla levande: Idag, Städer
+// (stadskort → gruppens FB-länk + utkastgenerator; ersatte Kön 18/8), Karta,
+// Planering (facebookschemat, 14 dagar), Logg (alla publiceringar med text +
+// utfall) och Statistik (totaler/utfall/toppinlägg/A-B ur loggen).
 // All data via /api/admin/outreach/* med Bearer-token — klienten läser ALDRIG
 // outreach-collections direkt (de är stängda i firestore.rules).
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import type { QueueResponse } from '@/types/outreach';
-import { Megaphone, RefreshCw, CalendarDays, ListTodo, ListOrdered, BarChart3, ScrollText, Map as MapIcon } from 'lucide-react';
+import type { OutreachApiUsage, QueueResponse } from '@/types/outreach';
+import { Megaphone, RefreshCw, Building2, CalendarDays, KeyRound, ListTodo, BarChart3, ScrollText, Map as MapIcon } from 'lucide-react';
 import TodayPanel from './panels/TodayPanel';
-import QueuePanel from './panels/QueuePanel';
 import MapPanel from './panels/MapPanel';
+import CityPanel from './panels/CityPanel';
+import SchedulePanel from './panels/SchedulePanel';
+import LogPanel from './panels/LogPanel';
+import StatsPanel from './panels/StatsPanel';
 
-type Tab = 'idag' | 'kon' | 'karta' | 'planering' | 'logg' | 'statistik';
+// Kön-fliken togs bort 18/8 (ägarbeslut: den visade samma data som Städer i en
+// annan layout) — stadskorten i Städer är sorterade på score, så kortordningen
+// ÄR kön.
+type Tab = 'idag' | 'stader' | 'karta' | 'planering' | 'logg' | 'statistik';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'idag', label: 'Idag', icon: <ListTodo size={14} /> },
-    { id: 'kon', label: 'Kön', icon: <ListOrdered size={14} /> },
+    { id: 'stader', label: 'Städer', icon: <Building2 size={14} /> },
     { id: 'karta', label: 'Karta', icon: <MapIcon size={14} /> },
     { id: 'planering', label: 'Planering', icon: <CalendarDays size={14} /> },
     { id: 'logg', label: 'Logg', icon: <ScrollText size={14} /> },
@@ -82,10 +90,14 @@ export default function OutreachConsole() {
                 </button>
             </div>
             {data && (
-                <p className="text-xs font-bold text-slate-400 mb-5">
+                <p className="text-xs font-bold text-slate-400 mb-3">
                     {data.counts.groups} FB-grupper · {data.counts.organizers} arrangörer · {data.counts.logged} loggade publiceringar
                 </p>
             )}
+
+            {/* API-kortet: nyckelrotation + förbrukning — kontrollen direkt här,
+                utan att behöva logga in på Anthropic-konsolen. */}
+            {data && <ApiCard usage={data.apiUsage} onRotated={load} />}
 
             {/* Flikarna */}
             <div className="flex items-center gap-1.5 mb-6 overflow-x-auto">
@@ -106,27 +118,87 @@ export default function OutreachConsole() {
             {!data && !error && <p className="text-sm font-bold text-slate-400">Hämtar kön…</p>}
 
             {data && tab === 'idag' && <TodayPanel data={data} onChanged={load} />}
-            {data && tab === 'kon' && <QueuePanel data={data} />}
+            {data && tab === 'stader' && <CityPanel data={data} onChanged={load} />}
             {tab === 'karta' && <MapPanel />}
-            {tab === 'planering' && (
-                <ComingSoon>
-                    Månadsschemat: utkast för både grupperna och FB-sidan planeras upp till
-                    30 dagar framåt, med automatisk omkoll 7 dagar före publicering
-                    (eventen räknas om + betygsätts på nytt). Byggs i etapp 2.
-                </ComingSoon>
-            )}
-            {tab === 'logg' && (
-                <ComingSoon>
-                    Alla publiceringar med hela inläggstexten, utfall och engagemang. Byggs i etapp 3.
-                </ComingSoon>
-            )}
-            {tab === 'statistik' && (
-                <ComingSoon>
-                    Godkänd-/borttagen-andel per variant och ort, klick per inlägg (ref-länkar),
-                    stjärn-napp per kod och besök per sida. Byggs i etapp 3–4.
-                </ComingSoon>
-            )}
+            {data && tab === 'planering' && <SchedulePanel data={data} />}
+            {tab === 'logg' && <LogPanel />}
+            {tab === 'statistik' && <StatsPanel />}
         </Shell>
+    );
+}
+
+/**
+ * API-kortet — nyckelstatus + förbrukning, alltid synligt oavsett flik.
+ *
+ * Nedräkningen är en ROTATIONSPÅMINNELSE (30 dagar från första utkastet, eller
+ * från senaste "Ny nyckel inlagd"): API-nycklar går inte ut av sig själva, men
+ * regelbunden rotation är god hygien. Kostnaden är en uppskattning på
+ * Opus 5-listpriser räknad ur varje anrops usage — facit bor i Anthropic-
+ * konsolens Usage-flik.
+ */
+const ROTATION_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+function ApiCard({ usage, onRotated }: { usage: OutreachApiUsage | null; onRotated: () => void }) {
+    const { user } = useAuth();
+    const [busy, setBusy] = useState(false);
+
+    const rotate = async () => {
+        if (!user || busy) return;
+        if (!window.confirm('Nollställ 30-dagarsräknaren? Gör detta först när nya nyckeln ligger i .env.local, .env och WEB_ENV-secreten.')) return;
+        setBusy(true);
+        try {
+            const token = await user.getIdToken();
+            await fetch('/api/admin/outreach/api-usage', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'key-rotated' }),
+            });
+            onRotated();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (!usage) {
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 mb-5 flex items-center gap-2">
+                <KeyRound size={14} className="text-slate-400" />
+                <p className="text-xs font-bold text-slate-400">
+                    API: ingen förbrukning loggad ännu — kortet vaknar vid första genererade utkastet.
+                </p>
+            </div>
+        );
+    }
+
+    const daysLeft = ROTATION_DAYS - Math.floor((Date.now() - usage.keyCreatedAt) / DAY_MS);
+    const keyTone = daysLeft <= 0 ? 'text-rose-600' : daysLeft <= 7 ? 'text-amber-600' : 'text-slate-700';
+    const fmtDate = (ms?: number) =>
+        ms ? new Date(ms).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : '—';
+
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 mb-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-black ${keyTone}`}>
+                <KeyRound size={14} />
+                {daysLeft <= 0
+                    ? 'Nyckelrotation: dags att byta nyckel'
+                    : `Nyckelrotation om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dagar'}`}
+            </span>
+            <span className="text-xs font-bold text-slate-500">
+                {usage.calls.toLocaleString('sv-SE')} utkast · {(usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens).toLocaleString('sv-SE')} tokens in
+                · {usage.outputTokens.toLocaleString('sv-SE')} ut
+            </span>
+            <span className="text-xs font-black text-slate-700">
+                ≈ ${usage.estimatedCostUsd.toFixed(2)} förbrukat
+            </span>
+            <span className="text-[11px] font-bold text-slate-400">
+                senast {fmtDate(usage.lastCallAt)} · {usage.lastModel ?? '—'}
+            </span>
+            <button onClick={rotate} disabled={busy}
+                className="ml-auto inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-[11px] hover:bg-slate-100 transition-colors disabled:opacity-50">
+                Ny nyckel inlagd
+            </button>
+        </div>
     );
 }
 
@@ -143,10 +215,3 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
     );
 }
 
-function ComingSoon({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6">
-            <p className="text-sm font-semibold text-slate-500">{children}</p>
-        </div>
-    );
-}
