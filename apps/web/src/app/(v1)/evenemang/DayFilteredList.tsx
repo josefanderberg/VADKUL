@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users } from 'lucide-react';
-import { PERIODS, periodKeys, relativeDayLabel, type Period } from './periods';
+import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
+import { useDayFilter } from './dayFilter';
 
 // Klientdelen av stads-/kategorisidornas eventsektion. Filterraden ligger
 // ÖVERST och styr allt under den (kategorichipsen och daglistan).
 // Filter i två dimensioner:
-//  - DAG: Alla/Idag/Imorgon/I helgen (räknas mot användarens riktiga klocka,
-//    periods.ts) + en chip per listad dag ("Lör 11/7"), + "Nästa timmen".
+//  - DAG: Alla/Idag/Imorgon/I veckan (räknas mot användarens riktiga klocka,
+//    periods.ts) + en chip per listad dag ("Lör 11/7").
+//    ("Nästa timmen"-chippen borttagen 18/8, ägarbeslut: onödig.)
 //  - TID: stapeldiagram över när på dagen eventen börjar — staplarna är
 //    filterknappar (visar SANNA totaler per timme via hourCounts, inte bara
 //    de listade raderna).
@@ -52,7 +54,7 @@ export type ListedEvent = {
     attendees: number;
     /** Starttimme 0–23 i svensk tid; null när eventet saknar klockslag. */
     hour: number | null;
-    /** Epoch-ms — "Nästa timmen"/historik jämför mot klientens klocka. */
+    /** Epoch-ms — "har varit"-historiken jämför mot klientens klocka. */
     t: number;
 };
 
@@ -68,10 +70,8 @@ export type ListedDay = {
     hourCounts: number[];
 };
 
-type Sel =
-    | { kind: 'period'; period: Period }
-    | { kind: 'day'; key: string }
-    | { kind: 'nextHour' };
+// Urvals-typen (dag/period/nästa timmen) bor numera i dayFilter.tsx (DaySel)
+// — staten delas med kart-heron via DayFilterProvider.
 
 const HOUR_MS = 3_600_000;
 // Samma nyckel som kartan — hjärtan här hamnar i kartans Sparat-panel.
@@ -229,7 +229,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
+            <li data-event-id={e.id} className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
                 <Link href={e.href} className="block">
                     <div className="relative">
                         <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
@@ -259,7 +259,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
 
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
     return (
-        <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
+        <li data-event-id={e.id} className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
             <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3">
                 <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
                 <span className="min-w-0 flex-1">
@@ -293,9 +293,10 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     /** Renderas mellan filterraden och daglistan (t.ex. kategorichips). */
     children?: ReactNode;
 }) {
-    const [sel, setSel] = useState<Sel>({ kind: 'period', period: 'all' });
-    // Valda timstaplar. Behålls när man byter dag — "kvällsfiltret" följer med.
-    const [hours, setHours] = useState<number[]>([]);
+    // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
+    // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
+    // byter dag — "kvällsfiltret" följer med.
+    const { sel, setSel, hours, setHours, focus, clearFocus } = useDayFilter();
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
     // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).
@@ -347,15 +348,11 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // som 'Alla' (null) — vilket med default 'Alla' är samma urval efter mount.
     const periodReady = nowTs !== 0;
     const dayKeys = sel.kind === 'period' ? (periodReady ? periodKeys(sel.period) : null)
-        : sel.kind === 'day' ? [sel.key]
-        : null; // Nästa timmen: alla dagar, raderna filtreras på klockslaget.
+        : [sel.key];
     const visDays = dayKeys ? days.filter(d => dayKeys.includes(d.key)) : days;
 
-    const now = sel.kind === 'nextHour' ? Date.now() : 0;
     const rowMatch = (e: ListedEvent) =>
-        sel.kind === 'nextHour' ? e.t >= now && e.t < now + HOUR_MS
-        : hours.length ? e.hour !== null && hours.includes(e.hour)
-        : true;
+        hours.length ? e.hour !== null && hours.includes(e.hour) : true;
     // Från nu och framåt: passerade rader göms bakom "har redan varit".
     const shownDays = visDays
         .map(d => {
@@ -373,6 +370,33 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
     // Filterbyte → börja om från första dagen i det nya urvalet.
     useEffect(() => { setRevealed(1); }, [sel, hours]);
+
+    // ── Fokus från kartan ─────────────────────────────────────────────────
+    // Kart-popupens klick har redan valt eventets dag (requestFocus i
+    // dayFilter.tsx) — här återstår att scrolla till raden och blinka den.
+    // Effekten är ren DOM-synk (ingen state) och körs varje render tills
+    // raden dykt upp (dagbytet är en transition och kan ta ett varv);
+    // noncen ser till att varje begäran bara hanteras en gång.
+    const handledFocusRef = useRef(0);
+    useEffect(() => {
+        if (!focus || handledFocusRef.current === focus.nonce) return;
+        const el = document.querySelector(`[data-event-id="${CSS.escape(focus.id)}"]`);
+        if (!el) return;
+        handledFocusRef.current = focus.nonce;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('event-row-flash');
+        const t = window.setTimeout(() => {
+            el.classList.remove('event-row-flash');
+            // Var det fokuserade eventet ett passerat sådant hölls "har varit"
+            // uppe av derivatet nedan — persistera uppfällningen INNAN fokus
+            // släpps, annars slår sektionen igen mitt framför ögonen på en.
+            const day = days.find(d => d.key === focus.dayKey);
+            const ev = day?.events.find(e => e.id === focus.id);
+            if (ev && isPast(ev)) setOpenPast(prev => new Set(prev).add(focus.dayKey));
+            clearFocus();
+        }, 2600);
+        return () => clearTimeout(t);
+    });
 
     // Nästa dag monteras när sentineln ligger OVANFÖR laddlinjen (viewport-
     // botten + 700 px) — "ovanför" i stället för "inom" så att en snabb
@@ -410,7 +434,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     if (hist[23] > 0) hi = 23;
     const barHours: number[] = [];
     for (let h = lo; h <= hi; h++) barHours.push(h);
-    const showHist = sel.kind !== 'nextHour' && hist.some(c => c > 0);
+    const showHist = hist.some(c => c > 0);
 
     const toggleHour = (h: number) =>
         startTransition(() => setHours(prev => (prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])));
@@ -425,15 +449,14 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     const unit = sel.kind === 'period'
         ? (sel.period === 'all' ? 'just nu' : PERIODS.find(p => p.key === sel.period)!.unit)
         : '';
-    const emptyPhrase = sel.kind === 'nextHour'
-        ? 'den närmaste timmen'
-        : `${hours.length ? `kl ${hourRanges(hours)} ` : ''}${selDayLabel ?? unit}`;
+    const emptyPhrase = `${hours.length ? `kl ${hourRanges(hours)} ` : ''}${selDayLabel ?? unit}`;
 
     return (
         <div className="mt-7">
-            {/* Dagval: perioder + Nästa timmen + en chip per listad dag.
-                Dagchipsen hoppar över de två första dagarna (= Idag/Imorgon
-                vid färsk deploy — dubbletter av period-chipsen). */}
+            {/* Dagval: perioder + en chip per listad dag. Dagchipsen hoppar
+                över de två första dagarna (= Idag/Imorgon vid färsk deploy —
+                dubbletter av period-chipsen). ("Nästa timmen"-chippen som låg
+                efter perioderna är borttagen 18/8, ägarbeslut: onödig.) */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                 {PERIODS.map(p => (
                     <Chip
@@ -443,11 +466,6 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                         onClick={() => startTransition(() => setSel({ kind: 'period', period: p.key }))}
                     />
                 ))}
-                <Chip
-                    label="Nästa timmen"
-                    active={sel.kind === 'nextHour'}
-                    onClick={() => startTransition(() => { setSel({ kind: 'nextHour' }); setHours([]); })}
-                />
                 <span className="shrink-0 mx-1 h-5 w-px bg-slate-200" aria-hidden />
                 {days.slice(2).map(d => (
                     <Chip
@@ -516,7 +534,11 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
             <div className="mt-6 flex flex-col gap-10">
                 {renderDays.map((day, di) => {
-                    const pastOpen = openPast.has(day.key);
+                    // Kart-fokus på ett redan-passerat event: fäll upp dagens
+                    // "har varit"-sektion automatiskt (deriverat — annars
+                    // finns raden inte i DOM:en när scrollen letar).
+                    const pastOpen = openPast.has(day.key)
+                        || (!!focus && focus.dayKey === day.key && day.past.some(e => e.id === focus.id));
                     // "Idag"/"Imorgon" är klockberoende → bara efter mount.
                     const rel = nowTs === 0 ? null : relativeDayLabel(day.key);
                     return (

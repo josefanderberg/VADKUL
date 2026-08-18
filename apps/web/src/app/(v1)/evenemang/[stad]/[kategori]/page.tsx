@@ -9,6 +9,7 @@ import {
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
+import { DayFilterProvider } from '../../dayFilter';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -118,6 +119,9 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     <span aria-hidden>{cat.emoji}</span> {cat.h1(city.name)}
                 </h1>
+                {/* Samma delade dagfilter som stadssidan: kart-heron och
+                    daglistan är ETT filter (dayFilter.tsx). */}
+                <DayFilterProvider>
                 {/* Samma kart-hero som stadssidan, men bara kategorins event
                     som brickor (ingen Rekommenderat-ranking här — bildsatta
                     event prioriteras av pickBricks fallbacken). */}
@@ -140,6 +144,7 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
 
                 <EventDayList events={events} cityName={city.name} />
+                </DayFilterProvider>
 
                 <FaqSection faqs={faqs} />
 

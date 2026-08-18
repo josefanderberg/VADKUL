@@ -8,6 +8,7 @@ import {
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
+import { DayFilterProvider } from '../dayFilter';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -119,6 +120,10 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
                     Vad händer i {city.name}?
                 </h1>
+                {/* Providern gör kart-heron och daglistan till SAMMA filter:
+                    dagchips på kartan styr listan och tvärtom, och kart-
+                    popupens klick scrollar till raden (dayFilter.tsx). */}
+                <DayFilterProvider>
                 {/* Kart-heron direkt under H1: sidans "startskärms-krok" — man
                     ser kartan och stadens brickor innan man läser något alls. */}
                 <CityMapHero
@@ -162,6 +167,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         </div>
                     )}
                 </EventDayList>
+                </DayFilterProvider>
 
                 <FaqSection faqs={faqs} />
 

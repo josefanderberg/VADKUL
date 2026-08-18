@@ -11,7 +11,9 @@ import { normalizePriceLabel } from '@/utils/priceLabel';
 // event — klienten avtäcker dagarna en i taget vid scroll (DayFilteredList),
 // så allt renderas ändå inte på en gång. Event bortom horisonten sammanfattas
 // med "…längre fram"-raden; kartan är alltid den fulla vyn.
-const DAYS_LISTED = 14;
+// Exporterad: kart-heron använder samma skärning för sin "listed"-flagga —
+// popup-rader ska bara peka på listrader som faktiskt finns.
+export const DAYS_LISTED = 14;
 
 export const mapHref = (id: string) => `/?event=${encodeURIComponent(id)}`;
 
