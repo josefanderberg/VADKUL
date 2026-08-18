@@ -1,7 +1,9 @@
 # Event-boost med Stripe
 
-Engångsbetald "boost" som lyfter fram ett användarskapat event på kartan en
-period (default **7 dagar**). Bygger på Firebase-extensionen
+Engångsbetald "boost" som lyfter fram ett event på kartan en period. Tre
+nivåer via callable-fältet `tier`: `day` (1 dag), `week` (7 dagar, default när
+fältet utelämnas) och `month` (30 dagar) — ett Stripe-pris per nivå, se
+env-nycklarna nedan. Bygger på Firebase-extensionen
 [`firestore-stripe-payments`](https://extensions.dev/extensions/invertase/firestore-stripe-payments).
 
 ## Hur det hänger ihop
@@ -65,10 +67,13 @@ måste matcha anroparen.
 1. **Stripe-konto** – skapa ett på [stripe.com](https://stripe.com). Börja i
    **testläge** (inga riktiga pengar). Du behöver `Secret key` (sk_test_…).
 
-2. **Skapa produkten + priset** i Stripe Dashboard → *Products*:
-   - Namn t.ex. "Event-boost (7 dagar)".
-   - **One-time**-pris (inte recurring), valuta SEK, valfritt belopp.
-   - Kopiera **Price-ID** (`price_…`).
+2. **Skapa produkterna + priserna** i Stripe Dashboard → *Products* — ETT
+   One-time-pris (inte recurring, valuta SEK, valfritt belopp) per nivå:
+   - "Event-boost (1 dag)" → Price-ID till `STRIPE_BOOST_PRICE_ID_DAY`
+   - "Event-boost (7 dagar)" → `STRIPE_BOOST_PRICE_ID_WEEK` (eller lämna
+     nyckeln tom och låt gamla `STRIPE_BOOST_PRICE_ID` gälla)
+   - "Event-boost (30 dagar)" → `STRIPE_BOOST_PRICE_ID_MONTH`
+   - Kopiera respektive **Price-ID** (`price_…`).
 
 3. **Installera extensionen**:
    ```bash
@@ -90,13 +95,17 @@ måste matcha anroparen.
    `checkout.session.completed`, `payment_intent.succeeded`. Signing secret
    klistras in med `firebase ext:configure`.
 
-5. **Price-ID till backend** – priset ägs av Cloud-funktionen, aldrig av
+5. **Price-ID:n till backend** – priserna ägs av Cloud-funktionen, aldrig av
    klienten. Ligger i `apps/functions/.env.vadkul-f2cb2` (committad, eftersom
    `.env` är gitignorerad och deployen körs från `main` på Mac minin):
    ```
-   STRIPE_BOOST_PRICE_ID=price_XXXXXXXXXXXX
+   STRIPE_BOOST_PRICE_ID=price_XXXXXXXXXXXX        # vecko-fallback (befintlig)
+   STRIPE_BOOST_PRICE_ID_DAY=price_XXXXXXXXXXXX    # 1 dag
+   STRIPE_BOOST_PRICE_ID_MONTH=price_XXXXXXXXXXXX  # 30 dagar
+   # STRIPE_BOOST_PRICE_ID_WEEK=price_XXXXXXXXXXXX # valfri — annars gäller raden överst
    ```
-   Saknas den svarar `createBoostCheckout` "Boost är inte tillgängligt ännu".
+   Saknas priset för den valda nivån svarar `createBoostCheckout` "Boost är
+   inte tillgängligt ännu" för just den nivån; övriga nivåer fungerar ändå.
 
 6. **Stripe-nyckeln till Secret Manager** – `createBoostCheckout` skapar
    sessionen själv och behöver därför sin egen kopia av secret key:
@@ -160,15 +169,17 @@ igenom; `permission-denied` att sessionen tillhör ett annat konto.
 
 ## Att tänka på / framtida
 
-- **Pris och längd** bor i Stripe (pris, via `STRIPE_BOOST_PRICE_ID`) resp.
-  `BOOST_DAYS` i `createBoostCheckout` (speglas av `BOOST_DURATION_DAYS` i
-  `boostService.ts`; backend klampar 1–90). Vill du ha flera nivåer: skapa flera
-  Priser och skicka olika `boostDays`.
-- **Skrapade event går inte att boosta.** Knappen visas bara för `userCreated`
-  (se `EventCard.tsx`) och `createBoostCheckout` avvisar allt som saknar
-  dokument i `linkEvents`. Skulle man släppa på det betalar kunden för en boost
-  som aldrig kan appliceras. Att öppna vägen kräver en egen collection som
-  kartan/aggregatet slår ihop – inte gjort.
+- **Pris och längd** bor i Stripe (ett Price-ID per nivå, se punkt 5 ovan)
+  resp. `BOOST_TIERS` i `createBoostCheckout` (day=1, week=7, month=30 dagar;
+  week speglar `BOOST_DURATION_DAYS` i `boostService.ts`; backend klampar
+  1–90). Nivån väljs av klienten via `tier`, men pris och dagar slås alltid
+  upp server-side — okänd nivå avvisas med `invalid-argument`.
+- **Skrapade event GÅR att boosta sedan 18/8.** `createBoostCheckout` validerar
+  skrapade id:n (URL:er, känns igen på snedstrecket) mot aggregatens
+  destinations-lager, och boosten skrivs till overlay-kollektionen
+  `eventBoosts/{slug}` som webben mappar tillbaka på kart-eventen — se
+  `boostTargetRef` i `index.ts`. Användarskapade event får som förut
+  `featuredUntil` direkt på `linkEvents`-dokumentet.
 - **Klienten kan fortfarande skriva `customers/{uid}/checkout_sessions`**
   (reglerna tillåter det, extensionen lyssnar). Vi använder inte den vägen
   längre; vill man stänga den helt är det en regel-ändring.

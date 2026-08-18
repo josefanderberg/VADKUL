@@ -7,7 +7,7 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp } from 'firebase/firestore';
@@ -50,6 +50,13 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     // Min stad (stadssegmenterade utskick). '' = ingen stad vald/sparad.
     const [citySlug, setCitySlug] = useState('');
     const [cityBusy, setCityBusy] = useState(false);
+    // "Jag har barn" + barnens åldrar — styr STANDARDLÄGET för kartans
+    // kategorifilter (Familj & barn auto-på); åldrarna är underlag för
+    // framtida åldersmatchning av event. Registreringen frågar bara ja/nej,
+    // åldrarna kompletteras här.
+    const [hasChildren, setHasChildren] = useState(false);
+    const [childAges, setChildAges] = useState<number[]>([]);
+    const [childrenBusy, setChildrenBusy] = useState(false);
 
     // Läs av notis-läget varje gång panelen öppnas (kan ha ändrats i
     // webbläsarens inställningar sedan sist).
@@ -57,13 +64,22 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
         if (open) setNotisStatus(getNotisStatus());
     }, [open]);
 
-    // Hämta sparad stad när panelen öppnas (kan ha GPS-härletts sedan sist).
+    // Hämta sparad stad + barn-fälten när panelen öppnas (staden kan ha
+    // GPS-härletts sedan sist; samma läsning täcker båda — ingen extra read).
     useEffect(() => {
         if (!open || !user) return;
         let stale = false;
         getDoc(doc(db, 'users', user.uid))
-            .then(snap => { if (!stale) setCitySlug(snap.exists() ? (snap.data().citySlug ?? '') : ''); })
-            .catch(() => { /* visa tomt — valet funkar ändå */ });
+            .then(snap => {
+                if (stale) return;
+                const data = snap.exists() ? snap.data() : null;
+                setCitySlug(data?.citySlug ?? '');
+                setHasChildren(data?.hasChildren === true);
+                setChildAges(Array.isArray(data?.childAges)
+                    ? data.childAges.filter((a: unknown): a is number => typeof a === 'number')
+                    : []);
+            })
+            .catch(() => { /* visa tomt — valen funkar ändå */ });
         return () => { stale = true; };
     }, [open, user]);
 
@@ -101,6 +117,53 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
             toast.error('Kunde inte spara staden. Försök igen.');
         } finally {
             setCityBusy(false);
+        }
+    };
+
+    // Kryssrutan "Jag har barn". Urkryssad ⇒ åldrarna töms också — ett aktivt
+    // "har inga barn" ska inte lämna gamla åldrar kvar i dokumentet.
+    const handleHasChildrenToggle = async (next: boolean) => {
+        if (!user || childrenBusy) return;
+        const prevHas = hasChildren;
+        const prevAges = childAges;
+        setHasChildren(next);
+        if (!next) setChildAges([]);
+        setChildrenBusy(true);
+        try {
+            await setDoc(doc(db, 'users', user.uid), {
+                hasChildren: next,
+                ...(next ? {} : { childAges: [] }),
+            }, { merge: true });
+        } catch (err) {
+            console.error(err);
+            setHasChildren(prevHas);
+            setChildAges(prevAges);
+            toast.error('Kunde inte spara. Försök igen.');
+        } finally {
+            setChildrenBusy(false);
+        }
+    };
+
+    // Ålders-chip (0–17): tryck togglar åldern. Flera barn = flera chips;
+    // två barn med samma ålder behöver inte två chips — fältet är filter-
+    // underlag, ingen familjeräkning. Hela listan skrivs varje gång (litet
+    // fält, enklast korrekt).
+    const handleChildAgeToggle = async (ageYears: number) => {
+        if (!user || childrenBusy) return;
+        const prev = childAges;
+        const next = prev.includes(ageYears)
+            ? prev.filter(a => a !== ageYears)
+            : [...prev, ageYears].sort((a, b) => a - b);
+        setChildAges(next);
+        setChildrenBusy(true);
+        try {
+            await setDoc(doc(db, 'users', user.uid), { childAges: next }, { merge: true });
+        } catch (err) {
+            console.error(err);
+            setChildAges(prev);
+            toast.error('Kunde inte spara. Försök igen.');
+        } finally {
+            setChildrenBusy(false);
         }
     };
 
@@ -467,6 +530,51 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                                 <option key={c.slug} value={c.slug}>{c.name}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    {/* Jag har barn + barnens åldrar — styr kartans
+                                        standardfilter (Familj & barn auto-på).
+                                        Manuella filterval på kartan vinner alltid. */}
+                                    <div className="w-full flex flex-col gap-2 px-4 py-3">
+                                        <label className="flex items-center gap-3 cursor-pointer select-none">
+                                            <Baby size={16} className="text-[#006AA7] shrink-0" />
+                                            <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Jag har barn</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={hasChildren}
+                                                disabled={childrenBusy}
+                                                onChange={(e) => handleHasChildrenToggle(e.target.checked)}
+                                                className="w-4 h-4 accent-[#006AA7] shrink-0 disabled:opacity-50"
+                                            />
+                                        </label>
+                                        {hasChildren && (
+                                            <div className="pl-7 flex flex-col gap-1.5">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                                    Barnens åldrar
+                                                </span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from({ length: 18 }, (_, a) => {
+                                                        const on = childAges.includes(a);
+                                                        return (
+                                                            <button
+                                                                key={a}
+                                                                type="button"
+                                                                onClick={() => handleChildAgeToggle(a)}
+                                                                disabled={childrenBusy}
+                                                                aria-pressed={on}
+                                                                aria-label={`${a} år`}
+                                                                className={`min-w-[30px] px-1.5 py-1 rounded-full border text-[11px] font-black tabular-nums leading-none transition-colors disabled:opacity-50 ${
+                                                                    on
+                                                                        ? 'bg-[#006AA7] border-[#006AA7] text-white'
+                                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-[#006AA7]'
+                                                                }`}
+                                                            >
+                                                                {a}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
                                         <ShieldCheck size={16} className="text-slate-500 shrink-0" />

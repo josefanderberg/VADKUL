@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -6,6 +6,9 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
+import { type BoostTier } from '../../services/boostService';
+import EventReminderBell from './EventReminderBell';
+import BoostTierPicker from './BoostTierPicker';
 import { getEventViews, recordEventClick } from '../../services/eventStatsService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
@@ -66,8 +69,19 @@ interface LinkEventCardProps {
     /** Ägaren av ett användarskapat event får ta bort det (reglerna verifierar). */
     canDelete?: boolean;
     onDeleteOwn?: () => void;
-    /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort". */
-    onBoost?: () => void;
+    /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort".
+     *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras. */
+    onBoost?: (tier: BoostTier) => void;
+    /** Chatt-vyn (sektionen med chatt/aktivitet): true = kortet visar BARA
+     *  headern — föräldern renderar chatten direkt under. Togglas via knappen
+     *  på headerns översta rad (onToggleActivityView). */
+    activityView?: boolean;
+    onToggleActivityView?: () => void;
+    /** List-vyn: som chatt-vyn fast för närhetslistan ("Fler event i
+     *  närheten") — kortet visar bara headern och föräldern renderar listan
+     *  direkt under. Egen pill bredvid Chatt på översta raden. */
+    nearbyView?: boolean;
+    onToggleNearbyView?: () => void;
     /** Fler event på SAMMA plats (multi-event-hög): position + antal → pager på
      *  platsraden ("3/7"). onGroupNext stegar till nästa i högen. groupTotal ≤ 1
      *  döljer pagern. */
@@ -82,7 +96,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
@@ -156,6 +170,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [reportOpen, setReportOpen] = useState(false);
     const [reportSent, setReportSent] = useState(false);
     useEffect(() => { setReportOpen(false); setReportSent(false); }, [linkEvent.id]);
+
+    // Boost-nivåväljaren (1 dag/vecka/månad) — öppnas av "Boosta eventet"-
+    // knappen; valet fyrar onBoost(tier). Stängs vid eventbyte så väljaren
+    // aldrig hänger kvar över fel event.
+    const [boostPickerOpen, setBoostPickerOpen] = useState(false);
+    useEffect(() => { setBoostPickerOpen(false); }, [linkEvent.id]);
     const handleReport = async (e: React.MouseEvent, reason: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -274,6 +294,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
 
     const handleHeaderClick = () => {
+        // I chatt-/listvyn är innehållet dolt — reveal-stegning vore ett no-op
+        // som ändå rapporterar steg uppåt (och kan växa sheeten). Gör inget.
+        if (activityView || nearbyView) return;
         if (alwaysExpanded) { onContentTap?.(); return; }
         setInternalRevealStep(prev => prev === 0 ? 1 : 0);
     };
@@ -333,14 +356,54 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </span>
                 )}
 
-                <div className="flex justify-between items-center mb-3">
-                    {/* Fixed 2-line height — single-line titles center vertically */}
-                    <div className="flex-1 min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden">
-                        <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors pr-10 line-clamp-2 w-full">
-                            <span aria-hidden className="mr-2 text-[1.5em] leading-none align-middle">{titleEmoji}</span>{linkEvent.title}
-                        </h3>
-                    </div>
-                    {/* Hjärta för att spara samt primär ANMÄL-knapp till höger om titeln. */}
+                {/* Översta raden: chatt-vytoggeln till vänster, åtgärdsknapparna
+                    (stjärna/klocka/hjärta/ANMÄL) till höger. Titeln + emojin bor
+                    på EGEN rad direkt under (ägarbeslut 18/8) — den fick flytta
+                    ner ett snäpp för att ge plats åt toggeln på knappraden. */}
+                <div className="flex justify-between items-center gap-2 mb-2">
+                    {/* Vy-togglar: växlar hela kortet till chatt-/aktivitets-
+                        sektionen respektive närhetslistan (som annars ligger
+                        långt ner och sällan nås via scroll). Tydligt på/av-läge:
+                        fylld blå när vyn är aktiv. */}
+                    {(onToggleActivityView || onToggleNearbyView) ? (
+                        <div className="shrink-0 flex items-center gap-1.5">
+                            {onToggleActivityView && (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleActivityView(); }}
+                                    aria-pressed={activityView}
+                                    title={activityView ? 'Tillbaka till eventinfon' : 'Visa chatten och aktiviteten för eventet'}
+                                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
+                                        activityView
+                                            ? 'bg-[#006AA7] border-[#006AA7] text-white'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                    }`}
+                                >
+                                    <MessageCircle size={13} fill={activityView ? 'currentColor' : 'none'} />
+                                    Chatt
+                                </button>
+                            )}
+                            {onToggleNearbyView && (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleNearbyView(); }}
+                                    aria-pressed={nearbyView}
+                                    title={nearbyView ? 'Tillbaka till eventinfon' : 'Visa listan med fler event i närheten'}
+                                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
+                                        nearbyView
+                                            ? 'bg-[#006AA7] border-[#006AA7] text-white'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                    }`}
+                                >
+                                    <List size={13} />
+                                    Lista
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        /* Tom platshållare så knapparna ligger kvar till höger
+                           även när togglarna saknas (t.ex. stadssidornas kort). */
+                        <div aria-hidden />
+                    )}
+                    {/* Hjärta för att spara samt primär ANMÄL-knapp. */}
                     <div className="shrink-0 flex items-center gap-2">
                         {/* Stjärn-gåvan ⭐ bredvid hjärtat: klickbar när man har en
                             oanvänd stjärna, annars ren guld-indikator på event som
@@ -363,6 +426,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 <Star size={15} fill="currentColor" />
                             </span>
                         ) : null}
+                        {/* Notisklockan 🔔 bredvid hjärtat: på/av för påminnelser
+                            (8 h/3 h/1 h före + vid start). Inaktiverad för event
+                            utan klockslag — se EventReminderBell. */}
+                        <EventReminderBell linkEvent={linkEvent} />
                         {onToggleSave && (
                             <button
                                 onClick={handleToggleSave}
@@ -376,15 +443,29 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
                             </button>
                         )}
+                        {/* Kortets primära CTA — får inte se billig ut bredvid de
+                            runda pillerna: helrundad, gradient i flaggblått med
+                            inre ljuskant och pil som glider vid hover (ägarens
+                            begäran 19/8: "syns lite mer"). h-8 som grannarna så
+                            knappraden håller höjden. */}
                         {linkEvent.url && (
                             <button
                                 onClick={handleVisitSite}
-                                className="bg-[#006AA7] hover:bg-[#005590] text-white text-[10px] font-black px-3 rounded shadow-lg h-8 flex items-center justify-center"
+                                className="group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-lg active:scale-[0.97] transition-all"
                             >
                                 ANMÄL
+                                <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
                             </button>
                         )}
                     </div>
+                </div>
+
+                {/* Titelraden — emoji + titel på egen rad under knapparna.
+                    Fast 2-radshöjd: enradstitlar centreras vertikalt. */}
+                <div className="min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden mb-3">
+                    <h3 className="font-black text-black dark:text-white leading-tight text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2 w-full">
+                        <span aria-hidden className="mr-2 text-[1.5em] leading-none align-middle">{titleEmoji}</span>{linkEvent.title}
+                    </h3>
                 </div>
 
                 {/* VADKUL-värdade event länkar inte ut någonstans — platsen är
@@ -499,7 +580,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
             {/* 2. Innehåll (bild + beskrivning + åtgärder) — ALLTID renderat, så
                 hopfällt och uppfällt skiljer sig BARA i sheet-höjd: drar man upp
-                det hopfällda kortet syns samma bild/beskrivning. */}
+                det hopfällda kortet syns samma bild/beskrivning. UNDANTAG:
+                chatt-/listvyn (activityView/nearbyView) — då byts hela innehållet
+                ut mot sektionen som föräldern renderar direkt under headern. */}
+            {!activityView && !nearbyView && (
             <div className="flex flex-col w-full">
                     {/* Omslagsbild — visas BARA när eventet har en riktig bild
                         (ingen fallback). Object-contain så hela motivet syns,
@@ -707,13 +791,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     )}
                                     {/* Boost är öppen för ALLA (5/8) — man får lyfta någon annans
                                         event också. Föräldern skickar bara onBoost när eventet är
-                                        boostbart (användarskapat). */}
+                                        boostbart (användarskapat). Knappen öppnar nivåväljaren
+                                        (1 dag/vecka/månad) — checkouten startar först vid valet. */}
                                     {onBoost && (
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                onBoost();
+                                                setBoostPickerOpen(true);
                                             }}
                                             className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 py-1.5 transition-colors"
                                         >
@@ -737,6 +822,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             </div>
                     </div>
                 </div>
+            )}
+
+            {/* Boost-nivåväljaren — modal ovanpå kortet; valet startar checkouten. */}
+            {boostPickerOpen && onBoost && (
+                <BoostTierPicker
+                    isExtension={isEventFeatured(linkEvent)}
+                    onClose={() => setBoostPickerOpen(false)}
+                    onSelect={(tier) => {
+                        setBoostPickerOpen(false);
+                        onBoost(tier);
+                    }}
+                />
+            )}
         </div>
     );
 }

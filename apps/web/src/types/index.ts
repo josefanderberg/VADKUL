@@ -37,6 +37,14 @@ export interface UserProfile {
    *  'manual' = valt/rensat i profilen eller vid registrering — skrivs
    *  aldrig över av GPS-vägen. */
   citySource?: 'gps' | 'manual';
+  /** "Jag har barn" (kryssruta i registreringen/profilen). Styr STANDARD-
+   *  läget för kartans kategorifilter: Familj & barn auto-på — men bara tills
+   *  användaren själv rört filtret (mapCategories vinner, se (v2)/page.tsx). */
+  hasChildren?: boolean;
+  /** Barnens åldrar i år (flera barn = flera värden; samma ålder två gånger
+   *  behövs inte — fältet är filterunderlag, ingen familjeräkning).
+   *  Kompletteras i profilen; registreringen frågar bara ja/nej. */
+  childAges?: number[];
 }
 
 export interface UserReview {

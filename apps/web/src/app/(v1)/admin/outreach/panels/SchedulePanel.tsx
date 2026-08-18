@@ -169,7 +169,7 @@ function ScheduleRow({ item, draftable }: { item: QueueItem; draftable: boolean 
                 <p className="text-[11px] font-bold text-amber-600">⚠ {c.groupRulesNote}</p>
             )}
             {draftable ? (
-                <DraftGenerator contactId={c.id} mode={c.postingMode} />
+                <DraftGenerator contactId={c.id} contactName={c.name} mode={c.postingMode} />
             ) : (
                 <p className="text-[11px] font-semibold text-slate-300">
                     Utkast skrivs tidigast dagen före (färskvaruregeln).

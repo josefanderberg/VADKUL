@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import { isVadkulHostedEvent, LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
+import { type BoostTier } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
@@ -553,8 +554,9 @@ interface EventCardProps {
     /** Inloggad användares uid — ägaren av ett användarskapat event får ta bort det. */
     currentUserUid?: string;
     onDeleteOwnEvent?: (eventId: string) => void;
-    /** Boosta (featura) sitt eget event — startar Stripe Checkout. */
-    onBoostOwnEvent?: (eventId: string) => void;
+    /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
+     *  (1 dag/vecka/månad; nivån väljs i kortets BoostTierPicker). */
+    onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
     /** Stjärn-gåvan ⭐: eventId:n som redan fått en stjärna (guld-indikator på
      *  kortet), om användaren har en oanvänd stjärna att sätta, samt placerings-
      *  callbacken (bekräftelsedialogen bor i LinkEventCard). */
@@ -585,6 +587,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
+    // ── Vyskiftet (chatt / lista) ───────────────────────────────────────────
+    // Chatten och närhetslistan ligger annars långt ner på kortet och många
+    // scrollar aldrig dit. Togglarna på headerns översta rad byter VY: kortets
+    // innehåll (bild/beskrivning/knappar) döljs och den valda sektionen visas
+    // DIREKT under headern (LinkEventCard renderar bara headern i
+    // vyskiftes-läget). Kortet växer samtidigt till full höjd och scrollas
+    // till toppen — ett riktigt vyskifte, inte en scroll-genväg.
+    const [cardView, setCardView] = useState<'info' | 'chat' | 'nearby'>('info');
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
@@ -876,7 +886,24 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         updateDragX(0);
         setIsAnimating(true);
         setCardRevealStep(0); // Återställ bildremsa vid nytt event
+        setCardView('info'); // Nytt event öppnar alltid i infovyn (chatt/lista är per event)
     }, [selectedEvent?.id]);
+
+    // Växla mellan infovyn och chatt-/listvyn. På väg IN i en vy: väx kortet
+    // till full höjd och börja från toppen så sektionen syns direkt. På väg UT
+    // behålls höjden — användaren står redan där hen vill. Pillarna växlar
+    // också direkt mellan varandra (chatt → lista utan mellansteg via infovyn).
+    const handleToggleView = (view: 'chat' | 'nearby') => {
+        setCardView(prev => {
+            const next = prev === view ? 'info' : view;
+            if (next !== 'info') {
+                setIsAnimating(true);
+                updateHeightVh(MAX_HEIGHT_VH);
+                if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+            }
+            return next;
+        });
+    };
 
     // Uppdatera "nu" var 30:e sekund så statusbadgar håller sig fräscha.
     useEffect(() => {
@@ -1292,7 +1319,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // exakt samma som när kortet öppnas) — inte ända ner till peek-strecket,
             // som kändes som att kortet åkte för långt ner. Drag-ner-gesten kan
             // fortfarande gå hela vägen ner till peek/stängning (se ovan).
-            updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
+            // I chatt-/listvyn görs inget: ett tap i sektionen (t.ex. på en
+            // bubbla eller mellan listraderna) ska inte fälla ihop kortet mitt
+            // i läsningen.
+            if (cardView === 'info') {
+                updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
+            }
         }
 
         dragDirection.current = 'none';
@@ -1788,7 +1820,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // Boost: alla inloggade får boosta ALLA event — användarskapade
                         // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
-                        onBoost={onBoostOwnEvent ? () => onBoostOwnEvent(selectedEvent.id) : undefined}
+                        // Nivån (1 dag/vecka/månad) väljs i kortets BoostTierPicker.
+                        onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
+                        // Vyskiftet: chatt-toggeln finns bara där chatten faktiskt
+                        // kan renderas (onRequireLogin är chatt-sektionens egen
+                        // vakt), list-toggeln bara när närhetslistan har innehåll.
+                        activityView={cardView === 'chat'}
+                        onToggleActivityView={onRequireLogin ? () => handleToggleView('chat') : undefined}
+                        nearbyView={cardView === 'nearby'}
+                        onToggleNearbyView={nearbyEvents.length > 0 ? () => handleToggleView('nearby') : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).
@@ -1796,16 +1836,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
                     {/* Chatt per event — alla kan läsa, skriva kräver konto.
-                        (Livebilder-panelen borttagen 5/8 på ägarens beslut.) */}
-                    {onRequireLogin && (
+                        (Livebilder-panelen borttagen 5/8 på ägarens beslut.)
+                        Döljs i listvyn så närhetslistan hamnar direkt under
+                        headern. */}
+                    {onRequireLogin && cardView !== 'nearby' && (
                         <div className="px-4 md:px-6 pb-4 flex flex-col gap-3">
                             <EventChatPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
                         </div>
                     )}
                     {/* Direkt till närhetslistan — "Tips för dig"-sektionen togs
                         bort 2026-07-13 (ägarbeslut: onödig, folk vill se Fler
-                        event i närheten direkt när de scrollar). */}
-                    {nearbyEvents.length > 0 && (
+                        event i närheten direkt när de scrollar). Döljs i
+                        chatt-vyn (som visar bara header + chatt); i listvyn
+                        hamnar den i stället direkt under headern. */}
+                    {cardView !== 'chat' && nearbyEvents.length > 0 && (
                         <NearbyEventsList
                             upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
                             upcomingTotal={upcomingNearby.length}
@@ -1823,8 +1867,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     bannern ska synas från början, inte först efter första
                     scrollen). Släcks när man scrollat ner till närhetslistan och
                     sett ≥4 event — engångs, aldrig igen när man klarat det en
-                    gång. Pointer-events-none så den inte fångar scroll/tap. */}
-                {coachStage !== 'off' && (
+                    gång. Pointer-events-none så den inte fångar scroll/tap.
+                    Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
+                    i chatt-vyn finns ingen lista att scrolla till. */}
+                {coachStage !== 'off' && cardView === 'info' && (
                     <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center gap-2 rounded-full bg-[#006AA7] text-white text-xs font-black px-4 py-2 shadow-lg">
                             <span>Scrolla ner — fler event i närheten</span>

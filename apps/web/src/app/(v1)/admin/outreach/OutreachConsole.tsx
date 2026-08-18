@@ -1,9 +1,12 @@
 'use client';
 
 // Publiceringskonsolen — skalet med flikar, alla levande: Idag, Städer
-// (stadskort → gruppens FB-länk + utkastgenerator; ersatte Kön 18/8), Karta,
-// Planering (facebookschemat, 14 dagar), Logg (alla publiceringar med text +
-// utfall) och Statistik (totaler/utfall/toppinlägg/A-B ur loggen).
+// (stadskort → gruppens FB-länk + utkastgenerator; ersatte Kön 18/8; kartan
+// bor här som lista/karta-toggle sedan 19/8), Planering (facebookschemat,
+// 14 dagar), Logg (alla publiceringar med text + utfall) och Statistik
+// (totaler/utfall/toppinlägg/A-B ur loggen).
+// Utkasten bor i DraftStore (provider över flikarna) — genereringar fortsätter
+// i bakgrunden vid flikbyte och docken (DraftDock) visar dem överallt.
 // All data via /api/admin/outreach/* med Bearer-token — klienten läser ALDRIG
 // outreach-collections direkt (de är stängda i firestore.rules).
 
@@ -11,23 +14,24 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import type { OutreachApiUsage, QueueResponse } from '@/types/outreach';
-import { Megaphone, RefreshCw, Building2, CalendarDays, KeyRound, ListTodo, BarChart3, ScrollText, Map as MapIcon } from 'lucide-react';
+import { Megaphone, RefreshCw, Building2, CalendarDays, KeyRound, ListTodo, BarChart3, ScrollText } from 'lucide-react';
 import TodayPanel from './panels/TodayPanel';
-import MapPanel from './panels/MapPanel';
 import CityPanel from './panels/CityPanel';
 import SchedulePanel from './panels/SchedulePanel';
 import LogPanel from './panels/LogPanel';
 import StatsPanel from './panels/StatsPanel';
+import { DraftProvider } from './panels/DraftStore';
+import DraftDock from './panels/DraftDock';
 
 // Kön-fliken togs bort 18/8 (ägarbeslut: den visade samma data som Städer i en
 // annan layout) — stadskorten i Städer är sorterade på score, så kortordningen
-// ÄR kön.
-type Tab = 'idag' | 'stader' | 'karta' | 'planering' | 'logg' | 'statistik';
+// ÄR kön. Karta-fliken togs bort 19/8 (ägarbeslut: "inte ett helt avsnitt")
+// och blev en lista/karta-toggle inne i Städer.
+type Tab = 'idag' | 'stader' | 'planering' | 'logg' | 'statistik';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'idag', label: 'Idag', icon: <ListTodo size={14} /> },
     { id: 'stader', label: 'Städer', icon: <Building2 size={14} /> },
-    { id: 'karta', label: 'Karta', icon: <MapIcon size={14} /> },
     { id: 'planering', label: 'Planering', icon: <CalendarDays size={14} /> },
     { id: 'logg', label: 'Logg', icon: <ScrollText size={14} /> },
     { id: 'statistik', label: 'Statistik', icon: <BarChart3 size={14} /> },
@@ -36,6 +40,9 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function OutreachConsole() {
     const { user, loading } = useAuth();
     const [tab, setTab] = useState<Tab>('idag');
+    // Städer-flikens lista/karta-toggle bor här: Shell behöver veta om kartan
+    // visas (Sverige i en 4xl-spalt blir en tunn remsa → bredare container).
+    const [cityView, setCityView] = useState<'lista' | 'karta'>('lista');
     const [data, setData] = useState<QueueResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -77,8 +84,9 @@ export default function OutreachConsole() {
     }
 
     return (
-        // Kartan behöver bredden — Sverige i en 4xl-spalt blir en tunn remsa.
-        <Shell wide={tab === 'karta'}>
+        <DraftProvider>
+        {/* Kartvyn behöver bredden — Sverige i en 4xl-spalt blir en tunn remsa. */}
+        <Shell wide={tab === 'stader' && cityView === 'karta'}>
             <div className="flex items-center justify-between gap-4 mb-1">
                 <div className="flex items-center gap-2">
                     <Megaphone size={22} className="text-[#006AA7]" />
@@ -118,12 +126,15 @@ export default function OutreachConsole() {
             {!data && !error && <p className="text-sm font-bold text-slate-400">Hämtar kön…</p>}
 
             {data && tab === 'idag' && <TodayPanel data={data} onChanged={load} />}
-            {data && tab === 'stader' && <CityPanel data={data} onChanged={load} />}
-            {tab === 'karta' && <MapPanel />}
+            {data && tab === 'stader' && (
+                <CityPanel data={data} onChanged={load} view={cityView} onViewChange={setCityView} />
+            )}
             {data && tab === 'planering' && <SchedulePanel data={data} />}
             {tab === 'logg' && <LogPanel />}
             {tab === 'statistik' && <StatsPanel />}
         </Shell>
+        <DraftDock />
+        </DraftProvider>
     );
 }
 

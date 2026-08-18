@@ -50,6 +50,10 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     // uppdateras) från "valde själv" (manual → GPS rör den aldrig).
     const [citySlug, setCitySlug] = useState('');
     const [cityTouched, setCityTouched] = useState(false);
+    // "Jag har barn" — bara kryssrutan här (registreringen hålls lätt);
+    // barnens åldrar kompletteras i profilpanelen. Styr kartans standardfilter
+    // (Familj & barn auto-på för den som har barn).
+    const [hasChildren, setHasChildren] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +110,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 await register(name, email, password, {
                     age: age.trim() ? Number(age) : undefined,
                     gender: gender || undefined,
+                    hasChildren: hasChildren || undefined,
                     ...(city ? {
                         city: city.name,
                         citySlug: city.slug,
@@ -199,6 +204,20 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     <option key={c.slug} value={c.slug}>{c.name}</option>
                                 ))}
                             </select>
+                            {/* "Jag har barn" — lätt steg: bara kryssrutan.
+                                Åldrarna fylls i senare i profilen; kryssrutan
+                                räcker för att kartan ska visa familjeevent. */}
+                            <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={hasChildren}
+                                    onChange={(e) => setHasChildren(e.target.checked)}
+                                    className="w-4 h-4 accent-[#006AA7] shrink-0"
+                                />
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                    Jag har barn
+                                </span>
+                            </label>
                         </>
                     )}
                     <input

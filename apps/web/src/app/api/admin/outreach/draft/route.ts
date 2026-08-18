@@ -6,6 +6,10 @@
 // enligt formatreglerna ur docs/outreach/facebook-grupper.md. Routen postar
 // ALDRIG något — den skriver text som ägaren kopierar manuellt (§0 i planen).
 //
+// Varje lyckat utkast sparas i outreachDrafts/{contactId} och GET läser
+// tillbaka de som är färskare än 48 h — så konsolens utkastlager (DraftStore)
+// överlever flikbyten och omladdningar. Äldre än så är färskvara som ruttnat.
+//
 // ANTHROPIC_API_KEY är server-only (aldrig NEXT_PUBLIC): .env.local i dev,
 // och i prod via apps/web/.env som följer med firebase deploy.
 
@@ -22,6 +26,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const MODEL = 'claude-opus-5';
+// Samma prisklass ($5/$25 per MTok) — används när Opus 5 är överbelastad (529).
+const FALLBACK_MODEL = 'claude-opus-4-8';
 
 /**
  * Opus 5-listpriser i USD per miljon tokens — för förbrukningskortet i
@@ -36,7 +42,7 @@ const PRICE_PER_MTOK = { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 
  * sätts vid FÖRSTA anropet och driver konsolens 30-dagars rotations-
  * påminnelse; "Ny nyckel inlagd"-knappen nollställer den.
  */
-function trackApiUsage(db: Firestore, usage: Anthropic.Usage): number {
+function trackApiUsage(db: Firestore, usage: Anthropic.Usage, model: string): number {
     const inTok = usage.input_tokens ?? 0;
     const outTok = usage.output_tokens ?? 0;
     const cacheRead = usage.cache_read_input_tokens ?? 0;
@@ -56,7 +62,7 @@ function trackApiUsage(db: Firestore, usage: Anthropic.Usage): number {
         cacheWriteTokens: FieldValue.increment(cacheWrite),
         estimatedCostUsd: FieldValue.increment(costUsd),
         lastCallAt: Date.now(),
-        lastModel: MODEL,
+        lastModel: model,
     }, { merge: true })).catch(e => console.warn('[outreach/draft] usage-bokföringen misslyckades:', e));
 
     return costUsd;
@@ -147,6 +153,59 @@ type DraftOutput = {
     angle: string;
 };
 
+// Färskvaruregeln (23/7): utkast äldre än så här serveras inte tillbaka.
+const DRAFT_TTL_MS = 48 * 3_600_000;
+
+/** GET → alla sparade utkast färskare än 48 h, för DraftStorens uppstart. */
+export async function GET(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+    const snap = await db.collection('outreachDrafts')
+        .where('generatedAt', '>=', Date.now() - DRAFT_TTL_MS)
+        .get();
+    return NextResponse.json(
+        { drafts: snap.docs.map(d => d.data()) },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+    );
+}
+
+/**
+ * 529 Overloaded från Anthropic kan drabba en enskild modell eller
+ * serveringsväg (structured output har egen kapacitet) medan andra svarar
+ * direkt. Stegen provas i tur och ordning tills en går igenom; alla andra
+ * fel än 529 kastas vidare direkt.
+ */
+async function generateDraftMessage(client: Anthropic, userMessage: string) {
+    const jsonInstruktion = `${SYSTEM_PROMPT}\n\nSVARA ENBART med ett JSON-objekt — ingen inledande text, inga \`\`\`-staket — som exakt följer detta JSON-schema (alla fält obligatoriska, "tomt" = tom sträng/array):\n${JSON.stringify(DRAFT_SCHEMA)}`;
+    const steg = [
+        { model: MODEL, structured: true },
+        { model: FALLBACK_MODEL, structured: true },
+        { model: FALLBACK_MODEL, structured: false },
+    ] as const;
+
+    let sistaFel: unknown;
+    for (const { model, structured } of steg) {
+        try {
+            const msg = await client.messages.create({
+                model,
+                max_tokens: 10000,
+                thinking: { type: 'adaptive' },
+                ...(structured ? { output_config: { format: { type: 'json_schema', schema: DRAFT_SCHEMA } } } : {}),
+                system: structured ? SYSTEM_PROMPT : jsonInstruktion,
+                messages: [{ role: 'user', content: userMessage }],
+            });
+            return { msg, structured, model };
+        } catch (e) {
+            if (!(e instanceof Anthropic.APIError) || e.status !== 529) throw e;
+            sistaFel = e;
+            console.warn(`[outreach/draft] 529 Overloaded på ${model}${structured ? ' (structured)' : ' (prompt-JSON)'} — provar nästa steg`);
+        }
+    }
+    throw sistaFel;
+}
+
 export async function POST(request: Request) {
     const denied = await requireAdmin(request);
     if (denied) return denied;
@@ -220,14 +279,7 @@ export async function POST(request: Request) {
         ].filter((x): x is string => x !== null).join('\n');
 
         const client = new Anthropic({ apiKey });
-        const msg = await client.messages.create({
-            model: MODEL,
-            max_tokens: 10000,
-            thinking: { type: 'adaptive' },
-            output_config: { format: { type: 'json_schema', schema: DRAFT_SCHEMA } },
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: userMessage }],
-        });
+        const { msg, structured, model } = await generateDraftMessage(client, userMessage);
 
         if (msg.stop_reason === 'refusal') {
             return NextResponse.json({ error: 'Modellen avböjde förfrågan — försök igen.' }, { status: 502 });
@@ -236,7 +288,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Svaret blev avhugget (max_tokens) — försök igen.' }, { status: 502 });
         }
 
-        const text = msg.content.find(b => b.type === 'text')?.text ?? '';
+        let text = msg.content.find(b => b.type === 'text')?.text ?? '';
+        // Fallback-vägen kan trots instruktionen sätta ```-staket runt JSON:en.
+        if (!structured) text = text.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '');
         let draft: DraftOutput;
         try { draft = JSON.parse(text) as DraftOutput; } catch {
             console.error('[outreach/draft] oparsbart svar:', text.slice(0, 400));
@@ -245,9 +299,9 @@ export async function POST(request: Request) {
 
         // Bokför förbrukningen + skicka med den i svaret, så både API-kortet
         // och den enskilda utkast-rutan visar vad genereringen faktiskt drog.
-        const costUsd = trackApiUsage(db, msg.usage);
+        const costUsd = trackApiUsage(db, msg.usage, model);
 
-        return NextResponse.json({
+        const body = {
             drafts: { v1: draft.v1, v2Post: draft.v2Post, v2FirstComment: draft.v2FirstComment },
             mentionedEvents: draft.mentionedEvents,
             angle: draft.angle,
@@ -261,7 +315,7 @@ export async function POST(request: Request) {
                 radiusKm: picked.radiusKm,
                 dataUpdatedAt: picked.dataUpdatedAt,
                 source: picked.source,
-                model: MODEL,
+                model,
                 generatedAt: Date.now(),
                 usage: {
                     inputTokens: msg.usage.input_tokens ?? 0,
@@ -269,10 +323,29 @@ export async function POST(request: Request) {
                     costUsd: Math.round(costUsd * 10_000) / 10_000,
                 },
             },
-        }, { headers: { 'Cache-Control': 'private, no-store' } });
+        };
+
+        // Spara utkastet (fire-and-forget — sparningen får aldrig fälla svaret):
+        // ett doc per kontakt, senaste utkastet vinner. GET ovan läser tillbaka.
+        db.collection('outreachDrafts').doc(contact.id).set({
+            contactId: contact.id,
+            contactName: contact.name,
+            payload: body,
+            generatedAt: body.meta.generatedAt,
+        }).catch(e => console.warn('[outreach/draft] kunde inte spara utkastet:', e));
+
+        return NextResponse.json(body, { headers: { 'Cache-Control': 'private, no-store' } });
     } catch (e) {
         console.error('[outreach/draft]', e);
-        const status = e instanceof Anthropic.APIError ? 502 : 500;
-        return NextResponse.json({ error: 'Utkastet kunde inte genereras — försök igen.' }, { status });
+        if (e instanceof Anthropic.APIError) {
+            const s = e.status;
+            const error =
+                s === 529 ? 'Anthropic är överbelastat just nu (529) — vänta en liten stund och försök igen.'
+                : s === 429 ? 'Rate limit hos Anthropic (429) — vänta en stund och försök igen.'
+                : s === 401 ? 'API-nyckeln avvisades av Anthropic (401) — kontrollera ANTHROPIC_API_KEY.'
+                : `Anthropic-fel (${s ?? 'nätverk'}) — försök igen.`;
+            return NextResponse.json({ error }, { status: 502 });
+        }
+        return NextResponse.json({ error: 'Utkastet kunde inte genereras — försök igen.' }, { status: 500 });
     }
 }

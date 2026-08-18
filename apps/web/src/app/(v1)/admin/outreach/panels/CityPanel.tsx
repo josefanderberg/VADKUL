@@ -1,21 +1,24 @@
 'use client';
 
 // Städer — konsolens enda grupplista sedan 18/8 (ersatte Kön-fliken, som
-// visade samma data i en annan layout). Två nivåer:
+// visade samma data i en annan layout). Två nivåer + en vy-toggle:
 //
 //   1. KORTVYN: ett kompakt kort per stad (namn, utbud, hur många grupper som
 //      är redo/i karens), sorterat på bästa mogna score — samma ordning som
 //      gamla Kön gav, så toppkortet ÄR nästa ställe att posta.
 //   2. STADSVYN (klick på kortet): stadens grupper med Öppna gruppen-knapp
 //      och utkastgeneratorn direkt i raden — kort → generera → posta, klart.
+//   3. KARTAN (lista/karta-togglen, ersatte Karta-fliken 19/8): samma städer
+//      som nålar + heatmap + vitfläckar — MapPanel, oförändrad inuti.
 //
 // Bygger helt på kö-svaret (queue + blocked = SAMTLIGA grupper).
 
 import { useMemo, useState } from 'react';
 import type { QueueItem, QueueResponse } from '@/types/outreach';
-import { AlertTriangle, ArrowLeft, ExternalLink, Lock, MapPin, Plus, Search } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ExternalLink, LayoutGrid, Lock, MapPin, Plus, Search, Map as MapIcon } from 'lucide-react';
 import { DraftGenerator } from './DraftGenerator';
 import AddGroupForm from './AddGroupForm';
+import MapPanel from './MapPanel';
 
 interface CityBucket {
     name: string;
@@ -64,7 +67,13 @@ function buildBuckets(items: QueueItem[]): CityBucket[] {
     return buckets;
 }
 
-export default function CityPanel({ data, onChanged }: { data: QueueResponse; onChanged: () => void }) {
+export default function CityPanel({ data, onChanged, view, onViewChange }: {
+    data: QueueResponse;
+    onChanged: () => void;
+    /** lista/karta-togglen — bor i OutreachConsole (Shell breddas i kartläge). */
+    view: 'lista' | 'karta';
+    onViewChange: (v: 'lista' | 'karta') => void;
+}) {
     const [filter, setFilter] = useState('');
     const [adding, setAdding] = useState(false);
     const [selected, setSelected] = useState<string | null>(null);
@@ -72,7 +81,7 @@ export default function CityPanel({ data, onChanged }: { data: QueueResponse; on
 
     // Vald stad kan ha döpts om/försvunnit efter en omladdning → tillbaka till korten.
     const sel = selected ? buckets.find(b => b.name === selected) : undefined;
-    if (selected && sel) {
+    if (view === 'lista' && selected && sel) {
         return <CityDetail bucket={sel} onBack={() => setSelected(null)} />;
     }
 
@@ -86,12 +95,15 @@ export default function CityPanel({ data, onChanged }: { data: QueueResponse; on
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
-                <label className="relative">
-                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="search" value={filter} onChange={e => setFilter(e.target.value)}
-                        placeholder="Filtrera ort eller grupp…"
-                        className="pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 w-60" />
-                </label>
+                <ViewToggle view={view} onChange={onViewChange} />
+                {view === 'lista' && (
+                    <label className="relative">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input type="search" value={filter} onChange={e => setFilter(e.target.value)}
+                            placeholder="Filtrera ort eller grupp…"
+                            className="pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 w-60" />
+                    </label>
+                )}
                 <button onClick={() => setAdding(v => !v)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#006AA7] text-white font-bold text-xs hover:bg-[#005590] transition-colors">
                     <Plus size={13} /> Lägg till grupp
@@ -101,7 +113,7 @@ export default function CityPanel({ data, onChanged }: { data: QueueResponse; on
                 </p>
             </div>
 
-            {/* Ny grupp utan koordinat: kör "Geokoda grupper" i Kartan efteråt,
+            {/* Ny grupp utan koordinat: kör "Geokoda grupper" i kartvyn efteråt,
                 eller spara via vitfläcksraden där ortens koordinat följer med. */}
             {adding && (
                 <AddGroupForm
@@ -110,12 +122,36 @@ export default function CityPanel({ data, onChanged }: { data: QueueResponse; on
                 />
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                {shown.map(b => <CityCard key={b.name} bucket={b} onOpen={() => setSelected(b.name)} />)}
-            </div>
-            {shown.length === 0 && (
-                <p className="text-sm font-semibold text-slate-400">Ingen ort eller grupp matchar filtret.</p>
+            {view === 'karta' ? (
+                <MapPanel />
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {shown.map(b => <CityCard key={b.name} bucket={b} onOpen={() => setSelected(b.name)} />)}
+                    </div>
+                    {shown.length === 0 && (
+                        <p className="text-sm font-semibold text-slate-400">Ingen ort eller grupp matchar filtret.</p>
+                    )}
+                </>
             )}
+        </div>
+    );
+}
+
+/** Lista ⇄ karta — kartan är en vy på Städer, inte ett eget avsnitt (19/8). */
+function ViewToggle({ view, onChange }: { view: 'lista' | 'karta'; onChange: (v: 'lista' | 'karta') => void }) {
+    const btn = (active: boolean) =>
+        `inline-flex items-center gap-1.5 px-3 py-2 text-xs font-black transition-colors ${
+            active ? 'bg-[#006AA7] text-white' : 'bg-white text-slate-600 hover:bg-slate-100'
+        }`;
+    return (
+        <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden">
+            <button type="button" onClick={() => onChange('lista')} className={btn(view === 'lista')}>
+                <LayoutGrid size={13} /> Lista
+            </button>
+            <button type="button" onClick={() => onChange('karta')} className={btn(view === 'karta')}>
+                <MapIcon size={13} /> Karta
+            </button>
         </div>
     );
 }
@@ -233,7 +269,7 @@ function GroupRow({ item }: { item: QueueItem }) {
 
             {/* Generatorn bara för mogna grupper — ett utkast till en grupp i
                 karens vore färskvara som garanterat hinner ruttna. */}
-            {!item.blocked && <DraftGenerator contactId={c.id} mode={c.postingMode} />}
+            {!item.blocked && <DraftGenerator contactId={c.id} contactName={c.name} mode={c.postingMode} />}
         </li>
     );
 }

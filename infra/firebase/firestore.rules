@@ -539,6 +539,61 @@ service cloud.firestore {
     // Stripe-betalning — kunde klienten skriva vore boosten gratis.
     match /eventBoosts/{boostId} { allow read: if true; allow write: if false; }
 
+    // EVENT-PÅMINNELSE-PREFS (klock-knappen på eventkortet): vilka fönster
+    // (8h/3h/1h/start) användaren vill påminnas i, per event. Doc-id =
+    // "{slug}_{uid}" där slug = eventShareSlug(event-id), 16 hex-tecken —
+    // rå-id:t är ofta en URL och därmed ogiltigt som doc-id (samma trick som
+    // eventStats). Privat per användare: läsa/skapa/ändra/radera BARA sitt
+    // eget dokument (uid i både doc-id och fält måste vara ens eget) —
+    // bevakningar är personliga och ska inte gå att kartlägga. Formlåst så
+    // schemajobbet (eventReminders i functions) aldrig möter okända fönster
+    // eller lösa fält.
+    match /eventReminderPrefs/{prefId} {
+      function validReminderPref() {
+        return request.resource.data.uid == request.auth.uid
+          // Id-formatet är kontraktet med functions-pipelinen: slug + eget uid.
+          && prefId == request.resource.data.slug + '_' + request.auth.uid
+          && request.resource.data.slug is string
+          && request.resource.data.slug.matches('[0-9a-f]{16}')
+          && request.resource.data.eventId is string
+          && request.resource.data.eventId.size() >= 1
+          && request.resource.data.eventId.size() <= 1400
+          && request.resource.data.times is list
+          && request.resource.data.times.size() <= 4
+          && request.resource.data.times.hasOnly(['8h', '3h', '1h', 'start'])
+          && request.resource.data.eventStart is timestamp
+          && request.resource.data.keys().hasAll(['uid', 'eventId', 'slug', 'times', 'eventStart', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'eventId', 'slug', 'times', 'eventStart', 'createdAt']);
+      }
+      // Läsning: sitt eget dokument — ÄVEN när det inte finns (id-suffixet
+      // avgör ägarskapet då). Webben håller en onSnapshot på dokumentet medan
+      // klockan är av; krävde vi resource.data.uid skulle lyssnaren dö med
+      // permission-denied på det saknade dokumentet och aldrig vakna när
+      // klockan slås på. (Auth-uid:n är alfanumeriska — suffix-matchen kan
+      // inte luras av ett '_' i uid:t.)
+      allow read: if isAuthenticated()
+        && (resource == null
+              ? prefId.matches('.*_' + request.auth.uid)
+              : resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && validReminderPref();
+      allow update: if isAuthenticated()
+        && resource.data.uid == request.auth.uid
+        && validReminderPref();
+      // Samma null-guard som läsregeln: en delete på ett redan raderat dokument
+      // (dubbelklick i två flikar, klient-retry) ska vara Firestores vanliga
+      // no-op — inte permission-denied som ger användaren en falsk feltoast.
+      allow delete: if isAuthenticated()
+        && (resource == null
+              ? prefId.matches('.*_' + request.auth.uid)
+              : resource.data.uid == request.auth.uid);
+    }
+
+    // Utskicksmarkörerna (exakt en notis per användare/event/fönster) skrivs
+    // ENBART av eventReminders-funktionen via admin-SDK:t. Ingen klientåtkomst
+    // alls: läsning hade läckt andras bevakningar, skrivning hade kunnat tysta
+    // (skapa markör i förväg) eller dubblera (radera markör) påminnelser.
+    match /eventReminderSends/{sendId} { allow read, write: if false; }
+
     // 22. SENASTE AKTIVITET — ETT välkänt dokument (latestComment) som kartans
     // "senaste kommentaren"-bubbla lyssnar på. Speglas av chattens sendMessage
     // (en collectionGroup-query över alla messages skulle även öppna privata

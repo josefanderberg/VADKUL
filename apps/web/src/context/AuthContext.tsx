@@ -44,8 +44,10 @@ interface AuthContextType {
   /** E-post + lösenord — samma flöde som gamla login-sidan, fast i modal. */
   signIn: (email: string, password: string) => Promise<void>;
   /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd).
-   *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore. */
-  register: (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual' }) => Promise<void>;
+   *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore.
+   *  hasChildren = "Jag har barn"-kryssrutan — åldrarna kompletteras i
+   *  profilen (registreringen hålls lätt). */
+  register: (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual'; hasChildren?: boolean }) => Promise<void>;
   /** Byt visningsnamn (profilpanelen). Speglas lokalt direkt. */
   updateDisplayName: (name: string) => Promise<void>;
   /** Byt profilbild (URL från Storage). Uppdaterar Auth-profilen + speglas lokalt. */
@@ -95,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual' }) => {
+  const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual'; hasChildren?: boolean }) => {
     // Har personen redan tipsat anonymt sitter hen på en anonym session med ett
     // uid som står som hostUid på tipsen. LÄNKA kontot till det uid:t i stället
     // för att skapa ett nytt — annars blir tipsen föräldralösa och hen tappar
@@ -130,6 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: name.trim(),
         ...(typeof stats?.age === 'number' && Number.isFinite(stats.age) ? { age: stats.age } : {}),
         ...(stats?.gender ? { gender: stats.gender } : {}),
+        // Bara ikryssad ruta skrivs — en okryssad ruta vid registrering är
+        // "inget svar", inte ett aktivt "har inga barn" (det sätts i profilen).
+        ...(stats?.hasChildren ? { hasChildren: true } : {}),
         ...(stats?.city && stats?.citySlug ? {
           city: stats.city,
           citySlug: stats.citySlug,

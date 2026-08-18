@@ -122,8 +122,9 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
 // per kod — koderna finns för att kunna hålla isär kampanjer i attributionen
 // (starGiftCode på user-dokumentet): STJARNA1 = publika kampanjer (FB-grupper
 // m.m.), ARRANGOR1 = arrangörs-outreachen (docs/outreach/), MEDLEM1 =
-// medlemsutskicket via Zoho Campaigns.
-const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1'];
+// medlemsutskicket via Zoho Campaigns, STJARNA2 = nya mejlutskicket (aug -26)
+// — samma mekanik som STJARNA1, egen kod enbart för attributionens skull.
+const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1', 'STJARNA2'];
 
 /** Lös in stjärn-gåvan: sätter starGift='unused' på kontot, max en gång. */
 export const redeemStarGift = region.https.onCall(async (data: any, context: functions.https.CallableContext) => {
@@ -349,18 +350,25 @@ export const sendPushNotification = region.firestore
     });
 
 // ==============================
-// EVENT-PÅMINNELSER (1 h innan start)
+// EVENT-PÅMINNELSER (automatiskt 1 h innan start + klock-knappens egna fönster)
 // ==============================
 
 /**
- * Körs var 5:e minut: hittar event som börjar inom en timme och pushar en
- * påminnelse till alla som ANMÄLT sig (linkEvents/{id}/attendees) eller
- * GILLAT eventet (users där savedEventIds innehåller event-id:t).
+ * Körs var 5:e minut. TVÅ utskicksvägar på samma tick:
  *
- * Dedupe: eventReminders/{eventId} skapas med create() INNAN utskicket —
- * finns dokumentet redan har en tidigare körning tagit eventet, så varje
- * event påminns exakt en gång. Ingen klient kan läsa/skriva collectionen
- * (reglerna är default-deny), bara admin-SDK:t här.
+ *  1) AUTOMATISKA 1h-påminnelsen: hittar event som börjar inom en timme och
+ *     pushar till alla som ANMÄLT sig (linkEvents/{id}/attendees) eller
+ *     GILLAT eventet (users där savedEventIds innehåller event-id:t).
+ *  2) KLOCK-KNAPPENS valda fönster (8h/3h/1h/start) ur eventReminderPrefs —
+ *     se processReminderPrefs nedan.
+ *
+ * Dedupe för väg 1: eventReminders/{eventId} skapas med create() INNAN
+ * utskicket — finns dokumentet redan har en tidigare körning tagit eventet,
+ * så varje event påminns exakt en gång. Dessutom claimas en per-mottagare-
+ * markör i eventReminderSends (delad med väg 2) så samma person aldrig får
+ * dubbla 1h-notiser när hen både är anmäld/gillare OCH valt 1h i klockan.
+ * Ingen klient kan läsa/skriva någon av collectionerna (reglerna är
+ * default-deny resp. explicit stängda), bara admin-SDK:t här.
  *
  * Fönstret är (nu, nu+60 min]: med 5-minuters-schemat fångas eventet första
  * ticken efter att det klivit in i fönstret (~55–60 min innan), och skulle en
@@ -376,7 +384,6 @@ export const eventReminders = region.pubsub
             .where('time', '>', now)
             .where('time', '<=', inOneHour)
             .get();
-        if (eventsSnap.empty) return null;
 
         for (const eventDoc of eventsSnap.docs) {
             const event = eventDoc.data();
@@ -413,10 +420,23 @@ export const eventReminders = region.pubsub
                 const title = `⏰ Om 1 timme: ${event.title}`;
                 const body = `Börjar kl ${startsAt}${event.locationName ? ` · ${event.locationName}` : ''}`;
                 // /e/<slug> studsar direkt in på kartan med eventet öppet.
-                const url = `/e/${eventShareSlug(eventDoc.id)}`;
+                const slug = eventShareSlug(eventDoc.id);
+                const url = `/e/${slug}`;
 
                 let delivered = 0;
                 for (const uid of recipients) {
+                    // Delad exakt-en-gång-markör per (användare, event, fönster)
+                    // med klock-pipelinen (processReminderPrefs): har den redan
+                    // skickat 1h-notisen till den här personen är fönstret taget
+                    // — annars tar vi det här. Vilken väg som än hinner först
+                    // vinner, så ingen får dubbla 1h-notiser.
+                    try {
+                        await db.collection('eventReminderSends')
+                            .doc(reminderSendId(slug, uid, '1h'))
+                            .create({ uid, eventId: eventDoc.id, slug, window: '1h', via: 'auto', sentAt: now });
+                    } catch {
+                        continue;
+                    }
                     try {
                         delivered += await sendPushToUser(uid, {
                             title, body, url,
@@ -434,8 +454,168 @@ export const eventReminders = region.pubsub
                 console.error(`[reminder] Event ${eventDoc.id} kunde inte behandlas:`, err);
             }
         }
+
+        // Väg 2: klock-knappens valda fönster. Egen try/catch så ett fel här
+        // aldrig får det att se ut som att HELA funktionen fallerat (och
+        // omvänt: väg 1 ovan sväljer sina egna fel per event).
+        try {
+            await processReminderPrefs(now);
+        } catch (err) {
+            console.error('[reminder] Klock-pipelinen fallerade:', err);
+        }
         return null;
     });
+
+// ── Klock-knappens påminnelsefönster (eventReminderPrefs) ──────────────────
+
+/** Valbara fönster i eventReminderPrefs.times → minuter före eventstart. */
+const PREF_WINDOWS = { '8h': 8 * 60, '3h': 3 * 60, '1h': 60, 'start': 0 } as const;
+type PrefWindow = keyof typeof PREF_WINDOWS;
+
+/**
+ * Hur långt EFTER fönstrets tidpunkt ett utskick fortfarande är meningsfullt.
+ * Schemat tickar var 5:e minut → normalt skickas inom 0–5 min; 30 min täcker
+ * en handfull missade körningar (deploy, cold start, kortare strul). Äldre än
+ * så skickas INTE ikapp: "Om 8 timmar" som landar 2 h före start är fel
+ * information — hellre tyst och låta nästa valda fönster ta vid.
+ */
+const PREF_WINDOW_GRACE_MS = 30 * 60 * 1000;
+
+/**
+ * Markör-id i eventReminderSends: exakt en notis per (användare, event,
+ * fönster). DELAS av klock-pipelinen och det automatiska 1h-utskicket till
+ * anmälda+gillare — det är själva dubbelskyddet, ändra inte formatet ensidigt.
+ */
+const reminderSendId = (slug: string, uid: string, window: PrefWindow): string =>
+    `${slug}_${uid}_${window}`;
+
+/**
+ * Titel + plats till notistexten. Användarskapade event läses ur linkEvents —
+ * saknas dokumentet är eventet raderat och null betyder "påminn inte".
+ * Skrapade event (id = URL) har inget klient-/billigt läsbart dokument
+ * (aggregatedEvents är stängd och en destinations-skanning per tick vore för
+ * dyr) — eventStats/{slug} bär titeln för allt som någon gång visats, annars
+ * faller notistexten tillbaka på en namnlös formulering. Cachen håller det
+ * till EN läsning per event och körning, oavsett antal prenumeranter.
+ */
+async function reminderEventInfo(
+    eventId: string,
+    slug: string,
+    cache: Map<string, { title: string; locationName: string } | null>,
+): Promise<{ title: string; locationName: string } | null> {
+    if (cache.has(eventId)) return cache.get(eventId) ?? null;
+    let info: { title: string; locationName: string } | null;
+    if (isScrapedEventId(eventId)) {
+        const stats = await db.collection('eventStats').doc(slug).get();
+        info = { title: (stats.get('title') as string) || '', locationName: '' };
+    } else {
+        const snap = await db.collection('linkEvents').doc(eventId).get();
+        info = snap.exists
+            ? { title: (snap.get('title') as string) || '', locationName: (snap.get('locationName') as string) || '' }
+            : null;
+    }
+    cache.set(eventId, info);
+    return info;
+}
+
+/**
+ * Klock-knappen på eventkortet: webben skriver eventReminderPrefs/{slug}_{uid}
+ * med fönstren användaren valt (times ⊆ 8h/3h/1h/start) + eventStart.
+ * KONTRAKTET (fältnamn, doc-id-format, times-värdena) delas med webben —
+ * ändras det här måste webben följa med, precis som eventShareSlug.
+ *
+ * Varje tick hämtas prefs vars event ligger inom [nu − grace, nu + 8 h] (+ en
+ * ticks marginal åt båda hållen): tidigaste möjliga fönster är 8 h före start,
+ * senaste är starten + grace, så inget kan missas trots det snäva intervallet.
+ * Ett fönster skickas när dess tidpunkt passerats men gracen inte löpt ut;
+ * create() på eventReminderSends-markören garanterar exakt en notis per
+ * (användare, event, fönster) även om körningar överlappar — och markören
+ * delas med 1h-utskicket till anmälda+gillare så ingen får dubbla 1h.
+ *
+ * Av-växeln per enhet (vadkul_notiser_av) behöver ingen egen hantering här:
+ * "av" raderar enhetens token ur fcmTokens, och sendPushToUser skickar bara
+ * till tokens som finns — exakt som befintliga utskick respekterar den.
+ */
+async function processReminderPrefs(now: admin.firestore.Timestamp): Promise<void> {
+    const nowMs = now.toMillis();
+    // En extra schematick (5 min) i marginal: gränsfall ska hellre hämtas en
+    // gång för mycket (och fällas av tidsvillkoren nedan) än falla mellan två
+    // queries. Range på ett enda fält → ingen composite-index behövs.
+    const TICK_MS = 5 * 60 * 1000;
+    const prefsSnap = await db.collection('eventReminderPrefs')
+        .where('eventStart', '>', admin.firestore.Timestamp.fromMillis(nowMs - PREF_WINDOW_GRACE_MS - TICK_MS))
+        .where('eventStart', '<=', admin.firestore.Timestamp.fromMillis(nowMs + PREF_WINDOWS['8h'] * 60 * 1000 + TICK_MS))
+        .get();
+    if (prefsSnap.empty) return;
+
+    const infoCache = new Map<string, { title: string; locationName: string } | null>();
+    let sent = 0;
+
+    for (const prefDoc of prefsSnap.docs) {
+        const pref = prefDoc.data();
+        const { uid, eventId, slug, eventStart } = pref;
+        // Reglerna formlåser dokumenten, men bältet kostar inget: ett trasigt
+        // dokument ska inte kunna välta hela körningen.
+        if (typeof uid !== 'string' || typeof eventId !== 'string' || typeof slug !== 'string'
+            || !(eventStart instanceof admin.firestore.Timestamp) || !Array.isArray(pref.times)) {
+            continue;
+        }
+        const startMs = eventStart.toMillis();
+
+        for (const chosen of pref.times) {
+            if (typeof chosen !== 'string' || !(chosen in PREF_WINDOWS)) continue;
+            const window = chosen as PrefWindow;
+            const sendAtMs = startMs - PREF_WINDOWS[window] * 60 * 1000;
+            // Aktuellt = tidpunkten passerad men gracen inte löpt ut …
+            if (nowMs < sendAtMs || nowMs > sendAtMs + PREF_WINDOW_GRACE_MS) continue;
+            // … och för-fönstren ALDRIG efter att eventet börjat (redundant så
+            // länge grace ≤ 1 h, men skyddar den som höjer gracen utan att tänka).
+            if (PREF_WINDOWS[window] > 0 && nowMs >= startMs) continue;
+
+            // Raderat användarskapat event → påminn inte. Ingen markör behövs
+            // för att minnas det: samma villkor fäller fönstret varje tick
+            // tills gracen löpt ut, sedan hämtas prefen aldrig mer.
+            const info = await reminderEventInfo(eventId, slug, infoCache);
+            if (info === null) continue;
+
+            // Ta fönstret: create() kastar ALREADY_EXISTS om en tidigare tick
+            // — eller det automatiska 1h-utskicket — redan skickat.
+            try {
+                await db.collection('eventReminderSends')
+                    .doc(reminderSendId(slug, uid, window))
+                    .create({ uid, eventId, slug, window, via: 'pref', sentAt: now });
+            } catch {
+                continue;
+            }
+
+            const name = info.title || 'eventet du bevakar';
+            const title = window === 'start' ? `🎉 Nu börjar: ${name}`
+                : window === '1h' ? `⏰ Om 1 timme: ${name}`
+                    : window === '3h' ? `⏰ Om 3 timmar: ${name}`
+                        : `⏰ Om 8 timmar: ${name}`;
+            const startsAt = eventStart.toDate()
+                .toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' });
+            const loc = info.locationName ? ` · ${info.locationName}` : '';
+            const body = window === 'start' ? `Börjar nu, kl ${startsAt}${loc}` : `Börjar kl ${startsAt}${loc}`;
+
+            try {
+                sent += await sendPushToUser(uid, {
+                    title, body,
+                    // /e/<slug> studsar direkt in på kartan med eventet öppet.
+                    url: `/e/${slug}`,
+                    type: 'eventReminder',
+                    eventId,
+                });
+            } catch (err) {
+                // Markören är redan tagen — notisen är förlorad, samma
+                // avvägning som väg 1: hellre en tappad notis än risk för
+                // dubbletter. Logga och gå vidare.
+                console.error(`[reminder] Klock-push (${window}) till ${uid} för ${eventId} misslyckades:`, err);
+            }
+        }
+    }
+    if (sent > 0) console.log(`[reminder] Klock-prefs: ${sent} leveranser den här körningen.`);
+}
 
 // ==============================
 // EVENT-BOOST (Stripe)
@@ -459,10 +639,21 @@ export const eventReminders = region.pubsub
  * nedan gör jobbet precis som förut.
  */
 
-/** Priset (Stripe Price-ID) sätts i apps/functions/.env — aldrig av klienten. */
-const BOOST_PRICE_ID = process.env.STRIPE_BOOST_PRICE_ID || '';
-/** Speglar BOOST_DURATION_DAYS i webbens boostService.ts. */
-const BOOST_DAYS = 7;
+/**
+ * Boost i TRE nivåer. Priserna (Stripe Price-ID) sätts i apps/functions/.env —
+ * aldrig av klienten: den skickar bara `tier`, och backend slår upp både pris
+ * och antal dagar här. _WEEK faller tillbaka på gamla STRIPE_BOOST_PRICE_ID så
+ * en deploy UTAN de nya env-nycklarna beter sig exakt som förut (en nivå,
+ * 7 dagar — speglar BOOST_DURATION_DAYS i webbens boostService.ts). Dagarna
+ * åker med som boostDays-metadata på sessionen + payment_intent, så
+ * fulfillment (confirmBoost/applyEventBoost) är helt nivå-omedveten.
+ */
+type BoostTier = 'day' | 'week' | 'month';
+const BOOST_TIERS: Record<BoostTier, { days: number; priceId: string }> = {
+    day: { days: 1, priceId: process.env.STRIPE_BOOST_PRICE_ID_DAY || '' },
+    week: { days: 7, priceId: process.env.STRIPE_BOOST_PRICE_ID_WEEK || process.env.STRIPE_BOOST_PRICE_ID || '' },
+    month: { days: 30, priceId: process.env.STRIPE_BOOST_PRICE_ID_MONTH || '' },
+};
 /**
  * Vart Stripe får skicka tillbaka webbläsaren. Klienten skickar sin egen URL,
  * men den valideras mot den här listan — annars vore funktionen en öppen
@@ -539,8 +730,19 @@ export const createBoostCheckout = functions
         if (context.auth.token?.firebase?.sign_in_provider === 'anonymous') {
             throw new functions.https.HttpsError('unauthenticated', 'Du måste vara inloggad för att boosta ett event.');
         }
-        if (!BOOST_PRICE_ID) {
-            console.error('[boost] STRIPE_BOOST_PRICE_ID saknas i functions-miljön.');
+        // Nivån är valfri — utelämnad (eller null) betyder 'week', så gamla
+        // bundlar som inte skickar tier köper 7-dagarsboosten precis som innan.
+        // Allt annat än de tre kända nivåerna avvisas hårt: tier väljer pris,
+        // och ett påhittat värde ska aldrig tyst bli ett köp på fel nivå.
+        const rawTier = data?.tier;
+        if (rawTier != null && rawTier !== 'day' && rawTier !== 'week' && rawTier !== 'month') {
+            throw new functions.https.HttpsError('invalid-argument', 'Ogiltig boostnivå.');
+        }
+        const tier: BoostTier = rawTier ?? 'week';
+        const { days: boostDays, priceId } = BOOST_TIERS[tier];
+        if (!priceId) {
+            console.error(`[boost] Pris-ID för nivån '${tier}' saknas i functions-miljön `
+                + `(STRIPE_BOOST_PRICE_ID_${tier.toUpperCase()}${tier === 'week' ? ' eller STRIPE_BOOST_PRICE_ID' : ''}).`);
             throw new functions.https.HttpsError('failed-precondition', 'Boost är inte tillgängligt ännu.');
         }
 
@@ -604,13 +806,13 @@ export const createBoostCheckout = functions
 
         // Samma metadata på både sessionen och payment_intent: extensionens
         // payments-dokument speglar payment_intent, och det är den `applyEventBoost` läser.
-        const metadata = { eventId, boostDays: String(BOOST_DAYS), firebaseUID: uid };
+        const metadata = { eventId, boostDays: String(boostDays), firebaseUID: uid };
 
         try {
             const session = await stripe.checkout.sessions.create({
                 mode: 'payment',
                 customer: stripeId,
-                line_items: [{ price: BOOST_PRICE_ID, quantity: 1 }],
+                line_items: [{ price: priceId, quantity: 1 }],
                 success_url: successUrl,
                 cancel_url: returnUrl,
                 allow_promotion_codes: true,
@@ -622,7 +824,7 @@ export const createBoostCheckout = functions
             if (!session.url) {
                 throw new functions.https.HttpsError('internal', 'Fick ingen betalningslänk från Stripe.');
             }
-            console.log(`[boost] Checkout ${session.id} skapad för event ${eventId} (user ${uid}).`);
+            console.log(`[boost] Checkout ${session.id} skapad för event ${eventId} (nivå ${tier}, ${boostDays} d, user ${uid}).`);
             return { url: session.url };
         } catch (err) {
             if (err instanceof functions.https.HttpsError) throw err;

@@ -16,27 +16,67 @@
  * docs/stripe-event-boost.md.
  *
  * Pris och eventId/boostDays-metadata ägs numera av backend — klienten skickar
- * bara vilket event det gäller.
+ * bara vilket event det gäller och vilken nivå (tier) man valt.
  */
 import { functions } from '../lib/firebase';
 
-/** Hur många dagar en boost gäller. Speglas i backend (default där är också 7). */
-export const BOOST_DURATION_DAYS = 7;
+/** Boost-nivåerna: hur länge eventet lyfts fram. Backend mappar tier → pris. */
+export type BoostTier = 'day' | 'week' | 'month';
+
+/** Hur många dagar en boost gäller per nivå. Speglas i backend. */
+export const BOOST_DURATION_DAYS: Record<BoostTier, number> = {
+    day: 1,
+    week: 7,
+    month: 30,
+};
 
 /**
- * Startar checkout för att boosta `eventId`. Redirectar till Stripe vid succé.
- * Kastar med ett läsbart felmeddelande om något går fel (visa via toast).
+ * Nivåerna som köp-UI:t (BoostTierPicker) visar — EN källa för etikett, pris
+ * och säljtext. OBS: priserna här är bara VISNING (platshållare) — det riktiga
+ * beloppet sätts i Stripe och ägs av backend (createBoostCheckout). Ändras
+ * priset i Stripe MÅSTE siffran här uppdateras, annars ljuger knappen.
  */
-export async function startEventBoostCheckout(eventId: string): Promise<void> {
+export const BOOST_TIERS: {
+    tier: BoostTier;
+    label: string;
+    priceLabel: string;
+    pitch: string;
+}[] = [
+    {
+        tier: 'day',
+        label: '1 dag',
+        priceLabel: '99 kr',
+        pitch: 'Ditt event syns på kartan — upp till 100x fler visningar.',
+    },
+    {
+        tier: 'week',
+        label: '1 vecka',
+        priceLabel: '299 kr',
+        pitch: 'Syns på kartan hela veckan — upp till 1000x exponering och 100x fler anmälda.',
+    },
+    {
+        tier: 'month',
+        label: '1 månad',
+        priceLabel: '795 kr',
+        pitch: 'Syns på kartan en hel månad — upp till 1000x exponering och 100x fler anmälda.',
+    },
+];
+
+/**
+ * Startar checkout för att boosta `eventId` på vald nivå. Redirectar till
+ * Stripe vid succé. Kastar med ett läsbart felmeddelande om något går fel
+ * (visa via toast).
+ */
+export async function startEventBoostCheckout(eventId: string, tier: BoostTier): Promise<void> {
     const { httpsCallable } = await import('firebase/functions');
-    const create = httpsCallable<{ eventId: string; returnUrl: string }, { url: string }>(
+    const create = httpsCallable<{ eventId: string; returnUrl: string; tier: BoostTier }, { url: string }>(
         functions,
         'createBoostCheckout',
     );
 
     // returnUrl valideras mot en tillåtlista på servern — den här sidan är bara
     // ett förslag, aldrig något Stripe redirectar till på klientens ord.
-    const res = await create({ eventId, returnUrl: window.location.href });
+    const res = await create({ eventId, returnUrl: window.location.href, tier });
     const url = res.data?.url;
     if (!url) throw new Error('Kunde inte starta betalningen. Försök igen om en stund.');
     window.location.assign(url);

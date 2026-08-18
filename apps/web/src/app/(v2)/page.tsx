@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, BOOST_DURATION_DAYS } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -1367,7 +1367,9 @@ export default function HomePage() {
 
     // Boosta ett event: startar Stripe Checkout (redirect). featuredUntil sätts
     // först av backend efter genomförd betalning — aldrig härifrån.
-    const handleBoostOwnEvent = useCallback(async (eventId: string) => {
+    // Nivån (1 dag/vecka/månad) väljs i kortets BoostTierPicker — hit kommer
+    // bara det färdiga valet; priset ägs av Stripe/backend (tier → belopp).
+    const handleBoostOwnEvent = useCallback(async (eventId: string, tier: BoostTier) => {
         // Utloggad (eller anonym tips-session — `user` är null då) → inloggnings-
         // modalen, inte ett rött fel. Köpet måste knytas till ett konto man kan
         // komma tillbaka till, men den som just tryckt "Boosta" är den mest
@@ -1375,7 +1377,7 @@ export default function HomePage() {
         if (!user) { openLogin('Logga in för att boosta eventet'); return; }
         try {
             const t = toast.loading('Öppnar betalning…');
-            await startEventBoostCheckout(eventId); // redirectar vid succé
+            await startEventBoostCheckout(eventId, tier); // redirectar vid succé
             toast.dismiss(t);
         } catch (err) {
             console.error(err);
@@ -1988,7 +1990,9 @@ export default function HomePage() {
             .then(res => {
                 toast.dismiss(t);
                 if (res.applied) {
-                    toast.success(`Boostat! Eventet lyfts fram i ${BOOST_DURATION_DAYS} dagar. 🚀`);
+                    // Nivåns längd (1/7/30 dagar) ägs av backend och är okänd
+                    // här efter redirecten — håll bekräftelsen generell.
+                    toast.success('Boostat! Eventet lyfts fram på kartan. 🚀');
                 } else if (res.alreadyApplied) {
                     toast.success('Boosten är redan aktiverad. 🚀');
                 } else {
@@ -2173,6 +2177,17 @@ export default function HomePage() {
     // Hydrering: läs users/{uid}.mapCategories EN gång per konto, efter att en
     // ev. inkommande ?kategori=-länk applicerats (länken vinner och blir då
     // baslinje — den skriver INTE över det sparade förrän man själv ändrar).
+    //
+    // PROFILSTYRT STANDARDLÄGE (bara när mapCategories aldrig sparats): barn i
+    // profilen (hasChildren) ⇒ Familj & barn på; 65+ (age) ⇒ PRO på (annars
+    // opt-in). Manual vinner alltid — samma princip som citySource: att
+    // mapCategories FINNS (även som tom array = aktivt "visa alla") betyder
+    // att användaren rört filtret, och då rör automatiken det aldrig igen.
+    // Defaulterna blir därför BASLINJE utan att sparas: först när användaren
+    // själv togglar något skiljer sig valet från baslinjen och spar-effekten
+    // nedan skriver det som ett manuellt val. Profiländringar (barnen växer
+    // ur, man fyller 65) slår alltså igenom vid nästa besök — tills man rört
+    // filtret själv.
     useEffect(() => {
         if (!user || !eventsLoaded || catPrefsUid === user.uid) return;
         let cancelled = false;
@@ -2181,12 +2196,23 @@ export default function HomePage() {
             try {
                 if (!urlHadCategoriesRef.current) {
                     const snap = await getDoc(doc(db, 'users', user.uid));
-                    const saved = snap.exists() ? (snap.data() as { mapCategories?: unknown }).mapCategories : null;
-                    if (Array.isArray(saved)) {
-                        const valid = saved.filter((k): k is string =>
+                    const data = snap.exists()
+                        ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown }
+                        : null;
+                    if (Array.isArray(data?.mapCategories)) {
+                        const valid = data.mapCategories.filter((k): k is string =>
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
                         baseline = [...valid].sort().join(',');
                         if (!cancelled && valid.length) setSelectedCategories(new Set(valid));
+                    } else {
+                        // Aldrig rört filtret → profilens standardläge.
+                        const defaults: string[] = [];
+                        if (data?.hasChildren === true) defaults.push('family');
+                        if (typeof data?.age === 'number' && data.age >= 65) defaults.push('pro');
+                        if (defaults.length) {
+                            baseline = [...defaults].sort().join(',');
+                            if (!cancelled) setSelectedCategories(new Set(defaults));
+                        }
                     }
                 }
             } catch { /* best-effort — kartan störs aldrig av prefs */ }

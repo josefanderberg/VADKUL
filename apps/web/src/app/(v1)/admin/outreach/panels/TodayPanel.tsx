@@ -180,7 +180,7 @@ function CandidateCard({ item, autoGenerate = false }: {
             </div>
             <p className="text-[11px] font-bold text-slate-500">{last}</p>
             <p className="text-[11px] font-bold text-slate-400">{item.scoreExplanation}</p>
-            <DraftGenerator contactId={c.id} mode={c.postingMode} autoStart={autoGenerate} />
+            <DraftGenerator contactId={c.id} contactName={c.name} mode={c.postingMode} autoStart={autoGenerate} />
         </li>
     );
 }
