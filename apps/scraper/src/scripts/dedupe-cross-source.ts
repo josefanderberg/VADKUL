@@ -24,6 +24,7 @@
 import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
+import { stamped } from '../utils/firestoreStamp';
 
 const apply = process.argv.includes('--apply');
 
@@ -223,7 +224,7 @@ async function main() {
     let failed = 0;
     for (const r of toHide) {
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update({ hidden: 1 });
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ hidden: 1 }));
             updated++;
         } catch (e: any) {
             // Firestore "5 NOT_FOUND" → dokumentet är borta, hoppar tyst

@@ -22,6 +22,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { db } from '../config/firebase';
 import { setHidden } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -110,7 +111,7 @@ async function main() {
         // Firestore — kan vara raderat av cleanup-old (gRPC code 5 = NOT_FOUND).
         if (m.row.firestoreId) {
             try {
-                await db.collection('linkEvents').doc(m.row.firestoreId).update({ hidden: true });
+                await db.collection('linkEvents').doc(m.row.firestoreId).update(stamped({ hidden: true }));
                 firestoreOk++;
             } catch (e) {
                 const err = e as Error & { code?: number };

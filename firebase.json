@@ -20,7 +20,8 @@
       "**/node_modules/**"
     ],
     "frameworksBackend": {
-      "region": "europe-north1"
+      "region": "europe-north1",
+      "memory": "512MiB"
     }
   },
   "storage": {

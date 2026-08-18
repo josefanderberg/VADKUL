@@ -68,6 +68,33 @@ function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
  * byggs från SQLite och känner inte till dem) — de hämtas i samma 30s-poll
  * som lagren och slås ihop med kartdatat.
  */
+/**
+ * Boost-overlay för SKRAPADE event: eventBoosts/{slug} skrivs av backend
+ * efter en betald boost — skrapade event har inget linkEvents-dokument att
+ * sätta featuredUntil på (aggregatedEvents är stängd för klientläsning).
+ * Returnerar eventId (källans URL = aggregat-eventets id) → featuredUntil
+ * för alla AKTIVA boostar. Kollektionen är en handfull små dokument som
+ * mest — ingen egress-fälla.
+ */
+async function fetchActiveBoosts(): Promise<Map<string, Date>> {
+    const out = new Map<string, Date>();
+    try {
+        if (!db) return out;
+        const q = query(collection(db, 'eventBoosts'), where('featuredUntil', '>', Timestamp.now()));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+            const v: any = d.data();
+            const until = v.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
+            if (typeof v.eventId === 'string' && v.eventId && until) out.set(v.eventId, until);
+        }
+    } catch (e) {
+        // Overlayn är ren kosmetik ovanpå kartdatan — ett hämtfel får aldrig
+        // stoppa event-flödet, boosten dyker upp vid nästa poll i stället.
+        console.warn('Kunde inte hämta boost-overlayn:', e);
+    }
+    return out;
+}
+
 async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
     try {
         if (!db) return [];
@@ -563,6 +590,7 @@ export const linkEventService = {
         let active = true;
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
+        let boostOverlay: Map<string, Date> = new Map(); // skrapat eventId → featuredUntil (eventBoosts)
         let initialLoadSignaled = false;
         const signalInitialLoad = () => {
             if (initialLoadSignaled || !active) return;
@@ -572,9 +600,21 @@ export const linkEventService = {
 
         // Slå ihop bas-lager + användarevent och skicka till UI:t.
         function emit() {
-            if (!userEvents.length) { callback(baseEvents); return; }
-            const known = new Set(baseEvents.map((e) => e.id));
-            const merged = [...baseEvents, ...userEvents.filter((e) => !known.has(e.id))]
+            // Boost-overlayn först: featuredUntil läggs på matchande aggregat-
+            // event (skrapade boostar bor i eventBoosts, inte på eventet), så
+            // guldnål/stickyness/sortering funkar exakt som för boostade
+            // användarevent. Utgångna boostar filtreras här — ingen städning.
+            let base = baseEvents;
+            if (boostOverlay.size) {
+                const nowMs = Date.now();
+                base = base.map((e) => {
+                    const until = boostOverlay.get(e.id);
+                    return until && until.getTime() > nowMs ? { ...e, featuredUntil: until } : e;
+                });
+            }
+            if (!userEvents.length) { callback(base); return; }
+            const known = new Set(base.map((e) => e.id));
+            const merged = [...base, ...userEvents.filter((e) => !known.has(e.id))]
                 // Boostade event först, därefter kronologiskt som tidigare.
                 .sort((a, b) => {
                     const fa = isEventFeatured(a) ? 1 : 0;
@@ -701,11 +741,15 @@ export const linkEventService = {
         }
 
         // Användarskapade event bor bara i Firestore (inte i aggregaten) → egen,
-        // tätare poll så att nyskapade event syns snabbt.
+        // tätare poll så att nyskapade event syns snabbt. Boost-overlayn åker
+        // med i samma poll: en nyss betald boost på ett skrapat event ska synas
+        // inom ~30 s efter Stripe-återkomsten, och queryn är försumbar bredvid
+        // user-event-hämtningen.
         async function loadUserEvents() {
-            const u = await fetchUserCreatedEvents();
+            const [u, boosts] = await Promise.all([fetchUserCreatedEvents(), fetchActiveBoosts()]);
             if (!active) return;
             userEvents = u;
+            boostOverlay = boosts;
             emit();
         }
 

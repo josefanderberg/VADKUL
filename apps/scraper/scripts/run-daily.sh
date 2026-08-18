@@ -67,6 +67,20 @@ if [ "$JOB_NAME" = "nightly" ]; then
     fi
 fi
 
+# ─── Sync Firestore→SQLite (bara nightly): håll spegeln färsk ───────────────
+# INKREMENTELL (updatedAt > cursor) — några hundra reads, inte hela ~29k-
+# kollektionen. Hel sync körs automatiskt var 7:e dag (självläkning). Körs FÖRE
+# skraporna så dubblettkollen (SQLite-först i dbHelper) svarar på färsk data.
+if [ "$JOB_NAME" = "nightly" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── SYNC FIRESTORE→SQLITE (inkrementell) ──" >> "$LOG_FILE"
+    if npm run sync-to-sqlite >> "$LOG_FILE" 2>&1; then
+        echo "Sync OK" >> "$LOG_FILE"
+    else
+        echo "⚠️ Sync misslyckades — fortsätter ändå (spegeln är som senast synkad)." >> "$LOG_FILE"
+    fi
+fi
+
 # ─── Cleanup (frivilligt) ───────────────────────────────────────────────────
 DELETED_COUNT=""
 if [ "$WITH_CLEANUP" = "--with-cleanup" ]; then

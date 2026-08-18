@@ -2595,12 +2595,14 @@ export default function HomePage() {
                 // cardExpanded || groupListOpen || savedPanelOpen ||
                 // profilePanelOpen || funcBagOpen || pågående sökning.
                 signpostsHidden
-                // Bart kartklick (inte bricka, inte dragning): växlar — om varken
-                // ett eventkort eller multi-event-listan är uppe — vyn mellan
-                // vald dag och hela veckan (Josef 9/8). Ligger inget i vägen är
-                // kartan i sig växeln. Veckovyn kräver att man är tillräckligt
-                // inzoomad (zoom-vakten stänger annars av den direkt), så
-                // utzoomad gör klicket ingenting.
+                // Bart DUBBELklick/-tapp på kartan (inte bricka, inte dragning):
+                // växlar — om varken ett eventkort eller multi-event-listan är
+                // uppe — vyn mellan vald dag och hela veckan (Josef 9/8; krav på
+                // dubbelklick 18/8 — enkelklicket växlade av misstag vid varje
+                // inzoomat kartklick). Ligger inget i vägen är kartan i sig
+                // växeln. Veckovyn kräver att man är tillräckligt inzoomad
+                // (zoom-vakten stänger annars av den direkt), så utzoomad gör
+                // klicket ingenting.
                 // (Skylt-togglingen som också låg här är borttagen 10/8 —
                 // skyltarna följer bildspelet, se signpostsHidden ovan.)
                 onMapTap={() => {

@@ -19,6 +19,7 @@
 
 import { db } from '../config/firebase';
 import { sqlite, setEventTime } from '../utils/sqliteHelper';
+import { stamped } from '../utils/firestoreStamp';
 import { normalizeDateOnlyTime } from '../utils/swedishDate';
 
 const APPLY = process.argv.includes('--apply');
@@ -64,7 +65,7 @@ async function main() {
             if (db && r.firestoreId) {
                 try {
                     await db.collection('linkEvents').doc(r.firestoreId)
-                        .update({ time: next, hasSpecificTime: false });
+                        .update(stamped({ time: next, hasSpecificTime: false }));
                 } catch (e: any) {
                     if (e?.code !== 5) { fsFail++; console.error(`  ❌ Firestore ${r.url.slice(0, 50)}: ${e?.message}`); }
                 }

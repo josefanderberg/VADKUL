@@ -346,8 +346,10 @@ interface V2MapProps {
      *  event) öppnas/stängs. Sidan gömmer då vägskyltarna — de ligger fritt över
      *  kartan och skulle annars hamna ovanpå listan. */
     onGroupListOpenChange?: (open: boolean) => void;
-    /** Fyrar vid ett bart kartklick (inte på en bricka, inte en dragning).
-     *  Sidan växlar vald dag ↔ hela veckan med den. */
+    /** Fyrar vid ett bart DUBBELklick/-tapp på kartan (inte på en bricka,
+     *  inte en dragning). Sidan växlar vald dag ↔ hela veckan med den —
+     *  enkelklick räknas inte längre, det växlade av misstag vid varje
+     *  inzoomat kartklick. */
     onMapTap?: () => void;
     /** Städerna vägskyltarna kan peka mot (bildspelets rutt). Skyltarna bor
      *  inuti kartan för att kunna ankras i marken — se CitySignposts. */
@@ -937,15 +939,18 @@ export default function V2Map({
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
                 // Vald grupp → jättestor sortKey så brickan (och dess "+N"-siffra)
                 // alltid ritas ÖVERST bland GL-brickorna, oavsett grannars count.
-                // Användarskapade event boostas också (under valt) — de är alltid
-                // tända (sticky) och ska vinna staplingen mot importerade grannar.
-                // Träff i emoji-raden lyfts på samma sätt (över stjärna, under
-                // valt): annars kunde en nedtonad granne ligga kvar ovanpå den
-                // sort man just bett om att få se.
+                // Användarskapade OCH boostade (featured — även skrapade, via
+                // eventBoosts-overlayn) event lyfts också (under valt) — de är
+                // alltid tända (sticky) och ska vinna staplingen mot grannarna.
+                // Lyftet ger dem dessutom pushPlainEvents boosted-prefix
+                // (sortKey >= 100_000) = våg 1 i streamen. Träff i emoji-raden
+                // lyfts på samma sätt (över stjärna, under valt): annars kunde
+                // en nedtonad granne ligga kvar ovanpå den sort man just bett
+                // om att få se.
                 properties: {
                     icon: finalIcon, key, count: group.length, color: color ?? '#1e293b',
                     sortKey: group.length
-                        + (group.some(e => e.userCreated) ? 100_000 : 0)
+                        + (group.some(e => e.userCreated || (isEventFeatured(e) && !isEventPast(e, nowMs))) ? 100_000 : 0)
                         + (drawStar ? 200_000 : 0)
                         + (highlightEmoji != null && hit ? 400_000 : 0)
                         + (isSel ? 1_000_000 : 0),
@@ -1932,7 +1937,13 @@ export default function V2Map({
                     // samma force-reveal som userCreated, tills eventet passerat
                     // (därefter är stjärnan förbrukad och vanliga past-
                     // släckningen gäller, ingen specialbehandling).
-                    (starredEventIds.has(e.id) && !isEventPast(e, stickyNowMs))
+                    (starredEventIds.has(e.id) && !isEventPast(e, stickyNowMs)) ||
+                    // Boostade (featured) event lyser också för alla — betald
+                    // synlighet ska inte behöva skrapas fram. Gäller även
+                    // SKRAPADE event: deras featuredUntil läggs på via
+                    // eventBoosts-overlayn i linkEventService. Släcks när
+                    // eventet passerat, precis som stjärnan.
+                    (isEventFeatured(e) && !isEventPast(e, stickyNowMs))
                 )) sticky.add(key);
             }
         }
@@ -2107,7 +2118,14 @@ export default function V2Map({
             // renderas den som en utfälld textrad ("MapLibre | © CARTO …") längst
             // ner — vi vill i stället ha en egen i compact-läge (liten ⓘ-knapp) som
             // läggs till direkt efter init nedan.
-            attributionControl: false
+            attributionControl: false,
+            // Dubbelklick/dubbeltapp är PERIODVÄXELN (Idag ↔ Hela veckan) — se
+            // click-handlern. Zoomen på den gesten MÅSTE av här: dels skulle
+            // varje växling annars också zooma, dels preventDefault:ar mobilens
+            // tap-zoom andra tappens touchend så inget andra click-event når
+            // oss och dubbeltappen aldrig skulle kännas igen. Nyp och scroll
+            // zoomar som vanligt.
+            doubleClickZoom: false
         });
         } catch (err) {
             // WebGL kunde inte initieras (ofta "blocked" efter en tidigare
@@ -2492,31 +2510,50 @@ export default function V2Map({
 
         // ZOOM STOPPAR INTE BILDSPELET (Josef 9/8): siffrorna räknar det som
         // syns i vyn, så att zooma ut och in ÄR att utforska — man ser talen
-        // och brickorna växa och krympa. Därför ingen 'wheel'/'dblclick'-
-        // avstängning längre, och en tvåfingersnyp (pinch) räknas som zoom.
+        // och brickorna växa och krympa. Därför ingen 'wheel'-avstängning,
+        // och en tvåfingersnyp (pinch) räknas som zoom. (Dubbelklickzoomen är
+        // av sedan 18/8 — gesten är periodväxeln, se map-init — men det är en
+        // gest-omtolkning, inte en bildspels-stopp.)
         // Ett enfingerstouch är däremot början på en panorering eller en tapp
         // och stoppar som förut.
         map.on('touchstart', (e) => {
             if (isPinch(e.originalEvent)) return;
             handleMapUserInteractionRef.current();
         });
+        // DUBBELKLICK krävs för periodväxlingen (Josef 18/8): inzoomad bytte
+        // varje bart kartklick Idag ↔ Hela veckan av misstag. Två bara klick
+        // inom fönstret nedan = växla; ett ensamt gör ingenting längre.
+        // Egen detektering via click-PARET (inte maplibres 'dblclick') så
+        // mobilens dubbeltapp räknas likadant — kräver att doubleClickZoom är
+        // avstängd i map-init, se kommentaren där.
+        const DOUBLE_TAP_MS = 350;
+        const DOUBLE_TAP_MAX_DIST = 40; // px — fingret träffar sällan exakt samma punkt
+        let lastBareTap: { time: number; x: number; y: number } | null = null;
         map.on('click', (e) => {
             handleMapUserInteractionRef.current();
-            // Ett BART kartklick (inte på en bricka, och inte en dragning —
-            // maplibre skickar ingen 'click' efter en pan) växlar vald dag ↔
-            // hela veckan: ligger inget i vägen är kartan i sig växeln.
+            // Bara ett BART kartklick (inte på en bricka, och inte en dragning —
+            // maplibre skickar ingen 'click' efter en pan) räknas som halva
+            // dubbelklicket.
             //
             // MEN: stängde samma klick ett eventkort/en multi-event-lista gör det
-            // bara det — perioden byts inte förrän man klickar på kartan med allt
-            // stängt (flaggan sätts i tomma-kartan-handlern ovan, som kör först).
+            // bara det — klicket räknas inte ens som första halvan (flaggan
+            // sätts i tomma-kartan-handlern ovan, som kör först).
             const suppressed = suppressMapTapRef.current;
             suppressMapTapRef.current = false;
-            if (suppressed) return;
-            if (!onMapTapRef.current) return;
+            if (suppressed || !onMapTapRef.current) { lastBareTap = null; return; }
             const hits = map.queryRenderedFeatures(e.point, { layers: glHitLayers.filter(id => layerExists(map, id)) });
-            if (hits.length === 0) onMapTapRef.current();
+            if (hits.length > 0) { lastBareTap = null; return; }
+            const prev = lastBareTap;
+            lastBareTap = { time: performance.now(), x: e.point.x, y: e.point.y };
+            if (prev
+                && lastBareTap.time - prev.time <= DOUBLE_TAP_MS
+                && Math.hypot(e.point.x - prev.x, e.point.y - prev.y) <= DOUBLE_TAP_MAX_DIST) {
+                lastBareTap = null; // ett trippelklick ska inte växla en gång till
+                onMapTapRef.current();
+            }
         });
-        // (Ingen 'dblclick'/'wheel'-avstängning — båda är ren zoom, se ovan.)
+        // (Ingen 'wheel'-avstängning — ren zoom, se ovan. Dubbelklickets zoom
+        // är däremot av sedan gesten blev periodväxeln, se map-init.)
 
         // Real-time projection updater: håller multi-event-listan fastnitad vid
         // sin brickas geo-punkt när kartan pannas/zoomas.
@@ -3144,8 +3181,10 @@ export default function V2Map({
             const isUserCreated = count === 1 && isVadkulHostedEvent(rep);
 
             // Boostat ("featured") event: betald framlyftning. Bara enskilda
-            // markörer (grupper cyklar och behåller standardutseende). Featured är
-            // alltid också userCreated, så isSpecialGroup fångar redan brickan.
+            // markörer (grupper cyklar och behåller standardutseende). Sedan
+            // 18/8 kan även SKRAPADE event vara featured (eventBoosts-
+            // overlayn) — de hålls tända via sticky-setet och lyfts i
+            // staplingen via sortKey, precis som userCreated.
             const isFeatured = count === 1 && isEventFeatured(rep);
 
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.

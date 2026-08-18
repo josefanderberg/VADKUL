@@ -1785,10 +1785,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             && (selectedEvent.anonTip
                                 || (currentUserUid && selectedEvent.hostUid === currentUserUid)))}
                         onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
-                        // Boost: alla inloggade får boosta ALLA användarskapade event
-                        // (5/8 — inte längre bara sina egna). Skrapade event kan inte
-                        // boostas än — de bor inte i linkEvents (se applyEventBoost).
-                        onBoost={onBoostOwnEvent && selectedEvent.userCreated ? () => onBoostOwnEvent(selectedEvent.id) : undefined}
+                        // Boost: alla inloggade får boosta ALLA event — användarskapade
+                        // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
+                        // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
+                        onBoost={onBoostOwnEvent ? () => onBoostOwnEvent(selectedEvent.id) : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).

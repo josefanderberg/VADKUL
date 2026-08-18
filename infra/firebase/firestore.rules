@@ -531,6 +531,14 @@ service cloud.firestore {
     // att förlänga genom att ladda om success-URL:en.
     match /boostPayments/{sessionId} { allow read, write: if false; }
 
+    // Boost-overlay för SKRAPADE event: de har inget linkEvents-dokument
+    // (aggregatedEvents är stängd för klientläsning sedan egress-fixen), så
+    // deras featuredUntil bor här — ett litet dokument per boostat event,
+    // id = eventShareSlug(url). Alla läser (en handfull små dokument, ingen
+    // egress-fälla); skrivs ENBART av Cloud Functions efter verifierad
+    // Stripe-betalning — kunde klienten skriva vore boosten gratis.
+    match /eventBoosts/{boostId} { allow read: if true; allow write: if false; }
+
     // 22. SENASTE AKTIVITET — ETT välkänt dokument (latestComment) som kartans
     // "senaste kommentaren"-bubbla lyssnar på. Speglas av chattens sendMessage
     // (en collectionGroup-query över alla messages skulle även öppna privata

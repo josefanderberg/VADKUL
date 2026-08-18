@@ -8,6 +8,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import {
     upsertEvent, sqliteEventExists, getSqliteEvent, setEventStatus,
     recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact,
+    getSyncMeta, setSyncMeta,
 } from './sqliteHelper';
 
 beforeAll(() => {
@@ -80,5 +81,15 @@ describe('known_venues', () => {
         upsertKnownVenue('Vida Arena', 56.8797, 14.7736, 'Växjö');
         expect(lookupVenueExact('Vida Arena')).toEqual([56.8797, 14.7736]);
         expect(lookupVenueExact('Okänd Arena')).toBeNull();
+    });
+});
+
+describe('sync_meta', () => {
+    it('okänd nyckel → null; set + överskrivning fungerar', () => {
+        expect(getSyncMeta('test.cursor')).toBeNull();
+        setSyncMeta('test.cursor', '2026-08-17T00:30:00.000Z');
+        expect(getSyncMeta('test.cursor')).toBe('2026-08-17T00:30:00.000Z');
+        setSyncMeta('test.cursor', '2026-08-18T00:30:00.000Z');
+        expect(getSyncMeta('test.cursor')).toBe('2026-08-18T00:30:00.000Z');
     });
 });

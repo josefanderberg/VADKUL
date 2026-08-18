@@ -480,6 +480,49 @@ const safeReturnUrl = (raw: unknown): string => {
     }
 };
 
+/**
+ * Skrapade event har källans URL som id (url är primärnyckeln i hela
+ * pipelinen); linkEvents-dokument har Firestore-id:n, som aldrig kan
+ * innehålla snedstreck. Snedstrecket skiljer alltså spåren åt.
+ */
+const isScrapedEventId = (id: string): boolean => id.includes('/');
+
+/**
+ * Var boosten bor. Användarskapade event: featuredUntil på själva
+ * linkEvents-dokumentet. Skrapade event har inget dokument klienten får läsa
+ * (aggregatedEvents är stängd sedan egress-fixen) — deras boost läggs i
+ * overlay-kollektionen eventBoosts/{slug}, som webben läser och mappar
+ * tillbaka på kart-eventen via fältet eventId. Slug i stället för URL som
+ * dokument-id eftersom Firestore-id:n inte får innehålla snedstreck — samma
+ * FNV-hash som /e/-länkarna, så id:t är stabilt för alltid.
+ */
+const boostTargetRef = (eventId: string) =>
+    isScrapedEventId(eventId)
+        ? db.collection('eventBoosts').doc(eventShareSlug(eventId))
+        : db.collection('linkEvents').doc(eventId);
+
+/**
+ * Finns det skrapade eventet i aggregatens destinations-lager? Kollas innan
+ * checkout skapas — ingen ska betala för ett id som inte pekar på något.
+ * Destinations är antingen ett doc med events-array eller ett index-doc med
+ * shardCount + destinations_N-shards; några få admin-reads, och boost-köp är
+ * sällsynta, så kostnaden är försumbar.
+ */
+async function scrapedEventExists(eventId: string): Promise<boolean> {
+    const index = await db.collection('aggregatedEvents').doc('destinations').get();
+    if (!index.exists) return false;
+    const data = index.data() || {};
+    const inArr = (events: unknown) =>
+        Array.isArray(events) && events.some((e: any) => e?.id === eventId);
+    if (inArr(data.events)) return true;
+    const shardCount = typeof data.shardCount === 'number' ? data.shardCount : 0;
+    for (let i = 0; i < shardCount; i++) {
+        const shard = await db.collection('aggregatedEvents').doc(`destinations_${i}`).get();
+        if (inArr(shard.data()?.events)) return true;
+    }
+    return false;
+}
+
 export const createBoostCheckout = functions
     // invoker: 'public' — nya Gen1-funktioner får INTE allUsers-invoker
     // automatiskt längre, och utan den svarar Google 403 innan koden startar
@@ -510,15 +553,22 @@ export const createBoostCheckout = functions
         // inget eget dokument — dokumentet är seriens bas (samma avskalning som
         // vid radering). Boosten hamnar alltså på serien, vilket är rätt: alla
         // tillfällen lyfts. Utan den här raden skulle varje serie-tillfälle
-        // avvisas som "finns inte".
-        const eventId = rawEventId.split('__')[0];
+        // avvisas som "finns inte". Skrapade id:n är URL:er och lämnas orörda —
+        // en URL kan mycket väl innehålla "__" utan att vara en serie.
+        const eventId = isScrapedEventId(rawEventId) ? rawEventId : rawEventId.split('__')[0];
 
-        // Boosten sätts på linkEvents/{eventId}. Finns inte dokumentet kan
-        // `applyEventBoost` aldrig applicera den — då ska ingen betala heller.
-        // (Det är därför skrapade event inte går att boosta: de bor inte här.)
-        const eventSnap = await db.collection('linkEvents').doc(eventId).get();
-        if (!eventSnap.exists) {
-            throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+        // Finns eventet inte ska ingen betala heller. Användarskapade valideras
+        // mot linkEvents (dit boosten skrivs); skrapade mot aggregatens
+        // destinations-lager (boosten hamnar i eventBoosts-overlayn).
+        if (isScrapedEventId(eventId)) {
+            if (!(await scrapedEventExists(eventId))) {
+                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+            }
+        } else {
+            const eventSnap = await db.collection('linkEvents').doc(eventId).get();
+            if (!eventSnap.exists) {
+                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+            }
         }
 
         const returnUrl = safeReturnUrl(data?.returnUrl);
@@ -639,15 +689,19 @@ export const confirmBoost = functions
         const paymentId = typeof session.payment_intent === 'string' ? session.payment_intent : sessionId;
 
         const receiptRef = db.collection('boostPayments').doc(sessionId);
-        const eventRef = db.collection('linkEvents').doc(eventId);
+        const scraped = isScrapedEventId(eventId);
+        const eventRef = boostTargetRef(eventId);
 
         const result = await db.runTransaction(async (tx) => {
             const [receipt, evt] = await Promise.all([tx.get(receiptRef), tx.get(eventRef)]);
             if (receipt.exists) return { applied: false, alreadyApplied: true };
-            if (!evt.exists) {
+            // Skrapade event: overlay-dokumentet skapas vid FÖRSTA boosten, så
+            // att det saknas är normalt. Användarskapade: dokumentet ÄR eventet
+            // och måste finnas.
+            if (!scraped && !evt.exists) {
                 throw new functions.https.HttpsError('not-found', 'Eventet finns inte längre.');
             }
-            const evtData = evt.data() || {};
+            const evtData = evt.exists ? (evt.data() || {}) : {};
             const now = Date.now();
             const currentUntilMs =
                 evtData.featuredUntil instanceof admin.firestore.Timestamp ? evtData.featuredUntil.toMillis() : 0;
@@ -656,10 +710,21 @@ export const confirmBoost = functions
                 uid, eventId, boostDays, paymentId, sessionId,
                 appliedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            tx.update(eventRef, {
-                featuredUntil: admin.firestore.Timestamp.fromDate(until),
-                featuredPaymentId: paymentId,
-            });
+            if (scraped) {
+                // eventId med i dokumentet: slug-hashen är enkelriktad och
+                // klienten behöver ursprungs-id:t (URL:en) för att para ihop
+                // overlayn med rätt kart-event.
+                tx.set(eventRef, {
+                    eventId,
+                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                    featuredPaymentId: paymentId,
+                }, { merge: true });
+            } else {
+                tx.update(eventRef, {
+                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                    featuredPaymentId: paymentId,
+                });
+            }
             return { applied: true, until: until.toISOString() };
         });
 
@@ -710,15 +775,19 @@ export const applyEventBoost = region.firestore
         // Säkra gränser: 1–90 dagar, default 7.
         const boostDays = Math.max(1, Math.min(90, parseInt(metadata.boostDays || '7', 10) || 7));
 
-        const eventRef = db.collection('linkEvents').doc(eventId);
+        const scraped = isScrapedEventId(eventId);
+        const eventRef = boostTargetRef(eventId);
         try {
             await db.runTransaction(async (tx) => {
                 const snap = await tx.get(eventRef);
-                if (!snap.exists) {
+                // Skrapade event: overlay-dokumentet skapas vid första boosten —
+                // att det saknas är normalt. Användarskapade: dokumentet ÄR
+                // eventet och måste finnas.
+                if (!scraped && !snap.exists) {
                     console.error(`[boost] Event ${eventId} saknas — betalning ${paymentId} (user ${uid}) kunde inte appliceras.`);
                     return;
                 }
-                const data = snap.data() || {};
+                const data = snap.exists ? (snap.data() || {}) : {};
                 // Redan applicerad av confirmBoost när användaren kom tillbaka från
                 // Stripe (samma payment_intent-id på båda vägarna). Utan den här
                 // kollen skulle en fungerande webhook lägga på boosten en gång till.
@@ -730,8 +799,8 @@ export const applyEventBoost = region.firestore
                 // lyfta ett event, inte bara ägaren (fans/föreningar/arrangörer utan
                 // eget konto för eventet). Betalningen är redan Stripe-verifierad och
                 // boost ger bara synlighet, så ägarkravet togs bort. Betalare + ägare
-                // loggas för spårbarhet.
-                if (data.hostUid !== uid) {
+                // loggas för spårbarhet. (Skrapade event har ingen ägare att logga.)
+                if (!scraped && data.hostUid !== uid) {
                     console.log(`[boost] ${uid} boostar annans event ${eventId} (hostUid=${data.hostUid ?? 'okänd'}).`);
                 }
                 // Förläng från det senare av "nu" och en ev. pågående boost.
@@ -740,10 +809,20 @@ export const applyEventBoost = region.firestore
                     data.featuredUntil instanceof admin.firestore.Timestamp ? data.featuredUntil.toMillis() : 0;
                 const base = Math.max(now, currentUntilMs);
                 const until = new Date(base + boostDays * 24 * 60 * 60 * 1000);
-                tx.update(eventRef, {
-                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
-                    featuredPaymentId: paymentId,
-                });
+                if (scraped) {
+                    // eventId med i dokumentet — se confirmBoost: hashen är
+                    // enkelriktad, klienten parar via URL:en.
+                    tx.set(eventRef, {
+                        eventId,
+                        featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                        featuredPaymentId: paymentId,
+                    }, { merge: true });
+                } else {
+                    tx.update(eventRef, {
+                        featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                        featuredPaymentId: paymentId,
+                    });
+                }
             });
             console.log(`[boost] Event ${eventId} boostat ${boostDays} dagar (betalning ${paymentId}, user ${uid}).`);
         } catch (err) {

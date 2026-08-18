@@ -10,7 +10,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const h = vi.hoisted(() => {
     const committedBatches: any[][] = [];
     const upsertCalls: any[] = [];
-    const state = { autoId: 0 };
+    const addedDocs: any[] = [];
+    const state = {
+        autoId: 0,
+        queryCount: 0,                                   // antal where-queries mot Firestore
+        queryResult: { empty: true, docs: [] as any[] }, // svar på nästa query
+    };
     const fakeDb = {
         batch: () => {
             const ops: any[] = [];
@@ -19,9 +24,20 @@ const h = vi.hoisted(() => {
                 commit: async () => { committedBatches.push(ops); },
             };
         },
-        collection: () => ({ doc: () => ({ id: `auto-${++state.autoId}` }) }),
+        collection: () => ({
+            doc: () => ({ id: `auto-${++state.autoId}` }),
+            where: () => ({
+                limit: () => ({
+                    get: async () => { state.queryCount++; return state.queryResult; },
+                }),
+            }),
+            add: async (data: any) => {
+                addedDocs.push(data);
+                return { id: `added-${++state.autoId}` };
+            },
+        }),
     };
-    return { committedBatches, upsertCalls, state, fakeDb };
+    return { committedBatches, upsertCalls, addedDocs, state, fakeDb };
 });
 
 vi.mock('../config/firebase', () => ({ db: h.fakeDb }));
@@ -33,7 +49,11 @@ vi.mock('./sqliteHelper', () => ({
     setEventTime: vi.fn(),
 }));
 
-import { addEventsBatch, chunkArray } from './dbHelper';
+import { addEventsBatch, addEventToDb, getEventFromDb, eventExistsInDb, chunkArray } from './dbHelper';
+import { getSqliteEvent, sqliteEventExists } from './sqliteHelper';
+
+const mockedGetSqliteEvent = vi.mocked(getSqliteEvent);
+const mockedSqliteEventExists = vi.mocked(sqliteEventExists);
 
 const committedBatches = h.committedBatches;
 const upsertCalls = h.upsertCalls;
@@ -41,8 +61,14 @@ const upsertCalls = h.upsertCalls;
 beforeEach(() => {
     committedBatches.length = 0;
     upsertCalls.length = 0;
+    h.addedDocs.length = 0;
     h.state.autoId = 0;
+    h.state.queryCount = 0;
+    h.state.queryResult = { empty: true, docs: [] };
     vi.clearAllMocks();
+    // Explicita defaults — mockReturnValue i ett test får inte läcka till nästa.
+    mockedGetSqliteEvent.mockReturnValue(null);
+    mockedSqliteEventExists.mockReturnValue(false);
 });
 
 describe('chunkArray', () => {
@@ -93,5 +119,73 @@ describe('addEventsBatch', () => {
         const r = await addEventsBatch([]);
         expect(r.written).toBe(0);
         expect(committedBatches).toHaveLength(0);
+    });
+
+    it('batch-skrivna dokument får updatedAt-stämpel (krav för inkrementell sync)', async () => {
+        await addEventsBatch([ev('stamp')]);
+        expect(committedBatches[0][0].data.updatedAt).toBeInstanceOf(Date);
+    });
+});
+
+describe('addEventToDb — dubblettkoll mot SQLite-spegeln', () => {
+    const ev = { title: 'E', url: 'https://t.se/known', time: new Date('2026-07-01T19:00:00'), hasSpecificTime: true };
+
+    it('rad med firestoreId i spegeln → INGEN Firestore-query, ingen add', async () => {
+        mockedGetSqliteEvent.mockReturnValue({ url: ev.url, firestoreId: 'fs-123' });
+        await addEventToDb({ ...ev });
+        expect(h.state.queryCount).toBe(0);
+        expect(h.addedDocs).toHaveLength(0);
+        expect(upsertCalls).toHaveLength(1);   // lokala spegeln uppdateras ändå
+    });
+
+    it('rad utan firestoreId + doc finns i Firestore → query + id-backfill, ingen add', async () => {
+        mockedGetSqliteEvent.mockReturnValue({ url: ev.url, firestoreId: null });
+        h.state.queryResult = { empty: false, docs: [{ id: 'fs-found' }] as any[] };
+        await addEventToDb({ ...ev });
+        expect(h.state.queryCount).toBe(1);
+        expect(h.addedDocs).toHaveLength(0);
+        expect(upsertCalls[upsertCalls.length - 1].firestoreId).toBe('fs-found');
+    });
+
+    it('okänd URL → query + add med updatedAt-stämpel', async () => {
+        await addEventToDb({ ...ev, url: 'https://t.se/new' });
+        expect(h.state.queryCount).toBe(1);
+        expect(h.addedDocs).toHaveLength(1);
+        expect(h.addedDocs[0].updatedAt).toBeInstanceOf(Date);
+        expect(upsertCalls[upsertCalls.length - 1].firestoreId).toMatch(/^added-/);
+    });
+});
+
+describe('getEventFromDb — SQLite-spegeln först', () => {
+    it('träff i spegeln → ingen Firestore-query', async () => {
+        const row = { url: 'https://t.se/x', title: 'Lokal', firestoreId: 'fs-1' };
+        mockedGetSqliteEvent.mockReturnValue(row);
+        expect(await getEventFromDb('https://t.se/x')).toBe(row);
+        expect(h.state.queryCount).toBe(0);
+    });
+
+    it('miss i spegeln → Firestore-fallback', async () => {
+        h.state.queryResult = { empty: false, docs: [{ id: 'fs-2', data: () => ({ title: 'Fjärr' }) }] as any[] };
+        const got = await getEventFromDb('https://t.se/y');
+        expect(got.title).toBe('Fjärr');
+        expect(h.state.queryCount).toBe(1);
+    });
+
+    it('miss överallt → null', async () => {
+        expect(await getEventFromDb('https://t.se/z')).toBeNull();
+        expect(h.state.queryCount).toBe(1);
+    });
+});
+
+describe('eventExistsInDb', () => {
+    it('träff i spegeln → ingen Firestore-query', async () => {
+        mockedSqliteEventExists.mockReturnValue(true);
+        expect(await eventExistsInDb('https://t.se/finns')).toBe(true);
+        expect(h.state.queryCount).toBe(0);
+    });
+
+    it('miss i spegeln → Firestore-fallback', async () => {
+        expect(await eventExistsInDb('https://t.se/saknas')).toBe(false);
+        expect(h.state.queryCount).toBe(1);
     });
 });

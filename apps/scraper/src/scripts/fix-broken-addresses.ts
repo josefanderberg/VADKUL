@@ -23,6 +23,7 @@ import puppeteer, { Page } from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { db } from '../config/firebase';
+import { stamped } from '../utils/firestoreStamp';
 import { LocationInstrument } from '../scrapers/facebook/location';
 import { extractEventDetails } from '../scrapers/facebook/extractor';
 import { geocodeVenueSweden, cleanVenueName } from '../utils/venueCoordinates';
@@ -596,7 +597,7 @@ async function fixAll() {
             };
             if (candidateName) updateData.locationName = candidateName;
 
-            await db!.collection('linkEvents').doc(evt.id).update(updateData);
+            await db!.collection('linkEvents').doc(evt.id).update(stamped(updateData));
             fixed++;
             console.log(`   ✅ FIXAD (${method}) → addr="${candidateAddr}" lat,lng=${newLat.toFixed(4)},${newLng.toFixed(4)}`);
             summary.push({ id: evt.id, title: evt.title, before: evt.extractedAddress, after: candidateAddr, method, status: 'fixed' });
