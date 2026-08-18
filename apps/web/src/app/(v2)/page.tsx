@@ -760,10 +760,11 @@ export default function HomePage() {
         startTransition(() => setDayOffset(o => Math.max(0, o + delta)));
     }, []);
 
-    // Kalenderknappen på stadsrutan (Josef 10/8): står man på Idag finns ingen
-    // bakåtpil, och på dess plats sitter i stället en knapp som öppnar
-    // MÅNADSKALENDERN direkt — de gamla snabbvalen (Idag/Imorgon/veckodagarna
-    // i navbarens dagväljare) är borta; specifika datum väljer man här.
+    // Kalenderknappen på stadsrutan (Josef 10/8; alltid-synlig 18/8): sitter
+    // ALLTID uppe vid stadsnamnets rad — den byter inte längre plats med
+    // bakåtpilen — och öppnar MÅNADSKALENDERN direkt. De gamla snabbvalen
+    // (Idag/Imorgon/veckodagarna i navbarens dagväljare) är borta;
+    // specifika datum väljer man här.
     // Precis som dagpilarna stoppar valet inte skyltläget, det tystar bara
     // landningspulsen. Själva kalendern är webbläsarens egen datumväljare på
     // ett osynligt date-fält som ankras vid knappen.
@@ -2361,10 +2362,13 @@ export default function HomePage() {
                 åt HÖGER på sin rad (som en kvittorad).
                 HELA RUTAN ÄR EN KNAPP (Josef 10/8): ett klick växlar mellan
                 vald dag och hela veckan.
-                DAGPILARNA vid stadsnamnet stegar en dag fram/tillbaka.
+                DAGPILARNA sitter i höjd med DAGRADEN, inte stadsnamnet
+                (Josef 18/8: vid namnet lästes de som stadsbyte) och stegar
+                en dag fram/tillbaka.
                 Bakåtpilen finns bara när det FINNS en dag att gå tillbaka till
-                (idag är botten) — på Idag sitter i stället KALENDERKNAPPEN på
-                dess plats (Josef 10/8) och öppnar månadskalendern direkt för
+                (idag är botten) — på Imorgon står den alltså till vänster om
+                ordet Imorgon. KALENDERKNAPPEN sitter ALLTID kvar uppe vid
+                stadsnamnet (Josef 18/8) och öppnar månadskalendern direkt för
                 ett specifikt datum. Knapparna ligger absolut placerade OVANPÅ
                 rutknappen i stället för inuti den: en <button> i en <button>
                 är ogiltig HTML. px-9 på plattan ger dem plats utan att rutan
@@ -2395,8 +2399,12 @@ export default function HomePage() {
                     : 'Växla mellan dagen och hela veckan'}
                 className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-9 py-3 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
             >
-                {/* 1. Stadsnamn högst upp — följer kartan (liveCityName) */}
-                <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none">
+                {/* 1. Stadsnamn högst upp — följer kartan (liveCityName).
+                       sm:leading-none MÅSTE upprepas: sm:text-2xl sätter om
+                       line-height till 32px i breakpointen och vinner annars
+                       över bara leading-none — då glider raderna under ner
+                       8 px på desktop och dagpilarna hamnar för högt. */}
+                <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none">
                     {liveCityName}
                 </span>
 
@@ -2463,53 +2471,58 @@ export default function HomePage() {
                 </span>
             </button>
 
-            {/* 2b. Vänsterplatsen, i höjd med stadsnamnets rad. Syskon till
-                   rutknappen (inte barn) — nästlade knappar är ogiltig HTML.
-                   Bakåtpil när det finns en dag kvar bakåt; på Idag sitter i
-                   stället KALENDERKNAPPEN där (Josef 10/8) och öppnar
-                   månadskalendern direkt. */}
-            {dayOffset > 0 ? (
+            {/* 2b. KALENDERKNAPPEN — alltid kvar uppe vid stadsnamnets rad
+                   (Josef 18/8: den byter inte längre plats med bakåtpilen).
+                   Syskon till rutknappen (inte barn) — nästlade knappar är
+                   ogiltig HTML. Öppnar månadskalendern direkt. */}
+            <button
+                type="button"
+                onClick={openMonthCalendar}
+                aria-label="Välj datum i kalendern"
+                title="Välj datum"
+                className="pointer-events-auto absolute left-0.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+            >
+                <CalendarDays size={16} strokeWidth={2.5} />
+            </button>
+            {/* Osynligt date-fält PÅ knappens plats: webbläsaren ankrar
+                månadskalendern vid fältet, så den öppnar vid knappen.
+                aria-hidden + tabIndex -1 — knappen är enda vägen in. */}
+            <input
+                ref={calendarInputRef}
+                type="date"
+                aria-hidden="true"
+                tabIndex={-1}
+                min={toInputDate(new Date())}
+                defaultValue={toInputDate(new Date())}
+                onChange={e => handleCalendarPick(e.target.value)}
+                className="absolute left-0.5 top-2.5 h-8 w-8 opacity-0 pointer-events-none"
+            />
+
+            {/* 2c. DAGPILARNA — i höjd med DAGRADEN (Idag/Imorgon-raden, inte
+                   stadsnamnet; top-värdet = py-3 + namnrad + gap ner till
+                   växelreglagets första rad, UPPMÄTT i webbläsaren 18/8 på
+                   båda breakpoints — kräver sm:leading-none på namnet, se
+                   kommentaren där). Syskon till rutknappen (inte barn) —
+                   nästlade knappar är ogiltig HTML. Bakåtpilen bara när det
+                   finns en dag kvar bakåt (idag är botten) — på Imorgon står
+                   den till vänster om ordet Imorgon. */}
+            {dayOffset > 0 && (
                 <button
                     type="button"
                     onClick={() => handleTourDayStep(-1)}
                     aria-label={`Visa ${getDayLabel(dayOffset - 1, 1).toLowerCase()}`}
                     title={getDayLabel(dayOffset - 1, 1)}
-                    className="pointer-events-auto absolute left-0.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+                    className="pointer-events-auto absolute left-0.5 top-[43px] sm:top-[47px] flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
                 >
                     <ChevronLeft size={18} strokeWidth={2.5} />
                 </button>
-            ) : (
-                <>
-                    <button
-                        type="button"
-                        onClick={openMonthCalendar}
-                        aria-label="Välj datum i kalendern"
-                        title="Välj datum"
-                        className="pointer-events-auto absolute left-0.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
-                    >
-                        <CalendarDays size={16} strokeWidth={2.5} />
-                    </button>
-                    {/* Osynligt date-fält PÅ knappens plats: webbläsaren ankrar
-                        månadskalendern vid fältet, så den öppnar vid knappen.
-                        aria-hidden + tabIndex -1 — knappen är enda vägen in. */}
-                    <input
-                        ref={calendarInputRef}
-                        type="date"
-                        aria-hidden="true"
-                        tabIndex={-1}
-                        min={toInputDate(new Date())}
-                        defaultValue={toInputDate(new Date())}
-                        onChange={e => handleCalendarPick(e.target.value)}
-                        className="absolute left-0.5 top-2.5 h-8 w-8 opacity-0 pointer-events-none"
-                    />
-                </>
             )}
             <button
                 type="button"
                 onClick={() => handleTourDayStep(1)}
                 aria-label={`Visa ${getDayLabel(dayOffset + 1, 1).toLowerCase()}`}
                 title={getDayLabel(dayOffset + 1, 1)}
-                className="pointer-events-auto absolute right-0.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+                className="pointer-events-auto absolute right-0.5 top-[43px] sm:top-[47px] flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
             >
                 <ChevronRight size={18} strokeWidth={2.5} />
             </button>
