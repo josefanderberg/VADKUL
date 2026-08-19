@@ -128,6 +128,9 @@ addColumnIfMissing('scrape_runs', 'auto_hidden_count',    'INTEGER DEFAULT 0');
 // på detaljsidan — efter 3 försök ger vi upp (sidan saknar tid).
 addColumnIfMissing('link_events', 'hasSpecificTime', 'INTEGER');
 addColumnIfMissing('link_events', 'timeFixAttempts', 'INTEGER DEFAULT 0');
+// geoRefineAttempts: hur många nätter geo-refine försökt förfina eventets
+// koordinater utan träff — efter 3 hoppas raden så budgeten når nya event.
+addColumnIfMissing('link_events', 'geoRefineAttempts', 'INTEGER DEFAULT 0');
 {
     // Backfill av NULL-rader (legacy + rader skrivna av äldre processer):
     // midnatt i ANTINGEN lokal tid eller UTC = "bara datum". Körs i JS (inte
@@ -484,6 +487,30 @@ export function lookupVenueExact(name: string): [number, number] | null {
     return row ? [row.lat, row.lng] : null;
 }
 
+const venueSmartCityStmt = sqlite.prepare(
+    'SELECT lat, lng FROM known_venues WHERE LOWER(name) = LOWER(?) AND LOWER(city) = LOWER(?) LIMIT 1',
+);
+const venueSmartUniqueStmt = sqlite.prepare(
+    'SELECT lat, lng, COUNT(*) OVER () AS n FROM known_venues WHERE LOWER(name) = LOWER(?) LIMIT 1',
+);
+
+/**
+ * Case-okänslig venue-lookup för geokodningskedjan (geocodeVenueSweden steg 0).
+ * Med stad: kräver stadsmatch — "Konserthuset" finns i många städer och fel
+ * träff vore värre än Nominatim-vägen. Utan stad: träff bara om namnet är
+ * UNIKT i tabellen (annars ambiguöst → null och låt Nominatim avgöra).
+ */
+export function lookupVenueSmart(name: string, city?: string): [number, number] | null {
+    const n = name.trim();
+    if (n.length < 4) return null;
+    if (city && city.trim()) {
+        const row = venueSmartCityStmt.get(n, city.trim()) as { lat: number; lng: number } | undefined;
+        return row ? [row.lat, row.lng] : null;
+    }
+    const row = venueSmartUniqueStmt.get(n) as { lat: number; lng: number; n: number } | undefined;
+    return row && row.n === 1 ? [row.lat, row.lng] : null;
+}
+
 export function getAllKnownVenues(): KnownVenueRow[] {
     return venueAllStmt.all() as KnownVenueRow[];
 }
@@ -516,6 +543,15 @@ const bumpAttemptsStmt = sqlite.prepare(
 /** Räkna upp antalet misslyckade tids-fix-försök (fix-event-times ger upp efter 3). */
 export function bumpTimeFixAttempts(url: string): void {
     bumpAttemptsStmt.run(url);
+}
+
+const bumpGeoRefineStmt = sqlite.prepare(
+    'UPDATE link_events SET geoRefineAttempts = COALESCE(geoRefineAttempts, 0) + 1 WHERE url = ?',
+);
+
+/** Räkna upp antalet resultatlösa geo-refine-försök (ger upp efter 3). */
+export function bumpGeoRefineAttempts(url: string): void {
+    bumpGeoRefineStmt.run(url);
 }
 
 const setCoordsStmt = sqlite.prepare(`

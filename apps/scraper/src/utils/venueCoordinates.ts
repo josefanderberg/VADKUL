@@ -1,4 +1,4 @@
-import { upsertKnownVenue, lookupVenueExact, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet } from './sqliteHelper';
+import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet } from './sqliteHelper';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
 // Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
@@ -555,9 +555,18 @@ export async function geocodeVenueSweden(
         .replace(/,\s*,/g, ',');
     if (!cleaned) return null;
 
+    // 0. Verifierade venues (known_venues) — gratis, exakta, byggs upp av
+    // geo-refines nattliga träffar. Prova hela frågan och segmentet före
+    // första kommat ("Åhaga, Borås" → "Åhaga"). Stadskrav när nearCity finns;
+    // utan stad krävs att namnet är unikt i tabellen (se lookupVenueSmart).
+    const nearCityRaw = (opts.nearCity || '').trim();
+    const venueHit = lookupVenueSmart(cleaned, nearCityRaw || undefined)
+        ?? (cleaned.includes(',') ? lookupVenueSmart(cleaned.split(',')[0], nearCityRaw || undefined) : null);
+    if (venueHit) return venueHit;
+
     // nearCity-validering: geokoda stadens centroid (cachad) och bygg predikatet.
     // Kan centroiden inte lösas (okänd småort) → kör oskyddat som tidigare.
-    const nearCity = (opts.nearCity || '').trim();
+    const nearCity = nearCityRaw;
     const cityCenter = nearCity ? await geocodeCityCentroid(nearCity) : null;
     const accept = cityCenter
         ? (lat: number, lng: number) => distanceKm(lat, lng, cityCenter[0], cityCenter[1]) <= NEAR_CITY_MAX_KM

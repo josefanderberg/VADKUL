@@ -29,7 +29,7 @@
  */
 
 import { db } from '../config/firebase';
-import { sqlite, setEventCoords } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode, isInNordic,
@@ -37,7 +37,18 @@ import {
 
 const APPLY = process.argv.includes('--apply');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit='));
-const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 120;
+const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 250;
+
+/** Ge upp per event efter så här många resultatlösa nätter (geoRefineAttempts). */
+const MAX_ATTEMPTS = 3;
+
+/**
+ * Platsnamn som ALDRIG ska in i known_venues: generiska ("Biblioteket" finns i
+ * varje stad), platshållare ("plats meddelas") och rena stadsnamn (kollas
+ * separat). Memo-återanvändning inom ett kluster är ändå ok — där delar
+ * raderna stad — men tabellen är global och får inte förgiftas.
+ */
+const GENERIC_VENUE_NAME = /^(bibliotek(et)?|stadsbibliotek(et)?|kyrka(n)?|kapell(et)?|församlingshem(met)?|folkets hus|folkets park|hembygdsgård(en)?|bygdegård(en)?|scen(en)?|stora scenen|sporthall(en)?|ishall(en)?|simhall(en)?|torget|stora torget|centrum|park(en)?|stadspark(en)?|utomhus|ute|online|digitalt|zoom|teams|se beskrivning(en)?|plats meddelas( senare)?|vi återkommer.*|meddelas senare|hemma|tba|tbd)$/i;
 
 /** Minsta klusterstorlek + minsta antal OLIKA platsnamn för fallback-signatur. */
 const CLUSTER_MIN_EVENTS = 5;
@@ -52,6 +63,7 @@ interface Row {
     firestoreId: string | null;
     title: string;
     locationName: string;
+    geoRefineAttempts: number | null;
     extractedAddress: string | null;
     description: string | null;
     hostName: string | null;
@@ -229,7 +241,7 @@ async function applyCoords(r: Row, lat: number, lng: number, query: string): Pro
 async function main() {
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
     const rows = sqlite.prepare(`
-        SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName, lat, lng
+        SELECT url, firestoreId, title, locationName, geoRefineAttempts, extractedAddress, description, hostName, lat, lng
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
     `).all() as Row[];
@@ -241,30 +253,68 @@ async function main() {
         console.log(`  ${c.key}  ${String(c.rows.length).padStart(3)} event, ${c.distinctNames} platsnamn  (ex: ${c.rows[0].locationName.slice(0, 40)})`);
     }
 
-    let attempted = 0, refined = 0, noBetter = 0;
+    let attempted = 0, refined = 0, noBetter = 0, reused = 0, gaveUp = 0, learnedVenues = 0;
     outer: for (const c of clusters) {
         const city = await cityOfCluster(c);
+        // Memo per (kluster, platsnamn): "Årby bibliotek" × 15 event = ETT
+        // Nominatim-uppslag; träffen (eller misslyckandet) återanvänds gratis
+        // för resten av namnets rader utan att konsumera budgeten.
+        const nameMemo = new Map<string, [number, number, string] | null>();
         for (const r of c.rows) {
             if (attempted >= LIMIT) break outer;
+            // Ge upp efter MAX_ATTEMPTS resultatlösa nätter — annars äter samma
+            // hopplösa rader hela budgeten varje natt och kön rör sig aldrig.
+            if ((r.geoRefineAttempts ?? 0) >= MAX_ATTEMPTS) { gaveUp++; continue; }
             // Rena stadsnamns-rader utan adress i text har inget att förfina på.
             const hasAnyLead = r.extractedAddress || r.description || (r.locationName && r.locationName.toLowerCase() !== (city ?? '').toLowerCase());
             if (!hasAnyLead) continue;
 
-            attempted++;
-            const hit = await refineEvent(r, c, city);
-            if (!hit) { noBetter++; continue; }
+            const nameKey = (r.locationName || '').trim().toLowerCase();
+            const memoKey = nameKey.length >= 4 ? nameKey : null;
+
+            let hit: [number, number, string] | null;
+            if (memoKey && nameMemo.has(memoKey)) {
+                hit = nameMemo.get(memoKey)!;
+                if (hit) reused++;
+            } else {
+                attempted++;
+                hit = await refineEvent(r, c, city);
+                if (memoKey) nameMemo.set(memoKey, hit);
+            }
+
+            if (!hit) {
+                noBetter++;
+                if (APPLY) bumpGeoRefineAttempts(r.url);
+                continue;
+            }
             const [lat, lng, query] = hit;
             const dist = Math.round(distanceM(lat, lng, c.lat, c.lng));
             console.log(`  📍 ${r.title.slice(0, 45).padEnd(45)} → ${query.slice(0, 45)} (${dist} m från klustret)`);
             refined++;
-            if (APPLY) await applyCoords(r, lat, lng, query);
+            if (APPLY) {
+                await applyCoords(r, lat, lng, query);
+                // Lär systemet permanent: venue-namn + stad → known_venues, som
+                // geokodningskedjan numera kollar FÖRST (steg 0). Nästa skrapning
+                // av samma venue landar rätt direkt — gratis. Generiska namn
+                // ("Biblioteket") och rena stadsnamn hålls ute ur den globala
+                // tabellen; kravet på stad gör namnet entydigt.
+                const name = (r.locationName || '').trim();
+                if (city && name.length >= 5 && !GENERIC_VENUE_NAME.test(name)
+                    && name.toLowerCase() !== city.toLowerCase()) {
+                    upsertKnownVenue(name, lat, lng, city, `geo-refine ${new Date().toISOString().slice(0, 10)}`);
+                    learnedVenues++;
+                }
+            }
         }
     }
 
     console.log('\n=== Klart ===');
-    console.log(`  🔎 Försökta:   ${attempted}`);
-    console.log(`  📍 Förfinade:  ${refined}`);
-    console.log(`  ○ Ingen bättre: ${noBetter}`);
+    console.log(`  🔎 Försökta:       ${attempted}`);
+    console.log(`  📍 Förfinade:      ${refined}`);
+    console.log(`  ♻️ Memo-återanvända: ${reused}`);
+    console.log(`  🏛️ Lärda venues:    ${learnedVenues}`);
+    console.log(`  ○ Ingen bättre:    ${noBetter}`);
+    console.log(`  ✋ Uppgivna (≥${MAX_ATTEMPTS} försök): ${gaveUp}`);
     if (!APPLY) console.log('\n(dry-run — kör med --apply för att skriva)');
     process.exit(0);
 }
