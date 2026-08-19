@@ -26,6 +26,7 @@
  */
 
 import { Source } from './types';
+import { applyQuarantine } from './quarantine';
 
 const CADENCE_DAYS: Record<string, number> = {
     hourly: 1,
@@ -88,10 +89,21 @@ export function isRefreshRun(source: Source, today: Date = new Date()): boolean 
 }
 
 /**
- * Filtrera ut källor som ska köras idag enligt sin frekvens + fas.
+ * Filtrera ut källor som ska köras idag enligt sin frekvens + fas,
+ * minus auto-karantänen (se sources/quarantine.ts). Karantänsatta källor
+ * hålls pausade utom sin vecko-retry; manuella --ids-körningar går inte
+ * genom denna funktion och påverkas alltså aldrig.
  */
 export function scheduledForToday(sources: Source[], today: Date = new Date()): Source[] {
-    return sources.filter((s) => shouldRunToday(s, today));
+    const scheduled = sources.filter((s) => shouldRunToday(s, today));
+    const { run, retrying, held } = applyQuarantine(scheduled, today);
+    if (held.length || retrying.length) {
+        console.log(
+            `⏸️  Karantän: ${held.length} pausade` +
+            (retrying.length ? `, ${retrying.length} vecko-retry (${retrying.map((s) => s.id).join(', ')})` : ''),
+        );
+    }
+    return [...run, ...retrying];
 }
 
 /**

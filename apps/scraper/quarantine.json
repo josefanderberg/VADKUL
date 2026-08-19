@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "sources": {
+    "cirkus": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "dalhalla": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "engso-hembygds-och-intresseforening": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "folk-goteborg": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "gotska-sandons-hembygdsforening": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "huddinge-hembygdsforening": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "nordmaling": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "nybro": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "nykoping": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "orebro": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "ortraskbygdens-intresse-och-hembygdsfor": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "pitea": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "rosendals-tradgard": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "rotary": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "sater": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "staffanstorp": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "stockholm": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "tingsryd": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "tjorn": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "tjorns-hembygdsforening": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "trelleborg": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "vasteras": {
+      "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    }
+  }
+}

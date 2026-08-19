@@ -119,6 +119,18 @@ fi
 END_TS="$(date +%s)"
 DURATION=$(( END_TS - START_TS ))
 
+# ─── Auto-karantän: pausa källor utan livstecken ────────────────────────────
+# N raka körningar med found=0 och inga skips ⇒ quarantine.json (läses av
+# schedule.scheduledForToday). Vecko-retry ger självläkning. ⏸️/▶️-raderna
+# plockas upp i Teams-kortet nedan. Friska-men-tysta källor (found>0) rörs ej.
+echo "" >> "$LOG_FILE"
+echo "── AUTO-KARANTÄN (källor utan livstecken) ──" >> "$LOG_FILE"
+if npm run quarantine >> "$LOG_FILE" 2>&1; then
+    echo "Auto-karantän OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Auto-karantän misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Dölj events i fel land (locationName matchar utländsk markör) ─────────
 # Konservativt — bara geografi-fält, inte title/description.
 # Hittar ~10/dygn typiskt. Idempotent (skipper redan hidden).
@@ -284,6 +296,9 @@ if [ "$JOB_NAME" = "nightly" ]; then
         apps/web/public/events-descriptions.json \
         apps/web/public/events-destinations.json \
         apps/scraped_events.json \
+        apps/scraper/quarantine.json \
+        apps/scraper/web-snowball-state.json \
+        apps/scraper/src/sources/registry-snowball.ts \
         apps/scraper/src/scrapers/facebook/watchlist-national.ts >> "$LOG_FILE" 2>&1
     if git -C "$REPO_ROOT" diff --cached --quiet; then
         echo "Inget nytt att committa (datafilerna oförändrade)." >> "$LOG_FILE"
@@ -304,6 +319,11 @@ fi
 SAVED_COUNT="$(grep -cE '✅ Saved:|✅ Sparat:|✅.*Sparade' "$LOG_FILE" || echo 0)"
 SKIPPED_COUNT="$(grep -cE 'already exists:|Event already exists:' "$LOG_FILE" || echo 0)"
 ERROR_COUNT="$(grep -cE '❌ Fel|^❌|kraschade|Error:|Failed to add' "$LOG_FILE" || echo 0)"
+
+# Auto-karantänens utfall (sätts av npm run quarantine ovan)
+QUAR_SUMMARY="$(grep -oE 'Karantän-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Karantän-summering: //')"
+QUAR_NAMES="$(grep '⏸️ KARANTÄN:' "$LOG_FILE" | sed 's/.*KARANTÄN: //;s/ — .*//' | tr '\n' ',' | sed 's/,$//;s/,/, /g' | cut -c1-250)"
+QUAR_RELEASED="$(grep '▶️ SLÄPPT:' "$LOG_FILE" | sed 's/.*SLÄPPT: //;s/ — .*//' | tr '\n' ',' | sed 's/,$//;s/,/, /g' | cut -c1-250)"
 
 # ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
 echo "" >> "$LOG_FILE"
@@ -363,6 +383,9 @@ STAT_FB_UNIQUE_URLS="$STAT_FB_UNIQUE_URLS" \
 STAT_FB_DUPLICATE_HITS="$STAT_FB_DUPLICATE_HITS" \
 STAT_FB_TOP_KEYWORDS="$STAT_FB_TOP_KEYWORDS" \
 STAT_FB_STATS_AGE_H="$STAT_FB_STATS_AGE_H" \
+QUAR_SUMMARY="$QUAR_SUMMARY" \
+QUAR_NAMES="$QUAR_NAMES" \
+QUAR_RELEASED="$QUAR_RELEASED" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
 import os, json
@@ -436,6 +459,18 @@ if fb_age_h:
     age_note = "(senaste körning)" if float(fb_age_h) < 4 else f"({fb_age_h}h sedan)"
     fb_facts.append({"title": "⏰ FB-stats ålder",           "value": age_note})
 
+# ── Auto-karantän ──
+quar_summary  = os.environ.get("QUAR_SUMMARY", "")
+quar_names    = os.environ.get("QUAR_NAMES", "")
+quar_released = os.environ.get("QUAR_RELEASED", "")
+quar_facts = []
+if quar_summary:
+    quar_facts.append({"title": "⏸️ Status",        "value": quar_summary})
+if quar_names:
+    quar_facts.append({"title": "🆕 Nya i karantän", "value": quar_names})
+if quar_released:
+    quar_facts.append({"title": "▶️ Släppta",        "value": quar_released})
+
 body = [
     {
         "type": "TextBlock",
@@ -456,6 +491,10 @@ if map_facts:
 if fb_facts:
     body.append({"type": "TextBlock", "text": "👤 Facebook Events", "weight": "Bolder", "spacing": "Medium"})
     body.append({"type": "FactSet", "facts": fb_facts})
+
+if quar_facts:
+    body.append({"type": "TextBlock", "text": "⏸️ Källkarantän", "weight": "Bolder", "spacing": "Medium"})
+    body.append({"type": "FactSet", "facts": quar_facts})
 
 body += [
     {"type": "TextBlock", "text": "📝 Logg (tail)", "weight": "Bolder", "spacing": "Medium"},

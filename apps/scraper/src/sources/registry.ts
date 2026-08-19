@@ -18,6 +18,7 @@
  */
 
 import { Source } from './types';
+import { SNOWBALL_SOURCES } from './registry-snowball';
 
 export const SOURCES: Source[] = [
     // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
@@ -5649,6 +5650,9 @@ export const SOURCES: Source[] = [
         notes: 'Lokalkretsars kalendarium (~100 event). Kända URL:er hoppas över före API-anrop (ctx.isKnownUrl).',
         lastVerified: '2026-06-11',
     },
+
+    // ─── WEBB-SNÖBOLLEN (auto-upptäckta, se registry-snowball.ts) ───────────
+    ...SNOWBALL_SOURCES,
 ];
 
 /**
