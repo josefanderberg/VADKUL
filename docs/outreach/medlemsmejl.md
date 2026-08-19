@@ -73,7 +73,9 @@ Campaigns och **radera filen efteråt**.
 3. Contacts → Hantera listor → **Skapa lista** "Medlemmar" → Importera CSV:n.
    Prenumerationstyp **Marknadsföring**; fältmappning `email` → Contact Email,
    `firstname` → First Name.
-4. Ny kampanj → avsändare **info@vadkul.se** / Josef på VADKUL → klistra in
+4. Ny kampanj → avsändare **hej@vadkul.se** / Josef på VADKUL (INTE info@ —
+   hej@ är den verifierade avsändaren, se facit överst; raden sa tidigare
+   info@ och vilseledde 19/8) → klistra in
    mejlet nedan → **behåll Campaigns avregistreringsfot** (lagkrav och
    spamskydd — ta aldrig bort den).
 5. Skicka **vardagkväll ca 19–20 eller söndag kväll**.
