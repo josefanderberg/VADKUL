@@ -31,7 +31,7 @@ interface Candidate { name: string; region: string; base: string; }
 interface ProbeResult {
     cand: Candidate;
     verdict: 'PASS' | 'FAIL' | 'DUPE';
-    engine?: 'wp-rest' | 'sitemap';
+    engine?: 'wp-rest' | 'sitemap' | 'sitevision';
     method?: string;       // tribe | wp-v2 | sitemap-json-ld | sitemap-text
     count?: number;        // framtida/strukturerade events upptäckta
     detail?: string;       // bästa URL / sub-sitemap
@@ -52,6 +52,72 @@ async function fetchText(url: string): Promise<{ ok: boolean; status: number; bo
 }
 
 function safeJson(s: string): any { try { return JSON.parse(s); } catch { return null; } }
+
+// ── 0. SiteVision-kalender ───────────────────────────────────────────────────
+// Kommuner/kommunala bolag (museer, turistbyråer, scener) kör ofta SiteVision —
+// varken WP-REST eller event-sitemaps finns då. Testa vanliga kalender-paths,
+// kräv SiteVision-markörer + tillräckligt många <time datetime>-element.
+// Samma path-lista som probe-sitevision.ts (kommun-svepet).
+const SV_CAL_PATHS = [
+    '/evenemangskalender',
+    '/uppleva-och-gora/evenemangskalender',
+    '/uppleva-och-gora/evenemang',
+    '/uppleva-och-gora/kalender',
+    '/se-och-gora/evenemangskalender',
+    '/se-och-gora/evenemang',
+    '/kalender',
+    '/evenemang',
+    '/evenemangsguiden',
+    '/aktuellt/evenemangskalender',
+    '/aktuellt/kalender',
+    '/program',
+];
+
+const SV_MARKERS = /sitevision|sv-portlet|sv-template|sv-no-js|envision/i;
+
+async function probeSitevisionCal(base: string): Promise<{ count: number; url: string; restApi?: string } | null> {
+    const home = await fetchText(base);
+    if (!home.ok) return null;
+
+    // Kandidat-URL:er: kalender-länkar skördade ur startsidan (interna +
+    // subdomäner på samma basdomän, t.ex. evenemang.<kommun>.se) + fasta paths.
+    // Fasta listor räcker inte — venue-sajter har /aktiviteter, /pa-gang osv.
+    const baseDom = base.replace(/^https?:\/\/(www\.)?/, '').split('/')[0].split('.').slice(-2).join('.');
+    const cands = new Set<string>();
+    for (const m of home.body.matchAll(/href="([^"#?]+)"/gi)) {
+        let h = m[1];
+        if (!/kalend|evenemang|aktivitet|program|pa-gang|pagang|event|whats-on/i.test(h)) continue;
+        if (h.startsWith('/')) h = base + h;
+        if (!/^https?:\/\//i.test(h)) continue;
+        const hd = h.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+        if (hd !== baseDom && !hd.endsWith('.' + baseDom)) continue;   // stanna i sajtfamiljen
+        // trimma till kalender-ROTEN (max 2 path-segment) — inte enskilda eventsidor
+        const origin = h.match(/^https?:\/\/[^/]+/i)![0];
+        const segs = h.replace(/^https?:\/\/[^/]+/i, '').split('/').filter(Boolean).slice(0, 2);
+        cands.add(origin + (segs.length ? '/' + segs.join('/') : ''));
+        if (cands.size >= 8) break;
+    }
+    for (const p of SV_CAL_PATHS) cands.add(base + p);
+
+    const testedOrigins = new Set<string>();
+    for (const url of [...cands].slice(0, 16)) {
+        const r = await fetchText(url);
+        if (!r.ok || !SV_MARKERS.test(r.body)) continue;
+        const origin = url.match(/^https?:\/\/[^/]+/i)![0];
+        // 1) SiteVision RESTApp "Evenemang" (visiteskilstuna-mönstret) på samma origin?
+        if (!testedOrigins.has(origin)) {
+            testedOrigins.add(origin);
+            const ra = await fetchText(`${origin}/rest-api/Evenemang`);
+            if (ra.ok && /json/i.test(ra.ct)) return { count: 0, url, restApi: `${origin}/rest-api/Evenemang` };
+        }
+        // 2) List-HTML-signaler: <time datetime> eller datum-sluggade eventlänkar.
+        //    Räknarna är bara en SIEVE — smoke-steget kör riktiga motorn efteråt.
+        const times = (r.body.match(/<time[^>]+datetime="20\d{2}-/gi) || []).length;
+        const dateLinks = (r.body.match(/href="[^"]*20\d{2}-\d{2}-\d{2}[^"]*"/gi) || []).length;
+        if (times >= MIN_EVENTS || dateLinks >= MIN_EVENTS) return { count: Math.max(times, dateLinks), url };
+    }
+    return null;
+}
 
 // ── 1. Tribe (The Events Calendar) ───────────────────────────────────────────
 async function probeTribe(base: string): Promise<{ count: number; sample: string } | null> {
@@ -161,6 +227,13 @@ async function probeCandidate(cand: Candidate, existingDomains: Set<string>): Pr
     if (sm) return {
         cand, verdict: 'PASS', engine: 'sitemap', method: sm.method, count: sm.count, detail: sm.detail,
         config: { sitemapUrl: sm.detail, urlPatterns: [sm.pattern], defaultCity: cand.name, maxUrls: 200 },
+    };
+
+    // 4. SiteVision-kalender
+    const sv = await probeSitevisionCal(base);
+    if (sv) return {
+        cand, verdict: 'PASS', engine: 'sitevision', method: sv.restApi ? 'sitevision-restapp' : 'sitevision-cal', count: sv.count, detail: sv.url,
+        config: { urls: [sv.url], defaultCity: cand.name, ...(sv.restApi ? { restApi: { url: sv.restApi } } : {}) },
     };
 
     return { cand, verdict: 'FAIL' };

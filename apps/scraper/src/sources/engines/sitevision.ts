@@ -855,6 +855,32 @@ export const sitevisionEngine = async (
         }
 
         ctx.log(`  extracted ${cards} events`);
+
+        // Fallback: inga <time datetime>-kort — vissa SiteVision-sajter (museer
+        // med "aktiviteter"-struktur, t.ex. textilmuseet.se) länkar i stället
+        // eventsidor med datumet i URL-sluggen: /aktiviteter/.../2026-06-05-visning.
+        // Datum ur sluggen, titel ur länktexten. Klockslag saknas → runnerns
+        // midnatts-heuristik + nattens fix-times hämtar tid från detaljsidan.
+        if (cards === 0) {
+            let slugCards = 0;
+            $('a[href]').each((_, a) => {
+                if (slugCards >= maxItems) return;
+                const href = $(a).attr('href') ?? '';
+                const m = href.match(/\/(20\d{2}-\d{2}-\d{2})[-/][a-z0-9]/i);
+                if (!m) return;
+                let abs: string;
+                try { abs = href.startsWith('http') ? href : new URL(href, url).toString(); } catch { return; }
+                if (seenUrls.has(abs)) return;
+                const startDate = new Date(m[1]);
+                if (isNaN(startDate.getTime())) return;
+                const title = $(a).text().replace(/\s+/g, ' ').trim();
+                if (title.length < 3 || title.length > 150) return;
+                seenUrls.add(abs);
+                events.push({ title, startDate, url: abs, city: config.defaultCity });
+                slugCards++;
+            });
+            if (slugCards > 0) ctx.log(`  datum-slugg-fallback: ${slugCards} events`);
+        }
     }
 
     // Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter

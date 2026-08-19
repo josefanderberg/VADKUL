@@ -1,4 +1,110 @@
 {
   "version": 1,
-  "domains": {}
+  "domains": {
+    "": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-08-19",
+      "note": "bara 0 framtida event (kräver ≥3)"
+    },
+    "borascongress.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "borasdjurpark.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "brygghusetboras.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "byteatern.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "ebelingmuseet.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "exercishallen.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "gamlateatern.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "jamtland.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "kalmarstadsfest.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "kalmarteater.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "krusenstiernska.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "lokomotivet.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "munktellarenan.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "oland.com": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "retuna.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "scenkonstsormland.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "sormlandsmuseum.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "stigasportsarena.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "sundbyholms-slott.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    },
+    "textilmuseet.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-19",
+      "note": "bulk-probe"
+    }
+  }
 }

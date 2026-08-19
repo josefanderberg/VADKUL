@@ -6,6 +6,8 @@
  *   npm run web-snowball                 # full veckokörning
  *   npm run web-snowball -- --dry        # proba + smoke, skriv INGEN registry-fil
  *   npm run web-snowball -- --max=10     # cappa antal kandidater (default 40)
+ *   npm run web-snowball -- --candidates=fil.txt   # riktat svep: egen lista i
+ *       stället för skörd; rad = "Namn|region|https://bas|Stad" (stad valfri)
  *
  * Kedjan (allt måste passera innan en källa går live):
  *   1. SKÖRD    — domäner ur event-beskrivningarnas länkar (hög precision:
@@ -113,7 +115,7 @@ function prettyName(domain: string): string {
     return stem.charAt(0).toUpperCase() + stem.slice(1);
 }
 
-interface Candidate { name: string; region: string; base: string; domain: string; refs: number; via: 'beskrivning' | 'slug-gissning'; sample?: string }
+interface Candidate { name: string; region: string; base: string; domain: string; refs: number; via: 'beskrivning' | 'slug-gissning' | 'fil'; sample?: string; city?: string }
 
 // ─── 1. SKÖRD ────────────────────────────────────────────────────────────────
 
@@ -190,6 +192,30 @@ function harvestCandidates(max: number): Candidate[] {
     return [...seen.values()]
         .sort((a, b) => (b.via === 'beskrivning' ? b.refs : b.refs / 10) - (a.via === 'beskrivning' ? a.refs : a.refs / 10))
         .slice(0, max);
+}
+
+/**
+ * Kandidater ur fil (--candidates=fil): rad = "Namn|region|https://bas|Stad".
+ * Stad (kolumn 4, valfri) blir defaultCity — för riktade stads-sveper vet vi
+ * ju staden, till skillnad från snöbollens egna fynd. Samma dedup/blocklist/
+ * state-filter som skörden, så redan täckta domäner och färska FAILs hoppas.
+ */
+function candidatesFromFile(file: string, max: number): Candidate[] {
+    const existing = existingDomains();
+    const state = loadState();
+    const out: Candidate[] = [];
+    const lines = fs.readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+    for (const line of lines) {
+        const [name, region, base, city] = line.split('|').map((p) => p.trim());
+        if (!base) { console.log(`   hoppar rad utan bas-URL: "${line}"`); continue; }
+        const domain = domainFromUrl(base);
+        if (existing.has(domain) || existing.has('www.' + domain)) { console.log(`   redan i registry: ${domain}`); continue; }
+        if (DOMAIN_BLOCKLIST.test(domain)) { console.log(`   blocklistad: ${domain}`); continue; }
+        const st = state.domains[domain];
+        if (st && (st.verdict === 'DUPE' || daysSince(st.date) < RETRY_FAILED_DAYS)) { console.log(`   nyligen probad (${st.verdict} ${st.date}): ${domain}`); continue; }
+        out.push({ name: name || prettyName(domain), region: region || 'national', base, domain, refs: 0, via: 'fil', city: city || undefined });
+    }
+    return out.slice(0, max);
 }
 
 // ─── 3. SMOKE ────────────────────────────────────────────────────────────────
@@ -321,12 +347,15 @@ async function main() {
     const dry = process.argv.includes('--dry');
     const maxArg = process.argv.find((a) => a.startsWith('--max='));
     const max = maxArg ? parseInt(maxArg.split('=')[1], 10) : MAX_CANDIDATES;
+    const fileArg = process.argv.find((a) => a.startsWith('--candidates='));
 
-    console.log(`🕸️ Webb-snöboll ${todayISO()} — max ${max} kandidater${dry ? ' (DRY-RUN)' : ''}`);
+    console.log(`🕸️ Webb-snöboll ${todayISO()} — max ${max} kandidater${dry ? ' (DRY-RUN)' : ''}${fileArg ? ` (fil: ${fileArg.split('=')[1]})` : ''}`);
 
-    // 1. SKÖRD
-    const candidates = harvestCandidates(max);
-    console.log(`🕸️ SNÖBOLL: ${candidates.length} kandidater skördade (${candidates.filter((c) => c.via === 'beskrivning').length} ur beskrivningar, ${candidates.filter((c) => c.via === 'slug-gissning').length} slug-gissningar)`);
+    // 1. SKÖRD (eller manuell kandidatlista)
+    const candidates = fileArg
+        ? candidatesFromFile(fileArg.split('=')[1], max)
+        : harvestCandidates(max);
+    console.log(`🕸️ SNÖBOLL: ${candidates.length} kandidater (${candidates.filter((c) => c.via === 'beskrivning').length} ur beskrivningar, ${candidates.filter((c) => c.via === 'slug-gissning').length} slug-gissningar, ${candidates.filter((c) => c.via === 'fil').length} ur fil)`);
     if (!candidates.length) { console.log('Inget att göra.'); return; }
     for (const c of candidates.slice(0, 15)) console.log(`   ${c.domain.padEnd(32)} ${String(c.refs).padStart(3)} refs (${c.via})`);
 
@@ -366,8 +395,9 @@ async function main() {
 
         // Hänvisande eventets hostName/stad säger inget om SAJTENS namn/stad —
         // neutralt domännamn + tom defaultCity (geokodningen tar eventadressen).
-        const displayName = cand?.via === 'slug-gissning' ? (cand.name ?? prettyName(domain)) : prettyName(domain);
-        sug.config = { ...sug.config, defaultCity: '' };
+        // Undantag: fil-kandidater där vi angett stad explicit.
+        const displayName = cand?.via === 'beskrivning' ? prettyName(domain) : (cand?.name ?? prettyName(domain));
+        sug.config = { ...sug.config, defaultCity: cand?.city ?? '' };
 
         process.stdout.write(`   smoke: ${domain.padEnd(32)} `);
         const v = await smokeTest(sug);
@@ -379,8 +409,8 @@ async function main() {
         console.log(`✅ ${v.events} event, t.ex. ${v.sampleTitles.map((t) => `"${t.slice(0, 40)}"`).join(', ')}`);
 
         const note = `web-snöboll ${todayISO()}: ${sug.method}, smoke ${v.events} event ok. ` +
-            (cand?.via === 'beskrivning'
-                ? `Hänvisad av ${cand.refs} event i DB (t.ex. "${cand.sample ?? ''}").`
+            (cand?.via === 'beskrivning' ? `Hänvisad av ${cand.refs} event i DB (t.ex. "${cand.sample ?? ''}").`
+                : cand?.via === 'fil' ? `Manuell kandidatlista (stads-svep).`
                 : `Slug-gissning från arrangör "${cand?.name}" (${cand?.refs} event i DB).`);
         approved.push(sourceToTs({
             id, hostName: displayName, region: cand?.region ?? 'national',
