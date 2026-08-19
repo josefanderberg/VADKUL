@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
     categoryBySlug, getCityCategoryEvents, getCategoryCombos, dayLabel,
-    todayKey, weekendKeys, weekKeys, countByDayKeys, topVenues, exampleTitles, svList,
+    todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
@@ -29,21 +29,17 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const cat = categoryBySlug(kategori);
     if (!city || !cat) return {};
     const { events } = await getCityCategoryEvents(city, cat.dataKey);
-    // "idag & i veckan" i titeln fångar långsvansen ("konserter kalmar")
-    // — siffrorna hålls färska av den dagliga auto-deployen.
-    //
-    // VECKOTALET, inte helgtalet (Josef 20/8) — se stadssidans metadata:
-    // helgsiffran är noll halva veckan. Veckan = idag + 6 dagar och rymmer
-    // alltså dagens event. Helg-långsvansen lever kvar i FAQ:n nedan
-    // ("Vilka konserter är det i helgen i …?"), som svarar på just den frågan.
+    // "idag & i helgen" i titeln fångar långsvansen ("konserter kalmar i
+    // helgen") — siffrorna hålls färska av den dagliga auto-deployen.
+    // Beskrivningen tar med både helg- och vecko-talet (countsSentence i
+    // cityData; ordning och nollhantering dokumenterad där).
     const todayCount = countByDayKeys(events, [todayKey()]);
+    const weekendCountMeta = countByDayKeys(events, weekendKeys());
     const weekCount = countByDayKeys(events, weekKeys());
-    const counts = todayCount > 0 || weekCount > 0
-        ? ` ${todayCount} idag, ${weekCount} i veckan.`
-        : '';
+    const counts = countsSentence(todayCount, weekendCountMeta, weekCount);
     const description = `${events.length} kommande evenemang: ${cat.intro(city.name)} i ${city.name} med omnejd.${counts} Se allt som händer på VADKUL-kartan, gratis.`;
     return {
-        title: `${cat.h1(city.name)} — idag & i veckan`,
+        title: `${cat.h1(city.name)} — idag & i helgen`,
         description,
         alternates: { canonical: `/evenemang/${city.slug}/${cat.slug}` },
         openGraph: {

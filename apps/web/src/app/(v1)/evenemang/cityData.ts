@@ -519,6 +519,33 @@ export function weekKeys(): string[] {
     return keys;
 }
 
+/**
+ * Sifferfrasen i sidornas metabeskrivning: " 9 idag, 8 i helgen, 53 i veckan."
+ *
+ * ORDNINGEN är ett ägarbeslut (Josef 20/8): helgen står kvar eftersom "i
+ * helgen" är en egen sökfras folk faktiskt skriver, och veckotalet läggs
+ * EFTER som volymmått (helgsiffran ensam är noll halva veckan och sa inget
+ * om hur mycket som finns).
+ *
+ * Talen är ÖVERLAPPANDE delmängder, inte poster att summera: veckan = idag +
+ * 6 dagar och rymmer både dagens och helgens event.
+ *
+ * Nolltal utelämnas — "0 i helgen" i ett sökresultat säljer ingenting. Och
+ * veckotalet tas bara med när det säger något NYTT (större än både dagens och
+ * helgens), annars blir det "3 idag, 3 i veckan" på tunna orter.
+ *
+ * Längden spelar roll: Google kapar utdraget vid ~155 tecken, och frasen ska
+ * rymmas FÖRE svansen. Håll den kort om den byggs ut.
+ */
+export function countsSentence(today: number, weekend: number, week: number): string {
+    const parts = [
+        today > 0 ? `${today} idag` : '',
+        weekend > 0 ? `${weekend} i helgen` : '',
+        week > Math.max(today, weekend) ? `${week} i veckan` : '',
+    ].filter(Boolean);
+    return parts.length ? ` ${parts.join(', ')}.` : '';
+}
+
 /** Antal event som infaller på någon av dagarna. */
 export function countByDayKeys(events: CityEvent[], keys: string[]): number {
     const set = new Set(keys);

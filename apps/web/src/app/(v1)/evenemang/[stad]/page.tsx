@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, pickRecommended, dayLabel,
-    todayKey, weekendKeys, weekKeys, countByDayKeys, topVenues, exampleTitles, svList,
+    todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
@@ -25,21 +25,23 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const city = CITIES.find(c => c.slug === stad);
     if (!city) return {};
     const { events } = await getCityEvents(city);
-    // "idag/i veckan" i beskrivningen matchar hur folk faktiskt söker
-    // ("vad händer i växjö idag") — siffrorna bakas vid build och hålls
-    // dagsfärska av den dagliga auto-deployen.
+    // "idag/i helgen/i veckan" matchar hur folk faktiskt söker ("vad händer i
+    // växjö idag", "…i helgen") — siffrorna bakas vid build och hålls
+    // dagsfärska av den dagliga auto-deployen. Ordning och nollhantering:
+    // se countsSentence i cityData.
     //
-    // VECKOTALET, inte helgtalet (Josef 20/8): helgsiffran är noll halva veckan
-    // och sa inget om volymen i Googles utdrag. Samma tal som intro-raden på
-    // sidan visar (bytet gjordes där 11/8) — utdraget och sidan ska säga samma
-    // sak. Veckan = idag + 6 dagar, så talet RYMMER dagens event; det är
-    // avsiktligt ("17 i veckan" är totalen, inte utöver dagens 13).
+    // Svansen är MEDVETET kort ("gratis på VADKUL", inte "allt gratis på
+    // VADKUL-kartan"): med tre tal ligger beskrivningen annars över Googles
+    // ~155-teckengräns och kapas mitt i ordet — precis det utdrag Josef såg
+    // 20/8 ("allt gratis på …").
     const todayCount = countByDayKeys(events, [todayKey()]);
+    const weekendCountMeta = countByDayKeys(events, weekendKeys());
     const weekCount = countByDayKeys(events, weekKeys());
-    const counts = todayCount > 0 || weekCount > 0
-        ? ` ${todayCount} idag, ${weekCount} i veckan.`
-        : '';
-    const description = `${events.length} kommande evenemang i ${city.name} med omnejd.${counts} Konserter, marknader, sport och saker att göra med barn — allt gratis på VADKUL-kartan.`;
+    const counts = countsSentence(todayCount, weekendCountMeta, weekCount);
+    // "kommande" är struket (20/8): siffrorna direkt efter säger idag/helgen/
+    // veckan, så ordet bar ingen egen information — och de tecknen behövdes
+    // för att helgtalet skulle rymmas utan att svansen kapas.
+    const description = `${events.length} evenemang i ${city.name} med omnejd.${counts} Konserter, marknader, sport och saker att göra med barn — gratis på VADKUL.`;
     return {
         title: `Vad händer i ${city.name}? Evenemang & saker att göra idag`,
         description,
