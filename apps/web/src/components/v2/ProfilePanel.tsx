@@ -10,9 +10,19 @@ import EventListRow from './EventListRow';
 import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
-import { doc, getDoc, setDoc, deleteField, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CITIES, getCity } from '@/lib/cityUtils';
+import { eventShareSlug } from '@/utils/eventShareSlug';
+import { boostedUntilLabel } from '@/utils/boostLabel';
+
+/** En rad i "Mina boostar": eventets namn + hur länge boosten syns. */
+interface MyBoost {
+    key: string;
+    title: string;
+    until: Date | null;
+    active: boolean;
+}
 
 interface ProfilePanelProps {
     open: boolean;
@@ -58,6 +68,11 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     const [hasChildren, setHasChildren] = useState(false);
     const [childAges, setChildAges] = useState<number[]>([]);
     const [childrenBusy, setChildrenBusy] = useState(false);
+    // "Mina boostar": användarens boost-köp (boostPayments-kvitton) berikade
+    // med eventtitel + featuredUntil. null = inte hämtat/inget att visa —
+    // sektionen göms då helt (inklusive innan rules-deployen som öppnar
+    // läsrätten på egna kvitton: permission denied ⇒ tyst tom lista).
+    const [myBoosts, setMyBoosts] = useState<MyBoost[] | null>(null);
 
     // Läs av notis-läget varje gång panelen öppnas (kan ha ändrats i
     // webbläsarens inställningar sedan sist).
@@ -81,6 +96,62 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                     : []);
             })
             .catch(() => { /* visa tomt — valen funkar ändå */ });
+        return () => { stale = true; };
+    }, [open, user]);
+
+    // "Mina boostar" när panelen öppnas: läs egna boostPayments-kvitton
+    // (rules släpper bara igenom frågor filtrerade på eget uid), deduplicera
+    // per event (förlängningar ger flera kvitton men ETT slutdatum) och slå
+    // upp titel + featuredUntil: användarskapade ur linkEvents-dokumentet,
+    // skrapade ur eventBoosts-overlayn (samma slug-hash som /e/-länkarna).
+    // Max ~10 uppslag per öppning — boost-köp är sällsynta, ingen egress-fälla.
+    useEffect(() => {
+        if (!open || !user) return;
+        let stale = false;
+        (async () => {
+            try {
+                const snap = await getDocs(query(
+                    collection(db, 'boostPayments'),
+                    where('uid', '==', user.uid),
+                    limit(50),
+                ));
+                const receipts = snap.docs
+                    .map(d => d.data() as { eventId?: unknown; appliedAt?: Timestamp })
+                    .filter((r): r is { eventId: string; appliedAt?: Timestamp } => typeof r.eventId === 'string')
+                    .sort((a, b) => (b.appliedAt?.toMillis?.() ?? 0) - (a.appliedAt?.toMillis?.() ?? 0));
+                const seen = new Set<string>();
+                const out: MyBoost[] = [];
+                for (const r of receipts) {
+                    if (seen.has(r.eventId)) continue;
+                    seen.add(r.eventId);
+                    if (out.length >= 10) break;
+                    let title: string;
+                    let until: Date | null = null;
+                    if (r.eventId.includes('/')) {
+                        // Skrapat event (id = källans URL): featuredUntil bor i
+                        // overlayn; titeln finns inte klient-läsbart → visa domänen.
+                        const b = await getDoc(doc(db, 'eventBoosts', eventShareSlug(r.eventId)));
+                        const v = b.data();
+                        until = v?.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
+                        try { title = new URL(r.eventId).hostname.replace(/^www\./, ''); }
+                        catch { title = 'Skrapat event'; }
+                    } else {
+                        const e = await getDoc(doc(db, 'linkEvents', r.eventId));
+                        const v = e.data();
+                        title = typeof v?.title === 'string' ? v.title : 'Borttaget event';
+                        until = v?.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
+                    }
+                    out.push({ key: r.eventId, title, until, active: !!until && until.getTime() > Date.now() });
+                }
+                // Aktiva överst (nyast först inom respektive grupp — listan är
+                // redan appliedAt-sorterad).
+                out.sort((a, b) => Number(b.active) - Number(a.active));
+                if (!stale) setMyBoosts(out);
+            } catch {
+                // Ingen läsrätt (rules ej deployade) eller nätfel → göm sektionen.
+                if (!stale) setMyBoosts(null);
+            }
+        })();
         return () => { stale = true; };
     }, [open, user]);
 
@@ -491,6 +562,34 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                 </ul>
                             )}
                         </div>
+
+                        {/* Mina boostar — bara när det finns kvitton att visa: event
+                            man boostat + hur länge guldstjärnan syns. Slutdatumet är
+                            samma featuredUntil som kartan/kortet läser. */}
+                        {myBoosts && myBoosts.length > 0 && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <div className="px-4 pt-3 pb-1.5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Mina boostar · {myBoosts.length}
+                                    </span>
+                                </div>
+                                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {myBoosts.map(b => (
+                                        <li key={b.key} className="px-4 py-2.5 flex items-center gap-2.5">
+                                            <span aria-hidden className={b.active ? '' : 'grayscale opacity-50'}>⭐</span>
+                                            <span className={`flex-1 min-w-0 truncate text-sm font-bold ${b.active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
+                                                {b.title}
+                                            </span>
+                                            <span className={`shrink-0 text-[11px] font-bold tabular-nums ${b.active ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                                                {b.until
+                                                    ? (b.active ? `t.o.m. ${boostedUntilLabel(b.until)}` : `gick ut ${boostedUntilLabel(b.until)}`)
+                                                    : 'aktiveras…'}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                         {/* Inställningar — utfällbar mapp: klick visar de 3 alternativen */}
                         <div className="border-t border-slate-100 dark:border-slate-800">
