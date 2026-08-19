@@ -118,7 +118,10 @@ på 215 mottagare är skillnaderna brus.
 >
 > /Josef, som bygger VADKUL på kvällar och helger
 
-*(Campaigns lägger själv på avregistreringslänken i sidfoten — låt den vara.)*
+*(Avregistreringen ligger i mejlets EGEN sidfot — `$[LI:UNSUBSCRIBE]$` +
+`$[LI:SUB_PREF]$`. Zoho vägrar annars och byter ut hela foten mot sin
+standard, vilket tar med "du får det här mejlet för att…"-raden. Ta aldrig
+bort taggarna.)*
 
 ## HTML-versionen
 
@@ -133,8 +136,25 @@ Priset 99 kr/vecka är det riktiga Stripe-livepriset — inga platshållare kvar
 - **Livebilder** — panelen togs bort från eventkortet 5/8 (c3f8cfe).
 - **Önska event ✨** — nämndes redan i 28/7-mejlet, inte nytt sedan sist.
 
+## Spårning (val i Campaigns)
+
+- **Öppningar + länkklick: PÅ** — visar om det är boosten eller stjärnan som
+  drar klicken.
+- **Google Analytics-spårning: PÅ.** Webben kör Firebase Analytics = en
+  GA4-property (`G-JY54WK822P`), så Zohos UTM-parametrar plockas upp och
+  mejltrafiken kan skiljas från ~500/dag-basen — annars går det inte att veta
+  vad utskicket gav. Kontrollerat att UTM inte stör stjärnlänken: koden läser
+  `stjarna` och raderar BARA den parametern, övriga lämnas orörda.
+  Döp kampanjen till `medlemsmejl-aug-2026` — namnet blir `utm_campaign`.
+- **Svarsspårning: AV.** Svaren på ett personligt skrivet mejl är det
+  värdefullaste som kommer tillbaka och ska landa i vanliga inkorgen utan
+  mellanhänder; på 208 mottagare räknas de för hand. Kolla att svarsadressen
+  är hej@vadkul.se.
+
 ## Efteråt
 
 - Öppnings-/klicksiffror: Campaigns-rapporten.
+- Trafiken från mejlet: GA4, källa/medium = Zohos UTM (`utm_campaign` =
+  kampanjnamnet).
 - Inlösta stjärnor: Firestore `users` → `starGiftCode == 'STJARNA2'`.
 - Boost-köp: `boostPayments`-collectionen + Stripe-dashboarden.
