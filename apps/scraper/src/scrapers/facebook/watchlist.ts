@@ -65,4 +65,21 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'WisbyHFS', name: 'Wisby Historiska Fäktskola', city: 'Visby' },
     { slug: 'V%C3%A4stergarn-P%C3%A4rk-Varpa-199651444269140', name: 'Västergarn Pärk & Varpa', city: 'Gotland' },
     { slug: 'paraglidingfriendsgotland', name: 'Paragliding Friends Gotland', city: 'Gotland' },
+
+    // ── Norrköping (maxningen 2026-08-09) ───────────────────────────────
+    // Alla verifierade headless 2026-08-09: sidan finns + /events-fliken
+    // visar eventlänkar utloggat. Urvalet är komplementet till den nya
+    // 'visit-norrkoping'-källan (kommunens evenemangskalender, 356 event):
+    // BARA arrangörer vars utbud INTE når turistkalendern. Medvetet EJ med
+    // trots publika event — Augustifesten (45 träffar i visit-källan),
+    // Kulturnatten (17), Östgötateatern (6), Arbetets museum,
+    // Visualiseringscenter C, stadsmuseet — de dubblerar bara.
+    // Norrköping Dolphins provades på båda slug-varianterna: 0 publika event.
+    { slug: 'palacenorrkoping', name: 'Palace Norrköping', city: 'Norrköping' },      // nattklubb
+    { slug: 'harrysnorrkoping', name: 'Harrys Norrköping', city: 'Norrköping' },      // pub/livemusik
+    { slug: 'knappingsborg', name: 'Knäppingsborg', city: 'Norrköping' },             // kvarter, mat/marknad
+    { slug: 'ingelstashopping', name: 'Ingelsta shopping', city: 'Norrköping' },
+    { slug: 'ifknorrkoping', name: 'IFK Norrköping', city: 'Norrköping' },            // allsvenskan
+    { slug: 'vitahasten', name: 'Vita Hästen', city: 'Norrköping' },                  // hockeyallsvenskan
+    { slug: 'kolmarden', name: 'Kolmårdens djurpark', city: 'Kolmården' },
 ];

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit } from './sitevision';
+import {
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit,
+    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
+} from './sitevision';
 
 describe('parseSoleilDate', () => {
     it('YYYY-MM-DD + HH:MM → lokal tid med klocka', () => {
@@ -164,5 +167,181 @@ describe('mapRestAppHit', () => {
     it('titel- eller startlösa hits → null', () => {
         expect(mapRestAppHit({ ...hit, title: '' }, BASE_URL, 'Eskilstuna')).toBeNull();
         expect(mapRestAppHit({ ...hit, info: {} }, BASE_URL, 'Eskilstuna')).toBeNull();
+    });
+});
+
+// ── searchApp-varianten (visit.norrkoping.se) ────────────────────────────────
+
+describe('parseSearchAppDate', () => {
+    // Alla fall ankras på en fast "nu" så årsgissningen är deterministisk.
+    const NOW = new Date(2026, 7, 9); // 9 aug 2026
+
+    it('"9 aug" → innevarande år, midnatt', () => {
+        const r = parseSearchAppDate('9 aug', NOW)!;
+        expect(r.start.getFullYear()).toBe(2026);
+        expect(r.start.getMonth()).toBe(7);
+        expect(r.start.getDate()).toBe(9);
+        expect(r.start.getHours()).toBe(0);
+        expect(r.end).toBeUndefined();
+    });
+
+    it('"13 mar 2027" → explicit år vinner', () => {
+        const r = parseSearchAppDate('13 mar 2027', NOW)!;
+        expect(r.start.getFullYear()).toBe(2027);
+        expect(r.start.getMonth()).toBe(2);
+        expect(r.start.getDate()).toBe(13);
+    });
+
+    it('årslöst datum långt bakåt tolkas som nästa år', () => {
+        // "5 feb" sett i augusti → feb 2027, inte feb 2026.
+        const r = parseSearchAppDate('5 feb', NOW)!;
+        expect(r.start.getFullYear()).toBe(2027);
+        expect(r.start.getMonth()).toBe(1);
+    });
+
+    it('nyss passerat årslöst datum behåller innevarande år', () => {
+        const r = parseSearchAppDate('1 aug', NOW)!;
+        expect(r.start.getFullYear()).toBe(2026);
+    });
+
+    it('"5 aug - 6 sep" → intervall med start och slut', () => {
+        const r = parseSearchAppDate('5 aug - 6 sep', NOW)!;
+        expect(r.start.getMonth()).toBe(7);
+        expect(r.start.getDate()).toBe(5);
+        expect(r.end!.getMonth()).toBe(8);
+        expect(r.end!.getDate()).toBe(6);
+    });
+
+    it('"13 - 15 aug" → månaden ärvs från slutdatumet', () => {
+        const r = parseSearchAppDate('13 - 15 aug', NOW)!;
+        expect(r.start.getMonth()).toBe(7);
+        expect(r.start.getDate()).toBe(13);
+        expect(r.end!.getDate()).toBe(15);
+    });
+
+    it('"25 sep 2026 - 27 jan 2027" → intervall över årsskiftet', () => {
+        const r = parseSearchAppDate('25 sep 2026 - 27 jan 2027', NOW)!;
+        expect(r.start.getFullYear()).toBe(2026);
+        expect(r.start.getMonth()).toBe(8);
+        expect(r.end!.getFullYear()).toBe(2027);
+        expect(r.end!.getMonth()).toBe(0);
+    });
+
+    it('tankstreck (–) fungerar som avgränsare', () => {
+        const r = parseSearchAppDate('4 – 6 sep', NOW)!;
+        expect(r.start.getDate()).toBe(4);
+        expect(r.end!.getDate()).toBe(6);
+    });
+
+    it('skräp → null', () => {
+        expect(parseSearchAppDate('', NOW)).toBeNull();
+        expect(parseSearchAppDate(undefined, NOW)).toBeNull();
+        expect(parseSearchAppDate('Löpande', NOW)).toBeNull();
+        expect(parseSearchAppDate('9 smurf', NOW)).toBeNull();
+    });
+});
+
+describe('mapSearchAppHit', () => {
+    const BASE_URL = 'https://visit.norrkoping.se/kalender';
+    const NOW = new Date(2026, 7, 9);
+    const WINDOW_START = new Date(2026, 7, 9);
+    const hit = {
+        id: '4.523ac55219e631884d623c9',
+        title: 'Kyrkogårdsvandring – Matteus kyrkogård',
+        summary: 'Följ med på en kulturhistorisk vandring.',
+        date: '9 aug',
+        image: '/images/200.5048c0b619e632d671f25b7/1780653034701/Kyrko.png',
+        url: '/se-och-gora/evenemangskalender/evenemang-augusti-2026/kyrkogardsvandring---matteus-kyrkogard',
+        categories: 'Citynära, Guidning, Museum',
+        type: 'event',
+    };
+
+    it('fullt hit → komplett RawEvent med absoluta URL:er', () => {
+        const ev = mapSearchAppHit(hit, BASE_URL, 'Norrköping', WINDOW_START, NOW)!;
+        expect(ev.externalId).toBe('4.523ac55219e631884d623c9');
+        expect(ev.title).toBe('Kyrkogårdsvandring – Matteus kyrkogård');
+        expect(ev.url).toBe('https://visit.norrkoping.se/se-och-gora/evenemangskalender/evenemang-augusti-2026/kyrkogardsvandring---matteus-kyrkogard');
+        expect(ev.imageUrl).toBe('https://visit.norrkoping.se/images/200.5048c0b619e632d671f25b7/1780653034701/Kyrko.png');
+        expect(ev.city).toBe('Norrköping');
+        expect(ev.description).toBe('Följ med på en kulturhistorisk vandring.');
+        // Listan saknar klockslag — runnerns heuristik får avgöra tills
+        // detaljsidan berikat eventet.
+        expect(ev.hasSpecificTime).toBeUndefined();
+    });
+
+    it('pågående fleradagars-event ankras på windowStart', () => {
+        const ev = mapSearchAppHit(
+            { ...hit, date: '6 jun - 31 aug' }, BASE_URL, 'Norrköping', WINDOW_START, NOW,
+        )!;
+        expect(ev.startDate.getTime()).toBe(WINDOW_START.getTime());
+        expect(ev.endDate!.getMonth()).toBe(7);
+        expect(ev.endDate!.getDate()).toBe(31);
+    });
+
+    it('framtida intervall behåller sitt riktiga startdatum', () => {
+        const ev = mapSearchAppHit(
+            { ...hit, date: '29 aug - 13 sep' }, BASE_URL, 'Norrköping', WINDOW_START, NOW,
+        )!;
+        expect(ev.startDate.getMonth()).toBe(7);
+        expect(ev.startDate.getDate()).toBe(29);
+    });
+
+    it('icke-event-typer filtreras bort', () => {
+        expect(mapSearchAppHit({ ...hit, type: 'place' }, BASE_URL, 'Norrköping', WINDOW_START, NOW)).toBeNull();
+    });
+
+    it('titel-, url- eller datumlösa hits → null', () => {
+        expect(mapSearchAppHit({ ...hit, title: '' }, BASE_URL, 'Norrköping', WINDOW_START, NOW)).toBeNull();
+        expect(mapSearchAppHit({ ...hit, url: undefined }, BASE_URL, 'Norrköping', WINDOW_START, NOW)).toBeNull();
+        expect(mapSearchAppHit({ ...hit, date: 'Löpande' }, BASE_URL, 'Norrköping', WINDOW_START, NOW)).toBeNull();
+    });
+});
+
+describe('parseSearchAppDetail', () => {
+    const HTML = `
+      <div class="vn-object-page__occasions">
+        <div class="vn-object-page__occasion-item-metadata-row">
+          <span class="vn-object-page__occasion-item-metadata-time-icon" aria-hidden="true"></span>
+          <span class="show-for-sr">Tid:</span>19:00&#150;20:40
+        </div>
+        <div class="vn-object-page__occasion-item-metadata-row">
+          <span class="vn-object-page__occasion-item-metadata-location-icon" aria-hidden="true"></span>
+          <span class="show-for-sr">Plats:</span>Flygeln
+        </div>
+      </div>
+      <div class="vn-object-page__information-box-metadata-item">
+        <div class="vn-object-page__information-box-metadata-item-title">
+          <span class="vn-object-page__information-box-metadata-email" aria-hidden="true"></span>E-postadress</div>
+        <div class="vn-object-page__information-box-metadata-item-value">
+          <a href="mailto:x@y.se">x@y.se</a></div>
+      </div>
+      <div class="vn-object-page__information-box-metadata-item">
+        <div class="vn-object-page__information-box-metadata-item-title">
+          <span class="vn-object-page__information-box-metadata-address" aria-hidden="true"></span>Adress</div>
+        <div class="vn-object-page__information-box-metadata-item-value">Holmengatan 4, 602 32 Norrköping</div>
+      </div>
+      <div class="vn-object-page__information-map">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1d519.86!2d16.18078509919739!3d58.5879991!2m3!1f0"></iframe>
+      </div>`;
+
+    it('plockar tid, plats, adress och koordinater', () => {
+        const d = parseSearchAppDetail(HTML);
+        expect(d.time).toBe('19:00–20:40');
+        expect(d.venueName).toBe('Flygeln');
+        expect(d.address).toBe('Holmengatan 4, 602 32 Norrköping');
+        expect(d.coords).toEqual([58.5879991, 16.18078509919739]);
+    });
+
+    it('E-postadress förväxlas inte med Adress', () => {
+        expect(parseSearchAppDetail(HTML).address).not.toContain('@');
+    });
+
+    it('koordinater utanför Sverige förkastas', () => {
+        const foreign = HTML.replace('!2d16.18078509919739!3d58.5879991', '!2d-73.9857!3d40.7484');
+        expect(parseSearchAppDetail(foreign).coords).toBeUndefined();
+    });
+
+    it('sida utan fälten → tomt objekt, inget kast', () => {
+        expect(parseSearchAppDetail('<html><body><p>404</p></body></html>')).toEqual({});
     });
 });

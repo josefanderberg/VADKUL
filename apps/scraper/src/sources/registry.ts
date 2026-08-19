@@ -466,6 +466,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Östersund',
             maxUrls: 300,
         },
+        // Fokusstad 2026-08-09: 129 av 137 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://visitostersund.se/sitemap_index.xml', date: '2026-06-11' },
@@ -487,6 +489,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Östersund',
             maxUrls: 100,
         },
+        // Fokusstad 2026-08-09: hela höst/vår-programmet t.o.m. mars 2027 låg utanför fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Agent-probe 2026-07-27: 27 kommande event t.o.m. mars 2027 (PB-Hallen/Arnljotsalen — Dina Ögon, Babblarna m.fl.). Datum radbrutet "21 mar." + "2027" — textparsern klarar det.',
@@ -526,6 +530,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Östersund',
             maxUrls: 200,
         },
+        // Fokusstad 2026-08-09: 87 av 89 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Probe 2026-06-24 (round3): 177 URLs i ajde_events-sitemap.xml (sv + en). Ingen JSON-LD startDate → datum ur sidtext. Friluftsmuseum i Östersund (defaultCity korrigerad från auto-genererade venue-namnet "Jamtli").',
@@ -711,6 +717,9 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
             defaultCity: 'Norrköping',
         },
+        // Fokusstad 2026-08-09: 208 av 214 hittade event låg utanför 30d-fönstret
+        // — konserthuset släpper hela säsongen på en gång.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: evenemang-sitemap.xml (konserthus Norrköping).',
         lastVerified: '2026-06-08',
@@ -755,10 +764,67 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
             defaultCity: 'Kalmar',
         },
+        // Fokusstad 2026-08-09.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: events-sitemap.xml, /evenemang/ (länsmuseum).',
         lastVerified: '2026-06-08',
     },
+    {
+        id: 'kalmar-konstmuseum',
+        hostName: 'Kalmar Konstmuseum',
+        region: 'kalmar',
+        engine: 'wp-rest',
+        config: {
+            baseUrl: 'https://www.kalmarkonstmuseum.se',
+            variant: 'tribe',
+            defaultCity: 'Kalmar',
+        },
+        windowDays: 180,
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Fokusstad Kalmar 2026-08-09. The Events Calendar med ÖPPEN tribe-REST '
+            + '— men tom vid upptäckt ("0 evenemang har hittats", sista eventet 8 aug). '
+            + 'Lagd som beredskap: höstprogrammet dyker upp av sig självt. '
+            + 'OBS: wp-sitemap-taxonomies-tribe_events_cat-1.xml är en FÄLLA — dess 49 '
+            + 'URL:er är kategorisidor, inte event (bulk-probe rapporterar PASS på dem).',
+        lastVerified: '2026-08-09',
+        discovery: { method: 'probe-wp', probeUrl: 'https://www.kalmarkonstmuseum.se/wp-json/tribe/events/v1/events', date: '2026-08-09', rawEventCount: 0 },
+    },
+    {
+        id: 'kalmar-slott',
+        hostName: 'Kalmar Slott',
+        region: 'kalmar',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://kalmarslott.se/events-sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
+            // Samma event finns på /en/, /de/ och /da/ — bara svenska.
+            urlBlacklist: [/\/(?:en|de|da)\//i],
+            defaultCity: 'Kalmar',
+            maxUrls: 200,
+        },
+        windowDays: 180,
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Bulk-probe 2026-08-09 (fokusstad Kalmar): 31 event-URLs i dedikerad events-sitemap.',
+        lastVerified: '2026-08-09',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://kalmarslott.se/events-sitemap.xml', date: '2026-08-09', rawEventCount: 31 },
+    },
+    // Avfärdade i fokusstadsrundan 2026-08-09 (Kalmar/Borås/Norrköping/
+    // Östersund) — proba INTE om utan ny information:
+    //   byteatern.se        — ajde_events-CPT finns men REST ger [] och det
+    //                         saknas ajde_events-sitemap; produktionerna är
+    //                         vanliga sidor utan datum i markup.
+    //   estradnorr.se       — SiteVision (kulturjamtlandharjedalen.se), 17
+    //                         programsidor utan speldatum i sidtexten.
+    //   cnema.se            — post-sitemap har 5 URL:er totalt.
+    //   son.se              — SPA som svarar 200 på allt; konserterna bärs
+    //                         ändå av 'louisdegeer' (SON spelar där).
+    //   textilmuseet.se, boraskonstmuseum.se, kulturhuset.boras.se,
+    //   boraszoo.se, gamlateatern.se — ingen sitemap/DNS-svar; Borås
+    //                         kulturhus-program ligger i 'boras-com'.
+    //   kolmarden.com       — sitemap utan event-URL:er (nöjespark = öppettider).
     {
         id: 'dalarnasmuseum',
         hostName: 'Dalarnas Museum',
@@ -938,6 +1004,8 @@ export const SOURCES: Source[] = [
             endpoint: '/wp-json/wp/v2/evenemang',
             defaultCity: 'Östersund',
         },
+        // Fokusstad 2026-08-09: 106 av 155 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06: 226 events. Svensk CPT + content-parser.',
     },
@@ -1322,6 +1390,8 @@ export const SOURCES: Source[] = [
                 portletId: '12.2a057aed1776e064a77113f',
             },
         },
+        // Fokusstad 2026-08-09: destinationskalendern publicerar kvartal framåt.
+        windowDays: 180,
         updateFrequency: 'daily',
         // Historik: tyst 2026-06-22 → 2026-07-27 (kalmar.se/evenemang blev
         // landningssida; eventen bor på kalmar.com som JS-renderad webapp).
@@ -2299,6 +2369,8 @@ export const SOURCES: Source[] = [
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Borås',
                 },
+        // Fokusstad 2026-08-09: 55 av 62 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'weekly',
         notes: 'Probe-sitemap 2026-06-04: 23 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
@@ -2316,6 +2388,8 @@ export const SOURCES: Source[] = [
             eventBaseUrl: 'https://www.boras.com',
             defaultCity: 'Borås',
         },
+        // Fokusstad 2026-08-09: 169 av 256 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'daily',
         notes: 'Agent-probe 2026-07-27: 246 event varav 74 i 30d-fönstret. Självstädande (WP trashar passerade event). language:SV-filter i queryn — inga EN-dubbletter.',
         lastVerified: '2026-07-27',
@@ -2341,6 +2415,8 @@ export const SOURCES: Source[] = [
             defaultCity: 'Borås',
             maxUrls: 50,
         },
+        // Fokusstad 2026-08-09: 23 av 25 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Agent-probe 2026-07-27: 24 kommande /evenemang/-URLs (mäss- och konserthall). Ingen JSON-LD Event.',
@@ -2361,6 +2437,10 @@ export const SOURCES: Source[] = [
             defaultCity: 'Borås',
             maxUrls: 40,
         },
+        // Fokusstad 2026-08-09: 23 av 24 hittade event låg utanför 30d-fönstret
+        // (teatersäsongen släpps i klump). Passerade produktioner klipps ändå
+        // av fönstrets startkant.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Agent-probe 2026-07-27: 29 /forestallningar/-URLs i sitemap1.xml.gz (~8 aktuella produktioner). Gamla produktioner ligger kvar — fönstret klipper.',
@@ -3739,10 +3819,56 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/(?:sv\/)?kalender\/[^/]+\/?$/i],
             defaultCity: 'Norrköping',
         },
+        // Fokusstad 2026-08-09: 254 av 254 hittade event låg utanför 30d-fönstret.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 328 event-URLs (kalender-mönster) — museum.',
         lastVerified: '2026-06-09',
     },
+    {
+        id: 'visit-norrkoping',
+        hostName: 'Visit Norrköping',
+        region: 'norrkoping',
+        engine: 'sitevision',
+        config: {
+            urls: ['https://visit.norrkoping.se/kalender'],
+            defaultCity: 'Norrköping',
+            // SiteVision-webappens /search-route (se searchAppApi i sitevision.ts).
+            // Portlet-id sniffat ur "Visa fler"-XHR:en 2026-08-09.
+            searchAppApi: {
+                portletId: '12.5ff942e1184b3f255e27f786',
+                fetchDetail: true,
+            },
+            maxItems: 800,
+        },
+        // Kalendern sträcker sig mars 2026–maj 2027; 30d-fönstret hade kastat
+        // ~80 % av det som gör Norrköping till en fokusstad.
+        windowDays: 180,
+        updateFrequency: 'daily',
+        notes: 'Norrköpings officiella evenemangskalender (kommunen + Visit Norrköping). '
+            + '445 tillfällen / 356 unika event vid upptäckt 2026-08-09, mars 2026–maj 2027. '
+            + 'Bär det som saknades helt i regionen: Augustifesten (84), Kulturnatten (73), '
+            + 'Flygeln, Arbis, To Decay, Östgötateatern, stadsmuseet. Listan saknar tid och '
+            + 'plats — fetchDetail hämtar varje unik URL en gång och ger klockslag, venue, '
+            + 'gatuadress OCH exakta koordinater ur kart-iframen (ingen geokodning behövs). '
+            + 'Kostar ~356 throttlade detalj-fetch (~9 min) per körning.',
+        lastVerified: '2026-08-09',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://visit.norrkoping.se/kalender?filters=%7B%7D&query=&page=1'
+                + '&sv.12.5ff942e1184b3f255e27f786.route=%2Fsearch'
+                + '&sv.target=12.5ff942e1184b3f255e27f786&timestamp=0',
+            date: '2026-08-09',
+            rawEventCount: 445,
+        },
+    },
+    // Avfärdade i Norrköping-maxningen 2026-08-09 — proba INTE om:
+    //   arbetetsmuseum.se, visualiseringscenter.se — bulk-probe rapporterar
+    //     PASS (wp/v2/event, 20 "framtida"), men det är en FÄLLA: REST-fältet
+    //     `date` är PUBLICERINGSdatum och eventdatumet finns ingenstans i
+    //     API:t (meta=null, acf=[]). Inspect gav 44 event på ETT datum,
+    //     inkl. "WorkLab General Conference 2024". Båda husens program bärs
+    //     ändå av 'visit-norrkoping' med klockslag och koordinater.
     {
         id: 'fargfabriken',
         hostName: 'Färgfabriken',
@@ -4134,21 +4260,10 @@ export const SOURCES: Source[] = [
         notes: 'Probe-venues 2026-06-09: 41 event-URLs (events-mönster) — regionteater. Körd: 0/29 (sommarstängt). Kolla i sep.',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.regionteatern.se/sitemap.xml', date: '2026-06-09' },
     },
-    {
-        id: 'louis-de-geer',
-        hostName: 'Louis De Geer',
-        region: 'norrkoping',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: 'https://www.louisdegeer.se/sitemap_index.xml',
-            urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-            defaultCity: 'Norrköping',
-        },
-        updateFrequency: 'every-3d',
-        status: 'experimental',
-        notes: 'Probe-venues 2026-06-09: 207 event-URLs (evenemang-mönster) — konserthus. Körd: 0/207 (höstsäsong → allt framåt, sommaruppehåll). Kolla i aug.',
-        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.louisdegeer.se/sitemap_index.xml', date: '2026-06-09' },
-    },
+    // 'louis-de-geer' borttagen 2026-08-09: dubblett av 'louisdegeer'. Dess
+    // sitemap_index pekar på SAMMA evenemang-sitemap.xml som den redan hämtar
+    // direkt, så de två källorna skapade samma konserter under två hostNames
+    // ("Louis De Geer" / "Louis De Geer Konsert & Kongress").
     {
         id: 'oceanen',
         hostName: 'Oceanen',

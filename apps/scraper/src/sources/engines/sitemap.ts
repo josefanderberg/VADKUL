@@ -477,6 +477,20 @@ function titleFromUrl(url: string): string {
     }
 }
 
+/**
+ * Sidans "chrome" (meny, sidhuvud/-fot, cookie-banner) bortplockad — bara
+ * innehållet kvar. Används som datum-textkandidat på sajter utan semantiska
+ * <main>/<article>-taggar, där menyn annars kommer först i body-texten.
+ * <header> lämnas kvar: många artiklar lägger datumet i sitt eget artikel-
+ * huvud, och navigationen fångas ändå av nav/meny-selektorerna.
+ */
+function stripChrome(html: string): string {
+    const $c = cheerio.load(html);
+    $c('script, style, noscript, nav, [role="navigation"], footer, .site-footer, '
+        + '.menu, .main-menu, .nav-menu, .navbar, .breadcrumb, .breadcrumbs, .cookie, .cookies').remove();
+    return $c('body').text();
+}
+
 function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
     // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet).
@@ -559,8 +573,13 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         const candidateText = [
             $('.event-info, .event-date, .event-date-time, #event-dates-list, .evenemang-datum, .datum, .date').text(),
             $('main, article, .content').first().text(),
+            // Meny-strippad body FÖRE den orörda: sajter utan <main>/<article>
+            // (Kalmar Slott m.fl.) har hundratals menylänkar före brödtexten,
+            // och de åt upp hela teckenbudgeten innan "Tid 18 februari kl 19.00"
+            // hanns med → 0 event trots att datumet stod på sidan.
+            stripChrome(html),
             $('body').text(),
-        ].join('\n').slice(0, 5000); // cap för parser-prestanda
+        ].join('\n').slice(0, 8000); // cap för parser-prestanda
         const parsed = findFirstDateInText(candidateText);
         if (parsed) {
             // Om vi inte hade något strukturerat datum: använd text rakt av.
@@ -592,8 +611,18 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         $('time').each((_i, el) => { const v = $(el).text().trim().match(/^(\d{1,2})[:.](\d{2})$/); if (v) push(+v[1], +v[2]); });
         // 2. "kl HH:MM" eller bara HH.MM i HUVUDINNEHÅLLET (ej footer/nav) — venues
         //    (Nalen/Norrlandsoperan/Pustervik) lägger showtiden i renderad brödtext.
-        const content = ($('main, article, .content, .event-info, .single-event, .program, .evenemang').first().text()
-            || '').slice(0, 4000);
+        //    Saknar sajten semantiska taggar (Louis De Geer m.fl. — varken
+        //    <main>, <article> eller .content finns) blev strängen tom och ALLA
+        //    konserter fick midnatt/heldag trots att "20:00" stod på sidan.
+        //    Då: meny-strippad text ANKRAD vid rubriken, så vi läser eventets
+        //    egen ingress och inte husets öppettider längre upp på sidan.
+        const semantic = $('main, article, .content, .event-info, .single-event, .program, .evenemang').first().text();
+        let content = (semantic || '').slice(0, 4000);
+        if (!content.trim()) {
+            const stripped = stripChrome(html).replace(/\s+/g, ' ');
+            const anchor = stripped.indexOf(title.replace(/\s+/g, ' ').slice(0, 40));
+            content = stripped.slice(anchor >= 0 ? anchor : 0, (anchor >= 0 ? anchor : 0) + 2500);
+        }
         for (const mt of content.matchAll(/(?:kl[.\s]*)?\b(\d{1,2})[:.](\d{2})\b/gi)) push(parseInt(mt[1], 10), parseInt(mt[2], 10));
         if (cands.length) {
             // Heuristik: kvällstid (>=17) först (konserter); annars tidigaste kronologiskt.

@@ -86,6 +86,24 @@ export interface SiteVisionConfig {
      * timestamp-parametern krävs (utan den kastar servern JSONException).
      */
     guideApi?: { basePath: string };
+    /**
+     * SiteVision-webappens `/search`-route (upptäckt på visit.norrkoping.se
+     * 2026-08-09):
+     *   GET <listUrl>?filters=%7B%7D&query=&page=N
+     *       &sv.<portletId>.route=%2Fsearch&sv.target=<portletId>&timestamp=<ms>
+     *   Header: X-Requested-With: XMLHttpRequest   ← UTAN den svarar servern
+     *   med hela HTML-sidan i stället för JSON (Accept: application/json räcker inte).
+     *   → { searchHits: [{ id, title, summary, date, image, url, categories, type }],
+     *       searchInfo: { totalHits, totalPages, currentPage } }
+     *
+     * Pagineringen är INTE kumulativ (10 träffar/sida) — alla sidor måste hämtas.
+     * `date` är renderad svensk text ("9 aug", "13 mar 2027", "5 aug - 6 sep")
+     * och saknar klockslag; en återkommande serie ger EN träff per tillfälle,
+     * alla med samma url. Tid/plats/adress/koordinater finns bara på detaljsidan
+     * → `fetchDetail` hämtar varje unik URL en gång (throttlat) och delar
+     * resultatet mellan seriens tillfällen.
+     */
+    searchAppApi?: { portletId: string; fetchDetail?: boolean };
 }
 
 /** Rått item ur soleil items-API:t (bara fälten vi läser). */
@@ -464,7 +482,251 @@ async function scrapeGuideApi(
     return events;
 }
 
-async function fetchHtml(url: string, cfg: SiteVisionConfig): Promise<string | null> {
+/** Rått hit ur webappens /search-route (visit.norrkoping-varianten). */
+interface SearchAppHit {
+    id?: string;
+    title?: string;
+    summary?: string;
+    date?: string;              // "9 aug" | "13 mar 2027" | "5 aug - 6 sep"
+    image?: string;
+    url?: string;
+    categories?: string;
+    type?: string;              // 'event' — andra typer filtreras bort
+}
+
+const SV_MONTHS: Record<string, number> = {
+    jan: 0, januari: 0, feb: 1, februari: 1, mar: 2, mars: 2, apr: 3, april: 3,
+    maj: 4, jun: 5, juni: 5, jul: 6, juli: 6, aug: 7, augusti: 7,
+    sep: 8, september: 8, okt: 9, oktober: 9, nov: 10, november: 10, dec: 11, december: 11,
+};
+
+/**
+ * Tolka webappens renderade datumtext. Exporterad för test.
+ *
+ * Format (alla observerade på visit.norrkoping.se 2026-08-09):
+ *   "9 aug"                      — år underförstått
+ *   "13 mar 2027"                — explicit år
+ *   "5 aug - 6 sep"              — intervall, år underförstått
+ *   "13 - 15 aug"                — intervall, månad bara på slutdatumet
+ *   "25 sep 2026 - 27 jan 2027"  — intervall, explicita år
+ *
+ * Kalendern listar bara pågående/kommande event, så ett årslöst datum tolkas
+ * som innevarande år — utom när det då hamnar mer än 120 dagar bakåt, vilket
+ * betyder att det syftar på nästa år ("5 feb" sett i augusti).
+ */
+export function parseSearchAppDate(
+    raw: string | undefined,
+    now: Date = new Date(),
+): { start: Date; end?: Date } | null {
+    const s = raw?.trim().replace(/[‐-―]/g, '-');   // – — → -
+    if (!s) return null;
+
+    const mkDate = (day: number, month: number, year: number | null): Date => {
+        const y = year ?? now.getFullYear();
+        let d = new Date(y, month, day);
+        if (year === null) {
+            const daysOff = (d.getTime() - now.getTime()) / 86_400_000;
+            if (daysOff < -120) d = new Date(y + 1, month, day);
+        }
+        return d;
+    };
+    // "13 mar 2027" / "9 aug" / "13" (månadslöst, bara i intervallets vänsterled)
+    const PART = /^(\d{1,2})(?:\s+([a-zåäö]+))?(?:\s+(\d{4}))?$/i;
+
+    const [lhs, rhs] = s.split(/\s+-\s+/);
+    const parse = (part: string, fallbackMonth?: number, fallbackYear?: number | null) => {
+        const m = part.trim().match(PART);
+        if (!m) return null;
+        const day = parseInt(m[1], 10);
+        const monthKey = m[2]?.toLowerCase();
+        const month = monthKey ? SV_MONTHS[monthKey] : fallbackMonth;
+        if (month === undefined || !(day >= 1 && day <= 31)) return null;
+        const year = m[3] ? parseInt(m[3], 10) : (fallbackYear ?? null);
+        const d = mkDate(day, month, year);
+        return isNaN(d.getTime()) ? null : d;
+    };
+
+    if (!rhs) {
+        const start = parse(lhs);
+        return start ? { start } : null;
+    }
+    // Slutdatumet parsas först — "13 - 15 aug" saknar månad i vänsterledet.
+    const end = parse(rhs);
+    if (!end) return null;
+    const start = parse(lhs, end.getMonth(), end.getFullYear() === now.getFullYear() ? null : end.getFullYear());
+    if (!start) return null;
+    // "25 sep 2026 - 27 jan 2027" utan explicit år i vänsterledet: slutet före
+    // starten betyder att intervallet spänner över ett årsskifte.
+    if (end < start) end.setFullYear(end.getFullYear() + 1);
+    return { start, end };
+}
+
+/** Mappa ett searchApp-hit → RawEvent. Exporterad för test. */
+export function mapSearchAppHit(
+    hit: SearchAppHit,
+    baseUrl: string,
+    defaultCity: string | undefined,
+    windowStart: Date,
+    now: Date = new Date(),
+): RawEvent | null {
+    const title = (hit.title || '').trim();
+    const eventUrl = makeAbsoluteUrl(hit.url, baseUrl);
+    const parsed = parseSearchAppDate(hit.date, now);
+    if (!title || !eventUrl || !parsed) return null;
+    if (hit.type && hit.type !== 'event') return null;
+
+    // Pågående fleradagars-event ankras på windowStart (samma som eventSearch/guide).
+    let start = parsed.start;
+    if (start < windowStart && parsed.end && parsed.end >= windowStart) {
+        start = new Date(windowStart);
+    }
+
+    return {
+        externalId: hit.id,
+        title,
+        startDate: start,
+        endDate: parsed.end && parsed.end > start ? parsed.end : undefined,
+        url: eventUrl,
+        city: defaultCity,
+        description: hit.summary?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(hit.image, baseUrl),
+    };
+}
+
+/**
+ * Plocka tid/plats/adress/koordinater ur detaljsidan. Exporterad för test.
+ *
+ * Markup (vn-object-page, stabila klassnamn):
+ *   <div class="…occasion-item-metadata-row"><span …/><span class="show-for-sr">Tid:</span>19:00–20:40</div>
+ *   …samma rad-mönster för "Plats:"
+ *   <div class="…metadata-item-title">…Adress</div><div class="…metadata-item-value">Holmengatan 4, 602 32 Norrköping</div>
+ *   <iframe src="https://www.google.com/maps/embed?pb=…!2d<lng>!3d<lat>!…">
+ */
+export function parseSearchAppDetail(html: string): {
+    time?: string;
+    venueName?: string;
+    address?: string;
+    coords?: [number, number];
+} {
+    const $ = cheerio.load(html);
+    const out: { time?: string; venueName?: string; address?: string; coords?: [number, number] } = {};
+
+    $('.vn-object-page__occasion-item-metadata-row').each((_, el) => {
+        const label = $(el).find('.show-for-sr').first().text().trim().replace(/:$/, '');
+        const value = decodeHtmlEntities($(el).clone().children('span').remove().end().text())
+            .replace(/\s+/g, ' ').trim();
+        if (!value) return;
+        if (/^tid$/i.test(label) && !out.time) out.time = value;
+        if (/^plats$/i.test(label) && !out.venueName) out.venueName = value;
+    });
+
+    $('.vn-object-page__information-box-metadata-item').each((_, el) => {
+        const title = $(el).find('.vn-object-page__information-box-metadata-item-title').text().trim();
+        if (!/^adress$/i.test(title)) return;
+        const value = decodeHtmlEntities(
+            $(el).find('.vn-object-page__information-box-metadata-item-value').text(),
+        ).replace(/\s+/g, ' ').trim();
+        if (value && !out.address) out.address = value;
+    });
+
+    // Kartans embed-URL bär venue-koordinaterna exakt → hoppa över geokodning.
+    const mapSrc = $('.vn-object-page__information-map iframe').attr('src') || '';
+    const geo = mapSrc.match(/!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)/);
+    if (geo) {
+        const lng = parseFloat(geo[1]);
+        const lat = parseFloat(geo[2]);
+        if (lat > 55 && lat < 70 && lng > 10 && lng < 25) out.coords = [lat, lng];
+    }
+    return out;
+}
+
+/** "19:00-20:40" / "19.00" → starttimme+minut, eller null för heldag. */
+function parseClock(time: string | undefined): { hh: number; mi: number } | null {
+    const m = time?.trim().match(/^(\d{1,2})[:.](\d{2})/);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mi = parseInt(m[2], 10);
+    if (hh > 23 || mi > 59) return null;
+    // 00:00 = heldagsmarkering, inte ett riktigt klockslag.
+    return hh === 0 && mi === 0 ? null : { hh, mi };
+}
+
+/** Webappens /search-route: paginera + (valfritt) berika ur detaljsidorna. */
+async function scrapeSearchAppApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const { portletId, fetchDetail } = config.searchAppApi!;
+    const cap = config.maxItems ?? 1000;
+    const timestamp = Date.now();
+    const mkUrl = (page: number) =>
+        `${base}?filters=%7B%7D&query=&page=${page}`
+        + `&sv.${portletId}.route=%2Fsearch&sv.target=${portletId}&timestamp=${timestamp}`;
+
+    const events: RawEvent[] = [];
+    let totalPages = 1;
+    let totalHits: number | undefined;
+
+    for (let page = 1; page <= totalPages && events.length < cap; page++) {
+        const body = await fetchHtml(mkUrl(page), config, { 'X-Requested-With': 'XMLHttpRequest' });
+        if (!body) { ctx.log(`  searchApp-API svarade inte (page=${page})`); break; }
+
+        let data: { searchHits?: SearchAppHit[]; searchInfo?: { totalHits?: number; totalPages?: number } };
+        try { data = JSON.parse(body); } catch { ctx.log('  searchApp-API gav icke-JSON (saknas X-Requested-With?)'); break; }
+
+        if (page === 1) {
+            totalPages = data.searchInfo?.totalPages ?? 1;
+            totalHits = data.searchInfo?.totalHits;
+        }
+        const hits = data.searchHits ?? [];
+        if (hits.length === 0) break;
+
+        for (const hit of hits) {
+            const ev = mapSearchAppHit(hit, base, config.defaultCity, ctx.windowStart);
+            if (ev) events.push(ev);
+        }
+    }
+    ctx.log(`searchApp-API: ${events.length} tillfällen (totalHits=${totalHits}, sidor=${totalPages})`);
+
+    if (!fetchDetail || events.length === 0) return events;
+
+    // Ett fetch per UNIK url — en återkommande serie delar detaljsida.
+    const byUrl = new Map<string, RawEvent[]>();
+    for (const ev of events) {
+        const list = byUrl.get(ev.url);
+        if (list) list.push(ev); else byUrl.set(ev.url, [ev]);
+    }
+    let enriched = 0, withClock = 0, withCoords = 0;
+    for (const [url, group] of byUrl) {
+        const html = await fetchHtml(url, config);
+        if (!html) continue;
+        const d = parseSearchAppDetail(html);
+        if (!d.time && !d.venueName && !d.address && !d.coords) continue;
+        enriched++;
+        const clock = parseClock(d.time);
+        if (clock) withClock++;
+        if (d.coords) withCoords++;
+        for (const ev of group) {
+            if (d.venueName) ev.venueName = d.venueName;
+            if (d.address) ev.address = d.address;
+            if (d.coords) ev.coords = d.coords;
+            if (clock) {
+                ev.startDate = new Date(ev.startDate);
+                ev.startDate.setHours(clock.hh, clock.mi, 0, 0);
+                ev.hasSpecificTime = true;
+            }
+        }
+    }
+    ctx.log(`  detaljsidor: ${enriched}/${byUrl.size} berikade (${withClock} med klockslag, ${withCoords} med koordinater)`);
+    return events;
+}
+
+async function fetchHtml(
+    url: string,
+    cfg: SiteVisionConfig,
+    extraHeaders?: Record<string, string>,
+): Promise<string | null> {
     await domainLimiter.wait(url);
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
@@ -474,6 +736,7 @@ async function fetchHtml(url: string, cfg: SiteVisionConfig): Promise<string | n
                 'User-Agent': cfg.userAgent ?? DEFAULT_UA,
                 'Accept': 'text/html,application/xhtml+xml',
                 'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+                ...extraHeaders,
             },
             redirect: 'follow',
             signal: ac.signal,
@@ -501,6 +764,7 @@ export const sitevisionEngine = async (
     if (config.itemsApi) return scrapeSoleilItemsApi(config, ctx);
     if (config.eventSearchApi) return scrapeEventSearchApi(config, ctx);
     if (config.guideApi) return scrapeGuideApi(config, ctx);
+    if (config.searchAppApi) return scrapeSearchAppApi(config, ctx);
 
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();
