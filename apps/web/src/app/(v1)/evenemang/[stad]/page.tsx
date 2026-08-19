@@ -25,13 +25,19 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const city = CITIES.find(c => c.slug === stad);
     if (!city) return {};
     const { events } = await getCityEvents(city);
-    // "idag/i helgen" i titel+beskrivning matchar hur folk faktiskt söker
+    // "idag/i veckan" i beskrivningen matchar hur folk faktiskt söker
     // ("vad händer i växjö idag") — siffrorna bakas vid build och hålls
     // dagsfärska av den dagliga auto-deployen.
+    //
+    // VECKOTALET, inte helgtalet (Josef 20/8): helgsiffran är noll halva veckan
+    // och sa inget om volymen i Googles utdrag. Samma tal som intro-raden på
+    // sidan visar (bytet gjordes där 11/8) — utdraget och sidan ska säga samma
+    // sak. Veckan = idag + 6 dagar, så talet RYMMER dagens event; det är
+    // avsiktligt ("17 i veckan" är totalen, inte utöver dagens 13).
     const todayCount = countByDayKeys(events, [todayKey()]);
-    const weekendCount = countByDayKeys(events, weekendKeys());
-    const counts = todayCount > 0 || weekendCount > 0
-        ? ` ${todayCount} idag, ${weekendCount} i helgen.`
+    const weekCount = countByDayKeys(events, weekKeys());
+    const counts = todayCount > 0 || weekCount > 0
+        ? ` ${todayCount} idag, ${weekCount} i veckan.`
         : '';
     const description = `${events.length} kommande evenemang i ${city.name} med omnejd.${counts} Konserter, marknader, sport och saker att göra med barn — allt gratis på VADKUL-kartan.`;
     return {

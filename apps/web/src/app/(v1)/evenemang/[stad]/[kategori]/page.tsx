@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
     categoryBySlug, getCityCategoryEvents, getCategoryCombos, dayLabel,
-    todayKey, weekendKeys, countByDayKeys, topVenues, exampleTitles, svList,
+    todayKey, weekendKeys, weekKeys, countByDayKeys, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
@@ -29,16 +29,21 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const cat = categoryBySlug(kategori);
     if (!city || !cat) return {};
     const { events } = await getCityCategoryEvents(city, cat.dataKey);
-    // "idag & i helgen" i titeln fångar långsvansen ("konserter kalmar i
-    // helgen") — siffrorna hålls färska av den dagliga auto-deployen.
+    // "idag & i veckan" i titeln fångar långsvansen ("konserter kalmar")
+    // — siffrorna hålls färska av den dagliga auto-deployen.
+    //
+    // VECKOTALET, inte helgtalet (Josef 20/8) — se stadssidans metadata:
+    // helgsiffran är noll halva veckan. Veckan = idag + 6 dagar och rymmer
+    // alltså dagens event. Helg-långsvansen lever kvar i FAQ:n nedan
+    // ("Vilka konserter är det i helgen i …?"), som svarar på just den frågan.
     const todayCount = countByDayKeys(events, [todayKey()]);
-    const weekendCount = countByDayKeys(events, weekendKeys());
-    const counts = todayCount > 0 || weekendCount > 0
-        ? ` ${todayCount} idag, ${weekendCount} i helgen.`
+    const weekCount = countByDayKeys(events, weekKeys());
+    const counts = todayCount > 0 || weekCount > 0
+        ? ` ${todayCount} idag, ${weekCount} i veckan.`
         : '';
     const description = `${events.length} kommande evenemang: ${cat.intro(city.name)} i ${city.name} med omnejd.${counts} Se allt som händer på VADKUL-kartan, gratis.`;
     return {
-        title: `${cat.h1(city.name)} — idag & i helgen`,
+        title: `${cat.h1(city.name)} — idag & i veckan`,
         description,
         alternates: { canonical: `/evenemang/${city.slug}/${cat.slug}` },
         openGraph: {
@@ -72,6 +77,10 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     const wkKeys = weekendKeys();
     const todayCount = countByDayKeys(events, [tKey]);
     const weekendCount = countByDayKeys(events, wkKeys);
+    // Intro-raden visar VECKANS antal, precis som stadssidan (Josef 11/8 för
+    // stadssidan, kategorisidan följde efter 20/8) — helg-siffran lever kvar i
+    // FAQ:n som svarar på helg-frågan.
+    const weekCount = countByDayKeys(events, weekKeys());
     const venues = topVenues(events, city.name);
     const todayEx = exampleTitles(events, [tKey]);
     const weekendEx = exampleTitles(events, wkKeys);
@@ -134,9 +143,9 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
                     Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> med
                     {' '}{cat.intro(city.name)} i {city.name} med omnejd på VADKUL
-                    {(todayCount > 0 || weekendCount > 0) && (
+                    {(todayCount > 0 || weekCount > 0) && (
                         <> — <strong className="text-slate-900">{todayCount} idag</strong> och{' '}
-                        <strong className="text-slate-900">{weekendCount} i helgen</strong></>
+                        <strong className="text-slate-900">{weekCount} i veckan</strong></>
                     )}.
                     Allt är gratis att utforska, utan konto.
                     {venues.length >= 2 && <> Vanliga platser: {svList(venues)}.</>}
