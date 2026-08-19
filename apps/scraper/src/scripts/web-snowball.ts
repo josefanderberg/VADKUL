@@ -278,6 +278,7 @@ async function smokeTest(suggestion: any): Promise<SmokeVerdict> {
 
     const config = { ...suggestion.config };
     if (Array.isArray(config.urlPatterns)) config.urlPatterns = config.urlPatterns.map(parseRegexLiteral);
+    if (typeof config.detailPattern === 'string') config.detailPattern = parseRegexLiteral(config.detailPattern);
     if (config.maxUrls) config.maxUrls = Math.min(config.maxUrls, 60);   // smoke ska vara snabb
     if (config.maxPages) config.maxPages = Math.min(config.maxPages, 1);
 
@@ -308,6 +309,8 @@ function configToTs(config: Record<string, any>): string {
     for (const [k, v] of Object.entries(config)) {
         if (k === 'urlPatterns' && Array.isArray(v)) {
             parts.push(`${k}: [${v.map((p) => (typeof p === 'string' && /^\/.*\/[a-z]*$/s.test(p) ? p : tsString(String(p)))).join(', ')}]`);
+        } else if (k === 'detailPattern' && typeof v === 'string' && /^\/.*\/[a-z]*$/s.test(v)) {
+            parts.push(`${k}: ${v}`);   // regex-literal som sträng → skriv rått
         } else if (typeof v === 'string') parts.push(`${k}: ${tsString(v)}`);
         else parts.push(`${k}: ${JSON.stringify(v)}`);
     }

@@ -87,4 +87,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         notes: 'web-snöboll 2026-08-20: sitemap-text, smoke 51 event ok. Manuell kandidatlista (stads-svep).',
         lastVerified: '2026-08-20',
     },
+
+    {
+        id: 'sb-regionostergotland-se',
+        hostName: 'Region Östergötland',
+        region: 'ostergotland',
+        engine: 'sitemap' as const,
+        config: { sitemapUrl: 'https://www.regionostergotland.se/rest-api/sitemap/4.32669883183822752aa905', urlPatterns: [/\/kalender\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://www.regionostergotland.se/rest-api/sitemap/4.32669883183822752aa905',
+            date: '2026-08-20',
+            rawEventCount: 3,
+        },
+        notes: 'web-snöboll 2026-08-20: sitemap-text, smoke 3 event ok. Manuell kandidatlista (stads-svep).',
+        lastVerified: '2026-08-20',
+    },
 ];

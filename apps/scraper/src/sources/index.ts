@@ -16,6 +16,7 @@ import { nuxtDataEngine } from './engines/nuxt-data';
 import { sitevisionEngine } from './engines/sitevision';
 import { sitemapEngine } from './engines/sitemap';
 import { crunchoEngine } from './engines/cruncho';
+import { gotohubEngine } from './engines/gotohub';
 import { wpGraphqlEngine } from './engines/wp-graphql';
 // Nätverks-engines — paraply-API:er där EN engine täcker hela nätverket.
 // Bor i src/scrapers/ (källspecifik kod) men kör genom samma runner-pipeline.
@@ -80,6 +81,7 @@ export const ENGINES: Record<string, Engine> = {
     'sitevision': sitevisionEngine,
     'sitemap': sitemapEngine,
     'cruncho': crunchoEngine,
+    'gotohub': gotohubEngine,
     'wp-graphql': wpGraphqlEngine,
     // Nätverks-engines (en källa = hela nätverket)
     'hembygd': hembygdEngine,

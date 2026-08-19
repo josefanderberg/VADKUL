@@ -31,7 +31,7 @@ interface Candidate { name: string; region: string; base: string; }
 interface ProbeResult {
     cand: Candidate;
     verdict: 'PASS' | 'FAIL' | 'DUPE';
-    engine?: 'wp-rest' | 'sitemap' | 'sitevision';
+    engine?: 'wp-rest' | 'sitemap' | 'sitevision' | 'gotohub';
     method?: string;       // tribe | wp-v2 | sitemap-json-ld | sitemap-text
     count?: number;        // framtida/strukturerade events upptäckta
     detail?: string;       // bästa URL / sub-sitemap
@@ -117,6 +117,25 @@ async function probeSitevisionCal(base: string): Promise<{ count: number; url: s
         if (times >= MIN_EVENTS || dateLinks >= MIN_EVENTS) return { count: Math.max(times, dateLinks), url };
     }
     return null;
+}
+
+// ── 0b. GoToHub/Visit Group (List/Search-komponenten) ────────────────────────
+// Umbraco-frontade destinationssajter (visitskelleftea.se). Eventantalet
+// ligger i page-total-headern; korten i HTML-fragmentet länkar detaljsidor
+// med JSON-LD Event. Motorn: gotohub.
+async function probeGotohub(base: string): Promise<{ count: number; url: string; detailPattern: string } | null> {
+    const url = `${base}/front/components/List/Search?locale=sv-SE&view=ListView&page=1&pageSize=16&types=event&categories=events`;
+    try {
+        const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT_MS) });
+        if (!res.ok) return null;
+        const total = parseInt(res.headers.get('page-total') ?? '0', 10);
+        if (!total || total < MIN_EVENTS) return null;
+        const body = await res.text();
+        // Härleda detaljmönstret ur första kort-länken: /sv/evenemangsarkiv/slug → /evenemangsarkiv/
+        const first = body.match(/href="\/(?:sv\/)?([a-z0-9-]+)\/[a-z0-9][a-z0-9-]+\/?"/i);
+        const seg = first ? first[1] : 'evenemang';
+        return { count: total, url, detailPattern: `/\\/${seg}\\//i` };
+    } catch { return null; }
 }
 
 // ── 1. Tribe (The Events Calendar) ───────────────────────────────────────────
@@ -229,7 +248,14 @@ async function probeCandidate(cand: Candidate, existingDomains: Set<string>): Pr
         config: { sitemapUrl: sm.detail, urlPatterns: [sm.pattern], defaultCity: cand.name, maxUrls: 200 },
     };
 
-    // 4. SiteVision-kalender
+    // 4. GoToHub (List/Search-komponenten)
+    const gh = await probeGotohub(base);
+    if (gh) return {
+        cand, verdict: 'PASS', engine: 'gotohub', method: 'gotohub-list', count: gh.count, detail: gh.url,
+        config: { baseUrl: base, detailPattern: gh.detailPattern, defaultCity: cand.name },
+    };
+
+    // 5. SiteVision-kalender
     const sv = await probeSitevisionCal(base);
     if (sv) return {
         cand, verdict: 'PASS', engine: 'sitevision', method: sv.restApi ? 'sitevision-restapp' : 'sitevision-cal', count: sv.count, detail: sv.url,

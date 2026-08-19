@@ -10,6 +10,11 @@
       "note": "bulk-probe-FÄLLA: wp/v2 ger publiceringsdatum, ej eventdatum (norrkoping-maxning-minnet) — proba ALDRIG om",
       "verdict": "FAIL"
     },
+    "atvidaberg.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "augustifesten.se": {
       "verdict": "FAIL",
       "date": "2026-08-20",
@@ -24,6 +29,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "boxholm.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-08-20",
+      "note": "bara 0 framtida event (kräver ≥3)"
     },
     "brygghusetboras.se": {
       "date": "2026-08-19",
@@ -50,6 +60,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "finspang.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "fjallravencenter.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
@@ -63,6 +78,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "gotakanal.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
     },
     "harnosand.se": {
       "date": "2026-08-19",
@@ -89,6 +109,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "kinda.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "konsertkongress.se": {
       "verdict": "FAIL",
       "date": "2026-08-20",
@@ -109,6 +134,11 @@
       "date": "2026-08-20",
       "note": "bulk-probe"
     },
+    "linkopingcity.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "linkopingsstadsfest.se": {
       "verdict": "PASS",
       "date": "2026-08-20"
@@ -117,6 +147,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "medevibrunn.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
     },
     "mjolby.se": {
       "verdict": "FAIL",
@@ -138,6 +173,16 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "norrkopingcity.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "odeshog.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "oland.com": {
       "date": "2026-08-19",
       "note": "bulk-probe",
@@ -157,6 +202,10 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "regionostergotland.se": {
+      "verdict": "PASS",
+      "date": "2026-08-20"
     },
     "retuna.se": {
       "date": "2026-08-19",
@@ -184,6 +233,11 @@
       "note": "bulk-probe"
     },
     "skylten.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "soderkoping.se": {
       "verdict": "FAIL",
       "date": "2026-08-20",
       "note": "bulk-probe"
@@ -239,6 +293,11 @@
       "verdict": "FAIL"
     },
     "trastocksfestivalen.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "vadstena.se": {
       "verdict": "FAIL",
       "date": "2026-08-20",
       "note": "bulk-probe"
