@@ -370,19 +370,24 @@ export const sendPushNotification = region.firestore
  * Ingen klient kan läsa/skriva någon av collectionerna (reglerna är
  * default-deny resp. explicit stängda), bara admin-SDK:t här.
  *
- * Fönstret är (nu, nu+60 min]: med 5-minuters-schemat fångas eventet första
- * ticken efter att det klivit in i fönstret (~55–60 min innan), och skulle en
+ * Fönstret är (nu, nu+60 min]: med 15-minuters-schemat (glesat 2026-08-19,
+ * var tidigare 5 — tredjedelen av scan-läsningarna) fångas eventet första
+ * ticken efter att det klivit in i fönstret (~45–60 min innan), och skulle en
  * körning missas tar nästa tick det (så länge eventet inte redan börjat).
  */
 export const eventReminders = region.pubsub
-    .schedule('every 5 minutes')
+    .schedule('every 15 minutes')
     .onRun(async () => {
         const now = admin.firestore.Timestamp.now();
         const inOneHour = admin.firestore.Timestamp.fromMillis(now.toMillis() + 60 * 60 * 1000);
 
+        // select() = fältmask: scannen körs var 15:e minut och läser samma event
+        // upp till 4 gånger — skicka inte hela ~1 kB-dokumentet över nätet varje
+        // gång (egress var den dyra SKU:n aug-26), bara fälten notisen behöver.
         const eventsSnap = await db.collection('linkEvents')
             .where('time', '>', now)
             .where('time', '<=', inOneHour)
+            .select('time', 'hasSpecificTime', 'title', 'locationName')
             .get();
 
         for (const eventDoc of eventsSnap.docs) {
@@ -391,17 +396,13 @@ export const eventReminders = region.pubsub
             // kl 23 kvällen innan vore fel — hoppa över dem.
             if (event.hasSpecificTime === false) continue;
 
-            // Ta eventet: create() kastar ALREADY_EXISTS om en tidigare körning
-            // redan påmint → hoppa vidare.
             const markerRef = db.collection('eventReminders').doc(eventDoc.id);
             try {
-                await markerRef.create({ claimedAt: now, eventTime: event.time });
-            } catch {
-                continue;
-            }
-
-            try {
-                // Anmälda (subcollectionens doc-id = uid) ∪ gillare.
+                // MOTTAGARNA FÖRST (kostnadsfix 2026-08-19): tidigare skapades
+                // markören för VARJE event i fönstret — 46 920 dokument varav 2
+                // med mottagare. Nu kollas anmälda ∪ gillare först (2 läsningar,
+                // nästan alltid tomma) och event utan mottagare lämnar INGA spår;
+                // de omprövas per tick (≤4 ggr à 2 reads) tills fönstret passerat.
                 const recipients = new Set<string>();
                 const attendeesSnap = await eventDoc.ref.collection('attendees').get();
                 attendeesSnap.docs.forEach(d => recipients.add(d.id));
@@ -410,8 +411,19 @@ export const eventReminders = region.pubsub
                     .get();
                 likersSnap.docs.forEach(d => recipients.add(d.id));
 
-                if (recipients.size === 0) {
-                    await markerRef.update({ sentAt: now, recipients: 0, delivered: 0 });
+                if (recipients.size === 0) continue;
+
+                // Ta eventet: create() kastar ALREADY_EXISTS om en tidigare tick
+                // redan påmint → hoppa vidare. expiresAt låter en Firestore
+                // TTL-policy (eller nattens db-janitor) städa markören efteråt.
+                try {
+                    await markerRef.create({
+                        claimedAt: now,
+                        eventTime: event.time,
+                        expiresAt: admin.firestore.Timestamp.fromMillis(
+                            (event.time as admin.firestore.Timestamp).toMillis() + 7 * 24 * 60 * 60 * 1000),
+                    });
+                } catch {
                     continue;
                 }
 
@@ -474,8 +486,8 @@ type PrefWindow = keyof typeof PREF_WINDOWS;
 
 /**
  * Hur långt EFTER fönstrets tidpunkt ett utskick fortfarande är meningsfullt.
- * Schemat tickar var 5:e minut → normalt skickas inom 0–5 min; 30 min täcker
- * en handfull missade körningar (deploy, cold start, kortare strul). Äldre än
+ * Schemat tickar var 15:e minut → normalt skickas inom 0–15 min; 30 min täcker
+ * en missad körning (deploy, cold start, kortare strul). Äldre än
  * så skickas INTE ikapp: "Om 8 timmar" som landar 2 h före start är fel
  * information — hellre tyst och låta nästa valda fönster ta vid.
  */
@@ -538,10 +550,10 @@ async function reminderEventInfo(
  */
 async function processReminderPrefs(now: admin.firestore.Timestamp): Promise<void> {
     const nowMs = now.toMillis();
-    // En extra schematick (5 min) i marginal: gränsfall ska hellre hämtas en
+    // En extra schematick (15 min) i marginal: gränsfall ska hellre hämtas en
     // gång för mycket (och fällas av tidsvillkoren nedan) än falla mellan två
     // queries. Range på ett enda fält → ingen composite-index behövs.
-    const TICK_MS = 5 * 60 * 1000;
+    const TICK_MS = 15 * 60 * 1000;
     const prefsSnap = await db.collection('eventReminderPrefs')
         .where('eventStart', '>', admin.firestore.Timestamp.fromMillis(nowMs - PREF_WINDOW_GRACE_MS - TICK_MS))
         .where('eventStart', '<=', admin.firestore.Timestamp.fromMillis(nowMs + PREF_WINDOWS['8h'] * 60 * 1000 + TICK_MS))

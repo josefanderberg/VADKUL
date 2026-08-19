@@ -64,6 +64,8 @@
     "quality-coverage": "ts-node src/scripts/quality-coverage.ts",
     "quarantine": "ts-node src/scripts/auto-quarantine.ts",
     "web-snowball": "ts-node src/scripts/web-snowball.ts",
+    "db-janitor": "ts-node src/scripts/db-janitor.ts",
+    "cost-guard": "ts-node src/scripts/cost-guard.ts",
     "backfill-run": "ts-node src/scripts/backfill-run.ts",
     "daily-report": "ts-node src/scripts/teams-daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",

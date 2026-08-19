@@ -131,6 +131,28 @@ else
     echo "⚠️ Auto-karantän misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── DB-janitor + kostnadsvakt (bara nightly): ren databas + larm ───────────
+# Janitorn raderar bevisat döda markörer (eventReminders m.m. — incidenten
+# 2026-08-19: 46 920 docs varav 2 med mottagare). Kostnadsvakten snapshotar
+# alla kollektioners docantal i SQLite och ⚠️-varnar vid tillväxt/tak —
+# raderna landar i Teams-kortet nedan. Läsningarna är count-aggregat (~gratis).
+if [ "$JOB_NAME" = "nightly" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── DB-JANITOR (döda reminder-markörer) ──" >> "$LOG_FILE"
+    if npm run db-janitor >> "$LOG_FILE" 2>&1; then
+        echo "Janitor OK" >> "$LOG_FILE"
+    else
+        echo "⚠️ Janitor misslyckades — fortsätter ändå." >> "$LOG_FILE"
+    fi
+    echo "" >> "$LOG_FILE"
+    echo "── KOSTNADSVAKT (kollektionstillväxt) ──" >> "$LOG_FILE"
+    if npm run cost-guard >> "$LOG_FILE" 2>&1; then
+        echo "Kostnadsvakt OK" >> "$LOG_FILE"
+    else
+        echo "⚠️ Kostnadsvakt misslyckades — fortsätter ändå." >> "$LOG_FILE"
+    fi
+fi
+
 # ─── Dölj events i fel land (locationName matchar utländsk markör) ─────────
 # Konservativt — bara geografi-fält, inte title/description.
 # Hittar ~10/dygn typiskt. Idempotent (skipper redan hidden).
@@ -325,6 +347,11 @@ QUAR_SUMMARY="$(grep -oE 'Karantän-summering: .*' "$LOG_FILE" | tail -1 | sed '
 QUAR_NAMES="$(grep '⏸️ KARANTÄN:' "$LOG_FILE" | sed 's/.*KARANTÄN: //;s/ — .*//' | tr '\n' ',' | sed 's/,$//;s/,/, /g' | cut -c1-250)"
 QUAR_RELEASED="$(grep '▶️ SLÄPPT:' "$LOG_FILE" | sed 's/.*SLÄPPT: //;s/ — .*//' | tr '\n' ',' | sed 's/,$//;s/,/, /g' | cut -c1-250)"
 
+# Janitorns och kostnadsvaktens utfall (sätts av stegen ovan)
+JANITOR_SUMMARY="$(grep -oE 'Janitor-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Janitor-summering: //')"
+COST_SUMMARY="$(grep -oE 'Kostnadsvakt-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Kostnadsvakt-summering: //')"
+COST_WARNINGS="$(grep '⚠️ KOSTNADSVAKT:' "$LOG_FILE" | sed 's/.*KOSTNADSVAKT: //' | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-400)"
+
 # ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
 echo "" >> "$LOG_FILE"
 echo "── STATS ──" >> "$LOG_FILE"
@@ -386,6 +413,9 @@ STAT_FB_STATS_AGE_H="$STAT_FB_STATS_AGE_H" \
 QUAR_SUMMARY="$QUAR_SUMMARY" \
 QUAR_NAMES="$QUAR_NAMES" \
 QUAR_RELEASED="$QUAR_RELEASED" \
+JANITOR_SUMMARY="$JANITOR_SUMMARY" \
+COST_SUMMARY="$COST_SUMMARY" \
+COST_WARNINGS="$COST_WARNINGS" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
 import os, json
@@ -471,6 +501,18 @@ if quar_names:
 if quar_released:
     quar_facts.append({"title": "▶️ Släppta",        "value": quar_released})
 
+# ── Databas & kostnad ──
+janitor_summary = os.environ.get("JANITOR_SUMMARY", "")
+cost_summary    = os.environ.get("COST_SUMMARY", "")
+cost_warnings   = os.environ.get("COST_WARNINGS", "")
+db_facts = []
+if janitor_summary:
+    db_facts.append({"title": "🧹 Janitor",       "value": janitor_summary})
+if cost_summary:
+    db_facts.append({"title": "📊 Kollektioner",  "value": cost_summary})
+if cost_warnings:
+    db_facts.append({"title": "🚨 VARNINGAR",     "value": cost_warnings})
+
 body = [
     {
         "type": "TextBlock",
@@ -495,6 +537,11 @@ if fb_facts:
 if quar_facts:
     body.append({"type": "TextBlock", "text": "⏸️ Källkarantän", "weight": "Bolder", "spacing": "Medium"})
     body.append({"type": "FactSet", "facts": quar_facts})
+
+if db_facts:
+    header_color = "attention" if cost_warnings else "default"
+    body.append({"type": "TextBlock", "text": "🧹 Databas & kostnadsvakt", "weight": "Bolder", "spacing": "Medium", "color": header_color})
+    body.append({"type": "FactSet", "facts": db_facts})
 
 body += [
     {"type": "TextBlock", "text": "📝 Logg (tail)", "weight": "Bolder", "spacing": "Medium"},
