@@ -22,6 +22,10 @@ jobs:
           cache-dependency-path: apps/scraper/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+      # Scraperns enhetstester. Inga secrets behövs: utan service-account.json
+      # varnar config bara (db=null), vitest tvingar SQLite till :memory: och
+      # allt IO mockas.
+      - run: npm test
 
   typecheck-web:
     name: Web (tsc)
@@ -36,4 +40,7 @@ jobs:
       # Installera hela monorepon från root-lockfilen (web har ingen egen lockfil).
       - run: npm ci
       - run: npx tsc --noEmit
+        working-directory: apps/web
+      # Webbens enhetstester (vitest, rena funktioner — inget nät/Firebase).
+      - run: npm test
         working-directory: apps/web

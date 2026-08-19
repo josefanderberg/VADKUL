@@ -37,14 +37,19 @@ export interface UserProfile {
    *  'manual' = valt/rensat i profilen eller vid registrering — skrivs
    *  aldrig över av GPS-vägen. */
   citySource?: 'gps' | 'manual';
-  /** "Jag har barn" (kryssruta i registreringen/profilen). Styr STANDARD-
-   *  läget för kartans kategorifilter: Familj & barn auto-på — men bara tills
-   *  användaren själv rört filtret (mapCategories vinner, se (v2)/page.tsx). */
+  /** "Jag har barn (0–13 år)" (kryssruta i registreringen/profilen). Styr
+   *  STANDARDLÄGET för kartans kategorifilter: utan barn (vuxen 18+) göms
+   *  Familj & barn bakom 🧸-opt-in-cirkeln, med barn syns kategorin som
+   *  vanligt — regeln ligger i utils/familyFilter (familyIsOptIn). */
   hasChildren?: boolean;
   /** Barnens åldrar i år (flera barn = flera värden; samma ålder två gånger
    *  behövs inte — fältet är filterunderlag, ingen familjeräkning).
    *  Kompletteras i profilen; registreringen frågar bara ja/nej. */
   childAges?: number[];
+  /** Sparade kartfilter (kategorier + opt-in-källor). Att fältet FINNS —
+   *  även som tom array — betyder att användaren rört filtret; då rör
+   *  profil-defaulterna (65+ ⇒ PRO) det aldrig igen. Se (v2)/page.tsx. */
+  mapCategories?: string[];
 }
 
 export interface UserReview {
@@ -219,6 +224,13 @@ export interface LinkEvent {
    * kartan slipper tolv dokument per pubquiz.
    */
   repeatWeekly?: boolean;
+  /**
+   * Hur många veckor serien pågår, inklusive första tillfället (4 = basdatumet
+   * plus tre veckor till). Saknas fältet rullar serien tills vidare — det är
+   * beteendet alla serier hade innan valet fanns, så gamla dokument fortsätter
+   * som förut.
+   */
+  repeatWeeks?: number;
   /**
    * Sätts BARA på utvecklade tillfällen av en veckoserie: id:t på dokumentet
    * tillfället kommer från. Tillfällena har egna id ("<docId>__2026-08-13")

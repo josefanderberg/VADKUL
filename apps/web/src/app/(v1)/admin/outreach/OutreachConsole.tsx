@@ -129,7 +129,7 @@ export default function OutreachConsole() {
             {data && tab === 'stader' && (
                 <CityPanel data={data} onChanged={load} view={cityView} onViewChange={setCityView} />
             )}
-            {data && tab === 'planering' && <SchedulePanel data={data} />}
+            {data && tab === 'planering' && <SchedulePanel data={data} onChanged={load} />}
             {tab === 'logg' && <LogPanel />}
             {tab === 'statistik' && <StatsPanel />}
         </Shell>

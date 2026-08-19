@@ -37,10 +37,19 @@ const WEEKLY_HORIZON_WEEKS = 12;
  * emit() och React-nycklarna kräver unika id, och med delat id hade bara ett
  * enda tillfälle ritats ut. Kopplingen tillbaka till dokumentet bär `seriesId`.
  */
-function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
+export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
     const out: LinkEvent[] = [];
     const horizon = new Date(from);
     horizon.setDate(horizon.getDate() + WEEKLY_HORIZON_WEEKS * 7);
+
+    // Begränsad serie (repeatWeeks): sista tillfället är basen + (N-1) veckor.
+    // Utan fältet rullar serien tills vidare, som alla serier gjorde innan
+    // valet fanns. En färdigspelad serie ger [] och försvinner från kartan.
+    if (base.repeatWeeks && base.repeatWeeks >= 1) {
+        const seriesEnd = new Date(base.time);
+        seriesEnd.setDate(seriesEnd.getDate() + (base.repeatWeeks - 1) * 7);
+        if (seriesEnd < horizon) horizon.setTime(seriesEnd.getTime());
+    }
 
     // Starta på basens tid och stega en vecka i taget fram till `from` —
     // serier som startade i våras ska börja vid nästa kommande tillfälle,
@@ -133,6 +142,8 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     isTip: !!v.isTip,
                     anonTip: !!v.anonTip,
                     repeatWeekly: !!v.repeatWeekly,
+                    repeatWeeks: typeof v.repeatWeeks === 'number' && v.repeatWeeks >= 1
+                        ? Math.floor(v.repeatWeeks) : undefined,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
                 } as LinkEvent;
@@ -412,6 +423,7 @@ export const linkEventService = {
         locationName?: string; category?: string; description?: string;
         hostName: string; hostUid: string; coverImage?: string; url?: string;
         isTip?: boolean; anonTip?: boolean; repeatWeekly?: boolean;
+        repeatWeeks?: number;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -441,7 +453,15 @@ export const linkEventService = {
         // mot sign_in_provider och avvisar skrivningen om de inte stämmer.
         // Det är märkningen som gör tipset raderbart för vem som helst.
         if (input.anonTip) payload.anonTip = true;
-        if (input.repeatWeekly) payload.repeatWeekly = true;
+        if (input.repeatWeekly) {
+            payload.repeatWeekly = true;
+            // Bara med när ägaren valt en begränsning — utelämnat = tills
+            // vidare, och gamla Firestore-regler (utan repeatWeeks i hasOnly)
+            // fortsätter acceptera obegränsade serier tills nya är deployade.
+            if (input.repeatWeeks && input.repeatWeeks >= 1) {
+                payload.repeatWeeks = Math.floor(input.repeatWeeks);
+            }
+        }
         const ref = await addDoc(collection(db, 'linkEvents'), payload);
         return ref.id;
     },

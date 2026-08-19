@@ -16,7 +16,8 @@
 import { useMemo, useState } from 'react';
 import type { QueueItem, QueueResponse } from '@/types/outreach';
 import { AlertTriangle, ArrowLeft, ExternalLink, LayoutGrid, Lock, MapPin, Plus, Search, Map as MapIcon } from 'lucide-react';
-import { DraftGenerator } from './DraftGenerator';
+import { DraftGenerator, PostConfirm } from './DraftGenerator';
+import { useDrafts } from './DraftStore';
 import AddGroupForm from './AddGroupForm';
 import MapPanel from './MapPanel';
 
@@ -82,7 +83,7 @@ export default function CityPanel({ data, onChanged, view, onViewChange }: {
     // Vald stad kan ha döpts om/försvunnit efter en omladdning → tillbaka till korten.
     const sel = selected ? buckets.find(b => b.name === selected) : undefined;
     if (view === 'lista' && selected && sel) {
-        return <CityDetail bucket={sel} onBack={() => setSelected(null)} />;
+        return <CityDetail bucket={sel} onBack={() => setSelected(null)} onChanged={onChanged} />;
     }
 
     const q = filter.trim().toLowerCase();
@@ -183,7 +184,7 @@ function CityCard({ bucket, onOpen }: { bucket: CityBucket; onOpen: () => void }
 
 /* ── Stadsvyn — gruppens FB-länk + generatorn, allt på ett ställe ────────── */
 
-function CityDetail({ bucket, onBack }: { bucket: CityBucket; onBack: () => void }) {
+function CityDetail({ bucket, onBack, onChanged }: { bucket: CityBucket; onBack: () => void; onChanged: () => void }) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -206,14 +207,20 @@ function CityDetail({ bucket, onBack }: { bucket: CityBucket; onBack: () => void
                 )}
             </div>
             <ul className="flex flex-col gap-2">
-                {bucket.items.map(item => <GroupRow key={item.contact.id} item={item} />)}
+                {bucket.items.map(item => <GroupRow key={item.contact.id} item={item} onChanged={onChanged} />)}
             </ul>
         </div>
     );
 }
 
-function GroupRow({ item }: { item: QueueItem }) {
+function GroupRow({ item, onChanged }: { item: QueueItem; onChanged: () => void }) {
     const c = item.contact;
+    const { drafts } = useDrafts();
+    const d = drafts[c.id];
+    const draft = d?.status === 'done' ? d.result : null;
+    const bodyText = draft
+        ? (c.postingMode === 'direct' ? draft.drafts.v2Post : draft.drafts.v1)
+        : undefined;
     const hardBlocks = item.gates.filter(g => g.hard && !g.ok);
     const softWarnings = item.gates.filter(g => !g.hard && !g.ok);
     const last = c.lastPostedAt
@@ -269,7 +276,16 @@ function GroupRow({ item }: { item: QueueItem }) {
 
             {/* Generatorn bara för mogna grupper — ett utkast till en grupp i
                 karens vore färskvara som garanterat hinner ruttna. */}
-            {!item.blocked && <DraftGenerator contactId={c.id} contactName={c.name} mode={c.postingMode} />}
+            {!item.blocked && (
+                <>
+                    <DraftGenerator contactId={c.id} contactName={c.name} mode={c.postingMode} />
+                    {/* Löpande bandets avbockning — samma POST som i Planering:
+                        loggrad + karens, kön räknas om och gruppen lämnar listan. */}
+                    <div className="mt-2">
+                        <PostConfirm contactId={c.id} bodyText={bodyText} onPosted={onChanged} />
+                    </div>
+                </>
+            )}
         </li>
     );
 }

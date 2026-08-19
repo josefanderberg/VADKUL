@@ -116,7 +116,7 @@ const SYSTEM_PROMPT = `Du skriver Facebook-gruppinlägg för VADKUL (vadkul.se) 
 Du får en grupp och en kandidatlista med RIKTIGA event. Regler, i prioritetsordning:
 
 1. Nämn ENDAST event ur kandidatlistan, med exakta titlar. Hitta ALDRIG på event, tider eller platser.
-2. Välj 3–5 dragplåster: störst namn/roligast först, helgens event viktigast. Sprid över olika dagar och kategorier. Engångshändelser slår stående veckoaktiviteter — hoppa över "varje tisdag"-artade rader och rena föreningsträningar.
+2. Välj 8 dragplåster (minst 6 om utbudet är tunt): störst namn/roligast först, helgens event viktigast. Sprid över olika dagar, kategorier och platser. Engångshändelser slår stående veckoaktiviteter — hoppa över "varje tisdag"-artade rader och rena föreningsträningar.
 3. 8 KM-REGELN: kandidater med distanceKm > 8 ligger utanför huvudorten — då MÅSTE platsnamnet stå på raden ("i Gyttorp", "på Bjärehalvön"). Skriv aldrig så att ett grannortsevent ser ut att ligga i huvudorten.
 4. Om nearCount < 5: använd tips-frågeformatet i stället — max 2–3 eventrader (med ärliga platsnamn), en ärlig rad om att kartan är tunn just här, och be gruppen om tips. Ett inlägg som låtsas att det händer massor när det inte gör det får (välförtjänt) kritik.
 5. Varje eventrad: emoji (eventets egen om den finns, annars en passande) + titel + platsnamn vid behov + (veckodag) i gemener.
@@ -129,12 +129,16 @@ Du får en grupp och en kandidatlista med RIKTIGA event. Regler, i prioritetsord
 
 FORMATEXEMPEL för V1 (följ strukturen, inte ordvalen):
 
-Härlig helg på gång i Ängelholm 👇
+Härlig vecka på gång i Ängelholm 👇
 
 🎉 ABBA Party med The Visitors på Enkegården (lördag)
 🎶 Sommarglitter i Hembygdsparken (lördag)
+🎭 Sommarstandup på Stadsbiblioteket (torsdag)
 🎨 Vernissage "Immortal animals" på Galleri AM (fredag)
+🎺 Musik under bar himmel i Stadsparken (fredag)
+🧸 Familjedag på Hembygdsparken (söndag)
 🎨 Finissage på Bjäre Konsthall, Bjärehalvön (söndag)
+🎬 Utomhusbio i Rönneåparken (måndag)
 
 Hela grejen med vadkul.se: allt som händer samlas på EN karta, så du enkelt ser vad som är på gång var du än är — hela helgens utbud i trakten finns där:
 https://vadkul.se

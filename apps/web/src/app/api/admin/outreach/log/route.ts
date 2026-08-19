@@ -10,11 +10,18 @@
 // TodayPanel. Engagemangssiffror sätter engagementCheckedAt. Utfallet
 // denormaliseras till kontakten (lastOutcome + status), och avskriv=true
 // sätter doNotPost — grinden 'doNotPost' i rules.ts tar sedan gruppen ur kön.
-// POST (bekräfta postat från utkast) byggs med utkastgeneratorn i etapp 2.
+//
+// POST (löpande bandets "✓ Postad") — bekräfta att ett inlägg lades i gruppen:
+// body { contactId, method?, outcome?, bodyText?, pagePostUrl? }. Skapar
+// loggraden (postedAt = nu, confirmedByOwner) och uppdaterar kontakten:
+// lastPostedAt, nextAllowedAt = nu + 21 d (3-veckorsregeln), postCount++.
+// Utfallet default:ar från postingMode (direct → publicerat-direkt,
+// approval → krävde-godkännande) och kan justeras i efterhand via PATCH.
 
 import { NextResponse } from 'next/server';
 import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
-import type { ContactStatus, LogOutcome, LogStatus, OutreachLogEntry } from '@/types/outreach';
+import { KARENS_DAGAR } from '@/lib/outreach/rules';
+import type { ContactStatus, LogOutcome, LogStatus, OutreachContact, OutreachLogEntry, PostMethod } from '@/types/outreach';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +68,81 @@ const CONTACT_STATUS_BY_OUTCOME: Partial<Record<LogOutcome, ContactStatus>> = {
 
 const num = (v: unknown): number | undefined =>
     typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : undefined;
+
+const DAY_MS = 86_400_000;
+
+export async function POST(request: Request) {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
+    const db = getAdminDb();
+    if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
+
+    let body: Record<string, unknown>;
+    try { body = await request.json(); } catch {
+        return NextResponse.json({ error: 'Ogiltig JSON' }, { status: 400 });
+    }
+
+    const contactId = typeof body.contactId === 'string' ? body.contactId : '';
+    if (!contactId) return NextResponse.json({ error: 'contactId saknas' }, { status: 400 });
+
+    try {
+        const cRef = db.collection('outreachContacts').doc(contactId);
+        const cSnap = await cRef.get();
+        if (!cSnap.exists) return NextResponse.json({ error: 'Kontakten finns inte' }, { status: 404 });
+        const contact = cSnap.data() as OutreachContact;
+
+        const method: PostMethod | undefined =
+            body.method === 'eget-inlägg' || body.method === 'delat-sidinlägg'
+                ? body.method : undefined;
+
+        // Utfallet: angivet i bodyn, annars härlett ur gruppens postingMode.
+        // 'okänt' lämnar kontaktstatusen orörd — TodayPanels '?'-flöde tar det.
+        const outcome: LogOutcome = Object.hasOwn(STATUS_BY_OUTCOME, body.outcome as string)
+            ? body.outcome as LogOutcome
+            : contact.postingMode === 'direct' ? 'publicerat-direkt'
+            : contact.postingMode === 'approval' ? 'krävde-godkännande'
+            : 'okänt';
+
+        const now = Date.now();
+        const entry: Record<string, unknown> = {
+            contactId,
+            contactName: contact.name,
+            channel: 'fb-grupp',
+            draftCreatedAt: now,
+            postedAt: now,
+            confirmedByOwner: true,
+            status: STATUS_BY_OUTCOME[outcome],
+            outcome,
+        };
+        if (method) {
+            entry.method = method;
+            entry.identity = method === 'delat-sidinlägg' ? 'sida' : 'privat';
+        }
+        if (typeof body.bodyText === 'string' && body.bodyText.trim()) entry.bodyText = body.bodyText.trim();
+        if (typeof body.pagePostUrl === 'string' && body.pagePostUrl.startsWith('https://')) entry.pagePostUrl = body.pagePostUrl;
+
+        const logRef = await db.collection('outreachLog').add(entry);
+
+        // Kontakten: karensen börjar ticka från bekräftelsen — det är den som
+        // tar gruppen ur kön/schemat och flyttar bandet till nästa stad.
+        const cUpdate: Record<string, unknown> = {
+            lastPostedAt: now,
+            nextAllowedAt: now + KARENS_DAGAR * DAY_MS,
+            postCount: (contact.postCount ?? 0) + 1,
+            lastOutcome: outcome,
+            updatedAt: now,
+        };
+        const cs = CONTACT_STATUS_BY_OUTCOME[outcome];
+        if (cs) cUpdate.status = cs;
+        await cRef.set(cUpdate, { merge: true });
+
+        return NextResponse.json({ ok: true, logId: logRef.id });
+    } catch (e) {
+        console.error('[outreach/log POST]', e);
+        return NextResponse.json({ error: 'Kunde inte logga postningen' }, { status: 500 });
+    }
+}
 
 export async function PATCH(request: Request) {
     const denied = await requireAdmin(request);

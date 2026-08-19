@@ -50,10 +50,11 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     // Min stad (stadssegmenterade utskick). '' = ingen stad vald/sparad.
     const [citySlug, setCitySlug] = useState('');
     const [cityBusy, setCityBusy] = useState(false);
-    // "Jag har barn" + barnens åldrar — styr STANDARDLÄGET för kartans
-    // kategorifilter (Familj & barn auto-på); åldrarna är underlag för
-    // framtida åldersmatchning av event. Registreringen frågar bara ja/nej,
-    // åldrarna kompletteras här.
+    // "Jag har barn (0–13 år)" + barnens åldrar — styr STANDARDLÄGET för
+    // kartans kategorifilter: utan barn göms Familj & barn bakom 🧸-opt-in-
+    // cirkeln (utils/familyFilter), med barn syns kategorin som vanligt.
+    // Åldrarna är underlag för framtida åldersmatchning av event.
+    // Registreringen frågar bara ja/nej, åldrarna kompletteras här.
     const [hasChildren, setHasChildren] = useState(false);
     const [childAges, setChildAges] = useState<number[]>([]);
     const [childrenBusy, setChildrenBusy] = useState(false);
@@ -144,7 +145,7 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
         }
     };
 
-    // Ålders-chip (0–17): tryck togglar åldern. Flera barn = flera chips;
+    // Ålders-chip (0–13): tryck togglar åldern. Flera barn = flera chips;
     // två barn med samma ålder behöver inte två chips — fältet är filter-
     // underlag, ingen familjeräkning. Hela listan skrivs varje gång (litet
     // fält, enklast korrekt).
@@ -531,13 +532,14 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                             ))}
                                         </select>
                                     </div>
-                                    {/* Jag har barn + barnens åldrar — styr kartans
-                                        standardfilter (Familj & barn auto-på).
-                                        Manuella filterval på kartan vinner alltid. */}
+                                    {/* Jag har barn (0–13 år) + barnens åldrar — styr
+                                        kartans standardfilter: utan barn göms Familj &
+                                        barn bakom 🧸-opt-in-cirkeln, med barn syns den
+                                        som vanligt. Manuella filterval vinner alltid. */}
                                     <div className="w-full flex flex-col gap-2 px-4 py-3">
                                         <label className="flex items-center gap-3 cursor-pointer select-none">
                                             <Baby size={16} className="text-[#006AA7] shrink-0" />
-                                            <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Jag har barn</span>
+                                            <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Jag har barn (0–13 år)</span>
                                             <input
                                                 type="checkbox"
                                                 checked={hasChildren}
@@ -552,7 +554,10 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                                     Barnens åldrar
                                                 </span>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {Array.from({ length: 18 }, (_, a) => {
+                                                    {/* 0–13 (barn-definitionen i kryssrutan) + ev.
+                                                        redan sparade högre åldrar, så gamla val
+                                                        alltid går att kryssa ur. */}
+                                                    {[...new Set([...Array.from({ length: 14 }, (_, a) => a), ...childAges])].sort((x, y) => x - y).map((a) => {
                                                         const on = childAges.includes(a);
                                                         return (
                                                             <button

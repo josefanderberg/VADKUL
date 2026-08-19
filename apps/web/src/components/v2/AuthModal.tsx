@@ -204,9 +204,11 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     <option key={c.slug} value={c.slug}>{c.name}</option>
                                 ))}
                             </select>
-                            {/* "Jag har barn" — lätt steg: bara kryssrutan.
-                                Åldrarna fylls i senare i profilen; kryssrutan
-                                räcker för att kartan ska visa familjeevent. */}
+                            {/* "Jag har barn (0–13 år)" — lätt steg: bara kryss-
+                                rutan, åldrarna fylls i senare i profilen.
+                                Kryssrutan avgör om kartan visar familjeeventen
+                                direkt eller lägger dem bakom 🧸-opt-in-cirkeln
+                                (utils/familyFilter). */}
                             <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
                                 <input
                                     type="checkbox"
@@ -215,7 +217,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     className="w-4 h-4 accent-[#006AA7] shrink-0"
                                 />
                                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                                    Jag har barn
+                                    Jag har barn (0–13 år)
                                 </span>
                             </label>
                         </>

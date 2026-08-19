@@ -17,6 +17,10 @@ interface CategoryFilterProps {
     selected: Set<string>;
     onToggle: (categoryId: string) => void;
     onClear: () => void;
+    /** Familj & barn som opt-in (profilregeln i utils/familyFilter — inloggad
+     *  vuxen utan barn): 🧸-cirkeln flyttar upp bland opt-in-raderna (Svenska
+     *  kyrkan/PRO) och kategorin är gömd tills den kryssas i. */
+    familyOptIn?: boolean;
 }
 
 /**
@@ -35,7 +39,7 @@ interface CategoryFilterProps {
  * Öppen kolumn är ett sessionsval — ingen localStorage. Inget
  * stäng-vid-klick-utanför: öppnad kolumn står kvar tills man stänger den.
  */
-export default function CategoryFilter({ events, selected, onToggle, onClear }: CategoryFilterProps) {
+export default function CategoryFilter({ events, selected, onToggle, onClear, familyOptIn = false }: CategoryFilterProps) {
     // Startar ALLTID GÖMD (Josef 12/8, skärpt från 11/8): kolumnen tar nästan
     // hela högersidan på mobil. Första versionen lät ett gammalt "visa"-val i
     // localStorage vinna över defaulten — då såg det ut som att defaulten
@@ -57,14 +61,27 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         return c;
     }, [events]);
 
+    // I familj-opt-in-läget beter sig 'family' som en opt-in-källa: cirkeln
+    // renderas bland opt-in-raderna överst (och tas bort ur normal-listan),
+    // urblekt tills den kryssas i — precis som Svenska kyrkan/PRO.
+    const optInList = useMemo(
+        () => (familyOptIn ? [...SPECIAL_CATEGORY_LIST, EVENT_CATEGORIES.family] : [...SPECIAL_CATEGORY_LIST]),
+        [familyOptIn],
+    );
+    const optInKeys = useMemo(
+        () => (familyOptIn ? new Set([...SPECIAL_CATEGORY_KEYS, 'family']) : SPECIAL_CATEGORY_KEYS),
+        [familyOptIn],
+    );
+
     // Bara kategorier som SYNS i vyn (eller är ikryssade — en bortfiltrerad
     // kategori måste gå att kryssa ur igen). Mest event överst.
     const visible = useMemo(
         () =>
             (Object.keys(EVENT_CATEGORIES) as EventCategoryType[])
+                .filter((id) => !(familyOptIn && id === 'family'))
                 .filter((id) => (counts.get(id) ?? 0) > 0 || selected.has(id))
                 .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0)),
-        [counts, selected],
+        [counts, selected, familyOptIn],
     );
 
     // Gemensam cirkel-rendering för både vanliga kategorier och opt-in-källor:
@@ -83,8 +100,8 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
         // (sourceGradientCss på kategorins markerHex). Färgstark = syns på
         // kartan just nu, urblekt = bortfiltrerad, blå ring = uttryckligen
         // vald. Tom selection betyder "alla PÅ" för vanliga kategorier, men
-        // opt-in-källorna (Svenska kyrkan/PRO) är bara på när de är ikryssade.
-        const shownOnMap = active || (selected.size === 0 && !SPECIAL_CATEGORY_KEYS.has(cat.id));
+        // opt-in-raderna (Svenska kyrkan/PRO, ev. 🧸) är bara på ikryssade.
+        const shownOnMap = active || (selected.size === 0 && !optInKeys.has(cat.id));
         const count = counts.get(cat.id) ?? 0;
         return (
             <div key={cat.id} className="flex flex-row-reverse items-center gap-2">
@@ -191,10 +208,12 @@ export default function CategoryFilter({ events, selected, onToggle, onClear }: 
                         skärmen faktiskt erbjuder. */}
                     {!hidden && (
                         <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-148px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
-                            {/* Opt-in-källorna ALLTID överst, avstängda tills man
+                            {/* Opt-in-raderna ALLTID överst, avstängda tills man
                                 kryssar i dem — och alltid samma rader, så toppen
-                                av kolumnen står still när vyn byter. */}
-                            {SPECIAL_CATEGORY_LIST.map((cat) => renderCircle(cat))}
+                                av kolumnen står still när vyn byter. I familj-
+                                opt-in-läget ligger 🧸 här i stället för i
+                                normal-listan. */}
+                            {optInList.map((cat) => renderCircle(cat))}
                             <span className="w-6 mr-2 border-t border-white/80 dark:border-slate-600" aria-hidden />
                             {/* Rensa-kryss — bara ett kryss, samma cirkel som resten.
                                 Betydelsen ("visa alla") ligger i tooltip/aria. */}

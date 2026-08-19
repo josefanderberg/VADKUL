@@ -218,7 +218,7 @@ service cloud.firestore {
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
-            'isTip', 'anonTip', 'repeatWeekly'
+            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de

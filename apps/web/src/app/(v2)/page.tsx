@@ -21,6 +21,7 @@ import { recordEventView } from '@/services/eventStatsService';
 import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, ZoomIn, Lock } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
+import { familyIsOptIn } from '@/utils/familyFilter';
 import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -385,6 +386,11 @@ export default function HomePage() {
     const [catPrefsUid, setCatPrefsUid] = useState<string | null>(null);
     const lastSavedCatsRef = useRef<string | null>(null);
     const urlHadCategoriesRef = useRef(false);
+    // Familj & barn som opt-in (profilregeln i utils/familyFilter): inloggad
+    // vuxen utan barn ⇒ 'family' göms tills 🧸-cirkeln kryssas i, och cirkeln
+    // ligger då bland opt-in-raderna (Svenska kyrkan/PRO). Sätts vid
+    // prefs-hydreringen nedan, nollas vid utloggning.
+    const [familyOptIn, setFamilyOptIn] = useState(false);
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -429,6 +435,8 @@ export default function HomePage() {
     // dem med en inloggningsspärr för ett läge de inte var ute efter.
     const [newEventRole, setNewEventRole] = useState<'host' | 'tip'>('tip');
     const [newEventRepeatWeekly, setNewEventRepeatWeekly] = useState(false); // veckovis serie
+    // Hur många veckor serien pågår (inkl. första gången). null = tills vidare.
+    const [newEventRepeatWeeks, setNewEventRepeatWeeks] = useState<number | null>(null);
     const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (valfri)
     const [newEventHost, setNewEventHost] = useState('');  // tips: arrangörens namn (valfritt)
     // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
@@ -469,6 +477,7 @@ export default function HomePage() {
         setNewEventImagePreview('');
         setNewEventRole('tip');
         setNewEventRepeatWeekly(false);
+        setNewEventRepeatWeeks(null);
         setNewEventUrl('');
         setNewEventHost('');
         setCreateKind('event');
@@ -1246,6 +1255,7 @@ export default function HomePage() {
                 isTip,
                 anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
+                repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
             });
             const created: LinkEvent = {
                 id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
@@ -1253,7 +1263,9 @@ export default function HomePage() {
                 hostName,
                 category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
                 isLocationVerified: true, userCreated: true, isTip, anonTip: isAnonTip,
-                repeatWeekly: newEventRepeatWeekly, hostUid: authorUid,
+                repeatWeekly: newEventRepeatWeekly,
+                repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                hostUid: authorUid,
             } as LinkEvent;
             // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
             myCreatedRef.current = [...myCreatedRef.current, created];
@@ -1294,7 +1306,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -1466,8 +1478,12 @@ export default function HomePage() {
     // delar vi upp valet — opt-in-källorna ska inte räknas in i normal-valet
     // (annars skulle en ikryssad källa dölja alla andra event).
     const selectedNormal = useMemo(
-        () => new Set([...selectedCategories].filter(id => !SPECIAL_CATEGORY_KEYS.has(id))),
-        [selectedCategories],
+        // I familj-opt-in-läget behandlas 'family' som en opt-in-källa och ska
+        // därför inte heller räknas in i normal-valet (ett ikryssat 🧸 skulle
+        // annars dölja alla andra kategorier).
+        () => new Set([...selectedCategories].filter(id =>
+            !SPECIAL_CATEGORY_KEYS.has(id) && !(familyOptIn && id === 'family'))),
+        [selectedCategories, familyOptIn],
     );
     const matchesFilter = useCallback((evt: LinkEvent) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
@@ -1478,11 +1494,16 @@ export default function HomePage() {
         const src = classifySource(evt.url || evt.id);
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);
+        // Familj & barn: opt-in för inloggade vuxna utan barn i profilen
+        // (utils/familyFilter). Bara exakt kategori 'family' berörs — breda
+        // event som passar både barn och vuxna klassas som music/party av
+        // pipelinen och göms aldrig här.
+        if (familyOptIn && evt.category === 'family') return selectedCategories.has('family');
         // Normalt event: tomt normal-val = visa alla, annars matcha kategori.
         if (selectedNormal.size === 0) return true;
         const catKey = evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other';
         return selectedNormal.has(catKey);
-    }, [selectedCategories, selectedNormal]);
+    }, [selectedCategories, selectedNormal, familyOptIn]);
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(
@@ -2178,27 +2199,35 @@ export default function HomePage() {
     // ev. inkommande ?kategori=-länk applicerats (länken vinner och blir då
     // baslinje — den skriver INTE över det sparade förrän man själv ändrar).
     //
-    // PROFILSTYRT STANDARDLÄGE (bara när mapCategories aldrig sparats): barn i
-    // profilen (hasChildren) ⇒ Familj & barn på; 65+ (age) ⇒ PRO på (annars
-    // opt-in). Manual vinner alltid — samma princip som citySource: att
-    // mapCategories FINNS (även som tom array = aktivt "visa alla") betyder
-    // att användaren rört filtret, och då rör automatiken det aldrig igen.
-    // Defaulterna blir därför BASLINJE utan att sparas: först när användaren
-    // själv togglar något skiljer sig valet från baslinjen och spar-effekten
-    // nedan skriver det som ett manuellt val. Profiländringar (barnen växer
-    // ur, man fyller 65) slår alltså igenom vid nästa besök — tills man rört
-    // filtret själv.
+    // PROFILSTYRT STANDARDLÄGE (bara när mapCategories aldrig sparats):
+    // 65+ (age) ⇒ PRO på (annars opt-in). Manual vinner alltid — samma
+    // princip som citySource: att mapCategories FINNS (även som tom array =
+    // aktivt "visa alla") betyder att användaren rört filtret, och då rör
+    // automatiken det aldrig igen. Defaulterna blir därför BASLINJE utan att
+    // sparas: först när användaren själv togglar något skiljer sig valet från
+    // baslinjen och spar-effekten nedan skriver det som ett manuellt val.
+    // Profiländringar (man fyller 65) slår alltså igenom vid nästa besök —
+    // tills man rört filtret själv.
+    //
+    // FAMILJ & BARN styrs INTE via kategorivalet utan via opt-in-LÄGET
+    // (familyOptIn ovan): vuxen utan barn ⇒ kategorin göms tills 🧸 kryssas i;
+    // förälder/ung/utloggad ⇒ kategorin syns som vanligt utan att vara "vald".
+    // (Gamla modellen förvalde 'family' för föräldrar — det gömde alla ANDRA
+    // kategorier, eftersom ett icke-tomt normal-val betyder "visa bara dessa".)
     useEffect(() => {
         if (!user || !eventsLoaded || catPrefsUid === user.uid) return;
         let cancelled = false;
         (async () => {
             let baseline = [...selectedCategories].sort().join(',');
             try {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                const data = snap.exists()
+                    ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown }
+                    : null;
+                // Opt-in-läget följer alltid profilen — även när en inkommande
+                // ?kategori=-länk vinner över det sparade kategorivalet.
+                if (!cancelled) setFamilyOptIn(familyIsOptIn(data));
                 if (!urlHadCategoriesRef.current) {
-                    const snap = await getDoc(doc(db, 'users', user.uid));
-                    const data = snap.exists()
-                        ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown }
-                        : null;
                     if (Array.isArray(data?.mapCategories)) {
                         const valid = data.mapCategories.filter((k): k is string =>
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
@@ -2207,7 +2236,6 @@ export default function HomePage() {
                     } else {
                         // Aldrig rört filtret → profilens standardläge.
                         const defaults: string[] = [];
-                        if (data?.hasChildren === true) defaults.push('family');
                         if (typeof data?.age === 'number' && data.age >= 65) defaults.push('pro');
                         if (defaults.length) {
                             baseline = [...defaults].sort().join(',');
@@ -2223,6 +2251,11 @@ export default function HomePage() {
         })();
         return () => { cancelled = true; };
     }, [user, eventsLoaded, catPrefsUid, selectedCategories]);
+
+    // Utloggning ⇒ opt-in-läget nollas: besökare ska alltid se familjeeventen.
+    useEffect(() => {
+        if (!user) setFamilyOptIn(false);
+    }, [user]);
 
     // Spara (debounce): först efter hydrering, och bara när valet faktiskt
     // skiljer sig från senast sparade — även tömning sparas (aktivt avval).
@@ -2373,6 +2406,7 @@ export default function HomePage() {
                 selected={selectedCategories}
                 onToggle={handleToggleCategory}
                 onClear={handleClearCategories}
+                familyOptIn={familyOptIn}
             />
             )}
 
@@ -2746,6 +2780,13 @@ export default function HomePage() {
                                         💡 Jag tipsar bara
                                     </button>
                                 </div>
+                                {newEventRole === 'host' && (
+                                    <p className="text-xs text-slate-500">
+                                        Ditt event får en egen bricka på kartan och syns direkt
+                                        för alla som tittar här — gratis synlighet för det du
+                                        ordnar, med dig som arrangör.
+                                    </p>
+                                )}
                                 {newEventRole === 'tip' && (
                                     <p className="text-xs text-slate-500">
                                         Tipsa om ett event som redan finns — du står inte som
@@ -2835,7 +2876,7 @@ export default function HomePage() {
                                     onChange={e => setNewEventRepeatWeekly(e.target.checked)}
                                     className="mt-0.5 h-4 w-4 accent-green-600 shrink-0"
                                 />
-                                <span className="min-w-0">
+                                <span className="min-w-0 flex-1">
                                     <span className="block text-sm font-bold text-slate-800">
                                         Återkommer varje vecka
                                     </span>
@@ -2844,6 +2885,27 @@ export default function HomePage() {
                                         träningstider. Ändrar du tiden senare gäller det alla
                                         kommande gånger.
                                     </span>
+                                    {/* Hur länge serien pågår. Tills vidare är förval —
+                                        det är beteendet serier alltid haft. Väljs ett antal
+                                        slutar serien efter sista tillfället och försvinner
+                                        då från kartan av sig själv. */}
+                                    {newEventRepeatWeekly && (
+                                        <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600" onClick={e => e.preventDefault()}>
+                                            Hur länge?
+                                            <select
+                                                value={newEventRepeatWeeks ?? ''}
+                                                onChange={e => setNewEventRepeatWeeks(e.target.value ? Number(e.target.value) : null)}
+                                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-green-500 focus:outline-none"
+                                            >
+                                                <option value="">Tills vidare</option>
+                                                <option value="2">2 veckor</option>
+                                                <option value="4">4 veckor</option>
+                                                <option value="6">6 veckor</option>
+                                                <option value="8">8 veckor</option>
+                                                <option value="12">12 veckor</option>
+                                            </select>
+                                        </span>
+                                    )}
                                 </span>
                             </label>
                         )}

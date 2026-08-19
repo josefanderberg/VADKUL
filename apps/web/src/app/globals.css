@@ -1,4 +1,3 @@
-@import 'leaflet/dist/leaflet.css';
 @import url('https://fonts.googleapis.com/css2?family=Satisfy&display=swap');
 
 @tailwind base;
@@ -137,26 +136,6 @@
     @apply bg-background text-foreground;
     color-scheme: light dark;
   }
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-}
-
-.leaflet-popup-content-wrapper {
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-}
-
-.leaflet-popup-content {
-  margin: 0;
-}
-
-.leaflet-popup-tip {
-  background: white;
 }
 
 /* === Welcome Modal Animations === */
@@ -510,119 +489,7 @@
   to { transform: translateX(0); }
 }
 
-/* === Cloud Popup Animations === */
-/* Mjuk, ganska stilla float — dämpad amplitud (~1/4 av tidigare) och långsammare
-   så molnet "andas" lätt i stället för att sväva omkring. */
-@keyframes cloud-float {
-  0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
-  25%      { transform: translate(5px, -4px) rotate(0.3deg); }
-  50%      { transform: translate(0px, -7px) rotate(-0.2deg); }
-  75%      { transform: translate(-5px, -3px) rotate(0.25deg); }
-}
-
-@keyframes cloud-pop-in {
-  0%   { opacity: 0; transform: scale(0.6) translateY(30px); }
-  60%  { transform: scale(1.06) translateY(-6px); }
-  80%  { transform: scale(0.97) translateY(2px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes cloud-mini-pop {
-  0%   { opacity: 0; transform: scale(0.5) translateY(10px); }
-  60%  { transform: scale(1.08) translateY(-3px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* Studs vid tryck på molnet: poppar upp till --bounce-peak och fjädrar tillbaka
-   med en avtagande studs. Topphöjden styrs av --bounce-peak (sätts i JS:
-   enkeltryck = liten studs, dubbeltryck = dubbelt så hög). Animationen startas
-   imperativt i CloudPopup så den kan spelas om vid varje tryck. */
-@keyframes cloud-bounce {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(var(--bounce-peak, 1.22)); }
-  60%  { transform: scale(calc(1 + (var(--bounce-peak, 1.22) - 1) * 0.45)); }
-  80%  { transform: scale(calc(1 + (var(--bounce-peak, 1.22) - 1) * 0.12)); }
-  100% { transform: scale(1); }
-}
-
-/* Serietidnings-grabb: korta actionlinjer som blixtrar utåt runt molnet vid
-   grepp, fadar och skalar bort. Startas via key-bump på elementet så animationen
-   kan återstartas vid varje nytt grepp. */
-@keyframes cloud-grab-burst {
-  0%   { opacity: 0; transform: scale(0.55); }
-  25%  { opacity: 1; transform: scale(1.00); }
-  100% { opacity: 0; transform: scale(1.35); }
-}
-.animate-cloud-grab-burst {
-  transform-origin: 150px 135px;
-  animation: cloud-grab-burst 480ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
-}
-
-.animate-cloud-float {
-  animation: cloud-float 18s ease-in-out infinite;
-}
-
-/* "Det blåser" — molnet svänger stort och pulserar i storlek i början, för att
-   sedan lugna sig och övergå till den vanliga cloud-float. Körs som EN
-   iteration; läggs på en yttre wrapper så det stackas med cloud-float utan att
-   slåss om transform-egenskapen. */
-@keyframes cloud-windy-intro {
-  0%   { transform: translate(0px, 0px)   scale(0.55) rotate(0deg); }
-  10%  { transform: translate(8px, -4px)  scale(1.22) rotate(1deg); }
-  22%  { transform: translate(-10px, -2px) scale(0.78) rotate(-0.8deg); }
-  36%  { transform: translate(6px, -6px)  scale(1.16) rotate(0.8deg); }
-  52%  { transform: translate(-6px, -2px) scale(0.88) rotate(-0.5deg); }
-  68%  { transform: translate(4px, -3px)  scale(1.08) rotate(0.4deg); }
-  84%  { transform: translate(-2px, -1px) scale(0.96) rotate(-0.2deg); }
-  100% { transform: translate(0px, 0px)   scale(1)    rotate(0deg); }
-}
-.animate-cloud-windy-intro {
-  animation: cloud-windy-intro 14s cubic-bezier(0.32, 0.72, 0.35, 1) 1 both;
-  will-change: transform;
-}
-
-/* Texten på molnet driver med en egen, motfas-rörelse mot molnet — ger ett mjukt
-   parallax-djup. Lift höjer också upp texten en aning så den sitter över mitten. */
-@keyframes cloud-text-drift {
-  0%, 100% { transform: translate(0px, -12px); }
-  25%      { transform: translate(-6px, -16px); }
-  50%      { transform: translate(2px, -10px); }
-  75%      { transform: translate(5px, -14px); }
-}
-.animate-cloud-text-drift {
-  animation: cloud-text-drift 9s ease-in-out infinite;
-  will-change: transform;
-}
-
-.animate-cloud-pop-in {
-  animation: cloud-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
-}
-
-@keyframes cloud-pop-out {
-  0%   { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0.6) translateY(30px); }
-}
-
-.animate-cloud-pop-out {
-  animation: cloud-pop-out 0.4s cubic-bezier(0.36,0,0.66,0) forwards;
-}
-
-/* "Poof": molnet försvinner PÅ PLATS — sväller upp en aning (som en pust) och
-   krymper sedan bort medan det tonar ut. Ingen förflyttning i sidled. Används
-   när start-molnet stängs med ett tryck. */
-@keyframes cloud-poof-out {
-  0%   { opacity: 1; transform: scale(1); }
-  28%  { opacity: 0.95; transform: scale(1.18); }
-  100% { opacity: 0; transform: scale(0.5); }
-}
-
-.animate-cloud-poof-out {
-  transform-origin: 50% 56.25%;
-  animation: cloud-poof-out 0.5s cubic-bezier(0.4, 0, 0.5, 1) forwards;
-}
-
-/* Molnsymbol-knappen (återkalla): pulsande sky-ring som tipsar om att den går
-   att klicka, tills man hämtat tillbaka molnet första gången. */
+/* Pulsande sky-ring som tipsar om att något går att klicka (EventCard). */
 @keyframes recall-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(56,189,248,0.6); }
   70%  { box-shadow: 0 0 0 12px rgba(56,189,248,0); }
@@ -630,19 +497,6 @@
 }
 .animate-recall-pulse {
   animation: recall-pulse 1.5s ease-out infinite;
-}
-
-@keyframes today-pulse {
-  0%, 100% { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1), 0 0 0 0 rgba(56,189,248,0.55); }
-  50%      { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1), 0 0 0 14px rgba(56,189,248,0); }
-}
-
-.animate-today-pulse {
-  animation: today-pulse 1.6s ease-in-out infinite;
-}
-
-.animate-cloud-mini {
-  animation: cloud-mini-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
 /* === "Min plats"-punkten: blå prick med pulserande ring (geolocation) === */
