@@ -794,6 +794,26 @@ export const createBoostCheckout = functions
         const customerRef = db.collection('customers').doc(uid);
         const customerSnap = await customerRef.get();
         let stripeId = customerSnap.get('stripeId') as string | undefined;
+        // Sparade kund-id:n kan höra till FEL Stripe-läge: alla köp före
+        // live-växlingen 19/8 skapade TEST-kunder, och med live-nyckeln
+        // svarar Stripe "No such customer" på dem — hela checkouten föll.
+        // Verifiera id:t i nuvarande läge; finns kunden inte (eller är
+        // raderad) släpps id:t så en ny kund skapas nedan. Andra fel
+        // (nät m.m.) kastas vidare — att skapa om kunden i blindo hade
+        // gett dubbletter.
+        if (stripeId) {
+            try {
+                const existing = await stripe.customers.retrieve(stripeId);
+                if ((existing as { deleted?: boolean }).deleted) stripeId = undefined;
+            } catch (err) {
+                if ((err as { code?: string })?.code === 'resource_missing') {
+                    console.warn(`[boost] Sparad Stripe-kund ${stripeId} finns inte i nuvarande läge (test/live-växling) — skapar ny.`);
+                    stripeId = undefined;
+                } else {
+                    throw err;
+                }
+            }
+        }
         if (!stripeId) {
             const authUser = await admin.auth().getUser(uid);
             const customer = await stripe.customers.create({
