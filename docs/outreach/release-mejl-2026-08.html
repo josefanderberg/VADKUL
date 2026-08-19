@@ -142,7 +142,13 @@
           <td align="center" style="padding:18px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#94a3b8;">
             Du f&aring;r det h&auml;r mejlet f&ouml;r att du har ett konto p&aring;
             <a href="https://vadkul.se" style="color:#64748b;">vadkul.se</a>.<br>
-            <!-- Zoho Campaigns l&auml;gger sj&auml;lv p&aring; avregistreringsl&auml;nken h&auml;r under &mdash; ta aldrig bort den. -->
+            <!-- LAGKRAV (CAN-SPAM/GDPR) + Zohos kontroll vid inklistring: taggen
+                 $[LI:UNSUBSCRIBE]$ MÅSTE finnas. Ligger den i EGEN sidfot beh&aring;ller
+                 vi formen; saknas den ers&auml;tter Zoho hela foten med sin standard.
+                 $[LI:SUB_PREF]$ = prenumerationsinst&auml;llningar i st&auml;llet. TA ALDRIG BORT. -->
+            <a href="$[LI:UNSUBSCRIBE]$" style="color:#94a3b8;text-decoration:underline;">Avregistrera dig</a>
+            &nbsp;&middot;&nbsp;
+            <a href="$[LI:SUB_PREF]$" style="color:#94a3b8;text-decoration:underline;">&Auml;ndra dina inst&auml;llningar</a>
           </td>
         </tr>
 
