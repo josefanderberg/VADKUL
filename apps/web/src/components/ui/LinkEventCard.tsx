@@ -2,6 +2,7 @@ import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation,
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDate } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { eventShareSlug } from '../../utils/eventShareSlug';
@@ -789,10 +790,18 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             Rapportera event
                                         </button>
                                     )}
+                                    {/* Aktiv boost: visa hur länge eventet lyfts fram —
+                                        köparen (och alla andra) ska se när guldstjärnan
+                                        slocknar utan att behöva gissa. */}
+                                    {isEventFeatured(linkEvent) && linkEvent.featuredUntil && (
+                                        <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 py-0.5">
+                                            ⭐ Boostad t.o.m. {boostedUntilLabel(linkEvent.featuredUntil)}
+                                        </p>
+                                    )}
                                     {/* Boost är öppen för ALLA (5/8) — man får lyfta någon annans
                                         event också. Föräldern skickar bara onBoost när eventet är
-                                        boostbart (användarskapat). Knappen öppnar nivåväljaren
-                                        (1 dag/vecka/månad) — checkouten startar först vid valet. */}
+                                        boostbart. Knappen öppnar BoostTierPicker — checkouten
+                                        startar först vid valet där. */}
                                     {onBoost && (
                                         <button
                                             onClick={(e) => {

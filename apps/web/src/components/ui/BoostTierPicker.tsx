@@ -12,9 +12,11 @@ interface Props {
 }
 
 /**
- * Nivåväljaren för boost-köpet: 1 dag / 1 vecka / 1 månad. Ren presentation —
- * nivåerna (etikett, visningspris, säljtext) ägs av BOOST_TIERS i
- * boostService.ts och det riktiga beloppet av Stripe/backend.
+ * Nivåväljaren för boost-köpet. Ren presentation — nivåerna (etikett,
+ * visningspris, säljtext) ägs av BOOST_TIERS i boostService.ts och det
+ * riktiga beloppet av Stripe/backend. Lanseringen kör EN nivå (1 vecka,
+ * 99 kr) — då är modalen en bekräftelseruta; copyn och "Populärast"-badgen
+ * anpassar sig efter antalet nivåer i listan.
  *
  * z-[1300]: modalskiktet — över eventkortet (1250), som alla andra modaler.
  *
@@ -52,7 +54,9 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                     </button>
                 </div>
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4">
-                    Ditt event lyfts fram och syns direkt på kartan — välj hur länge. 🚀
+                    {BOOST_TIERS.length > 1
+                        ? 'Ditt event lyfts fram och syns direkt på kartan — välj hur länge. 🚀'
+                        : 'Ditt event lyfts fram med guldstjärna och syns direkt på kartan. 🚀'}
                 </p>
 
                 <div className="flex flex-col gap-2.5">
@@ -70,8 +74,10 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                             <div className="flex items-center justify-between gap-3 mb-0.5">
                                 <span className="flex items-center gap-2 text-sm font-black text-black dark:text-white">
                                     {label}
-                                    {/* Veckan lyfts fram som det självklara valet. */}
-                                    {tier === 'week' && (
+                                    {/* Veckan lyfts fram som det självklara valet —
+                                        badgen är bara meningsfull när det finns
+                                        flera nivåer att välja mellan. */}
+                                    {tier === 'week' && BOOST_TIERS.length > 1 && (
                                         <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-slate-900">
                                             Populärast
                                         </span>

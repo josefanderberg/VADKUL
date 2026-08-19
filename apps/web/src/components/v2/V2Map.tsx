@@ -856,6 +856,11 @@ export default function V2Map({
             // (men inte alla) varit ska visa ett kommande event, inte ett gammalt.
             // Alla passerade → group[0] (brickan är ändå släckt via groupIsPast).
             const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
+            // Boostat (featured) event får SAMMA guld-bricka med ⭐ som stjärn-
+            // gåvan — betald framlyftning ska synas direkt på kartan, inte
+            // först vid klick (DOM-markören med guldet ritas bara för det
+            // VALDA eventet). Passerad boost = förbrukad, precis som stjärnan.
+            const boostedRep = group.find(e => isEventFeatured(e) && !isEventPast(e, nowMs));
             // FRAMKLICKAD SORT VINNER REPRESENTANTEN (Josef 10/8). Har man
             // klickat 🎪 i emoji-raden ska varje bricka som HAR en 🎪 visa den —
             // annars "dök vissa inte upp": en multibricka cyklar mellan sina
@@ -867,7 +872,7 @@ export default function V2Map({
             const pickedRep = highlightEmoji == null ? undefined : group.find(
                 e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji && isValidLatLng(e.lat, e.lng),
             );
-            const rep = pickedRep ?? starredRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
+            const rep = pickedRep ?? starredRep ?? boostedRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
             if (!isValidLatLng(rep.lat, rep.lng)) continue;
             const emoji = eventEmoji(rep);
             // Stor källa (PRO/Svenska kyrkan) → ingen färg (mörk standard);
@@ -882,8 +887,11 @@ export default function V2Map({
             // kl 20 för event utan klockslag) — inte en rå 1 h-cutoff som släppte
             // heldagsevent redan kl 01.
             const drawSav = group.some(e => savedEventIds.has(e.id) && !isEventPast(e, nowMs));
-            // Stjärnmärkt (ej passerad) → guld-bricka med ⭐-badge.
-            const drawStar = starredRep != null;
+            // Stjärnmärkt ELLER boostad (ej passerad) → guld-bricka med ⭐-badge.
+            // (Guldet gäller gruppen: cyklingen stängs av nedan så brickan står
+            // still på det stjärnmärkta/boostade eventet, samma beslut som för
+            // stjärnan.)
+            const drawStar = starredRep != null || boostedRep != null;
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : ''}`;
             if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar });

@@ -555,7 +555,7 @@ interface EventCardProps {
     currentUserUid?: string;
     onDeleteOwnEvent?: (eventId: string) => void;
     /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
-     *  (1 dag/vecka/månad; nivån väljs i kortets BoostTierPicker). */
+     *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker). */
     onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
     /** Stjärn-gåvan ⭐: eventId:n som redan fått en stjärna (guld-indikator på
      *  kortet), om användaren har en oanvänd stjärna att sätta, samt placerings-
@@ -1820,7 +1820,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // Boost: alla inloggade får boosta ALLA event — användarskapade
                         // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
-                        // Nivån (1 dag/vecka/månad) väljs i kortets BoostTierPicker.
+                        // Nivån väljs i kortets BoostTierPicker (ägs av BOOST_TIERS).
                         onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
                         // Vyskiftet: chatt-toggeln finns bara där chatten faktiskt
                         // kan renderas (onRequireLogin är chatt-sektionens egen

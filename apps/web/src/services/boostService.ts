@@ -32,9 +32,18 @@ export const BOOST_DURATION_DAYS: Record<BoostTier, number> = {
 
 /**
  * Nivåerna som köp-UI:t (BoostTierPicker) visar — EN källa för etikett, pris
- * och säljtext. OBS: priserna här är bara VISNING (platshållare) — det riktiga
- * beloppet sätts i Stripe och ägs av backend (createBoostCheckout). Ändras
- * priset i Stripe MÅSTE siffran här uppdateras, annars ljuger knappen.
+ * och säljtext. OBS: priserna här är bara VISNING — det riktiga beloppet
+ * sätts i Stripe och ägs av backend (createBoostCheckout). Ändras priset i
+ * Stripe MÅSTE siffran här uppdateras, annars ljuger knappen.
+ *
+ * LANSERINGEN (19/8) KÖR ENBART 'week' (99 kr — gamla STRIPE_BOOST_PRICE_ID,
+ * testad hela vägen). 'day'/'month' är byggda i backend men har inga Stripe-
+ * priser: utan pris svarar createBoostCheckout "Boost är inte tillgängligt
+ * ännu", så de ska INTE visas i väljaren. Tänd en till nivå så här:
+ *   1. Skapa priset i Stripe.
+ *   2. Sätt STRIPE_BOOST_PRICE_ID_DAY/_MONTH i apps/functions/.env och
+ *      deploya functions (actionen tar bara hosting).
+ *   3. Lägg till nivån här med det RIKTIGA beloppet som priceLabel.
  */
 export const BOOST_TIERS: {
     tier: BoostTier;
@@ -43,22 +52,10 @@ export const BOOST_TIERS: {
     pitch: string;
 }[] = [
     {
-        tier: 'day',
-        label: '1 dag',
-        priceLabel: '99 kr',
-        pitch: 'Ditt event syns på kartan — upp till 100x fler visningar.',
-    },
-    {
         tier: 'week',
         label: '1 vecka',
-        priceLabel: '299 kr',
-        pitch: 'Syns på kartan hela veckan — upp till 1000x exponering och 100x fler anmälda.',
-    },
-    {
-        tier: 'month',
-        label: '1 månad',
-        priceLabel: '795 kr',
-        pitch: 'Syns på kartan en hel månad — upp till 1000x exponering och 100x fler anmälda.',
+        priceLabel: '99 kr',
+        pitch: 'Syns på kartan hela veckan med guldstjärna — upp till 1000x exponering.',
     },
 ];
 
