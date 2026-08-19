@@ -140,12 +140,16 @@ Priset 99 kr/vecka är det riktiga Stripe-livepriset — inga platshållare kvar
 
 - **Öppningar + länkklick: PÅ** — visar om det är boosten eller stjärnan som
   drar klicken.
-- **Google Analytics-spårning: PÅ.** Webben kör Firebase Analytics = en
-  GA4-property (`G-JY54WK822P`), så Zohos UTM-parametrar plockas upp och
-  mejltrafiken kan skiljas från ~500/dag-basen — annars går det inte att veta
-  vad utskicket gav. Kontrollerat att UTM inte stör stjärnlänken: koden läser
-  `stjarna` och raderar BARA den parametern, övriga lämnas orörda.
-  Döp kampanjen till `medlemsmejl-aug-2026` — namnet blir `utm_campaign`.
+- **Google Analytics: UTM ligger i HTML:ens länkar — koppla INTE Zoho mot
+  Google.** Campaigns GA-ruta kräver att man loggar in med Google-kontot och
+  hämtar en spårningskod (deras integration är byggd för gamla Universal
+  Analytics). Onödigt: webben kör Firebase Analytics = en GA4-property
+  (`G-JY54WK822P`), och GA4 läser UTM-parametrar av sig själv. Alla tre
+  länkarna bär därför `utm_source=zoho&utm_medium=email&utm_campaign=
+  medlemsmejl-aug-2026` + `utm_content` = `stadssida` / `stjarnknapp` /
+  `sidfot`. Kontrollerat med webbens egen parsningslogik att stjärnlänken
+  fortfarande läser ut STJARNA2 och att UTM överlever till GA4 (koden raderar
+  BARA `stjarna`-parametern).
 - **Svarsspårning: AV.** Svaren på ett personligt skrivet mejl är det
   värdefullaste som kommer tillbaka och ska landa i vanliga inkorgen utan
   mellanhänder; på 208 mottagare räknas de för hand. Kolla att svarsadressen
