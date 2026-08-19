@@ -109,6 +109,11 @@ function domainFromUrl(url: string): string {
     return baseDomain(String(url).replace(/^https?:\/\//, '').split('/')[0]);
 }
 
+/** Probe-configens huvud-URL oavsett engine-typ (wp-rest: baseUrl, sitemap: sitemapUrl, sitevision: urls[0]). */
+function configMainUrl(config: any): string {
+    return String(config?.baseUrl ?? config?.sitemapUrl ?? config?.urls?.[0] ?? '');
+}
+
 /** "vastsverige.com" → "Vastsverige" — visningsnamn när sajten själv är okänd. */
 function prettyName(domain: string): string {
     const stem = domain.split('.')[0];
@@ -227,7 +232,7 @@ function parseRegexLiteral(s: unknown): RegExp | unknown {
     return m ? new RegExp(m[1], m[2]) : s;
 }
 
-interface SmokeVerdict { ok: boolean; reasons: string[]; events: number; sampleTitles: string[] }
+interface SmokeVerdict { ok: boolean; reasons: string[]; events: number; sampleTitles: string[]; allTitles: string[] }
 
 export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date, domain: string): SmokeVerdict {
     const reasons: string[] = [];
@@ -235,7 +240,7 @@ export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date,
         && e.startDate >= windowStart && e.startDate < windowEnd);
 
     if (future.length < SMOKE_MIN_EVENTS) {
-        return { ok: false, reasons: [`bara ${future.length} framtida event (kräver ≥${SMOKE_MIN_EVENTS})`], events: future.length, sampleTitles: [] };
+        return { ok: false, reasons: [`bara ${future.length} framtida event (kräver ≥${SMOKE_MIN_EVENTS})`], events: future.length, sampleTitles: [], allTitles: [] };
     }
     const titles = future.map((e) => (e.title ?? '').trim());
 
@@ -264,17 +269,17 @@ export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date,
     const stamps = new Set(future.map((e) => +e.startDate));
     if (stamps.size === 1 && future.length >= 5) reasons.push('alla event på samma timestamp (datumparse trasig?)');
 
-    return { ok: reasons.length === 0, reasons, events: future.length, sampleTitles: titles.slice(0, 3) };
+    return { ok: reasons.length === 0, reasons, events: future.length, sampleTitles: titles.slice(0, 3), allTitles: titles };
 }
 
 async function smokeTest(suggestion: any): Promise<SmokeVerdict> {
     const engine = ENGINES[suggestion.engine as keyof typeof ENGINES];
-    if (!engine) return { ok: false, reasons: [`okänd engine ${suggestion.engine}`], events: 0, sampleTitles: [] };
+    if (!engine) return { ok: false, reasons: [`okänd engine ${suggestion.engine}`], events: 0, sampleTitles: [], allTitles: [] };
 
     const config = { ...suggestion.config };
     if (Array.isArray(config.urlPatterns)) config.urlPatterns = config.urlPatterns.map(parseRegexLiteral);
     if (config.maxUrls) config.maxUrls = Math.min(config.maxUrls, 60);   // smoke ska vara snabb
-    if (config.maxPages) config.maxPages = Math.min(config.maxPages, 2);
+    if (config.maxPages) config.maxPages = Math.min(config.maxPages, 1);
 
     const windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
     const windowEnd = new Date(windowStart.getTime() + SMOKE_WINDOW_DAYS * 86_400_000);
@@ -283,12 +288,12 @@ async function smokeTest(suggestion: any): Promise<SmokeVerdict> {
     try {
         const raw = await Promise.race([
             engine(config, ctx),
-            new Promise<RawEvent[]>((_, rej) => setTimeout(() => rej(new Error('smoke-timeout 90s')), 90_000)),
+            new Promise<RawEvent[]>((_, rej) => setTimeout(() => rej(new Error('smoke-timeout 150s')), 150_000)),
         ]);
-        const domain = domainFromUrl(suggestion.config.baseUrl ?? suggestion.config.sitemapUrl ?? '');
+        const domain = domainFromUrl(configMainUrl(suggestion.config));
         return judgeEvents(raw, windowStart, windowEnd, domain);
     } catch (e: any) {
-        return { ok: false, reasons: [`motorn kraschade: ${e?.message ?? e}`], events: 0, sampleTitles: [] };
+        return { ok: false, reasons: [`motorn kraschade: ${e?.message ?? e}`], events: 0, sampleTitles: [], allTitles: [] };
     }
 }
 
@@ -377,7 +382,7 @@ async function main() {
     // Verdikt-bokföring för alla probade
     const state = loadState();
     const passedDomains = new Set(suggestions.map((s: any) =>
-        domainFromUrl(s.config.baseUrl ?? s.config.sitemapUrl ?? '')));
+        domainFromUrl(configMainUrl(s.config))));
     for (const c of candidates) {
         state.domains[c.domain] = passedDomains.has(c.domain)
             ? { verdict: 'PASS', date: todayISO() }
@@ -387,8 +392,12 @@ async function main() {
     // 3. SMOKE — sekventiellt (snällt mot sajterna, enkel felsökning)
     const approved: string[] = [];
     const existingIds = new Set([...SOURCES, ...SNOWBALL_SOURCES].map((s: Source) => s.id));
+    // Innehålls-fingeravtryck: samma SiteVision-installation kan svara på flera
+    // domäner (norraberget.se == visitsundsvall.se) — jämför titeluppsättningar
+    // mellan godkända i samma körning och avvisa innehålls-dubbletter.
+    const approvedTitleSets: { id: string; titles: Set<string> }[] = [];
     for (const sug of suggestions) {
-        const domain = domainFromUrl(sug.config.baseUrl ?? sug.config.sitemapUrl ?? '');
+        const domain = domainFromUrl(configMainUrl(sug.config));
         const cand = candidates.find((c) => c.domain === domain);
         let id = `sb-${domain.replace(/\./g, '-')}`;
         if (existingIds.has(id)) id = `${id}-2`;
@@ -406,6 +415,17 @@ async function main() {
             state.domains[domain] = { verdict: 'SMOKE-FAIL', date: todayISO(), note: v.reasons[0] };
             continue;
         }
+        const mine = new Set(v.allTitles.map((t) => t.toLowerCase()));
+        const dupOf = approvedTitleSets.find((a) => {
+            const inter = [...mine].filter((t) => a.titles.has(t)).length;
+            return inter / Math.min(mine.size, a.titles.size) >= 0.6;
+        });
+        if (dupOf) {
+            console.log(`❌ innehålls-dubblett av ${dupOf.id} (samma kalender på flera domäner)`);
+            state.domains[domain] = { verdict: 'DUPE', date: todayISO(), note: `samma innehåll som ${dupOf.id}` };
+            continue;
+        }
+        approvedTitleSets.push({ id, titles: mine });
         console.log(`✅ ${v.events} event, t.ex. ${v.sampleTitles.map((t) => `"${t.slice(0, 40)}"`).join(', ')}`);
 
         const note = `web-snöboll ${todayISO()}: ${sug.method}, smoke ${v.events} event ok. ` +
@@ -415,7 +435,7 @@ async function main() {
         approved.push(sourceToTs({
             id, hostName: displayName, region: cand?.region ?? 'national',
             engine: sug.engine, config: sug.config,
-            probeUrl: String(sug.config.baseUrl ?? sug.config.sitemapUrl ?? ''),
+            probeUrl: configMainUrl(sug.config),
             rawEventCount: v.events, note,
         }));
         existingIds.add(id);

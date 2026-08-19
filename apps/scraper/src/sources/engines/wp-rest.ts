@@ -171,7 +171,7 @@ function tribeToRawEvent(e: any): RawEvent | null {
 
     return {
         externalId: e.id ? String(e.id) : undefined,
-        title: String(e.title).trim(),
+        title: decodeEntities(String(e.title)).trim(),
         startDate: start,
         endDate: end || undefined,
         url: e.url || e.website || '',
@@ -257,7 +257,8 @@ function categoryFromTerms(e: any): string | undefined {
 }
 
 async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: AbortSignal): Promise<RawEvent | null> {
-    const title = e?.title?.rendered ? String(e.title.rendered).trim() : null;
+    // WP REST HTML-enkodar titlar (&#038; &amp; &#8211;) — avkoda enligt encoding-guarden
+    const title = e?.title?.rendered ? decodeEntities(String(e.title.rendered)).trim() : null;
     if (!title) return null;
 
     // 1. Standardfält först

@@ -17,4 +17,39 @@
 import { Source } from './types';
 
 export const SNOWBALL_SOURCES: Source[] = [
+
+    {
+        id: 'sb-visitpitea-se',
+        hostName: 'Visit Piteå',
+        region: 'pitea',
+        engine: 'wp-rest' as const,
+        config: { baseUrl: 'https://visitpitea.se', variant: 'wp-v2', defaultCity: 'Piteå', fetchDetailPage: true, maxPages: 5 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://visitpitea.se',
+            date: '2026-08-19',
+            rawEventCount: 50,
+        },
+        notes: 'web-snöboll 2026-08-19: wp-v2, smoke 50 event ok. Manuell kandidatlista (stads-svep).',
+        lastVerified: '2026-08-19',
+    },
+    {
+        id: 'sb-visitsundsvall-se',
+        hostName: 'Visit Sundsvall',
+        region: 'sundsvall',
+        engine: 'sitevision' as const,
+        config: { urls: ["https://visitsundsvall.se/destination/evenemang"], defaultCity: 'Sundsvall' },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://visitsundsvall.se/destination/evenemang',
+            date: '2026-08-19',
+            rawEventCount: 4,
+        },
+        notes: 'web-snöboll 2026-08-19: sitevision-cal, smoke 4 event ok. Manuell kandidatlista (stads-svep).',
+        lastVerified: '2026-08-19',
+    },
 ];
