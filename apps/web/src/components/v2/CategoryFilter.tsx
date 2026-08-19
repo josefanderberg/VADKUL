@@ -73,6 +73,16 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
         [familyOptIn],
     );
 
+    // Antal valda NORMALA kategorier — opt-in-källorna räknas bort, precis som
+    // matchesFilter i page.tsx gör med selectedNormal. Avgörande sedan
+    // opt-in-källorna kan vara FÖRVALDA (utils/categoryDefaults: utloggade och
+    // 65+): utan borträkningen hade varje besökare mötts av alla vanliga
+    // kategorier urblekta, trots att kartan visar dem.
+    const normalSelectedCount = useMemo(
+        () => [...selected].filter((id) => !optInKeys.has(id)).length,
+        [selected, optInKeys],
+    );
+
     // Bara kategorier som SYNS i vyn (eller är ikryssade — en bortfiltrerad
     // kategori måste gå att kryssa ur igen). Mest event överst.
     const visible = useMemo(
@@ -99,9 +109,9 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
         // Cirkeln bär SAMMA brick-gradient som eventmarkörerna på kartan
         // (sourceGradientCss på kategorins markerHex). Färgstark = syns på
         // kartan just nu, urblekt = bortfiltrerad, blå ring = uttryckligen
-        // vald. Tom selection betyder "alla PÅ" för vanliga kategorier, men
+        // vald. Tomt NORMAL-val betyder "alla PÅ" för vanliga kategorier, men
         // opt-in-raderna (Svenska kyrkan/PRO, ev. 🧸) är bara på ikryssade.
-        const shownOnMap = active || (selected.size === 0 && !optInKeys.has(cat.id));
+        const shownOnMap = active || (normalSelectedCount === 0 && !optInKeys.has(cat.id));
         const count = counts.get(cat.id) ?? 0;
         return (
             <div key={cat.id} className="flex flex-row-reverse items-center gap-2">

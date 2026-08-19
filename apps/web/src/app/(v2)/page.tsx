@@ -22,6 +22,7 @@ import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays,
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
+import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -376,8 +377,17 @@ export default function HomePage() {
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
-    // Kategorifilter (flerval). Tom set = visa alla kategorier.
-    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+    // Kategorifilter (flerval). Tomt NORMAL-val = visa alla kategorier; opt-in-
+    // källorna (Svenska kyrkan/PRO) räknas separat och göms om de inte står i
+    // seten. Startläget är BESÖKARENS (utloggad ⇒ båda källorna på,
+    // utils/categoryDefaults) — hydreringen nedan skriver över det med
+    // profilens standardläge så fort ett konto landat.
+    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+        () => new Set(defaultSpecialCategories({ loggedIn: false })),
+    );
+    // Profilens ålder, sparad vid hydreringen: behövs för att kunna räkna fram
+    // standardläget igen (Rensa-knappen) utan att läsa om user-dokumentet.
+    const profileAgeRef = useRef<unknown>(undefined);
     // Sparade kartfilter (inloggade): users/{uid}.mapCategories. catPrefsUid =
     // uid vars sparade filter hydrerats (läses EN gång per konto);
     // lastSavedCatsRef = senast sparade/laddade värdet (sorterad nyckel) så vi
@@ -1798,7 +1808,15 @@ export default function HomePage() {
             return next;
         }));
     }, []);
-    const handleClearCategories = useCallback(() => startTransition(() => setSelectedCategories(new Set())), []);
+    // Rensa-krysset heter "Visa alla" — då måste det landa i STANDARDLÄGET, inte
+    // i tom set: för en besökare (och för 65+) ingår opt-in-källorna i "allt",
+    // och ett tomt set hade tvärtom SLÄCKT dem. Under 65 ⇒ tomt som förut.
+    const handleClearCategories = useCallback(
+        () => startTransition(() => setSelectedCategories(
+            new Set(defaultSpecialCategories({ loggedIn: !!user, age: profileAgeRef.current })),
+        )),
+        [user],
+    );
 
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
     // Ett medvetet dagval är att ta över rodret: stoppa bildspelet, annars
@@ -2187,7 +2205,14 @@ export default function HomePage() {
         // inkommande ?event=-läsningen ovan öppnar det hos mottagaren.
         if (dayOffset !== 0) params.set('dag', String(dayOffset));
         if (dayRangeDays > 1) params.set('dagar', String(dayRangeDays));
-        if (selectedCategories.size > 0) params.set('kategori', [...selectedCategories].join(','));
+        // Skriv INTE standardläget till adressen. Annars hade varje besökare
+        // fått ?kategori=pro,svenskakyrkan i URL:en direkt vid ankomst, och
+        // delade länkar burit med sig ett filter ingen valt — som dessutom
+        // låser mottagarens hydrering (urlHadCategoriesRef vinner över profilen).
+        const catsKey = [...selectedCategories].sort().join(',');
+        if (selectedCategories.size > 0 && catsKey !== specialDefaultsKey({ loggedIn: false })) {
+            params.set('kategori', [...selectedCategories].join(','));
+        }
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
     }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying]);
@@ -2227,20 +2252,25 @@ export default function HomePage() {
                 // Opt-in-läget följer alltid profilen — även när en inkommande
                 // ?kategori=-länk vinner över det sparade kategorivalet.
                 if (!cancelled) setFamilyOptIn(familyIsOptIn(data));
+                profileAgeRef.current = data?.age;
                 if (!urlHadCategoriesRef.current) {
                     if (Array.isArray(data?.mapCategories)) {
                         const valid = data.mapCategories.filter((k): k is string =>
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
                         baseline = [...valid].sort().join(',');
-                        if (!cancelled && valid.length) setSelectedCategories(new Set(valid));
+                        // Sätts ÄVEN när listan är tom: staten startar i
+                        // BESÖKARLÄGET (opt-in-källorna på), och ett sparat
+                        // aktivt "visa alla" måste kunna släcka dem igen.
+                        if (!cancelled) setSelectedCategories(new Set(valid));
                     } else {
-                        // Aldrig rört filtret → profilens standardläge.
-                        const defaults: string[] = [];
-                        if (typeof data?.age === 'number' && data.age >= 65) defaults.push('pro');
-                        if (defaults.length) {
-                            baseline = [...defaults].sort().join(',');
-                            if (!cancelled) setSelectedCategories(new Set(defaults));
-                        }
+                        // Aldrig rört filtret → profilens standardläge:
+                        // 65+ ⇒ Svenska kyrkan + PRO på, annars opt-in som förut
+                        // (utils/categoryDefaults). Sätts ovillkorligt av samma
+                        // skäl som ovan — en 40-åring ska INTE ärva besökarens
+                        // förvalda källor bara för att defaulten är tom.
+                        const defaults = defaultSpecialCategories({ loggedIn: true, age: data?.age });
+                        baseline = [...defaults].sort().join(',');
+                        if (!cancelled) setSelectedCategories(new Set(defaults));
                     }
                 }
             } catch { /* best-effort — kartan störs aldrig av prefs */ }
@@ -2252,9 +2282,19 @@ export default function HomePage() {
         return () => { cancelled = true; };
     }, [user, eventsLoaded, catPrefsUid, selectedCategories]);
 
-    // Utloggning ⇒ opt-in-läget nollas: besökare ska alltid se familjeeventen.
+    // Utloggning ⇒ tillbaka till BESÖKARLÄGET: familj-opt-in nollas (besökare
+    // ska alltid se familjeeventen) och opt-in-källorna slås på igen. Körs även
+    // vid mount medan Firebase återställer sessionen — då är läget redan
+    // besökarens, så det är en no-op. catPrefsUid nollas så att en ny
+    // inloggning hydrerar om profilens standardläge i stället för att ärva
+    // besökarens källor.
     useEffect(() => {
-        if (!user) setFamilyOptIn(false);
+        if (user) return;
+        setFamilyOptIn(false);
+        setSelectedCategories(new Set(defaultSpecialCategories({ loggedIn: false })));
+        setCatPrefsUid(null);
+        lastSavedCatsRef.current = null;
+        profileAgeRef.current = undefined;
     }, [user]);
 
     // Spara (debounce): först efter hydrering, och bara när valet faktiskt
