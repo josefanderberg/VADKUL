@@ -5,6 +5,16 @@
       "note": "bara 0 framtida event (kräver ≥3)",
       "verdict": "SMOKE-FAIL"
     },
+    "arbetetsmuseum.se": {
+      "date": "2026-08-20",
+      "note": "bulk-probe-FÄLLA: wp/v2 ger publiceringsdatum, ej eventdatum (norrkoping-maxning-minnet) — proba ALDRIG om",
+      "verdict": "FAIL"
+    },
+    "augustifesten.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "borascongress.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
@@ -31,9 +41,9 @@
       "verdict": "FAIL"
     },
     "ebeneser.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "exercishallen.se": {
       "date": "2026-08-19",
@@ -41,9 +51,13 @@
       "verdict": "FAIL"
     },
     "fjallravencenter.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "gamlalinkoping.info": {
+      "verdict": "PASS",
+      "date": "2026-08-20"
     },
     "gamlateatern.se": {
       "date": "2026-08-19",
@@ -51,14 +65,14 @@
       "verdict": "FAIL"
     },
     "harnosand.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "hogakusten.com": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "jamtland.se": {
       "date": "2026-08-19",
@@ -75,20 +89,39 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "konsertkongress.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "krusenstiernska.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "kulturenshus.com": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "linkoping.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
       "note": "bulk-probe"
+    },
+    "linkopingsstadsfest.se": {
+      "verdict": "PASS",
+      "date": "2026-08-20"
     },
     "lokomotivet.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "mjolby.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
     },
     "munktellarenan.se": {
       "date": "2026-08-19",
@@ -96,14 +129,14 @@
       "verdict": "FAIL"
     },
     "norraberget.se": {
-      "verdict": "DUPE",
       "date": "2026-08-19",
-      "note": "samma innehåll som sb-visitsundsvall-se"
+      "note": "samma innehåll som sb-visitsundsvall-se",
+      "verdict": "DUPE"
     },
     "norrbottensmuseum.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "oland.com": {
       "date": "2026-08-19",
@@ -111,29 +144,59 @@
       "verdict": "FAIL"
     },
     "ornskoldsvik.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "pdol.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "piteamuseum.nu": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "retuna.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "sagateatern.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "sarakulturhus.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
     "scenkonstsormland.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "skellefteamuseum.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "skylten.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "soderkopingsbrunn.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
+    },
+    "son.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
     },
     "sormlandsmuseum.se": {
       "date": "2026-08-19",
@@ -146,9 +209,9 @@
       "verdict": "FAIL"
     },
     "studioacusticum.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-19",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "sundbyholms-slott.se": {
       "date": "2026-08-19",
@@ -156,14 +219,14 @@
       "verdict": "FAIL"
     },
     "teatervasternorrland.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-19",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "technichus.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "textilmuseet.se": {
       "date": "2026-08-19",
@@ -171,32 +234,47 @@
       "verdict": "FAIL"
     },
     "tonhallen.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "trastocksfestivalen.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
       "note": "bulk-probe"
     },
     "vasternorrlandsmuseum.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "visitlulea.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "visitornskoldsvik.se": {
-      "verdict": "FAIL",
       "date": "2026-08-19",
-      "note": "bulk-probe"
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "visitpitea.se": {
-      "verdict": "PASS",
-      "date": "2026-08-19"
+      "date": "2026-08-19",
+      "verdict": "PASS"
+    },
+    "visitskelleftea.se": {
+      "verdict": "FAIL",
+      "date": "2026-08-20",
+      "note": "bulk-probe"
     },
     "visitsundsvall.se": {
-      "verdict": "PASS",
-      "date": "2026-08-19"
+      "date": "2026-08-19",
+      "verdict": "PASS"
+    },
+    "visualiseringscenter.se": {
+      "date": "2026-08-20",
+      "note": "bulk-probe-FÄLLA: wp/v2 ger publiceringsdatum, ej eventdatum (norrkoping-maxning-minnet) — proba ALDRIG om",
+      "verdict": "FAIL"
     }
   },
   "version": 1

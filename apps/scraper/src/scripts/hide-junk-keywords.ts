@@ -44,6 +44,11 @@ const JUNK_PATTERNS: { name: string; re: RegExp }[] = [
     // Pyramidspel / MLM-rekrytering förklädd som "föreläsning" eller "workshop".
     // Konservativt — bara explicita branschord.
     { name: 'mlm', re: /\b(pyramidspel|multi[- ]?level[- ]?marketing|nätverksmarknadsföring)\b/i },
+
+    // Titel som är ENBART ett veckodagsnamn = programsida/dagsindelning, inte
+    // ett event (stadsfest-sajternas /evenemang/lordag-sidor, 2026-08-20).
+    // Ankrat mot haystackens första rad (titeln) — "Lördagsdans" matchar inte.
+    { name: 'veckodag-titel', re: /^(måndag|tisdag|onsdag|torsdag|fredag|lördag|söndag)\s*\n/i },
 ];
 
 interface Row {
