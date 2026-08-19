@@ -11,39 +11,62 @@ STJARNA1/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA2'`).
 
 ## Före utskick — checklista
 
-- [ ] **STJARNA2 finns INTE i koden ännu.** Lägg till i `STAR_GIFT_CODES` i
-      `apps/functions/src/index.ts` (rad ~126, idag `['STJARNA1', 'ARRANGOR1',
-      'MEDLEM1']`) och deploya `firebase deploy --only functions:redeemStarGift`
-      — annars studsar länken för alla mottagare.
-- [ ] **Priserna är platshållare.** Alla belopp står som `[PRIS: …]` i mejlet —
-      byt mot de riktiga innan utskick.
-- [ ] **Boost-nivåerna:** koden har idag EN nivå (`BOOST_DAYS = 7`, ett enda
-      `STRIPE_BOOST_PRICE_ID`). Tre nivåer (1 dag/1 vecka/1 månad) kräver tre
-      Stripe-priser + val i checkout-flödet — skeppa det, eller skala ner
-      mejltexten till det som är live.
-- [ ] **Notis-tidpunkterna:** mejlet lovar upp till 4 notiser (8 h/3 h/1 h/vid
-      start) enligt ägarbeslut; koden skickar idag EN påminnelse (1 h före,
-      `eventReminders` i functions). Skeppa stegen eller justera meningen.
-- [ ] Bygg om medlemslistan strax före utskick (`build-medlemslista.mjs`,
-      se medlemsmejl.md steg 0) — city-kolumnen fylls på av sig själv.
+- [x] ~~STJARNA2 saknas i koden~~ — finns nu i `STAR_GIFT_CODES`
+      (`apps/functions/src/index.ts` rad ~127, commit 1169ff5).
+- [x] ~~BLOCKERARE: redeemStarGift ej omdeployad~~ — **DEPLOYAD 19/8 22:4x**
+      (prod-versionen var från 5/8, före STJARNA2 i 1169ff5). Skarptestat mot
+      prod med ett tillfälligt konto, sedan raderat: STJARNA2 → `success:true`
+      "Du har en stjärna! ⭐", andra försöket → "Du har redan hämtat din
+      stjärna", påhittad kod → "Ogiltig gåvolänk." Länken i mejlet fungerar.
+- [x] ~~Priser/nivåer~~ — mejlet nedskalat till det som är LIVE sedan 19/8:
+      **EN nivå, 1 vecka, 99 kr** (riktiga Stripe-livepriset). Dag/månad göms
+      på sajten och nämns inte i mejlet. "500 sidvisningar om dagen" är den
+      ärliga trafiksiffran — de gamla 100×/1000×-påståendena är borttagna.
+- [x] ~~Notis-tidpunkterna~~ — stegen 8 h/3 h/1 h/vid start är byggda
+      (`eventReminderPrefs` i functions), meningen i mejlet stämmer.
+- [ ] **Stadsanpassningen:** mejlet använder `$[CITY|…]$` på tre ställen (se
+      nedan). Vid CSV-importen i Campaigns: mappa `city`-kolumnen till
+      kontaktfältet **City** och verifiera i editorns merge-tag-väljare att
+      taggen heter exakt `$[CITY|...]$` — justera i HTML:en om Campaigns
+      genererar ett annat taggnamn. Skicka ett testmejl till dig själv med en
+      kontakt UTAN stad och kolla att fallbacken ("din stad") läser bra.
+- [x] Medlemslistan byggd 19/8: `medlemmar-2026-08-19.csv` (gitignorad, här i
+      mappen) — 215 adresser, 205 med förnamn, 32 med stad (183 utan → får
+      fallback-texten "din stad"). Dröjer utskicket flera dagar: bygg om
+      listan (`build-medlemslista.mjs`, se medlemsmejl.md steg 0).
 - [ ] Behåll Campaigns avregistreringsfot. Skicka vardagkväll 19–20 eller
       söndag kväll.
 
+## Stadsanpassningen
+
+`$[CITY|…]$` med fallback så kontakter utan stad får nationell text:
+
+1. Nyhetslistan: "**$[CITY|Din stad]$ har fått en egen sida**"
+2. Boost-sektionen: "Arrangerar du något i $[CITY|din stad]$ …"
+3. Stjärnan: "kanske något du själv ska på i $[CITY|din stad]$?"
+
 ## Ämnesrad
 
-**Förstaval:**
+**ANVÄND DENNA:**
+
+- `Mycket nytt på kartan — och en ny stjärna till dig ⭐`
+
+Det viktiga står först (syns på mobil, som kapar vid ~40 tecken), "ny" gör
+att de 167 som fick MEDLEM1 i juli inte läser det som en repris, och gåvan —
+inte boosten — är hooken. Ingen `$[CITY]$` i ämnesraden: 183 av 215 saknar
+stad, så den varianten blir generisk för de flesta. Inget A/B-test heller;
+på 215 mottagare är skillnaderna brus.
+
+**Ratade (sparade om ämnesraden ska bytas):**
 
 - `Nytt på VADKUL: din stad har fått en egen sida — och du en ny stjärna ⭐`
-
-**Alternativ (A/B-testa i Campaigns):**
-
-- `$[FNAME|Hej]$, mycket nytt på kartan sedan sist ⭐`
-- `VADKUL har uppdaterats — stadssidor, notiser och en gåva till dig`
+  (för lång — kapas mitt i på mobil)
+- `Nytt i $[CITY|din stad]$ — och en guldstjärna till dig ⭐`
 
 ## Preheader
 
-> Stadssidor med levande karta, sök bland 291 orter, notiser på event — och en
-> ny guldstjärna att lösa in.
+> Boosta ditt event i en vecka för 99 kr — och lös in din nya guldstjärna:
+> ett dygns boost, gratis för dig som medlem.
 
 ## Mejlet
 
@@ -54,7 +77,7 @@ STJARNA1/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA2'`).
 >
 > **Nytt på kartan sedan sist**
 >
-> - 🗺️ **Din stad har fått en egen sida** — med en levande karta högst upp.
+> - 🗺️ **$[CITY|Din stad]$ har fått en egen sida** — med en levande karta högst upp.
 >   Bläddra dag för dag och se allt som händer nära dig:
 >   [vadkul.se/evenemang](https://vadkul.se/evenemang)
 > - 🔍 **Sök din ort** — sökrutan hittar nu **291 orter**, från Stockholm till
@@ -68,26 +91,24 @@ STJARNA1/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA2'`).
 >
 > **Nyhet: Boosta ditt event 🚀**
 >
-> Arrangerar du något — eller har du skapat ett event på kartan? Nu kan du
-> **boosta** det: eventet får en **guldmarkör** och ligger **alltid synligt på
-> kartan**, före allt annat, så länge boosten varar.
+> Arrangerar du något i $[CITY|din stad]$ — eller har du skapat ett event på
+> kartan? Nu kan du **boosta** det: eventet får en **guldmarkör ⭐** och ligger
+> **alltid synligt på kartan**, före allt annat, i en hel vecka.
 >
-> - **1 dag** — [PRIS: 99 kr] — upp till **100× fler visningar**
-> - **1 vecka** — [PRIS: 299 kr] — upp till **1000× exponering** och
->   **100× fler anmälda**
-> - **1 månad** — [PRIS: 795 kr] — upp till **1000× exponering** och
->   **100× fler anmälda**
+> **99 kr — en hel vecka.** Kartan har runt **500 sidvisningar om dagen** —
+> under boostveckan syns ditt event tydligt för flera tusen besök.
 >
 > Öppna ditt event på kartan och tryck på **Boosta** — klart på en minut.
 >
 > **Och en gåva till dig ⭐**
 >
-> Som tack för att du är med får du en **ny guldstjärna** — en gratis
-> 1-dagars boost till valfritt event. Så här använder du den:
+> Som tack för att du är medlem får du en **ny guldstjärna** — en gratis boost
+> i **24 timmar** till valfritt event. Så här använder du den:
 >
 > 1. Öppna [vadkul.se/?stjarna=STJARNA2](https://vadkul.se/?stjarna=STJARNA2)
 >    och logga in
-> 2. Öppna valfritt event på kartan — kanske något du själv ska på?
+> 2. Öppna valfritt event på kartan — kanske något du själv ska på i
+>    $[CITY|din stad]$?
 > 3. Tryck på ⭐
 >
 > Eventet får guldmarkör och syns för alla i ett helt dygn. Du har en
@@ -103,8 +124,9 @@ STJARNA1/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA2'`).
 
 [release-mejl-2026-08.html](release-mejl-2026-08.html) — mejlklient-säker
 (tabellayout, inline-CSS, max 600 px, inga bilder — logotypen är text).
-Klistra in i Campaigns HTML-editor. Merge-taggen `$[FNAME|där]$` står redan i
-hälsningen. Prisplatshållarna är gulmarkerade i HTML:en så de inte kan missas.
+Klistra in i Campaigns HTML-editor. Merge-taggarna `$[FNAME|där]$` (hälsningen)
+och `$[CITY|…]$` (tre ställen, se Stadsanpassningen ovan) står redan i HTML:en.
+Priset 99 kr/vecka är det riktiga Stripe-livepriset — inga platshållare kvar.
 
 ## Vad som medvetet INTE är med
 
