@@ -8,6 +8,9 @@
 //   FB_PAGE_ID           — sidans numeriska id
 //   FB_PAGE_ACCESS_TOKEN — sid-token med pages_manage_posts (app i dev-läge
 //                          räcker för egen sida där man själv är app-admin)
+//                          Alias: FB_PAGE_TOKEN — samma namn som scrapern och
+//                          ~/.vadkul-secrets/env använder, så nattjobbets
+//                          redan fungerande token kan klistras in rakt av.
 //
 // POST { message } → { postId, url }. Routen postar ENBART på egen sida.
 
@@ -23,10 +26,13 @@ export async function POST(request: Request) {
     if (denied) return denied;
 
     const pageId = process.env.FB_PAGE_ID;
-    const token = process.env.FB_PAGE_ACCESS_TOKEN;
+    // FB_PAGE_TOKEN accepteras som alias: scrapern (publish-fb/socialPublish)
+    // och ~/.vadkul-secrets/env på Mac minin kallar sid-tokenen så, och den
+    // har redan pages_manage_posts. Då slipper man döpa om vid kopiering.
+    const token = process.env.FB_PAGE_ACCESS_TOKEN || process.env.FB_PAGE_TOKEN;
     if (!pageId || !token) {
         return NextResponse.json({
-            error: 'Sidpublicering är inte påkopplad än — lägg FB_PAGE_ID och FB_PAGE_ACCESS_TOKEN i apps/web/.env.local (dev) resp. .env (deploy).',
+            error: 'Sidpublicering är inte påkopplad än — lägg FB_PAGE_ID och FB_PAGE_ACCESS_TOKEN (eller FB_PAGE_TOKEN) i apps/web/.env.local (dev) resp. .env (deploy).',
         }, { status: 503 });
     }
 

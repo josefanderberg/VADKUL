@@ -42,15 +42,25 @@ import path from 'path';
 import fs from 'fs';
 import { db } from '../config/firebase';
 import { postToFacebook, getFacebookPostPermalink, SCHEDULE_MAX_MS } from '../utils/socialPublish';
-import { CATEGORY_EMOJI } from '../utils/llmAudit';
+import { buildCityPostText, pickCityRows, type PickedRows } from '../utils/cityPostText';
 
-// Hemligheter (FB_PAGE_ID/FB_PAGE_TOKEN) — samma mönster som publish-fb.ts
-const secretFile = path.join(process.env.HOME || '~', '.vadkul-secrets/env');
-if (fs.existsSync(secretFile)) {
+// Hemligheter (FB_PAGE_ID/FB_PAGE_TOKEN) — samma mönster som publish-fb.ts.
+// MacBooken saknar ~/.vadkul-secrets — där läses webbens .env.local/.env i
+// stället, och FB_PAGE_ACCESS_TOKEN (webbens namn) mappas till FB_PAGE_TOKEN.
+const secretSources = [
+    path.join(process.env.HOME || '~', '.vadkul-secrets/env'),
+    path.resolve(__dirname, '../../../web/.env.local'),
+    path.resolve(__dirname, '../../../web/.env'),
+];
+for (const secretFile of secretSources) {
+    if (!fs.existsSync(secretFile)) continue;
     for (const line of fs.readFileSync(secretFile, 'utf-8').split('\n')) {
         const m = line.match(/^([A-Z_]+)="?([^"]*)"?\s*$/);
         if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
     }
+}
+if (!process.env.FB_PAGE_TOKEN && process.env.FB_PAGE_ACCESS_TOKEN) {
+    process.env.FB_PAGE_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 }
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
@@ -166,8 +176,41 @@ async function loadTowns(): Promise<Town[]> {
         );
     }
 
+    // --orter som inte matchade någon grupp: slå upp i webbens CITY_POINTS
+    // (291 orter) så en ort utan registrerad grupp ändå kan få ett sidinlägg
+    // (t.ex. Sollefteå 20/8 — gruppen fanns men var inte inlagd än). Ingen
+    // grupp ⇒ inga loggrader, bara sidinlägget.
+    for (const wanted of onlyCities ?? []) {
+        if ([...byTown.values()].some(t => t.key.includes(wanted) || t.name.toLowerCase().includes(wanted))) continue;
+        const cp = lookupCityPoint(wanted);
+        if (!cp) { console.warn(`⚠️  "${wanted}" finns varken bland grupperna eller i cityPoints — hoppas över.`); continue; }
+        byTown.set(cp.name.toLowerCase(), {
+            key: cp.name.toLowerCase(), name: cp.name,
+            citySlug: citySlugFor(cp.name), lat: cp.lat, lng: cp.lng, groups: [],
+        });
+    }
+
     // Flest grupper först — den orten ger störst utdelning per schemalagt inlägg.
     return [...byTown.values()].sort((a, b) => b.groups.length - a.groups.length);
+}
+
+/** Webbens ortlistor, regex-lästa (uniforma objektliteraler — ingen TS-import
+ *  över paketgränsen). cityPoints = koordinater, cityData.CITIES = stadssidor. */
+function lookupCityPoint(query: string): { name: string; lat: number; lng: number } | null {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/utils/cityPoints.ts'), 'utf-8');
+    const q = query.toLowerCase();
+    for (const m of src.matchAll(/\{ name: '([^']+)', lat: ([\d.]+), lng: ([\d.]+)/g)) {
+        if (m[1].toLowerCase().includes(q)) return { name: m[1], lat: Number(m[2]), lng: Number(m[3]) };
+    }
+    return null;
+}
+
+function citySlugFor(name: string): string | null {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/app/(v1)/evenemang/cityData.ts'), 'utf-8');
+    for (const m of src.matchAll(/\{ name: '([^']+)', slug: '([a-z-]+)'/g)) {
+        if (m[1].toLowerCase() === name.toLowerCase()) return m[2];
+    }
+    return null;
 }
 
 /* ── 2. Eventen per ort ───────────────────────────────────────────────────── */
@@ -196,80 +239,24 @@ function eventsForTown(sqlite: Database.Database, town: Town, from: Date, to: Da
     return rows.filter(r => distKm(town.lat, town.lng, r.lat, r.lng) <= radiusKm);
 }
 
-/** Sprid raderna över olika dagar och platser — fem spelningar på samma krog
- *  är ett tråkigt inlägg även om de är de fem närmaste i tid. */
-function pickRows(events: EventRow[], n = 5): EventRow[] {
-    const seenDay = new Map<string, number>();
-    const seenVenue = new Set<string>();
-    const picked: EventRow[] = [];
-
-    for (const e of events) {
-        if (picked.length >= n) break;
-        const day = e.time.slice(0, 10);
-        const venue = (e.locationName ?? '').toLowerCase().trim();
-        if ((seenDay.get(day) ?? 0) >= 2) continue;
-        if (venue && seenVenue.has(venue)) continue;
-        picked.push(e);
-        seenDay.set(day, (seenDay.get(day) ?? 0) + 1);
-        if (venue) seenVenue.add(venue);
-    }
-    // Fyll på om filtren var för hårda (liten ort, få event).
-    for (const e of events) {
-        if (picked.length >= n) break;
-        if (!picked.includes(e)) picked.push(e);
-    }
-    return picked;
-}
-
-/* ── 3. Texten ────────────────────────────────────────────────────────────── */
-
-const WEEKDAY = ['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag'];
-
-function formatRow(e: EventRow): string {
-    const emoji = CATEGORY_EMOJI[e.category] ?? '✨';
-    const d = new Date(e.time);
-    const day = WEEKDAY[d.getDay()];
-    const hasTime = !(d.getHours() === 0 && d.getMinutes() === 0);
-    const when = hasTime
-        ? `${day} kl ${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`
-        : day;
-    const where = e.locationName ? ` på ${e.locationName}` : '';
-    return `${emoji} ${e.title}${where}, ${when}`;
-}
+/* ── 3. Texten — bygget bor i utils/cityPostText (ägarens täta tvåsektions-
+ *    format 20/8), här väljs bara mellan det och den tidlösa varianten. ── */
 
 function linkFor(town: Town): string {
     return town.citySlug ? `${SITE}/evenemang/${town.citySlug}` : SITE;
 }
 
-/**
- * Sidans röst är "vi", inte "jag" — maker-storyn i facebook-poster.md hör
- * hemma på det privata kontot. En Sida som skriver "jag byggde den själv"
- * läses som fejk.
- */
-function buildText(town: Town, rows: EventRow[], timeless: boolean): string {
-    const link = linkFor(town);
-
-    if (timeless || rows.length === 0) {
-        return [
-            `Vad händer i ${town.name}? 👀`,
-            '',
-            'Konserter, loppisar, barnaktiviteter, föreläsningar — vi samlar allt',
-            'som händer på en karta. Gratis, och utan konto.',
-            '',
-            `Kolla ${town.name}: ${link}`,
-            '',
-            'Saknas något? Tipsa oss så lägger vi in det 👇',
-        ].join('\n');
-    }
-
+/** Tidlös text för inlägg >7 dygn fram — inga daterade rader (färskvaruregeln). */
+function timelessText(town: Town): string {
     return [
-        `Vad händer i ${town.name} den här veckan? Här är några tips 👇`,
+        `Vad händer i ${town.name}? 👀`,
         '',
-        ...rows.map(formatRow),
+        'Konserter, loppisar, barnaktiviteter, föreläsningar — vi samlar allt',
+        'som händer på en karta. Gratis, och utan konto.',
         '',
-        `Allt ligger på kartan: ${link}`,
+        `Kolla ${town.name}: ${linkFor(town)}`,
         '',
-        'Vad har vi missat? Tipsa i kommentarerna 👇',
+        'Saknas något? Tipsa oss så lägger vi in det 👇',
     ].join('\n');
 }
 
@@ -317,8 +304,17 @@ async function main() {
         const timeless = daysAhead > FRESH_DAYS;
 
         // Tidlösa inlägg listar inga event alls, så hämta dem bara när de används.
-        const rows = timeless ? [] : pickRows(eventsForTown(sqlite, town, new Date(), new Date(when.getTime() + 7 * DAY_MS)));
-        planned.push({ town, when, text: buildText(town, rows, timeless), image: imageFor(town, timeless), timeless, rows });
+        // 14 dygn från publiceringen: sektion 1 (t.o.m. söndag) + "Och nästa vecka:".
+        const picked: PickedRows = timeless
+            ? { thisWeek: [], nextWeek: [] }
+            : pickCityRows(
+                eventsForTown(sqlite, town, when, new Date(when.getTime() + 14 * DAY_MS)),
+                when.getTime());
+        const rows = [...picked.thisWeek, ...picked.nextWeek];
+        const text = timeless || rows.length === 0
+            ? timelessText(town)
+            : buildCityPostText(town.name, linkFor(town), picked, when.getTime());
+        planned.push({ town, when, text, image: imageFor(town, timeless), timeless, rows });
     });
 
     sqlite.close();

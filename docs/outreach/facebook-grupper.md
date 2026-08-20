@@ -2648,3 +2648,221 @@ V1:
 
 V2: kartstycket utan länk + "Länken ligger i kommentarerna 👇". Första kommentaren:
 `Här är kartan: https://vadkul.se/evenemang/goteborg — tipsa gärna om det som saknas i nordost!`
+
+---
+
+## Torsdag 20/8 — fyra grupper: Kalmar + Borås + Skellefteå (fre 21/8) och Norrtälje byn (tis 25/8)
+
+Dagskvoten 20/8 är FULL (Frölunda, Stockholm!, Lundby). Postningsplan:
+**fredag 21/8 = AN + AO + AR** (exakt 3 = dagstaket; AP Skellefteå MAKULERAT
+— fel stad, ägaren menade Sollefteå), **lördag 22/8 = AQ** (Norrtälje byn:
+karensen löper formellt till 25/8, ägaren valde att gå på helgen — utkastet
+omskrivet 20/8 till helg + nästa vecka). Sollefteå-gruppen är NY och finns
+inte i registret än — lägg in exakta gruppnamnet via Lägg till grupp i
+konsolen (eller säg namnet till Claude).
+
+### AN. Vad händer i kalmar! (#67 → /evenemang/kalmar) — utkast klart 20/8, EJ postat
+
+Andra inlägget i gruppen (23/7 länk i kommentar, publicerat direkt). Karens
+gick ut 13/8. Kackelstugan ligger på Öland — utskrivet så ingen kan klaga.
+
+V1:
+
+> Helgen i Kalmar (och en bit ut på Öland) 👇
+>
+> 🎤 Viktor Norén & Björn Dixgård tolkar Beatles kärlekslåtar i Kavaljersparken (fredag kl 19.30)
+> 🦞 Kvällstrav med kräftskiva på Kalmartravet (fredag kl 18.20)
+> 🛍️ Fynd Fest på Bilbyggarvägen — kl 10–17 både lördag och söndag
+> 🎶 Orgelmatiné "Bach 14" i domkyrkan (lördag kl 12)
+> 🎸 Wilmer X på Kackelstugan på Öland (lördag)
+> 🧸 Familjeguidning om Regalskeppet Kronan (söndag kl 13.30)
+> 🎸 Albin Lee Meldau & Arvid Nero, också Kackelstugan (söndag)
+> 🎻 Och på onsdag: sensommarkonsert med Kalmar Musiksällskap i Stadsparken (kl 19)
+>
+> Jag hittade allt på https://vadkul.se/evenemang/kalmar — kartan där allt
+> som händer samlas på ett ställe. Jag bygger den själv på kvällarna, så säg
+> gärna till om något saknas!
+>
+> Vad går ni på? 👇
+
+V2 (länk i kommentar): byt länkstycket mot
+"Jag hittade allt på en gratis eventkarta jag byggt själv — länken ligger i
+första kommentaren 👇 Säg gärna till om något saknas!"
+Första kommentaren:
+`Här är kartan: https://vadkul.se/evenemang/kalmar — tipsa om det som fattas!`
+
+### AO. Händer i Borås (#83 → /evenemang/boras) — utkast klart 20/8, EJ postat
+
+Andra inlägget (23/7 Dolly Style, länk i inlägg, publicerat direkt). Karens
+gick ut 13/8. Albin Lee Meldau spelar BÅDE Borås lördag och Kalmar söndag —
+äkta turné, ingen kopia.
+
+V1:
+
+> Borås i helgen — grillrök, medeltid och en Sverigepremiär 👇
+>
+> 🍖 Borås Barbecue Festival på campingen (lördag kväll)
+> 🎤 Albin Lee Meldau & Arvid Nero på Bruket i Wiared (lördag kl 20)
+> ⚔️ Medeltidsdag vid Hedareds stavkyrka (lördag kl 12)
+> 🎨 Vernissage "Ljusets gränser" på Flamenska galleriet + Folkkonst & annan konst på Borås Museum (lördag)
+> 🎸 Releaseparty med Vrävarna + Missmod på Viva Nightclub (fredag kl 19)
+> 🦇 Fladdermussafari vid Svaneholm (fredag kl 20)
+> 🎬 Sverigepremiär för Främlingen på Bio Röda Kvarn (söndag kl 16)
+> 🌿 Nästa torsdag: Trädgårdskalas i stadsparken (kl 12) och öppet rep av Jane Eyre (kl 18.45)
+>
+> Allt ihopplockat från https://vadkul.se/evenemang/boras — en gratis karta
+> över det som händer i stan som jag bygger själv. Kika och säg vad som
+> fattas!
+>
+> Någon som ska på barbecuefestivalen? 🍖👇
+
+V2 (länk i kommentar): byt länkstycket mot
+"Allt ihopplockat från en gratis eventkarta jag bygger själv — länk i första
+kommentaren 👇" Första kommentaren:
+`Kartan: https://vadkul.se/evenemang/boras — säg till om något saknas i Borås!`
+
+### AP. [SKELLEFTEÅ] — ❌ MAKULERAT 20/8: FEL STAD (ägaren menade Sollefteå, se AR)
+
+FÖRSTA inlägget i gruppen — maker-raden är med. OBS nymedlem-regeln: om du
+gick med nyligen, svara/delta någon dag först. Lördag 22/8 är späckad
+(Folkparken 100 år). Byske-gruppen i samma kommun är AVSKRIVEN (borttagen
+17/7) — undvik att korsposta dit.
+
+V1:
+
+> Hallå Skellefteå! Lördagen ser ut så här 👇
+>
+> 🎉 Folkparken fyller 100 år — firande på dagen, countrykväll kl 21 (lördag)
+> 🧸 Barnens dag på Kyrkholmen (lördag kl 11)
+> 🛍️ Augustimarknad på Varuträskgården (lördag kl 12)
+> ⚽ Morön BK:s ParasportCup (lördag kl 14)
+> 🌸 Foto-event & fika i gårdsmiljö på Tubölegatan (lördag)
+> 💃 Prova-på-dans på Nordanå (måndag kl 18)
+> 🦞 Surströmmingsfest i Lövånger (tisdag)
+> 🏃 Och nästa lördag: Kraftloppet!
+>
+> Jag har byggt vadkul.se — en gratis karta där allt som händer samlas på
+> ett ställe i stället för utspritt på tio olika sidor. Skellefteå har en
+> egen sida: https://vadkul.se/evenemang/skelleftea
+> Inget konto behövs för att titta. Säg gärna till om något saknas —
+> kartan blir bättre för varje tips!
+>
+> Vad blir det — 100-årsfesten eller marknaden? 👇
+
+V2 (länk i kommentar): stryk länkraden och skriv
+"…på ett ställe i stället för utspritt på tio olika sidor — länken ligger i
+första kommentaren 👇" Första kommentaren:
+`Skellefteås sida: https://vadkul.se/evenemang/skelleftea — tipsa om det som fattas!`
+
+### AQ. Norrtälje - Vad händer på byn? (#11 → vadkul.se) — utkast klart 20/8 (OMSKRIVET: helgen 21–23/8 + nästa vecka), EJ postat
+
+Andra inlägget (4/8 utkast Y). Karensen (husregeln) löper formellt till 25/8
+— ägaren valde 20/8 att täcka helgen direkt i stället; 17 dagar sedan sist.
+Postas helgen: lägg det LÖRDAG — fredagens dagstak fylls av AN+AO+AP.
+"Vad händer i Norrtälje?"-gruppen är AVSKRIVEN — rör den inte.
+
+V1:
+
+> Norrtälje i helgen — och en riktigt full vecka efter det 👇
+>
+> 🎤 Marilyn 100 – hyllningskonsert i Kulturhuset (fredag kl 19)
+> 🎸 Kim Edvinsson, Malin Butler & Janne Westerlund på Kapellet (fredag kl 19)
+> 🦞 Räkfrossa & grill med livemusik på Sundstavägen (fredag kl 16)
+> 🎶 Rö Musikfest (lördag från kl 15)
+> 🎷 Ålands Sea Jazz i Sjöfararkapellet (lördag kl 16.30)
+> 🎨 Konstutställning Peter Buchar på Galleri Chocolate i Rimbo (lördag)
+> 🥐 Sommarbrunch med livemusik + byvandring på Lidö (söndag)
+> 🎸 PK Bluesinferno på Kapellet (söndag kl 19)
+>
+> Och nästa vecka:
+> 🎶 Konsert med Big ACE i Rådmansö kyrka (måndag kl 19)
+> 🗣️ Norrtelje Tidnings valdebatt på Rimbo bibliotek (onsdag kl 18.30)
+> 🎸 Månegarm Open Air på Pythagoras industrimuseum (fredag 28/8)
+> 😂 Roligast i Roslagen — första semifinalen på Havspiren (fredag 28/8 kl 20)
+> 🧸 Barnens dag vid Rimbo kyrka + veteranfordonsträff på Labacken (lördag 29/8)
+>
+> Jag hittade allt på vadkul.se — gratiskartan där event från hela Sverige
+> samlas på ett ställe. Jag bygger den själv och blir glad för varje tips om
+> saker som saknas!
+>
+> Vad lockar mest — räkfrossan nu i helgen eller metal på industrimuseet nästa? 👇
+
+V2 (länk i kommentar): byt kartmeningen mot "Jag hittade allt på en gratis
+eventkarta jag byggt själv — länk i första kommentaren 👇" Första kommentaren:
+`Kartan: https://vadkul.se — säg till om något saknas i Norrtälje!`
+
+### AR. [SOLLEFTEÅ — exakt gruppnamn saknas] (→ vadkul.se) — utkast klart 20/8, EJ postat
+
+Ersätter makulerade AP (Skellefteå var fel stad). FÖRSTA inlägget i gruppen —
+maker-stycket är med; nymedlem-regeln gäller om ägaren gick med nyss.
+Utbudet är TUNT (10 event inom 25 km på 11 dygn) — listan tar med Ådalen
+(Kramfors/Bjärtrå/Svanö, ~30–43 km) med orterna utskrivna, Hudiksvall-läget.
+Kroken: FYRA surströmmingskalas på en vecka. Ingen stadssida → vadkul.se.
+Geokodnings-obs: flera pastoratsrader ligger ~30 km fel i datat (Sollefteå
+församlingsgård m.fl.) — venue-namnen är facit, inte distansen.
+
+V1:
+
+> Sollefteå med omnejd — surströmmingssäsongen är igång på allvar 👇
+>
+> 🎉 Österåsen firar 125 år med öppet hus (lördag kl 10)
+> 👨‍👩‍👧 Äventyrliga familjen med Friluftsfrämjandet Sollefteå (lördag kl 12)
+> 🎓 Guidad visning av Storbergets gruvor i Torsåker (lördag kl 13)
+> 🎸 Surströmmingsfestivalen på Kramforsviken (lördag)
+> 🍔 Vikingadag på Eds Hembygdsgård (söndag kl 11)
+> 🎉 Surströmmingsfest med PRO Sollefteå-Ed (söndag kl 14)
+> 🎶 "Toner vid källan" med Kent & Marie i Sånga kyrka (söndag kl 18)
+>
+> Och nästa vecka:
+> 🎭 Operaafton i Sollefteå kyrka (onsdag kl 19)
+> 🎶 Musik i sommarkväll med Holmsten trio i Resele kyrka (torsdag kl 19)
+> 🎶 Sångcafé i Eds församlingsgård (torsdag kl 18.30)
+> 🥓 Surströmming på Hämragården i Torsåker (lördag 29/8 kl 18)
+> 🎸 Invigning av Svanös nya utescen med konsertkväll (lördag 29/8)
+>
+> Jag har byggt vadkul.se — en gratis karta där allt som händer samlas på
+> ett ställe i stället för utspritt på tio olika sidor. Inget konto behövs
+> för att titta, och säg gärna till om något saknas — kartan blir bättre
+> för varje tips!
+>
+> Räcker det med EN surströmmingsfest i veckan, eller kör ni alla fyra? 👇
+
+V2 (länk i kommentar): byt kartstycket mot "Jag har byggt en gratis
+eventkarta där allt som händer samlas på ett ställe — länken ligger i första
+kommentaren 👇" Första kommentaren:
+`Kartan: https://vadkul.se — tipsa om det som fattas kring Sollefteå!`
+
+---
+
+## 🏭 20/8 kväll — SIDINLÄGGS-BANDET IGÅNG: 4 stadsinlägg schemalagda för 21/8
+
+Ägarens beställning: "posta 4 om dagen i olika städer på min facebooksida,
+som planerade i Business Suite — sen delar jag bara dem." Skriptet
+`apps/scraper/src/scripts/schedule-city-posts.ts` fanns redan; textbygget
+uppgraderades 20/8 till ägarens täta tvåsektionsformat (helgen + "Och nästa
+vecka:", brusfilter mot korpenmatcher/kyrkorutiner, venue-trimning) — ren
+logik i `src/utils/cityPostText.ts` med 10 tester.
+
+**Schemalagt 21/8 (syns i Business Suite → Planner, redigera/flytta/ta bort där):**
+
+| Kl | Ort | Permalink | Delas in i |
+|---|---|---|---|
+| 08:00 | Borås | facebook.com/122131640679235371 | Händer i Borås (#83) |
+| 09:00 | Norrtälje | facebook.com/122131640721235371 | Norrtälje - Vad händer på byn? (#11) |
+| 10:00 | Kalmar | facebook.com/122131640841235371 | Vad händer i kalmar! (#67) |
+| 11:00 | Sollefteå (45 km-radie, Ådalen med) | facebook.com/122131640961235371 | gruppen ej i registret än |
+
+Loggrader (channel `fb-sida`, status utkast, method delat-sidinlägg) skapade
+för Borås/Norrtälje/Kalmar — kvitteras när delningen är gjord.
+
+**VÄLJ EN METOD PER GRUPP imorgon:** antingen dela sidinlägget (Dela → Dela i
+en grupp = delat-sidinlägg-armen i A/B:t) ELLER klistra in eget-inlägg-utkastet
+AN/AO/AQ/AR (eget-inlägg-armen, den som satt rekorden). Inte båda.
+
+**Körkommandot (från apps/scraper):**
+```
+npx ts-node src/scripts/schedule-city-posts.ts --orter=A,B,C,D --start=ÅÅÅÅ-MM-DD --klockan=08:00 --per-dag=4 --commit
+```
+Utan --commit: dry-run. Ort utan grupp i registret slås upp i webbens
+cityPoints (291 orter). Token läses ur ~/.vadkul-secrets/env ELLER
+apps/web/.env.local (FB_PAGE_ACCESS_TOKEN funkar som alias).

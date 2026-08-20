@@ -1,7 +1,7 @@
 # FB-grupper — masterlista (alla jag är medlem i)
 
-85 grupper (82 importerade 2026-07-22 + Händer i Borås tillagd 23/7 + två
-Gotlandsgrupper tillagda 8/8). Detta är
+86 grupper (82 importerade 2026-07-22 + Händer i Borås tillagd 23/7 + två
+Gotlandsgrupper tillagda 8/8 + Sigtuna/Märsta tillagd 20/8). Detta är
 MEDLEMSKAPSREGISTRET — de färdiga inläggen bor i
 [facebook-grupper.md](facebook-grupper.md).
 
@@ -82,7 +82,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 46 | VAD HÄNDER I GÖTEBORG - Bara bilder! | /evenemang/goteborg |  |
 | 47 | VAD HÄNDER I VÄSTRA GÖTALAND | vadkul.se | 6/8 · publicerat direkt — ingen godkännandekö (helg-utkastet: Asperö/Borås/Tjörn/Kungälv) · karens 27/8 |
 | 48 | Vad händer i Norrtälje? | vadkul.se | 17/7 · länk i inlägg · BORTTAGEN |
-| 49 | Vad händer i Stockholm! | /evenemang/stockholm | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö |
+| 49 | Vad händer i Stockholm! | /evenemang/stockholm | 6/8 · länk i inlägg (V1) · KRÄVDE GODKÄNNANDE — i kö · **20/8 nytt eget inlägg** (utfall ej kollat) · karens 10/9 |
 | 50 | Vad händer på Östermalm. | /evenemang/stockholm | 30/7 · länk i kommentar (Skansen/Grönan/Thielska) · uppe (text ej verifierad mot flödet) |
 | 51 | Åstorp, vad händer på byn (med omnejd) | vadkul.se |  |
 | 52 | VAD HÄNDER I LANDSKRONA | vadkul.se | 27/7 · (metod obekräftad) · **9 likes, 7 komm.** — bekräftat av Josef 8/8 · karens 17/8 |
@@ -95,7 +95,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 59 | Vad händer i Gränna | vadkul.se | 19/7 · länk i kommentar · ⏳ **FORTFARANDE I GODKÄNNANDEKÖ 8/8 (20 dygn)** — bekräftat av Josef; admin-DM eller släpp gruppen |
 | 60 | Vad händer i Västmanland! | vadkul.se | 30/7 · 28/7-texten (O) · uppe · ⚠️ 2 av 5 rader (onsdag 29/7) hade redan passerat |
 | 61 | Vad händer i Kungsladugård | vadkul.se |  |
-| 62 | Vad händer i Frölunda? | /evenemang/goteborg |  |
+| 62 | Vad händer i Frölunda? | /evenemang/goteborg | 20/8 · eget inlägg · utfall ej kollat (följ upp 21/8) · karens 10/9 |
 | 63 | Vad händer i Örnsköldsvik? | vadkul.se |  |
 | 64 | Vad händer i Helsingborg? | /evenemang/helsingborg | 30/7 · länk i kommentar (N2) · uppe · **karens till 20/8** — ⚠️ 4/8-utkastet Ä skrevs i tro att gruppen var orörd (osynkad main); POSTA EJ Ä före 20/8 |
 | 65 | Vad händer i Torsås? | vadkul.se |  |
@@ -107,7 +107,7 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 71 | Vad händer i Arjeplog? | vadkul.se |  |
 | 72 | VAD HÄNDER I MÖLNDAL ? | vadkul.se | 30/7 · 28/7-texten (M) · ❌ **AVVISAT — släpptes aldrig igenom** → admin-DM + regelkoll före nytt försök |
 | 73 | Vad händer i Göteborg? | /evenemang/goteborg | 25/7 · länk i kommentar (m. stjärnlänk) · publicerat direkt |
-| 74 | Vad händer i Lundby (Hisingen) | /evenemang/goteborg |  |
+| 74 | Vad händer i Lundby (Hisingen) | /evenemang/goteborg | 20/8 · eget inlägg · utfall ej kollat (följ upp 21/8) · karens 10/9 |
 | 75 | Vad händer på Södermalm | /evenemang/stockholm | 27/7 · länk i inlägg (Pride-texten, V1) · publicerat direkt |
 | 76 | Vad händer i Sölvesborg | vadkul.se |  |
 | 77 | Vad händer i Gävle? | /evenemang/gavle | 23/7 · länk i kommentar · KRÄVDE GODKÄNNANDE (enda av dagens fyra) |
@@ -119,3 +119,37 @@ flera Göteborg) = OLIKA grupper, posta i alla — men med olika text/event.
 | 83 | Händer i Borås | /evenemang/boras | 23/7 · länk i inlägg (Dolly Style) · publicerat direkt |
 | 84 | Vi som älskar Gotland (38,2t medl.) | vadkul.se | 8/8 · länk i inlägg (V1, 10 rader utanför ringmuren) · KRÄVDE GODKÄNNANDE — i kö |
 | 85 | Evenemang på Gotland (22,1t medl.) ⚠️ medlemsfråga vid ansökan | vadkul.se | 8/8 · länk i inlägg (V1, 10 rader hela ön) · KRÄVDE GODKÄNNANDE — i kö |
+| 86 | Det är i Sigtuna/Märsta det händer! (1 900 medl.) | vadkul.se |  |
+
+---
+
+## Konsolen är facit sedan 20/8 — tabellen ovan är läskopian
+
+Firestore (`outreachContacts` + `outreachLog`) driver karensen, kön och
+Statistik-fliken på vadkul.se/admin/outreach. **20/8 backfillades 21 loggrader
+ur den här tabellen** — augustipostningarna (Nykvarn, Hudiksvall, Norrtälje
+byn, Ängelholm, Värmland, Piteå, Söderhamn, Nora, Haninge, Torshälla,
+Vänersborg, Nynäshamn, Kvänum, Västra Götaland, Landskrona, Majorna,
+Sundsvall, Hisingen, Tjörn + Stockholm! 6/8 och Gotland-omtaget 8/8) fanns
+BARA här, så konsolen räknade 19 redan bearbetade grupper som orörda och
+hade föreslagit dubbelpostning inom karensen. Gotlandsgrupperna 84–85 saknades
+som kontakter och skapades samtidigt.
+
+**Regeln framåt:** bekräfta postningen i konsolen (✓ Postad) — då sätts
+karensen automatiskt. Skriv in raden här bara som läsbar historik.
+
+## Sidinlägg på facebook.com/Vadkul (egen sida, API-publicerade)
+
+Sidan är den enda ytan Meta tillåter API-publicering på (grupp-API:t dog
+april 2024). Sidinlägg har ingen hemvist i konsolens datamodell än — logga
+dem här. Siffrorna nedan ur Metas egen export 23/7–20/8:
+
+| Datum | Inlägg | Typ | Exponeringar | Visningar | Interaktioner |
+|---|---|---|---|---|---|
+| 11/8 02:34 | "Nya kartan på vadkul.se 🗺️" | Foto | 14 | 23 | 0 |
+| 20/8 08:05 | "Hallå Högsbohöjd! 👋" (8 eventrader) | Text | 0 | 0 | 0 |
+
+> Läget: **sidan har ingen publik.** 14 exponeringar på ett inlägg = bara de
+> som redan följer sidan. Sidinlägg är därför INTE en distributionskanal än —
+> värdet ligger i att kunna *dela* sidinlägget till grupperna
+> ("delat sidinlägg" i A/B-loggen) i stället för att klistra in text.
