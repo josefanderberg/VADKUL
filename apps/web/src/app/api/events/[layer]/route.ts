@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { gzipSync, gunzipSync } from 'zlib';
+import { gzipSync, gunzipSync, brotliCompressSync, constants as zlibConstants } from 'zlib';
 import { readFile, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -29,9 +29,42 @@ const CACHE_HEADERS = {
     Vary: 'Accept-Encoding',
 } as const;
 
-// Varm funktionsinstans slipper läsa om shards + gzippa när updatedAt är
+/**
+ * Kodningar vi håller färdigpackade. Brotli är ~37 % mindre än gzip på de här
+ * payloaderna (destinations: 2,01 MB gzip → 1,26 MB br) och alla webbläsare
+ * som når kartan stödjer det; gzip finns kvar som fallback för allt annat.
+ *
+ * Kvalitet 6, inte 11: uppmätt på destinations-lagret ger q=6 37 % på 342 ms
+ * medan q=11 ger 47 % på 29 SEKUNDER. Packningen sker visserligen bara en gång
+ * per datauppdatering och instans (memo + diskcache nedan), men en kall instans
+ * som råkar bli den som packar får inte hänga en halv minut på en besökare.
+ */
+type Enc = 'br' | 'gzip';
+const BROTLI_QUALITY = 6;
+
+function packBoth(raw: Uint8Array): Record<Enc, Uint8Array> {
+    return {
+        gzip: new Uint8Array(gzipSync(raw)),
+        br: new Uint8Array(brotliCompressSync(raw, {
+            params: {
+                [zlibConstants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY,
+                [zlibConstants.BROTLI_PARAM_SIZE_HINT]: raw.length,
+            },
+        })),
+    };
+}
+
+/** Bäst kodning klienten accepterar. Okänd/utelämnad header → okomprimerat. */
+function negotiate(request: Request): Enc | null {
+    const ae = (request.headers.get('accept-encoding') || '').toLowerCase();
+    if (ae.includes('br')) return 'br';
+    if (ae.includes('gzip')) return 'gzip';
+    return null;
+}
+
+// Varm funktionsinstans slipper läsa om shards + packa om när updatedAt är
 // oförändrad (t.ex. CDN-missar från olika kant-noder samma timme).
-const memo = new Map<string, { updatedAt: string; gz: Uint8Array }>();
+const memo = new Map<string, { updatedAt: string; enc: Record<Enc, Uint8Array> }>();
 
 // ── Tidsfönster-slice (?from=…&to=…, bara destinations) ─────────────────────
 // Snabbstartsväg för kartan: dagens ~1 400 event är ~90 % mindre än hela lagret
@@ -44,7 +77,7 @@ const SLICE_MAX_SPAN_MS = 8 * 24 * 60 * 60 * 1000; // vakt: max 8 dygn per slice
 
 // Färdig-gzippade slices per (updatedAt|from|to). Litet tak — i praktiken lever
 // bara "idag" (+ ev. gårdag runt midnatt) här; äldsta åker ut först.
-const sliceMemo = new Map<string, Uint8Array>();
+const sliceMemo = new Map<string, Record<Enc, Uint8Array>>();
 const SLICE_MEMO_MAX = 8;
 
 // Parsad events-array för HELA destinations-lagret (för att slippa gunzip+parse
@@ -56,12 +89,17 @@ let parsedDest: { updatedAt: string; events: any[] } | null = null;
 // full shard-omläsning + gzip (~10–20 s). Hjälper också omstartade prod-
 // instanser under samma dygn. Misslyckade läs/skriv ignoreras — cachen är
 // alltid bara en genväg, aldrig sanningskälla.
-const diskPath = (layer: string, updatedAt: string) =>
-    path.join(tmpdir(), `vadkul-events-${layer}-${encodeURIComponent(updatedAt)}.json.gz`);
+const diskPath = (layer: string, updatedAt: string, enc: Enc) =>
+    path.join(tmpdir(), `vadkul-events-${layer}-${encodeURIComponent(updatedAt)}.json.${enc}`);
 
-async function readDiskCache(layer: string, updatedAt: string): Promise<Uint8Array | null> {
+/** Båda kodningarna måste finnas på disk för att träffen ska räknas. */
+async function readDiskCache(layer: string, updatedAt: string): Promise<Record<Enc, Uint8Array> | null> {
     try {
-        return new Uint8Array(await readFile(diskPath(layer, updatedAt)));
+        const [gzip, br] = await Promise.all([
+            readFile(diskPath(layer, updatedAt, 'gzip')),
+            readFile(diskPath(layer, updatedAt, 'br')),
+        ]);
+        return { gzip: new Uint8Array(gzip), br: new Uint8Array(br) };
     } catch {
         return null;
     }
@@ -111,12 +149,12 @@ export async function GET(
         let entry = updatedAt ? memo.get(layer) : undefined;
         if (entry && entry.updatedAt !== updatedAt) entry = undefined;
 
-        // Kall process men samma data som sist → hämta färdig-gzippat från disk
-        // i stället för att läsa om alla shards (~26 MB) och gzippa igen.
+        // Kall process men samma data som sist → hämta färdigpackat från disk
+        // i stället för att läsa om alla shards (~26 MB) och packa igen.
         if (!entry && updatedAt) {
-            const gz = await readDiskCache(layer, updatedAt);
-            if (gz) {
-                entry = { updatedAt, gz };
+            const enc = await readDiskCache(layer, updatedAt);
+            if (enc) {
+                entry = { updatedAt, enc };
                 memo.set(layer, entry);
             }
         }
@@ -140,51 +178,53 @@ export async function GET(
                     body = { updatedAt, events };
                 }
             }
-            // gzip här i stället för att lita på att CDN:en komprimerar
-            // funktions-svar — garanterat ~5:1 färre fakturerade byte.
-            const gz = new Uint8Array(gzipSync(new TextEncoder().encode(JSON.stringify(body))));
-            entry = { updatedAt, gz };
+            // Packa här i stället för att lita på att CDN:en komprimerar
+            // funktions-svar — garanterat färre fakturerade byte.
+            const enc = packBoth(new TextEncoder().encode(JSON.stringify(body)));
+            entry = { updatedAt, enc };
             if (updatedAt) {
                 memo.set(layer, entry);
-                writeFile(diskPath(layer, updatedAt), gz).catch(() => { /* cache är bara en genväg */ });
+                for (const e of ['gzip', 'br'] as Enc[]) {
+                    writeFile(diskPath(layer, updatedAt, e), enc[e]).catch(() => { /* cache är bara en genväg */ });
+                }
             }
         }
 
         // Slice begärd → filtrera fram tidsfönstret ur det fulla lagret och
         // gzippa separat. Memoiseras per (updatedAt|from|to); det fulla lagrets
         // parsade events-array återanvänds mellan slices (en gunzip+parse totalt).
-        let outGz = entry.gz;
+        let out = entry.enc;
         if (slice) {
             const sliceKey = `${updatedAt}|${slice.key}`;
             // Utan updatedAt finns ingen versionsnyckel → memoisera inte (annars
             // kan en gammal slice överleva en datauppdatering).
-            let sgz = updatedAt ? sliceMemo.get(sliceKey) : undefined;
-            if (!sgz) {
+            let sEnc = updatedAt ? sliceMemo.get(sliceKey) : undefined;
+            if (!sEnc) {
                 // !updatedAt = oversionerad data → parsa alltid om (ingen nyckel
                 // att lita på för cache-träffen).
                 if (!parsedDest || !updatedAt || parsedDest.updatedAt !== updatedAt) {
-                    const full = JSON.parse(new TextDecoder().decode(gunzipSync(entry.gz)));
+                    const full = JSON.parse(new TextDecoder().decode(gunzipSync(entry.enc.gzip)));
                     parsedDest = { updatedAt, events: Array.isArray(full?.events) ? full.events : [] };
                 }
                 const events = parsedDest.events.filter((e: any) => {
                     const t = Date.parse(e?.time);
                     return Number.isFinite(t) && t >= slice!.from && t <= slice!.to;
                 });
-                sgz = new Uint8Array(gzipSync(new TextEncoder().encode(JSON.stringify({ updatedAt, events }))));
+                sEnc = packBoth(new TextEncoder().encode(JSON.stringify({ updatedAt, events })));
                 if (updatedAt) {
                     // Äldsta posten ut när taket nås (Map itererar i insättningsordning).
                     if (sliceMemo.size >= SLICE_MEMO_MAX) {
                         const oldest = sliceMemo.keys().next().value;
                         if (oldest !== undefined) sliceMemo.delete(oldest);
                     }
-                    sliceMemo.set(sliceKey, sgz);
+                    sliceMemo.set(sliceKey, sEnc);
                 }
             }
-            outGz = sgz;
+            out = sEnc;
         }
 
-        const wantsGzip = (request.headers.get('accept-encoding') || '').includes('gzip');
-        const payload = wantsGzip ? outGz : new Uint8Array(gunzipSync(outGz));
+        const enc = negotiate(request);
+        const payload = enc ? out[enc] : new Uint8Array(gunzipSync(out.gzip));
         // TS DOM-lib räknar inte Uint8Array<ArrayBufferLike> som BodyInit — casten är ofarlig.
         return new NextResponse(payload as unknown as BodyInit, {
             status: 200,
@@ -192,7 +232,7 @@ export async function GET(
                 ...CACHE_HEADERS,
                 'Content-Type': 'application/json; charset=utf-8',
                 ...(updatedAt ? { ETag: etag } : {}),
-                ...(wantsGzip ? { 'Content-Encoding': 'gzip' } : {}),
+                ...(enc ? { 'Content-Encoding': enc } : {}),
             },
         });
     } catch (e) {
