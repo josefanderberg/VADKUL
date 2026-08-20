@@ -785,16 +785,63 @@ export default function HomePage() {
     // (Idag/Imorgon/veckodagarna i navbarens dagväljare) är borta;
     // specifika datum väljer man här.
     // Precis som dagpilarna stoppar valet inte skyltläget, det tystar bara
-    // landningspulsen. Själva kalendern är webbläsarens egen datumväljare på
-    // ett osynligt date-fält som ankras vid knappen.
+    // landningspulsen.
+    // TRYCKYTAN ÄR SJÄLVA DATE-FÄLTET (Josef 21/8): det ligger osynligt
+    // OVANPÅ ikonen i stället för under en knapp. iOS öppnar bara
+    // månadskalendern från en äkta tapp på fältet — showPicker() saknas/failar
+    // tyst där, och programmatiska focus()/click() öppnar aldrig pickern, så
+    // knapp-varianten gav en död kalenderknapp på iPhone. På desktop räcker
+    // inte klicket på fältet (det bara fokuserar), därför showPicker() i
+    // fältets egen onClick.
     const calendarInputRef = useRef<HTMLInputElement>(null);
+    // TOGGLE (Josef 21/8): ett tryck på kalenderknappen när pickern är UPPE
+    // ska STÄNGA den, inte öppna om den. Native-pickern har inget "är
+    // öppen?"-API och inget stängningsevent — vi bokför själva med
+    // calendarPickerOpen: sätts av klicket som öppnar, nollas av fältets
+    // blur (iOS-popovern blurrar fältet när den avvisas; på desktop blurrar
+    // utanförklicket som stänger popupen). MEDAN pickern är öppen stängs
+    // date-fältets pointer-events av och ikonen tar över tryckytan som
+    // STÄNG-knapp (blur fäller popovern) — annars träffar avvisnings-tappen
+    // själva fältet och iOS öppnar pickern på nytt i samma tryck.
+    const [calendarPickerOpen, setCalendarPickerOpen] = useState(false);
     const openMonthCalendar = useCallback(() => {
         const el = calendarInputRef.current;
-        if (!el) return;
-        // showPicker kräver en användargest (det här ÄR en) men saknas i äldre
-        // webbläsare — fall tillbaka på fokus+klick som öppnar samma kalender.
-        try { el.showPicker(); } catch { el.focus(); el.click(); }
+        // focus FÖRST: showPicker() fokuserar INTE fältet (desktop), och utan
+        // fokus är blur() i pick-/stängvägarna en no-op → guldet fastnade PÅ
+        // efter ett datumval och nästa klick bara släckte det (Josef 21/8).
+        // Med fokus släcker även ett klick utanför via blur-eventet.
+        el?.focus({ preventScroll: true });
+        // Ofarligt no-op där showPicker saknas eller kalendern redan öppnas
+        // nativt av tappen (iOS).
+        try { el?.showPicker(); } catch { /* nativt beteende räcker */ }
+        setCalendarPickerOpen(true);
+        // Kalenderklicket hoppar samtidigt HEM TILL IDAG (Josef 21/8) —
+        // snabbaste vägen tillbaka, och pickern som öppnas står då på dagens
+        // datum. Vill man till ett annat datum väljer man det direkt i den.
+        setPulseSuppressed(true);
+        startTransition(() => {
+            setDayOffset(0);
+            setDayRangeDays(1);
+        });
     }, []);
+    const closeMonthCalendar = useCallback(() => {
+        // blur stänger iOS-popovern; på desktop är popupen redan stängd av
+        // utanförklicket och blur är ofarligt. Nolla ALLTID bokföringen här —
+        // blur-EVENTET uteblir om fältet inte längre är fokuserat (t.ex.
+        // Esc-stängd popup), och då satt knappen annars fast i "öppen"
+        // (fältet pointer-events-none) och blev död för alltid.
+        calendarInputRef.current?.blur();
+        setCalendarPickerOpen(false);
+    }, []);
+    // Fältets värde FÖLJER vald dag (controlled). Med gamla defaultValue stod
+    // kalendern kvar på "idag" fast man pilat fram — och ett tapp på dagens
+    // datum gav då ingen change-händelse alls (samma värde), så det gick inte
+    // att hoppa hem till idag utan att studsa via en annan dag först.
+    const calendarValue = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + dayOffset);
+        return toInputDate(d);
+    }, [dayOffset]);
     const handleCalendarPick = useCallback((value: string) => {
         if (!value) return;
         const picked = new Date(`${value}T00:00:00`);
@@ -802,7 +849,13 @@ export default function HomePage() {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.round((picked.getTime() - startOfToday.getTime()) / 86_400_000);
-        if (offset < 0) return; // passerade dygn visas inte
+        if (offset < 0) return; // passerade dygn visas inte — pickern står kvar så man kan välja om
+        // Valt datum = klart: fäll pickern (iOS-popovern blir annars stående
+        // över kartan man just hoppat i) och släck guldet DIREKT — blur-
+        // eventet uteblir om fältet inte var fokuserat, och då lyste knappen
+        // kvar som "öppen" fast pickern stängts (Josef 21/8).
+        calendarInputRef.current?.blur();
+        setCalendarPickerOpen(false);
         setPulseSuppressed(true);
         startTransition(() => {
             setDayOffset(offset);
@@ -2462,14 +2515,15 @@ export default function HomePage() {
                 åt HÖGER på sin rad (som en kvittorad).
                 HELA RUTAN ÄR EN KNAPP (Josef 10/8): ett klick växlar mellan
                 vald dag och hela veckan.
-                DAGPILARNA sitter i höjd med DAGRADEN, inte stadsnamnet
-                (Josef 18/8: vid namnet lästes de som stadsbyte) och stegar
-                en dag fram/tillbaka.
+                DAGPILARNA är HELA SIDOKOLUMNER på plattan (Josef 21/8: de
+                gamla 32px-cirklarna var för svåra att träffa på mobil) och
+                stegar en dag fram/tillbaka.
                 Bakåtpilen finns bara när det FINNS en dag att gå tillbaka till
-                (idag är botten) — på Imorgon står den alltså till vänster om
-                ordet Imorgon. KALENDERKNAPPEN sitter ALLTID kvar uppe vid
-                stadsnamnet (Josef 18/8) och öppnar månadskalendern direkt för
-                ett specifikt datum. Knapparna ligger absolut placerade OVANPÅ
+                (idag är botten). KALENDERKNAPPEN sitter i plattans övre
+                vänstra hörn och hoppar ut till VÄNSTER OM rutan när
+                bakåtpilen finns — fast bara från sm:, på mobil krockar det
+                hörnet med navbarens vänsterkolumn (Josef 21/8, se 2b) — och
+                öppnar månadskalendern direkt för ett specifikt datum. Knapparna ligger absolut placerade OVANPÅ
                 rutknappen i stället för inuti den: en <button> i en <button>
                 är ogiltig HTML. px-9 på plattan ger dem plats utan att rutan
                 (168 px innehåll + padding) växer förbi den smalaste mobilvyn
@@ -2503,7 +2557,9 @@ export default function HomePage() {
                        sm:leading-none MÅSTE upprepas: sm:text-2xl sätter om
                        line-height till 32px i breakpointen och vinner annars
                        över bara leading-none — då glider raderna under ner
-                       8 px på desktop och dagpilarna hamnar för högt. */}
+                       8 px på desktop och plattan växer i onödan. (Dagpilarna
+                       är sedan 21/8 fulla sidokolumner och bryr sig inte om
+                       radhöjden.) */}
                 <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none">
                     {liveCityName}
                 </span>
@@ -2571,48 +2627,23 @@ export default function HomePage() {
                 </span>
             </button>
 
-            {/* 2b. KALENDERKNAPPEN — alltid kvar uppe vid stadsnamnets rad
-                   (Josef 18/8: den byter inte längre plats med bakåtpilen).
-                   Syskon till rutknappen (inte barn) — nästlade knappar är
-                   ogiltig HTML. Öppnar månadskalendern direkt. */}
-            <button
-                type="button"
-                onClick={openMonthCalendar}
-                aria-label="Välj datum i kalendern"
-                title="Välj datum"
-                className="pointer-events-auto absolute left-0.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
-            >
-                <CalendarDays size={16} strokeWidth={2.5} />
-            </button>
-            {/* Osynligt date-fält PÅ knappens plats: webbläsaren ankrar
-                månadskalendern vid fältet, så den öppnar vid knappen.
-                aria-hidden + tabIndex -1 — knappen är enda vägen in. */}
-            <input
-                ref={calendarInputRef}
-                type="date"
-                aria-hidden="true"
-                tabIndex={-1}
-                min={toInputDate(new Date())}
-                defaultValue={toInputDate(new Date())}
-                onChange={e => handleCalendarPick(e.target.value)}
-                className="absolute left-0.5 top-2.5 h-8 w-8 opacity-0 pointer-events-none"
-            />
-
-            {/* 2c. DAGPILARNA — i höjd med DAGRADEN (Idag/Imorgon-raden, inte
-                   stadsnamnet; top-värdet = py-3 + namnrad + gap ner till
-                   växelreglagets första rad, UPPMÄTT i webbläsaren 18/8 på
-                   båda breakpoints — kräver sm:leading-none på namnet, se
-                   kommentaren där). Syskon till rutknappen (inte barn) —
-                   nästlade knappar är ogiltig HTML. Bakåtpilen bara när det
-                   finns en dag kvar bakåt (idag är botten) — på Imorgon står
-                   den till vänster om ordet Imorgon. */}
+            {/* 2c. DAGPILARNA — HELA SIDOKOLUMNER (Josef 21/8: 32px-cirklarna
+                   var för svåra att träffa på mobil), spegelvända och lika
+                   höga. Bakåtpilen äger HELA sin kolumn från sm: —
+                   kalenderknappen hoppar ut ur vägen när pilen finns; på
+                   mobil ligger den kvar ovanpå pilens topp (se 2b, sist i
+                   DOM = tar tappen i sitt hörn). De gamla
+                   uppmätta top-värdena (18/8) behövs inte längre. Syskon till
+                   rutknappen (inte barn) — nästlade knappar är ogiltig HTML.
+                   Bakåtpilen bara när det finns en dag kvar bakåt (idag är
+                   botten). */}
             {dayOffset > 0 && (
                 <button
                     type="button"
                     onClick={() => handleTourDayStep(-1)}
                     aria-label={`Visa ${getDayLabel(dayOffset - 1, 1).toLowerCase()}`}
                     title={getDayLabel(dayOffset - 1, 1)}
-                    className="pointer-events-auto absolute left-0.5 top-[43px] sm:top-[47px] flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+                    className="pointer-events-auto absolute left-0.5 inset-y-0.5 flex w-8 items-center justify-center rounded-[14px] bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
                 >
                     <ChevronLeft size={18} strokeWidth={2.5} />
                 </button>
@@ -2622,10 +2653,60 @@ export default function HomePage() {
                 onClick={() => handleTourDayStep(1)}
                 aria-label={`Visa ${getDayLabel(dayOffset + 1, 1).toLowerCase()}`}
                 title={getDayLabel(dayOffset + 1, 1)}
-                className="pointer-events-auto absolute right-0.5 top-[43px] sm:top-[47px] flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+                className="pointer-events-auto absolute right-0.5 inset-y-0.5 flex w-8 items-center justify-center rounded-[14px] bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-colors active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
             >
                 <ChevronRight size={18} strokeWidth={2.5} />
             </button>
+
+            {/* 2b. KALENDERKNAPPEN — i plattans övre vänstra HÖRN (top-0.5)
+                   när man står på idag; när bakåtpilen finns (dayOffset > 0)
+                   HOPPAR den direkt (ingen animation, Josef 21/8) ut till
+                   vänster UTANFÖR rutan — MEN BARA FRÅN sm: (sm:-left-9).
+                   PÅ MOBIL LIGGER DEN KVAR I HÖRNET OVANPÅ PILEN: navbarens
+                   vänsterkolumn (profil/hjärta/plus, top-6 z-[1160]) står i
+                   samma hörn ÖVER stadsrutans lager, och luckan mellan den och
+                   plattan är bara några px — utflyttad hamnade kalendern under
+                   profilknappen och gick inte att trycka på (buggen 21/8).
+                   UTANFÖR plattan (sm+) får den en egen mörk platta (slate +
+                   ring + blur) — white/15 försvinner mot den ljusa kartan.
+                   GULDCIRKEL = pickern är ÖPPEN (samma guld som
+                   växelreglaget), i alla positioner.
+                   Syskon till rutknappen (inte barn) — nästlade knappar är
+                   ogiltig HTML.
+                   DATE-FÄLTET ÄR TRYCKYTAN (Josef 21/8): osynligt OVANPÅ
+                   ikonen, för iOS öppnar kalendern bara vid en äkta tapp på
+                   själva fältet (se openMonthCalendar). Fältet är också det
+                   fokuserbara elementet — ikonen under är ren dekor och får
+                   hover/fokus-ringen via peer. VÄRDET följer vald dag så
+                   kalendern markerar rätt dag och "idag" går att välja när man
+                   pilat fram (samma värde ger annars ingen change-händelse).
+                   TOGGLE: medan pickern är öppen (calendarPickerOpen) byter
+                   fältet och ikonen roller — fältet släpper pointer-events och
+                   ikonen blir stäng-knapp (se kommentaren vid
+                   calendarPickerOpen). */}
+            <input
+                ref={calendarInputRef}
+                type="date"
+                aria-label="Välj datum i kalendern"
+                title="Välj datum"
+                min={toInputDate(new Date())}
+                value={calendarValue}
+                onClick={openMonthCalendar}
+                onBlur={() => setCalendarPickerOpen(false)}
+                onChange={e => handleCalendarPick(e.target.value)}
+                className={`peer absolute top-0.5 h-8 w-8 cursor-pointer opacity-0 ${dayOffset > 0 ? 'left-0.5 sm:-left-9' : 'left-0.5'} ${calendarPickerOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}
+            />
+            <span
+                aria-hidden="true"
+                onClick={closeMonthCalendar}
+                className={`absolute top-0.5 flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[#FECC02]/70 ${dayOffset > 0 ? 'left-0.5 sm:-left-9' : 'left-0.5'} ${calendarPickerOpen
+                    ? 'pointer-events-auto cursor-pointer bg-[#FECC02] text-slate-900 active:scale-95'
+                    : dayOffset > 0
+                        ? 'pointer-events-none bg-white/15 text-white/90 peer-hover:bg-white/25 peer-hover:text-white peer-active:scale-95 sm:bg-slate-900/80 sm:text-white/85 sm:ring-1 sm:ring-white/10 sm:backdrop-blur-md sm:peer-hover:bg-slate-900/95 sm:peer-hover:text-white'
+                        : 'pointer-events-none bg-white/15 text-white/90 peer-hover:bg-white/25 peer-hover:text-white peer-active:scale-95'}`}
+            >
+                <CalendarDays size={16} strokeWidth={2.5} />
+            </span>
 
             {/* (Emoji-raden som låg här under rutan är BORTTAGEN 10/8 — dess
                 jobb görs av kategorikolumnen till höger, som visar antal per
@@ -2664,6 +2745,7 @@ export default function HomePage() {
                 open={profilePanelOpen}
                 onClose={() => setProfilePanelOpen(false)}
                 myEvents={myEvents}
+                allEvents={events}
                 onPickEvent={jumpToEvent}
                 onDeleteEvent={handleDeleteOwnEvent}
                 savedCount={activeSavedCount}

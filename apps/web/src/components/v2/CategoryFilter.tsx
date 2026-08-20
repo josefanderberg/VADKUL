@@ -162,7 +162,13 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                     kategorier. På största brytpunkten (2xl) HOPPAR den upp på
                     navbarens rad, längst åt höger (navbaren får 2xl:pr för att
                     lämna plats — se FloatingNavbar). */}
-                <div className="absolute right-0 top-[48px] 2xl:top-0 pointer-events-auto">
+                {/* Pointer-events NONE även HÄR, som på cirkelkolumnen (11/8) —
+                    boxens bredd sätts av den osynliga namn-pillen ("Göm
+                    kategorier") och med auto åt containern klicks i hela det
+                    fältet: den låg som ett dött band över stadsrutans
+                    framåtpil-kolumn (Josef 21/8, "måste klicka över eller
+                    under"). Knappen och cirklarna har egna auto. */}
+                <div className="absolute right-0 top-[48px] 2xl:top-0 pointer-events-none">
                     {/* Rund knapp — VISAR/GÖMMER kolumnen. Badge = antal aktiva
                         filter. Namn-pill vid hover, samma som kategoricirklarna
                         nedanför (raden är flex-row-reverse så pillen kan ligga
