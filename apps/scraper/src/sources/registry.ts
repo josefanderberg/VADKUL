@@ -4281,8 +4281,9 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'weekly',
         status: 'experimental',
-        notes: 'Probe-venues 2026-06-09: 41 event-URLs (events-mönster) — regionteater. Körd: 0/29 (sommarstängt). Kolla i sep.',
+        notes: 'Probe-venues 2026-06-09: 41 event-URLs. OBS turnerande regionteater: spelplatsen ligger i schema-rader ("<h3>Fredag 28 augusti</h3><p>Lokstallarna, Karlshamn | 20:00") som backfillPlaceFromHtml läser sedan 2026-08-20 — innan dess fick ALLT defaultCity Växjö + platshållartid (21 event reparerade via oneoff-regionteatern-repair).',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.regionteatern.se/sitemap.xml', date: '2026-06-09' },
+        lastVerified: '2026-08-20',
     },
     // 'louis-de-geer' borttagen 2026-08-09: dubblett av 'louisdegeer'. Dess
     // sitemap_index pekar på SAMMA evenemang-sitemap.xml som den redan hämtar

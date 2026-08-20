@@ -828,6 +828,46 @@ export function backfillPlaceFromHtml(html: string, ev: RawEvent): void {
             ev.city = raw.charAt(0).toUpperCase() + raw.slice(1);
         }
     }
+    // 3) Schema-rader (regionteatern.se-mönstret, 2026-08-20): rubrik med
+    //    svenskt datum följd av stycke "Venue, Stad | HH:MM | …":
+    //      <h3>Fredag 28 augusti 2026</h3><p>Lokstallarna, Karlshamn | 20:00 | 45 min</p>
+    //    Utan detta fick alla Regionteaterns event defaultCity (Växjö) och
+    //    platshållartid — fast föreställningarna spelas i Karlshamn kl 20:00.
+    //    Försiktighetsregler: klockslag bara från raden vars datum matchar
+    //    eventets (eller när det bara finns en rad); stad/venue från matchande
+    //    rad, annars bara när ALLA rader är eniga (turnéer får inte blandas).
+    if (!ev.venueName || ev.hasSpecificTime !== true) {
+        const $ = cheerio.load(html);
+        const rows: { date: Date | null; venue: string; city: string; h: number; min: number }[] = [];
+        $('h2, h3, h4').each((_i, el) => {
+            const headText = $(el).text().replace(/\s+/g, ' ').trim();
+            if (!headText || headText.length > 60) return;
+            const date = findFirstDateInText(headText);
+            if (!date) return;
+            const p = $(el).nextAll('p').first().text().replace(/\s+/g, ' ').trim();
+            const m = p.match(/^([^|]{2,60}?),\s*([A-ZÅÄÖ][A-Za-zåäöÅÄÖé -]{2,30}?)\s*\|\s*(\d{1,2})[:.](\d{2})\b/);
+            if (!m) return;
+            rows.push({ date, venue: m[1].trim(), city: m[2].trim(), h: parseInt(m[3], 10), min: parseInt(m[4], 10) });
+        });
+        if (rows.length) {
+            const sameDay = ev.startDate instanceof Date
+                ? rows.find(r => r.date && r.date.toDateString() === ev.startDate.toDateString())
+                : undefined;
+            const allSameCity = rows.every(r => r.city === rows[0].city);
+            const allSameVenue = rows.every(r => r.venue === rows[0].venue);
+            const cityPick = sameDay?.city ?? (allSameCity ? rows[0].city : undefined);
+            const venuePick = sameDay?.venue ?? (allSameVenue ? rows[0].venue : undefined);
+            if (venuePick && !ev.venueName) ev.venueName = venuePick;
+            if (cityPick) ev.city = cityPick;   // radens stad slår defaultCity
+            const timeRow = sameDay ?? (rows.length === 1 ? rows[0] : undefined);
+            if (timeRow && ev.hasSpecificTime !== true && ev.startDate instanceof Date) {
+                const d = new Date(ev.startDate);
+                d.setHours(timeRow.h, timeRow.min, 0, 0);
+                ev.startDate = d;
+                ev.hasSpecificTime = true;
+            }
+        }
+    }
 }
 
 /**
