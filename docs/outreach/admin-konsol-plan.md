@@ -626,3 +626,35 @@ Ligger sist av en anledning: med n=20 loggrader varav 4 mätta finns det ännu i
 - Ingen URL-shortener (husregel, obelagd — men vår egen domän räcker och ger bättre kontroll).
 - Ingen öppning av `aggregatedEvents` för klienten. All eventdata i konsolen hämtas server-side med Admin SDK.
 - Ingen PII i repot: medlemslistan importeras som ett aggregat (137 st, kod `MEDLEM1`), aldrig som rader.
+---
+
+## Ägarfeedback 2026-08-20 — "rörig och knappt användbar" (OHANTERAD kravlista)
+
+Rakt ur ägarens mun efter två veckors användning. Inget av detta är byggt än.
+
+1. **Planeringen går inte att säga nej till.** Planerade grupper kunde inte
+   tas bort — ägaren tvingades klicka Acceptera på saker som redan var
+   gjorda dagen innan. Krav: **Skippa-knapp per rad** som (a) tar bort
+   gruppen ur dagens plan och (b) automatiskt lyfter in nästa grupp i
+   turordningen som ersättare. Skippa ≠ avskriva — gruppen ska tillbaka i
+   rotationen senare.
+2. **Grupperna ska bo i städerna.** Kön/planeringen och Städer-fliken lever
+   isär. Krav: gruppplaneringen inbakad i stadsvyn — och städer som SAKNAR
+   grupp ska också synas i planeringen (som "hitta en grupp i X" -uppgift),
+   annars upptäcks aldrig luckorna. Idag kommer de aldrig med.
+3. **Stegen/flikarna (Logg, Planering …) fast längst uppe** — sticky header,
+   inte något som scrollar bort.
+4. **Rensa Idag-fliken: bort med manuell statistikinmatning.** Ägaren ska
+   ALDRIG knappa in likes/kommentarer för hand. Statistiken kommer från
+   Facebook: CSV/md-exporten (som 20/8: Meta-exporten "Innehåll_Publiceringstid_
+   Sammanfattning") eller Pages-API:t för sidinläggen. Krav: importväg för
+   exportfilen i stället för formulärfälten.
+5. **Utkast går inte att radera.** DraftStore/outreachDrafts saknar
+   delete-knapp. Krav: kasta-knapp per utkast.
+6. Helhetsbetyg: rörig. Färre flikar, färre steg, mindre att fylla i.
+
+**Sammanhang 20/8:** registret backfillades samma dag med 21 loggrader ur
+facebook-grupplista.md (hela augusti fanns bara i markdown) + Gotlandsgrupperna
+84–85 skapades som kontakter. Konsolen är facit FRAMÅT — men bara om
+bekräfta-flödet är lätt nog att användas, vilket är precis vad punkterna
+ovan handlar om.
