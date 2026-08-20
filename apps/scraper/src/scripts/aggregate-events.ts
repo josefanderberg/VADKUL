@@ -305,15 +305,26 @@ async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: num
     return deleteShards(db, 'cards_', keepBelow);
 }
 
-/** Generisk shard-radering. Tar prefix typ "cards_" eller "descriptions_". */
-async function deleteShards(db: FirebaseFirestore.Firestore, prefix: string, keepBelow: number = 0): Promise<void> {
+/**
+ * Generisk shard-radering. Tar prefix typ "cards_" eller "descriptions_".
+ *
+ * listDocuments() — ALDRIG get(): vi behöver bara dokument-ID:na för att matcha
+ * "<prefix><N>", och shard-dokumenten är ~684 KB styck. En get() laddade ner
+ * HELA kollektionen (33,6 MB) — tre gånger per aggregatkörning, en per
+ * payload-grupp — enbart för att läsa ID-strängar. Aggregatet körs om varje
+ * gång audit-daemonen betat av en batch, så det blev ~100 MB egress per
+ * körning och den överlägset största posten på Firebase-fakturan:
+ * 134 GiB / 144 kr i augusti = 76 % av notan. listDocuments() hämtar bara
+ * namnen och kostar i praktiken ingenting.
+ */
+export async function deleteShards(db: FirebaseFirestore.Firestore, prefix: string, keepBelow: number = 0): Promise<void> {
     try {
-        const snap = await db.collection('aggregatedEvents').get();
+        const refs = await db.collection('aggregatedEvents').listDocuments();
         const re = new RegExp(`^${prefix}(\\d+)$`);
-        for (const doc of snap.docs) {
-            const m = doc.id.match(re);
+        for (const ref of refs) {
+            const m = ref.id.match(re);
             if (m && parseInt(m[1], 10) >= keepBelow) {
-                await doc.ref.delete();
+                await ref.delete();
             }
         }
     } catch { /* ignore */ }
