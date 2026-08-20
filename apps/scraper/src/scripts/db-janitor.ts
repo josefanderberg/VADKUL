@@ -24,6 +24,7 @@ import { db } from '../config/firebase';
 import * as admin from 'firebase-admin';
 
 const KEEP_DAYS = 7;
+const PAGE_SIZE = 1000;
 
 interface Rule { collection: string; field: string }
 const RULES: Rule[] = [
@@ -32,31 +33,62 @@ const RULES: Rule[] = [
     { collection: 'eventReminderPrefs', field: 'eventStart' },
 ];
 
-async function cleanCollection(fdb: admin.firestore.Firestore, rule: Rule, cutoff: admin.firestore.Timestamp, dry: boolean): Promise<number> {
+/**
+ * Städar en kollektion och returnerar antalet dokument (raderade, eller vid
+ * --dry hur många som SKULLE raderas).
+ *
+ * MARKÖR-PAGINERING, och det är inte kosmetik: kör man i stället om SAMMA
+ * query varje varv och litar på att "query:n krymper när raderingarna landar"
+ * får man tillbaka de redan raderade dokumenten tills query-INDEXET hunnit
+ * ikapp — Firestore uppdaterar indexet asynkront. Det var buggen 2026-08-19:
+ * 1 709 frågor à ~1000 dokument = 1,7 MILJONER reads för att radera 37 800
+ * dokument (~38 000 reads är rätt siffra). orderBy + startAfter går alltid
+ * framåt och kan aldrig snurra på samma sida.
+ */
+export async function cleanCollection(
+    fdb: admin.firestore.Firestore,
+    rule: Rule,
+    cutoff: admin.firestore.Timestamp,
+    dry: boolean,
+): Promise<number> {
     const query = fdb.collection(rule.collection).where(rule.field, '<', cutoff);
 
-    // Dry-run: räkna bara (count-aggregat, ingen pagination behövs).
-    if (dry) {
-        const agg = await query.count().get();
-        return agg.data().count;
-    }
+    // Count-aggregat: ~1 read per 1000 indexposter. Ger både dry-svaret och
+    // varvtaket nedan för en spottstyver.
+    const total = (await query.count().get()).data().count;
+    if (dry || total === 0) return total;
 
-    let deleted = 0;
     const writer = fdb.bulkWriter();
-    // Paginera i 1000-block tills inget kvar — query:n krymper allteftersom
-    // raderingarna landar, så samma query kan köras om tills den är tom.
-    for (;;) {
-        const snap = await query
-            .select()                      // bara dokument-id:n — ingen payload
-            .limit(1000)
-            .get();
+    let deleted = 0;
+    let cursor: admin.firestore.QueryDocumentSnapshot | null = null;
+    // Skyddsnät: även om markören mot förmodan skulle stå still kan loopen
+    // aldrig kosta mer än en dryg genomläsning av träffmängden.
+    const maxRounds = Math.ceil(total / PAGE_SIZE) + 2;
+
+    let round = 0;
+    for (; round < maxRounds; round++) {
+        // select(rule.field): minsta möjliga payload som ändå bär värdet
+        // startAfter() behöver för att bygga markören (tom select() ger ett
+        // snapshot utan fält → Firestore kan inte läsa ut sorteringsvärdet).
+        let page = query.orderBy(rule.field).select(rule.field).limit(PAGE_SIZE);
+        if (cursor) page = page.startAfter(cursor);
+        const snap = await page.get();
         if (snap.empty) break;
+
         snap.docs.forEach((d) => { void writer.delete(d.ref); });
+        // Flush per sida håller bufferten liten och ger backpressure. Den är
+        // INTE längre lastbärande för korrektheten — markören är det.
         await writer.flush();
+
+        cursor = snap.docs[snap.docs.length - 1];
         deleted += snap.size;
-        if (snap.size < 1000) break;
+        if (snap.size < PAGE_SIZE) break;
     }
     await writer.close();
+
+    if (round >= maxRounds) {
+        console.warn(`🧹 JANITOR: ${rule.collection} — varvtaket (${maxRounds}) nåddes vid ${deleted}/${total}; resten tas nästa natt.`);
+    }
     return deleted;
 }
 
@@ -76,4 +108,6 @@ async function main() {
     console.log(`Janitor-summering: ${total}${dry ? ' skulle raderas' : ' raderade'} (${parts.join(', ')})`);
 }
 
-main().then(() => process.exit(0)).catch((e) => { console.error('🧹 JANITOR-FEL:', e); process.exit(1); });
+if (require.main === module) {
+    main().then(() => process.exit(0)).catch((e) => { console.error('🧹 JANITOR-FEL:', e); process.exit(1); });
+}
