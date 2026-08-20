@@ -22,6 +22,8 @@ interface MyBoost {
     title: string;
     until: Date | null;
     active: boolean;
+    /** Eventet ur den laddade datan — finns det är raden klickbar (hoppa dit). */
+    evt: LinkEvent | null;
 }
 
 interface ProfilePanelProps {
@@ -29,6 +31,9 @@ interface ProfilePanelProps {
     onClose: () => void;
     /** Användarens egna skapade event (filtrerade ur eventlistan i page). */
     myEvents: LinkEvent[];
+    /** HELA laddade eventlistan — boost-raderna slår upp titel + hoppmål här
+     *  (kvittona bär bara eventId; domännamn i stället för titel var obegripligt). */
+    allEvents: LinkEvent[];
     onPickEvent: (evt: LinkEvent) => void;
     onDeleteEvent: (id: string) => void;
     savedCount: number;
@@ -41,7 +46,7 @@ interface ProfilePanelProps {
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
@@ -102,9 +107,19 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
     // "Mina boostar" när panelen öppnas: läs egna boostPayments-kvitton
     // (rules släpper bara igenom frågor filtrerade på eget uid), deduplicera
     // per event (förlängningar ger flera kvitton men ETT slutdatum) och slå
-    // upp titel + featuredUntil: användarskapade ur linkEvents-dokumentet,
-    // skrapade ur eventBoosts-overlayn (samma slug-hash som /e/-länkarna).
+    // upp featuredUntil: användarskapade ur linkEvents-dokumentet, skrapade ur
+    // eventBoosts-overlayn (samma slug-hash som /e/-länkarna).
+    // TITELN + hoppmålet tas ur den redan laddade eventdatan (allEvents,
+    // Josef 21/8: "facebook.com" sa ingenting — eventets titel ska stå, och
+    // raden ska gå att klicka på). Domännamnet är bara fallback när eventet
+    // inte (längre) finns i datan. RADERADE användarskapade event visas inte
+    // alls — en kvittorad utan event att visa stod som "Borttaget event
+    // aktiveras…" för alltid, vilket bara förvirrade.
     // Max ~10 uppslag per öppning — boost-köp är sällsynta, ingen egress-fälla.
+    // allEvents läses via ref: strömmen pushar nya referenser hela tiden och
+    // som dep hade effekten dragit om Firestore-uppslagen vid varje våg.
+    const allEventsRef = useRef(allEvents);
+    allEventsRef.current = allEvents;
     useEffect(() => {
         if (!open || !user) return;
         let stale = false;
@@ -119,29 +134,34 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                     .map(d => d.data() as { eventId?: unknown; appliedAt?: Timestamp })
                     .filter((r): r is { eventId: string; appliedAt?: Timestamp } => typeof r.eventId === 'string')
                     .sort((a, b) => (b.appliedAt?.toMillis?.() ?? 0) - (a.appliedAt?.toMillis?.() ?? 0));
+                const byId = new Map(allEventsRef.current.map(e => [e.id, e]));
                 const seen = new Set<string>();
                 const out: MyBoost[] = [];
                 for (const r of receipts) {
                     if (seen.has(r.eventId)) continue;
                     seen.add(r.eventId);
                     if (out.length >= 10) break;
+                    const loaded = byId.get(r.eventId) ?? null;
                     let title: string;
                     let until: Date | null = null;
                     if (r.eventId.includes('/')) {
-                        // Skrapat event (id = källans URL): featuredUntil bor i
-                        // overlayn; titeln finns inte klient-läsbart → visa domänen.
+                        // Skrapat event (id = källans URL): featuredUntil bor i overlayn.
                         const b = await getDoc(doc(db, 'eventBoosts', eventShareSlug(r.eventId)));
                         const v = b.data();
                         until = v?.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
-                        try { title = new URL(r.eventId).hostname.replace(/^www\./, ''); }
-                        catch { title = 'Skrapat event'; }
+                        if (loaded) title = loaded.title;
+                        else {
+                            try { title = new URL(r.eventId).hostname.replace(/^www\./, ''); }
+                            catch { title = 'Skrapat event'; }
+                        }
                     } else {
                         const e = await getDoc(doc(db, 'linkEvents', r.eventId));
+                        if (!e.exists()) continue; // eventet raderat → ingen rad
                         const v = e.data();
-                        title = typeof v?.title === 'string' ? v.title : 'Borttaget event';
+                        title = typeof v?.title === 'string' ? v.title : (loaded?.title ?? 'Borttaget event');
                         until = v?.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
                     }
-                    out.push({ key: r.eventId, title, until, active: !!until && until.getTime() > Date.now() });
+                    out.push({ key: r.eventId, title, until, active: !!until && until.getTime() > Date.now(), evt: loaded });
                 }
                 // Aktiva överst (nyast först inom respektive grupp — listan är
                 // redan appliedAt-sorterad).
@@ -249,6 +269,13 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
             toast.success('Notiser på! Du får en påminnelse 1 h innan dina gillade event börjar.');
         } else if (res === 'denied') {
             toast.error('Notiser är blockerade — tillåt dem för vadkul.se i webbläsarens inställningar.');
+        } else if (res === 'no-sw') {
+            // I dev finns aldrig någon service worker (avsiktligt) — notiser
+            // kan bara testas på riktiga sajten. I prod betyder samma läge att
+            // SW-registreringen inte hunnit/kunnat köra → omladdning brukar lösa.
+            toast.error(process.env.NODE_ENV !== 'production'
+                ? 'Notiser funkar inte i dev-miljön (ingen service worker) — testa på vadkul.se.'
+                : 'Notiserna kunde inte kopplas — ladda om sidan och försök igen.');
         } else {
             toast.error('Kunde inte aktivera notiser. Försök igen.');
         }
@@ -389,9 +416,14 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
 
     return (
         <>
-            {/* Klick utanför stänger panelen */}
-            <div className="fixed inset-0 z-[1030]" onClick={onClose} />
-            <div className="absolute top-[4.6rem] left-4 right-4 sm:right-auto sm:w-[420px] z-[1040] pointer-events-auto">
+            {/* Klick utanför stänger panelen. z-[1164]/[1165] som SavedPanel:
+                panelen låg på 1040 — UNDER stadsrutan (1090), kategorikolumnen
+                (1150) och navbaren (1160), så knapparna och plattan målades
+                ovanpå panelinnehållet på mobilen (Josef 21/8). Nu över allt
+                krom men under eventkortet (1250)/modalerna (1300); utanför-
+                ytan fångar klick på kromet panelen täcker och stänger. */}
+            <div className="fixed inset-0 z-[1164]" onClick={onClose} />
+            <div className="absolute top-[4.6rem] left-4 right-4 sm:right-auto sm:w-[420px] z-[1165] pointer-events-auto">
                 <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[min(70vh,34rem)] animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {/* Identitet */}
@@ -574,19 +606,40 @@ export default function ProfilePanel({ open, onClose, myEvents, onPickEvent, onD
                                     </span>
                                 </div>
                                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {myBoosts.map(b => (
-                                        <li key={b.key} className="px-4 py-2.5 flex items-center gap-2.5">
-                                            <span aria-hidden className={b.active ? '' : 'grayscale opacity-50'}>⭐</span>
-                                            <span className={`flex-1 min-w-0 truncate text-sm font-bold ${b.active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
-                                                {b.title}
-                                            </span>
-                                            <span className={`shrink-0 text-[11px] font-bold tabular-nums ${b.active ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
-                                                {b.until
-                                                    ? (b.active ? `t.o.m. ${boostedUntilLabel(b.until)}` : `gick ut ${boostedUntilLabel(b.until)}`)
-                                                    : 'aktiveras…'}
-                                            </span>
-                                        </li>
-                                    ))}
+                                    {myBoosts.map(b => {
+                                        // Finns eventet i laddade datan är raden en knapp som
+                                        // hoppar dit (onPickEvent stänger panelen), annars en
+                                        // stum rad — det finns inget att visa då.
+                                        const inner = (
+                                            <>
+                                                <span aria-hidden className={b.active ? '' : 'grayscale opacity-50'}>⭐</span>
+                                                <span className={`flex-1 min-w-0 truncate text-sm font-bold ${b.active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
+                                                    {b.title}
+                                                </span>
+                                                <span className={`shrink-0 text-[11px] font-bold tabular-nums ${b.active ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                                                    {b.until
+                                                        ? (b.active ? `t.o.m. ${boostedUntilLabel(b.until)}` : `gick ut ${boostedUntilLabel(b.until)}`)
+                                                        : 'aktiveras…'}
+                                                </span>
+                                            </>
+                                        );
+                                        const evt = b.evt;
+                                        return (
+                                            <li key={b.key}>
+                                                {evt ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onPickEvent(evt)}
+                                                        className="w-full px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                                                    >
+                                                        {inner}
+                                                    </button>
+                                                ) : (
+                                                    <div className="px-4 py-2.5 flex items-center gap-2.5">{inner}</div>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </div>
                         )}

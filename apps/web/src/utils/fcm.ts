@@ -20,6 +20,30 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 }
 
 /**
+ * SW-registreringen med vakt: `navigator.serviceWorker.ready` väntar FÖR
+ * EVIGT om ingen SW någonsin registreras — och i dev registreras den
+ * AVSIKTLIGT inte (registerServiceWorker avregistrerar t.o.m.). Ett bart
+ * `await ready` fick notis-knappen att fastna i busy/'…' för alltid
+ * (Josef 21/8: "stängde av den och nu går den inte klicka på igen").
+ * Ingen registrering → null direkt; annars ready med timeout-fallnät
+ * ifall aktiveringen hängt sig.
+ */
+async function getActiveSWRegistration(): Promise<ServiceWorkerRegistration | null> {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
+    try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) return null;
+        const ready = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
+        ]);
+        return ready ?? (reg.active ? reg : null);
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Request notification permission and get FCM token
  */
 export async function requestNotificationPermission(): Promise<string | null> {
@@ -39,10 +63,10 @@ export async function requestNotificationPermission(): Promise<string | null> {
 
         // Get FCM token - explicitly provide the service worker registration
         // so Firebase doesn't try to look for /firebase-messaging-sw.js
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await getActiveSWRegistration();
 
         if (!registration || !registration.active) {
-            console.warn('FCM: Service worker registration not active yet');
+            console.warn('FCM: ingen aktiv service worker (i dev registreras ingen — notiser kan bara slås på i produktion)');
             return null;
         }
 
@@ -129,13 +153,16 @@ export function getNotisStatus(): NotisStatus {
  * vilket är varför login-flödet aldrig får fråga (bara uppfräscha, se
  * FCMHandler i Providers).
  */
-export async function enableEventReminders(uid: string): Promise<'on' | 'denied' | 'error'> {
+export async function enableEventReminders(uid: string): Promise<'on' | 'denied' | 'no-sw' | 'error'> {
     try {
         const token = await requestNotificationPermission();
         if (!token) {
-            return typeof Notification !== 'undefined' && Notification.permission === 'denied'
-                ? 'denied'
-                : 'error';
+            if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return 'denied';
+            // Ingen service worker = push kan aldrig kopplas. I dev är det
+            // ALLTID så (registerServiceWorker registrerar ingen där) —
+            // "försök igen"-toasten var bara vilseledande, säg som det är.
+            if (!(await getActiveSWRegistration())) return 'no-sw';
+            return 'error';
         }
         await notificationService.saveFCMToken(uid, token);
         try { localStorage.removeItem(NOTIS_OFF_KEY); } catch { /* privat läge */ }
@@ -158,10 +185,14 @@ export async function disableEventReminders(uid: string): Promise<'off' | 'error
     try { localStorage.setItem(NOTIS_OFF_KEY, '1'); } catch { /* privat läge */ }
     try {
         if (messaging) {
-            const registration = await navigator.serviceWorker.ready;
-            const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
-            if (token) await notificationService.deleteFCMToken(uid, token);
-            await deleteToken(messaging);
+            // Ingen SW-registrering (dev) → ingen token att städa; utan vakten
+            // hängde `.ready` för evigt och knappen fastnade i busy.
+            const registration = await getActiveSWRegistration();
+            if (registration) {
+                const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+                if (token) await notificationService.deleteFCMToken(uid, token);
+                await deleteToken(messaging);
+            }
         }
         return 'off';
     } catch (error) {

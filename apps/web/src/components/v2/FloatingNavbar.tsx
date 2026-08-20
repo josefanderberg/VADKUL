@@ -200,8 +200,14 @@ export default function FloatingNavbar({
                             </button>
                             <HoverLabel>{user ? 'Min profil' : 'Logga in'}</HoverLabel>
                         </div>
-                        {/* Sparade event (hjärtan) — direkt höger om profilen */}
-                        {onToggleSaved && (
+                        {/* Sparade event (hjärtan) — BARA UTLOGGAD (Josef 21/8):
+                            inloggade har Sparade-raden i profilpanelen, så
+                            hjärtknappen var en dubblett för dem. Utloggade
+                            behåller den — sparade event funkar utan konto
+                            (localStorage) men profilknappen öppnar då LOGIN-
+                            modalen, inte panelen, så hjärtat är deras enda
+                            väg in i Sparat-listan. */}
+                        {onToggleSaved && !user && (
                             <div className="flex items-center gap-2 pointer-events-none">
                                 <button
                                     type="button"
