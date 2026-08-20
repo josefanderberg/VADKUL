@@ -51,9 +51,17 @@ export default function SavedPanel({ open, events, savedEventIds, onPick, onRemo
 
     return (
         <>
-            {/* Klick utanför panelen stänger den */}
-            <div className="fixed inset-0 z-[1030]" onClick={onClose} />
-            <div className="absolute top-[4.6rem] right-4 left-4 sm:left-auto sm:w-[420px] z-[1040] pointer-events-auto">
+            {/* Klick utanför panelen stänger den. z-[1154]: direkt under
+                panelen, så ett klick på det krom panelen numera täcker
+                (stadsrutan, kategorikolumnen) stänger den i stället för att
+                gå igenom till knappen under. */}
+            <div className="fixed inset-0 z-[1154]" onClick={onClose} />
+            {/* z-[1155]: ÖVER stadsrutan (1090) och kategorikolumnen (1150) —
+                på mobilen är panelen full bredd och hamnade annars UNDER
+                stad/Idag/Hela veckan-plattan. Under navbaren (1160) så
+                hjärtknappen som öppnade panelen är kvar överst, och under
+                eventkortet (1250)/modalerna (1300). */}
+            <div className="absolute top-[4.6rem] right-4 left-4 sm:left-auto sm:w-[420px] z-[1155] pointer-events-auto">
                 <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[min(60vh,30rem)] animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-between">
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
