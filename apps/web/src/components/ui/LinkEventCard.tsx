@@ -332,9 +332,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
     return (
         <div className="w-full bg-card border-b border-border flex flex-col group">
-            {/* 1. Header (Always visible) */}
+            {/* 1. Header. INTE sticky längre (Josef 21/8): den satt fast i
+                toppen medan bild/beskrivning scrollade in under den tills
+                chatten kom och puttade ut den — nu scrollar ALLT direkt ut
+                över kanten när kortet är fullt uppdraget. */}
             <div
-                className={`p-4 md:p-6 pt-10 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer sticky top-0 z-10'}`}
+                className={`p-4 md:p-6 pt-10 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
@@ -444,6 +447,18 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
                             </button>
                         )}
+                        {/* Dela-knapp i knappraden mellan hjärtat och ANMÄL
+                            (Josef 21/8) — samma runda formspråk som hjärtat.
+                            Native share-dialog på mobil, annars kopieras länken
+                            (handleShare, samma som dela-knappen i botten). */}
+                        <button
+                            onClick={handleShare}
+                            aria-label="Dela eventet"
+                            title="Dela eventet"
+                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                        >
+                            <Share2 size={15} />
+                        </button>
                         {/* Kortets primära CTA — får inte se billig ut bredvid de
                             runda pillerna: helrundad, gradient i flaggblått med
                             inre ljuskant och pil som glider vid hover (ägarens
@@ -587,8 +602,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             {!activityView && !nearbyView && (
             <div className="flex flex-col w-full">
                     {/* Omslagsbild — visas BARA när eventet har en riktig bild
-                        (ingen fallback). Object-contain så hela motivet syns,
-                        höjd-capad. Ligger under värd/pris-raden i kortet. */}
+                        (ingen fallback). FAST höjd h-56 (dubbla närhetslistans
+                        h-28), beskuren med object-cover. Expandera-på-klick +
+                        "Visa hela bilden"-chipen provades och TOGS BORT (Josef
+                        21/8) — de flesta omslag är liggande, så "full höjd" på
+                        mobilbredd blev LÄGRE än h-56 och klicket såg ut att
+                        göra ingenting. Klick stegar reveal, som förut. */}
                     {hasRealCover && !coverFailed && (
                         <div
                             className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
@@ -599,7 +618,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 src={linkEvent.coverImage as string}
                                 alt={linkEvent.title}
                                 onError={() => setCoverFailed(true)}
-                                className="w-full h-auto max-h-[60vh] object-contain"
+                                className="w-full h-56 object-cover"
                             />
                         </div>
                     )}

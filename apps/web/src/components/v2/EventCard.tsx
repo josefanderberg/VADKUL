@@ -1635,11 +1635,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
-                            {/* Nästa — hela ytan är klickbar men luftig: vänster­kanten
-                                är helt transparent och tonar in mot blått åt höger, där
-                                nästa events emoji-bricka sitter. Precis som Föregående-
-                                knappen fungerar den som en förhandsvisning: man ser
-                                vilket event man går VIDARE till (framåt-pil + antal). */}
+                            {/* Nästa — hela flex-1-ytan är klickbar, men det SYNLIGA är
+                                en solid flaggblå kapsel i högerkanten (samma gradient +
+                                inre ljuskant som ANMÄL-knappen). Den genomskinliga
+                                urstansade SVG-varianten TOGS BORT (Josef 21/8: "den
+                                behöver synas lite mer" — kartan genom bokstäverna gjorde
+                                den nästan osynlig över ljusa kvarter). Precis som
+                                Föregående-knappen är den en förhandsvisning: man ser
+                                vilket event man går VIDARE till (emoji + pil + antal). */}
                             <button
                                 type="button"
                                 onClick={handleNextOnly}
@@ -1649,73 +1652,31 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
                                 title={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
-                                className="group/nasta relative min-w-0 h-[38px] box-border rounded-full text-[#006AA7]
-                                    flex items-center justify-end gap-2 pr-1.5 flex-1 bg-transparent"
+                                className="group/nasta relative min-w-0 h-[38px] box-border flex items-center justify-end flex-1 bg-transparent"
                             >
-                                {/* Permanent "NÄSTA"-etikett. SVG:n fyller hela pillen (absolut) och
-                                    ritar gradienten (transparent→vit åt höger) med "NÄSTA" URSTANSAT
-                                    via en <mask> (vit = synlig gradient, svart text = hål) → kartan
-                                    syns rakt genom bokstavshålen. Inget viewBox → koordinaterna är
-                                    CSS-pixlar; texten är förankrad till högerkanten (x=100%, dx=-48)
-                                    så den ligger kvar bredvid emojin i alla bredder.
-                                    I VILA når fyllnaden kortare åt vänster (transparent ända fram
-                                    till ~0.62); hover/tryck tonar upp den till full längd. offset
-                                    kan inte CSS-animeras, så stopparna ligger FAST och bara deras
-                                    stop-opacity växlar (transition = mjuk övergång). Hover-värdena
-                                    ÄR gamla gradienten: 0.43 @0.62 ligger på linjen 0.35@0.55→0.85@1. */}
-                                <svg
-                                    aria-hidden
-                                    className="absolute inset-0 h-full w-full block pointer-events-none"
-                                >
-                                    <defs>
-                                        <linearGradient id="nastaCutGrad" x1="0" y1="0" x2="1" y2="0">
-                                            <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
-                                            <stop offset="0.55" stopColor="#ffffff" className="transition-[stop-opacity] duration-300 ease-out [stop-opacity:0] group-hover/nasta:[stop-opacity:0.35] group-active/nasta:[stop-opacity:0.35]" />
-                                            <stop offset="0.62" stopColor="#ffffff" className="transition-[stop-opacity] duration-300 ease-out [stop-opacity:0] group-hover/nasta:[stop-opacity:0.43] group-active/nasta:[stop-opacity:0.43]" />
-                                            <stop offset="1" stopColor="#ffffff" stopOpacity="0.85" />
-                                        </linearGradient>
-                                        <mask id="nastaCutMask">
-                                            {/* vit = behåll gradienten, svart text = stansa hål */}
-                                            <rect x="0" y="0" width="100%" height="100%" rx="19" fill="#ffffff" />
-                                            <text
-                                                x="100%"
-                                                dx="-48"
-                                                y="50%"
-                                                textAnchor="end"
-                                                dominantBaseline="central"
-                                                fontSize="13"
-                                                fontWeight="900"
-                                                letterSpacing="1"
-                                                fontFamily="var(--font-fredoka), system-ui, sans-serif"
-                                                fill="#000000"
-                                            >
-                                                NÄSTA
-                                            </text>
-                                        </mask>
-                                    </defs>
-                                    <rect x="0" y="0" width="100%" height="100%" rx="19" fill="url(#nastaCutGrad)" mask="url(#nastaCutMask)" />
-                                </svg>
-                                {/* Emoji för nästa event — BARA symbolen (emoji + liten framåt-pil),
-                                    ingen cirkel/bakgrund bakom. Samma look från första trycket. */}
-                                {nextEvent ? (
-                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-8 h-8 text-lg leading-none">
-                                        {eventEmoji(nextEvent)}
-                                        {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
-                                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
-                                            <ArrowRight size={10} />
-                                        </span>
-                                        {/* Siffra för hur många event gruppen innehåller */}
-                                        {nextEventGroupCount > 1 && (
-                                            <span className="absolute -top-1 -left-1 min-w-[16px] h-4 px-1 rounded-full bg-slate-800 text-white border border-white flex items-center justify-center text-[9px] font-black leading-none">
-                                                {nextEventGroupCount}
+                                <span className="flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97]">
+                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">NÄSTA</span>
+                                    {/* Emoji för nästa event + liten framåt-pil. */}
+                                    {nextEvent ? (
+                                        <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
+                                            {eventEmoji(nextEvent)}
+                                            {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
+                                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
+                                                <ArrowRight size={10} />
                                             </span>
-                                        )}
-                                    </span>
-                                ) : (
-                                    <span aria-hidden className="relative z-20 flex items-center justify-center w-7 h-7 [&_svg]:drop-shadow-[0_1px_2px_rgba(0,30,55,0.6)]">
-                                        <ArrowRight size={16} />
-                                    </span>
-                                )}
+                                            {/* Siffra för hur många event gruppen innehåller */}
+                                            {nextEventGroupCount > 1 && (
+                                                <span className="absolute -top-1 -left-1 min-w-[16px] h-4 px-1 rounded-full bg-slate-800 text-white border border-white flex items-center justify-center text-[9px] font-black leading-none">
+                                                    {nextEventGroupCount}
+                                                </span>
+                                            )}
+                                        </span>
+                                    ) : (
+                                        <span aria-hidden className="flex items-center justify-center w-7 h-7">
+                                            <ArrowRight size={16} />
+                                        </span>
+                                    )}
+                                </span>
                             </button>
                         </>
                     )}
@@ -1822,11 +1783,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
                         // Nivån väljs i kortets BoostTierPicker (ägs av BOOST_TIERS).
                         onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
-                        // Vyskiftet: chatt-toggeln finns bara där chatten faktiskt
-                        // kan renderas (onRequireLogin är chatt-sektionens egen
-                        // vakt), list-toggeln bara när närhetslistan har innehåll.
-                        activityView={cardView === 'chat'}
-                        onToggleActivityView={onRequireLogin ? () => handleToggleView('chat') : undefined}
+                        // Chatt-knappen i knappraden BORTTAGEN (Josef 21/8) —
+                        // chatten nås genom att scrolla ner i kortet, den
+                        // ligger direkt under eventinfon. Lista-toggeln bara
+                        // när närhetslistan har innehåll.
+                        activityView={false}
                         nearbyView={cardView === 'nearby'}
                         onToggleNearbyView={nearbyEvents.length > 0 ? () => handleToggleView('nearby') : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
