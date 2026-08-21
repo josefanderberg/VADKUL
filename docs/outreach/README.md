@@ -11,6 +11,7 @@ arrangörerna vars event redan visas på kartan.
 | [arrangorer.md](arrangorer.md) | Bocklistan — 120 arrangörer ur riktiga eventdatat, prioriterade i tre nivåer |
 | [mail-mallar.md](mail-mallar.md) | Mall A (mejl), mall B (Facebook), uppföljning, stjärn-P.S., signatur |
 | [facebook-poster.md](facebook-poster.md) | Inläggsutkast för "Vad händer i [stad]"-grupperna (privata kontot) |
+| [gruppinlagg-2026-08-21.md](gruppinlagg-2026-08-21.md) | Färdiga gruppinlägg 21/8: Mariestad, Halmstad, Norrköping — 10 event per stad |
 | [generate-arrangorer.mjs](generate-arrangorer.mjs) | Bygger om arrangorer.md ur `apps/web/public/events-*.json` — **skriver över ibockningarna**, kopiera undan dem först |
 
 ## Veckorutinen (≈30 min)
