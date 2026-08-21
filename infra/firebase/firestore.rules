@@ -50,17 +50,20 @@ service cloud.firestore {
       
       // Man får uppdatera sin egen profil...
       // ELLER om man bara uppdaterar 'rating' och 'ratingCount' (för att ge omdöme)
-      // OBS: starGift/starEventId (stjärn-gåvan) är SERVERGIVNA — de skrivs
-      // enbart av Cloud-funktionerna redeemStarGift/placeStar (admin-SDK,
-      // kringgår reglerna). Klientskrivning blockeras här, annars kunde vem
-      // som helst ge sig själv en stjärna.
+      // OBS: stjärn-fälten är SERVERGIVNA — de skrivs enbart av Cloud-
+      // funktionerna redeemStarGift/placeStar (admin-SDK, kringgår reglerna).
+      // Klientskrivning blockeras här, annars kunde vem som helst ge sig
+      // själv stjärnor. starsAvailable (räknaren) och starGiftCodes (vilka
+      // koder kontot löst in) tillkom 22/8 när spärren blev per kod —
+      // MÅSTE vara med i listan, annars kan man skriva upp sin räknare
+      // eller radera sin inlösningshistorik och lösa in samma länk igen.
       allow update: if isOwner(userId)
         && (
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified']) || request.resource.data.isVerified == false)
           &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus']) || request.resource.data.verificationStatus in ['pending', 'none'])
           &&
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['starGift', 'starEventId'])
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['starGift', 'starEventId', 'starsAvailable', 'starGiftCodes', 'starGiftCode'])
         )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         

@@ -2027,11 +2027,12 @@ export default function HomePage() {
     }, []);
 
     // ── Stjärn-gåvan ⭐: /?stjarna=<KOD> ─────────────────────────────────────
-    // Tack-kampanj till de första användarna: EN gemensam gåvolänk ger varje
-    // konto EN stjärna som sätts på valfritt event — eventet lyser då (guld-
-    // bricka + alltid synlig, som userCreated) för ALLA tills det passerat.
+    // Tack-kampanj till de första användarna: en gåvolänk ger EN stjärna som
+    // sätts på valfritt event — eventet lyser då (guldbricka + alltid synlig,
+    // som userCreated) för ALLA tills det passerat. Spärren är per (konto,
+    // kod) sedan 22/8: olika länkar ger fler stjärnor till samma konto.
     // All skrivning sker i Cloud Functions (redeemStarGift/placeStar);
-    // klienten läser bara eventStars + sitt eget starGift-fält.
+    // klienten läser bara eventStars + sina egna stjärn-fält.
     //
     // Vilka event som har en stjärna — litet live-set som överlagras på kartan
     // och kortet (stjärnan bor ALDRIG i aggregaten: de byggs 1 gång/dygn +
@@ -2039,17 +2040,20 @@ export default function HomePage() {
     const [starredEventIds, setStarredEventIds] = useState<Set<string>>(new Set());
     useEffect(() => starService.subscribeStarredEventIds(setStarredEventIds), []);
 
-    // Egen stjärn-status: 'none' = ingen (eller utloggad), 'unused' = hämtad
-    // men inte satt, 'placed' = förbrukad. Läses från users/{uid} vid inloggning
-    // och uppdateras optimistiskt efter lyckade funktionsanrop.
-    const [starGiftStatus, setStarGiftStatus] = useState<'none' | 'unused' | 'placed'>('none');
+    // Egna oplacerade stjärnor. Sedan 22/8 är gåvan per (konto, kod): olika
+    // kampanjlänkar ger fler stjärnor till samma konto och de staplas, så det
+    // här är ett ANTAL, inte en flagga. Gamla dokument saknar räknaren →
+    // härled ur legacy-flaggan (samma fallback som i functions).
+    // Läses från users/{uid} vid inloggning, uppdateras optimistiskt efteråt.
+    const [starsAvailable, setStarsAvailable] = useState(0);
     useEffect(() => {
-        if (!user) { setStarGiftStatus('none'); return; }
+        if (!user) { setStarsAvailable(0); return; }
         let cancelled = false;
         userService.getUserProfile(user.uid).then(profile => {
             if (cancelled || !profile) return;
-            setStarGiftStatus(profile.starGift === 'unused' ? 'unused'
-                : profile.starGift === 'placed' ? 'placed' : 'none');
+            setStarsAvailable(typeof profile.starsAvailable === 'number'
+                ? Math.max(0, profile.starsAvailable)
+                : profile.starGift === 'unused' ? 1 : 0);
         }).catch(err => console.warn('Kunde inte läsa stjärn-status:', err));
         return () => { cancelled = true; };
     }, [user]);
@@ -2106,10 +2110,15 @@ export default function HomePage() {
     const pendingStarCodeRef = useRef<string | null>(null);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const code = params.get('stjarna');
+        // ?s= är kortformen (kortlänken /s/<kod> landar här med den);
+        // ?stjarna= är originalet och måste fortsätta funka — de gamla
+        // länkarna ligger i utskickade mejl och FB-inlägg. Kortformerna är
+        // alias för samma kampanj, functions normaliserar dem.
+        const code = params.get('stjarna') ?? params.get('s');
         if (!code) return;
         pendingStarCodeRef.current = code;
         params.delete('stjarna');
+        params.delete('s');
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2129,12 +2138,19 @@ export default function HomePage() {
         pendingStarCodeRef.current = null;
         (async () => {
             const res = await starService.redeemStarGift(code);
+            // Räknaren från servern gäller ALLTID när den finns med — även vid
+            // success=false (koden var redan inlöst, men kontot kan ha kvar
+            // stjärnor från andra länkar).
+            if (typeof res.starsAvailable === 'number') setStarsAvailable(res.starsAvailable);
             if (res.success) {
-                setStarGiftStatus('unused');
-                toast.success('Du har en stjärna! Öppna ett event och tryck på ⭐ bredvid hjärtat.', { duration: 8000, icon: '⭐' });
+                toast.success(
+                    (res.starsAvailable ?? 1) > 1
+                        ? `Du har ${res.starsAvailable} stjärnor! Öppna ett event och tryck på ⭐ bredvid hjärtat.`
+                        : 'Du har en stjärna! Öppna ett event och tryck på ⭐ bredvid hjärtat.',
+                    { duration: 8000, icon: '⭐' },
+                );
             } else {
-                // Redan hämtad/placerad eller ogiltig kod — statusen från
-                // profilhämtningen ovan gäller; visa bara beskedet.
+                // Redan inlöst kod eller ogiltig länk — visa bara beskedet.
                 toast(res.message, { icon: '⭐', duration: 6000 });
             }
         })();
@@ -2145,14 +2161,19 @@ export default function HomePage() {
     const handlePlaceStar = useCallback(async (eventId: string) => {
         if (!user) { openLogin('Logga in för att sätta din stjärna ⭐'); return; }
         const res = await starService.placeStar(eventId);
+        if (typeof res.starsLeft === 'number') setStarsAvailable(res.starsLeft);
         if (res.success) {
-            setStarGiftStatus('placed');
             setStarredEventIds(prev => {
                 const next = new Set(prev);
                 next.add(eventId);
                 return next;
             });
-            toast.success('Din stjärna sitter! ⭐ Eventet lyser nu för alla.', { duration: 6000 });
+            toast.success(
+                (res.starsLeft ?? 0) > 0
+                    ? `Din stjärna sitter! ⭐ Eventet lyser nu för alla — du har ${res.starsLeft} kvar att sätta.`
+                    : 'Din stjärna sitter! ⭐ Eventet lyser nu för alla.',
+                { duration: 6000 },
+            );
         } else {
             toast.error(res.message);
         }
@@ -3452,7 +3473,7 @@ export default function HomePage() {
                 onDeleteOwnEvent={handleDeleteOwnEvent}
                 onBoostOwnEvent={handleBoostOwnEvent}
                 starredEventIds={starredEventIds}
-                canPlaceStar={starGiftStatus === 'unused'}
+                canPlaceStar={starsAvailable > 0}
                 onPlaceStar={handlePlaceStar}
             />
 

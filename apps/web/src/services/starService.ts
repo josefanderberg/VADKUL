@@ -1,11 +1,13 @@
 // src/services/starService.ts
-// Stjärn-gåvan ⭐ — tack-kampanjen till de första användarna. En gemensam
-// gåvolänk (/?stjarna=<KOD>) ger varje konto EN stjärna som kan sättas på
-// valfritt event; eventet lyser sedan för ALLA på kartan tills det passerat.
+// Stjärn-gåvan ⭐ — tack-kampanjen till de första användarna. En gåvolänk
+// (/?stjarna=<KOD>) ger EN stjärna som kan sättas på valfritt event; eventet
+// lyser sedan för ALLA på kartan tills det passerat. Spärren är per (konto,
+// kod) sedan 22/8 — olika länkar ger alltså fler stjärnor till samma konto,
+// och de staplas (starsAvailable).
 //
 // All skrivning går via Cloud Functions (redeemStarGift/placeStar) — Firestore-
 // reglerna blockerar klientskrivning av både eventStars-collectionen och
-// users.starGift-fälten, så gåvan inte går att förfalska. Klienten läser bara.
+// users stjärn-fält, så gåvan inte går att förfalska. Klienten läser bara.
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -31,12 +33,14 @@ export const starService = {
     );
   },
 
-  /** Lös in gåvolänkens kampanjkod (kräver inloggning — funktionen verifierar). */
-  async redeemStarGift(code: string): Promise<{ success: boolean; status?: 'unused' | 'placed'; message: string }> {
+  /** Lös in gåvolänkens kampanjkod (kräver inloggning — funktionen verifierar).
+   *  starsAvailable = antal stjärnor kontot har kvar att sätta EFTER anropet
+   *  (även när success=false, dvs. koden redan var inlöst). */
+  async redeemStarGift(code: string): Promise<{ success: boolean; status?: 'unused' | 'placed'; message: string; starsAvailable?: number }> {
     try {
       const { httpsCallable } = await import('firebase/functions');
       const { functions } = await import('../lib/firebase');
-      const fn = httpsCallable<{ code: string }, { success: boolean; status?: 'unused' | 'placed'; message: string }>(functions, 'redeemStarGift');
+      const fn = httpsCallable<{ code: string }, { success: boolean; status?: 'unused' | 'placed'; message: string; starsAvailable?: number }>(functions, 'redeemStarGift');
       const result = await fn({ code });
       return result.data;
     } catch (e: unknown) {
@@ -45,12 +49,13 @@ export const starService = {
     }
   },
 
-  /** Sätt sin (oanvända) stjärna på ett event. Engångs — går inte att ångra. */
-  async placeStar(eventId: string): Promise<{ success: boolean; message: string }> {
+  /** Sätt EN av sina oplacerade stjärnor på ett event. Går inte att ångra.
+   *  starsLeft = antal kvar efter placeringen. */
+  async placeStar(eventId: string): Promise<{ success: boolean; message: string; starsLeft?: number }> {
     try {
       const { httpsCallable } = await import('firebase/functions');
       const { functions } = await import('../lib/firebase');
-      const fn = httpsCallable<{ eventId: string }, { success: boolean; message: string }>(functions, 'placeStar');
+      const fn = httpsCallable<{ eventId: string }, { success: boolean; message: string; starsLeft?: number }>(functions, 'placeStar');
       const result = await fn({ eventId });
       return result.data;
     } catch (e: unknown) {

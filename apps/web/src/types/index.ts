@@ -23,11 +23,18 @@ export interface UserProfile {
   redeemedCodes?: string[]; // <--- NY: Inlösta koder (kampanjkoder)
   savedEventIds?: string[]; // Sparade event (hjärtan) — synkas mellan enheter
   reviretHue?: number; // <--- NY: vald spelfärg (färgton 0–359) för Reviret/topplistan
-  /** Stjärn-gåvan ⭐: 'unused' = inlöst men inte satt, 'placed' = förbrukad.
-   *  SERVERGIVET fält — skrivs enbart av Cloud-funktionerna redeemStarGift/
-   *  placeStar (reglerna blockerar klientskrivning). */
+  /** Stjärn-gåvan ⭐: LEGACY-spegel av starsAvailable ('unused' = har minst en
+   *  oplacerad, 'placed' = alla satta). Läs starsAvailable i stället — det här
+   *  fältet finns kvar för gamla dokument. SERVERGIVET — skrivs enbart av
+   *  Cloud-funktionerna redeemStarGift/placeStar (reglerna blockerar
+   *  klientskrivning). */
   starGift?: 'unused' | 'placed';
-  /** Eventet stjärnan sitter på (satt när starGift === 'placed'). */
+  /** Antal stjärnor kvar att sätta. Spärren är per kod sedan 22/8: varje
+   *  kampanjkod ger en stjärna per konto, och de staplas. SERVERGIVET. */
+  starsAvailable?: number;
+  /** Koder kontot redan löst in — spärrlistan. SERVERGIVET. */
+  starGiftCodes?: string[];
+  /** Senast stjärnmärkta eventet. */
   starEventId?: string;
   /** Användarens stad (för stadssegmenterade utskick). city = visningsnamn,
    *  citySlug = slug ur CITIES (cityUtils). */
