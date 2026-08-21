@@ -1367,6 +1367,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const handleSwipeOut = (direction: 'left' | 'right') => {
         if (!selectedEvent) return;
 
+        // Svep höger = SPARA, och gilla kräver konto sedan 22/8. Utloggad:
+        // låt onSaveEvent öppna inloggningsmodalen (den äger gaten) men snäpp
+        // TILLBAKA kortet — flög det ut här hade eventet försvunnit ur leken
+        // utan att ha sparats, och man landat i modalen på ett tomt kort.
+        if (direction === 'right' && !currentUserUid) {
+            onSaveEvent(selectedEvent.id);
+            updateDragX(0);
+            return;
+        }
+
         // Animate off screen
         setExitX(direction === 'right' ? window.innerWidth : -window.innerWidth);
 

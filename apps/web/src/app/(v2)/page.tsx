@@ -373,7 +373,7 @@ export default function HomePage() {
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
-    // Panel med sparade event (hjärtknappen i navbaren).
+    // Panel med sparade event (öppnas från Sparade-raden i profilpanelen).
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
@@ -1505,6 +1505,11 @@ export default function HomePage() {
     }, [user]);
 
     const handleSaveEvent = (eventId: string) => {
+        // Gilla kräver konto (Josef 22/8). Navbar-hjärtat är borttaget, så en
+        // utloggad gillning hade landat i en localStorage-låda utan väg
+        // tillbaka — Sparat-panelen nås numera bara från profilpanelen.
+        // Gäller ALLA vägar in hit: hjärtat på kortet OCH svep höger (SPARA).
+        if (!user) { openLogin('Logga in för att gilla event'); return; }
         setSavedEventIds(prev => {
             const next = new Set(prev);
             next.add(eventId);
@@ -1905,11 +1910,6 @@ export default function HomePage() {
     useEffect(() => {
         if (searchQuery.trim()) { setSavedPanelOpen(false); setProfilePanelOpen(false); }
     }, [searchQuery]);
-    const handleToggleSaved = useCallback(() => {
-        setSavedPanelOpen(o => !o);
-        setProfilePanelOpen(false);
-        setSearchQuery('');
-    }, []);
     const handleToggleProfile = useCallback(() => {
         setProfilePanelOpen(o => !o);
         setSavedPanelOpen(false);
@@ -2483,8 +2483,6 @@ export default function HomePage() {
                 closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                savedCount={activeSavedCount}
-                onToggleSaved={handleToggleSaved}
                 plusHint={plusHint}
             />
             )}
@@ -2730,7 +2728,7 @@ export default function HomePage() {
                 onPickCity={handlePickSearchCity}
             />
 
-            {/* 1d. Sparade event — hjärtknappen i navbaren */}
+            {/* 1d. Sparade event — öppnas från profilpanelens Sparade-rad */}
             <SavedPanel
                 open={savedPanelOpen}
                 events={events}

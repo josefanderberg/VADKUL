@@ -1,11 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
+import { useAuth } from '@/context/AuthContext';
+
+// Inloggningsmodalen (samma som kartans) — laddas först när någon utloggad
+// trycker på ett hjärta. Stadssidorna är SEO-ytor och ska inte bära
+// registreringsformuläret i sitt förstabundle.
+const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: false });
 
 // Klientdelen av stads-/kategorisidornas eventsektion. Filterraden ligger
 // ÖVERST och styr allt under den (kategorichipsen och daglistan).
@@ -24,7 +31,8 @@ import { useDayFilter } from './dayFilter';
 //    listan (crawlbar) och är deterministisk (ingen hydreringsmiss).
 //  - HJÄRTAN: varje rad har en spara-knapp längst till höger. Samma
 //    localStorage-nyckel som kartan ('vadkul_saved_events') — sparade event
-//    dyker upp i kartans Sparat-panel.
+//    dyker upp under Sparade i profilen. Gilla KRÄVER konto (22/8): utloggad
+//    öppnar hjärtat inloggningsmodalen i stället för att spara.
 // Servern (EventDayList) har förbyggt raderna till rena strängar; varje listad
 // dag innehåller ALLA sina event. Default-filtret är 'Alla', och dag-
 // filtreringen slår till först EFTER mount (nowTs) — SSR-HTML:en visar hela
@@ -246,7 +254,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
                     onClick={() => onToggleSave(e.id)}
                     aria-pressed={isSaved}
                     aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                    title={isSaved ? 'Sparat — finns under ♥ på kartan' : 'Spara eventet'}
+                    title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
                     className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow transition-colors ${
                         isSaved ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
                     }`}
@@ -275,7 +283,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
                 onClick={() => onToggleSave(e.id)}
                 aria-pressed={isSaved}
                 aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                title={isSaved ? 'Sparat — finns under ♥ på kartan' : 'Spara eventet'}
+                title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
                 className={`shrink-0 flex items-center px-3.5 rounded-r-xl transition-colors ${
                     isSaved ? 'text-rose-500' : 'text-slate-300 hover:text-rose-400'
                 }`}
@@ -304,6 +312,9 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Sparade event (hjärtan) + klockan. Båda sätts efter mount så att
     // SSR-HTML:en är deterministisk; innan dess är inget sparat/passerat.
     const [saved, setSaved] = useState<Set<string>>(new Set());
+    // Inloggningsmodalen — öppnas när en utloggad trycker på ett hjärta.
+    const { user } = useAuth();
+    const [authOpen, setAuthOpen] = useState(false);
     const [nowTs, setNowTs] = useState(0);
     // Dagar vars "har redan varit"-sektion är uppfälld.
     const [openPast, setOpenPast] = useState<Set<string>>(new Set());
@@ -323,13 +334,18 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
         startTransition(() => setNowTs(Date.now()));
     }, []);
 
-    const toggleSave = (id: string) =>
+    const toggleSave = (id: string) => {
+        // Gilla kräver konto (Josef 22/8) — samma regel som på kartan. Redan
+        // sparade rader får plockas bort utan inloggning: det är gamla poster
+        // från localStorage-tiden, och de ska gå att städa bort.
+        if (!user && !saved.has(id)) { setAuthOpen(true); return; }
         setSaved(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             try { localStorage.setItem(SAVED_KEY, JSON.stringify([...next])); } catch { /* privat läge */ }
             return next;
         });
+    };
 
     // "Har varit" = specifikt klockslag som passerade för >1 h sedan, eller —
     // för event utan klockslag (midnatt = bara datum från källan) — kl 20 sin
@@ -616,6 +632,15 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                     …och {restCount} evenemang längre fram.{' '}
                     <Link href="/" className="text-[#006AA7]">Utforska hela utbudet på kartan</Link>
                 </p>
+            )}
+
+            {/* Utloggad tryckte på ett hjärta → samma inloggning som kartan. */}
+            {authOpen && (
+                <AuthModal
+                    open
+                    reason="Logga in för att gilla event"
+                    onClose={() => setAuthOpen(false)}
+                />
             )}
         </div>
     );

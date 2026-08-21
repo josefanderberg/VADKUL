@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X, Heart } from 'lucide-react';
+import { User, MapPinPlus, Check, Search, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface FloatingNavbarProps {
@@ -21,10 +21,10 @@ interface FloatingNavbarProps {
     onLoginClick?: () => void;
     /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
     onOpenProfile?: () => void;
-    /** Antal sparade event — visas som badge på hjärtknappen. */
-    savedCount?: number;
-    /** Öppna/stäng panelen med sparade event. */
-    onToggleSaved?: () => void;
+    /* (Hjärtknappen "Sparade" låg här. BORTTAGEN 22/8, Josef: gilla-knappen
+       ska inte finnas för utloggade — och för inloggade var den redan ersatt
+       av Sparade-raden i profilpanelen, så props savedCount/onToggleSaved
+       försvann med den. Sparat-panelen öppnas numera bara därifrån.) */
     /* (Skylt-knappen och dess signsOn/onToggleSigns låg här. Borttagna 14/8 —
        Josef: "we don't need that anymore". Skapa-knappen ärvde platsen.) */
     /** Sant en kort stund efter att onboardingens actionruta flugit hem hit:
@@ -84,8 +84,6 @@ export default function FloatingNavbar({
     closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
-    savedCount = 0,
-    onToggleSaved,
     plusHint = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
@@ -172,12 +170,12 @@ export default function FloatingNavbar({
                 {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
                     höger åt kategorifiltret som då hoppar upp på den här raden
                     (CategoryFilter, samma max-w-[1400px]-container).
-                    items-start (inte center): vänsterkolumnen är två knappar hög
-                    sedan hjärtat flyttade ner under profilen — övriga kontroller
-                    ska ligga kvar i topplinjen, inte mittcentreras mot kolumnen. */}
+                    items-start (inte center): vänsterkolumnen är flera knappar
+                    hög — övriga kontroller ska ligga kvar i topplinjen, inte
+                    mittcentreras mot kolumnen. */}
                 <div className="relative flex items-start gap-2 w-full 2xl:pr-[56px]">
 
-                    {/* Vänster: profil med hjärtat (sparade) UNDER — frigör plats i
+                    {/* Vänster: profil med skapa-knappen UNDER — frigör plats i
                         topplinjen för dagväljarens bläddringspilar (6/8, Josefs
                         önskemål: allt ska få plats utan att det blir trångt). */}
                     <div className="flex flex-col items-start gap-2 shrink-0">
@@ -200,35 +198,12 @@ export default function FloatingNavbar({
                             </button>
                             <HoverLabel>{user ? 'Min profil' : 'Logga in'}</HoverLabel>
                         </div>
-                        {/* Sparade event (hjärtan) — BARA UTLOGGAD (Josef 21/8):
-                            inloggade har Sparade-raden i profilpanelen, så
-                            hjärtknappen var en dubblett för dem. Utloggade
-                            behåller den — sparade event funkar utan konto
-                            (localStorage) men profilknappen öppnar då LOGIN-
-                            modalen, inte panelen, så hjärtat är deras enda
-                            väg in i Sparat-listan. */}
-                        {onToggleSaved && !user && (
-                            <div className="flex items-center gap-2 pointer-events-none">
-                                <button
-                                    type="button"
-                                    onClick={onToggleSaved}
-                                    aria-label="Sparade event"
-                                    className="peer pointer-events-auto relative bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0"
-                                >
-                                    <Heart
-                                        size={19}
-                                        className="text-rose-500"
-                                        fill={savedCount > 0 ? 'currentColor' : 'none'}
-                                    />
-                                    {savedCount > 0 && (
-                                        <span className="absolute -top-1.5 -right-1.5 bg-[#006AA7] text-white text-[10px] font-black tabular-nums min-w-[18px] h-[18px] px-1 rounded-full border-2 border-white flex items-center justify-center leading-none">
-                                            {savedCount > 99 ? '99+' : savedCount}
-                                        </span>
-                                    )}
-                                </button>
-                                <HoverLabel>Sparade</HoverLabel>
-                            </div>
-                        )}
+                        {/* (Hjärtknappen "Sparade" satt HÄR, under profilen.
+                            BORTTAGEN 22/8 på ägarbeslut — lägg inte tillbaka
+                            den. Gilla kräver numera konto: kortets hjärta
+                            öppnar inloggningen för utloggade, och den som är
+                            inloggad når listan via Sparade-raden i
+                            profilpanelen.) */}
                         {/* Skapa/tipsa — kartnål-med-plus. Bor SEDAN 14/8 här nere
                             i vänsterkolumnen, på skylt-knappens gamla plats (den
                             är borttagen), och bär dess formspråk: blå gradient,
