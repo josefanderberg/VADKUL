@@ -1,6 +1,6 @@
-# Gruppinlägg 22/8 2026 — Gnosjö, Eslöv, Boden
+# Gruppinlägg 22/8 2026 — Gnosjö, Eslöv, Boden, Sävsjö
 
-Tre utkast till "Vad händer i …"-grupperna, i **två varianter var**:
+Fyra utkast till "Vad händer i …"-grupperna, i **två varianter var**:
 
 - **V1 — länk i inlägget.** För grupper med förhandsgodkännande (man hinner
   inte kommentera innan inlägget släpps) och för grupper som tillåter länkar.
@@ -13,11 +13,11 @@ Samma stad, samma helg → **posta bara en av varianterna per grupp.** Har en or
 flera grupper: byt även ut ett par eventrader mellan dem (identisk copy-paste
 flaggas).
 
-**Status: utkast klart, EJ postat.** Ingen av de tre orterna finns i
+**Status: utkast klart, EJ postat.** Ingen av de fyra orterna finns i
 `facebook-grupplista.md` ännu — lägg till raden när du hittat gruppen du postar
 i, och fyll i `datum · metod · utfall` först när inlägget bevisligen ligger uppe.
 
-Alla tre orterna saknar egen stadssida (`cityData.ts` har 45 orter) → **länken
+Alla fyra orterna saknar egen stadssida (`cityData.ts` har 45 orter) → **länken
 går till startsidan** i samtliga varianter.
 
 Eventen är hämtade ur aggregaten i `apps/web/public/` (`updatedAt` 2026-08-20
@@ -225,6 +225,72 @@ kvällar och helger, så säg till om något Bodenevent saknas så lägger jag i
 
 ---
 
+## 4. Sävsjö
+
+Tunnaste orten i omgången: 49 event inom tre mil på tio dagar, och nästan allt
+är kyrkans och PRO:s veckorutiner. Radien är därför **40 km** — Vetlanda,
+Nässjö, Lammhult, Forserum och Skillingaryd är med, och inlägget säger
+"med omnejd" redan i öppnaren så ingen känner sig lurad.
+
+### V1 — länk i inlägget
+
+```text
+Vad händer i Sävsjö med omnejd? Mer än man tror, faktiskt 👇
+
+I helgen:
+🎵 Larz-Kristerz — danskväll på Vallsjöbaden, mat och dryck finns (lördag kl 19–23, 300 kr)
+🚗 Åtorpets biluppvisning — samling kl 16 vid Arken Zoo i Vetlanda, kl 18 rullar bilarna in på torget (lördag, fri entré, alla bilar över 30 år välkomna)
+🎭 Kristina från Duvemåla, konsertversionen — Naturscenen på Ribbingsnäs säteri i Forserum (lördag kl 18 och söndag kl 15)
+🛍️ Åka/gå runt-loppis i Stensjön — boende säljer från sina tomter, karta över rundan finns (söndag kl 10–14)
+🧇 Våffelsöndag i Melaområdet — Bäckseda hembygdsförening, sångarna Men Voices gästar (söndag kl 15, gratis)
+🎤 Kyrkoturné: Tomas Andersson Wij — Bergs kyrka i Lammhult (söndag kl 18, 300 kr)
+
+Och nästa vecka:
+📚 Föreläsning: Utan folkbildning tystnar Sverige — ABF i Nässjö (måndag 24/8 kl 17.30)
+🎸 Peter Jezewski — Boppers-hits och en hyllning till Svenne Hedlund, Kulturhuset Galaxen i Sävsjö (fredag 28/8 kl 19, 350 kr)
+🎶 Önskesångernas kväll — Fridhäll i Skillingaryd (lördag 29/8 kl 19, gratis)
+🎵 Musik i parken: Real Band — Forserums hembygdspark, grillning och servering (söndag 30/8 kl 17, gratis)
+
+Allt kommer från vadkul.se — en gratis karta där det som händer samlas på ett
+ställe i stället för utspritt på tio olika sidor. Inget konto behövs för att
+titta, och jag har byggt den själv på kvällar och helger: vadkul.se
+
+Vad har jag missat i Sävsjötrakten? Tipsa i kommentarerna 👇
+```
+
+### V2 — länk i första kommentaren
+
+```text
+Vad händer i Sävsjö med omnejd? Mer än man tror, faktiskt 👇
+
+I helgen:
+🎵 Larz-Kristerz — danskväll på Vallsjöbaden, mat och dryck finns (lördag kl 19–23, 300 kr)
+🚗 Åtorpets biluppvisning — samling kl 16 vid Arken Zoo i Vetlanda, kl 18 rullar bilarna in på torget (lördag, fri entré, alla bilar över 30 år välkomna)
+🎭 Kristina från Duvemåla, konsertversionen — Naturscenen på Ribbingsnäs säteri i Forserum (lördag kl 18 och söndag kl 15)
+🛍️ Åka/gå runt-loppis i Stensjön — boende säljer från sina tomter, karta över rundan finns (söndag kl 10–14)
+🧇 Våffelsöndag i Melaområdet — Bäckseda hembygdsförening, sångarna Men Voices gästar (söndag kl 15, gratis)
+🎤 Kyrkoturné: Tomas Andersson Wij — Bergs kyrka i Lammhult (söndag kl 18, 300 kr)
+
+Och nästa vecka:
+📚 Föreläsning: Utan folkbildning tystnar Sverige — ABF i Nässjö (måndag 24/8 kl 17.30)
+🎸 Peter Jezewski — Boppers-hits och en hyllning till Svenne Hedlund, Kulturhuset Galaxen i Sävsjö (fredag 28/8 kl 19, 350 kr)
+🎶 Önskesångernas kväll — Fridhäll i Skillingaryd (lördag 29/8 kl 19, gratis)
+🎵 Musik i parken: Real Band — Forserums hembygdspark, grillning och servering (söndag 30/8 kl 17, gratis)
+
+Hela utbudet ligger på en gratis karta jag byggt — länken i första kommentaren.
+
+Vad har jag missat i Sävsjötrakten? Tipsa gärna 👇
+```
+
+**Första kommentaren (posta själv direkt efteråt):**
+
+```text
+Kartan finns här: vadkul.se — gratis och utan konto. Byggd av mig själv på
+kvällar och helger, så säg till om något i Sävsjötrakten saknas så lägger jag in det 🙏
+```
+
+---
+
 ## Om du vill kunna mäta V1 mot V2
 
 Samma länk i båda varianterna gör A/B-testet omätbart i GA4. Vill du kunna
@@ -236,6 +302,7 @@ själv — samma konvention som annonserna):
 | Gnosjö | `vadkul.se/?utm_source=facebook&utm_campaign=grupper-v03&utm_content=gnosjo-inlagg` | `vadkul.se/?utm_source=facebook&utm_campaign=grupper-v03&utm_content=gnosjo-kommentar` |
 | Eslöv | `…&utm_content=eslov-inlagg` | `…&utm_content=eslov-kommentar` |
 | Boden | `…&utm_content=boden-inlagg` | `…&utm_content=boden-kommentar` |
+| Sävsjö | `…&utm_content=savsjo-inlagg` | `…&utm_content=savsjo-kommentar` |
 
 I V2 sitter länken i en kommentar där en lång URL stör mindre — kör du bara en
 variant med UTM, kör den där.
@@ -269,7 +336,16 @@ variant med UTM, kör den där.
 - **Bilbingons beskrivning är förra omgångens** ("på lördag den 11 juli"), medan
   datumet är rätt. Tiderna i raden är tagna ur beskrivningens fasta upplägg
   (kassor 14.30, start 16) — stämmer de inte, ändra raden.
-- **Ingen av de tre orterna har stadssida**, så alla tre inläggen tappar
+- **Datumkrock på Peter Jezewski i Sävsjö:** kommunkalenderns rad
+  (savsjo.se) ligger på lördag 22/8, men Nortic-raden för samma konsert har
+  fredag 28/8 och en beskrivning som uttryckligen säger "Den 28 augusti …
+  Galaxen på Sävsjö Kulturhus". Kommunraden ser ut som samma event med fel
+  datum (beskrivningen är dessutom kommunens generiska sidfot) — inlägget
+  använder 28/8-raden. Dubbelkolla gärna innan du postar.
+- **savsjo.se-scrapen saknar beskrivningar:** alla rader därifrån har
+  kommunens generiska "den lilla kommunen på höglandet"-text i stället för
+  eventets egen.
+- **Ingen av de fyra orterna har stadssida**, så alla tre inläggen tappar
   djuplänken. Gnosjö (~4 500 inv.) och Boden är gränsfall, men Eslöv med
   ~20 000 invånare och ett eget välfyllt utbud ser ut att förtjäna en plats i
   `cityData.ts`.
