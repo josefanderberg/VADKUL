@@ -25,6 +25,7 @@ import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
 import { decodeHtmlEntities } from '../../utils/text';
+import { findFirstDateInText } from '../../utils/swedishDate';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -798,6 +799,17 @@ export const sitevisionEngine = async (
                 container = $(timeEl).closest('div[class*="event"], div[class*="item"], div[class*="card"]').first();
             }
             if (container.length === 0) container = $(timeEl).parent().parent();
+            // Containern måste rymma en TITEL-länk — annars har vi stannat i en
+            // bildwrapper (askersund.se: <time> i .con-event-puff__image-wrapper,
+            // rubriken i syster-wrappern). Klättra uppåt tills en länk finns,
+            // men aldrig förbi ett element som rymmer fler <time> (= hela listan).
+            if (container.find('a[href]').length === 0) {
+                let up = container.parent();
+                for (let depth = 0; depth < 5 && up.length > 0; depth++, up = up.parent()) {
+                    if (up.find('time[datetime]').length > 1) break;
+                    if (up.find('a[href]').length > 0) { container = up; break; }
+                }
+            }
 
             // Hitta titel-länk: prova båda mönster
             //   1. <a><h3>title</h3></a>   (Malmö-stil)
@@ -819,11 +831,29 @@ export const sitevisionEngine = async (
                 title = container.find('h1, h2, h3, h4').first().text().trim();
                 if (title && linkEl.length === 0) linkEl = container.find('a').first();
             }
+            // Kort UTAN rubriktagg (jarfalla.se/evenemang: <a href title>Titel</a>
+            // + <small><time>): första länken med text, eller dess title-attribut.
+            // Lät 121 Järfälla-event och 55 Askersund-event falla bort (2026-08-23).
+            if (!title) {
+                const textLink = container.find('a[href]').filter((_, a) => {
+                    const t = ($(a).text().trim() || $(a).attr('title') || '').trim();
+                    return t.length >= 3 && !/^(läs mer|visa|mer info|boka|anmäl)/i.test(t);
+                }).first();
+                if (textLink.length > 0) {
+                    linkEl = textLink;
+                    // Länktexten kan rymma datumspans (ydre.se: "26 augusti 2026Lunchwebbinarium")
+                    // — ta bort time/datum-barn innan texten läses; title-attributet är renast.
+                    const clone = textLink.clone();
+                    clone.find('time, [class*="date"], [class*="datum"], [class*="day"], [class*="month"]').remove();
+                    title = (textLink.attr('title') || clone.text() || '').replace(/\s+/g, ' ').trim();
+                }
+            }
 
             const href = linkEl.attr('href');
             const eventUrl = makeAbsoluteUrl(href, url);
 
             if (!title || title.length < 2 || !eventUrl) continue;
+            if (/^(läs mer|visa alla|visa mer|mer info|boka|anmäl dig|till evenemanget)\.?$/i.test(title)) continue;   // länktext, inte titel
             if (config.pathFilter && !eventUrl.includes(config.pathFilter)) continue;
             if (seenUrls.has(eventUrl)) continue;
             seenUrls.add(eventUrl);
@@ -871,10 +901,30 @@ export const sitevisionEngine = async (
                 let abs: string;
                 try { abs = href.startsWith('http') ? href : new URL(href, url).toString(); } catch { return; }
                 if (seenUrls.has(abs)) return;
-                const startDate = new Date(m[1]);
+                let startDate = new Date(m[1]);
+                // Sluggens datum är ofta PUBLICERINGSdatum (varberg.se: /2026-04-09-
+                // teach-me… visas 30 maj–23 aug). Finns ett svenskt datum i kortets
+                // egen text vinner det. Splittade intervall "30 - 23 / maj - augusti"
+                // normaliseras till "30 maj - 23 augusti" först.
+                const card = $(a).closest('li, article, [class*="item"], [class*="card"]').first();
+                if (card.length > 0) {
+                    // html→text med mellanslag mellan element: annars klistras
+                    // spans ihop ("26 augusti 2026" + "26 augusti 2026" → år 202626).
+                    const cardText = (card.html() ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+                        .replace(/(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([a-zåäö]+)\s*[-–]\s*([a-zåäö]+)/i, '$1 $3 - $2 $4')
+                        .trim();
+                    const fromText = findFirstDateInText(cardText, new Date());
+                    if (fromText) startDate = fromText;
+                }
                 if (isNaN(startDate.getTime())) return;
-                const title = $(a).text().replace(/\s+/g, ' ').trim();
+                // Länken kan omsluta hela kortet (ydre.se: datumspans + <h2>Titel</h2>):
+                // rubrik inne i länken vinner, annars title-attribut, annars text utan datumbarn.
+                const innerHeading = $(a).find('h1, h2, h3, h4').first();
+                const aClone = $(a).clone();
+                aClone.find('time, [class*="date"], [class*="datum"], [class*="day"], [class*="month"], .env-assistive-text, [aria-hidden="true"]').remove();
+                const title = (innerHeading.length > 0 ? innerHeading.text() : ($(a).attr('title') || aClone.text())).replace(/\s+/g, ' ').trim();
                 if (title.length < 3 || title.length > 150) return;
+                if (/^(läs mer|visa alla|visa mer|mer info|boka|anmäl dig|till evenemanget)\.?$/i.test(title)) return;   // länktext, inte titel
                 seenUrls.add(abs);
                 events.push({ title, startDate, url: abs, city: config.defaultCity });
                 slugCards++;
