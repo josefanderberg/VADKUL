@@ -59,8 +59,25 @@ cd "$SCRAPER_DIR" || {
 if [ "$JOB_NAME" = "nightly" ]; then
     echo "" >> "$LOG_FILE"
     echo "── GIT PULL (rebase, autostash) ──" >> "$LOG_FILE"
+    PRE_PULL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD)"
     if git -C "$REPO_ROOT" pull --rebase --autostash origin main >> "$LOG_FILE" 2>&1; then
         echo "Git pull OK ($(git -C "$REPO_ROOT" rev-parse --short HEAD))" >> "$LOG_FILE"
+        # Nya beroenden? Kör npm install BARA när pullen ändrade package-filer —
+        # annars ligger node_modules kvar på gårdagens versioner fast locken är
+        # ny (puppeteer 25-läxan 2026-08-23: lyftet krävde manuell install på
+        # minin). Installen sker i workspace-ROTEN (scrapern resolvar därifrån).
+        # Failar den loggas det och kedjan kör vidare på gamla node_modules —
+        # gårdagens beroenden är alltid körbara.
+        if git -C "$REPO_ROOT" diff --name-only "$PRE_PULL_HEAD"..HEAD -- '*package.json' '*package-lock.json' | grep -q .; then
+            echo "── NPM INSTALL (beroenden ändrades i pullen) ──" >> "$LOG_FILE"
+            if (cd "$REPO_ROOT" && npm install --no-audit --no-fund) >> "$LOG_FILE" 2>&1; then
+                echo "npm install OK" >> "$LOG_FILE"
+            else
+                echo "⚠️ npm install misslyckades — kör vidare på gamla node_modules." >> "$LOG_FILE"
+            fi
+        else
+            echo "Inga beroendeändringar — hoppar npm install." >> "$LOG_FILE"
+        fi
     else
         git -C "$REPO_ROOT" rebase --abort >> "$LOG_FILE" 2>&1 || true
         echo "⚠️ Git pull misslyckades (konflikt?) — kör vidare på lokal kod. Synka manuellt!" >> "$LOG_FILE"
