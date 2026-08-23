@@ -16,7 +16,7 @@ import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
-import { decodeHtmlEntities } from '../utils/text';
+import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
@@ -178,10 +178,12 @@ export async function runSource(
                 result.skipped.invalid++;
                 continue;
             }
-            // Encoding-guard: WP m.fl. levererar titlar med råa entiteter
-            // ("Live &#8211; Jimmy &#038; Co") — avkoda centralt så ingen
-            // engine behöver komma ihåg det.
-            e.title = decodeHtmlEntities(e.title).trim();
+            // Central städning (normalizeEvent.ts): entiteter/taggar i titel,
+            // beskrivning och platsnamn, FB-sidfot som beskrivning, arrangörs-
+            // prefix "11/9 …" och " | VENUE"-suffix i titlar, flerradiga
+            // platsnamn → venue + address. Revisionen 2026-08-20 visade att
+            // per-engine-städning missade på 4 ställen — en plats, för alla.
+            normalizeRawEvent(e, source.hostName);
             if (e.startDate < windowStart || e.startDate >= windowEnd) {
                 result.skipped.outsideWindow++;
                 continue;
