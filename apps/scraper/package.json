@@ -90,7 +90,7 @@
     "firebase-admin": "^13.6.1",
     "geofire-common": "^6.0.0",
     "probe-image-size": "^7.3.0",
-    "puppeteer": "^24.43.0"
+    "puppeteer": "^25.8.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
