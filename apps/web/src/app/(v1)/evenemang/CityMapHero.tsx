@@ -6,10 +6,11 @@ import CityMapHeroCanvas, { type HeroLiveEvent } from './CityMapHeroCanvas';
 import { mapHref, DAYS_LISTED } from './EventList';
 
 // Kart-heron överst på stads-/kategorisidorna: en äkta, inzoomad kartbit över
-// staden med riktiga VADKUL-brickor på riktiga event-positioner. Sedan 18/8 är
-// den INTERAKTIV (CityMapHeroCanvas): zoom/panorering, dagchips som delar
-// filter med daglistan, och klick på brickor som leder till eventet i listan
-// på samma sida. CTA-pillen längst ner är kvar som länken till stora kartan
+// staden med riktiga VADKUL-brickor på riktiga event-positioner. Sedan 24/8
+// PASSIV men klickbar (CityMapHeroCanvas): inga kartgester — klick på
+// kartbotten öppnar stora kartan över staden — men dagchipsen delar filter
+// med daglistan och brick-klick leder till eventet i listan på samma sida.
+// CTA-pillen längst ner är kvar som den tydliga länken till stora kartan
 // (?plats=lat,lng,zoom — läses i V2Maps init). Poängen är densamma: sidorna
 // ska kännas som sajten (kartan ÄR produkten), inte som ett textindex.
 //
@@ -193,15 +194,16 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 />
             ))}
 
-            {/* Riktiga, INTERAKTIVA kartan i huvudkartans stil, tonas in ovanpå
-                kaklen. De statiska SSR-brickorna skickas med som children:
-                samma nål-droppe som kartan (tre runda hörn + spets nedåt via
-                rotate) med kategori-gradienten, poppar in staggrat och tonas
-                bort när de levande markörerna tagit över. Måtten speglar
-                GL-brickans (makeBrickaImageData): hörnradien är HALVA kroppen
-                — droppen ska se rund ut med ett enda spetsigt hörn — kanten är
-                svagt vit och emojin ~0,6 av kroppen. */}
-            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live}>
+            {/* Riktiga kartan (passiv men klickbar — kartbotten-klick öppnar
+                stora kartan via bigMapHref) i huvudkartans stil, tonas in
+                ovanpå kaklen. De statiska SSR-brickorna skickas med som
+                children men visas BARA i GL-fallerade reservläget: samma
+                nål-droppe som kartan (tre runda hörn + spets nedåt via rotate)
+                med kategori-gradienten. Måtten speglar GL-brickans
+                (makeBrickaImageData): hörnradien är HALVA kroppen — droppen
+                ska se rund ut med ett enda spetsigt hörn — kanten är svagt
+                vit och emojin ~0,6 av kroppen. */}
+            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)}>
                 {bricks.map((b, i) => (
                     <span
                         key={b.id}

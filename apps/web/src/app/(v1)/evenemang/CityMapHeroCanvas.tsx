@@ -9,33 +9,34 @@ import { NO_TIME_PAST_HOUR, sourceGradientCss, BRICKA_DARK_BG } from '@/componen
 import { PERIODS, periodKeys } from './periods';
 import { useDayFilter } from './dayFilter';
 
-// Den RIKTIGA VADKUL-kartan i stads-heron — numera INTERAKTIV (Josef 18/8:
-// "kan vi inte bara ha den som den riktiga kartan"). Man kan zooma/panorera,
-// dagchipsen uppe till vänster delar filter med daglistan under (dayFilter),
-// och klick på en bricka öppnar en popup vars rader scrollar till eventet i
-// listan PÅ SAMMA SIDA (requestFocus) — man skickas inte längre iväg till
-// stora kartan för att titta på ett event man redan ser framför sig.
+// Den RIKTIGA VADKUL-kartan i stads-heron — PASSIV men klickbar (Josef 24/8).
+// 18/8-varianten var fullt interaktiv (zoom/panorering, cooperativeGestures),
+// men gav två problem: de statiska byggtids-brickorna syntes på gröna plattan
+// innan kartan laddat och "stämde inte överens" med de levande markörerna som
+// tog över, och panorering i en liten hero-yta tillförde inget. Nu gäller:
+// KARTAN FÖRST, EVENTEN SEN — inga brickor förrän GL-kartan är uppe — och
+// inga kartgester alls: klick på kartbotten (miss på en bricka) öppnar STORA
+// kartan centrerad på staden (bigMapHref). Dagchipsen delar filter med
+// daglistan (dayFilter) och brick-klick öppnar popupen vars rader scrollar
+// till eventet i listan (requestFocus), precis som förr.
 //
 // Lagren (i hero-containern i CityMapHero):
 //   1. Serverrenderade Carto-rasterkakel — reservväg om GL fallerar.
 //   2. Landfärgs-plattan täcker kaklen redan i server-HTML:en (inget
 //      Voyager-blink) och släpps fram bara om GL inte går att starta.
 //   3. Riktiga MapLibre-kartan i "nöjesfälts"-stilen tonas in när den laddat.
-//   4. De statiska SSR-brickorna (children) ligger ovanpå tills GL är klar —
-//      då tonas de bort och ersätts av levande DOM-markörer som följer kartan.
+//   4. De statiska SSR-brickorna (children) visas BARA i GL-fallerade
+//      reservläget (ovanpå rasterkaklen) — aldrig före den riktiga kartan.
 //
-// GESTER: cooperativeGestures — en-finger-drag ska SCROLLA SIDAN, inte kapa
-// den till kartpanorering (två fingrar/Ctrl+scroll styr kartan; hjälptexten
-// är försvenskad via locale). CSS:en för det (och för markörerna) ligger
-// scopat under .city-hero-map i globals.css — maplibre-gl.css importeras
-// fortfarande INTE (render-blockerande på en sida som ska vara lätt).
+// CSS:en för markörerna ligger scopad under .city-hero-map i globals.css —
+// maplibre-gl.css importeras fortfarande INTE (render-blockerande på en sida
+// som ska vara lätt).
 //
 // MARKÖRER: alla stadens kommande event (filtrerade på valt dagfilter, med
 // kartans delade "har varit"-gräns NO_TIME_PAST_HOUR) grupperade per koordinat
 // — samma gruppnyckel-idé som stora kartan. DOM-markörer saknar GL:ens
-// kollisionshantering, så en greedy min-avstånds-gallring i SKÄRMPIXLAR vid
-// aktuell zoom körs om vid varje zoomend: utzoomad syns de tidigaste eventen
-// glest, inzoomad tätnar det. Tidigast-först = prioritetsordningen.
+// kollisionshantering, så en greedy min-avstånds-gallring i SKÄRMPIXLAR görs
+// vid den fasta hero-zoomen. Tidigast-först = prioritetsordningen.
 
 const HOUR_MS = 3_600_000;
 /** Min-avstånd i skärm-px mellan markörer + tak på antal (DOM-markörer är
@@ -112,14 +113,17 @@ const popupDayFmt = new Intl.DateTimeFormat('sv-SE', {
 type MapLibreMap = import('maplibre-gl').Map;
 type MapLibreMarker = import('maplibre-gl').Marker;
 
-export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }: {
+export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref, children }: {
     lat: number;
     lng: number;
     /** MapLibre-zoom, INTE kakel-zoom — se HERO_GL_ZOOM i CityMapHero. */
     zoom: number;
     /** Stadens kommande event, tidssorterade (byggda i CityMapHero). */
     markers: HeroLiveEvent[];
-    /** De statiska SSR-brickorna — tonas bort när de levande tagit över. */
+    /** Stora kartan centrerad på staden (cityMapHref) — dit går klick på
+     *  kartbotten när ingen popup är öppen. */
+    bigMapHref: string;
+    /** De statiska SSR-brickorna — visas bara i GL-fallerade reservläget. */
     children?: ReactNode;
 }) {
     const holderRef = useRef<HTMLDivElement>(null);
@@ -137,13 +141,18 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }:
     const { sel, setSel, hours, requestFocus } = useDayFilter();
     const filterKey = JSON.stringify([sel, hours]);
 
+    // Kartklick-lyssnaren binds en gång (utanför React) men måste veta om en
+    // popup är öppen JUST NU: öppen popup → klicket stänger den; annars →
+    // vidare till stora kartan. Spegel-ref i stället för stale closure.
+    const popupOpenRef = useRef(false);
+    useEffect(() => { popupOpenRef.current = popup !== null; });
+
     const mapRef = useRef<MapLibreMap | null>(null);
     const markerCtorRef = useRef<(new (o: object) => MapLibreMarker) | null>(null);
     const liveMarkersRef = useRef<MapLibreMarker[]>([]);
 
-    /** Riv och bygg om markörerna för aktuellt filter + aktuell zoom.
-     *  Läser sel/hours/markers ur SIN renders closure — zoomend-lyssnaren
-     *  (utanför React) når alltid färsk version via rebuildRef nedan. */
+    /** Riv och bygg om markörerna för aktuellt filter (zoomen är fast —
+     *  kartan är passiv). Läser sel/hours/markers ur sin renders closure. */
     const rebuild = () => {
         const map = mapRef.current;
         const Marker = markerCtorRef.current;
@@ -189,11 +198,6 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }:
             i++;
         }
     };
-    // Synkas EFTER varje render (ref-skrivning under render är förbjudet) —
-    // zoomend-lyssnaren i init-effekten pekar alltid på färskaste closuren.
-    const rebuildRef = useRef<() => void>(() => {});
-    useEffect(() => { rebuildRef.current = rebuild; });
-
     useEffect(() => {
         const el = holderRef.current;
         if (!el) return;
@@ -212,30 +216,25 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }:
                     style,
                     center: [lng, lat],
                     zoom,
-                    minZoom: zoom - 2,
-                    maxZoom: 17,
-                    dragRotate: false,
-                    pitchWithRotate: false,
-                    touchPitch: false,
-                    // En-finger-drag ska scrolla SIDAN — kartan styrs med två
-                    // fingrar (mobil) resp. Ctrl/⌘+scroll (desktop).
-                    cooperativeGestures: true,
-                    locale: {
-                        'CooperativeGesturesHandler.WindowsHelpText': 'Ctrl + scrolla för att zooma kartan',
-                        'CooperativeGesturesHandler.MacHelpText': '⌘ + scrolla för att zooma kartan',
-                        'CooperativeGesturesHandler.MobileHelpText': 'Dra med två fingrar för att flytta kartan',
-                    },
                     // Heron har redan sin egen © OpenStreetMap © CARTO-rad.
                     attributionControl: false,
                 });
-                m.touchZoomRotate.disableRotation();
+                // PASSIV karta: inga gester alls — en-finger-drag scrollar
+                // sidan, scroll zoomar inte. (interactive:false duger inte:
+                // då slutar även 'click'-eventen komma.) Handlers stängs av
+                // en och en i stället.
+                for (const h of [m.dragPan, m.dragRotate, m.scrollZoom, m.doubleClickZoom, m.touchZoomRotate, m.touchPitch, m.keyboard, m.boxZoom]) h.disable();
                 mapRef.current = m;
                 markerCtorRef.current = Marker as unknown as new (o: object) => MapLibreMarker;
                 m.on('load', () => { if (!cancelled) setReady(true); });
-                // Tätheten är zoomberoende — gallra om efter varje zoom.
-                m.on('zoomend', () => { if (!cancelled) rebuildRef.current(); });
-                // Klick på kartbotten (inte på en markör) stänger popupen.
-                m.on('click', () => { if (!cancelled) setPopup(null); });
+                // Klick på kartbotten (inte på en markör): öppen popup stängs;
+                // annars öppnas STORA kartan över staden — "missar man en
+                // bricka ska man se eventen på riktiga kartan" (Josef 24/8).
+                m.on('click', () => {
+                    if (cancelled) return;
+                    if (popupOpenRef.current) { setPopup(null); return; }
+                    window.location.assign(bigMapHref);
+                });
             } catch {
                 // Ingen WebGL eller ingen stil — göm plattan så de statiska
                 // kaklen under blir synliga igen.
@@ -264,7 +263,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }:
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [lat, lng, zoom]);
+    }, [lat, lng, zoom, bigMapHref]);
 
     // Filterbyte (eller GL-klart) → bygg om markörerna. Ren extern synk —
     // en popup för ett inaktuellt urval döljs av filternyckeln i renderingen.
@@ -294,12 +293,14 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, children }:
                     ready ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
             />
-            {/* Statiska SSR-brickorna: syns tills de levande markörerna tagit
-                över, sedan tonas de bort. */}
+            {/* Statiska SSR-brickorna: BARA i reservläget (GL fallerade →
+                rasterkakel + byggtids-brickor). Annars gäller kartan-först-
+                eventen-sen: inga brickor förrän de levande markörerna poppar
+                på den riktiga kartan. */}
             <div
                 aria-hidden
                 className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                    ready ? 'opacity-0' : 'opacity-100'
+                    failed ? 'opacity-100' : 'opacity-0'
                 }`}
             >
                 {children}
