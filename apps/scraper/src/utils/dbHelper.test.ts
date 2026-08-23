@@ -47,6 +47,10 @@ vi.mock('./sqliteHelper', () => ({
     getSqliteEvent: vi.fn(() => null),
     getSqlitePath: vi.fn(() => ':memory:'),
     setEventTime: vi.fn(),
+    setEventCoords: vi.fn(),
+    setEventLocationName: vi.fn(),
+    // Ingen sync-cursor i testerna → spegeln är INTE auktoritativ → Firestore-fallback testas som förut.
+    getSyncMeta: vi.fn(() => null),
 }));
 
 import { addEventsBatch, addEventToDb, getEventFromDb, eventExistsInDb, chunkArray } from './dbHelper';

@@ -3502,8 +3502,8 @@ export const SOURCES: Source[] = [
             maxUrls: 300,
         },
         updateFrequency: 'every-3d',
-        status: 'experimental',
-        notes: 'Probe 2026-06-22: event-sitemap.xml med 221 /event/-URLs. Alternativ biograf i Haga (film + samtal/konsert).',
+        status: 'dead',
+        notes: 'Probe 2026-06-22: event-sitemap.xml med 221 /event/-URLs. DÖD 2026-08-20: filmsidorna saknar visningstider (laddas via JS) — text-läget tog menyposten "Smygöppning helgen 4–6 september" som datum för 152 filmer; alla dolda. Kräver egen visningsprogram-motor om den ska återupplivas.',
         lastVerified: '2026-06-22',
     },
     {

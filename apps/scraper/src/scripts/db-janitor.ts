@@ -23,7 +23,7 @@
 import { db } from '../config/firebase';
 import * as admin from 'firebase-admin';
 
-const KEEP_DAYS = 7;
+const KEEP_DAYS = 2;   // markörer är meningslösa efter eventstart (1h-dedupfönster); 7 gav en vecka falska kostnadsvakt-larm
 const PAGE_SIZE = 1000;
 
 interface Rule { collection: string; field: string }

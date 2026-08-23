@@ -288,6 +288,15 @@ export function isForeignAddress(address: string): boolean {
     const lower = address.toLowerCase();
     const foreignIndicators = [
         // Engelsktalande länder
+        // SVENSKA landsnamn (2026-08-23: "Pontefract, Storbritannien" geokodades
+        // till Stockholms mittpunkt — stads-skanningen tog landsnamnet som ort).
+        // Grannländerna (Danmark/Norge/Finland) medvetet INTE med, se nedan.
+        'storbritannien', 'tyskland', 'frankrike', 'spanien', 'italien', 'portugal',
+        'nederländerna', 'holland', 'belgien', 'österrike', 'schweiz', 'polen', 'tjeckien',
+        'estland', 'lettland', 'litauen', 'ryssland', 'ukraina', 'grekland', 'turkiet',
+        'irland', 'skottland', 'wales', 'kanada', 'australien', 'nya zeeland', 'brasilien',
+        'mexiko', 'argentina', 'thailand', 'indien', 'kina', 'japan', 'sydkorea', 'israel',
+        'egypten', 'marocko', 'sydafrika', 'förenade arabemiraten', 'dubai', 'island',
         'usa', 'united states', 'new zealand', 'united kingdom', 'great britain', 'england',
         'australia', 'canada', 'germany', 'deutschland', 'france', 'spain', 'italy',
         'new york', 'london', 'auckland', 'california', 'florida', 'texas',

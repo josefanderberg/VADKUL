@@ -11,7 +11,8 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventsBatch, eventExistsInDb, refreshEventTime } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace } from '../utils/dbHelper';
+import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
@@ -126,7 +127,8 @@ export async function runSource(
     const { windowStart, windowEnd } = buildWindow(source.windowDays ?? DEFAULT_WINDOW_DAYS);
     // Var 4:e körning per källa är en full-refresh: skip-känt-optimeringen
     // stängs av så ändrade/flyttade event på kända URL:er fångas upp.
-    const refreshKnown = !opts.dryRun && isRefreshRun(source);
+    // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
+    const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1');
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
@@ -198,6 +200,30 @@ export async function runSource(
                     if (changed) {
                         result.updated++;
                         ctx.log(`  🔄 tid uppdaterad: ${e.title.slice(0, 50)} → ${e.startDate.toISOString()}`);
+                    }
+                    // Plats: källan ger nu en venue medan det sparade bara var
+                    // stads-fallbacken (defaultCity) → geokoda och flytta.
+                    const storedRow = getSqliteEvent(e.url);
+                    const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
+                    const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
+                    const cityLower = (e.city ?? '').trim().toLowerCase();
+                    if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
+                        const q = `${e.venueName}, ${e.city}`;
+                        // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
+                        let hit: [number, number] | null = e.coords ?? null;
+                        for (const cand of (e.geocodeCandidates ?? [])) {
+                            if (hit) break;
+                            hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
+                        }
+                        if (!hit) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
+                        // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
+                        // geo-refine-klustren tar det vidare) — men märk som overifierat.
+                        let verified = true;
+                        if (!hit && storedUngeocoded) { hit = await geocodeVenueSweden(e.city!); verified = false; }
+                        if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified)) {
+                            result.updated++;
+                            ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
+                        }
                     }
                 }
                 result.skipped.duplicate++;

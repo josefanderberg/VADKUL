@@ -545,6 +545,11 @@ export function bumpTimeFixAttempts(url: string): void {
     bumpAttemptsStmt.run(url);
 }
 
+const setLocStmt = sqlite.prepare('UPDATE link_events SET locationName = ?, updatedAt = ? WHERE url = ?');
+export function setEventLocationName(url: string, locationName: string): void {
+    setLocStmt.run(locationName, new Date().toISOString(), url);
+}
+
 const bumpGeoRefineStmt = sqlite.prepare(
     'UPDATE link_events SET geoRefineAttempts = COALESCE(geoRefineAttempts, 0) + 1 WHERE url = ?',
 );

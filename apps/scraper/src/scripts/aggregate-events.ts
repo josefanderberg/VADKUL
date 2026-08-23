@@ -1,3 +1,37 @@
+/**
+ * Publik länk = rå URL minus FRÄMMANDE affiliate-parametrar. Ticketmaster-
+ * skrapern klistrade 31 maj–28 jul ?c=8469859&ac=1 på länkarna — koden är
+ * inte vår (Impact-publisher 7528311) och att servera den är precis vad
+ * TM/Impact-compliance underkänner vid programansökan. URL:en i DB rörs
+ * inte (primärnyckel + share-slug-bas); städningen sker här i utkanten.
+ * När vårt Impact-program är godkänt: lägg den RIKTIGA spårningslänken här.
+ */
+const FOREIGN_AFFILIATE_PARAMS: Record<string, string[]> = {
+    'ticketmaster.': ['c', 'ac'],
+    'universe.com': ['c', 'ac', 'ref'],
+};
+/** Impact Radius-/affiliate-redirectdomäner: länken bär destinationen i ?u= */
+const AFFILIATE_REDIRECT_HOST = /\.(evyy\.net|sjv\.io|pxf\.io|7eer\.net|ojrq\.net|i\d+\.net|prf\.hn|go2cloud\.org)$/i;
+export function publicUrl(raw: string): string {
+    try {
+        let u = new URL(raw);
+        // Någon ANNANS Impact-redirect ("ticketmaster.evyy.net/c/8469859/…?u=…"):
+        // packa upp till den riktiga sidan — vi ska aldrig skicka trafik genom
+        // främmande spårningslänkar, oavsett vems.
+        if (AFFILIATE_REDIRECT_HOST.test(u.hostname)) {
+            const inner = u.searchParams.get('u') || u.searchParams.get('url');
+            if (inner && /^https?:\/\//.test(inner)) u = new URL(inner);
+        }
+        for (const [hostPart, params] of Object.entries(FOREIGN_AFFILIATE_PARAMS)) {
+            if (!u.hostname.includes(hostPart)) continue;
+            if (u.searchParams.get('c') !== '8469859' && !u.searchParams.has('ref')) continue;
+            params.forEach((k) => u.searchParams.delete(k));
+        }
+        if (u.searchParams.get('utm_medium') === 'affiliate') u.searchParams.delete('utm_medium');
+        return u.toString().replace(/\?$/, '');
+    } catch { return raw; }
+}
+
 import { db } from '../config/firebase';
 import { sqlite } from '../utils/sqliteHelper';
 import * as path from 'path';
@@ -118,7 +152,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             price: row.price || '',
             isLocationVerified: row.isLocationVerified === 1,
             isHostVerified: row.isHostVerified === 1,
-            url: row.url,
+            url: publicUrl(row.url),
             emoji: row.emoji || undefined
         });
 

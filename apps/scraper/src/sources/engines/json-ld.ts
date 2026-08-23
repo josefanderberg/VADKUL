@@ -239,6 +239,14 @@ function pickUrl(node: any): string {
  * påverkas inte.
  */
 function resolveSchedule(node: any): { start?: string; end?: string } {
+    // startDate som ARRAY (storateatern.se: alla speldatum i en lista) — behandla
+    // som schema och välj nästa kommande. Tidigare blev `new Date(array)` Invalid
+    // → text-fallback gav 21 konserter samma dag utan klockslag (2026-08-20).
+    if (Array.isArray(node.startDate)) {
+        const ends: any[] = Array.isArray(node.endDate) ? node.endDate : [];
+        const occurrences = node.startDate.map((d: any, i: number) => ({ startDate: d, endDate: ends[i] }));
+        return resolveSchedule({ eventSchedule: occurrences });
+    }
     if (node.startDate) return { start: node.startDate, end: node.endDate };
     const sched = node.eventSchedule;
     if (!sched) return {};
