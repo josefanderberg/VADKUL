@@ -30,10 +30,18 @@ const BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
 // inte den här parametern.
 function cleanEventUrl(rawUrl: string): string {
     try {
-        const u = new URL(rawUrl);
-        u.searchParams.delete('c');
-        u.searchParams.delete('ac');
-        return u.toString();
+        let u = new URL(rawUrl);
+        // API:t levererar ibland hela Impact-REDIRECTEN ("ticketmaster.evyy.net/
+        // c/8469859/…?u=<riktig URL>") — API-nyckeln hör till publisher 8469859,
+        // inte till oss. Packa upp till destinationen (2026-08-23: 313 event
+        // hade sparats med redirect-formen trots "fixen" 28/7 som bara tog ?c=).
+        if (/\.(evyy\.net|sjv\.io|pxf\.io|7eer\.net|ojrq\.net)$/i.test(u.hostname)) {
+            const inner = u.searchParams.get('u') || u.searchParams.get('url');
+            if (inner && /^https?:\/\//.test(inner)) u = new URL(inner);
+        }
+        ['c', 'ac', 'irclickid', 'irgwc'].forEach((k) => u.searchParams.delete(k));
+        if (u.searchParams.get('utm_medium') === 'affiliate') u.searchParams.delete('utm_medium');
+        return u.toString().replace(/\?$/, '');
     } catch {
         return rawUrl;
     }
