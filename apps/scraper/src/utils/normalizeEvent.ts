@@ -38,6 +38,9 @@ function collapse(s: string): string {
 export function normalizeTitle(title: string, ctx: { venueName?: string; city?: string; hostName?: string } = {}): string {
     let t = collapse(decodeHtmlEntities(String(title ?? '')).replace(/<[^>]+>/g, ' '));
     t = t.replace(/^\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s*[-–:]?\s+(?=\S)/, '');
+    // Inklistrad datumtext i början ("26 augusti 202626 augusti 2026Lunchwebbinarium"):
+    // strippa upprepade "D månad [ÅÅÅÅ]"-prefix, även utan mellanslag efter.
+    t = t.replace(/^(?:\d{1,2}\s+(?:januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)(?:\s*20\d{2})?\s*[-–,]?\s*)+(?=\S)/i, '');
     const tail = t.match(/^(.*\S)\s+[|–-]\s+([^|–-]{2,60})$/);
     if (tail) {
         const suffix = tail[2].trim().toLowerCase();
