@@ -399,6 +399,17 @@ async function main() {
     // domäner (norraberget.se == visitsundsvall.se) — jämför titeluppsättningar
     // mellan godkända i samma körning och avvisa innehålls-dubbletter.
     const approvedTitleSets: { id: string; titles: Set<string> }[] = [];
+    // …och mot BEFINTLIGA källor: titlar på framtida event i spegeln. Visit-
+    // svepet 2026-08-23 släppte igenom destinationeskilstuna.se (= visiteskilstuna,
+    // 381 dubbletter) eftersom fingeravtrycket bara såg samma körning.
+    const dbTitles = new Map<string, string>();
+    {
+        const dbx = new Database(getSqlitePath(), { readonly: true });
+        for (const r of dbx.prepare("SELECT LOWER(TRIM(title)) t, hostName h FROM link_events WHERE hidden = 0 AND time > datetime('now')").all() as { t: string; h: string }[]) {
+            if (r.t && !dbTitles.has(r.t)) dbTitles.set(r.t, r.h ?? '');
+        }
+        dbx.close();
+    }
     for (const sug of suggestions) {
         const domain = domainFromUrl(configMainUrl(sug.config));
         const cand = candidates.find((c) => c.domain === domain);
@@ -426,6 +437,14 @@ async function main() {
         if (dupOf) {
             console.log(`❌ innehålls-dubblett av ${dupOf.id} (samma kalender på flera domäner)`);
             state.domains[domain] = { verdict: 'DUPE', date: todayISO(), note: `samma innehåll som ${dupOf.id}` };
+            continue;
+        }
+        // Innehåll som redan finns i databasen (annan domän, samma kalender)?
+        const known = [...mine].filter((t) => dbTitles.has(t));
+        if (mine.size >= 3 && known.length / mine.size >= 0.6) {
+            const via = dbTitles.get(known[0]) || 'okänd källa';
+            console.log(`❌ innehållet finns redan i DB (${known.length}/${mine.size} titlar, t.ex. via "${via}")`);
+            state.domains[domain] = { verdict: 'DUPE', date: todayISO(), note: `samma innehåll som befintlig källa (${via})` };
             continue;
         }
         approvedTitleSets.push({ id, titles: mine });

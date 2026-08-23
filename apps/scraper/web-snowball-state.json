@@ -36,8 +36,8 @@
       "verdict": "FAIL"
     },
     "askersund.se": {
-      "verdict": "PASS",
-      "date": "2026-08-23"
+      "date": "2026-08-23",
+      "verdict": "PASS"
     },
     "astorp.se": {
       "date": "2026-08-23",
@@ -60,9 +60,9 @@
       "verdict": "FAIL"
     },
     "bjuv.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 1 framtida event (kräver ≥3)"
+      "note": "bara 1 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "bollebygd.se": {
       "date": "2026-08-23",
@@ -76,6 +76,11 @@
     },
     "borasdjurpark.se": {
       "date": "2026-08-19",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "borasturism.se": {
+      "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
@@ -119,12 +124,1445 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "dalsland.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "danderyd.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "degerfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationale.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalingsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalmhult.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalvdalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalvesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalvkarleby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationalvsbyn.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "destinationamal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationaneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationangelholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationarboga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationare.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationarjang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationarjeplog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationarvidsjaur.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationarvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationasele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationaskersund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationatvidaberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationavesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbastad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbengtsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbjurholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbjuv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationboden.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbollebygd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbollnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationboras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationborgholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationborlange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbotkyrka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationboxholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbracke.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationbromolla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationburlov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationdalsed.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationdanderyd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationdegerfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationdorotea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationeda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationekero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationeksjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationemmaboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationenkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationeskilstuna.se": {
+      "date": "2026-08-23",
+      "note": "samma RESTApp-guide som visiteskilstuna",
+      "verdict": "DUPE"
+    },
+    "destinationeslov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationessunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfagersta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfalkenberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfalkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfalun.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfargelanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfilipstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationfinspang.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "destinationflen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationforshaga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgagnef.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgallivare.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgavle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgislaved.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgnesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgnosjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgoteborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgotene.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgotland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgrastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgrums.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationgullspang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhabo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhagfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhallefors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhallsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhallstahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhammaro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhaninge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhaparanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationharjedalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationharnosand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationharryda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhassleholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationheby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhedemora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhelsingborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationherrljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhofors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhoganas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhogsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhoor.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhorby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhuddinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhudiksvall.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhultsfred.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationhylte.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationjarfalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationjokkmokk.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationjonkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkalmar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkarlsborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkarlshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkarlskoga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkarlskrona.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkarlstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkatrineholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkavlinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkinda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkiruna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationklippan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationknivsta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkramfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkristianstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkristinehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkrokom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkumla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkungalv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkungsbacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationkungsor.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlaholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlandskrona.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlaxa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlekeberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationleksand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlerum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlessebo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlidingo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlidkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlillaedet.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlindesberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlinkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationljungby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationljusdal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationljusnarsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlomma.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationludvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlulea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlycksele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationlysekil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmalmo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmalungsalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmariestad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmark.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmarkaryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmellerud.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmjolby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmolndal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmonsteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmorbylanga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmotala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmullsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmunkedal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationmunkfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnassjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnorberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnordanstig.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnordmaling.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnorrkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnorrtalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnorsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnybro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnykoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnykvarn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationnynashamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationockelbo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationockero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationodeshog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationolofstrom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationorebro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationorkelljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationornskoldsvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationorsa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationorust.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationosby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationoskarshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationosteraker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationostersund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationosthammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationostragoinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationovanaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationoverkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationovertornea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationoxelosund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationpajala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationpartille.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationperstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationpitea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationragunda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationrattvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationrobertsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationronneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsaffle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsalem.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsandviken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsater.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsavsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsigtuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsimrishamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsjobo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationskara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationskelleftea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationskinnskatteberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationskovde.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationskurup.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsmedjebacken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsoderhamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsoderkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsodertalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsolleftea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsollentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsolna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsolvesborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsorsele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsotenas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstaffanstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstenungsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstockholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstorfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstoruman.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstrangnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstromstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationstromsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsundbyberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsundsvall.se": {
+      "date": "2026-08-23",
+      "note": "samma kalender som sb-visitsundsvall-se",
+      "verdict": "DUPE"
+    },
+    "destinationsunne.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsurahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsvalov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsvedala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationsvenljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtaby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtanum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtibro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtidaholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtierp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtimra.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtingsryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtjorn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtomelilla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtoreboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtorsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtorsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtranas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtranemo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtrelleborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtrollhattan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtrosa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationtyreso.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationuddevalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationulricehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationumea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationupplandsbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationupplandsvasby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationuppvidinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvadstena.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvaggeryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvaldemarsvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvallentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvanersborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvannas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvansbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvarberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvargarda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvarmdo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvarnamo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvasteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvastervik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvaxjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvellinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvetlanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvilhelmina.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvimmerby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvindeln.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationvingaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationydre.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "destinationystad.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
@@ -212,6 +1650,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "gotland.net": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "grastorp.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
@@ -228,9 +1671,9 @@
       "verdict": "FAIL"
     },
     "hagfors.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "hallstahammar.se": {
       "date": "2026-08-23",
@@ -253,9 +1696,9 @@
       "verdict": "FAIL"
     },
     "hofors.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "hogakusten.com": {
       "date": "2026-08-19",
@@ -287,14 +1730,29 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "idrefjall.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "jamtland.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "jarfalla.se": {
-      "verdict": "PASS",
-      "date": "2026-08-23"
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "jkpg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "jonkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "kalix.se": {
       "date": "2026-08-23",
@@ -332,9 +1790,9 @@
       "verdict": "FAIL"
     },
     "kristinehamn.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "krusenstiernska.se": {
       "date": "2026-08-19",
@@ -352,9 +1810,9 @@
       "verdict": "FAIL"
     },
     "kungalv.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "kungsbacka.se": {
       "date": "2026-08-23",
@@ -372,13 +1830,13 @@
       "verdict": "FAIL"
     },
     "laxa.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "lekeberg.se": {
-      "verdict": "PASS",
-      "date": "2026-08-23"
+      "date": "2026-08-23",
+      "verdict": "PASS"
     },
     "lerum.se": {
       "date": "2026-08-23",
@@ -420,9 +1878,9 @@
       "verdict": "FAIL"
     },
     "ludvika.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "lycksele.se": {
       "date": "2026-08-23",
@@ -430,6 +1888,11 @@
       "verdict": "FAIL"
     },
     "mala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "malmotown.com": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
@@ -523,6 +1986,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "olandsturist.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "ornskoldsvik.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
@@ -587,12 +2055,22 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "roslagen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "sagateatern.se": {
       "date": "2026-08-20",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "sala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "salen.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
@@ -607,15 +2085,20 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "siljan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "simrishamn.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "sjobo.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "skellefteamuseum.se": {
       "date": "2026-08-20",
@@ -638,9 +2121,9 @@
       "verdict": "FAIL"
     },
     "smedjebacken.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "soderkoping.se": {
       "date": "2026-08-20",
@@ -711,6 +2194,11 @@
       "date": "2026-08-23",
       "verdict": "PASS"
     },
+    "swedishlapland.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "teatervasternorrland.se": {
       "date": "2026-08-19",
       "note": "bara 0 framtida event (kräver ≥3)",
@@ -770,15 +2258,1458 @@
       "date": "2026-08-23",
       "verdict": "PASS"
     },
+    "upplevale.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevalingsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevalmhult.se": {
+      "date": "2026-08-23",
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
+    },
+    "upplevalvdalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevalvesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevalvkarleby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevalvsbyn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevamal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevaneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevangelholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevarboga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevare.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevarjang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevarjeplog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevarvidsjaur.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevarvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevasele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevaskersund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevatvidaberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevavesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbastad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbengtsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbjurholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbjuv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevboden.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbollebygd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbollnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevboras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevborgholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevborlange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbotkyrka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevboxholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbracke.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevbromolla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevburlov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevdalsed.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevdanderyd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevdegerfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevdorotea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "uppleveda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevekero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "uppleveksjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevemmaboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevenkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "uppleveskilstuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "uppleveslov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevessunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfagersta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfalkenberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfalkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfalun.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfargelanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfilipstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevfinspang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevflen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevforshaga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgagnef.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgallivare.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgavle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgislaved.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgnesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgnosjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgoteborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgotene.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgotland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgrastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgrums.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevgullspang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhabo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhagfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhallefors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhallsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhallstahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhalmstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhammaro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhaninge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhaparanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevharjedalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevharnosand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevharryda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhassleholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevheby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhedemora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhelsingborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevherrljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhofors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhoganas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhogsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhoor.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhorby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhuddinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhudiksvall.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhultsfred.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevhylte.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevjarfalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevjokkmokk.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevjonkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkalmar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkarlsborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkarlshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkarlskoga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkarlskrona.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkarlstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkatrineholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkavlinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkinda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkiruna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevklippan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevknivsta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkramfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkristianstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkristinehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkrokom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkumla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkungalv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkungsbacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevkungsor.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlaholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlandskrona.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlaxa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlekeberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevleksand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlerum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlessebo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlidingo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlidkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlillaedet.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlindesberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlinkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevljungby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevljusdal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevljusnarsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlomma.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevludvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlulea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlycksele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevlysekil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmalmo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmalungsalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmariestad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmark.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmarkaryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmellerud.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmjolby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmolndal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmonsteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmorbylanga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmotala.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "upplevmullsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmunkedal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevmunkfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnassjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnorberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnordanstig.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnordmaling.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnorrkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnorrtalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnorsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnybro.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "upplevnykoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnykvarn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevnynashamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevockelbo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevockero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevodeshog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevolofstrom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevorebro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevorkelljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevornskoldsvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevorsa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevorust.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevosby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevoskarshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevosteraker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevostersund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevosthammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevostragoinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevovanaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevoverkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevovertornea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevoxelosund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevpajala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevpartille.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevperstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevpitea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevragunda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevrattvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevrobertsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevronneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsaffle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsalem.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsandviken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsater.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsavsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsigtuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsimrishamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsjobo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevskara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevskelleftea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevskinnskatteberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevskovde.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevskurup.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsmedjebacken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsoderhamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsoderkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsodertalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsolleftea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsollentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsolna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsolvesborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsorsele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsotenas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstaffanstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstenungsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstockholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstorfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstoruman.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstrangnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstromstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevstromsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsundbyberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsundsvall.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsunne.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsurahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsvalov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsvedala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevsvenljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtaby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtanum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtibro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtidaholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtierp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtimra.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtingsryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtjorn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtomelilla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtoreboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtorsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtorsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtranas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtranemo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtrelleborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtrollhattan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtrosa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevtyreso.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevuddevalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevulricehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevumea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevupplandsbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevupplandsvasby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevuppsala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevuppvidinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvadstena.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvaggeryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvaldemarsvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvallentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvanersborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvannas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvansbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvarberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvargarda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvarmdo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvarnamo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvasteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvastervik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvaxholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvaxjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvellinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvetlanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvilhelmina.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvimmerby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvindeln.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevvingaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevydre.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "upplevystad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "vadstena.se": {
       "date": "2026-08-20",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
     "vaggeryd.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "titellängder orimliga (1/5 inom 3–120 tecken)"
+      "note": "titellängder orimliga (1/5 inom 3–120 tecken)",
+      "verdict": "SMOKE-FAIL"
     },
     "vallentuna.se": {
       "date": "2026-08-23",
@@ -786,9 +3717,9 @@
       "verdict": "FAIL"
     },
     "vannas.se": {
-      "verdict": "SMOKE-FAIL",
       "date": "2026-08-23",
-      "note": "bara 0 framtida event (kräver ≥3)"
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
     },
     "vansbro.se": {
       "date": "2026-08-23",
@@ -796,8 +3727,8 @@
       "verdict": "FAIL"
     },
     "varberg.se": {
-      "verdict": "PASS",
-      "date": "2026-08-23"
+      "date": "2026-08-23",
+      "verdict": "PASS"
     },
     "varmdo.se": {
       "date": "2026-08-23",
@@ -814,12 +3745,139 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "vaxjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "vellinge.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "vemdalen.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
     "vindeln.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitale.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitale.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalingsas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalingsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalmhult.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalmhult.se": {
+      "date": "2026-08-23",
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
+    },
+    "visitalvdalen.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvdalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvesta.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvkarleby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvkarleby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitalvsbyn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitamal.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitamal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitaneby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitaneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitange.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitangelholm.com": {
+      "date": "2026-08-23",
+      "note": "samma innehåll som sb-visitangelholm-se",
+      "verdict": "DUPE"
+    },
+    "visitangelholm.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitarboga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarboga.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitare.com": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
@@ -829,8 +3887,1639 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "visitarjang.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarjang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarjeplog.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarjeplog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarvidsjaur.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarvidsjaur.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarvika.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitarvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitasele.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitasele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitaskersund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitaskersund.se": {
+      "date": "2026-08-23",
+      "note": "samma event som sb-askersund-se (kommun)",
+      "verdict": "DUPE"
+    },
+    "visitastorp.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitatvidaberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitatvidaberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitavesta.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitavesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbastad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbastad.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitbengtsfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbengtsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbjurholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbjurholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbjuv.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbjuv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboden.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboden.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbollebygd.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbollebygd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbollnas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbollnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboras.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitborgholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitborgholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitborlange.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitborlange.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbotkyrka.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbotkyrka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboxholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitboxholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbracke.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbracke.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbromolla.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitbromolla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitburlov.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitburlov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdalsed.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdalsed.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdanderyd.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdanderyd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdegerfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdegerfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdorotea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitdorotea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitekero.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitekero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteksjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteksjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitemmaboda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitemmaboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitenkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitenkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteskilstuna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteslov.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visiteslov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitessunga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitessunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfagersta.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfagersta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalkenberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalkenberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalun.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfalun.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfargelanda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfargelanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfilipstad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfilipstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfinspang.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitfinspang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitflen.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitflen.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitforshaga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitforshaga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgagnef.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgagnef.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgallivare.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgallivare.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitgavle.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgavle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgavleborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgislaved.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgislaved.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgnesta.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgnesta.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgnosjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgnosjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgoteborg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgoteborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgotene.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgotene.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgotland.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgotland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgrastorp.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgrastorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgrums.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgrums.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgullspang.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitgullspang.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithabo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithabo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithagfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithagfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithalland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallefors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallefors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallsberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallstahammar.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithallstahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithalmstad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithalmstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithalsingland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithammaro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithammaro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithaninge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithaninge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithaparanda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithaparanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharjedalen.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharjedalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharnosand.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharnosand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharryda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitharryda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithassleholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithassleholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitheby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitheby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithedemora.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithedemora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithelsingborg.se": {
+      "date": "2026-08-23",
+      "note": "samma sajt som Visit Helsingborg (.com, befintlig)",
+      "verdict": "DUPE"
+    },
+    "visitherrljunga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitherrljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithofors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithofors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithoganas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithoganas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithogsby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithogsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithoor.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithoor.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithorby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithorby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithuddinge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithuddinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithudiksvall.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithudiksvall.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithultsfred.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithultsfred.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visithylte.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visithylte.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjarfalla.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjarfalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjokkmokk.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjokkmokk.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjonkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitjonkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkalix.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkalmar.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkalmar.se": {
+      "date": "2026-08-23",
+      "note": "bara 2 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
+    },
+    "visitkarlsborg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlsborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlshamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlskoga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlskoga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlskrona.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkarlstad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkatrineholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkavlinge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkavlinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkil.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkinda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkinda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkiruna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitklippan.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitklippan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitknivsta.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitknivsta.se": {
+      "date": "2026-08-23",
+      "note": "samma innehåll som sb-visitknivsta-se",
+      "verdict": "DUPE"
+    },
+    "visitkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkoping.se": {
+      "date": "2026-08-23",
+      "note": "samma innehåll som sb-visitarboga-se",
+      "verdict": "DUPE"
+    },
+    "visitkramfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkramfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkristianstad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkristianstad.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitkristinehamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkristinehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkrokom.com": {
+      "date": "2026-08-23",
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
+    },
+    "visitkrokom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkumla.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkumla.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitkungalv.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkungalv.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkungsbacka.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkungsbacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkungsor.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitkungsor.se": {
+      "date": "2026-08-23",
+      "note": "samma innehåll som sb-visitarboga-se",
+      "verdict": "DUPE"
+    },
+    "visitlaholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlaholm.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitlandskrona.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlandskrona.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlaxa.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlaxa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlekeberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlekeberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitleksand.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitleksand.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlerum.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlerum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlessebo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlessebo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlidingo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlidingo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlidkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlidkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlillaedet.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlillaedet.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlindesberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlindesberg.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitlinkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljungby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljungby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljusdal.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljusdal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljusnarsberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitljusnarsberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlomma.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlomma.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitludvika.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitludvika.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlulea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "visitlulea.se": {
       "date": "2026-08-19",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlycksele.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlycksele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlysekil.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitlysekil.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmala.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmalmo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmalmo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmalungsalen.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmalungsalen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmariestad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmariestad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmark.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmark.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmarkaryd.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmarkaryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmellerud.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmellerud.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmjolby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmjolby.se": {
+      "date": "2026-08-23",
+      "note": "bara 0 framtida event (kräver ≥3)",
+      "verdict": "SMOKE-FAIL"
+    },
+    "visitmolndal.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmolndal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmonsteras.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmonsteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmora.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmorbylanga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmorbylanga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmotala.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmotala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmullsjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmullsjo.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitmunkedal.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmunkedal.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmunkfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitmunkfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnacka.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnacka.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnassjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnassjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnora.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnora.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnordanstig.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnordanstig.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnordmaling.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorrbotten.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorrkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorrkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorrtalje.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorrtalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorsjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnorsjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnybro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnybro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnykoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnykoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnykvarn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnykvarn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnynashamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitnynashamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitockelbo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitockelbo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitockero.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitockero.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitodeshog.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitodeshog.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitolofstrom.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitolofstrom.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorebro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorkelljunga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorkelljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitornskoldsvik.com": {
+      "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
@@ -839,11 +5528,298 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "visitorsa.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorsa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorust.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitorust.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoskarshamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoskarshamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosteraker.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosteraker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitostersund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosthammar.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitosthammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitostragoinge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitostragoinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitovanaker.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitovanaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoverkalix.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoverkalix.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitovertornea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitovertornea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoxelosund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitoxelosund.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitpajala.com": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitpartille.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitpartille.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitperstorp.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitperstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitpitea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "visitpitea.se": {
       "date": "2026-08-19",
       "verdict": "PASS"
     },
+    "visitragunda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitragunda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitrattvik.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitrattvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitrobertsfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitrobertsfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitronneby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitronneby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsaffle.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsaffle.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsala.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsalem.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsalem.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsandviken.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsandviken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsater.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsater.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsavsjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsavsjo.se": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitsigtuna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsigtuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsimrishamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "visitsimrishamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsjobo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsjobo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskane.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskara.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskelleftea.com": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
@@ -853,9 +5829,783 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "visitskinnskatteberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskinnskatteberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskovde.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskovde.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskurup.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitskurup.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsmaland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsmedjebacken.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsmedjebacken.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsoderhamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsoderhamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsoderkoping.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsoderkoping.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsodertalje.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsodertalje.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsodradalarna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolleftea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolleftea.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsollentuna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsollentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolvesborg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsolvesborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsorsele.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsorsele.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsotenas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsotenas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstaffanstorp.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstaffanstorp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstenungsund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstenungsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstorfors.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstorfors.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstoruman.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstoruman.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstrangnas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstrangnas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstromstad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstromstad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstromsund.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitstromsund.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsundbyberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsundbyberg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsundsvall.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
     "visitsundsvall.se": {
       "date": "2026-08-19",
       "verdict": "PASS"
+    },
+    "visitsunne.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsunne.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsurahammar.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsurahammar.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvalov.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvalov.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvedala.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvedala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvenljunga.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitsvenljunga.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittaby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittaby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittanum.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittanum.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittibro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittibro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittidaholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittidaholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittierp.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittierp.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittimra.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittimra.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittingsryd.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittingsryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittjorn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittjorn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittomelilla.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittomelilla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittoreboda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittoreboda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittorsas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittorsas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittorsby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittorsby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittranas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittranas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittranemo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittranemo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrelleborg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrelleborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrollhattan.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrollhattan.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrosa.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittrosa.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittyreso.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visittyreso.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituddevalla.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituddevalla.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitulricehamn.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitulricehamn.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitumea.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituppland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitupplandsbro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitupplandsbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitupplandsvasby.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitupplandsvasby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituppsala.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituppsala.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituppvidinge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visituppvidinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvadstena.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvadstena.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaggeryd.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaggeryd.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaldemarsvik.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaldemarsvik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvallentuna.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvallentuna.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvanersborg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvanersborg.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvannas.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvannas.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvansbro.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvansbro.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvara.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvara.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarberg.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarberg.se": {
+      "date": "2026-08-23",
+      "note": "delmängd av sb-varberg-se (kommun, 148 ev)",
+      "verdict": "DUPE"
+    },
+    "visitvargarda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvargarda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarmdo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarmdo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarmland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarnamo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvarnamo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvasteras.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvasteras.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvastervik.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvastervik.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvastmanland.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaxholm.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaxholm.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaxjo.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvaxjo.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvellinge.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvellinge.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvetlanda.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvetlanda.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvilhelmina.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvimmerby.com": {
+      "date": "2026-08-23",
+      "verdict": "PASS"
+    },
+    "visitvimmerby.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvindeln.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvindeln.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvingaker.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitvingaker.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitydre.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitydre.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitystad.com": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitystad.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
+    },
+    "visitystadosterlen.se": {
+      "date": "2026-08-23",
+      "note": "bulk-probe",
+      "verdict": "FAIL"
     },
     "visualiseringscenter.se": {
       "date": "2026-08-20",
@@ -863,8 +6613,8 @@
       "verdict": "FAIL"
     },
     "ydre.se": {
-      "verdict": "PASS",
-      "date": "2026-08-23"
+      "date": "2026-08-23",
+      "verdict": "PASS"
     }
   },
   "version": 1
