@@ -203,11 +203,19 @@ export async function runSource(
                     }
                     // Plats: källan ger nu en venue medan det sparade bara var
                     // stads-fallbacken (defaultCity) → geokoda och flytta.
-                    const storedLoc = (getSqliteEvent(e.url)?.locationName ?? '').trim().toLowerCase();
+                    const storedRow = getSqliteEvent(e.url);
+                    const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
+                    const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
                     const cityLower = (e.city ?? '').trim().toLowerCase();
-                    if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige')) {
+                    if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
                         const q = `${e.venueName}, ${e.city}`;
-                        const hit = e.coords ?? await geocodeVenueSweden(q, { nearCity: e.city! });
+                        // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
+                        let hit: [number, number] | null = e.coords ?? null;
+                        for (const cand of (e.geocodeCandidates ?? [])) {
+                            if (hit) break;
+                            hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
+                        }
+                        if (!hit) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
                         if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : q)) {
                             result.updated++;
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);

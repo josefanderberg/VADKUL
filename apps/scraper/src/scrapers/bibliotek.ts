@@ -46,25 +46,37 @@ export interface AxiellTenant {
      * ("Åstorps bibliotek") och fel stad vore värre än ingen.
      */
     cityHint?: string;
+    /**
+     * Konsortier (flera kommuner, ingen cityHint): medlemsorterna, så filial-
+     * namnet kan geokodas som "<filial>, <ort>" i tur och ordning och eventet
+     * alltid får en stad (hellre stadscentrum än null-ön). 2026-08-20: 279
+     * biblioteksevent saknade koordinater — alla från konsortier.
+     */
+    cities?: string[];
 }
 
 /** Verifierade tenants: 8 st 2026-06-12 + 30 st 2026-07-02 (≈4 000 framtida event). Växer via discovery. */
 export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'uppsala',      customerId: '5de8fb519cf47722f2bb9871', eventsUrl: 'https://bibliotekuppsala.se/evenemang',       name: 'Bibliotek Uppsala',            cityHint: 'Uppsala' },
     { id: 'orebro',       customerId: '671758c4296c3201a2484671', eventsUrl: 'https://bibliotek.orebro.se/evenemang',       name: 'Bibliotek Örebro',             cityHint: 'Örebro' },
-    { id: 'gota',         customerId: '62834578bbee2204026d7529', eventsUrl: 'https://www.gotabiblioteken.se/evenemang',    name: 'Götabiblioteken' },
-    { id: 'snoka',        customerId: '61516cdee9a84303da337ecb', eventsUrl: 'https://www.snokabibliotek.se/evenemang',     name: 'Snokabiblioteken' },
-    { id: 'helsingborg',  customerId: '635903c8703695290b575cd8', eventsUrl: 'https://www.bibliotekfh.se/evenemang',        name: 'Bibliotek Familjen Helsingborg' },
+    { id: 'gota',         customerId: '62834578bbee2204026d7529', eventsUrl: 'https://www.gotabiblioteken.se/evenemang',    name: 'Götabiblioteken',
+      cities: ['Linköping', 'Norrköping', 'Motala', 'Mjölby', 'Finspång', 'Söderköping', 'Åtvidaberg', 'Kisa', 'Vadstena', 'Ödeshög', 'Boxholm', 'Valdemarsvik', 'Österbymo'] },
+    { id: 'snoka',        customerId: '61516cdee9a84303da337ecb', eventsUrl: 'https://www.snokabibliotek.se/evenemang',     name: 'Snokabiblioteken',
+      cities: ['Kristianstad', 'Hässleholm', 'Osby', 'Bromölla', 'Broby', 'Hörby', 'Perstorp'] },
+    { id: 'helsingborg',  customerId: '635903c8703695290b575cd8', eventsUrl: 'https://www.bibliotekfh.se/evenemang',        name: 'Bibliotek Familjen Helsingborg',
+      cities: ['Helsingborg', 'Bjuv', 'Båstad', 'Höganäs', 'Klippan', 'Landskrona', 'Perstorp', 'Svalöv', 'Åstorp', 'Ängelholm', 'Örkelljunga'] },
     { id: 'kalmar',       customerId: '5f801bab9cf477217a2912cd', eventsUrl: 'https://bibliotek.kalmar.se/evenemang',       name: 'Biblioteken i Kalmar',         cityHint: 'Kalmar' },
     { id: 'huddinge',     customerId: '5fbfa17e9cf4776ba2b1a711', eventsUrl: 'https://bibliotek.huddinge.se/evenemang',     name: 'Huddinge bibliotek',           cityHint: 'Huddinge' },
-    { id: 'varmland',     customerId: '5fda02f69cf4776ba2b1a819', eventsUrl: 'https://www.bibliotekvarmland.se/evenemang',  name: 'Bibliotek Värmland' },
+    { id: 'varmland',     customerId: '5fda02f69cf4776ba2b1a819', eventsUrl: 'https://www.bibliotekvarmland.se/evenemang',  name: 'Bibliotek Värmland',
+      cities: ['Karlstad', 'Arvika', 'Kristinehamn', 'Säffle', 'Skoghall', 'Forshaga', 'Kil', 'Sunne', 'Torsby', 'Hagfors', 'Munkfors', 'Filipstad', 'Storfors', 'Grums', 'Årjäng', 'Charlottenberg'] },
 
     // ── Discovery-runda 2026-07-02 (≈1 900 framtida event till) ──────────────
     // customerId fångad ur browserns api.axiell.com-anrop (config-endpointen är
     // numera 403; se scratchpad/axiell-puppeteer-discover.cjs). cityHint utelämnad
     // för läns-/regionkonsortier (Umeåregionen) — filialnamnet bär orten då.
     { id: 'jonkoping',     customerId: '6489becd8094f362d53890d9', eventsUrl: 'https://bibliotek.jonkoping.se/evenemang',    name: 'Biblioteken i Jönköping',      cityHint: 'Jönköping' },
-    { id: 'umea',          customerId: '67efbbec296c3258c8eaf816', eventsUrl: 'https://www.minabibliotek.se/evenemang',      name: 'Umeåregionens bibliotek' },
+    { id: 'umea',          customerId: '67efbbec296c3258c8eaf816', eventsUrl: 'https://www.minabibliotek.se/evenemang',      name: 'Umeåregionens bibliotek',
+      cities: ['Umeå', 'Bjurholm', 'Nordmaling', 'Robertsfors', 'Vindeln', 'Vännäs'] },
     { id: 'vaxjo',         customerId: '62418559ae077e04267beb89', eventsUrl: 'https://bibliotek.vaxjo.se/evenemang',        name: 'Biblioteken i Växjö',          cityHint: 'Växjö' },
     { id: 'sundsvall',     customerId: '5dceb8c39cf47722f2bb983a', eventsUrl: 'https://bibliotek.sundsvall.se/evenemang',    name: 'Sundsvalls bibliotek',         cityHint: 'Sundsvall' },
     { id: 'molndal',       customerId: '6638d1d9f9286e318ed74d05', eventsUrl: 'https://bibliotek.molndal.se/evenemang',      name: 'Mölndals bibliotek',           cityHint: 'Mölndal' },
@@ -89,12 +101,14 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     // ── Discovery-runda 2 samma dag, ur axiell.com/se/bibliotek-med-arena-nova/ ──
     // Fyrstad (Trollhättan/Uddevalla/Vänersborg/Lysekil) och Dalsland är
     // konsortier → ingen cityHint, filialnamnet bär orten.
-    { id: 'fyrstad',       customerId: '6392e838d76e6e2eb0e75894', eventsUrl: 'https://bibliotekenifyrstad.se/evenemang',    name: 'Biblioteken i Fyrstad' },
+    { id: 'fyrstad',       customerId: '6392e838d76e6e2eb0e75894', eventsUrl: 'https://bibliotekenifyrstad.se/evenemang',    name: 'Biblioteken i Fyrstad',
+      cities: ['Trollhättan', 'Uddevalla', 'Vänersborg', 'Lysekil'] },
     { id: 'varnamo',       customerId: '5ed608059cf47776dc7b115a', eventsUrl: 'https://bibliotek.varnamo.se/evenemang',     name: 'Värnamo bibliotek',            cityHint: 'Värnamo' },
     { id: 'kavlinge',      customerId: '613b2517e9a84303da337bf1', eventsUrl: 'https://bibliotek.kavlinge.se/evenemang',    name: 'Kävlinge bibliotek',           cityHint: 'Kävlinge' },
     { id: 'laholm',        customerId: '639059cfd76e6e2eb0e75860', eventsUrl: 'https://bibliotek.laholm.se/evenemang',      name: 'Laholms bibliotek',            cityHint: 'Laholm' },
     { id: 'harnosand',     customerId: '5e37d5ab9cf47722f2bb98aa', eventsUrl: 'https://bibliotek.harnosand.se/evenemang',   name: 'Härnösands bibliotek',         cityHint: 'Härnösand' },
-    { id: 'dalsland',      customerId: '5dceb9039cf47722f2bb983c', eventsUrl: 'https://bibliotekdalsland.se/evenemang',     name: 'Dalslands bibliotek' },
+    { id: 'dalsland',      customerId: '5dceb9039cf47722f2bb983c', eventsUrl: 'https://bibliotekdalsland.se/evenemang',     name: 'Dalslands bibliotek',
+      cities: ['Bengtsfors', 'Ed', 'Färgelanda', 'Mellerud', 'Åmål'] },
     { id: 'gislaved',      customerId: '5e25b56b9cf47722f2bb9889', eventsUrl: 'https://bibliotek.gislaved.se/evenemang',    name: 'Gislaveds bibliotek',          cityHint: 'Gislaved' },
     { id: 'gnesta',        customerId: '5fbfa0e49cf4776ba2b1a710', eventsUrl: 'https://bibliotek.gnesta.se/evenemang',      name: 'Gnesta bibliotek',             cityHint: 'Gnesta' },
     // Runda 3 (2026-07-03): Skellefteå hade 0 event vid proben (sommardvala) —
@@ -103,12 +117,14 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'gnosjo',        customerId: '615c380fe9a84303da33805a', eventsUrl: 'https://bibliotek.gnosjo.se/evenemang',      name: 'Gnosjö bibliotek',             cityHint: 'Gnosjö' },
     { id: 'skelleftea',    customerId: '6087d3134cfcfc2892c15af1', eventsUrl: 'https://bibliotek.skelleftea.se/evenemang',  name: 'Skellefteå bibliotek',         cityHint: 'Skellefteå' },
     // V8 = åtta inlandskommuner i Västerbotten (Lycksele/Storuman/Vilhelmina m.fl.) — konsortium, filialen bär orten.
-    { id: 'v8',            customerId: '68f0ea72cdc95c54359674f8', eventsUrl: 'https://v8biblioteken.se/evenemang',         name: 'V8-biblioteken' },
+    { id: 'v8',            customerId: '68f0ea72cdc95c54359674f8', eventsUrl: 'https://v8biblioteken.se/evenemang',         name: 'V8-biblioteken',
+      cities: ['Lycksele', 'Storuman', 'Sorsele', 'Vilhelmina', 'Dorotea', 'Åsele', 'Malå', 'Norsjö'] },
     // Runda 4 (2026-07-03, agent-probe): Varberg fyller topp-40-luckan (OBS
     // eventsidan är /kalender, inte /evenemang). Blekinge = delad tenant
     // (karlshamn+ronneby CNAME:ar dit) — konsortium, filialen bär orten.
     { id: 'varberg',       customerId: '62431e61ae077e04267bebc4', eventsUrl: 'https://bibliotek.varberg.se/kalender',      name: 'Varbergs bibliotek',           cityHint: 'Varberg' },
-    { id: 'blekinge',      customerId: '61447a53e9a84303da337d16', eventsUrl: 'https://blekingebiblioteken.se/evenemang',   name: 'Blekingebiblioteken' },
+    { id: 'blekinge',      customerId: '61447a53e9a84303da337d16', eventsUrl: 'https://blekingebiblioteken.se/evenemang',   name: 'Blekingebiblioteken',
+      cities: ['Karlskrona', 'Karlshamn', 'Ronneby', 'Sölvesborg', 'Olofström'] },
 ];
 
 interface AxiellHit {
@@ -161,7 +177,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         // klickbar och unik (URL = PRIMARY KEY).
         url: `${tenant.eventsUrl}#${hit.id}`,
         venueName: branch || undefined,
-        city: tenant.cityHint,
+        city: tenant.cityHint ?? branchCity(branch, tenant.cities),
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
         description: [stripHtml(e.description).slice(0, 600), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
@@ -169,10 +185,33 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         hasSpecificTime: true,   // API:t levererar riktiga klockslag (UTC)
         geocodeCandidates: [
             branch && tenant.cityHint ? `${branch}, ${tenant.cityHint}` : '',
+            // Konsortier: härledd ort först ("Åstorps bibliotek" → Åstorp),
+            // sedan övriga medlemsorter — runnern tar första träffen.
+            ...(branch && !tenant.cityHint && tenant.cities
+                ? [...new Set([branchCity(branch, tenant.cities), ...tenant.cities].filter(Boolean))].map((c) => `${branch}, ${c}`)
+                : []),
             branch,
-            tenant.cityHint ?? '',
+            tenant.cityHint ?? branchCity(branch, tenant.cities) ?? '',
         ].filter(Boolean) as string[],
     };
+}
+
+/**
+ * Ort ur filialnamnet för konsortier: "Åstorps bibliotek" → Åstorp,
+ * "Linköpings huvudbibliotek" → Linköping (svensk genitiv: strippa -s när
+ * basen är en medlemsort). Stadsdelsfilialer ("Sylte bibliotek") ger
+ * undefined → kandidatkedjan provar medlemsorterna i stället.
+ */
+export function branchCity(branch: string | undefined, cities: string[] | undefined): string | undefined {
+    if (!branch || !cities?.length) return undefined;
+    const m = branch.match(/^(.+?)\s+(?:huvud|stads|folk)?bibliotek/i);
+    const base = (m ? m[1] : branch).trim();
+    const lower = base.toLowerCase();
+    for (const c of cities) {
+        const cl = c.toLowerCase();
+        if (lower === cl || lower === cl + 's' || lower === cl.replace(/[aeiouyåäö]$/, '') + 's') return c;
+    }
+    return undefined;
 }
 
 async function fetchTenantEvents(tenant: AxiellTenant, nowIso: string, log: (m: string) => void, signal?: AbortSignal): Promise<RawEvent[]> {

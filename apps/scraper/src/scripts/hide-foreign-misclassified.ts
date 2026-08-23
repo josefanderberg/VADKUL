@@ -31,6 +31,14 @@ const APPLY = process.argv.includes('--apply');
  * även i USA) hanterar vi via koordinatkontroll, inte text.
  */
 const FOREIGN_MARKERS = [
+    // Grannländer som landsnamn i adressen (revisionen 2026-08-20: "Rønne,
+    // Denmark", "Sorø, Denmark", "Aalborg, Denmark" låg synliga). Landsnamn
+    // är säkra markörer — svenska adresser skriver aldrig ut "Sweden"-grannar.
+    /\bdenmark\b/i, /\bnorway\b/i, /\bsuomi\b/i,
+    /\bgermany\b/i, /\bdeutschland\b/i, /\bestonia\b/i, /\beesti\b/i, /\bpoland\b/i,
+    /\bnetherlands\b/i, /\bnederland\b/i, /\bbelgium\b/i, /\bfrance\b/i, /\bespaña\b/i, /\bspain\b/i,
+    /\bitalia\b/i, /\bitaly\b/i, /\bösterreich\b/i, /\baustria\b/i, /\bschweiz\b/i, /\bswitzerland\b/i,
+    /\bunited kingdom\b/i, /\bengland\b/i, /\bscotland\b/i, /\bireland\b/i, /\busa\b/i, /\bunited states\b/i,
     // USA — Vanliga namn
     /\barlington\b/i, /\bbrooklyn\b/i, /\bmanhattan\b/i, /\bqueens\b/i,
     /\bvirginia\b/i, /\btexas\b/i, /\bcalifornia\b/i, /\bflorida\b/i,
