@@ -203,8 +203,13 @@ OBS (korrigerat 2026-08-24): TM:s nolla i klickdatan är INTE en gåta —
 under mätperioden var bara 84 svenska TM-event exponerade (förväntansvärde
 ~1 klick vid Ticksters frekvens), och 647 av dagens 692 kom in 23/8 med det
 breddade fönstret. Mät om efter ~4 veckor med nya lagret innan TM-spårets
-klickpotential döms. Separat kvarstår .dk/.no-frågan: ~65 % av TM-lagret är
-danskt/norskt — kontrollera att geo-närhet i kartvyn gör dem relevanta.
+klickpotential döms. .dk/.no-lagret (~65 % av TM-eventen) är INTE död vikt:
+programmet onboardar alla marknader med separata kontrakt (DK/NO inkluderade),
+så danska/norska klick blir också provisionsgrundande — och geografiskt är de
+relevanta (Köpenhamn 30 min från Malmö/Lund; norska gränsstäder). Wrap-tabellen
+i §4 ska därför täcka ticketmaster.se/.dk/.no från start, med respektive
+marknadskontrakts baslänk om Impact skiljer dem åt (kontrollera vid onboarding
+om AdId/CampaignId är per marknad).
 
 ## 6. Aktiveringsplan (när Impact-godkännandet kommer)
 
