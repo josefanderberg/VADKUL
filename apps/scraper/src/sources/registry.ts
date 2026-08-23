@@ -5675,6 +5675,27 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-11',
     },
 
+    {
+        id: 'everysport-matcher',
+        hostName: 'Everysport',
+        region: 'national',
+        engine: 'everysport',
+        config: { country: 'se' },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        // AKTIVERAS när EVERYSPORT_API_KEY finns (mejla support@everysport.com).
+        // Utan nyckel returnerar motorn [] → skulle karantäneras i onödan.
+        disabled: true,
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://app.swaggerhub.com/apis-docs/esmg/Everysport/1.0',
+            date: '2026-08-23',
+            notes: 'Officiella API:t (api.everysport.com/v1). /events med country=se, fromDate/toDate; Event.facts.arena bär namn/stad/koordinater (position eller RT90 → rt90ToWgs84). Åskådarsport ner till division 3 — luckan Ticketmaster inte täcker (SHL=AXS, Allsvenskan=klubbkanaler).',
+        },
+        notes: 'Matcher som event: "Hemmalag – Bortalag", kategori sport, arenaplacerade. VERIFIERA url-mallen (everysport.com/game/<id>) och fältmappningen mot riktiga svar vid aktivering — byggd mot swagger-specen utan nyckel.',
+        lastVerified: '2026-08-23',
+    },
+
     // ─── WEBB-SNÖBOLLEN (auto-upptäckta, se registry-snowball.ts) ───────────
     ...SNOWBALL_SOURCES,
 ];
