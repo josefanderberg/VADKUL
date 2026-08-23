@@ -15,12 +15,16 @@ anges där det spelar roll; ⚠ = kunde inte verifieras publikt.
 
 ## TL;DR — de fyra sakerna som styr beslutet
 
-1. **Klicken går inte till Ticketmaster.** Mätt klickdata (eventStats sedan
-   16/7): Tickster 71 utklick, Nortic 55, Billetto 20 — **Ticketmaster 0**,
-   trots 692 synliga TM-event. ~86 % av biljettklicken går till plattformar
-   UTAN publikt affiliateprogram. Impact/TM-ansökan är rätt att fullfölja
-   (enda färdiga programmet), men **direktkontakt med Tickster och Nortic är
-   sannolikt mer värd** — vi är en mätbar trafikkälla åt dem.
+1. **Klicken går i dag till Tickster/Nortic — men jämförelsen med TM är
+   inte rättvis.** Mätt klickdata (eventStats 16/7–23/8): Tickster 71
+   utklick (~4 934 exponerade event), Nortic 55, Billetto 20, Ticketmaster 0
+   — men TM hade bara **84 svenska event** exponerade under perioden
+   (30-dagarsfönstret; 90-dagarsfönstret med 647 nya kom först 23/8).
+   Vid Ticksters klickfrekvens (~1,4 %/event) är förväntansvärdet ~1 klick —
+   nollan är brus, ingen gåta. Kvar står ändå: ~86 % av dagens biljettklick
+   går till plattformar UTAN publikt program → **direktkontakt med Tickster
+   och Nortic är värdefull oavsett**, och TM-spårets potential kan bedömas
+   först efter några veckor med det breddade lagret på kartan.
 2. **Pengarna är små vid dagens trafik.** ~100 biljettklick/mån ger i bästa
    scenario ~100–200 kr/mån, i troligt scenario ~10–40 kr/mån. Break-even mot
    Firebase-kostnaden (~270 kr/mån) kräver ~8–23× dagens biljettklick.
@@ -195,9 +199,17 @@ Break-even mot Firebase (~270 kr/mån) kräver ~8–23× dagens biljettklick i
 medelscenariot. **Slutsats: trafiktillväxt är förutsättningen; affiliate är
 en gratis option att montera, inte en intäktsplan i sig.**
 
-Gåta att lösa före aktivering: varför får TM-eventen 0 klick? (Hypotes:
-54 % är .dk-event som visas men inte är relevanta — geo-relevans kan vara
-mer värd än monetisering.)
+OBS (korrigerat 2026-08-24): TM:s nolla i klickdatan är INTE en gåta —
+under mätperioden var bara 84 svenska TM-event exponerade (förväntansvärde
+~1 klick vid Ticksters frekvens), och 647 av dagens 692 kom in 23/8 med det
+breddade fönstret. Mät om efter ~4 veckor med nya lagret innan TM-spårets
+klickpotential döms. .dk/.no-lagret (~65 % av TM-eventen) är INTE död vikt:
+programmet onboardar alla marknader med separata kontrakt (DK/NO inkluderade),
+så danska/norska klick blir också provisionsgrundande — och geografiskt är de
+relevanta (Köpenhamn 30 min från Malmö/Lund; norska gränsstäder). Wrap-tabellen
+i §4 ska därför täcka ticketmaster.se/.dk/.no från start, med respektive
+marknadskontrakts baslänk om Impact skiljer dem åt (kontrollera vid onboarding
+om AdId/CampaignId är per marknad).
 
 ## 6. Aktiveringsplan (när Impact-godkännandet kommer)
 
@@ -222,5 +234,5 @@ faktiska klicksiffror ur eventStats).
 - TM-kontraktets provisionsmodell för Norden (avgör allt) ⚠
 - Momsmotpart + "användning och utnyttjande"-frågan (Skatteverket) ⚠
 - Kräver TM-kontraktet FTC-stil disclosure utöver svensk märkning? ⚠
-- Varför 0 mätta klick på 692 TM-event? (.dk-vikt? synlighet? relevans?)
+- TM-klickfrekvens med nya 90d-lagret — mät om ~20/9 (fönstret breddades 23/8)
 - Awins SE-katalog inifrån: finns bio/nöjesparker där? (kräver konto)
