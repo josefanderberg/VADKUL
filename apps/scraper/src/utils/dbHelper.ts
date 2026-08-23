@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName } from './sqliteHelper';
+import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, getSyncMeta } from './sqliteHelper';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
 
@@ -42,10 +42,28 @@ function afternoonForDateOnly(time: unknown, hasSpecificTime: unknown): Date | u
 
 console.log(`🗃️  SQLite-spegel: ${getSqlitePath()}`);
 
+/**
+ * Är spegeln auktoritativ? Ja när en (inkrementell) sync lyckats de senaste
+ * 36 h — då finns varje stamped()-skrivet dokument lokalt och en miss i
+ * spegeln betyder "finns inte". Utan färsk cursor dubbelkollas mot Firestore
+ * som förut. Läses en gång per process. Sparade ~10 000 reads/natt (2026-08-23:
+ * 28 535 spegelträffar men 10 339 onödiga Firestore-queries på missar).
+ */
+let mirrorFresh: boolean | null = null;
+function isMirrorFresh(): boolean {
+    if (mirrorFresh !== null) return mirrorFresh;
+    const last = getSyncMeta('linkEvents.lastSyncAt');
+    const ageH = last ? (Date.now() - new Date(last).getTime()) / 3_600_000 : Infinity;
+    mirrorFresh = TRUST_MIRROR && ageH < 36;
+    if (mirrorFresh) console.log(`🗃️  Spegeln auktoritativ (sync ${ageH.toFixed(1)} h sedan) — missar dubbelkollas inte mot Firestore`);
+    return mirrorFresh;
+}
+
 export async function eventExistsInDb(url: string): Promise<boolean> {
     // Snabb lokal check först — undviker Firestore-läsning om vi redan har eventet.
     if (sqliteEventExists(url)) { readStats.sqliteHits++; return true; }
     if (!db) return false;
+    if (isMirrorFresh()) { readStats.sqliteHits++; return false; }
     readStats.firestoreQueries++;
     const snapshot = await db.collection('linkEvents').where('url', '==', url).limit(1).get();
     return !snapshot.empty;
@@ -129,6 +147,7 @@ export async function refreshEventPlace(
     lat: number,
     lng: number,
     geocodedQuery: string,
+    verified = true,
 ): Promise<boolean> {
     const row = getSqliteEvent(url);
     if (!row) return false;
@@ -142,7 +161,7 @@ export async function refreshEventPlace(
     }
     if (db && row.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ locationName, lat, lng, isLocationVerified: true }));
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ locationName, lat, lng, isLocationVerified: verified }));
         } catch (err: any) {
             if (err?.code !== 5) console.error('refreshEventPlace: Firestore-uppdatering misslyckades:', err?.message);
         }

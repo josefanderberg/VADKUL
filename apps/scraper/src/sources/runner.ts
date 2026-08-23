@@ -216,7 +216,11 @@ export async function runSource(
                             hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
                         }
                         if (!hit) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
-                        if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : q)) {
+                        // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
+                        // geo-refine-klustren tar det vidare) — men märk som overifierat.
+                        let verified = true;
+                        if (!hit && storedUngeocoded) { hit = await geocodeVenueSweden(e.city!); verified = false; }
+                        if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified)) {
                             result.updated++;
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
                         }
