@@ -8,7 +8,6 @@ import { startEventBoostCheckout, confirmEventBoost, type BoostTier } from '@/se
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
-import LatestCommentBubble from '@/components/v2/LatestCommentBubble';
 import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
@@ -546,8 +545,7 @@ export default function HomePage() {
     // per kategori i vyn. mixPick/highlightEmoji-kopplingen försvann med den.)
     // Onboarding-rutan. Startar STÄNGD — den öppnas från info-knappen nere till
     // vänster i stället för att möta besökaren vid varje sidladdning.
-    const [welcomeOpen, setWelcomeOpen] = useState(false);
-    // Onboarding vid start IGEN (Josef 11/8, ersätter 9/8-beslutet): utloggade
+    const [welcomeOpen, setWelcomeOpen] = useState(false);    // Onboarding vid start IGEN (Josef 11/8, ersätter 9/8-beslutet): utloggade
     // möts av intron vid sidladdning, inloggade slipper den. Vi väntar in
     // auth-svaret innan vi öppnar — annars blinkar rutan förbi för inloggade
     // medan sessionen återställs. Auto-öppnas EN gång per sidladdning; efter
@@ -2737,7 +2735,6 @@ export default function HomePage() {
             {/* 1b2. Senaste kommentaren på sajten — bubbla under navbaren.
                 Klick hoppar till kommentarens event (samma väg som sök/sparat).
                 Ligger nere medan välkomstrutan är uppe, som allt annat krom. */}
-            {!chromeHidden && <LatestCommentBubble events={events} onPick={jumpToEvent} />}
 
             {/* 1c. Sökträffar: STÄDER överst (klick flyger dit) och därunder
                 event ur alla kommande dagar (klick hoppar till eventets dag). */}
@@ -3433,8 +3430,9 @@ export default function HomePage() {
 
             {/* Info-knappen — öppnar onboarding-rutan när man själv vill ha den.
                 Nere till vänster, i samma rad som "Evenemang stad för stad"-
-                pillen i motsatta hörnet (Josef 9/8). Under kortet i
-                z-ordningen så den aldrig lägger sig över ett uppfällt event. */}
+                pillen i motsatta hörnet (Josef 9/8, tillbaka 23/8 — kommentars-
+                bubblan som en stund bodde i hörnet är borttagen). Under kortet
+                i z-ordningen så den aldrig lägger sig över ett uppfällt event. */}
             {!chromeHidden && (
                 <button
                     type="button"

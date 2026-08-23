@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
 
 /**
  * Kortlänk till stjärn-gåvan: vadkul.se/s/2 → kartan med koden inlöst.
@@ -13,16 +13,25 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Koden valideras INTE här — den skickas vidare som den är och avgörs av
  * redeemStarGift i Cloud Functions (enda stället som får dela ut stjärnor).
  * Ev. övriga parametrar (utm_*) följer med så spårningen överlever hoppet.
+ *
+ * RELATIV Location, inte NextResponse.redirect(new URL(...)): bakom Firebase
+ * Hosting kör Next i en Cloud Run-container som ser sin egen interna adress,
+ * så en absolut URL byggd ur request.url pekade rakt ner i
+ * https://0.0.0.0:8080/ (verifierat i prod 22/8). En relativ Location löses
+ * mot adressen webbläsaren faktiskt bad om.
  */
 export function GET(req: NextRequest, ctx: { params: Promise<{ kod: string }> }) {
     return ctx.params.then(({ kod }) => {
-        const url = new URL('/', req.url);
-        url.searchParams.set('s', kod);
+        const params = new URLSearchParams();
+        params.set('s', kod);
         req.nextUrl.searchParams.forEach((value, key) => {
-            if (key !== 's') url.searchParams.set(key, value);
+            if (key !== 's') params.set(key, value);
         });
         // 302, inte 301: koder kommer och går, och en permanent redirect
         // cachas i webbläsaren tills användaren rensar den.
-        return NextResponse.redirect(url, 302);
+        return new Response(null, {
+            status: 302,
+            headers: { Location: `/?${params.toString()}`, 'Cache-Control': 'no-store' },
+        });
     });
 }
