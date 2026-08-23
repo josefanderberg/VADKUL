@@ -94,8 +94,13 @@ export default function RootLayout({
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
-                <link rel="icon" type="image/png" href="/favicon.png" />
-                <link rel="apple-touch-icon" href="/favicon.png" />
+                {/* Två favicons med olika roller: Google (och iOS-hemskärmen) tar den
+                    STÖRSTA deklarerade — blå platta så det vita molnet syns i sökresultatens
+                    vita cirkel. Fliken tar 32:an — transparent, som förr. Ordningen är
+                    medveten: Safari väljer sist deklarerade ikonen, Chrome går på sizes. */}
+                <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192-bla.png" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+                <link rel="apple-touch-icon" href="/favicon-192-bla.png" />
                 <meta name="theme-color" content="#38bdf8" />
                 {/* Impact kräver value-attributet (inte content) — spread eftersom Reacts typer saknar value på meta */}
                 <meta name="impact-site-verification" {...({ value: 'dfee543c-aa2e-4d41-8f1e-0496d288b344' } as Record<string, string>)} />
