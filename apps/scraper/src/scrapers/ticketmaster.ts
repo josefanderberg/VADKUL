@@ -20,14 +20,15 @@ import { classifyEvent } from '../utils/classify';
 const API_KEY  = process.env.TICKETMASTER_API_KEY || '';
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
 
-// ── Affiliate-taggning: AVSTÄNGD ─────────────────────────────────────────────
-// Tidigare klistrades ?c=8469859&ac=1 på varje TM-URL. Den koden är INTE vår
-// (vårt Impact-publisher-konto är 7528311, skapat 2026-07-28 — parametern låg i
-// scrapern sedan 31 maj). Att köra främmande affiliate-taggar mot Ticketmaster
-// utan godkänt program är precis vad TM/Impact-compliance underkänner, så
-// länkarna sparas rena tills programansökan är godkänd. När den går igenom:
-// ersätt med den riktiga spårningslänken Impact genererar för programmet —
-// inte den här parametern.
+// ── Affiliate-läge ───────────────────────────────────────────────────────────
+// Nyckeln byttes 2026-08-23 till vår egen (Impact-publisher 7528311) — API:t
+// returnerar nu VÅRA evyy-spårningslänkar (/c/7528311/). Vi sparar ÄNDÅ rena
+// kanoniska ticketmaster.se-URL:er: url är primärnyckel + share-slug-bas, och
+// programansökan är inte godkänd än. NÄR Impact godkänner: slå på spårningen i
+// UTKANTEN (aggregate-events.ts publicUrl) genom att wrappa ticketmaster.se-
+// länkar i vår Impact-länk där — aldrig i databasen.
+// Historik: 31 maj–28 jul klistrades FRÄMMANDE ?c=8469859&ac=1 (gamla nyckeln
+// var registrerad på det kontot); städat 2026-08-23.
 function cleanEventUrl(rawUrl: string): string {
     try {
         let u = new URL(rawUrl);
@@ -61,13 +62,14 @@ function legacyAffiliateUrl(rawUrl: string): string {
     }
 }
 
-// ── Date window (30 dagar) ───────────────────────────────────────────────────
-// 30d matchar pipelinens SCRAPE_WINDOW_DAYS. TM-arenor annonseras månader i
-// förväg, så 7d tappade ~3/4 av Sverige-utbudet (7d=9 vs 30d=37 events).
+// ── Date window (90 dagar) ───────────────────────────────────────────────────
+// Breddat 30→90 (2026-08-23): TM-arenor och elitmatcher annonseras månader i
+// förväg — 30d tappade hösten. Pipelinens källfönster är 180d; 90 håller
+// sidantalet nere (~200/sida) med egen nyckel (5000 anrop/dygn).
 function getDateWindow(): { start: string; end: string } {
     const now = new Date();
     const end = new Date(now);
-    end.setDate(end.getDate() + 30);
+    end.setDate(end.getDate() + 90);
     end.setHours(23, 59, 59, 999);
     // TM kräver format: "2024-05-31T00:00:00Z"
     const fmt = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, 'Z');
