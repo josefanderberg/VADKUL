@@ -315,18 +315,13 @@ const weeklyLabelFor = (datetimeLocal: string): string => {
     const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     return `Varje ${weekday} kl ${time}`;
 };
-// Radie för "i närheten" i tom-läget: hur långt bort ett event får ligga och
-// ändå räknas som att det händer något där man tittar. 2,5 mil ≈ en småstad
-// med kringliggande byar (Hudiksvall + Forsa/Hög/Iggesund). Används numera BARA
-// som golv i tom-läget — själva frågan ställs mot kartans faktiska vy, se
-// eventInView nedan.
-const NEARBY_EMPTY_KM = 25;
 // Radie kring en SÖKT stads centrum när träfflistan räknar "X event den
-// närmaste veckan". Samma 2,5 mil som tom-lägets närhetsgolv — orten plus dess
-// byar (Hudiksvall + Forsa/Hög/Iggesund). Siffran är alltså en CIRKEL kring
-// centrum, medan stadsrutan man möts av efter hoppet räknar kartans rektangel:
-// de landar nära varandra men behöver inte bli exakt lika.
-const CITY_SEARCH_RADIUS_KM = NEARBY_EMPTY_KM;
+// närmaste veckan". 2,5 mil ≈ orten plus dess byar (Hudiksvall + Forsa/Hög/
+// Iggesund). Siffran är alltså en CIRKEL kring centrum, medan stadsrutan man
+// möts av efter hoppet räknar kartans rektangel: de landar nära varandra men
+// behöver inte bli exakt lika. (Tom-läget hade tidigare samma 2,5 mil som
+// tyst-golv — borttaget 24/8, se nearbyIsEmpty.)
+const CITY_SEARCH_RADIUS_KM = 25;
 // Intervall från så här många dagar räknas som "veckoläge" (helgen = 3 dagar
 // ska INTE geo-avgränsas eller zoom-gatas — den har alltid funkat nationellt).
 const WEEK_RANGE_MIN_DAYS = 5;
@@ -1610,81 +1605,13 @@ export default function HomePage() {
         }));
     }, [searchQuery, events, eventsSettled, selectedCategories, matchesFilter]);
 
-    /**
-     * "Syns det något i vyn?" — enda geo-testet tom-läget behöver. Ett event
-     * räknas som synligt om det ligger i kartans ruta ELLER inom NEARBY_EMPTY_KM
-     * från mitten. Golvet finns för att en hårt inzoomad vy (kvarteret) annars
-     * skulle skrika "inget här" fast spelningen ligger tre gator bort.
-     */
-    const eventInView = useCallback((evt: LinkEvent) => {
-        if (!hasValidCoords(evt)) return false;
-        if (mapCenter && haversineKm(mapCenter.lat, mapCenter.lng, evt.lat, evt.lng) <= NEARBY_EMPTY_KM) return true;
-        if (!mapBounds) return false;
-        return evt.lat >= mapBounds.south && evt.lat <= mapBounds.north
-            && evt.lng >= mapBounds.west && evt.lng <= mapBounds.east;
-    }, [mapCenter, mapBounds]);
-
-    /**
-     * "Här händer ingenting"-läget: noll synliga event i den vy man tittar på.
-     * Det är i den sekunden en uppmaning att tipsa faktiskt biter — besvikelsen
-     * är precis nyss uppstådd och gäller en konkret plats och dag. En permanent
-     * banner eller ringar runt knappar blir folk blinda för på tre besök; det
-     * här syns bara när det är sant.
-     *
-     * Frågan ställs mot kartans FAKTISKA ruta (eventInView), inte mot en fast
-     * radie. Den fasta radien var fel åt båda hållen: i nationell översikt låg
-     * det per definition inget inom 2,5 mil från mitten, så prompten slog till
-     * direkt när sidan öppnades — mitt över en karta full av markörer; och en
-     * zoomgrind i stället gjorde att den aldrig dök upp där den behövs.
-     *
-     * Laddningsgrinden är två signaler, inte en: eventsSettled (det DEFINITIVA
-     * "aggregaten är hämtade"-beskedet — dayCountReady duger inte, den tänds
-     * redan vid första delbatchen) OCH mapPainted (prickarna är utritade).
-     * Utan den andra hann prompten påstå "inget här" medan ladda-pillen
-     * fortfarande sa "Ritar ut eventen…". Utöver det: håll tyst så fort något
-     * annat pågår — skapa-flödet, ett öppet kort eller en aktiv sökning.
-     */
-    const nearbyIsEmpty = useMemo(() => {
-        if (!eventsSettled || !mapPainted) return false;
-        // Under bildspelet skulle prompten blinka in och ut i takt med
-        // dag↔vecka-växlingen (en småstad är ofta tom just idag men inte i
-        // veckan). Håll tyst — besökaren har inte valt den här platsen.
-        if (tourPlaying) return false;
-        if (!mapCenter && !mapBounds) return false;
-        if (creationMode !== 'idle' || selectedEvent || selectedWish) return false;
-        if (searchQuery.trim()) return false;
-        return !visibleEvents.some(eventInView);
-    }, [eventsSettled, mapPainted, mapCenter, mapBounds, eventInView, creationMode, selectedEvent, selectedWish, searchQuery, visibleEvents, tourPlaying]);
-
     // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
     // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
-    // konstantblocket ovanför HomePage. Definieras här uppe eftersom
-    // nearbyThisWeekCount/canOfferWeek nedan läser den.
+    // konstantblocket ovanför HomePage.
     const weekUnlocked = mapZoom !== null && mapZoom >= WEEK_VIEW_MIN_ZOOM;
     // Spegel för handleToggleTourRange (stadsrutans klick) — den är deklarerad
     // långt ovanför, uppe i bildspels-blocket.
     weekUnlockedRef.current = weekUnlocked;
-
-    /**
-     * Hur många event finns i närheten den KOMMANDE VECKAN, oavsett vald dag?
-     * Det är skillnaden mellan "här händer ingenting" och "här händer inget
-     * just idag" — i en småstad är dagsvyn ofta tom medan veckan har ett
-     * tiotal, och då är rätt svar att vidga tiden, inte att be om tips.
-     * Räknas på samma källfilter som kartan, så siffran vi lovar är den man
-     * faktiskt får se.
-     */
-    const nearbyThisWeekCount = useMemo(() => {
-        const from = Date.now();
-        const to = from + 7 * 86_400_000;
-        return events.filter(evt =>
-            evt.time.getTime() >= from && evt.time.getTime() <= to
-            && matchesFilter(evt)
-            && eventInView(evt),
-        ).length;
-    }, [events, eventInView, matchesFilter]);
-
-    /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren). */
-    const canOfferWeek = weekUnlocked && dayRangeDays !== 7 && nearbyThisWeekCount > 0;
 
     /**
      * Är stadsrutans växel låst just nu? Sant bara på väg TILL veckan medan man
@@ -1693,14 +1620,16 @@ export default function HomePage() {
      */
     const tourRangeToggleLocked = dayRangeDays < WEEK_RANGE_MIN_DAYS && !weekUnlocked;
 
-    /** Dagen prompten pratar om — "idag"/"imorgon", annars veckodagen. */
+    /** Perioden prompten pratar om — "idag"/"imorgon"/veckodagen, eller
+     *  "i veckan" när veckoläget är det som är tomt. */
     const promptDayLabel = useMemo(() => {
+        if (dayRangeDays >= WEEK_RANGE_MIN_DAYS) return 'i veckan';
         if (dayOffset === 0) return 'idag';
         if (dayOffset === 1) return 'imorgon';
         const d = new Date();
         d.setDate(d.getDate() + dayOffset);
         return `på ${d.toLocaleDateString('sv-SE', { weekday: 'long' })}`;
-    }, [dayOffset]);
+    }, [dayOffset, dayRangeDays]);
 
     /**
      * Öppna skapa-modalen direkt i TIPS-läge på den plats man tittar på.
@@ -1826,6 +1755,46 @@ export default function HomePage() {
         };
         return { day: until(1).length, week: until(7).length };
     }, [cityTourTarget, mapBounds, boundsCityKey, inMapView, dayOffset, events, selectedCategories, matchesFilter]);
+
+    /**
+     * "Här händer ingenting"-läget: stadsrutans siffra för valt läge är NOLL.
+     * Det är i den sekunden en uppmaning att vidga (vecka/zooma ut) eller
+     * tipsa faktiskt biter — besvikelsen är precis nyss uppstådd och gäller en
+     * konkret plats och dag. En permanent banner blir folk blinda för på tre
+     * besök; det här syns bara när det är sant.
+     *
+     * MÅTTET ÄR areaCounts — EXAKT samma tal som stadsrutan visar (enda
+     * geo-regeln: kartans ruta). Tidigare låg här ett eget test med 2,5 mils
+     * tyst-golv kring mitten: då kunde rutan säga "0 idag" medan prompten teg
+     * för att ett event låg 2 mil bort utanför vyn (Josef 24/8, "då ska det ju
+     * komma upp att det finns inga här idag"). Säger rutan 0 ska prompten upp
+     * — två olika mått på samma skärm är alltid fel. areaCounts === null
+     * (rutan omätt efter stadshopp, "…") räknas som INTE tomt.
+     *
+     * Laddningsgrinden är två signaler, inte en: eventsSettled (det DEFINITIVA
+     * "aggregaten är hämtade"-beskedet — dayCountReady duger inte, den tänds
+     * redan vid första delbatchen) OCH mapPainted (prickarna är utritade).
+     * Utan den andra hann prompten påstå "inget här" medan ladda-pillen
+     * fortfarande sa "Ritar ut eventen…". Utöver det: håll tyst så fort något
+     * annat pågår — skapa-flödet, ett öppet kort eller en aktiv sökning.
+     */
+    const nearbyIsEmpty = useMemo(() => {
+        if (!eventsSettled || !mapPainted) return false;
+        // Under bildspelet skulle prompten blinka in och ut i takt med
+        // dag↔vecka-växlingen (en småstad är ofta tom just idag men inte i
+        // veckan). Håll tyst — besökaren har inte valt den här platsen.
+        if (tourPlaying) return false;
+        if (creationMode !== 'idle' || selectedEvent || selectedWish) return false;
+        if (searchQuery.trim()) return false;
+        if (!areaCounts) return false;
+        return (dayRangeDays >= WEEK_RANGE_MIN_DAYS ? areaCounts.week : areaCounts.day) === 0;
+    }, [eventsSettled, mapPainted, tourPlaying, creationMode, selectedEvent, selectedWish, searchQuery, areaCounts, dayRangeDays]);
+
+    /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren),
+     *  bara från dagsläget, och bara om veckan faktiskt har något — mätt med
+     *  SAMMA tal som stadsrutans veckorad, så siffran vi lovar är den man ser
+     *  när man växlar. */
+    const canOfferWeek = weekUnlocked && dayRangeDays < WEEK_RANGE_MIN_DAYS && (areaCounts?.week ?? 0) > 0;
 
     /**
      * Stadsnamnet i rutan FÖLJER KARTAN (Josef 10/8): närmsta ort ur den stora
@@ -3174,9 +3143,9 @@ export default function HomePage() {
                 </div>
             )}
 
-            {/* Tomt här: noll event inom 2,5 mil från det man tittar på. Frågan
-                ställs bara i det läget — se nearbyIsEmpty. Sitter ovanför
-                navbaren så den inte skymmer kartan man just letade i. */}
+            {/* Tomt här: stadsrutans siffra för valt läge är noll — samma mått
+                som rutan (se nearbyIsEmpty). Sitter ovanför navbaren så den
+                inte skymmer kartan man just letade i. */}
             {nearbyIsEmpty && (
                 <div className="fixed inset-x-0 bottom-24 z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
@@ -3189,11 +3158,11 @@ export default function HomePage() {
                             {canOfferWeek ? (
                                 <>
                                     <p className="text-sm font-bold text-slate-800">
-                                        Inget här {promptDayLabel} — men {nearbyThisWeekCount} i veckan.
+                                        Inget här {promptDayLabel} — men {areaCounts?.week} i veckan.
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                        Kartan visar en dag i taget. Vidga till hela veckan
-                                        så syns de direkt.
+                                        Byt till hela veckan så syns de direkt — eller
+                                        zooma ut för att se mer.
                                     </p>
                                 </>
                             ) : (
@@ -3202,8 +3171,8 @@ export default function HomePage() {
                                         Inget här {promptDayLabel}.
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                        Vet du något som händer? Tipsa — det tar en halvminut
-                                        och kräver inget konto.
+                                        Zooma ut för att se mer — eller tipsa om något du
+                                        vet händer. Tar en halvminut, inget konto.
                                     </p>
                                 </>
                             )}
