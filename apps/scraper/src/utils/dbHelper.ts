@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime } from './sqliteHelper';
+import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName } from './sqliteHelper';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
 
@@ -113,6 +113,38 @@ export async function refreshEventTime(
         } catch (err: any) {
             // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
             if (err?.code !== 5) console.error('refreshEventTime: Firestore-uppdatering misslyckades:', err?.message);
+        }
+    }
+    return true;
+}
+
+/**
+ * Refresh-körning: källan levererar nu en riktig venue för ett känt event
+ * vars sparade plats bara var stads-fallbacken. Uppdaterar locationName +
+ * koordinater (SQLite + Firestore). Returnerar true om något ändrades.
+ */
+export async function refreshEventPlace(
+    url: string,
+    locationName: string,
+    lat: number,
+    lng: number,
+    geocodedQuery: string,
+): Promise<boolean> {
+    const row = getSqliteEvent(url);
+    if (!row) return false;
+    if ((row.locationName ?? '') === locationName && Math.abs((row.lat ?? 0) - lat) < 1e-6) return false;
+    try {
+        setEventCoords(url, lat, lng, geocodedQuery);
+        setEventLocationName(url, locationName);
+    } catch (err) {
+        console.error('refreshEventPlace: SQLite-uppdatering misslyckades:', err);
+        return false;
+    }
+    if (db && row.firestoreId) {
+        try {
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ locationName, lat, lng, isLocationVerified: true }));
+        } catch (err: any) {
+            if (err?.code !== 5) console.error('refreshEventPlace: Firestore-uppdatering misslyckades:', err?.message);
         }
     }
     return true;

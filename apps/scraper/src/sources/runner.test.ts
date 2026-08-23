@@ -11,6 +11,7 @@ vi.mock('../utils/dbHelper', () => ({
     addEventsBatch: vi.fn(async (evs: any[]) => ({ written: evs.length, errors: [] })),
     eventExistsInDb: vi.fn(async () => false),
     refreshEventTime: vi.fn(async () => false),
+    refreshEventPlace: vi.fn(async () => false),
 }));
 vi.mock('../utils/venueCoordinates', () => ({
     geocodeVenueSweden: vi.fn(async () => null),
@@ -29,6 +30,7 @@ vi.mock('../utils/storageHelper', () => ({
 vi.mock('../utils/sqliteHelper', () => ({
     recordScrapeRun: vi.fn(),
     setEventAudit: vi.fn(),
+    getSqliteEvent: vi.fn(() => undefined),
 }));
 vi.mock('../utils/llmAudit', () => ({
     auditEvent: vi.fn(),

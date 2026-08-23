@@ -200,6 +200,16 @@ function tribeToRawEvent(e: any): RawEvent | null {
  * uttryckligen säger "idag/imorgon", anta det är publication date och
  * leta efter ett RIKTIGT event-datum i content/title/excerpt istället.
  */
+/** Synlig brödtext ur HTML: bort med head/script/style/nav/footer + taggar. */
+function visibleText(html: string): string {
+    return html
+        .replace(/<head[\s\S]*?<\/head>/i, ' ')
+        .replace(/<(script|style|nav|footer|header)[\s\S]*?<\/\1>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ');
+}
+
 function looksLikePublishDate(dateRaw: string | undefined, now: Date): boolean {
     if (!dateRaw) return false;
     const d = new Date(dateRaw);
@@ -260,6 +270,11 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
     // WP REST HTML-enkodar titlar (&#038; &amp; &#8211;) — avkoda enligt encoding-guarden
     const title = e?.title?.rendered ? decodeEntities(String(e.title.rendered)).trim() : null;
     if (!title) return null;
+    // WPML/Polylang levererar översättningar som EGNA poster i samma API —
+    // Visit Piteå gav engelska dubbletter ("Knit and read at Öjebyn library").
+    // Hoppa språkprefixade permalänkar när källans baseUrl inte själv är på det språket.
+    const link = String(e.link ?? '');
+    if (/\/(en|de|fi|no|da)\//i.test(link.replace(/^https?:\/\/[^/]+/, '')) && !/\/(en|de|fi|no|da)\/?$/i.test(cfg.baseUrl)) return null;
 
     // 1. Standardfält först
     const dateRaw = e.meta?.event_date || e.meta?.start_date || e.acf?.start_date;
@@ -278,6 +293,7 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
 
     // 3. Sista utvägen: hämta event-permalänken som HTML och leta där
     let detailHtml: string | null = null;
+    let detailVenue: string | undefined;
     if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && e.link) {
         detailHtml = await fetchDetailHtml(e.link, cfg, signal);
         if (detailHtml) {
@@ -289,8 +305,22 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
                     if (scanned) start = scanned;
                 }
             } else {
-                const scanned = findFirstDateInText(detailHtml, now);
-                if (scanned) start = scanned;
+                // SYNLIG text, inte rå HTML: <head> bär article:modified_time
+                // (ISO) som annars vinner över eventets "2 oktober" i brödtexten
+                // — så fick Visit Piteå 77 event på publiceringsdagen (2026-08-20).
+                // Etiketterade rader ("Nästa tillfälle: Fredag, 2 oktober 21:00
+                // Studio Acusticum") är säkrast och ger dessutom venue.
+                const visible = visibleText(detailHtml);
+                const labeled = visible.match(/(?:Nästa tillfälle|Nästa datum|Datum|När|Tid)\s*:\s*([^.]{0,120})/i);
+                const fromLabel = labeled ? findFirstDateInText(labeled[1].replace(/,/g, ' '), now) : null;
+                if (fromLabel) {
+                    start = fromLabel;
+                    const afterTime = labeled![1].match(/\d{1,2}[:.]\d{2}\s+([A-ZÅÄÖ][^|]{2,70}?)(?=\s+(?:Boka|Köp|Biljett|Läs mer|Priser|Fri entré|Mer info)|$)/);
+                    if (afterTime?.[1]) detailVenue = afterTime[1].trim();
+                } else {
+                    const scanned = findFirstDateInText(visible, now);
+                    if (scanned) start = scanned;
+                }
             }
         }
     }
@@ -325,7 +355,8 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
     }
 
     // Venue: leta i content → excerpt → HTML detalsida om vi redan hämtat den
-    const venueName = findVenueInText(String(e.content?.rendered || ''))
+    const venueName = detailVenue
+        || findVenueInText(String(e.content?.rendered || ''))
         || findVenueInText(String(e.excerpt?.rendered || ''))
         || (detailHtml ? findVenueInHtml(detailHtml) : undefined);
 
