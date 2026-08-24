@@ -22,6 +22,7 @@ sqlite.pragma('journal_mode = WAL');
 const updateStmt = sqlite.prepare(`
     UPDATE link_events
     SET lat = @lat, lng = @lng, geocodedQuery = @geocodedQuery,
+        geoPrecision = COALESCE(@geoPrecision, geoPrecision),
         isLocationVerified = 1, updatedAt = @updatedAt
     WHERE url = @url
 `);
@@ -122,6 +123,7 @@ async function main() {
                     lat: coords[0],
                     lng: coords[1],
                     geocodedQuery: query,
+                    geoPrecision: coords[2] ?? null,
                     updatedAt: new Date().toISOString(),
                     url: event.url,
                 });

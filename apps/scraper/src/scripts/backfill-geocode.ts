@@ -104,11 +104,11 @@ function candidates(r: Row): string[] {
     return out;
 }
 
-async function applyCoords(r: Row, lat: number, lng: number, query: string): Promise<void> {
-    setEventCoords(r.url, lat, lng, query);
+async function applyCoords(r: Row, lat: number, lng: number, query: string, precision: string | null = null): Promise<void> {
+    setEventCoords(r.url, lat, lng, query, precision);
     if (db && r.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ lat, lng, isLocationVerified: true }));
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ lat, lng, isLocationVerified: true, ...(precision ? { geoPrecision: precision } : {}) }));
         } catch (e: any) {
             if (e?.code !== 5) console.error(`  ❌ Firestore fail ${r.url.slice(0, 50)}: ${e?.message}`);
         }
@@ -144,7 +144,7 @@ async function main() {
         if (cands.length === 0) { skipped++; continue; }
 
         attempted++;
-        let hit: [number, number] | null = null;
+        let hit: import('../utils/venueCoordinates').GeoHit | null = null;
         let usedQuery = '';
         for (const q of cands) {
             const res = await geocodeVenueSweden(q);
@@ -155,7 +155,7 @@ async function main() {
             fixed++;
             bump(host, 'ok');
             console.log(`  📍 ${r.title.slice(0, 42).padEnd(42)} → "${usedQuery.slice(0, 40)}" [${hit[0].toFixed(4)}, ${hit[1].toFixed(4)}]`);
-            if (APPLY) await applyCoords(r, hit[0], hit[1], usedQuery);
+            if (APPLY) await applyCoords(r, hit[0], hit[1], usedQuery, hit[2] ?? null);
         } else {
             failed++;
             bump(host, 'fail');

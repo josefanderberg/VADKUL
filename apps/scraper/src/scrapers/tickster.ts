@@ -442,9 +442,11 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                 let lat: number;
                 let lng: number;
 
+                let geoPrecision: string | null = null;
                 if (details.jsonLat && details.jsonLng) {
                     lat = details.jsonLat;
                     lng = details.jsonLng;
+                    geoPrecision = 'kallkoordinat';
                     console.log(`     📍 Koordinater från JSON-LD: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
                 } else {
                     // Geocoda adressen med Sverige-bred sökning
@@ -453,12 +455,14 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     if (coords) {
                         lat = coords[0];
                         lng = coords[1];
+                        geoPrecision = coords[2] ?? null;
                         console.log(`     📍 Geocodad: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
                     } else {
-                        // Geocoda bara stad som fallback
+                        // Geocoda bara stad som fallback — märks som stad-centroid
                         const cityCoords = details.city ? await geocodeVenueSweden(details.city) : null;
                         lat = cityCoords ? cityCoords[0] : 59.3293; // Stockholm centrum som yttersta fallback
                         lng = cityCoords ? cityCoords[1] : 18.0686;
+                        geoPrecision = 'stad-centroid';
                         console.log(`     📍 Fallback stad: [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
                     }
                 }
@@ -481,6 +485,7 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     geocodedQuery: details.geocodeQuery,
                     lat,
                     lng,
+                    geoPrecision,
                     hostName: 'Tickster',
                     category: guessCategoryFromTitle(details.title),
                     createdAt: new Date(),

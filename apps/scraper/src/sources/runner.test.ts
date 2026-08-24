@@ -165,7 +165,7 @@ describe('runSource — geocoding', () => {
 
     it('projicerade koordinater (SWEREF99/RT90) kastas och ersätts av geokodning', async () => {
         // lat=6129956 spränger WGS84 → ska INTE skrivas; geokodning tar över.
-        geocodeMock.mockResolvedValueOnce([59.0, 18.0]);
+        geocodeMock.mockResolvedValueOnce([59.0, 18.0, 'poi']);
         await run([makeEvent({ coords: [6129956, 1703467], venueName: 'X', city: 'Y' })]);
         expect(geocodeMock).toHaveBeenCalled();
         const written = writtenEvents()[0];
@@ -184,7 +184,7 @@ describe('runSource — geocoding', () => {
     it('kandidat-kedjan provas i ordning, första träff vinner', async () => {
         geocodeMock
             .mockResolvedValueOnce(null)              // "Storkyrkan" → miss
-            .mockResolvedValueOnce([59.32, 18.07]);   // "Stockholms domkyrkoförsamling" → träff
+            .mockResolvedValueOnce([59.32, 18.07, 'poi']);   // "Stockholms domkyrkoförsamling" → träff
         await run([makeEvent({
             geocodeCandidates: ['Storkyrkan', 'Stockholms domkyrkoförsamling', 'Stockholm'],
         })]);
@@ -195,7 +195,7 @@ describe('runSource — geocoding', () => {
     });
 
     it('geo-cachen återanvänder svar inom körningen (paraply: samma församling × N event)', async () => {
-        geocodeMock.mockResolvedValue([57.0, 15.0]);
+        geocodeMock.mockResolvedValue([57.0, 15.0, 'poi']);
         await run([
             makeEvent({ geocodeCandidates: ['Växjö domkyrka'] }),
             makeEvent({ geocodeCandidates: ['Växjö domkyrka'] }),

@@ -519,6 +519,74 @@ export async function geocodeCityCentroid(city: string): Promise<[number, number
     }
 }
 
+/**
+ * Sanningsmärkning av en geokodningsträff (ägarbeslut 24/8 — Växjö-granskningen):
+ *   'kallkoordinat'  källan levererade koordinaterna själv
+ *   'poi'            namngiven plats träffad (known_venues eller Nominatim)
+ *   'gata'           gatuadress-träff
+ *   'ort-centroid'   by/tätort ur platssträngan — rätt trakt, inte rätt hus
+ *   'stad-centroid'  stadens mittpunkt — sista fallbacken, positionen gissad
+ */
+export type GeoPrecision = 'kallkoordinat' | 'poi' | 'gata' | 'ort-centroid' | 'stad-centroid';
+
+/** [lat, lng, precision] — tredje elementet null när vägen är okänd (gammal cache). */
+export type GeoHit = [number, number, GeoPrecision | null];
+
+/**
+ * Stryk administrativa segment (", Växjö stads- och domkyrkoförsamling") ur
+ * frågan — Nominatim missar "Växjö domkyrka, X-församling" men träffar
+ * "Växjö domkyrka". Segment som är RIKTIGA hus (församlingsHEM/-GÅRD) berörs
+ * inte: mönstret kräver att segmentet SLUTAR på församling/pastorat/stift.
+ */
+export function stripParishSegments(q: string): string {
+    const parts = q.split(',').map(s => s.trim()).filter(Boolean);
+    const kept = parts.filter(p => !/(församling(en)?|pastorat(et)?|kontrakt(et)?|stift(et)?)$/i.test(p));
+    return (kept.length > 0 ? kept : parts).join(', ');
+}
+
+/** Grov gata-vs-POI-klassning av en fråga som träffade: "Storgatan 12" → gata. */
+export function classifyQueryPrecision(q: string): 'gata' | 'poi' {
+    return /[\p{L}.]+\s+\d{1,4}\s*[A-Za-z]?\s*(,|$)/u.test(q) ? 'gata' : 'poi';
+}
+
+/**
+ * Mellansegment-fallbacken: suffixkedjan för "VAIS-torpet, Fylleryd, Växjö" =
+ * ["Fylleryd, Växjö", "Växjö"]. Ortnamnet i mitten ska vinna över kommun-
+ * huvudorten — Fylleryd finns i OSM och eventet hamnar i rätt skog.
+ */
+export function suffixQueries(cleaned: string): string[] {
+    const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+    const out: string[] = [];
+    for (let i = 1; i < parts.length; i++) out.push(parts.slice(i).join(', '));
+    return out;
+}
+
+/** Adjektiv/genrer som inleder venuenamn — aldrig ortskandidater. */
+const FIRST_WORD_STOP = /^(stora|lilla|gamla|nya|norra|södra|östra|västra|övre|nedre|hotell|restaurang|caf[ée]|teater(n)?|bio(grafen)?|salong(en)?|galleri(et)?|the|el|la|de|den|det)$/i;
+
+/**
+ * "Gemla bibliotek" (stad: Växjö) → "Gemla, Växjö". Första ordet i ett
+ * platsnamn är ofta byn/tätorten — en träff där är mycket bättre än
+ * kommuncentroiden. nearCity-accept-predikatet vaktar mot fel landsände.
+ */
+export function firstWordPlaceQuery(cleaned: string, city: string): string | null {
+    const head = cleaned.split(',')[0].trim();
+    const words = head.split(/\s+/);
+    if (words.length < 2) return null;
+    const w = words[0].replace(/[^\p{L}\-]/gu, '');
+    if (w.length < 4 || FIRST_WORD_STOP.test(w)) return null;
+    if (w.toLowerCase() === city.trim().toLowerCase()) return null;
+    return `${w}, ${city.trim()}`;
+}
+
+/** Är frågan i praktiken bara ett stadsnamn? ("Växjö", "Växjö, Sverige") */
+function isCityOnlyQuery(cleaned: string, cityHint?: string): boolean {
+    const q = cleaned.replace(/,\s*(sverige|sweden)\s*$/i, '').trim();
+    if (q.includes(',')) return false;
+    if (cityHint && q.toLowerCase() === cityHint.trim().toLowerCase()) return true;
+    return SWEDISH_GEO_CITIES.some(c => c.toLowerCase() === q.toLowerCase());
+}
+
 export interface GeocodeSwedenOpts {
     /**
      * Förväntad stad/ort. Sätts den valideras ALLA svar (även cachade) mot
@@ -545,7 +613,7 @@ export interface GeocodeSwedenOpts {
 export async function geocodeVenueSweden(
     rawQuery: string,
     opts: GeocodeSwedenOpts = {},
-): Promise<[number, number] | null> {
+): Promise<GeoHit | null> {
     if (!rawQuery) return null;
 
     if (isForeignAddress(rawQuery)) {
@@ -556,12 +624,14 @@ export async function geocodeVenueSweden(
     // Skippa endast Ticksters faktiska kontoradress (Magasinsgatan 8, 411 18 Göteborg).
     // Tidigare strippade vi "Magasinsgatan 8" globalt, vilket förstörde adresser
     // som "Fat Daves, Magasinsgatan 8, Malmö" (samma gatunamn finns i andra städer).
-    const cleaned = rawQuery
+    // Församlings-/pastoratsegment strippas också — de får Nominatim att missa
+    // platser den annars hittar ("Växjö domkyrka, Växjö stads- och domkyrkoförsamling").
+    const cleaned = stripParishSegments(rawQuery
         .replace(/Magasinsgatan\s*8\s*,?\s*\d{3}\s*\d{2}\s+Göteborg/gi, '')
         .replace(/Magasinsgatan\s*8\s*,\s*Göteborg\b/gi, '')
         .trim()
         .replace(/^,\s*|\s*,\s*$/g, '')
-        .replace(/,\s*,/g, ',');
+        .replace(/,\s*,/g, ','));
     if (!cleaned) return null;
 
     // 0. Verifierade venues (known_venues) — gratis, exakta, byggs upp av
@@ -571,7 +641,7 @@ export async function geocodeVenueSweden(
     const nearCityRaw = (opts.nearCity || '').trim();
     const venueHit = lookupVenueSmart(cleaned, nearCityRaw || undefined)
         ?? (cleaned.includes(',') ? lookupVenueSmart(cleaned.split(',')[0], nearCityRaw || undefined) : null);
-    if (venueHit) return venueHit;
+    if (venueHit) return [venueHit[0], venueHit[1], 'poi'];
 
     // nearCity-validering: geokoda stadens centroid (cachad) och bygg predikatet.
     // Kan centroiden inte lösas (okänd småort) → kör oskyddat som tidigare.
@@ -585,10 +655,10 @@ export async function geocodeVenueSweden(
         // Bakåtkompatibla vägen — exakt gamla beteendet.
         const cached = geocodeCacheGet(cleaned);
         if (cached && (cached.ok ? cached.ageDays < 90 : cached.ageDays < 14)) {
-            return cached.ok ? [cached.lat, cached.lng] : null;
+            return cached.ok ? [cached.lat, cached.lng, (cached.precision as GeoPrecision | null)] : null;
         }
         try {
-            const result = await geocodeVenueSwedenLive(cleaned);
+            const result = await geocodeVenueSwedenLive(cleaned, undefined, nearCity || undefined);
             geocodeCacheSet(cleaned, result);
             return result;
         } catch (e) {
@@ -606,7 +676,7 @@ export async function geocodeVenueSweden(
     //    (den kan vara "rätt" för anropare utan nearCity-kontext).
     const cached = geocodeCacheGet(cleaned);
     if (cached && cached.ok && cached.ageDays < 90 && accept(cached.lat, cached.lng)) {
-        return [cached.lat, cached.lng];
+        return [cached.lat, cached.lng, (cached.precision as GeoPrecision | null)];
     }
 
     // 2. Stads-ankrad variant med egen cache-nyckel (svaret gäller PER stad).
@@ -618,14 +688,14 @@ export async function geocodeVenueSweden(
     if (nearCached && (nearCached.ok ? nearCached.ageDays < 90 : nearCached.ageDays < 14)) {
         // Validera även denna — nycklar skrivna före valideringen kan vara fel.
         if (nearCached.ok && accept(nearCached.lat, nearCached.lng)) {
-            return [nearCached.lat, nearCached.lng];
+            return [nearCached.lat, nearCached.lng, (nearCached.precision as GeoPrecision | null)];
         }
         if (!nearCached.ok) return null;
         // ok men fel stad → fall igenom till live-omkörning (skriver om nyckeln)
     }
 
     try {
-        const result = await geocodeVenueSwedenLive(anchored, accept);
+        const result = await geocodeVenueSwedenLive(anchored, accept, nearCity);
         geocodeCacheSet(nearKey, result);
         if (!result) {
             console.log(`[Geocoding/SE] "${anchored}" underkänd av nearCity-validering (${nearCity}, max ${NEAR_CITY_MAX_KM} km)`);
@@ -643,31 +713,62 @@ export async function geocodeVenueSweden(
 /**
  * Själva Nominatim-kedjan, utan cache. Anropa geocodeVenueSweden istället.
  * accept-predikatet (nearCity-validering) appliceras på ALLA steg — även
- * komma-tail- och stads-skanningsfallbacken får inte returnera fel stad.
+ * suffix- och stads-skanningsfallbacken får inte returnera fel stad.
+ * Varje träff märks med GeoPrecision — degraderingen till stadsnivå får
+ * aldrig mer ske tyst (Växjö-granskningen 24/8).
  */
 async function geocodeVenueSwedenLive(
     cleaned: string,
     accept?: (lat: number, lng: number) => boolean,
-): Promise<[number, number] | null> {
+    cityHint?: string,
+): Promise<GeoHit | null> {
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
 
-    // Försök 1: full fråga
+    // Försök 1: full fråga. En ren stadsnamnsfråga ("Växjö") ÄR en centroid.
     let result = await nominatimSearchSweden(cleaned, accept);
     if (result) {
         console.log(`[Geocoding/SE] Found "${cleaned}": [${result[0]}, ${result[1]}]`);
-        return result;
+        return [result[0], result[1], isCityOnlyQuery(cleaned, cityHint) ? 'stad-centroid' : classifyQueryPrecision(cleaned)];
     }
 
-    // Försök 2: om komma finns, testa sista delen (ofta stad)
-    if (cleaned.includes(',')) {
-        const city = cleaned.split(',').map(s => s.trim()).filter(Boolean).pop() || '';
-        if (city && city !== cleaned) {
+    // Försök 2: suffixkedjan — mellansegmenten FÖRE sista delen, så
+    // "VAIS-torpet, Fylleryd, Växjö" provar "Fylleryd, Växjö" (rätt skog)
+    // innan den ger upp till "Växjö" (kommuncentroiden). Rena stads-suffix
+    // SPARAS till sist — första-ords-orten (2b) måste få chansen före dem,
+    // annars vinner centroiden över "Gemla, Växjö".
+    const citySuffixes: string[] = [];
+    for (const sfx of suffixQueries(cleaned)) {
+        if (isCityOnlyQuery(sfx, cityHint)) { citySuffixes.push(sfx); continue; }
+        await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+        result = await nominatimSearchSweden(sfx, accept);
+        if (result) {
+            const precision: GeoPrecision = classifyQueryPrecision(sfx) === 'gata' ? 'gata' : 'ort-centroid';
+            console.log(`[Geocoding/SE] Found suffix "${sfx}" (${precision}): [${result[0]}, ${result[1]}]`);
+            return [result[0], result[1], precision];
+        }
+    }
+
+    // Försök 2b: första ordet i platsnamnet som ort ("Gemla bibliotek" →
+    // "Gemla, Växjö"). Bara med stadskontext, och accept-predikatet vaktar.
+    if (cityHint) {
+        const fw = firstWordPlaceQuery(cleaned, cityHint);
+        if (fw) {
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-            result = await nominatimSearchSweden(city, accept);
+            result = await nominatimSearchSweden(fw, accept);
             if (result) {
-                console.log(`[Geocoding/SE] Found city "${city}": [${result[0]}, ${result[1]}]`);
-                return result;
+                console.log(`[Geocoding/SE] Found first-word place "${fw}": [${result[0]}, ${result[1]}]`);
+                return [result[0], result[1], 'ort-centroid'];
             }
+        }
+    }
+
+    // Försök 2c: de uppskjutna stads-suffixen — ärligt märkta som centroid.
+    for (const sfx of citySuffixes) {
+        await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+        result = await nominatimSearchSweden(sfx, accept);
+        if (result) {
+            console.log(`[Geocoding/SE] City-suffix fallback "${sfx}": [${result[0]}, ${result[1]}]`);
+            return [result[0], result[1], 'stad-centroid'];
         }
     }
 
@@ -685,15 +786,15 @@ async function geocodeVenueSwedenLive(
             result = await nominatimSearchSweden(withCity, accept);
             if (result) {
                 console.log(`[Geocoding/SE] Found via city-scan "${withCity}": [${result[0]}, ${result[1]}]`);
-                return result;
+                return [result[0], result[1], classifyQueryPrecision(withCity)];
             }
         }
-        // Sista chansen: bara stadsnamnet (stad-nivå precision)
+        // Sista chansen: bara stadsnamnet — STAD-NIVÅ, märks som centroid.
         await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
         result = await nominatimSearchSweden(`${foundCity}, Sverige`, accept);
         if (result) {
             console.log(`[Geocoding/SE] City-level fallback "${foundCity}": [${result[0]}, ${result[1]}]`);
-            return result;
+            return [result[0], result[1], 'stad-centroid'];
         }
     }
 

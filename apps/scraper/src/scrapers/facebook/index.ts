@@ -657,6 +657,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
                 let finalLat = 0, finalLng = 0;
                 let isLocationVerified = false;
+                let geoPrecision: string | null = null;
 
                 if (extractedAddress) {
                     let geocodeQuery = extractedAddress;
@@ -680,12 +681,15 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         }
                     }
 
-                    // Retry 2: stad-nivå fallback — ger åtminstone ungefärlig position
+                    // Retry 2: stad-nivå fallback — ger åtminstone ungefärlig position.
+                    // Märks som stad-centroid: positionen är en gissning, inte platsen.
+                    let cityFallbackUsed = false;
                     if (!coords) {
                         const fallbackCity = city
                             || SWEDISH_GEO_CITIES.find(c => new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress));
                         if (fallbackCity) {
                             coords = await geocodeVenueSweden(`${fallbackCity}, Sverige`);
+                            cityFallbackUsed = !!coords;
                             if (coords) console.log(`    📍 Geocoding city-fallback: "${fallbackCity}" → [${coords[0]}, ${coords[1]}]`);
                         }
                     }
@@ -694,6 +698,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         finalLat = coords[0];
                         finalLng = coords[1];
                         isLocationVerified = true;
+                        geoPrecision = cityFallbackUsed ? 'stad-centroid' : (coords[2] ?? null);
                     }
                 }
 
@@ -803,6 +808,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     geocodedQuery: geocodedQuery,
                     lat: finalLat,
                     lng: finalLng,
+                    geoPrecision,
                     hostName: finalHostName,
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
@@ -823,6 +829,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     extractedAddress,
                     geocodedQuery,
                     lat: finalLat, lng: finalLng,
+                    geoPrecision,
                     hostName: finalHostName,
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,

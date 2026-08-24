@@ -131,6 +131,19 @@ addColumnIfMissing('link_events', 'timeFixAttempts', 'INTEGER DEFAULT 0');
 // geoRefineAttempts: hur många nätter geo-refine försökt förfina eventets
 // koordinater utan träff — efter 3 hoppas raden så budgeten når nya event.
 addColumnIfMissing('link_events', 'geoRefineAttempts', 'INTEGER DEFAULT 0');
+// geoPrecision: sanningsmärkning av koordinatens kvalitet (ägarbeslut 24/8):
+//   'kallkoordinat'  källan levererade egna koordinater
+//   'poi'            namngiven plats träffad (known_venues eller Nominatim)
+//   'gata'           gatuadress-träff
+//   'ort-centroid'   by/tätort — mer precist än kommunen, men inte platsen
+//   'stad-centroid'  stadens mittpunkt — fallback, positionen är en gissning
+//   NULL             geokodad före 2026-08-24 eller okänd väg (t.ex. gammal cache)
+// OBS: isLocationVerified behåller sin gamla betydelse ("har koordinater") —
+// den filtrerar stadsinlägg/digest/aggregat och får inte byta semantik utan
+// att alla konsumenter ses över. geoPrecision är kvalitetssanningen.
+addColumnIfMissing('link_events', 'geoPrecision', 'TEXT');
+// precision i geocode_cache: cache-träffar ska inte tappa kvalitetsmärkningen.
+addColumnIfMissing('geocode_cache', 'precision', 'TEXT');
 {
     // Backfill av NULL-rader (legacy + rader skrivna av äldre processer):
     // midnatt i ANTINGEN lokal tid eller UTC = "bara datum". Körs i JS (inte
@@ -303,12 +316,12 @@ export function setEventAuditWithCategory(url: string, a: EventAuditWrite): void
 const upsertStmt = sqlite.prepare(`
     INSERT INTO link_events (
         url, title, time, hasSpecificTime, locationName, extractedAddress, geocodedQuery,
-        lat, lng, hostName, category, coverImage, description,
+        lat, lng, geoPrecision, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
         firestoreId, updatedAt, status, price
     ) VALUES (
         @url, @title, @time, @hasSpecificTime, @locationName, @extractedAddress, @geocodedQuery,
-        @lat, @lng, @hostName, @category, @coverImage, @description,
+        @lat, @lng, @geoPrecision, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
         @firestoreId, @updatedAt, @status, @price
     )
@@ -321,6 +334,10 @@ const upsertStmt = sqlite.prepare(`
         geocodedQuery      = excluded.geocodedQuery,
         lat                = excluded.lat,
         lng                = excluded.lng,
+        -- geoPrecision: bevara känd märkning när nya skrivningen saknar en
+        -- (geo-refine-förbättringar och backfill får inte nollas av re-scrape
+        -- eller Firestore-sync som saknar fältet).
+        geoPrecision       = COALESCE(NULLIF(excluded.geoPrecision, ''), link_events.geoPrecision),
         hostName           = excluded.hostName,
         category           = excluded.category,
         coverImage         = excluded.coverImage,
@@ -364,6 +381,8 @@ export interface SqliteEvent {
     geocodedQuery?: string;
     lat?: number;
     lng?: number;
+    /** Koordinatens kvalitet — se migrationskommentaren för värdena. */
+    geoPrecision?: string | null;
     hostName?: string;
     category?: string;
     coverImage?: string;
@@ -396,6 +415,7 @@ export function upsertEvent(event: SqliteEvent): void {
         geocodedQuery:      event.geocodedQuery ?? '',
         lat:                event.lat ?? 0,
         lng:                event.lng ?? 0,
+        geoPrecision:       event.geoPrecision ?? null,
         hostName:           event.hostName ?? '',
         category:           event.category ?? 'other',
         coverImage:         event.coverImage ?? '',
@@ -561,13 +581,15 @@ export function bumpGeoRefineAttempts(url: string): void {
 
 const setCoordsStmt = sqlite.prepare(`
     UPDATE link_events
-    SET lat = ?, lng = ?, geocodedQuery = ?, isLocationVerified = 1, updatedAt = ?
+    SET lat = ?, lng = ?, geocodedQuery = ?, geoPrecision = COALESCE(?, geoPrecision),
+        isLocationVerified = 1, updatedAt = ?
     WHERE url = ?
 `);
 
-/** Sätt förfinade koordinater + vilken query som gav träffen (geo-refine). */
-export function setEventCoords(url: string, lat: number, lng: number, geocodedQuery: string): void {
-    setCoordsStmt.run(lat, lng, geocodedQuery, new Date().toISOString(), url);
+/** Sätt förfinade koordinater + vilken query som gav träffen (geo-refine).
+ *  precision märker kvaliteten ('poi'/'gata'/'stad-centroid' …); null = behåll. */
+export function setEventCoords(url: string, lat: number, lng: number, geocodedQuery: string, precision: string | null = null): void {
+    setCoordsStmt.run(lat, lng, geocodedQuery, precision, new Date().toISOString(), url);
 }
 
 // ─── Geocode-cache ───────────────────────────────────────────────────────────
@@ -577,25 +599,30 @@ export interface GeocodeCacheHit {
     lng: number;
     ok: boolean;
     ageDays: number;
+    /** Kvalitetsmärkning från live-svaret; null för rader cachade före 24/8. */
+    precision: string | null;
 }
 
-const geoCacheGetStmt = sqlite.prepare('SELECT lat, lng, ok, checked_at FROM geocode_cache WHERE query = ?');
+const geoCacheGetStmt = sqlite.prepare('SELECT lat, lng, ok, checked_at, precision FROM geocode_cache WHERE query = ?');
 const geoCacheSetStmt = sqlite.prepare(`
-    INSERT INTO geocode_cache (query, lat, lng, ok, checked_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO geocode_cache (query, lat, lng, ok, checked_at, precision)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(query) DO UPDATE SET
-        lat = excluded.lat, lng = excluded.lng, ok = excluded.ok, checked_at = excluded.checked_at
+        lat = excluded.lat, lng = excluded.lng, ok = excluded.ok,
+        checked_at = excluded.checked_at, precision = excluded.precision
 `);
 
 export function geocodeCacheGet(query: string): GeocodeCacheHit | null {
-    const row = geoCacheGetStmt.get(query) as { lat: number; lng: number; ok: number; checked_at: string } | undefined;
+    const row = geoCacheGetStmt.get(query) as { lat: number; lng: number; ok: number; checked_at: string; precision: string | null } | undefined;
     if (!row) return null;
     const ageDays = (Date.now() - new Date(row.checked_at).getTime()) / 86_400_000;
-    return { lat: row.lat, lng: row.lng, ok: row.ok === 1, ageDays };
+    return { lat: row.lat, lng: row.lng, ok: row.ok === 1, ageDays, precision: row.precision ?? null };
 }
 
-export function geocodeCacheSet(query: string, coords: [number, number] | null): void {
-    geoCacheSetStmt.run(query, coords?.[0] ?? null, coords?.[1] ?? null, coords ? 1 : 0, new Date().toISOString());
+/** coords tredje element (precision) lagras när den finns — cache-träffar ska
+ *  bära samma kvalitetsmärkning som live-svaret de speglar. */
+export function geocodeCacheSet(query: string, coords: [number, number] | null | readonly [number, number, string | null]): void {
+    geoCacheSetStmt.run(query, coords?.[0] ?? null, coords?.[1] ?? null, coords ? 1 : 0, new Date().toISOString(), (coords as any)?.[2] ?? null);
 }
 
 // ─── Sync-metadata (cursors för inkrementell sync) ──────────────────────────

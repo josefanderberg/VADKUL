@@ -14,7 +14,7 @@ import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './type
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace } from '../utils/dbHelper';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
-import { geocodeVenueSweden, isInNordic } from '../utils/venueCoordinates';
+import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
@@ -142,7 +142,7 @@ export async function runSource(
 
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
-    const geoCache = new Map<string, [number, number] | null>();
+    const geoCache = new Map<string, GeoHit | null>();
 
     let rawEvents: RawEvent[];
     try {
@@ -210,7 +210,7 @@ export async function runSource(
                     if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
                         const q = `${e.venueName}, ${e.city}`;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
-                        let hit: [number, number] | null = e.coords ?? null;
+                        let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
                         for (const cand of (e.geocodeCandidates ?? [])) {
                             if (hit) break;
                             hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
@@ -219,8 +219,12 @@ export async function runSource(
                         // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
                         // geo-refine-klustren tar det vidare) — men märk som overifierat.
                         let verified = true;
-                        if (!hit && storedUngeocoded) { hit = await geocodeVenueSweden(e.city!); verified = false; }
-                        if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified)) {
+                        if (!hit && storedUngeocoded) {
+                            hit = await geocodeVenueSweden(e.city!);
+                            verified = false;
+                            if (hit) hit = [hit[0], hit[1], 'stad-centroid'];
+                        }
+                        if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified, hit[2])) {
                             result.updated++;
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
                         }
@@ -236,13 +240,14 @@ export async function runSource(
             let lat = e.coords?.[0] ?? 0;
             let lng = e.coords?.[1] ?? 0;
             let geocodedQuery = e.coords ? 'källans egna koordinater' : '';
+            let geoPrecision: string | null = e.coords ? 'kallkoordinat' : null;
             // Validera källans koordinater: paraply-API:er (Naturskydd/Hembygd)
             // levererar ibland PROJICERADE koordinater (SWEREF99/RT90, t.ex.
             // lat=6129956) som spränger WGS84-intervallet och kraschar kartan.
             // Lita bara på koords inom nordiska bounds; annars kasta + geokoda.
             if ((lat || lng) && !isInNordic(lat, lng)) {
                 ctx.log(`⚠️ ogiltiga koords [${lat},${lng}] från källan för "${e.title.slice(0, 40)}" — geokodar på namn`);
-                lat = 0; lng = 0; geocodedQuery = '';
+                lat = 0; lng = 0; geocodedQuery = ''; geoPrecision = null;
             }
             if (!opts.dryRun && !lat && !lng) {
                 for (const q of geocodeQueriesFor(e)) {
@@ -255,7 +260,7 @@ export async function runSource(
                         geoCache.set(cacheKey, await geocodeVenueSweden(q, e.city ? { nearCity: e.city } : undefined));
                     }
                     const coords = geoCache.get(cacheKey);
-                    if (coords) { lat = coords[0]; lng = coords[1]; geocodedQuery = q; break; }
+                    if (coords) { lat = coords[0]; lng = coords[1]; geocodedQuery = q; geoPrecision = coords[2] ?? null; break; }
                 }
             }
 
@@ -326,6 +331,7 @@ export async function runSource(
                 geocodedQuery,
                 lat,
                 lng,
+                geoPrecision,
                 // Paraply-källor (församling/klubb/krets) sätter värd per event.
                 hostName: e.hostName || source.hostName,
                 category,
@@ -335,6 +341,9 @@ export async function runSource(
                 // och SQLite-upsert COALESCE:ar null → bevarar LLM-extraherat pris.
                 price: e.price || null,
                 createdAt: new Date(),
+                // OBS: betyder "har koordinater" (även stad-centroid) — kvalitets-
+                // sanningen bor i geoPrecision. Semantiken låst av konsumenterna
+                // (stadsinlägg/digest/aggregat filtrerar på flaggan).
                 isLocationVerified: lat !== 0 || lng !== 0,
                 // 'raw' när audit är på så eventet väntar på granskning;
                 // 'published' direkt annars — annars syns det inte i webben.

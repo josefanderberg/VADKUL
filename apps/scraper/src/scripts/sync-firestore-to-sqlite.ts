@@ -90,6 +90,9 @@ async function main() {
                 hasSpecificTime:    data.hasSpecificTime,
                 price:              data.price ?? undefined,
                 status:             data.status,
+                // null → COALESCE i upserten bevarar lokal märkning (backfillen
+                // 24/8 satte geoPrecision på rader vars Firestore-doc saknar fältet).
+                geoPrecision:       data.geoPrecision ?? null,
             });
             written++;
         } catch (err) {

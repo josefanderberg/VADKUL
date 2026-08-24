@@ -29,7 +29,7 @@
  */
 
 import { db } from '../config/firebase';
-import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode, isInNordic,
@@ -167,11 +167,19 @@ async function cityOfCluster(c: Cluster): Promise<string | null> {
 
 /**
  * Hitta bättre koordinater för ett event i ett kluster.
- * Returnerar [lat, lng, queryBeskrivning] eller null.
+ * Returnerar [lat, lng, queryBeskrivning, geoPrecision] eller null.
  */
-async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promise<[number, number, string] | null> {
+async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promise<[number, number, string, string] | null> {
     const loc = (r.locationName || '').trim();
     const locIsJustCity = !!city && loc.toLowerCase() === city.toLowerCase();
+
+    // Kandidat 0: platsregistret (known_venues) — gratis och exakt. Växer via
+    // Overpass-seedningen och geo-refines egna träffar; kollas före Nominatim.
+    if (loc && !locIsJustCity) {
+        const kv = lookupVenueSmart(loc, city ?? undefined)
+            ?? (loc.includes(',') ? lookupVenueSmart(loc.split(',')[0], city ?? undefined) : null);
+        if (kv && acceptable(kv, cluster)) return [kv[0], kv[1], `venue-register: ${loc.slice(0, 60)}`, 'poi'];
+    }
 
     // Kandidat 1–3: gatuadress ur extractedAddress → description → locationName.
     // Hoppa över kända kontorsadresser (Tickster HQ m.fl.) — de leder fel.
@@ -185,7 +193,7 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
     for (const street of [...new Set(streets)]) {
         if (!city) break;
         const hit = await geocodeStreetSweden(street, city);
-        if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `${street}, ${city}`];
+        if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `${street}, ${city}`, 'gata'];
     }
 
     // Kandidat 4: venue-namn via STRIKT geokodning (ingen stads-fallback — den
@@ -200,7 +208,7 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
             : [loc];
         for (const q of [...new Set(variants)]) {
             const hit = await geocodeVenueSwedenStrict(q);
-            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], q];
+            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], q, 'poi'];
         }
     }
 
@@ -214,7 +222,7 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
             : [host];
         for (const q of [...new Set(variants)]) {
             const hit = await geocodeVenueSwedenStrict(q);
-            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `värd: ${q}`];
+            if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `värd: ${q}`, 'poi'];
         }
     }
 
@@ -227,11 +235,11 @@ function acceptable(hit: [number, number], cluster: Cluster): boolean {
     return d > MIN_IMPROVEMENT_M && d < MAX_JUMP_KM * 1000;
 }
 
-async function applyCoords(r: Row, lat: number, lng: number, query: string): Promise<void> {
-    setEventCoords(r.url, lat, lng, query);
+async function applyCoords(r: Row, lat: number, lng: number, query: string, precision: string): Promise<void> {
+    setEventCoords(r.url, lat, lng, query, precision);
     if (db && r.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ lat, lng, isLocationVerified: true }));
+            await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ lat, lng, isLocationVerified: true, geoPrecision: precision }));
         } catch (e: any) {
             if (e?.code !== 5) console.error(`  ❌ Firestore fail ${r.url.slice(0, 50)}: ${e?.message}`);
         }
@@ -254,57 +262,88 @@ async function main() {
     }
 
     let attempted = 0, refined = 0, noBetter = 0, reused = 0, gaveUp = 0, learnedVenues = 0;
-    outer: for (const c of clusters) {
-        const city = await cityOfCluster(c);
+
+    // Round-robin över klustren (24/8): tidigare betades klustren störst-först
+    // tills budgeten tog slut — storstadsklustren (Göteborg 600+, Linköping
+    // 250+) fylls på med nya rader varje natt och åt hela budgeten, så mindre
+    // städers stackar nåddes ALDRIG (Växjö: 103 event, geoRefineAttempts=0
+    // efter månader). Nu tas EN rad per kluster och varv: alla kluster får
+    // nattliga försök, och de stora förbrukar bara det som blir över.
+    interface ClusterState {
+        c: Cluster;
+        idx: number;
+        city: string | null;
+        cityResolved: boolean;
         // Memo per (kluster, platsnamn): "Årby bibliotek" × 15 event = ETT
         // Nominatim-uppslag; träffen (eller misslyckandet) återanvänds gratis
         // för resten av namnets rader utan att konsumera budgeten.
-        const nameMemo = new Map<string, [number, number, string] | null>();
-        for (const r of c.rows) {
-            if (attempted >= LIMIT) break outer;
-            // Ge upp efter MAX_ATTEMPTS resultatlösa nätter — annars äter samma
-            // hopplösa rader hela budgeten varje natt och kön rör sig aldrig.
-            if ((r.geoRefineAttempts ?? 0) >= MAX_ATTEMPTS) { gaveUp++; continue; }
-            // Rena stadsnamns-rader utan adress i text har inget att förfina på.
-            const hasAnyLead = r.extractedAddress || r.description || (r.locationName && r.locationName.toLowerCase() !== (city ?? '').toLowerCase());
-            if (!hasAnyLead) continue;
+        nameMemo: Map<string, [number, number, string, string] | null>;
+    }
+    const states: ClusterState[] = clusters.map(c => ({ c, idx: 0, city: null, cityResolved: false, nameMemo: new Map() }));
 
-            const nameKey = (r.locationName || '').trim().toLowerCase();
-            const memoKey = nameKey.length >= 4 ? nameKey : null;
+    const processRow = async (st: ClusterState, r: Row): Promise<void> => {
+        const city = st.city;
+        const nameKey = (r.locationName || '').trim().toLowerCase();
+        const memoKey = nameKey.length >= 4 ? nameKey : null;
 
-            let hit: [number, number, string] | null;
-            if (memoKey && nameMemo.has(memoKey)) {
-                hit = nameMemo.get(memoKey)!;
-                if (hit) reused++;
-            } else {
-                attempted++;
-                hit = await refineEvent(r, c, city);
-                if (memoKey) nameMemo.set(memoKey, hit);
-            }
+        let hit: [number, number, string, string] | null;
+        if (memoKey && st.nameMemo.has(memoKey)) {
+            hit = st.nameMemo.get(memoKey)!;
+            if (hit) reused++;
+        } else {
+            attempted++;
+            hit = await refineEvent(r, st.c, city);
+            if (memoKey) st.nameMemo.set(memoKey, hit);
+        }
 
-            if (!hit) {
-                noBetter++;
-                if (APPLY) bumpGeoRefineAttempts(r.url);
-                continue;
+        if (!hit) {
+            noBetter++;
+            if (APPLY) bumpGeoRefineAttempts(r.url);
+            return;
+        }
+        const [lat, lng, query, precision] = hit;
+        const dist = Math.round(distanceM(lat, lng, st.c.lat, st.c.lng));
+        console.log(`  📍 ${r.title.slice(0, 45).padEnd(45)} → ${query.slice(0, 45)} (${dist} m från klustret, ${precision})`);
+        refined++;
+        if (APPLY) {
+            await applyCoords(r, lat, lng, query, precision);
+            // Lär systemet permanent: venue-namn + stad → known_venues, som
+            // geokodningskedjan numera kollar FÖRST (steg 0). Nästa skrapning
+            // av samma venue landar rätt direkt — gratis. Generiska namn
+            // ("Biblioteket") och rena stadsnamn hålls ute ur den globala
+            // tabellen; kravet på stad gör namnet entydigt.
+            const name = (r.locationName || '').trim();
+            if (city && name.length >= 5 && !GENERIC_VENUE_NAME.test(name)
+                && name.toLowerCase() !== city.toLowerCase()) {
+                upsertKnownVenue(name, lat, lng, city, `geo-refine ${new Date().toISOString().slice(0, 10)}`);
+                learnedVenues++;
             }
-            const [lat, lng, query] = hit;
-            const dist = Math.round(distanceM(lat, lng, c.lat, c.lng));
-            console.log(`  📍 ${r.title.slice(0, 45).padEnd(45)} → ${query.slice(0, 45)} (${dist} m från klustret)`);
-            refined++;
-            if (APPLY) {
-                await applyCoords(r, lat, lng, query);
-                // Lär systemet permanent: venue-namn + stad → known_venues, som
-                // geokodningskedjan numera kollar FÖRST (steg 0). Nästa skrapning
-                // av samma venue landar rätt direkt — gratis. Generiska namn
-                // ("Biblioteket") och rena stadsnamn hålls ute ur den globala
-                // tabellen; kravet på stad gör namnet entydigt.
-                const name = (r.locationName || '').trim();
-                if (city && name.length >= 5 && !GENERIC_VENUE_NAME.test(name)
-                    && name.toLowerCase() !== city.toLowerCase()) {
-                    upsertKnownVenue(name, lat, lng, city, `geo-refine ${new Date().toISOString().slice(0, 10)}`);
-                    learnedVenues++;
-                }
+        }
+    };
+
+    let anyLeft = true;
+    while (anyLeft && attempted < LIMIT) {
+        anyLeft = false;
+        for (const st of states) {
+            if (attempted >= LIMIT) break;
+            // Nästa behandlingsbara rad i klustret — en per varv.
+            while (st.idx < st.c.rows.length) {
+                const r = st.c.rows[st.idx++];
+                // Ge upp efter MAX_ATTEMPTS resultatlösa nätter — annars äter
+                // samma hopplösa rader budgeten varje natt och kön rör sig aldrig.
+                if ((r.geoRefineAttempts ?? 0) >= MAX_ATTEMPTS) { gaveUp++; continue; }
+                if (!r.extractedAddress && !r.description && !r.locationName) continue;
+                // Stadsnamnet reverse-geokodas först när klustret faktiskt har
+                // en behandlingsbar rad (en Nominatim-fråga per kluster).
+                if (!st.cityResolved) { st.city = await cityOfCluster(st.c); st.cityResolved = true; }
+                // Rena stadsnamns-rader utan adress i text har inget att förfina på.
+                const hasAnyLead = r.extractedAddress || r.description
+                    || (r.locationName && r.locationName.toLowerCase() !== (st.city ?? '').toLowerCase());
+                if (!hasAnyLead) continue;
+                await processRow(st, r);
+                break;
             }
+            if (st.idx < st.c.rows.length) anyLeft = true;
         }
     }
 

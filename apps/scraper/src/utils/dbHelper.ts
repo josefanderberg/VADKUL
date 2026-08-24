@@ -148,12 +148,13 @@ export async function refreshEventPlace(
     lng: number,
     geocodedQuery: string,
     verified = true,
+    geoPrecision: string | null = null,
 ): Promise<boolean> {
     const row = getSqliteEvent(url);
     if (!row) return false;
     if ((row.locationName ?? '') === locationName && Math.abs((row.lat ?? 0) - lat) < 1e-6) return false;
     try {
-        setEventCoords(url, lat, lng, geocodedQuery);
+        setEventCoords(url, lat, lng, geocodedQuery, geoPrecision);
         setEventLocationName(url, locationName);
     } catch (err) {
         console.error('refreshEventPlace: SQLite-uppdatering misslyckades:', err);
@@ -161,7 +162,10 @@ export async function refreshEventPlace(
     }
     if (db && row.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ locationName, lat, lng, isLocationVerified: verified }));
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({
+                locationName, lat, lng, isLocationVerified: verified,
+                ...(geoPrecision ? { geoPrecision } : {}),
+            }));
         } catch (err: any) {
             if (err?.code !== 5) console.error('refreshEventPlace: Firestore-uppdatering misslyckades:', err?.message);
         }

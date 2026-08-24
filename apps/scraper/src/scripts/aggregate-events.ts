@@ -68,6 +68,8 @@ interface CardLayer {
     url: string;
     /** Per-event-emoji från AI-audit. */
     emoji?: string;
+    /** true = koordinaten är stadens mittpunkt (geoPrecision='stad-centroid'). */
+    approxGeo?: boolean;
 }
 
 export async function runAggregation(opts: { includeUnpublished?: boolean } = {}) {
@@ -153,7 +155,11 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             isLocationVerified: row.isLocationVerified === 1,
             isHostVerified: row.isHostVerified === 1,
             url: publicUrl(row.url),
-            emoji: row.emoji || undefined
+            emoji: row.emoji || undefined,
+            // Positionen är stadens mittpunkt, inte platsen — låter webben visa
+            // "ungefär i {stad}" i stället för att låtsas vara en exakt nål.
+            // Utelämnas helt annars (bytes × 30k event i aggregatet).
+            approxGeo: row.geoPrecision === 'stad-centroid' ? true : undefined
         });
 
         descriptions[id] = row.description || '';

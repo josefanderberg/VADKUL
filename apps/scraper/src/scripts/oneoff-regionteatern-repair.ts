@@ -65,7 +65,7 @@ async function main() {
 
         const newLoc = [ev.venueName, ev.city].filter(Boolean).join(', ');
         const newTime = ev.hasSpecificTime ? ev.startDate.toISOString() : null;
-        console.log(`  📍 ${r.title.slice(0, 38).padEnd(38)} → ${newLoc.padEnd(28)} ${newTime ? newTime.slice(11, 16) + 'Z' : '(tid oförändrad)'} ${coords ? coords.map(c => c.toFixed(4)).join(',') : 'INGEN GEOKOD'}`);
+        console.log(`  📍 ${r.title.slice(0, 38).padEnd(38)} → ${newLoc.padEnd(28)} ${newTime ? newTime.slice(11, 16) + 'Z' : '(tid oförändrad)'} ${coords ? `${coords[0].toFixed(4)},${coords[1].toFixed(4)}` : 'INGEN GEOKOD'}`);
 
         if (!APPLY) continue;
         const now = new Date().toISOString();
