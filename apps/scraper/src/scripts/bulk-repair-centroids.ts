@@ -28,7 +28,7 @@ import fs from 'fs';
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
 import {
-    sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart,
+    sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupTatortNear,
 } from '../utils/sqliteHelper';
 import {
     geocodeVenueSweden, geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode,
@@ -129,7 +129,8 @@ async function resolveName(
     //     inte kommunens tre andra). Utan venue: bycentroiden slår kommunens.
     const fort = ortFromForeningsnamn(head);
     if (fort) {
-        const fortHit = await geocodeVenueSwedenStrict(`${fort}`);
+        const fortHit = lookupTatortNear(fort, cLat, cLng)
+            ?? await geocodeVenueSwedenStrict(`${fort}`);
         if (ok(fortHit)) {
             if (descVenue) {
                 const op2 = await resolveVenueOverpass(descVenue, fortHit[0], fortHit[1], 4000);

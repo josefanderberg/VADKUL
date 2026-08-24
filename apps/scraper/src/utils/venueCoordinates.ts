@@ -1,4 +1,4 @@
-import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet } from './sqliteHelper';
+import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear } from './sqliteHelper';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
 // Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
@@ -708,7 +708,7 @@ export async function geocodeVenueSweden(
     }
 
     try {
-        const result = await geocodeVenueSwedenLive(anchored, accept, nearCity);
+        const result = await geocodeVenueSwedenLive(anchored, accept, nearCity, cityCenter ?? undefined);
         geocodeCacheSet(nearKey, result);
         if (!result) {
             console.log(`[Geocoding/SE] "${anchored}" underkänd av nearCity-validering (${nearCity}, max ${NEAR_CITY_MAX_KM} km)`);
@@ -734,7 +734,21 @@ async function geocodeVenueSwedenLive(
     cleaned: string,
     accept?: (lat: number, lng: number) => boolean,
     cityHint?: string,
+    anchor?: [number, number],
 ): Promise<GeoHit | null> {
+    // Försök 0: SCB:s tätortsregister — när frågan i praktiken är "ort(, stad)"
+    // slås centroiden upp LOKALT (CC0-data, ingen Nominatim). Gäller bara när
+    // huvudsegmentet är hela informationen (resten stadssuffix).
+    const headSeg = cleaned.split(',')[0].trim();
+    const restCityOnly = suffixQueries(cleaned).every(sfx => isCityOnlyQuery(sfx, cityHint));
+    if (headSeg.length >= 4 && !/\d/.test(headSeg) && restCityOnly && !isCityOnlyQuery(headSeg, cityHint)) {
+        const t = lookupTatortNear(headSeg, anchor?.[0], anchor?.[1]);
+        if (t && (!accept || accept(t[0], t[1]))) {
+            console.log(`[Geocoding/SE] Tätortsregistret "${headSeg}": [${t[0]}, ${t[1]}]`);
+            return [t[0], t[1], 'ort-centroid'];
+        }
+    }
+
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
 
     // Försök 1: full fråga. En ren stadsnamnsfråga ("Växjö") ÄR en centroid.
@@ -752,6 +766,13 @@ async function geocodeVenueSwedenLive(
     const citySuffixes: string[] = [];
     for (const sfx of suffixQueries(cleaned)) {
         if (isCityOnlyQuery(sfx, cityHint)) { citySuffixes.push(sfx); continue; }
+        const sfxHead = sfx.split(',')[0].trim();
+        const tt = sfxHead.length >= 4 && !/\d/.test(sfxHead)
+            ? lookupTatortNear(sfxHead, anchor?.[0], anchor?.[1]) : null;
+        if (tt && (!accept || accept(tt[0], tt[1]))) {
+            console.log(`[Geocoding/SE] Tätortsregistret (suffix) "${sfxHead}": [${tt[0]}, ${tt[1]}]`);
+            return [tt[0], tt[1], 'ort-centroid'];
+        }
         await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
         result = await nominatimSearchSweden(sfx, accept);
         if (result) {
@@ -766,6 +787,12 @@ async function geocodeVenueSwedenLive(
     if (cityHint) {
         const fw = firstWordPlaceQuery(cleaned, cityHint);
         if (fw) {
+            const fwOrt = fw.split(',')[0].trim();
+            const ft = lookupTatortNear(fwOrt, anchor?.[0], anchor?.[1]);
+            if (ft && (!accept || accept(ft[0], ft[1]))) {
+                console.log(`[Geocoding/SE] Tätortsregistret (första ordet) "${fwOrt}": [${ft[0]}, ${ft[1]}]`);
+                return [ft[0], ft[1], 'ort-centroid'];
+            }
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
             result = await nominatimSearchSweden(fw, accept);
             if (result) {

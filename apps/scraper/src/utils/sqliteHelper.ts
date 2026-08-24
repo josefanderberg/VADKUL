@@ -94,6 +94,19 @@ sqlite.exec(`
         checked_at TEXT    NOT NULL
     );
 
+    -- SCB:s tätorter (CC0, seed-tatorter-scb.ts): deterministiska ortcentroider
+    -- för suffix-/förenings-/första-ords-fallbacken — noll Nominatim-beroende.
+    CREATE TABLE IF NOT EXISTS tatorter (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        name   TEXT NOT NULL,
+        kommun TEXT,
+        lan    TEXT,
+        lat    REAL NOT NULL,
+        lng    REAL NOT NULL,
+        bef    INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_tatorter_name ON tatorter(name COLLATE NOCASE);
+
     -- Sync-metadata (nyckel/värde): cursors för inkrementell Firestore→SQLite-sync.
     CREATE TABLE IF NOT EXISTS sync_meta (
         key   TEXT PRIMARY KEY,
@@ -605,6 +618,52 @@ const setCoordsStmt = sqlite.prepare(`
  *  precision märker kvaliteten ('poi'/'gata'/'stad-centroid' …); null = behåll. */
 export function setEventCoords(url: string, lat: number, lng: number, geocodedQuery: string, precision: string | null = null): void {
     setCoordsStmt.run(lat, lng, geocodedQuery, precision, new Date().toISOString(), url);
+}
+
+// ─── Tätortsregistret (SCB, CC0) ─────────────────────────────────────────────
+
+const tatortUpsertStmt = sqlite.prepare(
+    'INSERT INTO tatorter (name, kommun, lan, lat, lng, bef) VALUES (?, ?, ?, ?, ?, ?)',
+);
+const tatortByNameStmt = sqlite.prepare(
+    'SELECT name, kommun, lat, lng, bef FROM tatorter WHERE name = ? COLLATE NOCASE',
+);
+const tatortClearStmt = sqlite.prepare('DELETE FROM tatorter');
+
+export function replaceTatorter(rows: { name: string; kommun: string; lan: string; lat: number; lng: number; bef: number }[]): void {
+    const tx = sqlite.transaction(() => {
+        tatortClearStmt.run();
+        for (const r of rows) tatortUpsertStmt.run(r.name, r.kommun, r.lan, r.lat, r.lng, r.bef);
+    });
+    tx();
+}
+
+export function countTatorter(): number {
+    return (sqlite.prepare('SELECT COUNT(*) n FROM tatorter').get() as { n: number }).n;
+}
+
+/**
+ * Ortcentroid ur SCB-registret: närmaste tätorten med namnet inom maxKm från
+ * ankaret (samma namn finns i flera kommuner — ankaret väljer rätt). Utan
+ * ankare krävs att namnet är UNIKT i registret.
+ */
+export function lookupTatortNear(
+    name: string, anchorLat?: number, anchorLng?: number, maxKm = 75,
+): [number, number] | null {
+    const rows = tatortByNameStmt.all(name.trim()) as { lat: number; lng: number }[];
+    if (rows.length === 0) return null;
+    if (anchorLat === undefined || anchorLng === undefined) {
+        return rows.length === 1 ? [rows[0].lat, rows[0].lng] : null;
+    }
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    let best: { lat: number; lng: number; d: number } | null = null;
+    for (const r of rows) {
+        const h = Math.sin(toRad(r.lat - anchorLat) / 2) ** 2
+            + Math.cos(toRad(anchorLat)) * Math.cos(toRad(r.lat)) * Math.sin(toRad(r.lng - anchorLng) / 2) ** 2;
+        const d = 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+        if (d <= maxKm && (!best || d < best.d)) best = { ...r, d };
+    }
+    return best ? [best.lat, best.lng] : null;
 }
 
 // ─── Geocode-cache ───────────────────────────────────────────────────────────
