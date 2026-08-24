@@ -7,6 +7,29 @@ import { describe, it, expect } from 'vitest';
 import {
     stripParishSegments, suffixQueries, firstWordPlaceQuery, classifyQueryPrecision,
 } from './venueCoordinates';
+import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
+
+describe('lookupVenueSmart utan stadskontext (Malmö Seriefest-incidenten)', () => {
+    it('generiska namn matchar ALDRIG utan stad, även om tabellen har exakt en rad', () => {
+        upsertKnownVenue('Folkets Park', 56.883, 14.803, 'Växjö');
+        expect(lookupVenueSmart('Folkets Park')).toBeNull();          // kapningen som flyttade Malmö-eventet till Växjö
+        expect(lookupVenueSmart('Folkets Park', 'Växjö')).toEqual([56.883, 14.803]);  // med rätt stad ok
+        expect(lookupVenueSmart('Folkets Park', 'Malmö')).toBeNull(); // fel stad → Nominatim får avgöra
+    });
+
+    it('specifika unika namn matchar även utan stad', () => {
+        upsertKnownVenue('Tallgårdens bibliotek', 56.86, 14.82, 'Växjö');
+        expect(lookupVenueSmart('Tallgårdens bibliotek')).toEqual([56.86, 14.82]);
+    });
+
+    it('isGenericLookupName känner igen rikstäckande namn', () => {
+        for (const n of ['Folkets Park', 'folkets hus', 'Stortorget', 'Konserthuset', 'Nöjesfabriken', 'Domkyrkan']) {
+            expect(isGenericLookupName(n), n).toBe(true);
+        }
+        expect(isGenericLookupName('Tallgårdens bibliotek')).toBe(false);
+        expect(isGenericLookupName('Vida Arena')).toBe(false);
+    });
+});
 
 describe('stripParishSegments', () => {
     it('stryker församlingssegmentet som fick Nominatim att missa domkyrkan', () => {

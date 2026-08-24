@@ -515,10 +515,24 @@ const venueSmartUniqueStmt = sqlite.prepare(
 );
 
 /**
+ * Namn som finns i nästan varje svensk stad — de får ALDRIG matchas utan
+ * stadskontext, även om tabellen råkar ha exakt en rad (Malmö Seriefest-
+ * incidenten 24/8: "Folkets Park" var unik i tabellen = Växjö-seedens rad,
+ * och ett Malmö-event utan stadskontext kapades till Växjö).
+ */
+export const GENERIC_LOOKUP_NAMES = /^(folkets (park|hus)|teatern|stadsteatern|konserthuset|domkyrkan|stadsbiblioteket|biblioteket|stadsparken|stortorget|rådhus(et|torget)|kårhuset|kulturhuset|residenset|stadshuset|filmstaden|palladium|prisma|samarkand|vattentorget|linnéparken|hemvärnsgården|församlingshemmet|bishops arms|elite hotel|folkan|sporthallen|ishallen|simhallen|medborgarhuset|missionskyrkan|pingstkyrkan|allianskyrkan|equmeniakyrkan|frälsningsarmén|nöjesfabriken)$/i;
+
+/** Är namnet för generiskt för uppslag utan stadskontext? Exporterad för test. */
+export function isGenericLookupName(name: string): boolean {
+    return GENERIC_LOOKUP_NAMES.test(name.trim());
+}
+
+/**
  * Case-okänslig venue-lookup för geokodningskedjan (geocodeVenueSweden steg 0).
  * Med stad: kräver stadsmatch — "Konserthuset" finns i många städer och fel
  * träff vore värre än Nominatim-vägen. Utan stad: träff bara om namnet är
- * UNIKT i tabellen (annars ambiguöst → null och låt Nominatim avgöra).
+ * UNIKT i tabellen OCH inte generiskt — tabell-unikhet bevisar inte att
+ * platsen är unik i Sverige (se GENERIC_LOOKUP_NAMES).
  */
 export function lookupVenueSmart(name: string, city?: string): [number, number] | null {
     const n = name.trim();
@@ -527,6 +541,7 @@ export function lookupVenueSmart(name: string, city?: string): [number, number] 
         const row = venueSmartCityStmt.get(n, city.trim()) as { lat: number; lng: number } | undefined;
         return row ? [row.lat, row.lng] : null;
     }
+    if (isGenericLookupName(n)) return null;
     const row = venueSmartUniqueStmt.get(n) as { lat: number; lng: number; n: number } | undefined;
     return row && row.n === 1 ? [row.lat, row.lng] : null;
 }

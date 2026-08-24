@@ -665,7 +665,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     if (city && !extractedAddress.toLowerCase().includes(city.toLowerCase())) {
                         geocodeQuery = `${extractedAddress}, ${city}`;
                     }
-                    let coords = await geocodeVenueSweden(geocodeQuery);
+                    let coords = await geocodeVenueSweden(geocodeQuery, city ? { nearCity: city } : undefined);
 
                     // Retry 1: skanna extractedAddress efter inbäddad stad (t.ex. "Foajén - Örebro Konserthus")
                     if (!coords) {
@@ -675,9 +675,23 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         if (cityInAddr && cityInAddr.toLowerCase() !== (city || '').toLowerCase()) {
                             const retryQ = `${extractedAddress}, ${cityInAddr}`;
                             if (retryQ !== geocodeQuery) {
-                                coords = await geocodeVenueSweden(retryQ);
+                                coords = await geocodeVenueSweden(retryQ, { nearCity: cityInAddr });
                                 if (coords) console.log(`    📍 Geocoding retry (city-scan): "${cityInAddr}" → [${coords[0]}, ${coords[1]}]`);
                             }
+                        }
+                    }
+
+                    // Retry 1.5: staden kan stå i TITELN fast adressen saknar den
+                    // ("Malmö Seriefest 2026" + plats "Folkets Park"). Utan detta
+                    // gissar kedjan fritt — Seriefest-incidenten 24/8 hamnade i
+                    // Växjö via registrets generiska Folkets Park-rad.
+                    if (!coords && !city) {
+                        const cityInTitle = SWEDISH_GEO_CITIES.find(c =>
+                            new RegExp(`\\b${c}\\b`, 'i').test(details.title)
+                        );
+                        if (cityInTitle) {
+                            coords = await geocodeVenueSweden(`${extractedAddress}, ${cityInTitle}`, { nearCity: cityInTitle });
+                            if (coords) console.log(`    📍 Geocoding retry (titel-stad): "${cityInTitle}" → [${coords[0]}, ${coords[1]}]`);
                         }
                     }
 
