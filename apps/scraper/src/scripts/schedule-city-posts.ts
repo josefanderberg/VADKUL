@@ -48,6 +48,7 @@ import fs from 'fs';
 import { db } from '../config/firebase';
 import { postToFacebook, getFacebookPostPermalink, SCHEDULE_MAX_MS } from '../utils/socialPublish';
 import { buildCityPostText, pickCityRows, type PickedRows } from '../utils/cityPostText';
+import { matchOrt } from '../utils/ortMatch';
 
 // Hemligheter (FB_PAGE_ID/FB_PAGE_TOKEN) — samma mönster som publish-fb.ts.
 // MacBooken saknar ~/.vadkul-secrets — där läses webbens .env.local/.env i
@@ -160,7 +161,6 @@ async function loadTowns(): Promise<Town[]> {
 
         const name = c.city ?? c.name;
         const key = (c.citySlug ?? name).toLowerCase();
-        if (onlyCities && !onlyCities.some(o => key.includes(o) || name.toLowerCase().includes(o))) continue;
 
         const existing = byTown.get(key);
         if (existing) { existing.groups.push(c); continue; }
@@ -181,33 +181,37 @@ async function loadTowns(): Promise<Town[]> {
         );
     }
 
-    // --orter som inte matchade någon grupp: slå upp i webbens CITY_POINTS
-    // (291 orter) så en ort utan registrerad grupp ändå kan få ett sidinlägg
-    // (t.ex. Sollefteå 20/8 — gruppen fanns men var inte inlagd än). Ingen
-    // grupp ⇒ inga loggrader, bara sidinlägget.
-    for (const wanted of onlyCities ?? []) {
-        if ([...byTown.values()].some(t => t.key.includes(wanted) || t.name.toLowerCase().includes(wanted))) continue;
-        const cp = lookupCityPoint(wanted);
-        if (!cp) { console.warn(`⚠️  "${wanted}" finns varken bland grupperna eller i cityPoints — hoppas över.`); continue; }
-        byTown.set(cp.name.toLowerCase(), {
-            key: cp.name.toLowerCase(), name: cp.name,
-            citySlug: citySlugFor(cp.name), lat: cp.lat, lng: cp.lng, groups: [],
-        });
+    // --orter-filtret körs EFTER aggregeringen: exakt träff ska vinna över
+    // substring (--orter=Mora gav tidigare Hedemora), och det avgörs bara med
+    // alla orter på bordet. Orter utan grupp slås upp i webbens CITY_POINTS
+    // (291 orter) så de ändå kan få ett sidinlägg (t.ex. Sollefteå 20/8 —
+    // gruppen fanns men var inte inlagd än). Ingen grupp ⇒ inga loggrader,
+    // bara sidinlägget.
+    let towns = [...byTown.values()];
+    if (onlyCities) {
+        const kept = new Map<string, Town>();
+        for (const wanted of onlyCities) {
+            const hits = matchOrt(towns, wanted, t => [t.key, t.name.toLowerCase()]);
+            if (hits.length > 0) { for (const t of hits) kept.set(t.key, t); continue; }
+            const cp = lookupCityPoint(wanted);
+            if (!cp) { console.warn(`⚠️  "${wanted}" finns varken bland grupperna eller i cityPoints — hoppas över.`); continue; }
+            const key = cp.name.toLowerCase();
+            kept.set(key, { key, name: cp.name, citySlug: citySlugFor(cp.name), lat: cp.lat, lng: cp.lng, groups: [] });
+        }
+        towns = [...kept.values()];
     }
 
     // Flest grupper först — den orten ger störst utdelning per schemalagt inlägg.
-    return [...byTown.values()].sort((a, b) => b.groups.length - a.groups.length);
+    return towns.sort((a, b) => b.groups.length - a.groups.length);
 }
 
 /** Webbens ortlistor, regex-lästa (uniforma objektliteraler — ingen TS-import
  *  över paketgränsen). cityPoints = koordinater, cityData.CITIES = stadssidor. */
 function lookupCityPoint(query: string): { name: string; lat: number; lng: number } | null {
     const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/utils/cityPoints.ts'), 'utf-8');
-    const q = query.toLowerCase();
-    for (const m of src.matchAll(/\{ name: '([^']+)', lat: ([\d.]+), lng: ([\d.]+)/g)) {
-        if (m[1].toLowerCase().includes(q)) return { name: m[1], lat: Number(m[2]), lng: Number(m[3]) };
-    }
-    return null;
+    const points = [...src.matchAll(/\{ name: '([^']+)', lat: ([\d.]+), lng: ([\d.]+)/g)]
+        .map(m => ({ name: m[1], lat: Number(m[2]), lng: Number(m[3]) }));
+    return matchOrt(points, query, p => [p.name])[0] ?? null;
 }
 
 function citySlugFor(name: string): string | null {
