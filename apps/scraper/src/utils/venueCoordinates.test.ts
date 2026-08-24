@@ -90,6 +90,26 @@ describe('firstWordPlaceQuery', () => {
     });
 });
 
+describe('deGenitiveFirstWord + overpassNameVariants (Tallgården-fallet)', () => {
+    it('strippar genitiv-s ur första ordet', async () => {
+        const { deGenitiveFirstWord } = await import('./venueCoordinates');
+        expect(deGenitiveFirstWord('Ingelstads bibliotek')).toBe('Ingelstad bibliotek');
+        expect(deGenitiveFirstWord('Lammhults bibliotek')).toBe('Lammhult bibliotek');
+        expect(deGenitiveFirstWord('Braås bibliotek')).toBeNull();     // äkta -ås-ort
+        expect(deGenitiveFirstWord('Konserthuset')).toBeNull();        // ett ord
+        expect(deGenitiveFirstWord('Mora kyrka')).toBeNull();          // inget s
+    });
+
+    it('bygger varianterna full → av-genitiviserad → byggnadsnamn', async () => {
+        const { overpassNameVariants } = await import('./overpassVenue');
+        expect(overpassNameVariants('Tallgårdens bibliotek'))
+            .toEqual(['Tallgårdens bibliotek', 'Tallgården bibliotek', 'Tallgården']);
+        expect(overpassNameVariants('Gemla bibliotek'))
+            .toEqual(['Gemla bibliotek', 'Gemla']);
+        expect(overpassNameVariants('Vida Arena')).toEqual(['Vida Arena']);
+    });
+});
+
 describe('classifyQueryPrecision', () => {
     it('gatuadresser klassas som gata', () => {
         expect(classifyQueryPrecision('Storgatan 12, Växjö')).toBe('gata');

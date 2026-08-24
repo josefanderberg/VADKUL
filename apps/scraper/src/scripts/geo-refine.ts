@@ -33,7 +33,9 @@ import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookup
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode, isInNordic,
+    deGenitiveFirstWord,
 } from '../utils/venueCoordinates';
+import { resolveVenueOverpass } from '../utils/overpassVenue';
 
 const APPLY = process.argv.includes('--apply');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit='));
@@ -175,8 +177,11 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
 
     // Kandidat 0: platsregistret (known_venues) — gratis och exakt. Växer via
     // Overpass-seedningen och geo-refines egna träffar; kollas före Nominatim.
+    // Genitivvarianten fångar "Ingelstads bibliotek" mot OSM:s "Ingelstad bibliotek".
     if (loc && !locIsJustCity) {
+        const deGen = deGenitiveFirstWord(loc);
         const kv = lookupVenueSmart(loc, city ?? undefined)
+            ?? (deGen ? lookupVenueSmart(deGen, city ?? undefined) : null)
             ?? (loc.includes(',') ? lookupVenueSmart(loc.split(',')[0], city ?? undefined) : null);
         if (kv && acceptable(kv, cluster)) return [kv[0], kv[1], `venue-register: ${loc.slice(0, 60)}`, 'poi'];
     }
@@ -210,6 +215,15 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
             const hit = await geocodeVenueSwedenStrict(q);
             if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], q, 'poi'];
         }
+    }
+
+    // Kandidat 4.5: fuzzy namn-uppslag mot OSM via Overpass — hittar POI:er
+    // som Nominatims fritextsök missar ("Tallgårdens bibliotek" finns i OSM
+    // som byggnaden "Tallgården"). Ankare = klustret; tvetydiga namn avvisas.
+    if (loc && !locIsJustCity) {
+        const head = loc.split(',')[0].trim();
+        const hit = await resolveVenueOverpass(head, cluster.lat, cluster.lng);
+        if (hit && acceptable(hit, cluster)) return [hit[0], hit[1], `overpass: ${head.slice(0, 60)}`, 'poi'];
     }
 
     // Kandidat 5: hostName som plats — bara när det ser ut som en venue

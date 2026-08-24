@@ -579,6 +579,16 @@ export function firstWordPlaceQuery(cleaned: string, city: string): string | nul
     return `${w}, ${city.trim()}`;
 }
 
+/** Strippa genitiv-s ur FÖRSTA ordet: "Ingelstads bibliotek" → "Ingelstad bibliotek".
+ *  Rör inte ord som slutar på dubbel-s/-ås/-us/-es (Braås!) eller är för korta. */
+export function deGenitiveFirstWord(name: string): string | null {
+    const words = name.trim().split(/\s+/);
+    const w = words[0];
+    if (words.length < 2 || w.length < 5 || !/s$/i.test(w) || /(ss|ås|us|es)$/i.test(w)) return null;
+    const out = [w.slice(0, -1), ...words.slice(1)].join(' ');
+    return out === name.trim() ? null : out;
+}
+
 /** Är frågan i praktiken bara ett stadsnamn? ("Växjö", "Växjö, Sverige") */
 function isCityOnlyQuery(cleaned: string, cityHint?: string): boolean {
     const q = cleaned.replace(/,\s*(sverige|sweden)\s*$/i, '').trim();
@@ -639,8 +649,11 @@ export async function geocodeVenueSweden(
     // första kommat ("Åhaga, Borås" → "Åhaga"). Stadskrav när nearCity finns;
     // utan stad krävs att namnet är unikt i tabellen (se lookupVenueSmart).
     const nearCityRaw = (opts.nearCity || '').trim();
+    const head = cleaned.includes(',') ? cleaned.split(',')[0].trim() : cleaned;
+    const headDeGen = deGenitiveFirstWord(head);   // "Ingelstads bibliotek" ↔ OSM "Ingelstad bibliotek"
     const venueHit = lookupVenueSmart(cleaned, nearCityRaw || undefined)
-        ?? (cleaned.includes(',') ? lookupVenueSmart(cleaned.split(',')[0], nearCityRaw || undefined) : null);
+        ?? (head !== cleaned ? lookupVenueSmart(head, nearCityRaw || undefined) : null)
+        ?? (headDeGen ? lookupVenueSmart(headDeGen, nearCityRaw || undefined) : null);
     if (venueHit) return [venueHit[0], venueHit[1], 'poi'];
 
     // nearCity-validering: geokoda stadens centroid (cachad) och bygg predikatet.
