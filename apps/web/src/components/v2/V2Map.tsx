@@ -18,10 +18,12 @@ import {
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
-    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, WISH_DOT_HEX,
+    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG,
+    COUNT_BADGE_CORNER_X, COUNT_BADGE_CORNER_Y, COUNT_BADGE_IMG, WISH_DOT_HEX,
     brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, sourceGradientCss,
+    makeBrickaImageData, makeCountBadgeImageData, sourceGradientCss,
 } from './v2MapBricka';
+import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import V2MapGroupList from './V2MapGroupList';
 import CitySignposts, { type SignpostCity } from './CitySignposts';
@@ -65,7 +67,9 @@ type PlainFeature = {
     // gruppen visas som sin nål-prick (dämpad till 50 %).
     // dim = gruppen matchar INTE den emoji man klickat fram i emoji-raden under
     // stadsrutan → tonas ned och hamnar under de matchande i staplingen.
-    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean };
+    // labelCat/labelTitle = etikettlagrets text (kategorinamn vid mellanzoom,
+    // kapad titel vid hög zoom) — läses av spegelkällan 'plain-events-labels'.
+    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean; labelCat: string; labelTitle: string };
 };
 
 // En cyklande multibrickas rotation: den EGNA cykel-bildens id + frames i tur-
@@ -99,6 +103,10 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // zoomInOnFirstEventClick), så det är vid detta värde de två lagren ska
 // sammanfalla.
 const GL_ICON_SIZE_TOP = 0.98;
+// Etikettlagren (texten under brickorna): bottenlagret ritas UNDER brick-lagret
+// (en etikett får aldrig skymma en bricka), topplagret bär bara den VALDA
+// gruppens etikett (sortKey ≥ 1e6) ovanpå. Alla synlighetsväxlar går över båda.
+const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-top'] as const;
 const IS_PAST_EXPR: maplibregl.ExpressionSpecification =
     ['boolean', ['get', 'past'], false];
 const REVEAL_STATE_EXPR: maplibregl.ExpressionSpecification =
@@ -135,7 +143,11 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
         const pa = a[i].properties, pb = b[i].properties;
         if (pa.key !== pb.key || pa.icon !== pb.icon || pa.count !== pb.count ||
             pa.color !== pb.color || pa.sortKey !== pb.sortKey || pa.past !== pb.past ||
-            pa.dim !== pb.dim) return false;
+            pa.dim !== pb.dim ||
+            // Etiketterna ingår i jämförelsen: en ändring som BARA byter etikett
+            // (t.ex. ny representant vid stjärnmärkning) får inte skippas som
+            // "identisk push" — då blir spegelkällans text stale.
+            pa.labelCat !== pb.labelCat || pa.labelTitle !== pb.labelTitle) return false;
         const ca = a[i].geometry.coordinates, cb = b[i].geometry.coordinates;
         if (ca[0] !== cb[0] || ca[1] !== cb[1]) return false;
     }
@@ -212,7 +224,10 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // överlämningen bild → karta landar på samma ställe.
 // Tunbart: sänk lat = mer söderut, höj lat = längre upp, höj lng = åt
 // höger/öster.
-const START_CENTER: [number, number] = [14.3, 56.5]; // [lng, lat] — sänk lat = söderut
+// 24/8 flyttad norrut (Josef: "vara lite mer norr ut") — punkten ligger PÅ
+// den gamla reslinjen mot INTRO_PAN_TO, så rutten är identisk men resan
+// börjar ~11 mil längre fram.
+const START_CENTER: [number, number] = [14.75, 57.5]; // [lng, lat] — sänk lat = söderut
 // Höjden intron ligger på. Zoom-NIVÅN kan inte hårdkodas — samma zoom täcker
 // helt olika många kilometer på mobil och desktop — så vi räknar fram den ur
 // containerns mått (startZoomFor nedan). Breddmåttet styr normalt på desktop;
@@ -239,17 +254,16 @@ const INTRO_PAN_TO: [number, number] = [17.6, 63.6]; // [lng, lat] — Ångerman
 // desktop ser ett smalt band. Med en fast restid hade resan blivit omärklig på
 // mobilen och rusat på desktop.
 const INTRO_PAN_MS_PER_SCREEN = 26_000;
-// Resan görs i tre etapper: mjuk avfärd, marschfart, mjuk inbromsning i norr.
-// Sträckorna anges i skärmhöjder; etapptiderna räknas ur farten ovan så
-// skarvarna blir ryckfria (se `leg`).
-const INTRO_WARMUP_SCREENS = 0.1;
+// Resan görs i två etapper: marschfart från första bildrutan, mjuk inbromsning
+// i norr. Sträckorna anges i skärmhöjder; etapptiderna räknas ur farten ovan så
+// skarven blir ryckfri (se `leg`). Accelerationsrampen i starten är BORTTAGEN
+// (Josef 24/8: "den kan starta gåendes — inte rampa upp hastigheten"): även en
+// kort ramp lästes som att resan inte kommit igång.
 const INTRO_BRAKE_SCREENS = 0.3;
 // INGEN väntan innan avfärd (Josef 14/8: "börja rörelsen uppåt direkt vid
 // start"). Resan startade förut först när de första prick-vågorna landat, med
 // en andhämtning ovanpå — men all väntan i början läses som tröghet, och
-// prickarna hinner ändå tändas medan kameran redan rullar. Den mjuka
-// accelerationen (etapp 1 nedan) gör att starten inte rycker till trots att den
-// sker direkt.
+// prickarna hinner ändå tändas medan kameran redan rullar.
 // Nål-prickens storlek i vanligt läge …
 const DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
     ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5];
@@ -942,6 +956,11 @@ export default function V2Map({
             // emoji-raden själv räknar på.
             const hit = highlightEmoji == null ||
                 group.some(e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji);
+            // Etikettlagrets text = representantens (det brickan visar). För
+            // cyklande grupper är detta frame 0-läget; cykel-pumpen skriver
+            // över spegelkällans text i samma tick som emojin byter, så
+            // etiketten ALLTID beskriver den synliga framen.
+            const { labelCat, labelTitle } = eventLabels(rep.title, rep.category);
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
@@ -964,6 +983,7 @@ export default function V2Map({
                         + (isSel ? 1_000_000 : 0),
                     past: groupIsPast(group, nowMs),
                     dim: !hit,
+                    labelCat, labelTitle,
                 },
             });
         }
@@ -985,7 +1005,7 @@ export default function V2Map({
                 // Önskningar är ingen "sort" i emoji-raden (de räknas inte där)
                 // och tonas därför aldrig ned — de är alltid tända och ska
                 // fortsätta vara det även när man tittar närmare på en kategori.
-                properties: { icon: iconId, key: `wish:${w.id}`, count: 1, color: WISH_DOT_HEX, sortKey: 100_000, past: false, dim: false },
+                properties: { icon: iconId, key: `wish:${w.id}`, count: 1, color: WISH_DOT_HEX, sortKey: 100_000, past: false, dim: false, ...wishLabels(w.title) },
             });
         }
         // Nål-prick-lagret (cirklar) saknar sort-key och ritar i källordning —
@@ -999,6 +1019,10 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick, highlightEmoji]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
+    // Nyckel → feature-uppslag för klick-/hover-träffar (pickHoverKey): byggs en
+    // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
+    // i stället för att loopa alla tiotusentals features per klick/mousemove.
+    const plainFeatureByKeyRef = useRef<Map<string, PlainFeature>>(new Map());
     const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
@@ -1380,6 +1404,70 @@ export default function V2Map({
     // (setStyle rensar källor/bilder/lager, så de måste återinstalleras).
     // instant skickas vidare till pushen (stilbyte = återställ allt direkt,
     // ingen ny stream).
+    // ── Etikett-spegelkällan ──────────────────────────────────────────────────
+    // 'plain-events-labels' innehåller BARA tända, ej passerade grupper (se
+    // v2MapLabel för varför textkollisionen kräver en egen källa). Byggs alltid
+    // om i sin helhet ur plainFeaturesRef ∩ revealWrittenRef — aldrig
+    // inkrementellt, annars strandar etiketter för utbytta/släckta grupper.
+    // Debouncad: migrations-animationen skriver reveal-ramper varje frame och
+    // etiketterna ska landa när brickorna satt sig, inte fladdra under resan.
+    const LABEL_SYNC_DEBOUNCE_MS = 200;
+    const labelSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Senast skrivna spegelinnehållet (signatur). setData på en symbol-källa
+    // byter ut dess tiles, och varje byte är ett fönster där motorbuggen i
+    // safeQuery-kommentaren kan slå till — skriv därför BARA när innehållet
+    // faktiskt ändrats. Nollas när källan (åter)skapas i syncPlainLayer.
+    const labelSigRef = useRef<string | null>(null);
+    const syncLabelSource = useCallback(() => {
+        labelSyncTimerRef.current = null;
+        const map = mapRef.current;
+        if (!map || !styleReady(map)) return;
+        try {
+            const src = map.getSource('plain-events-labels') as maplibregl.GeoJSONSource | undefined;
+            if (!src) return;
+            // Cyklande grupper: skriv över rep-etiketten med DEN VISADE framens
+            // event (samma uppslag som klicket använder) — texten följer emojin.
+            const feats = labelFeaturesFrom(plainFeaturesRef.current, revealWrittenRef.current).map(f => {
+                const rot = cycleRotationsRef.current.get(f.properties.key);
+                if (!rot || rot.icon !== f.properties.icon) return f;
+                const ev = shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? []);
+                return ev ? { ...f, properties: { ...f.properties, ...eventLabels(ev.title, ev.category) } } : f;
+            });
+            // Zoom-medveten signatur: under z13 visar text-field bara labelCat —
+            // ett titelbyte i en cyklande grupp ska då INTE kosta ett tile-byte.
+            // Tier-markören tvingar en skrivning när man korsar z13 (exitZooming
+            // schemalägger en sync), så titlarna är färska när de börjar visas.
+            const withTitles = map.getZoom() >= 13;
+            const sig = (withTitles ? 'T' : 'C')
+                + feats.map(f => `${f.properties.key}${f.properties.labelCat}${withTitles ? f.properties.labelTitle : ''}`).join('');
+            if (sig === labelSigRef.current) return;
+            labelSigRef.current = sig;
+            src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
+        } catch { /* kartan/källan riven — nästa syncPlainLayer bygger om */ }
+    }, []);
+    const scheduleLabelSync = useCallback(() => {
+        if (labelSyncTimerRef.current != null) return;
+        labelSyncTimerRef.current = setTimeout(syncLabelSource, LABEL_SYNC_DEBOUNCE_MS);
+    }, [syncLabelSource]);
+    const scheduleLabelSyncRef = useRef(scheduleLabelSync);
+    scheduleLabelSyncRef.current = scheduleLabelSync;
+
+    // ── Etikett-toggeln ───────────────────────────────────────────────────────
+    // Ett klick som skulle tända EXAKT samma brickor som redan är tända (samma
+    // 50 närmast) ändrar inget på kartan — då togglas etiketterna av/på i
+    // stället (ägarbeslut 25/8). Togglet är fördröjt förbi dubbeltapp-fönstret
+    // så det aldrig krockar med periodväxeln; ett nytt mål (riktig resa)
+    // skrotar väntande toggle och återställer etiketterna synliga.
+    const labelsHiddenRef = useRef(false);
+    const labelToggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const applyLabelVisibility = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || isZoomingRef.current) return;
+        for (const id of LABEL_LAYER_IDS) {
+            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', labelsHiddenRef.current ? 'none' : 'visible');
+        }
+    }, []);
+
     const syncPlainLayer = useCallback((opts?: { instant?: boolean }) => {
         const map = mapRef.current;
         if (!map || !styleReady(map)) return;
@@ -1434,37 +1522,118 @@ export default function V2Map({
                 reapplyAllRevealRef.current();
                 ensureRevealPumpRef.current();
             }
-            // "+N"-badge för brickor med flera event (count > 1) — siffra uppe till
-            // höger på brickan. Följer samma reveal-state som ikonen (men multi-event
-            // hålls alltid tända, så badgen syns alltid). Kräver glyfer.
+            // "+N"-badge för brickor med flera event (count > 1) — VIT cirkel med
+            // mörk siffra i brickans ÖVRE HÖGRA hörn (samma look som stadssidornas
+            // antal-bubbla i CityMapHeroCanvas och DOM-badgen). Fast bakad cirkel;
+            // text och cirkel ankras båda i hörnpunkten (COUNT_BADGE_CORNER_*),
+            // med storleks-/offsetskalning som följer brickans icon-size-kurva
+            // (0.78→0.98) så badgen sitter kvar i hörnet på alla zoomnivåer.
+            // Följer samma reveal-state som brickan. Kräver glyfer.
+            if (!map.hasImage(COUNT_BADGE_IMG)) {
+                const badge = makeCountBadgeImageData();
+                if (badge) map.addImage(COUNT_BADGE_IMG, badge.data, { pixelRatio: badge.pixelRatio });
+            }
             if (!map.getLayer('plain-events-count')) {
                 map.addLayer({
                     id: 'plain-events-count',
                     type: 'symbol',
                     source: 'plain-events',
+                    // Bara fler-event-grupper — filtret (i stället för tom text-
+                    // field) hindrar cirkeln från att ritas tom på enskilda event.
+                    filter: ['>', ['get', 'count'], 1],
                     layout: {
-                        // Totalt antal event i gruppen (bara för count > 1).
-                        'text-field': ['case', ['>', ['get', 'count'], 1], ['to-string', ['get', 'count']], ''],
+                        'text-field': ['to-string', ['get', 'count']],
                         'text-font': ['Open Sans Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 13, 13],
-                        'text-anchor': 'bottom',
-                        'text-offset': [0.95, -1.5],
+                        // Siffran centreras i hörnpunkten: em-offseten × text-size
+                        // (10→13) följer brickhörnet (× icon-size 0.78→0.98) inom
+                        // ~1 px över hela zoomspannet.
+                        'text-anchor': 'center',
+                        'text-offset': [COUNT_BADGE_CORNER_X / 13, -COUNT_BADGE_CORNER_Y / 13],
                         'text-allow-overlap': true,
                         'text-ignore-placement': true,
+                        // Cirkeln under siffran: samma hörnpunkt (icon-offset × icon-
+                        // size). 0.98 i topp = brickans GL_ICON_SIZE_TOP → ~19,6 px
+                        // cirkel; 0.75 vid z4 håller den i takt med textens 10/13.
+                        'icon-image': COUNT_BADGE_IMG,
+                        'icon-anchor': 'center',
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.75, 13, GL_ICON_SIZE_TOP],
+                        'icon-offset': [COUNT_BADGE_CORNER_X, -COUNT_BADGE_CORNER_Y],
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': true,
                         // Samma stapling som brickan — fler-event-badgen överst,
                         // och den valda gruppens siffra allra överst (sortKey-boost).
                         'symbol-sort-key': ['coalesce', ['get', 'sortKey'], ['get', 'count']],
                         'symbol-z-order': 'auto',
                     },
                     paint: {
-                        'text-color': '#ffffff',
-                        'text-halo-color': '#006AA7',
-                        'text-halo-width': 2.4,
+                        // Mörk siffra på den vita pillen (stadssidans #0f172a).
+                        'text-color': '#0f172a',
                         // Badgen följer brickan — släckt för passerade grupper.
                         'text-opacity': BRICKA_OPACITY_EXPR,
                         'text-opacity-transition': { duration: 0, delay: 0 },
+                        'icon-opacity': BRICKA_OPACITY_EXPR,
+                        'icon-opacity-transition': { duration: 0, delay: 0 },
                     },
                 });
+            }
+            // Etikettlagret: text under brickspetsen — kategorinamn vid mellan-
+            // zoom, kapad titel från z13 (samma stopp som icon-size-toppen =
+            // stads-/gatuzoom). Läser SPEGELKÄLLAN (bara tända grupper, se
+            // syncLabelSource) så textkollisionen aldrig ser släckta etiketter —
+            // de skulle annars tränga undan baskartans ortsnamn. Brickan ligger
+            // orörd i sitt eget lager (allow-overlap); etiketten viker själv vid
+            // trängsel. Ingen klickyta — klickvägen (pickHoverKey) läser bara
+            // brick-features, aldrig etiketterna.
+            if (!map.getSource('plain-events-labels')) {
+                map.addSource('plain-events-labels', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                // Färsk (tom) källa → glöm signaturen så nästa sync skriver.
+                labelSigRef.current = null;
+            }
+            // Två lager ur samma spegel: botten (alla utom valda) läggs FÖRE
+            // brick-lagret i ritordningen — texten hamnar under brickorna;
+            // toppen (bara den valda gruppens etikett) läggs sist, ovanpå.
+            for (const layerId of LABEL_LAYER_IDS) {
+                if (map.getLayer(layerId)) continue;
+                const isTop = layerId === 'plain-events-labels-top';
+                map.addLayer({
+                    id: layerId,
+                    type: 'symbol',
+                    source: 'plain-events-labels',
+                    // Under z9 (Sverige-vyn) är etiketter meningslösa brus.
+                    minzoom: 9,
+                    // Vald grupp = sortKey ≥ 1e6 (samma gräns som brick-staplingen).
+                    filter: isTop
+                        ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
+                        : ['<', ['coalesce', ['get', 'sortKey'], 0], 1_000_000],
+                    layout: {
+                        'text-field': ['step', ['zoom'], ['get', 'labelCat'], 13, ['get', 'labelTitle']],
+                        'text-font': ['Open Sans Bold'],
+                        'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
+                        // Spetsen (icon-anchor bottom) står på koordinaten → texten
+                        // börjar strax under den; krockar aldrig med "+N"-badgen
+                        // som sitter uppe till höger.
+                        'text-anchor': 'top',
+                        'text-offset': [0, 0.35],
+                        'text-max-width': 12,
+                        // Placeringen sker i STIGANDE sort-key-ordning (lägst
+                        // placeras först och vinner kollisionen) — negationen ger
+                        // boostat/stora grupper etikettprioritet, spegelvänt
+                        // mot brick-lagrets högst-överst-ritordning.
+                        'symbol-sort-key': ['*', -1, ['coalesce', ['get', 'sortKey'], ['get', 'count']]],
+                        'visibility': (isZoomingRef.current || labelsHiddenRef.current) ? 'none' : 'visible',
+                    },
+                    paint: {
+                        'text-color': '#ffffff',
+                        // Mjuk mörkgrå halo (inte blå, inte svart): texten ska läsas
+                        // som en neutral skylt utan att kanten dominerar.
+                        'text-halo-color': 'rgba(51,65,85,0.8)',
+                        'text-halo-width': 2,
+                        // past/reveal är redan bortfiltrerade ur spegelkällan —
+                        // kvar är bara emoji-radens nedtoning.
+                        'text-opacity': DIM_FACTOR_EXPR,
+                    },
+                }, isTop ? undefined : 'plain-events');
             }
             // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
             // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
@@ -1522,6 +1691,9 @@ export default function V2Map({
             // pö), små ändringar går som en enda setData. Ladda-pillen i JSX:en
             // följer rundan via pendingPaintRef/paintDoneNonce.
             pushPlainEvents(map, opts);
+            // Spegelkällan byggs om när datan bytts ut (stilbyte återskapar den
+            // tom — debounce-fönstret hinner både denna push och reveal-skrivarna).
+            scheduleLabelSyncRef.current();
 
             // Multi-event- & "inom 1 timme"-prickar. Egen lätt cirkel-källa/lager —
             // INGEN clustering. Svart fyllning (orange för "inom 1 timme"), liten
@@ -1611,8 +1783,11 @@ export default function V2Map({
         if (prev === undefined ? op > 0.0001 : Math.abs(op - prev) > 0.004) {
             try { map.setFeatureState({ source: 'plain-events', id: key }, { reveal: op }); } catch { /* källan ej redo */ }
             written.set(key, op);
+            // Etikettspegeln följer tänd-uppsättningen (debouncad — migrationens
+            // per-frame-ramper kollapsar till några få ombyggen).
+            scheduleLabelSync();
         }
-    }, []);
+    }, [scheduleLabelSync]);
 
     // Skriv seed-markörerna (de ~10 alltid synliga) direkt — efter ett stilbyte
     // rensar setStyle feature-state, så de måste sättas på nytt.
@@ -1625,7 +1800,9 @@ export default function V2Map({
         };
         revealSeedRef.current.forEach(light);
         revealStickyRef.current.forEach(light); // klickade brickor stannar tända
-    }, []);
+        // Direktskrivningarna ovan går INTE via writeReveal — synka spegeln själv.
+        scheduleLabelSync();
+    }, [scheduleLabelSync]);
     reapplyAllRevealRef.current = reapplyAllReveal;
 
     // Avslöjning sker BARA via vilo-uppsättningen (seed): de REVEAL_SEED_COUNT
@@ -1682,6 +1859,22 @@ export default function V2Map({
     // destinationen (de N närmast klicket). Illusionen skapas genom att tända event
     // längs en KORRIDOR från→till: varje körfält har en plats-index som glider framåt
     // med olika hastighet, och tänder eventet vid sitt index.
+    // Skulle ett klick här tända EXAKT samma uppsättning som redan står tänd?
+    // (Samma uppslag som resans destination — nearestKeysTo mot settlade
+    // seed-mängden.) Under pågående migration är svaret alltid nej: då ska
+    // klicket få styra om resan som vanligt.
+    const isSameRevealTarget = useCallback((lng: number, lat: number): boolean => {
+        if (revealTweenRef.current != null) return false;
+        const cur = revealSeedRef.current;
+        if (cur.size === 0) return false;
+        const target = nearestKeysTo(lng, lat, REVEAL_NEAREST_COUNT);
+        if (target.size !== cur.size) return false;
+        for (const k of target) if (!cur.has(k)) return false;
+        return true;
+    }, [nearestKeysTo]);
+    const isSameRevealTargetRef = useRef(isSameRevealTarget);
+    isSameRevealTargetRef.current = isSameRevealTarget;
+
     const startRevealTravel = useCallback((toLng: number, toLat: number) => {
         const map = mapRef.current;
         if (!map || !layerExists(map, 'plain-events')) return;
@@ -1836,6 +2029,9 @@ export default function V2Map({
     // ändras. Väntar på att stilen är redo (annars finns ingen källa att skriva till).
     useEffect(() => {
         plainFeaturesRef.current = plainData.features;
+        const byKey = new Map<string, PlainFeature>();
+        for (const f of plainData.features) byKey.set(f.properties.key, f);
+        plainFeatureByKeyRef.current = byKey;
         usedIconsRef.current = plainData.icons;
         cycleRotationsRef.current = plainData.rotations;
         // cycleFrameIndexRef rensas MEDVETET inte här: en vald grupps rotation
@@ -1986,7 +2182,7 @@ export default function V2Map({
     const highlightEmojiRef = useRef(highlightEmoji);
     highlightEmojiRef.current = highlightEmoji;
     useEffect(() => {
-        const CYCLE_STEP_MS = 1000; // EN bricka byter per sekund
+        const CYCLE_STEP_MS = 650; // EN bricka byter per tick (ägarjustering 25/8: snabbare än 1 s)
         const interval = setInterval(() => {
             const map = mapRef.current;
             if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) return;
@@ -2022,6 +2218,9 @@ export default function V2Map({
             // makeBrickaImageData) — kravet för updateImage.
             if (baked && map.hasImage(pick.rot.icon)) {
                 try { map.updateImage(pick.rot.icon, baked.data); } catch { /* stilbyte i skarven */ }
+                // Etiketten byter i SAMMA tick som emojin (odebouncat — spegeln
+                // är ≤ ~100 features, en setData/sekund är billig).
+                syncLabelSource();
             }
         }, CYCLE_STEP_MS);
         return () => clearInterval(interval);
@@ -2122,6 +2321,14 @@ export default function V2Map({
             // Ladda inte om utgångna tiles i bakgrunden — sparar både nät och
             // minne (gamla texturer hålls inte kvar i väntan på refresh).
             refreshExpiredTiles: false,
+            // Ingen symbol-crossfade: multibrickornas emoji byts momentant
+            // (updateImage), och etikettspegelns text måste byta i SAMMA
+            // ögonblick — defaultens 300 ms fade fick texten att släpa nästan
+            // en halv cykeltakt efter emojin. Kartans egna lager kör redan
+            // opacity-transitioner på 0 överallt, så detta matchar designen;
+            // bieffekten är att baskartans ortsnamn poppar in i stället för
+            // att tona vid tile-laddning.
+            fadeDuration: 0,
             // Lägg INTE till default-attributionen automatiskt. På breda skärmar
             // renderas den som en utfälld textrad ("MapLibre | © CARTO …") längst
             // ner — vi vill i stället ha en egen i compact-läge (liten ⓘ-knapp) som
@@ -2144,6 +2351,10 @@ export default function V2Map({
         }
 
         mapRef.current = map;
+        // Dev-handtag för felsökning i konsolen (aldrig i produktion).
+        if (process.env.NODE_ENV === 'development') {
+            (window as unknown as { __vadkulMap?: maplibregl.Map }).__vadkulMap = map;
+        }
         // Speglas som state åt de overlays som behöver kartan själv (vägskyltarna
         // projicerar sina geo-ankare vid varje 'move').
         setMapInstance(map);
@@ -2211,6 +2422,8 @@ export default function V2Map({
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
+            setGlLayer('plain-events-count', false);   // badgen följer brickan — inte prickarna
+            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, false)); // text över nål-prickar = svävande etiketter
             // During zoom, show all dots including revealed ones ("har varit" stays at 50%)
             if (layerExists(map, 'plain-events-dots')) {
                 map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
@@ -2225,6 +2438,8 @@ export default function V2Map({
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
+            setGlLayer('plain-events-count', true);
+            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Prickarna göms INTE här — då blir det ett tomt glapp medan symbol-lagret
             // (brickorna) placerar sina ikoner. De ligger kvar tills exitZooming, dvs
             // när zoomen tystnat OCH brickorna hunnit ritas. Så syns alltid något.
@@ -2269,6 +2484,11 @@ export default function V2Map({
             if (introActiveRef.current) return;
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
+            setGlLayer('plain-events-count', true);
+            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
+            // Zoomen kan ha korsat z13 (kategori ↔ titel) — låt spegeln skriva
+            // om sig med rätt nivå (signaturvakten gör den till no-op annars).
+            scheduleLabelSyncRef.current();
             setGlLayer('multi-event-dots', false);
             setGlLayer('multi-event-dots-count', false);
             setIsZooming(false);
@@ -2295,38 +2515,32 @@ export default function V2Map({
         // I vila är detta en no-op (redan false), så ingen flimmer/extra omritning.
         map.on('moveend', exitZooming);
 
-        // GL-lager som är klickbara: brickorna (inzoomat) + prickarna (utzoomat) +
-        // multi-event-prickarna. Klick på en multi-prick väljer gruppens första event
-        // (onGlMarkerClick slår upp gruppen via feature-properties.key).
-        const glHitLayers = ['plain-events', 'plain-events-dots', 'multi-event-dots'];
-        const glLayersPresent = () => glHitLayers.filter(id => layerExists(map, id));
+        // OBS: klickvägen använder INTE queryRenderedFeatures. Motorbuggen
+        // (samma klass som stream-normaliseringens "Out of bounds") gör att
+        // symbol-queryn dels kan KASTA, dels — värre — returnera SKRÄP:
+        // verifierat 25/8 gav en punkt-query 86 träffar med event från hela
+        // landet under en enda pixel (kollisionsindexets bucket-mappning
+        // pekar fel när etikettspegeln byter tiles). All träffbedömning går
+        // därför via pickHoverKey, som räknar manuellt på plainFeaturesRef +
+        // reveal-write-cachen och är immun mot query-indexet.
 
         map.on('click', (e) => {
-            // Klick på en SYNLIG GL-markör hanteras av lager-handlern nedan (väljer
-            // eventet) — avmarkera/avslöja då inte. En DOLD bricka (icon-opacity 0)
-            // är fortfarande träffbar i queryRenderedFeatures men ska INTE gå att
-            // klicka direkt: första trycket på ett gömt område avslöjar bara. Vi
-            // räknar därför bara hit på AVSLÖJADE plain-events-brickor som "markör".
-            const layers = glLayersPresent();
-            if (layers.length) {
-                const hits = map.queryRenderedFeatures(e.point, { layers });
-                const hitVisibleMarker = hits.some(h => {
-                    // Nedtonad bricka + framklickad sort = INTE en markör (samma
-                    // regel som pickHoverKey). Utan det här blev klicket dött:
-                    // lager-handlern öppnade inget, och den här returnerade ändå
-                    // tidigt — så ingenting alls hände. Nu faller det igenom till
-                    // kartan, precis som om brickan inte låg där.
-                    if (highlightEmojiRef.current != null && h.properties?.dim) return false;
-                    if (h.layer.id === 'plain-events' || h.layer.id === 'plain-events-dots') {
-                        const key = h.properties?.key as string | undefined;
-                        // Faktiskt renderat tillstånd (ground truth), inte write-cachen —
-                        // annars kunde en SYNLIG bricka råka klassas som dold → klicket
-                        // gick till avslöjning/bro i stället för att öppna (brickan "försvann").
-                        return !!key && ((map.getFeatureState({ source: 'plain-events', id: key }).reveal as number ?? 0) > 0.5);
-                    }
-                    return true; // andra lager (t.ex. multi-event-dots) — alltid klickbara
-                });
-                if (hitVisibleMarker) return;
+            // Klick på en SYNLIG GL-markör = öppna. pickHoverKey tillämpar
+            // samma regler som hovern: bara avslöjade brickor är valbara
+            // (dolda ska skrapas fram av det allmänna klicket, inte öppnas),
+            // nedtonade räknas inte när en sort är framklickad.
+            if (pickHoverKey(map, e as unknown as maplibregl.MapLayerMouseEvent)) {
+                // En väntande etikett-toggle från ett tidigare samma-plats-
+                // klick ska inte fyra av mitt i kort-öppningen.
+                if (labelToggleTimerRef.current != null) {
+                    clearTimeout(labelToggleTimerRef.current);
+                    labelToggleTimerRef.current = null;
+                }
+                // Kort-öppningen körs HÄRIFRÅN i stället för via MapLibres
+                // delegerade lager-lyssnare — delegatens interna query är
+                // både oskyddad och opålitlig (se ovan).
+                onGlMarkerClick(e as unknown as maplibregl.MapLayerMouseEvent);
+                return;
             }
             // Tom karta-tap (eller bara dolda brickor under fingret) = ny utgångspunkt:
             // bron byter ut den avslöjade uppsättningen mot de N närmast klicket. Klick
@@ -2348,6 +2562,35 @@ export default function V2Map({
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort
             if (closedSomething) return;
+            // SAMMA-PLATS-KLICK: skulle klicket tända exakt samma 50 brickor som
+            // redan står tända ändrar det inget på kartan — toggla i stället
+            // etiketterna av/på. Fördröjt förbi dubbeltapp-fönstret (350 ms, se
+            // DOUBLE_TAP_MS nedan): kommer ett andra tapp inom fönstret är det
+            // periodväxeln som gäller — då avbryts den väntande togglingen i
+            // stället för att schemalägga en ny, och ingen text blinkar.
+            if (isSameRevealTargetRef.current(e.lngLat.lng, e.lngLat.lat)) {
+                if (labelToggleTimerRef.current != null) {
+                    clearTimeout(labelToggleTimerRef.current);
+                    labelToggleTimerRef.current = null;
+                } else {
+                    labelToggleTimerRef.current = setTimeout(() => {
+                        labelToggleTimerRef.current = null;
+                        labelsHiddenRef.current = !labelsHiddenRef.current;
+                        applyLabelVisibility();
+                    }, 360);
+                }
+                return;
+            }
+            // Riktig resa: skrota ev. väntande toggle och visa etiketterna igen —
+            // av-läget hör till platsen man stod på, inte till den nya vyn.
+            if (labelToggleTimerRef.current != null) {
+                clearTimeout(labelToggleTimerRef.current);
+                labelToggleTimerRef.current = null;
+            }
+            if (labelsHiddenRef.current) {
+                labelsHiddenRef.current = false;
+                applyLabelVisibility();
+            }
             startRevealTravelRef.current(e.lngLat.lng, e.lngLat.lat);
         });
 
@@ -2361,33 +2604,39 @@ export default function V2Map({
          * ett kluster. Delas av klicket och hover-bubblan.
          */
         const pickHoverKey = (m: maplibregl.Map, e: maplibregl.MapLayerMouseEvent): string | undefined => {
-            const candidates = (e.features ?? []).filter(f => {
-                // EN FRAMKLICKAD SORT GÖR RESTEN OKLICKBARA (Josef 10/8): är en
-                // emoji vald i raden under stadsrutan ska bara de brickor som
-                // HAR den sorten gå att öppna. De nedtonade grannarna snodde
-                // annars klicket i täta kluster — man siktade på den enda tända
-                // brickan och fick upp ett event av en helt annan sort. `dim`
-                // sätts i plainData och är exakt motsatsen till `hit` där.
-                // Önskningar och multi-prickar saknar `dim` → alltid klickbara.
-                if (highlightEmojiRef.current != null && f.properties?.dim) return false;
-                const lid = f.layer?.id;
-                if (lid === 'plain-events' || lid === 'plain-events-dots') {
-                    const k = f.properties?.key as string | undefined;
-                    return !!k && ((m.getFeatureState({ source: 'plain-events', id: k }).reveal as number ?? 0) > 0.5);
-                }
-                return true;
-            });
-            if (candidates.length === 0) return undefined;
+            // Kandidaterna kommer ur DATAN (tända nycklar i write-cachen +
+            // feature-uppslaget), INTE ur e.features/queryRenderedFeatures:
+            // dels är query-indexet opålitligt (motorbuggen — se klick-
+            // handlern), dels saknar det allmänna klicket helt e.features.
+            // Bara avslöjade brickor är valbara; passerade grupper är prickar
+            // och ska inte öppnas härifrån.
             const ANCHOR_LIFT_PX = 28;
+            // ~brickbredd: samma träffkänsla som ikonens gamla hit-box.
+            const HIT_RADIUS_PX = 34;
             const qx = e.point.x, qy = e.point.y + ANCHOR_LIFT_PX;
-            const ranked = candidates.map(f => {
-                const c = (f.geometry as GeoJSON.Point | undefined)?.coordinates;
-                const pp = c ? m.project([c[0], c[1]]) : null;
-                const d = pp ? Math.hypot(pp.x - qx, pp.y - qy) : 1e9;
-                return { f, d, count: Number(f.properties?.count) || 1 };
+            const byKey = plainFeatureByKeyRef.current;
+            let bestKey: string | undefined;
+            let bestD = Infinity;
+            let bestCount = 0;
+            revealWrittenRef.current.forEach((op, key) => {
+                if (op <= 0.5) return;
+                const f = byKey.get(key);
+                if (!f || f.properties.past) return;
+                // EN FRAMKLICKAD SORT GÖR RESTEN OKLICKBARA (Josef 10/8): är en
+                // emoji vald i raden ska bara brickor som HAR sorten gå att
+                // öppna — nedtonade grannar snodde annars klicket i kluster.
+                // Önskningar saknar `dim` → alltid klickbara.
+                if (highlightEmojiRef.current != null && f.properties.dim) return;
+                const pp = m.project([f.geometry.coordinates[0], f.geometry.coordinates[1]]);
+                const d = Math.hypot(pp.x - qx, pp.y - qy);
+                if (d > HIT_RADIUS_PX) return;
+                // Närmast pekaren vinner; nära-oavgjort (≤3 px) → flest event
+                // (samma prioritet som z-staplingen).
+                if (d < bestD - 3 || (Math.abs(d - bestD) <= 3 && f.properties.count > bestCount)) {
+                    bestKey = key; bestD = d; bestCount = f.properties.count;
+                }
             });
-            ranked.sort((a, b) => (Math.abs(a.d - b.d) > 3 ? a.d - b.d : b.count - a.count));
-            return ranked[0].f.properties?.key as string | undefined;
+            return bestKey;
         };
 
         const onGlMarkerClick = (e: maplibregl.MapLayerMouseEvent) => {
@@ -2493,13 +2742,13 @@ export default function V2Map({
         };
         const clearHoverPeek = () => setHoverPeek(null);
 
-        glHitLayers.forEach(id => {
-            map.on('click', id, onGlMarkerClick);
-            map.on('mouseenter', id, setPointer);
-            map.on('mouseleave', id, clearPointer);
-            map.on('mousemove', id, hoverPeek);
-            map.on('mouseleave', id, clearHoverPeek);
-        });
+        // INGA delegerade lager-lyssnare (varken click eller hover): delegaten
+        // kör MapLibres queryRenderedFeatures internt på varje event, och den
+        // är både oskyddad och opålitlig (motorbuggen — se klick-handlern).
+        // Klicket körs från det allmänna klick-handlern ovan via pickHoverKey;
+        // hovern likaså: hoverPeek sätter både pekare och bubbla själv.
+        map.on('mousemove', hoverPeek);
+        map.getCanvas().addEventListener('mouseleave', () => { clearPointer(); clearHoverPeek(); });
         // Panorering/zoom får inte lämna kvar en bubbla vid fel bricka.
         map.on('movestart', clearHoverPeek);
 
@@ -2549,8 +2798,9 @@ export default function V2Map({
             const suppressed = suppressMapTapRef.current;
             suppressMapTapRef.current = false;
             if (suppressed || !onMapTapRef.current) { lastBareTap = null; return; }
-            const hits = map.queryRenderedFeatures(e.point, { layers: glHitLayers.filter(id => layerExists(map, id)) });
-            if (hits.length > 0) { lastBareTap = null; return; }
+            // Markör under fingret? Samma skräp-immuna uppslag som klickvägen
+            // (queryRenderedFeatures är opålitlig — se kommentaren ovan).
+            if (pickHoverKey(map, e as unknown as maplibregl.MapLayerMouseEvent)) { lastBareTap = null; return; }
             const prev = lastBareTap;
             lastBareTap = { time: performance.now(), x: e.point.x, y: e.point.y };
             if (prev
@@ -2917,6 +3167,10 @@ export default function V2Map({
         container.classList.remove('map-state-full');
         container.classList.add('map-state-needle');
         if (layerExists(map, 'plain-events')) map.setLayoutProperty('plain-events', 'visibility', 'none');
+        if (layerExists(map, 'plain-events-count')) map.setLayoutProperty('plain-events-count', 'visibility', 'none');
+        for (const id of LABEL_LAYER_IDS) {
+            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'none');
+        }
         if (layerExists(map, 'plain-events-dots')) {
             map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
             map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', ['*', 0.9, PAST_DIM_EXPR]);
@@ -2939,7 +3193,6 @@ export default function V2Map({
         const map = mapRef.current;
         if (!map || !introGlide) return;
         let disposed = false;
-        let warmedUp = false;   // första etappen = mjuk acceleration från stillastående
         let legEndsAt = 0;      // när etappen som rullar SKA vara framme (ms, performance.now)
 
         // En etapp: åk `screens` skärmhöjder mot norr med given easing. `slow`
@@ -2990,14 +3243,7 @@ export default function V2Map({
             const totalPx = Math.hypot(p1.x - p0.x, p1.y - p0.y);
             const screens = totalPx / Math.max(1, map.getContainer().clientHeight);
             if (screens <= 0.02) return;                  // framme — stå still tills rutan stängs
-            if (!warmedUp) {
-                // 1. Avfärd: accelerera mjukt upp i marschfart (kvadratisk).
-                warmedUp = true;
-                const f = Math.min(0.5, INTRO_WARMUP_SCREENS / screens);
-                leg(p0, p1, f, screens * f, t => t * t, 2);
-                return;
-            }
-            // 3. Inbromsning: rulla ut till stillastående i norr. MARGINALEN är
+            // 2. Inbromsning: rulla ut till stillastående i norr. MARGINALEN är
             // inte kosmetisk: marsch-etappen siktar på exakt den här gränsen, och
             // utan slack landar kvarvarande sträcka en flyttalsgnutta OVANFÖR
             // den → marsch-grenen igen, fast med noll längd. Resultatet var en
@@ -3006,7 +3252,9 @@ export default function V2Map({
                 leg(p0, p1, 1, screens, t => 1 - (1 - t) * (1 - t), 2);
                 return;
             }
-            // 2. Marschfart: linjärt fram till inbromsningspunkten.
+            // 1. Marschfart: linjärt från stillastående (avsiktligt ingen
+            // uppvarvningsramp — resan ska "starta gåendes") fram till
+            // inbromsningspunkten.
             const f = (screens - INTRO_BRAKE_SCREENS) / screens;
             leg(p0, p1, f, screens - INTRO_BRAKE_SCREENS, t => t);
         };
@@ -3596,7 +3844,10 @@ export default function V2Map({
                 }
                 .pin-emoji {
                     transform: rotate(-45deg);
-                    font-size: 22px;
+                    /* Följer GL-brickans BRICKA_EMOJI_SCALE (0.68 ≈ 27 px på 40)
+                       skalat till bubblans 44 px-kropp — annars KRYMPER emojin
+                       synbart när klicket byter GL-bricka mot DOM-markör. */
+                    font-size: 25px;
                     line-height: 1;
                     position: relative;
                     z-index: 1;
@@ -3621,14 +3872,18 @@ export default function V2Map({
                     min-width: 20px;
                     height: 20px;
                     padding: 0 4px;
-                    background: #006AA7;
-                    color: #fff;
-                    font-size: 10px;
-                    font-weight: 700;
+                    /* Vit pill med mörk siffra — samma look som stadssidornas
+                       antal-bubbla (CityMapHeroCanvas) och GL-badgens bakade
+                       count-badge-bild, så DOM-bytet vid klick inte byter stil. */
+                    background: #fff;
+                    color: #0f172a;
+                    /* 13px = GL-badgens text-size vid stadszoom (klicket zoomar
+                       alltid dit) — annars KRYMPER siffran vid GL→DOM-bytet. */
+                    font-size: 13px;
+                    font-weight: 900;
                     font-variant-numeric: tabular-nums;
                     border-radius: 999px;
-                    border: 2px solid #fff;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
                     display: flex;
                     align-items: center;
                     justify-content: center;

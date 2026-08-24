@@ -32,6 +32,12 @@ export const ONE_HOUR_MS = 60 * 60 * 1000;
 // icon-size.
 export const BRICKA_IMG_S = 40;
 export const BRICKA_IMG_PAD = 7;
+// Emojins andel av kroppen. 0.68 (≈27 px) efter läsbarhetsfeedback (24/8:
+// 72-årig testare såg inte vad brickorna var). Geometri: kroppen är en 45°-
+// roterad kvadrat med tre hörnradier r=S/2 → i praktiken en cirkel med radie
+// S/2; största oroterade kvadrat som ryms är S·√2/2 ≈ 28,3 px. Gå ALDRIG över
+// 0.68 utan ny geometrikoll — breda VS16-glyfer (🍽️/🛍️) klipps annars.
+export const BRICKA_EMOJI_SCALE = 0.68;
 export const BRICKA_CENTER_ABOVE_COORD = BRICKA_IMG_PAD + (BRICKA_IMG_S * Math.SQRT2) / 2;
 
 // En grupp "börjar inom 1 timme" om något event startar i framtiden men inom en
@@ -124,6 +130,86 @@ export function brickaBodyBg(ev: LinkEvent): string {
 // Nål-prickens färg för ÖNSKE-brickor (samma lila familj som wish-gradienten).
 export const WISH_DOT_HEX = '#8b5cf6';
 
+// WebKit ritar emoji som slutar på variation selector-16 (U+FE0F, t.ex. 🍽️/🛍️)
+// ~en halv advance till HÖGER om textAlign:'center'-punkten i canvas-fillText —
+// emojin satt urknuffad i GL-brickan tills klicket bytte till DOM-brickan (vars
+// textmotor centrerar rätt). Vi mäter var glyfens synliga pixlar faktiskt hamnar
+// och korrigerar ritpunkten. Avvikelser ≤ 2 px lämnas: det är glyfens egen
+// optiska asymmetri, samma som DOM-brickan visar — att "rätta" den skulle i
+// stället flytta emojin vid klick. Cachen är nyckel per emoji (fonten är
+// konstant: storleken kommer ur BRICKA_IMG_S).
+const inkOffsetCache = new Map<string, number>();
+function emojiInkOffsetX(emoji: string, font: string): number {
+    const hit = inkOffsetCache.get(emoji);
+    if (hit !== undefined) return hit;
+    let off = 0;
+    const M = 96; // rymmer glyfen (~24 px) + även stora felplaceringar
+    const c = document.createElement('canvas');
+    c.width = M;
+    c.height = M;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (ctx) {
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, M / 2, M / 2);
+        const a = ctx.getImageData(0, 0, M, M).data;
+        let minX = Infinity, maxX = -Infinity;
+        for (let y = 0; y < M; y++) {
+            for (let x = 0; x < M; x++) {
+                if (a[(y * M + x) * 4 + 3] > 10) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                }
+            }
+        }
+        if (maxX >= minX) {
+            const d = (minX + maxX) / 2 - M / 2;
+            if (Math.abs(d) > 2) off = d;
+        }
+    }
+    inkOffsetCache.set(emoji, off);
+    return off;
+}
+
+// "+N"-badgens bakade cirkel: VIT kropp med mjuk skugga (samma look som stads-
+// sidornas antal-bubbla i CityMapHeroCanvas — siffran ritas av textlagret i
+// #0f172a ovanpå). Fast storlek: icon-text-fit prövades och förkastades —
+// bildens fasta kanter sätter en minimistorlek som gjorde pillen nästan lika
+// stor som brickan. Cirkelns mitt ska sitta i brickans ÖVRE HÖGRA hörn;
+// offseten dit exporteras här så lagret och bakningen aldrig glider isär.
+export const COUNT_BADGE_IMG = 'count-badge';
+export const COUNT_BADGE_D = 20;  // diameter (matchar DOM-badgens 20 px)
+const BADGE_PAD = 4;              // luft för skuggan
+// Badgens mittpunkt, relativt KOORDINATEN (spetsen), vid icon-size 1:
+// brickkroppens övre högra hörn (kroppens mitt ligger BRICKA_CENTER_ABOVE_COORD
+// ovanför, hörnet r·cos45° ut längs 45°-axeln — kroppen är i praktiken en
+// cirkel med radie S/2) plus en liten knuff utåt/uppåt så cirkeln SITTER PÅ
+// hörnet i stället för att hänga innanför det (ägarjustering 25/8).
+const BADGE_NUDGE_X = 4;
+const BADGE_NUDGE_Y = 5;
+export const COUNT_BADGE_CORNER_X = (BRICKA_IMG_S / 2) * Math.SQRT1_2 + BADGE_NUDGE_X;
+export const COUNT_BADGE_CORNER_Y = BRICKA_CENTER_ABOVE_COORD + (BRICKA_IMG_S / 2) * Math.SQRT1_2 + BADGE_NUDGE_Y;
+export function makeCountBadgeImageData(): { data: ImageData; pixelRatio: number } | null {
+    if (typeof document === 'undefined') return null;
+    const DPR = 2.5;
+    const W = COUNT_BADGE_D + BADGE_PAD * 2, H = W;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.scale(DPR, DPR);
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, COUNT_BADGE_D / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetY = 1;
+    ctx.fill();
+    return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
+}
+
 // Baka en bricka som ImageData för GL-symbol-lagret. bodyColor = kategori-/käll-
 // färg (utelämnad → mörk standard); selected → tydlig vit ram; saved → vit kropp
 // + ljusblå ram (matchar DOM-markörens sparad-look); wish → "drömsk" önske-look:
@@ -194,11 +280,13 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     ctx.stroke();
     ctx.restore();
 
-    // Emoji centrerad i kroppen (oroterad).
-    ctx.font = `${Math.round(S * 0.6)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
+    // Emoji centrerad i kroppen (oroterad), med ink-korrigering för WebKits
+    // VS16-felplacering (se emojiInkOffsetX).
+    const emojiFont = `${Math.round(S * BRICKA_EMOJI_SCALE)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
+    ctx.font = emojiFont;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, cx, cy);
+    ctx.fillText(emoji, cx - emojiInkOffsetX(emoji, emojiFont), cy);
 
     // Önskans ✨ — svävar strax UTANFÖR kroppens övre högra axel (ryms i
     // canvasens hörn-triangel: |dx|+|dy| ≈ 0,84·S > halva diagonalen ≈ 0,71·S,

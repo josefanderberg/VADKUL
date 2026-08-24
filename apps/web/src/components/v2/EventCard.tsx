@@ -1838,15 +1838,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     bannern ska synas från början, inte först efter första
                     scrollen). Släcks när man scrollat ner till närhetslistan och
                     sett ≥4 event — engångs, aldrig igen när man klarat det en
-                    gång. Pointer-events-none så den inte fångar scroll/tap.
+                    gång. 25/8: samma guldkant + skimmer som "Evenemang stad för
+                    stad"-knappen, och KLICKBAR — trycket scrollar direkt ner
+                    till närhetslistan (coach-markören, vilket också släcker
+                    coachen via observern). Wrappern är pointer-events-none så
+                    ytan runt pillen inte fångar scroll/tap.
                     Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
                     i chatt-vyn finns ingen lista att scrolla till. */}
                 {coachStage !== 'off' && cardView === 'info' && (
                     <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="flex items-center gap-2 rounded-full bg-[#006AA7] text-white text-xs font-black px-4 py-2 shadow-lg">
+                        <button
+                            type="button"
+                            onClick={() => coachMarkerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                            className="city-cta gold-glow-pulse pointer-events-auto relative overflow-hidden flex items-center gap-2 rounded-full bg-gradient-to-r from-[#006AA7] via-[#005590] to-[#003C66] border-2 border-[#FECC02] text-white text-xs font-black px-4 py-2 shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
+                        >
                             <span>Scrolla ner — fler event i närheten</span>
-                            <ChevronDown size={15} className="animate-bounce" />
-                        </div>
+                            <ChevronDown size={15} className="animate-bounce text-[#FECC02]" />
+                        </button>
                     </div>
                 )}
             </div>
