@@ -255,6 +255,8 @@ export async function scrapeTicketmaster(): Promise<number> {
                 locationName,
                 lat:               isNaN(lat) ? 0 : lat,
                 lng:               isNaN(lng) ? 0 : lng,
+                // TM-API:t levererar arenans egna koordinater — exakta.
+                geoPrecision:      (lat && lng && !isNaN(lat)) ? 'kallkoordinat' : null,
                 hostName:          'TicketMaster',
                 category,
                 createdAt:         new Date(),
