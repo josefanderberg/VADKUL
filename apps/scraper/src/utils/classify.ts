@@ -15,8 +15,10 @@ const RULES: [string, RegExp][] = [
     ['music', /musik|konsert|spelning|\blive\b|gig\b|\bband\b|festival|dj\b|rave|techno|hip[\s-]?hop|jazz|blues|country|folkmusik|symfoniker|orkester|\bkör(en|er)?\b|gitarr|tribute|visafton|sång|orgel|trubadur|spelmän|spelman|allsång|karaoke|dansband|kvartett|kvintett|lunchmusik|aftonmusik|kyrkokonsert|julkonsert/i],
     // scen — teater/film/show (\bteater(n|s)?\b — inte venue-namn som "Teatervallen")
     ['stage', /\bteater(n|s)?\b|sommarteater|barnteater|friluftsteater|teaterförest|föreställning|musikal|musical|\bopera\b|balett|impro|pjäs\b|monolog|revyr?\b|dansföreställning|dansuppvisning|standup|stand[\s-]?up|comedy|kabaré|komedi|cirkus|\bshow\b|filmvisning|\bbio\b|sommarbio|utomhusbio|drive[\s-]?in[\s-]?bio|magiker|trolleri/i],
-    // konst/kultur — museer, visningar, vandringar
-    ['art', /vernissage|utställning|\bkonst|galleri|expo\b|guidad|guidning|visning|stadsvandring|kulturvandring|museivisning|\bmuseum\b|museet\b|skulptur|fotografi|fotoutställning|keramik|akvarell|målning|teckning|slöjd|hantverk/i],
+    // konst/kultur — museer, visningar, vandringar. foto-mönstren MÅSTE ligga
+    // före sport: "Fotovandring"/"Fotografera i trädgården" ska inte fastna på
+    // sport-regelns "vandring" (Botaniska-incidenten 25/8).
+    ['art', /vernissage|utställning|\bkonst|galleri|expo\b|guidad|guidning|visning|stadsvandring|kulturvandring|museivisning|\bmuseum\b|museet\b|skulptur|fotografi|fotografer|fotokurs|fotovandring|mobilfoto|fotoutställning|keramik|akvarell|målning|teckning|slöjd|hantverk/i],
     // marknad — OBS 'mässa' undviks (krockar med kyrkans mässa)
     ['market', /loppis|loppmarknad|marknad\b|marknaden\b|bazar|antikvite|auktion|julmarknad|hantverksmässa|antikmässa|bokbord|bakluckeloppis|skördemarknad|torgdag/i],
     // sport & motion — före food så "sommaryoga med frukost" blir sport

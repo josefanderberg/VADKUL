@@ -120,11 +120,14 @@ Bedöm:
 2. confidence — "high" om du är säker. "medium"/"low" annars.
 3. inSweden — true/false. Är platsen i Sverige, Norge eller Danmark? (Fältnamnet är historiskt — svara true för hela SE/NO/DK.) Om text säger "Berlin", "Helsinki", "Polska", "Manchester" etc → false.
 4. reason — kort förklaring (max 15 ord, svenska).
-5. category — EN av dessa 11 (för filter/färg, välj den som passar bäst):
+5. category — EN av dessa 11 (för filter/färg, välj den som passar bäst).
+   VIKTIGT: kategorin avgörs av aktivitetens INNEHÅLL, inte av arrangören
+   eller miljön — en fotokurs i naturen är art/course (inte sport bara för
+   att Friluftsfrämjandet arrangerar), en konsert i kyrkan är music.
    - music: konsert, spelning, festival, DJ, klubbmusik
    - stage: teater, standup/komedi, dans, opera, film, bio
-   - art: utställning, vernissage, galleri, konst
-   - sport: match, turnering, yoga, gym, löpning, friluftsliv
+   - art: utställning, vernissage, galleri, konst, fotografering
+   - sport: match, turnering, yoga, gym, löpning, vandring/paddling (fysisk aktivitet)
    - food: matfestival, provning, middag, brunch, ölprovning
    - market: loppis, marknad, mässa, basar
    - party: fest, party, afterwork, klubb, uteliv
