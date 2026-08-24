@@ -49,28 +49,30 @@ export function overpassNameVariants(name: string): string[] {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Circuit breaker: efter 3 raka total-missar stängs Overpass av för resten
- *  av processen — en nere-tjänst får inte äta nattbudgetens tid i backoffs. */
-let consecutiveFailures = 0;
-const BREAKER_LIMIT = 3;
+/** Circuit breaker: Overpass får kosta max ~2 min strul per körning.
+ *  Lärdom 25/8: retry-backoffs à 20 s × blandade fel gjorde geo-refine
+ *  timslång — räkna TOTALA missar (inte bara raka) och stäng av tidigt. */
+let totalFailures = 0;
+const BREAKER_LIMIT = 8;
 
 async function overpassQuery(q: string): Promise<any | null> {
-    if (consecutiveFailures >= BREAKER_LIMIT) return null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) await new Promise(r => setTimeout(r, 20_000));
+    if (totalFailures >= BREAKER_LIMIT) return null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 10_000));
         const endpoint = OVERPASS_ENDPOINTS[attempt % OVERPASS_ENDPOINTS.length];
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' },
                 body: 'data=' + encodeURIComponent(q),
+                signal: AbortSignal.timeout(35_000),
             });
-            if (res.ok) { consecutiveFailures = 0; return await res.json(); }
-        } catch { /* nätfel → nästa försök */ }
+            if (res.ok) return await res.json();
+        } catch { /* nätfel/timeout → nästa försök */ }
     }
-    consecutiveFailures++;
-    if (consecutiveFailures === BREAKER_LIMIT) {
-        console.warn('[Overpass] 3 raka totalmissar — uppslaget avstängt för resten av körningen');
+    totalFailures++;
+    if (totalFailures === BREAKER_LIMIT) {
+        console.warn(`[Overpass] ${BREAKER_LIMIT} totalmissar — uppslaget avstängt för resten av körningen`);
     }
     return null;   // transient — cachas INTE som miss av anroparen
 }

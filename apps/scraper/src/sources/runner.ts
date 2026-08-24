@@ -15,6 +15,7 @@ import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace } 
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
+import { cleanLocationName } from '../utils/text';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
@@ -273,7 +274,7 @@ export async function runSource(
                 try {
                     const auditResult = await auditEvent({
                         title: e.title,
-                        locationName: e.venueName || e.city,
+                        locationName: cleanLocationName(e.venueName || e.city),
                         extractedAddress: e.address,
                         description: e.description,
                         hostName: source.hostName,
@@ -326,7 +327,7 @@ export async function runSource(
                 url: e.url,
                 time: e.startDate,
                 hasSpecificTime,
-                locationName: e.venueName || e.city || 'Sverige',
+                locationName: cleanLocationName(e.venueName || e.city || 'Sverige') || 'Sverige',
                 extractedAddress: e.address || '',
                 geocodedQuery,
                 lat,

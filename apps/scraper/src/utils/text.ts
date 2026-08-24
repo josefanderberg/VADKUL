@@ -72,3 +72,21 @@ export function cleanDescription(raw: unknown, maxLen = 500): string {
         .trim()
         .slice(0, maxLen);
 }
+
+/**
+ * Sanera ett platsnamn från käll-skräp innan lagring/geokodning (25/8):
+ * "Ljung slott (Öppnas i ett nytt fönster)" → "Ljung slott",
+ * "Storgatan 5, 632 20 Eskilstuna, Sweden" → "Storgatan 5, 632 20 Eskilstuna".
+ * Rör INTE informativa delar — bara kända UI-/exportrester.
+ */
+export function cleanLocationName(raw: unknown): string {
+    return decodeHtmlEntities((raw ?? '').toString())
+        .replace(/\s*\((?:Öppnas i (?:ett )?nytt fönster|Extern länk|Opens in (?:a )?new window)\)?/gi, '')
+        // Ihopklistrade metadatafält ur vissa besökssajter ("Uppsala Arrangör: X Webbsida: …")
+        .replace(/\s+(Arrangör|Webbsida|Telefon|E-post):\s.*$/i, '')
+        .replace(/,\s*(Sweden|Sverige)\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*,\s*/g, ', ')
+        .replace(/^[,\s]+|[,\s]+$/g, '')
+        .trim();
+}

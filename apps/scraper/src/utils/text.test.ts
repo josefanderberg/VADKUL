@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanDescription } from './text';
+import { cleanDescription, cleanLocationName } from './text';
 
 describe('cleanDescription', () => {
     it('strippar HTML-taggar, avkodar entities, kollapsar whitespace', () => {
@@ -28,5 +28,25 @@ describe('cleanDescription', () => {
         expect(cleanDescription(null)).toBe('');
         expect(cleanDescription(undefined)).toBe('');
         expect(cleanDescription(42)).toBe('42');
+    });
+});
+
+describe('cleanLocationName', () => {
+    it('strippar UI-rester och landssvansar (Linköpings-skräpet 25/8)', () => {
+        expect(cleanLocationName('Ljung slott (Öppnas i ett nytt fönster)')).toBe('Ljung slott');
+        expect(cleanLocationName('Folke Filbyterstatyn (Öppnas i ett nytt fönster')).toBe('Folke Filbyterstatyn');
+        expect(cleanLocationName('Storgatan 5, 632 20 Eskilstuna, Sweden')).toBe('Storgatan 5, 632 20 Eskilstuna');
+        expect(cleanLocationName('Kafé &amp; Scen, Växjö')).toBe('Kafé & Scen, Växjö');
+    });
+
+    it('kapar ihopklistrade metadatafält (Uppsala-källan)', () => {
+        expect(cleanLocationName('Parksnäckan (Stadsträdgården)  Arrangör:  Kaliber Live  Webbsida: https://x'))
+            .toBe('Parksnäckan (Stadsträdgården)');
+        expect(cleanLocationName('Gamla Uppsala  Arrangör:  Gamla Uppsala museum')).toBe('Gamla Uppsala');
+    });
+
+    it('rör inte rena namn', () => {
+        expect(cleanLocationName('Kulturhuset Spira')).toBe('Kulturhuset Spira');
+        expect(cleanLocationName('Vreta klosterkyrka, Linköping')).toBe('Vreta klosterkyrka, Linköping');
     });
 });
