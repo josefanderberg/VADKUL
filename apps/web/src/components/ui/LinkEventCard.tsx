@@ -351,12 +351,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 )}
 
                 {/* Event VÄRDADE på VADKUL lyfts fram med en grön badge — de är
-                    sajtens kärna och ska kännas igen direkt. (Tips får den INTE:
-                    de ska smälta in bland de vanliga länk-eventen.) */}
+                    sajtens kärna och ska kännas igen direkt. */}
                 {vadkulHosted && (
                     <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
                         <Sparkles size={11} className="shrink-0" />
                         Skapat på VADKUL
+                    </span>
+                )}
+                {/* TIPS får samma plats (Josef 24/8) men en egen dämpad bricka:
+                    inlagt av en användare, men anonymt — tipsaren ska aldrig se
+                    ut som arrangör, därför inte den gröna. */}
+                {isTip && (
+                    <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                        💡 Tipsat av en VADKUL-användare
                     </span>
                 )}
 
@@ -773,13 +780,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                                 {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
                                 <div className="flex flex-col items-center gap-1 pt-1">
-                                    {/* Transparens för TIPS: inlagt av en användare, men
-                                        anonymt — tipsaren ska aldrig se ut som arrangör. */}
-                                    {isTip && (
-                                        <p className="text-[10px] font-semibold text-slate-400 py-0.5">
-                                            💡 Tipsat av en VADKUL-användare
-                                        </p>
-                                    )}
                                     {/* Veckoserie: utan den här raden ser tolv utvecklade
                                         tillfällen ut som tolv separata event. */}
                                     {linkEvent.repeatWeekly && (
