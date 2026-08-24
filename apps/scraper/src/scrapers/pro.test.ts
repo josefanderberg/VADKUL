@@ -59,13 +59,14 @@ describe('mapProActivity', () => {
         expect(e.hasSpecificTime).toBe(true);
         expect(e.hostName).toBe('PRO Falköping');
         expect(e.venueName).toBe('PRO Falköping');          // location null → värden
-        expect(e.geocodeCandidates).toEqual(['falkoping']); // kommun-fallback
+        expect(e.geocodeCandidates).toEqual(['Falkoping']); // kommun-fallback (kapitaliserad sedan 24/8)
+        expect(e.city).toBe('Falkoping');
     });
 
     it('location.name används som venue och första geocode-kandidat', () => {
         const e = mapProActivity({ ...baseActivity, location: { name: 'Folkets Hus' } }, FORENING_URL, 'PRO Falköping')!;
         expect(e.venueName).toBe('Folkets Hus');
-        expect(e.geocodeCandidates).toEqual(['Folkets Hus, falkoping', 'falkoping']);
+        expect(e.geocodeCandidates).toEqual(['Folkets Hus, Falkoping', 'Falkoping']);
     });
 
     it('administrativa möten och samorganisationer filtreras', () => {

@@ -31,6 +31,8 @@
 import { gunzipSync } from 'zlib';
 import { Engine, RawEvent } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
+import { cleanDescription } from '../utils/text';
+import { extractVenueFromText, ortFromForeningsnamn } from '../utils/venueFromText';
 
 const SITE = 'https://pro.se';
 const PORTLET_ID = '12.4d4eef20190100e8b7a784c7';
@@ -123,8 +125,17 @@ export function mapProActivity(a: any, foreningUrl: string, foreningNamn: string
     if (!startDate) return null;
 
     const kommun = kommunFromUrl(foreningUrl);
+    const kommunCap = kommun ? kommun[0].toUpperCase() + kommun.slice(1) : '';
     const locationName = (a.location?.name || a.location || '').toString().trim();
     const host = foreningNamn || 'PRO';
+    // Orten ur föreningsnamnet ("PRO Vislanda" → Vislanda) slår kommun-
+    // huvudorten — Canasta-fallet 24/8: eventet låg på Alvesta centroid
+    // fast föreningen är Vislandas. Ortcentroiden är fel by-hus men rätt by.
+    const ort = ortFromForeningsnamn(host);
+    // Kommunen ur URL:en är ascii-slug ("falkoping") — vik åäö före jämförelsen,
+    // annars blir "Falköping" en falsk ny-info-kandidat till sin egen kommun.
+    const slugFold = (v: string) => v.toLowerCase().replace(/[åä]/g, 'a').replace(/ö/g, 'o').replace(/é/g, 'e');
+    const ortNyInfo = ort && slugFold(ort) !== slugFold(kommun) ? ort : null;
 
     return {
         title,
@@ -135,12 +146,35 @@ export function mapProActivity(a: any, foreningUrl: string, foreningNamn: string
         hasSpecificTime: !!a.startDate?.time && a.startDate.time !== '00:00',
         venueName: locationName || host,
         geocodeCandidates: [
-            locationName && kommun ? `${locationName}, ${kommun}` : locationName,
-            kommun,
+            locationName && ortNyInfo ? `${locationName}, ${ortNyInfo}` : '',
+            locationName && kommunCap ? `${locationName}, ${kommunCap}` : locationName,
+            ortNyInfo ?? '',
+            kommunCap,
         ].filter(Boolean) as string[],
+        city: kommunCap || undefined,
         hostName: host,
-        description: `${host}-aktivitet${locationName ? ` på ${locationName}` : ''}, ${kommun ? kommun[0].toUpperCase() + kommun.slice(1) : 'Sverige'}.`,
+        description: `${host}-aktivitet${locationName ? ` på ${locationName}` : ''}, ${kommunCap || 'Sverige'}.`,
     };
+}
+
+/**
+ * Riktiga beskrivningen ur aktivitetens DETALJSIDA — API-listan har den inte.
+ * SiteVision serverrenderar: <div class="pro-activity">…<div class="normal">
+ * TEXTEN</div>. All text går genom cleanDescription (entitets-/whitespace-
+ * städningen är obligatorisk, se description-encoding-guarden 2026-07-09).
+ * Exporterad för test + backfill-skriptet.
+ */
+export function parseActivityDescription(html: string): string | null {
+    const m = html.match(/class="pro-activity"[\s\S]*?<div class="normal">([\s\S]*?)<\/div>/);
+    if (!m) return null;
+    const text = cleanDescription(m[1].replace(/<[^>]+>/g, ' '));
+    return text && text.length >= 10 ? text : null;
+}
+
+/** Hämta + parsa detaljbeskrivningen. Exporterad för backfill-skriptet. */
+export async function fetchProActivityDescription(url: string): Promise<string | null> {
+    const html = await fetchText(url);
+    return html ? parseActivityDescription(html) : null;
 }
 
 /**
@@ -208,5 +242,29 @@ export const proEngine: Engine = async (config, ctx) => {
     });
 
     ctx.log(`${all.length} aktiviteter (serie-dedupade) från ${withEvents} föreningar (${failedPages} sidfel av ${scanned})`);
+
+    // Detaljbeskrivningar — bara för NYA event (kända hoppas; deras text
+    // backfillas separat). Venue ur texten ("Vi spelar i Folkets Hus …")
+    // blir främsta geokodningskandidaten, ankrad i föreningsorten.
+    const nya: RawEvent[] = [];
+    for (const e of all) {
+        if (ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(e.url))) nya.push(e);
+    }
+    if (nya.length > 0) {
+        ctx.log(`${nya.length} nya aktiviteter → hämtar detaljbeskrivningar`);
+        let enriched = 0;
+        await mapPool(nya, CONCURRENCY, async (e) => {
+            const desc = await fetchProActivityDescription(e.url);
+            if (!desc) return;
+            e.description = desc;
+            enriched++;
+            const venue = extractVenueFromText(desc);
+            const anchor = ortFromForeningsnamn(e.hostName || '') || e.city;
+            if (venue && anchor) {
+                e.geocodeCandidates = [`${venue}, ${anchor}`, ...(e.geocodeCandidates ?? [])];
+            }
+        });
+        ctx.log(`${enriched} detaljbeskrivningar hämtade`);
+    }
     return all;
 };
