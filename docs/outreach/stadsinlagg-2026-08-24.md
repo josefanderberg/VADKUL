@@ -5,15 +5,16 @@ Dag 2 efter [stadsinlagg-2026-08-23.md](stadsinlagg-2026-08-23.md). Texterna
 **kuraterade** — se avvikelserna per ort nedan. Målet: ligga färdiga i
 Business Suite → Planner så de kan publiceras/delas direkt på förmiddagen.
 
-## Schemalägg (minin/MacBooken, kan köras i samma sittning som 23/8-inläggen)
+## ✅ REDAN SCHEMALAGT — kör INTE skriptet (dubbelpostrisk)
 
-```bash
-cd apps/scraper
-PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH" \
-npx ts-node src/scripts/schedule-city-posts.ts \
-  --orter=Ystad,Göteborg,Haparanda --start=2026-08-24 --klockan=06:00 --per-dag=3
-# granska dry-runnen, kör om med --commit — byt sedan Göteborg-texten i Planner (se nedan)
-```
+Samtliga inlägg i den här filen publicerades/schemalades direkt via Graph
+API (ren text, utan bild) 2026-08-24 ~07:35. De ligger i Sidans schemakö
+(Business Suite → Planner). Texterna nedan = det som postas.
+
+Permalänkar (för Dela → Dela i en grupp efter publicering):
+- Ystad: https://www.facebook.com/122131945197235371/posts/122131945191235371
+- Göteborg: https://www.facebook.com/122131945197235371/posts/122131945215235371
+- Haparanda: https://www.facebook.com/122131945197235371/posts/122131945227235371
 
 ## ⚠️ Göteborg: byt skriptets text mot den kuraterade
 

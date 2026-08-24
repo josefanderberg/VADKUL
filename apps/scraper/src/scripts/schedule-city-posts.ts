@@ -25,12 +25,17 @@
  *   --commit         schemalägg (utan den: bara utskrift)
  *
  * ⚠️ FÄRSKVARUREGELN — läs innan du höjer --per-dag:
- * Facebook hämtar bilden vid SCHEMALÄGGNINGEN, inte vid publiceringen. En
- * kartbild som läggs 20 dygn fram publiceras med 20 dygn gamla prickar, och
- * daterade eventrader är då direkt felaktiga. Därför växlar skriptet
- * automatiskt till en TIDLÖS text utan datum och utan siffror för allt som
- * ligger mer än 7 dygn fram. Vill du ha konkreta eventrader: håll dig inom en
- * vecka och kör skriptet varje vecka i stället för en gång i månaden.
+ * Daterade eventrader som schemaläggs långt i förväg publiceras inaktuella.
+ * Därför växlar skriptet automatiskt till en TIDLÖS text utan datum och utan
+ * siffror för allt som ligger mer än 7 dygn fram. Vill du ha konkreta
+ * eventrader: håll dig inom en vecka och kör skriptet varje vecka i stället
+ * för en gång i månaden.
+ *
+ * BILD: Facebook-inlägget schemaläggs som REN TEXT — ingen bild, och ingen
+ * länkförhandsvisning (Graph API bygger bara preview-kort när `link`-param
+ * skickas, vilket vi aldrig gör). Ägarbeslut 2026-08-23: genererade
+ * kartbilder används enbart till Instagram. Kartbild-URL:en skrivs ändå ut i
+ * dry-runnen, märkt IG, för manuell IG-publicering.
  *
  * ⚠️ ATTRIBUTION: alla grupper som får samma sidinlägg delar samma länk, så
  * klicken går inte att fördela per grupp. Vill du veta vilken grupp som drog
@@ -326,7 +331,7 @@ async function main() {
         console.log('─'.repeat(72));
         console.log(`📍 ${p.town.name}  ·  ${p.when.toLocaleString('sv-SE')}  ·  ${p.timeless ? 'TIDLÖS (>7 dygn fram)' : `${p.rows.length} eventrader`}`);
         console.log(`   ${p.town.groups.length} grupp(er) att dela in i: ${gruppnamn}`);
-        console.log(`   Bild: ${p.image}`);
+        console.log(`   IG-bild (FB schemaläggs UTAN bild): ${p.image}`);
         console.log();
         console.log(p.text.split('\n').map(l => `   │ ${l}`).join('\n'));
         console.log();
@@ -341,7 +346,8 @@ async function main() {
     /* ── Schemaläggning ── */
     for (const p of planned) {
         try {
-            const postId = await postToFacebook(p.text, [p.image], 1, { scheduledFor: p.when.getTime() });
+            // Ren text till FB — bilden är enbart för IG (se filhuvudet).
+            const postId = await postToFacebook(p.text, [], 1, { scheduledFor: p.when.getTime() });
             const permalink = await getFacebookPostPermalink(postId);
 
             // Loggrad per GRUPP: varje grupp ska kunna kvitteras separat när
