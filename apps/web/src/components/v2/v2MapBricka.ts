@@ -172,43 +172,35 @@ function emojiInkOffsetX(emoji: string, font: string): number {
     return off;
 }
 
-// "+N"-badgens bakade cirkel: VIT kropp med mjuk skugga (samma look som stads-
-// sidornas antal-bubbla i CityMapHeroCanvas — siffran ritas av textlagret i
-// #0f172a ovanpå). Fast storlek: icon-text-fit prövades och förkastades —
-// bildens fasta kanter sätter en minimistorlek som gjorde pillen nästan lika
-// stor som brickan. Cirkelns mitt ska sitta i brickans ÖVRE HÖGRA hörn;
-// offseten dit exporteras här så lagret och bakningen aldrig glider isär.
-export const COUNT_BADGE_IMG = 'count-badge';
-export const COUNT_BADGE_D = 20;  // diameter (matchar DOM-badgens 20 px)
-const BADGE_PAD = 4;              // luft för skuggan
+// "+N"-badgen bakas IN i brick-bilden (makeBrickaImageData nedan): vit pill
+// med mörk siffra i brickans ÖVRE HÖGRA hörn (samma look som stadssidornas
+// antal-bubbla i CityMapHeroCanvas och DOM-badgen .badge-count). Ett separat
+// GL-lager (bakad cirkel + textlager) prövades och förkastades: MapLibre ritar
+// lager i sin helhet — alla brickor, SEDAN alla siffror (och även inom ETT
+// symbol-lager alla ikoner före all text) — så en skymd grannbrickas siffra
+// målades ovanpå brickan framför och siffrorna hamnade i hög vid trängsel/
+// utzoomat. Inbakad är bricka+siffra EN ikon som staplas atomiskt per
+// symbol-sort-key.
+export const COUNT_BADGE_D = 20;  // pillens höjd/min-bredd (matchar DOM-badgens 20 px)
 // Badgens mittpunkt, relativt KOORDINATEN (spetsen), vid icon-size 1:
 // brickkroppens övre högra hörn (kroppens mitt ligger BRICKA_CENTER_ABOVE_COORD
 // ovanför, hörnet r·cos45° ut längs 45°-axeln — kroppen är i praktiken en
-// cirkel med radie S/2) plus en liten knuff utåt/uppåt så cirkeln SITTER PÅ
+// cirkel med radie S/2) plus en liten knuff utåt/uppåt så pillen SITTER PÅ
 // hörnet i stället för att hänga innanför det (ägarjustering 25/8).
 const BADGE_NUDGE_X = 4;
 const BADGE_NUDGE_Y = 5;
 export const COUNT_BADGE_CORNER_X = (BRICKA_IMG_S / 2) * Math.SQRT1_2 + BADGE_NUDGE_X;
 export const COUNT_BADGE_CORNER_Y = BRICKA_CENTER_ABOVE_COORD + (BRICKA_IMG_S / 2) * Math.SQRT1_2 + BADGE_NUDGE_Y;
-export function makeCountBadgeImageData(): { data: ImageData; pixelRatio: number } | null {
-    if (typeof document === 'undefined') return null;
-    const DPR = 2.5;
-    const W = COUNT_BADGE_D + BADGE_PAD * 2, H = W;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(W * DPR);
-    canvas.height = Math.round(H * DPR);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.scale(DPR, DPR);
-    ctx.beginPath();
-    ctx.arc(W / 2, H / 2, COUNT_BADGE_D / 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 3;
-    ctx.shadowOffsetY = 1;
-    ctx.fill();
-    return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };
-}
+// GL-brickornas icon-size vid stads-/gatuzoom (symbol-lagrets översta
+// interpolate-steg). Bor HÄR för att badgen bakas kompenserad (÷ värdet) så
+// pill och siffra blir exakt 20/13 px vid stadszoom — DOM-badgen är matchad
+// 13 px just för att GL→DOM-bytet vid klick inte ska krympa siffran. Delas
+// med V2Map (lagerdefinitionen + DOM-markörens offsetberäkning).
+export const GL_ICON_SIZE_TOP = 0.98;
+// Extra luft på canvasens SIDOR: badge-pillen sticker ut utanför brickhörnet
+// (och blir bredare vid 2–3 siffror). Läggs symmetriskt på båda sidor så
+// bottom-center-ankaret (spetsen) inte flyttas.
+const BADGE_SIDE_PAD = 6;
 
 // Baka en bricka som ImageData för GL-symbol-lagret. bodyColor = kategori-/käll-
 // färg (utelämnad → mörk standard); selected → tydlig vit ram; saved → vit kropp
@@ -218,14 +210,15 @@ export function makeCountBadgeImageData(): { data: ImageData; pixelRatio: number
 // över sparad-vitt — stjärnan är den starkare statusen). Alla brickor bakas med
 // SAMMA mått (S/pad/DPR) — det är kravet för map.updateImage i emoji-cykel-
 // pumpen, och därför är wish/starred grenar HÄR i stället för egna bakfunktioner
-// (måtten kan aldrig glida isär).
-export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false): { data: ImageData; pixelRatio: number } | null {
+// (måtten kan aldrig glida isär). count > 1 → "+N"-pillen bakas in i hörnet
+// (se COUNT_BADGE-kommentaren ovan för varför den inte är ett eget lager).
+export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = BRICKA_IMG_S;      // brickans kropp (logiska px), nära DOM:ens 44
     const pad = BRICKA_IMG_PAD;  // luft för kant + skugga
     const diag = S * Math.SQRT2;
-    const W = Math.round(diag + pad * 2);
+    const W = Math.round(diag + pad * 2) + BADGE_SIDE_PAD * 2;
     const H = Math.round(diag + pad * 2);
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(W * DPR);
@@ -301,6 +294,38 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     if (starred) {
         ctx.font = `${Math.round(S * 0.34)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`;
         ctx.fillText('⭐', cx + S * 0.42, cy - S * 0.42);
+    }
+
+    // "+N"-pillen — vit med mörk siffra i övre högra hörnet. Ritas SIST så den
+    // ligger ovanpå ⭐/✨, precis som det gamla badge-lagret gjorde. Måtten
+    // kompenseras ÷GL_ICON_SIZE_TOP → exakt 20 px pill / 13 px siffra vid
+    // stadszoom = pixelmatchad mot DOM-badgen (.badge-count) vid GL→DOM-bytet.
+    // Pillen växer i bredd med sifferantalet (samma min-width+padding-beteende
+    // som DOM:ens pill); ≥100 kapas till "99+" som DOM-badgen.
+    if (count > 1) {
+        const comp = 1 / GL_ICON_SIZE_TOP;
+        const D = COUNT_BADGE_D * comp;
+        const label = count > 99 ? '99+' : String(count);
+        ctx.font = `900 ${13 * comp}px system-ui,-apple-system,"Segoe UI",sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const pillW = Math.max(D, ctx.measureText(label).width + 8 * comp);
+        const bx = cx + COUNT_BADGE_CORNER_X;
+        const by = H - COUNT_BADGE_CORNER_Y; // koordinaten = bildens nederkant
+        ctx.beginPath();
+        if (typeof anyCtx.roundRect === 'function') {
+            anyCtx.roundRect(bx - pillW / 2, by - D / 2, pillW, D, [D / 2]);
+        } else {
+            ctx.rect(bx - pillW / 2, by - D / 2, pillW, D);
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetY = 1;
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(label, bx, by);
     }
 
     return { data: ctx.getImageData(0, 0, canvas.width, canvas.height), pixelRatio: DPR };

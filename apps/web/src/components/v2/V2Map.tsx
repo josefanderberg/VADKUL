@@ -18,10 +18,9 @@ import {
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
-    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG,
-    COUNT_BADGE_CORNER_X, COUNT_BADGE_CORNER_Y, COUNT_BADGE_IMG, WISH_DOT_HEX,
+    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
     brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, makeCountBadgeImageData, sourceGradientCss,
+    makeBrickaImageData, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
@@ -74,8 +73,11 @@ type PlainFeature = {
 
 // En cyklande multibrickas rotation: den EGNA cykel-bildens id + frames i tur-
 // ordning. eventId = eventet bakom framen — klicket ska öppna det som VISAS.
+// count = gruppens "+N"-siffra: den bakas in i varje frame-bild (konstant
+// genom hela rotationen) så pumpens updateImage aldrig tappar badgen.
 type CycleRotation = {
     icon: string;
+    count: number;
     frames: { emoji: string; color?: string; saved?: boolean; eventId: string }[];
 };
 
@@ -98,11 +100,10 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // "+N"-badgen) släcks HELT och gruppen står kvar som sin nål-prick, dämpad till
 // 50 %. Uttrycken delas av lager-skapandet (syncPlainLayer) och återställningen
 // efter zoom (hideNeedleDotsWhenRendered) så vilo-looken aldrig glider isär.
-// GL-brickornas icon-size vid stads-/gatuzoom (lagrets översta interpolate-steg).
-// Delas med DOM-markörens offsetberäkning: klick zoomar alltid in (se
-// zoomInOnFirstEventClick), så det är vid detta värde de två lagren ska
-// sammanfalla.
-const GL_ICON_SIZE_TOP = 0.98;
+// GL-brickornas icon-size vid stads-/gatuzoom (GL_ICON_SIZE_TOP) bor i
+// v2MapBricka — badge-bakningen kompenserar mot värdet. Delas här av lager-
+// definitionen och DOM-markörens offsetberäkning: klick zoomar alltid in (se
+// zoomInOnFirstEventClick), så det är vid detta värde GL och DOM sammanfaller.
 // Etikettlagren (texten under brickorna): bottenlagret ritas UNDER brick-lagret
 // (en etikett får aldrig skymma en bricka), topplagret bär bara den VALDA
 // gruppens etikett (sortKey ≥ 1e6) ovanpå. Alla synlighetsväxlar går över båda.
@@ -842,7 +843,7 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>();
+        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; count?: number }>();
         // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
         // en EGEN cykel-bild (`cycle:<gruppnyckel>:<frame-ids>`) vars PIXLAR
         // cykelpumpen byter på plats via map.updateImage — ingen setData, ingen
@@ -907,8 +908,13 @@ export default function V2Map({
             // stjärnan.)
             const drawStar = starredRep != null || boostedRep != null;
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
-            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : ''}`;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar });
+            // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
+            // så två grupper med samma emoji men olika antal får OLIKA bilder —
+            // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
+            // aldrig med fel siffra).
+            const badgeCount = group.length > 1 ? group.length : 0;
+            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, count: badgeCount });
             // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
             // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
             // stället för rep-ikonen.
@@ -940,11 +946,14 @@ export default function V2Map({
                     // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
                     // (Identiska rotationer delade förr EN bild och bytte i
                     // perfekt synk — nu ska EN bricka i taget byta, staggrat.)
-                    const cycleId = `cycle:${key}:${frameIds.join('|')}`;
+                    // Antalet ingår också: ändras gruppens count (nytt/borttaget
+                    // event) ska ett NYTT bild-id bakas — den inbakade siffran
+                    // kan inte uppdateras i en befintlig bild.
+                    const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
                     // Registrera cykel-bilden med frame 0 som utgångsutseende så
                     // syncPlainLayer bakar + addImage:ar den som alla andra.
-                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved });
-                    rotations.set(key, { icon: cycleId, frames });
+                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, count: badgeCount });
+                    rotations.set(key, { icon: cycleId, count: badgeCount, frames });
                     finalIcon = cycleId;
                 }
             }
@@ -1023,7 +1032,7 @@ export default function V2Map({
     // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
     // i stället för att loopa alla tiotusentals features per klick/mousemove.
     const plainFeatureByKeyRef = useRef<Map<string, PlainFeature>>(new Map());
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean }>>(new Map());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; count?: number }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
     // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
@@ -1182,7 +1191,7 @@ export default function V2Map({
             if (!info) continue;
             let baked = bakedIconsRef.current.get(id);
             if (!baked) {
-                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred);
+                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0);
                 if (b) { bakedIconsRef.current.set(id, b); baked = b; }
             }
             if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -1522,61 +1531,12 @@ export default function V2Map({
                 reapplyAllRevealRef.current();
                 ensureRevealPumpRef.current();
             }
-            // "+N"-badge för brickor med flera event (count > 1) — VIT cirkel med
-            // mörk siffra i brickans ÖVRE HÖGRA hörn (samma look som stadssidornas
-            // antal-bubbla i CityMapHeroCanvas och DOM-badgen). Fast bakad cirkel;
-            // text och cirkel ankras båda i hörnpunkten (COUNT_BADGE_CORNER_*),
-            // med storleks-/offsetskalning som följer brickans icon-size-kurva
-            // (0.78→0.98) så badgen sitter kvar i hörnet på alla zoomnivåer.
-            // Följer samma reveal-state som brickan. Kräver glyfer.
-            if (!map.hasImage(COUNT_BADGE_IMG)) {
-                const badge = makeCountBadgeImageData();
-                if (badge) map.addImage(COUNT_BADGE_IMG, badge.data, { pixelRatio: badge.pixelRatio });
-            }
-            if (!map.getLayer('plain-events-count')) {
-                map.addLayer({
-                    id: 'plain-events-count',
-                    type: 'symbol',
-                    source: 'plain-events',
-                    // Bara fler-event-grupper — filtret (i stället för tom text-
-                    // field) hindrar cirkeln från att ritas tom på enskilda event.
-                    filter: ['>', ['get', 'count'], 1],
-                    layout: {
-                        'text-field': ['to-string', ['get', 'count']],
-                        'text-font': ['Open Sans Bold'],
-                        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 10, 13, 13],
-                        // Siffran centreras i hörnpunkten: em-offseten × text-size
-                        // (10→13) följer brickhörnet (× icon-size 0.78→0.98) inom
-                        // ~1 px över hela zoomspannet.
-                        'text-anchor': 'center',
-                        'text-offset': [COUNT_BADGE_CORNER_X / 13, -COUNT_BADGE_CORNER_Y / 13],
-                        'text-allow-overlap': true,
-                        'text-ignore-placement': true,
-                        // Cirkeln under siffran: samma hörnpunkt (icon-offset × icon-
-                        // size). 0.98 i topp = brickans GL_ICON_SIZE_TOP → ~19,6 px
-                        // cirkel; 0.75 vid z4 håller den i takt med textens 10/13.
-                        'icon-image': COUNT_BADGE_IMG,
-                        'icon-anchor': 'center',
-                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.75, 13, GL_ICON_SIZE_TOP],
-                        'icon-offset': [COUNT_BADGE_CORNER_X, -COUNT_BADGE_CORNER_Y],
-                        'icon-allow-overlap': true,
-                        'icon-ignore-placement': true,
-                        // Samma stapling som brickan — fler-event-badgen överst,
-                        // och den valda gruppens siffra allra överst (sortKey-boost).
-                        'symbol-sort-key': ['coalesce', ['get', 'sortKey'], ['get', 'count']],
-                        'symbol-z-order': 'auto',
-                    },
-                    paint: {
-                        // Mörk siffra på den vita pillen (stadssidans #0f172a).
-                        'text-color': '#0f172a',
-                        // Badgen följer brickan — släckt för passerade grupper.
-                        'text-opacity': BRICKA_OPACITY_EXPR,
-                        'text-opacity-transition': { duration: 0, delay: 0 },
-                        'icon-opacity': BRICKA_OPACITY_EXPR,
-                        'icon-opacity-transition': { duration: 0, delay: 0 },
-                    },
-                });
-            }
+            // "+N"-badgen (vit pill + mörk siffra i övre högra hörnet) är BAKAD
+            // i brick-bilden (se v2MapBricka) — inget eget lager. Ett separat
+            // lager ritas i sin helhet OVANPÅ alla brickor, så skymda grannars
+            // siffror målades ovanpå brickan framför (siffror i hög vid trängsel
+            // och utzoomat läge). Inbakad följer siffran brickans stapling,
+            // reveal-opacity och synlighetsväxlar av sig själv.
             // Etikettlagret: text under brickspetsen — kategorinamn vid mellan-
             // zoom, kapad titel från z13 (samma stopp som icon-size-toppen =
             // stads-/gatuzoom). Läser SPEGELKÄLLAN (bara tända grupper, se
@@ -2174,7 +2134,8 @@ export default function V2Map({
     // feature-state. STAGGRAT: bland de TÄNDA (reveal > 0.5) cyklande brickorna
     // byter EN bricka per tick, i tur och ordning (round-robin) — aldrig två
     // samtidigt. Är ingen tänd står allt still (noll kostnad i vila).
-    // Count-badgen är ett eget textlager och ligger stilla under bytet.
+    // Count-badgen är inbakad i varje frame-bild (konstant siffra) — den
+    // "ligger stilla" genom bytet av sig själv.
     const selectedEventValRef = useRef(selectedEvent);
     selectedEventValRef.current = selectedEvent;
     // Framklickad sort i emoji-raden — som ref, för klick/hover-handlarna som
@@ -2208,10 +2169,13 @@ export default function V2Map({
             const nextIdx = ((cycleFrameIndexRef.current.get(pick.rot.icon) ?? 0) + 1) % frames.length;
             cycleFrameIndexRef.current.set(pick.rot.icon, nextIdx);
             const fr = frames[nextIdx];
-            const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}`;
+            // :cN i cache-nyckeln — frame-bilden bär gruppens inbakade "+N"-
+            // siffra och får ALDRIG delas med en bild utan (eller med annan)
+            // badge, annars byter pumpen bort siffran vid nästa tick.
+            const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}:c${pick.rot.count}`;
             let baked = bakedIconsRef.current.get(frameId);
             if (!baked) {
-                const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved);
+                const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count);
                 if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
             }
             // Alla brickbilder bakas med samma mått (S/DPR-konstanterna i
@@ -2422,7 +2386,6 @@ export default function V2Map({
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
-            setGlLayer('plain-events-count', false);   // badgen följer brickan — inte prickarna
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, false)); // text över nål-prickar = svävande etiketter
             // During zoom, show all dots including revealed ones ("har varit" stays at 50%)
             if (layerExists(map, 'plain-events-dots')) {
@@ -2438,7 +2401,6 @@ export default function V2Map({
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
-            setGlLayer('plain-events-count', true);
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Prickarna göms INTE här — då blir det ett tomt glapp medan symbol-lagret
             // (brickorna) placerar sina ikoner. De ligger kvar tills exitZooming, dvs
@@ -2484,7 +2446,6 @@ export default function V2Map({
             if (introActiveRef.current) return;
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
-            setGlLayer('plain-events-count', true);
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Zoomen kan ha korsat z13 (kategori ↔ titel) — låt spegeln skriva
             // om sig med rätt nivå (signaturvakten gör den till no-op annars).
@@ -3167,7 +3128,6 @@ export default function V2Map({
         container.classList.remove('map-state-full');
         container.classList.add('map-state-needle');
         if (layerExists(map, 'plain-events')) map.setLayoutProperty('plain-events', 'visibility', 'none');
-        if (layerExists(map, 'plain-events-count')) map.setLayoutProperty('plain-events-count', 'visibility', 'none');
         for (const id of LABEL_LAYER_IDS) {
             if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'none');
         }
