@@ -773,6 +773,65 @@ export default function HomePage() {
         calendarInputRef.current?.blur();
         setCalendarPickerOpen(false);
     }, []);
+    // ── Stadsrutan (dag/vecka-väljaren) är FLYTTBAR i höjdled (Josef 26/8:
+    // "typ drag and drop"). Ta tag i plattan och dra den upp/ner; läget sparas
+    // i localStorage så den står kvar där man släppte den. Ett tryck utan
+    // rörelse är fortfarande växeln/pilarna/kalendern — först när fingret rört
+    // sig >6 px blir gesten ett drag, och släppets efterföljande klick sväljs
+    // (onClickCapture) så draget inte råkar växla dag/vecka. Klampas mellan
+    // ursprungsläget (0) och en bit ovanför nederkanten så plattan aldrig kan
+    // dras ut ur bild eller ner bakom eventkortet.
+    const CITY_BOX_DY_KEY = 'vadkul_stadsruta_dy';
+    const clampCityBoxDy = (dy: number) =>
+        Math.max(0, Math.min(dy, (typeof window !== 'undefined' ? window.innerHeight : 800) - 320));
+    const [cityBoxDy, setCityBoxDy] = useState(0);
+    const cityBoxDyRef = useRef(0);
+    useEffect(() => {
+        try {
+            const saved = Number(localStorage.getItem(CITY_BOX_DY_KEY));
+            if (Number.isFinite(saved) && saved > 0) {
+                cityBoxDyRef.current = clampCityBoxDy(saved);
+                setCityBoxDy(cityBoxDyRef.current);
+            }
+        } catch { /* privat läge → rutan står på sin vanliga plats */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    const cityBoxDragRef = useRef<{ startY: number; startDy: number; dragging: boolean; pointerId: number } | null>(null);
+    const cityBoxSwallowClickRef = useRef(false);
+    const handleCityBoxPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        cityBoxDragRef.current = { startY: e.clientY, startDy: cityBoxDyRef.current, dragging: false, pointerId: e.pointerId };
+    }, []);
+    const handleCityBoxPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        const drag = cityBoxDragRef.current;
+        if (!drag || e.pointerId !== drag.pointerId) return;
+        const delta = e.clientY - drag.startY;
+        if (!drag.dragging) {
+            if (Math.abs(delta) < 6) return;
+            drag.dragging = true;
+            // Fånga pekaren FÖRST när draget är ett faktum — annars stjäl vi
+            // tappen från kalenderfältet/pilarna/växeln.
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* redan släppt */ }
+        }
+        cityBoxDyRef.current = clampCityBoxDy(drag.startDy + delta);
+        setCityBoxDy(cityBoxDyRef.current);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    const handleCityBoxPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        const drag = cityBoxDragRef.current;
+        if (!drag || e.pointerId !== drag.pointerId) return;
+        cityBoxDragRef.current = null;
+        if (drag.dragging) {
+            cityBoxSwallowClickRef.current = true;
+            try { localStorage.setItem(CITY_BOX_DY_KEY, String(Math.round(cityBoxDyRef.current))); } catch { /* privat läge */ }
+        }
+    }, []);
+    const handleCityBoxClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!cityBoxSwallowClickRef.current) return;
+        cityBoxSwallowClickRef.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
     // Fältets värde FÖLJER vald dag (controlled). Med gamla defaultValue stod
     // kalendern kvar på "idag" fast man pilat fram — och ett tapp på dagens
     // datum gav då ingen change-händelse alls (samma värde), så det gick inte
@@ -2468,7 +2527,20 @@ export default function HomePage() {
                 byts bara namnet. */}
 {!chromeHidden && liveCityName && (
     <div className="fixed inset-x-0 top-6 z-[1090] flex justify-center px-16 pointer-events-none">
-        <div key={cityTourTarget?.key ?? 0} className="relative animate-in fade-in slide-in-from-top-2 duration-500">
+        {/* FLYTTBAR (Josef 26/8): dra plattan upp/ner — handlarna ligger på
+            wrappen (pointer-events-auto, touch-action none så draget vinner
+            över webbläsargester); ett drag sväljer det efterföljande klicket
+            så växeln inte slår om av misstag. translateY = sparat läge. */}
+        <div
+            key={cityTourTarget?.key ?? 0}
+            className="relative animate-in fade-in slide-in-from-top-2 duration-500 pointer-events-auto"
+            style={{ transform: `translateY(${cityBoxDy}px)`, touchAction: 'none' }}
+            onPointerDown={handleCityBoxPointerDown}
+            onPointerMove={handleCityBoxPointerMove}
+            onPointerUp={handleCityBoxPointerUp}
+            onPointerCancel={handleCityBoxPointerUp}
+            onClickCapture={handleCityBoxClickCapture}
+        >
             {/* Bara spans inuti knappen — <p>/<div> är ogiltigt innehåll i en
                 <button> och bryter både validering och en del skärmläsare. */}
             <button

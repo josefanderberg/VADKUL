@@ -74,10 +74,12 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
     const W = Math.min(vw * 0.86, 320);          // listbredd (px)
-    // Brickans ungefärliga storlek: nål-tippen sitter PÅ geo-punkten,
-    // kroppen ~BRICK_H px upp och ~BRICK_W px bred (centrerad i x).
-    const BRICK_W = 30, BRICK_H = 46, GAP = 6;
-    const TOP_MARGIN = 70, BOTTOM_MARGIN = 12;     // håll listan under navbaren resp. ovan nederkanten
+    // Brickans ungefärliga bredd: nål-tippen sitter PÅ geo-punkten,
+    // kroppen ~BRICK_W px bred (centrerad i x).
+    const BRICK_W = 30, GAP = 6;
+    // TOP_MARGIN rymmer navbaren OCH dag/vecka-väljaren — listans header
+    // (platsnamnet) får aldrig hamna bakom dem (Josef 26/8).
+    const TOP_MARGIN = 116, BOTTOM_MARGIN = 12;
     const HEADER_H = 46, ROW_H = 52, DAY_H = 30, PAST_H = 34, MAX_ROWS = 6;
 
     // Kommande event överst (kronologiskt, dag för dag), passerade sist —
@@ -101,13 +103,14 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     const contentH = Math.min(listMaxH, HEADER_H + bodyH);
     // Listan relaterar HORISONTELLT till brickans övre högra hörn.
     const cornerX = anchorPos ? anchorPos.x + BRICK_W / 2 + GAP : vw / 2 - W / 2;
-    const cornerY = anchorPos ? anchorPos.y - BRICK_H : TOP_MARGIN + contentH;
     const left = Math.max(8, Math.min(cornerX, vw - W - 8));
-    // Vertikalt: helst OVANFÖR brickan (växer uppåt → "högre upp"), men klampa
-    // så HELA boxen alltid syns (top ≥ TOP_MARGIN, bottom ≤ vh − margin). Då
-    // ligger scrollporten på skärmen och in-container-scrollen blir användbar
-    // (förut kunde toppen hamna utanför vyn → man nådde inte de nedersta).
-    const top = Math.max(TOP_MARGIN, Math.min(cornerY - contentH, vh - contentH - BOTTOM_MARGIN));
+    // Vertikalt: UNDER brickan (Josef 26/8 — förut växte listan uppåt och
+    // headern med platsnamnet hamnade bakom dag/vecka-togglen). Nålens tipp
+    // står på geo-punkten, så listan börjar strax under den. Klampa så HELA
+    // boxen alltid syns (top ≥ TOP_MARGIN, bottom ≤ vh − margin) — då ligger
+    // scrollporten på skärmen och in-container-scrollen är användbar.
+    const belowY = anchorPos ? anchorPos.y + GAP : TOP_MARGIN;
+    const top = Math.max(TOP_MARGIN, Math.min(belowY, vh - contentH - BOTTOM_MARGIN));
     // Platsens namn (alla event i gruppen delar koordinat → samma plats).
     const placeName = events[0]?.locationName?.trim() || 'Den här platsen';
     // "Nästa" stegar markeringen till nästa KOMMANDE event (wrap), listan

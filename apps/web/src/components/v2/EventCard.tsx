@@ -581,9 +581,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
-    // Kortets TAK: hur högt det får växa. Stannar ~17% från skärmtoppen (83vh)
-    // så det alltid syns en remsa karta + navbaren ovanför.
-    const MAX_HEIGHT_VH = 83;
+    // Kortets TAK: hur högt det får växa. Hela vägen upp (Josef 26/8 — förut
+    // stannade det på 83vh med en kartremsa ovanför, men kortet ska kunna
+    // fylla skärmen).
+    const MAX_HEIGHT_VH = 100;
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
@@ -1040,6 +1041,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
+    // LISTVYN (lista-toggeln i headern) visar BARA event med bild (Josef 26/8):
+    // den vyn är ett bildflöde. Infovyns lista längst ner visar som förut alla
+    // event, med eller utan bild.
+    const listViewOnly = cardView === 'nearby';
+    const listedUpcoming = listViewOnly ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
+    const listedPast = listViewOnly ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -1822,9 +1829,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         hamnar den i stället direkt under headern. */}
                     {cardView !== 'chat' && nearbyEvents.length > 0 && (
                         <NearbyEventsList
-                            upcomingItems={upcomingNearby.slice(0, nearbyVisibleCount)}
-                            upcomingTotal={upcomingNearby.length}
-                            pastItems={pastNearby}
+                            upcomingItems={listedUpcoming.slice(0, nearbyVisibleCount)}
+                            upcomingTotal={listedUpcoming.length}
+                            pastItems={listedPast}
                             now={now}
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
