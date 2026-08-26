@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, getSyncMeta } from './sqliteHelper';
+import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, getSyncMeta } from './sqliteHelper';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
 
@@ -131,6 +131,32 @@ export async function refreshEventTime(
         } catch (err: any) {
             // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
             if (err?.code !== 5) console.error('refreshEventTime: Firestore-uppdatering misslyckades:', err?.message);
+        }
+    }
+    return true;
+}
+
+/**
+ * Refresh-körning: källan levererar ett (validerat) SLUTDATUM för ett känt
+ * event som saknar eller har ett annat — fyll på (SQLite + Firestore).
+ * Valideringen (slut > start, max 30 dygn — utils/eventEnd) görs av anroparen.
+ * Returnerar true om något ändrades.
+ */
+export async function refreshEventEndDate(url: string, endIso: string): Promise<boolean> {
+    const row = getSqliteEvent(url);
+    if (!row) return false;
+    if ((row.endDate ?? null) === endIso) return false;
+    try {
+        setEventEndDate(url, endIso);
+    } catch (err) {
+        console.error('refreshEventEndDate: SQLite-uppdatering misslyckades:', err);
+        return false;
+    }
+    if (db && row.firestoreId) {
+        try {
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ endDate: new Date(endIso) }));
+        } catch (err: any) {
+            if (err?.code !== 5) console.error('refreshEventEndDate: Firestore-uppdatering misslyckades:', err?.message);
         }
     }
     return true;

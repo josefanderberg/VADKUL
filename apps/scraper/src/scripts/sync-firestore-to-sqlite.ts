@@ -93,6 +93,9 @@ async function main() {
                 // null → COALESCE i upserten bevarar lokal märkning (backfillen
                 // 24/8 satte geoPrecision på rader vars Firestore-doc saknar fältet).
                 geoPrecision:       data.geoPrecision ?? null,
+                // Slutdatum (Timestamp → ISO via upsertens toIso). null →
+                // COALESCE bevarar lokalt värde när dokumentet saknar fältet.
+                endDate:            data.endDate ?? null,
             });
             written++;
         } catch (err) {
