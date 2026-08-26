@@ -1962,19 +1962,15 @@ export default function V2Map({
     // Avståndet skalar longitud med cos(latitud) så det blir rätt på svenska breddgrader.
     const recomputeRevealSeed = useCallback(() => {
         const map = mapRef.current;
-        // Utgångspunkt: ankaret om ett är satt (tap eller områdes-drag), annars
-        // SKÄRMENS MITT (Josef 26/8 — ersätter beslutet från 12/8 att inget
-        // tändes utan känd plats: de 50 kring mitten ska stå öppna utan klick,
-        // och panorerar man är det mitten som gäller). GPS-positionen är bara
-        // sista fallback innan kartan finns.
-        const anchor = revealAnchorPtRef.current;
-        const count = anchor ? REVEAL_NEAREST_COUNT : REVEAL_SEED_COUNT;
+        // Utgångspunkt: alltid SKÄRMENS MITT (de 50 kring mitten ska stå öppna).
+        // GPS-positionen är bara sista fallback innan kartan finns.
+        const count = REVEAL_SEED_COUNT;
         // Under intro-resan gäller den gamla regeln (bara känd plats tänder) —
         // kameran glider genom hela landet och mitten är ingen "plats" ännu;
         // effekten på introGlide nedan tänder mitten så fort resan släppt.
-        const origin = anchor ?? (introActiveRef.current
+        const origin = introActiveRef.current
             ? userPosRef.current
-            : ((map ? map.getCenter() : null) ?? userPosRef.current));
+            : ((map ? map.getCenter() : null) ?? userPosRef.current);
         // BARA icke-passerade grupper (revealCoordsRef är förfiltrerad på past) —
         // "har varit"-grupper ritas aldrig som brickor (bara prickar) och får inte
         // äta upp seed-platser: sent på kvällen såg man annars en handfull brickor
@@ -2014,7 +2010,7 @@ export default function V2Map({
     // redan tryckt på kartan) → tänd seedet kring användarens plats (innan dess
     // är inget tänt — bara nål-prickarna).
     useEffect(() => {
-        if (userPos && !revealAnchorPtRef.current) recomputeRevealSeedRef.current();
+        if (userPos) recomputeRevealSeedRef.current();
     }, [userPos]);
 
     // Intro-resan släppt (välkomstrutan stängd) → mitt-följningen tar över:
@@ -2619,14 +2615,7 @@ export default function V2Map({
                 onGlMarkerClick(e as unknown as maplibregl.MapLayerMouseEvent);
                 return;
             }
-            // Tom karta-tap (eller bara dolda brickor under fingret) = ny utgångspunkt:
-            // bron byter ut den avslöjade uppsättningen mot de N närmast klicket. Klick
-            // PÅ tom karta (ej på en markör) STÄNGER också ev. öppet eventkort + listan.
-            //
-            // MEN: ett klick som stänger något gör BARA det. Man klickar ofta bort
-            // eventkortet för att se kartan igen — då vill man ha kvar exakt de
-            // brickor man redan tittade på, inte 50 nya kring där fingret råkade
-            // landa. Först NÄSTA klick (med allt stängt) flyttar avslöjningen.
+            // Tom karta-tap (eller bara dolda brickor under fingret) = stäng öppet eventkort + listan.
             const closedSomething = !!selectedEventValRef.current
                 || !!groupListRef.current
                 || !!wishCardOpenRef.current;
@@ -2638,37 +2627,6 @@ export default function V2Map({
             setGroupListAnchor(null);
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort
-            if (closedSomething) return;
-            // SAMMA-PLATS-KLICK: skulle klicket tända exakt samma 50 brickor som
-            // redan står tända ändrar det inget på kartan — toggla i stället
-            // etiketterna av/på. Fördröjt förbi dubbeltapp-fönstret (350 ms, se
-            // DOUBLE_TAP_MS nedan): kommer ett andra tapp inom fönstret är det
-            // periodväxeln som gäller — då avbryts den väntande togglingen i
-            // stället för att schemalägga en ny, och ingen text blinkar.
-            if (isSameRevealTargetRef.current(e.lngLat.lng, e.lngLat.lat)) {
-                if (labelToggleTimerRef.current != null) {
-                    clearTimeout(labelToggleTimerRef.current);
-                    labelToggleTimerRef.current = null;
-                } else {
-                    labelToggleTimerRef.current = setTimeout(() => {
-                        labelToggleTimerRef.current = null;
-                        labelsHiddenRef.current = !labelsHiddenRef.current;
-                        applyLabelVisibility();
-                    }, 360);
-                }
-                return;
-            }
-            // Riktig resa: skrota ev. väntande toggle och visa etiketterna igen —
-            // av-läget hör till platsen man stod på, inte till den nya vyn.
-            if (labelToggleTimerRef.current != null) {
-                clearTimeout(labelToggleTimerRef.current);
-                labelToggleTimerRef.current = null;
-            }
-            if (labelsHiddenRef.current) {
-                labelsHiddenRef.current = false;
-                applyLabelVisibility();
-            }
-            startRevealTravelRef.current(e.lngLat.lng, e.lngLat.lat);
         });
 
         // GL-markör/prick klickad → välj eventet (eller gissa i spelläget). Handlern
@@ -2951,11 +2909,7 @@ export default function V2Map({
         // queryRenderedFeatures).
         let revealFollowLastAt = 0;
         const revealFollowCenter = (e: { originalEvent?: unknown }) => {
-            if (e.originalEvent) {
-                revealAnchorPtRef.current = null;
-                if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
-            }
-            if (revealAnchorPtRef.current) return; // tap-/drag-ankare styr
+            if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
             const now = performance.now();
             if (now - revealFollowLastAt < 250) return;
             revealFollowLastAt = now;
@@ -2968,85 +2922,8 @@ export default function V2Map({
         map.on('move', revealFollowCenter);
         map.on('moveend', revealFollowEnd);
 
-        // ── Drag INOM brickområdet flyttar urvalet (Josef 26/8) ──────────────
-        // Börjar ett en-finger-/musdrag INNANFÖR de tända brickornas ram (bbox
-        // av ytterbrickorna + brickbred marginal) tar gesten tag i SJÄLVA
-        // URVALET: ankaret följer pekaren och de 50 närmaste tänds längs vägen —
-        // kartan panorerar inte (dragPan stängs av för gesten). Drag utanför
-        // ramen panorerar som vanligt. Tap utan rörelse är fortfarande tap
-        // (klickvägen orörd), och ett andra finger (nyp) släpper gesten
-        // tillbaka till kartan. Lyssnarna ligger på canvasen (före MapLibres
-        // container-handlers i bubblingen) så dragPan hinner stängas av.
-        const canvasEl = map.getCanvas();
-        let areaDragId: number | null = null;
-        let areaDragStart: { x: number; y: number } | null = null;
-        let areaDragging = false;
-        let areaDragMoveAt = 0;
-        const litBrickBounds = (): { minX: number; minY: number; maxX: number; maxY: number } | null => {
-            const byKey = plainFeatureByKeyRef.current;
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            let any = false;
-            revealWrittenRef.current.forEach((op, key) => {
-                if (op <= 0.5) return;
-                const f = byKey.get(key);
-                if (!f || f.properties.past) return;
-                const p = map.project([f.geometry.coordinates[0], f.geometry.coordinates[1]]);
-                if (p.x < minX) minX = p.x;
-                if (p.x > maxX) maxX = p.x;
-                if (p.y < minY) minY = p.y;
-                if (p.y > maxY) maxY = p.y;
-                any = true;
-            });
-            if (!any) return null;
-            // Marginal ≈ brickans egen yta: kroppen står OVANFÖR geo-punkten
-            // (nål-tippen), så ramen skjuts extra uppåt — "inom gränserna" ska
-            // kännas som brickytan, inte en linje mellan mittpunkter.
-            const PAD = 28;
-            return { minX: minX - PAD, minY: minY - PAD - 28, maxX: maxX + PAD, maxY: maxY + PAD };
-        };
-        const endAreaDrag = () => {
-            areaDragId = null;
-            areaDragStart = null;
-            if (areaDragging) revealDragClickGuardRef.current = performance.now();
-            areaDragging = false;
-            try { map.dragPan.enable(); } catch { /* kartan på väg bort */ }
-        };
-        const onAreaPointerDown = (ev: PointerEvent) => {
-            if (areaDragId != null) { endAreaDrag(); return; } // finger 2 → nyp: kartans
-            if (areaDragDisabledRef.current) return; // pinn-placering: kartan äger draget
-            if (ev.pointerType === 'mouse' && ev.button !== 0) return;
-            const rect = canvasEl.getBoundingClientRect();
-            const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
-            const b = litBrickBounds();
-            if (!b || x < b.minX || x > b.maxX || y < b.minY || y > b.maxY) return;
-            areaDragId = ev.pointerId;
-            areaDragStart = { x, y };
-            areaDragging = false;
-            map.dragPan.disable();
-        };
-        const onAreaPointerMove = (ev: PointerEvent) => {
-            if (ev.pointerId !== areaDragId || !areaDragStart) return;
-            const rect = canvasEl.getBoundingClientRect();
-            const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
-            // 8 px dödzon: under den är gesten fortfarande ett blivande tap.
-            if (!areaDragging && Math.hypot(x - areaDragStart.x, y - areaDragStart.y) <= 8) return;
-            areaDragging = true;
-            const now = performance.now();
-            if (now - areaDragMoveAt < 90) return;
-            areaDragMoveAt = now;
-            if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
-            const ll = map.unproject([x, y]);
-            revealAnchorPtRef.current = { lng: ll.lng, lat: ll.lat };
-            revealMarchPtRef.current = { lng: ll.lng, lat: ll.lat };
-            recomputeRevealSeedRef.current();
-        };
-        const onAreaPointerUp = (ev: PointerEvent) => {
-            if (ev.pointerId === areaDragId) endAreaDrag();
-        };
-        canvasEl.addEventListener('pointerdown', onAreaPointerDown);
-        window.addEventListener('pointermove', onAreaPointerMove);
-        window.addEventListener('pointerup', onAreaPointerUp);
-        window.addEventListener('pointercancel', onAreaPointerUp);
+        // ── Drag INOM brickområdet flyttar urvalet (Inaktiverad) ──────────────
+        // Drag-and-drop för eventbrickor har inaktiverats enligt Josef 26/8.
 
         // Rapportera initialt läge
         map.once('load', () => {
@@ -3110,10 +2987,7 @@ export default function V2Map({
             if (revealCleanupRef.current) { revealCleanupRef.current(); revealCleanupRef.current = null; }
             if (revealRafRef.current != null) { cancelAnimationFrame(revealRafRef.current); revealRafRef.current = null; }
             if (revealTweenRef.current != null) { cancelAnimationFrame(revealTweenRef.current); revealTweenRef.current = null; }
-            // Områdes-dragets fönsterlyssnare (canvasens tas av map.remove()).
-            window.removeEventListener('pointermove', onAreaPointerMove);
-            window.removeEventListener('pointerup', onAreaPointerUp);
-            window.removeEventListener('pointercancel', onAreaPointerUp);
+            // Områdes-dragets fönsterlyssnare (Inaktiverad)
             // Pågående marker-stream + målnings-runda (map.remove() tar lyssnarna,
             // timers måste vi städa själva).
             if (streamCleanupRef.current) { streamCleanupRef.current(); streamCleanupRef.current = null; }
@@ -3663,6 +3537,21 @@ export default function V2Map({
                         el.click();
                     }
                 });
+
+                // Dragging ska alltid panorera kartan — aldrig flytta markören.
+                // MapLibre-Marker fångar mousedown/touchstart på elementet och
+                // hindrar kart-panningen. Vi vidarebefordrar händelsen direkt
+                // till map-canvas:en så att panningshandlern alltid startar,
+                // oavsett om draget börjar på en markör.
+                const canvas = map.getCanvas();
+                const forwardToCanvas = (ev: MouseEvent | TouchEvent) => {
+                    // Släpp inte click-händelsen — den ska stanna på markören
+                    // och trigga selectEvent. Bara drag-starten (mousedown/
+                    // touchstart) behöver nå canvas:en.
+                    canvas.dispatchEvent(new (ev.constructor as typeof MouseEvent | typeof TouchEvent)(ev.type, ev as EventInit));
+                };
+                el.addEventListener('mousedown', forwardToCanvas);
+                el.addEventListener('touchstart', forwardToCanvas, { passive: true });
 
                 // 'bottom'-anchor: nålspetsen pekar på koordinaten.
                 const marker = new maplibregl.Marker({
