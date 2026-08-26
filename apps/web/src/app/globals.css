@@ -252,16 +252,6 @@
   animation: welcome-sun-pulse 4.5s ease-in-out infinite;
 }
 
-/* Live-prick vid "börjar inom 1 h" — pulserande ring som en sändningsindikator */
-@keyframes welcome-live-ping {
-  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
-  70%  { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-}
-.welcome-live-dot {
-  animation: welcome-live-ping 1.6s ease-out infinite;
-}
-
 /* Ljusstråk som sveper över primärknappen med jämna mellanrum */
 @keyframes welcome-cta-shimmer {
   0%       { transform: translateX(-160%) skewX(-18deg); }
@@ -405,7 +395,7 @@
     opacity: 1;
     transform: none;
   }
-  .welcome-sun, .welcome-live-dot, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float {
+  .welcome-sun, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float {
     animation: none;
   }
   /* Exit blir en ren uttoning — ingen zoom/blur. */

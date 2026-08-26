@@ -1685,15 +1685,8 @@ export default function HomePage() {
         return events.filter(evt => evt.time >= start && evt.time < end).length;
     }, [events]);
 
-    // Antal event som börjar inom 1 timme (för välkomstmodalen)
-    const soonEventCount = useMemo(() => {
-        const now = Date.now();
-        const oneHourFromNow = now + 60 * 60 * 1000;
-        return events.filter(evt => {
-            const timeMs = evt.time.getTime();
-            return timeMs > now && timeMs <= oneHourFromNow;
-        }).length;
-    }, [events]);
+    // ("Börjar inom en timme"-räknaren i välkomstmodalen är borttagen —
+    // ägarbeslut 26/8: rutan ska inte visa den infon.)
 
     /**
      * ENDA GEO-REGELN I HELA GRÄNSSNITTET (Josef 9/8): varje tal räknar det som
@@ -2823,6 +2816,9 @@ export default function HomePage() {
                 // och stadshoppet tar över.
                 introGlide={introMapMode}
                 onUserInteraction={handleMapUserInteraction}
+                // Under pinn-placeringen drar man KARTAN för att sikta —
+                // urvals-flytten (drag i brickområdet) får inte kapa draget.
+                areaDragDisabled={creationMode !== 'idle'}
             />
 
 
@@ -3305,7 +3301,6 @@ export default function HomePage() {
                     onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
-                    soonEventCount={soonEventCount}
                     onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
                 />
             )}

@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 import { ChevronRight, Clock, X } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { eventEmoji, isEventPast } from './v2MapBricka';
+import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 
 // ── Multi-event-lista ───────────────────────────────────────────────────────
 // Öppnas när man klickar en bricka med FLERA event på samma koordinat: en liten
@@ -121,11 +122,15 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     const selIdx = pool.findIndex(ev => ev.id === selectedEvent?.id);
     const goNextInList = () => onSelect(pool[(selIdx + 1) % pool.length]);
 
-    // En eventrad: emoji, titel, klockslag (+ "har varit" på passerade).
+    // En eventrad: emoji, titel, klockslag · kategorinamn (+ "har varit" på
+    // passerade). Kategorinamnet till höger om klockslaget (Josef 26/8) —
+    // samma nyckelupplösning som eventEmoji: okänd/utebliven kategori → Övrigt.
     const row = (ev: LinkEvent, isPast: boolean) => {
         const tid = ev.time && ev.hasSpecificTime !== false
             ? ev.time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
             : '';
+        const catKey = (ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other') as EventCategoryType;
+        const catLabel = EVENT_CATEGORIES[catKey].label;
         const isSel = selectedEvent?.id === ev.id;
         return (
             <li key={ev.id}>
@@ -141,12 +146,12 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                     <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`} aria-hidden>{eventEmoji(ev)}</span>
                     <span className="flex-1 min-w-0">
                         <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{ev.title}</span>
-                        {(tid || isPast) && (
-                            <span className={`flex items-center gap-1 text-[11px] font-semibold tabular-nums ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                                {tid && <Clock size={10} className="shrink-0" />}
-                                {tid ? `kl ${tid}` : ''}{isPast ? `${tid ? ' · ' : ''}har varit` : ''}
-                            </span>
-                        )}
+                        <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                            {tid && <Clock size={10} className="shrink-0" />}
+                            {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
+                            <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
+                            {isPast && <span className="shrink-0">· har varit</span>}
+                        </span>
                     </span>
                     <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                 </button>
