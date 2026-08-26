@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -375,5 +375,39 @@ describe('pickCityFromVenue', () => {
 
     it('är skiftlägesokänslig', () => {
         expect(pickCityFromVenue('KÖPINGS STADSHOTELL', CITIES, 'Arboga')).toBe('Köping');
+    });
+});
+
+describe('cleanCardTitle', () => {
+    const OPTS = { titleStripRe: /^Evenemang\s+/i, stripVenue: true };
+
+    it('tar bort både kategorietikett och venue-svans (vaggeryd.se)', () => {
+        expect(cleanCardTitle('Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd', 'Berghems Lajvby, Skillingaryd', OPTS))
+            .toBe('Mareld - Piratlajv');
+        expect(cleanCardTitle('Evenemang Bokcirklar för ungdomar Vaggeryds bibliotek', 'Vaggeryds bibliotek', OPTS))
+            .toBe('Bokcirklar för ungdomar');
+    });
+
+    it('rör inte titeln utan opt-in', () => {
+        const raw = 'Evenemang Bio: Marsuplami Folkets hus i Vaggeryd';
+        expect(cleanCardTitle(raw, 'Folkets hus i Vaggeryd')).toBe(raw);
+    });
+
+    it('behåller venue-namnet när det hör till titeln', () => {
+        expect(cleanCardTitle('Konsert i Berghems Lajvby', 'Berghems Lajvby', OPTS))
+            .toBe('Konsert i Berghems Lajvby');
+    });
+
+    it('kapar inte när för lite blir kvar', () => {
+        expect(cleanCardTitle('Bio Folkets hus', 'Folkets hus', OPTS)).toBe('Bio Folkets hus');
+    });
+
+    it('matchar venue skiftlägesokänsligt och normaliserar blanksteg', () => {
+        expect(cleanCardTitle('Evenemang  Shared   reading   VAGGERYDS BIBLIOTEK', 'Vaggeryds bibliotek', OPTS))
+            .toBe('Shared reading');
+    });
+
+    it('klarar saknad venue', () => {
+        expect(cleanCardTitle('Evenemang WIK-dagen 2026', undefined, OPTS)).toBe('WIK-dagen 2026');
     });
 });

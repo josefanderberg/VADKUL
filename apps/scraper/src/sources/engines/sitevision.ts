@@ -35,6 +35,15 @@ export interface SiteVisionConfig {
     urls: string[];
     defaultCity?: string;
     /**
+     * Kort där rubriken är hopklistrad av kategorietikett + titel + venue
+     * ("Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd" på
+     * vaggeryd.se). `titleStripRe` tar bort etiketten, `stripVenueFromTitle`
+     * kapar venue-svansen — venue extraheras separat och exakt, så svansen är
+     * ren dubbelinformation. Båda är OPT-IN: default rör vi inte titeln.
+     */
+    titleStripRe?: RegExp;
+    stripVenueFromTitle?: boolean;
+    /**
      * Flerkommuns-källor (regionala eventguider): orterna källan täcker.
      * Venue-namnen bär orten i klartext ("Arboga bibliotek", "Mötesplats
      * Tallåsgården, Kungsör") — matchar ett namn i listan sätts det som city
@@ -169,6 +178,29 @@ export function mapSoleilItem(
         imageUrl: makeAbsoluteUrl(item.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/**
+ * Städa en kort-rubrik som bär kategorietikett och/eller venue-svans.
+ * Venue-svansen kapas bara om något meningsfullt blir kvar (≥6 tecken och
+ * inte ett hängande förhållandeord) — annars var venue-namnet en del av
+ * titeln på riktigt ("Konsert i Berghems Lajvby"). Exporterad för test.
+ */
+export function cleanCardTitle(
+    title: string,
+    venueName: string | undefined,
+    opts: { titleStripRe?: RegExp; stripVenue?: boolean } = {},
+): string {
+    let t = title.replace(/\s+/g, ' ').trim();
+    if (opts.titleStripRe) t = t.replace(opts.titleStripRe, '').trim();
+    if (opts.stripVenue && venueName) {
+        const v = venueName.replace(/\s+/g, ' ').trim();
+        if (v && t.toLowerCase().endsWith(v.toLowerCase())) {
+            const rest = t.slice(0, t.length - v.length).replace(/[\s,–—-]+$/, '').trim();
+            if (rest.length >= 6 && !/\b(i|på|vid|hos|med|till|från|och|för)$/i.test(rest)) t = rest;
+        }
+    }
+    return t;
 }
 
 /**
@@ -337,8 +369,10 @@ async function scrapeSoleilItemsApi(
 interface EventSearchHit {
     id?: string;
     name?: string;
-    URl?: string;               // sic — API:t stavar fältet så
+    URl?: string;               // sic — kalmar.com stavar fältet så
+    URL?: string;               // osteraker.se stavar det så i stället
     image?: string;
+    city?: string;              // ort per hit (osteraker.se) — saknas på kalmar.com
     description?: string;
     local?: string;             // venue-namn ("Kalmar läns museum")
     location?: string;          // gatuadress ("Skeppsbrogatan 51")
@@ -356,7 +390,7 @@ export function mapEventSearchHit(
     windowStart: Date,
 ): RawEvent | null {
     const title = (hit.name || '').trim();
-    const eventUrl = makeAbsoluteUrl(hit.URl, baseUrl);
+    const eventUrl = makeAbsoluteUrl(hit.URl ?? hit.URL, baseUrl);
     if (!title || !eventUrl) return null;
 
     // Pågående fleradagars-event (start i det förflutna, slut framåt) ankras på
@@ -377,7 +411,7 @@ export function mapEventSearchHit(
         url: eventUrl,
         venueName: hit.local?.trim() || undefined,
         address: hit.location?.trim() || undefined,
-        city: defaultCity,
+        city: hit.city?.trim() || defaultCity,
         description: hit.description?.trim() || undefined,
         imageUrl: makeAbsoluteUrl(hit.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
@@ -900,8 +934,14 @@ export const sitevisionEngine = async (
             const venueEl = container.find('[class*="location"], [class*="venue"], [class*="place"]').first();
             const venueName = venueEl.text().trim() || undefined;
 
+            const cleanTitle = cleanCardTitle(title, venueName, {
+                titleStripRe: config.titleStripRe,
+                stripVenue: config.stripVenueFromTitle,
+            });
+            if (cleanTitle.length < 2) continue;
+
             events.push({
-                title,
+                title: cleanTitle,
                 startDate,
                 url: eventUrl,
                 venueName,

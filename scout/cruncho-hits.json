@@ -1,0 +1,60 @@
+[
+ {
+  "name": "Burlöv",
+  "url": "https://burlov.se/evenemang",
+  "note": "cruncho men ingen portletId"
+ },
+ {
+  "name": "Kungsbacka",
+  "url": "https://kungsbacka.se/uppleva-och-gora/evenemang",
+  "portletId": "12.40dca3c719a555f04d072010",
+  "listUrl": "https://kungsbacka.se/uppleva-och-gora/evenemang",
+  "noHits": 0,
+  "noPages": 0
+ },
+ {
+  "name": "Kungsbacka",
+  "url": "https://kungsbacka.se/uppleva-och-gora/evenemang/importerade-evenemang/guidning-brackan---gravarna",
+  "portletId": "12.825d63f17dc1e8befbde0",
+  "listUrl": "https://kungsbacka.se/uppleva-och-gora/evenemang/importerade-evenemang/guidning-brackan---gravarna",
+  "noHits": 0,
+  "noPages": 0
+ },
+ {
+  "name": "Kungsbacka",
+  "url": "https://kungsbacka.se/evenemang",
+  "portletId": "12.40dca3c719a555f04d072010",
+  "listUrl": "https://kungsbacka.se/uppleva-och-gora/evenemang",
+  "noHits": 0,
+  "noPages": 0
+ },
+ {
+  "name": "Ljusdal",
+  "url": "https://www.ljusdal.se/evenemang",
+  "portletId": "12.2997294f17c5bd63c689142a",
+  "listUrl": "https://www.ljusdal.se/evenemang",
+  "noHits": 0,
+  "noPages": 0
+ },
+ {
+  "name": "Lomma",
+  "url": "https://lomma.se/evenemang",
+  "note": "cruncho men ingen portletId"
+ },
+ {
+  "name": "Strängnäs",
+  "url": "https://www.strangnas.se/evenemang",
+  "portletId": "12.62ee8b4718e984031142480d",
+  "listUrl": "https://www.strangnas.se/evenemang",
+  "noHits": 0,
+  "noPages": 0
+ },
+ {
+  "name": "Vellinge",
+  "url": "https://vellinge.se/evenemang",
+  "portletId": "12.6d4e8c919a7b9bfbaf6ea41",
+  "listUrl": "https://vellinge.se/evenemang",
+  "noHits": 0,
+  "noPages": 0
+ }
+]

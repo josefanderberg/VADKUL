@@ -1,0 +1,1877 @@
+[
+ {
+  "name": "Huddinge",
+  "region": "stockholm",
+  "rootDom": "huddinge.se",
+  "url": "https://www.huddinge.se/kommunkalender",
+  "renderedDates": 19,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Ekerö",
+  "region": "stockholm",
+  "rootDom": "ekero.se",
+  "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott",
+  "renderedDates": 7,
+  "top": [],
+  "externals": [
+   {
+    "host": "web103.reachmee.com",
+    "text": "Jobb"
+   }
+  ]
+ },
+ {
+  "name": "Botkyrka",
+  "region": "stockholm",
+  "rootDom": "botkyrka.se",
+  "url": "https://www.botkyrka.se/evenemang",
+  "renderedDates": 20,
+  "top": [],
+  "externals": [
+   {
+    "host": "t-d.se",
+    "text": "Tillgänglighetsdatabasen"
+   }
+  ]
+ },
+ {
+  "name": "Vallentuna",
+  "region": "stockholm",
+  "rootDom": "vallentuna.se",
+  "url": "https://www.vallentuna.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Solna",
+  "region": "stockholm",
+  "rootDom": "solna.se",
+  "url": "https://www.solna.se/uppleva--gora/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "solnacomp.esoj.se",
+    "text": "Jämför förskolor"
+   },
+   {
+    "host": "opic.com",
+    "text": "Aktuella upphandlingar"
+   },
+   {
+    "host": "tendsign.com",
+    "text": "Avtalsregister"
+   },
+   {
+    "host": "val.se",
+    "text": "Information på minoritetsspråk"
+   },
+   {
+    "host": "solna.tromanpublik.se",
+    "text": "Hitta politiker"
+   },
+   {
+    "host": "filmstadenskultur.se",
+    "text": "www.filmstadenskultur.se"
+   },
+   {
+    "host": "maps.app.goo.gl",
+    "text": "karta"
+   },
+   {
+    "host": "via.tt.se",
+    "text": "Pressmeddelanden Länk till annan webbpla"
+   }
+  ]
+ },
+ {
+  "name": "Värmdö",
+  "region": "stockholm",
+  "rootDom": "varmdo.se",
+  "url": "https://www.varmdo.se/upplevaochgora/evenemang.4.62b6567e177d2c33d13c3489.html",
+  "renderedDates": 22,
+  "top": [
+   {
+    "url": "https://www.varmdo.se/appresource/4.62b6567e177d2c33d13c3489/12.467d267619ed4689c71a97c/page?p=1&f=&t=&c=&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 4801,
+    "score": 22,
+    "prefix": "{\"items\":[{\"img\":\"/images/200.360bac7a19ed441e94fd67/1784800034988/fotoparken.jpg\",\"endDate\":1.7962524E12,\"displayName\":\"Fotoparken – Min värld\",\"publishDate\":1.779891505922E12,\"id"
+   }
+  ],
+  "externals": [
+   {
+    "host": "porslinsriket.se",
+    "text": "Porslinsrikets kalendarium Länk till ann"
+   }
+  ]
+ },
+ {
+  "name": "Österåker",
+  "region": "stockholm",
+  "rootDom": "osteraker.se",
+  "url": "https://osteraker.se/evenemang",
+  "renderedDates": 0,
+  "top": [
+   {
+    "url": "https://www.osteraker.se/appresource/4.592cfecd176fc0db87818e/12.367d658917909e8fc2b8984/events?fromDate=2026-08-25T22:00:00.000Z&toDate=2027-08-26T21:59:59.999Z&categories=&limit=9",
+    "status": 200,
+    "len": 7536,
+    "score": 40,
+    "prefix": "{\"hits\":[{\"image\":\"https://www.osteraker.se/images/200.44fe6fa019e40e754cd7bef/1782394961493/Parbild.webp\",\"endDate\":\"27 aug 2026\",\"city\":\"Åkersberga\",\"fullEndDate\":\"2026-08-27\",\"d"
+   }
+  ],
+  "externals": []
+ },
+ {
+  "name": "Strängnäs",
+  "region": "sodermanland",
+  "rootDom": "strangnas.se",
+  "url": "https://www.strangnas.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Boxholm",
+  "region": "ostergotland",
+  "rootDom": "boxholm.se",
+  "url": "https://www.boxholm.se/uppleva-och-gora/bibliotek/intresseanmalan-volontar-sprakcafe",
+  "renderedDates": 7,
+  "top": [
+   {
+    "url": "https://f1-eu.readspeaker.com/script/5177/webReader/r/r2977/lang/sv_se.json",
+    "status": 200,
+    "len": 18378,
+    "score": 4,
+    "prefix": "{ \"announce-clicklistenactive\": \"Klicka och lyssna har slagits på.\", \"announce-clicklisteninactive\": \"Klicka och lyssna har slagits av.\", \"announce-enlargetextactive\": "
+   },
+   {
+    "url": "https://f1-eu.readspeaker.com/script/5177/webReader/r/r2977/lang/en_us.json",
+    "status": 200,
+    "len": 19276,
+    "score": 4,
+    "prefix": "{ \"announce-clicklistenactive\": \"Click and Listen was turned on.\", \"announce-clicklisteninactive\": \"Click and Listen was turned off.\", \"announce-enlargetextactive\": \"En"
+   }
+  ],
+  "externals": [
+   {
+    "host": "karta.tranas.se",
+    "text": "Karta"
+   },
+   {
+    "host": "app.readspeaker.com",
+    "text": "Lyssna"
+   }
+  ]
+ },
+ {
+  "name": "Söderköping",
+  "region": "ostergotland",
+  "rootDom": "soderkoping.se",
+  "url": "https://soderkoping.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "consentmanager.net",
+    "text": "consentmanager.net"
+   },
+   {
+    "host": "soderkoping.screen9.tv",
+    "text": "Söderköping Play"
+   }
+  ]
+ },
+ {
+  "name": "Kinda",
+  "region": "ostergotland",
+  "rootDom": "kinda.se",
+  "url": "https://www.kinda.se/upplevaochgora/friluftsliv/badplatser.4.15d59a7c151bb4254b7e7147.html",
+  "renderedDates": 3,
+  "top": [],
+  "externals": [
+   {
+    "host": "karta.tranas.se",
+    "text": "Kartor"
+   },
+   {
+    "host": "app.readspeaker.com",
+    "text": "Lyssna"
+   },
+   {
+    "host": "kinda.screen9.tv",
+    "text": "Playkanal"
+   },
+   {
+    "host": "almi.se",
+    "text": "Almi företagspartner"
+   },
+   {
+    "host": "energikontoretostergotland.se",
+    "text": "Energikontoret"
+   },
+   {
+    "host": "lantmateriet.se",
+    "text": "Lantmäteri"
+   },
+   {
+    "host": "kindahus.se",
+    "text": "Lägenheter"
+   },
+   {
+    "host": "hemnet.se",
+    "text": "Hemnet.se"
+   },
+   {
+    "host": "booli.se",
+    "text": "Booli.se"
+   },
+   {
+    "host": "blocket.se",
+    "text": "Blocket Bostad"
+   },
+   {
+    "host": "svenskakyrkan.se",
+    "text": "Arken"
+   },
+   {
+    "host": "himlabacken.com",
+    "text": "Himlabacken"
+   },
+   {
+    "host": "naturkartan.se",
+    "text": "Bjuggö"
+   },
+   {
+    "host": "docreader.readspeaker.com",
+    "text": ""
+   }
+  ]
+ },
+ {
+  "name": "Mjölby",
+  "region": "ostergotland",
+  "rootDom": "mjolby.se",
+  "url": "https://www.mjolby.se/uppleva-och-gora",
+  "renderedDates": 3,
+  "top": [
+   {
+    "url": "https://www.vizzit.se/myvizzit/api/tag?pbk=706c3779634f4d4265342b3059714572763542674339435653344438713053524a52463856597555756a673d&host=www.mjolby.se&path=%2Fuppleva-och-gora",
+    "status": 200,
+    "len": 499,
+    "score": 8,
+    "prefix": "{\"page\": {\"id\": \"4.56dbfd418310c3599073f\"}, \"tag\": [{\"id\": 1, \"criteria\": [{\"id\": 1, \"selector\": \".sv-cookie-consent-modal form button.env-button\", \"event\": [{\"id\": 1, \"read\": null"
+   },
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=1&v30=1&dlv=30&p=10991155&ubl=sv-SE&nr=5&subtree=%5E%2Fuppleva-och-gora&excludetree=%2Fnyheter&minpathdepth=3&pl=sv&singletab=uppleva-och-gora&notdomain=kommunwebbetjansportal&seed=4104902e&currentp=%2Fuppleva-och-gora&currentid=4.56dbfd418310c3599073f&pn=Uppleva%20och%20g%C3%B6ra%20%7C%20Mj%C3%B6lby%20kommun",
+    "status": 200,
+    "len": 1081,
+    "score": 0,
+    "prefix": "{\"predictions\":[{\"title\":\"Lundbybadet\",\"url\":\"/uppleva-och-gora/idrott-motion-och-friluftsliv/lundbybadet\",\"percent\":0.025251850485801697,\"pageid\":\"4.7063fa8e18363291e14d07\",\"type\""
+   }
+  ],
+  "externals": [
+   {
+    "host": "mjolby.screen9.tv",
+    "text": "Mjölby play Länk till annan webbplats, ö"
+   }
+  ]
+ },
+ {
+  "name": "Ödeshög",
+  "region": "ostergotland",
+  "rootDom": "odeshog.se",
+  "url": "https://www.odeshog.se/forskolaskolaochutbildning/kulturskolan/kulturskolansevenemang.106.1256cf2c195adccf7597a15.html",
+  "renderedDates": 14,
+  "top": [
+   {
+    "url": "https://f1-eu.readspeaker.com/script/5177/webReader/r/r2977/lang/sv_se.json",
+    "status": 200,
+    "len": 18378,
+    "score": 4,
+    "prefix": "{ \"announce-clicklistenactive\": \"Klicka och lyssna har slagits på.\", \"announce-clicklisteninactive\": \"Klicka och lyssna har slagits av.\", \"announce-enlargetextactive\": "
+   },
+   {
+    "url": "https://f1-eu.readspeaker.com/script/5177/webReader/r/r2977/lang/en_us.json",
+    "status": 200,
+    "len": 19276,
+    "score": 4,
+    "prefix": "{ \"announce-clicklistenactive\": \"Click and Listen was turned on.\", \"announce-clicklisteninactive\": \"Click and Listen was turned off.\", \"announce-enlargetextactive\": \"En"
+   }
+  ],
+  "externals": [
+   {
+    "host": "app.readspeaker.com",
+    "text": "Lyssna"
+   }
+  ]
+ },
+ {
+  "name": "Åtvidaberg",
+  "region": "ostergotland",
+  "rootDom": "atvidaberg.se",
+  "url": "https://www.atvidaberg.se/uppleva-och-gora",
+  "renderedDates": 5,
+  "top": [],
+  "externals": [
+   {
+    "host": "app-eu.readspeaker.com",
+    "text": "Lyssna"
+   },
+   {
+    "host": "bildningscentrum.se",
+    "text": "Bildningscentrum Facetten"
+   }
+  ]
+ },
+ {
+  "name": "Vadstena",
+  "region": "ostergotland",
+  "rootDom": "vadstena.se",
+  "url": "https://vadstena.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Aneby",
+  "region": "jonkoping",
+  "rootDom": "aneby.se",
+  "url": "https://aneby.se/arkiv/evenemang.html",
+  "renderedDates": 1,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Värnamo",
+  "region": "jonkoping",
+  "rootDom": "varnamo.se",
+  "url": "https://varnamo.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Gnosjö",
+  "region": "jonkoping",
+  "rootDom": "gnosjo.se",
+  "url": "https://gnosjo.se/uppleva-och-gora",
+  "renderedDates": 8,
+  "top": [
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=2&v30=1&dlv=30&p=11171183&ubl=sv-SE&nr=5&subtree=%2Fuppleva-och-gora&pagetype=svpage&pl=sv&singletab=uppleva-och-gora&seed=4104722521t&currentp=%2Fuppleva-och-gora&currentid=4.1ea20f27181a84610ba21ea&pn=Uppleva%20och%20g%C3%B6ra%20%7C%20Gnosj%C3%B6%20kommun&p0=4.1ea20f27181a84610ba21ea&renderstyle=pills",
+    "status": 200,
+    "len": 979,
+    "score": 0,
+    "prefix": "{\"predictions\":[{\"title\":\"Simhall\",\"url\":\"/uppleva-och-gora/tollstorpshallen/simhall\",\"percent\":0.03483572229743004,\"pageid\":\"4.1ea20f27181a84610ba2375\",\"type\":\"page\",\"alwaysfirst\""
+   }
+  ],
+  "externals": [
+   {
+    "host": "gnosjoandan.com",
+    "text": "Evenemang"
+   }
+  ]
+ },
+ {
+  "name": "Högsby",
+  "region": "kalmar",
+  "rootDom": "hogsby.se",
+  "url": "https://hogsby.se/evenemang",
+  "renderedDates": 1,
+  "top": [],
+  "externals": [
+   {
+    "host": "cookiedatabase.org",
+    "text": "Läs mer om dessa syften"
+   },
+   {
+    "host": "novitell.se",
+    "text": "Novitell AB"
+   }
+  ]
+ },
+ {
+  "name": "Vaggeryd",
+  "region": "jonkoping",
+  "rootDom": "vaggeryd.se",
+  "url": "https://www.vaggeryd.se/uppleva-och-gora/upplev-vaggeryds--kommun.html",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "vaggerydsenergi.se",
+    "text": "Vaggeryds Energi AB Länk till annan webb"
+   },
+   {
+    "host": "vsbo.se",
+    "text": "VSBo Länk till annan webbplats."
+   },
+   {
+    "host": "vgd.maps.arcgis.com",
+    "text": "Karta Länk till annan webbplats."
+   }
+  ]
+ },
+ {
+  "name": "Markaryd",
+  "region": "kronoberg",
+  "rootDom": "markaryd.se",
+  "url": "https://www.markaryd.se/sidor/uppleva-och-gora/bad/hannabadet.html",
+  "renderedDates": 1,
+  "top": [],
+  "externals": [
+   {
+    "host": "markaryd.screen9.tv",
+    "text": "Media"
+   },
+   {
+    "host": "app.readspeaker.com",
+    "text": "Lyssna"
+   },
+   {
+    "host": "markarydsbowling.se",
+    "text": "Markaryds bowling Länk till annan webbpl"
+   }
+  ]
+ },
+ {
+  "name": "Torsås",
+  "region": "kalmar",
+  "rootDom": "torsas.se",
+  "url": "https://www.torsas.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "kollpasoc.se",
+    "text": "KOLL PÅ SOC – Om socialtjänsten för barn"
+   },
+   {
+    "host": "torsnet.se",
+    "text": "Torsnet AB"
+   },
+   {
+    "host": "nybro.se",
+    "text": "Överförmyndarnämnden"
+   }
+  ]
+ },
+ {
+  "name": "Bromölla",
+  "region": "skane",
+  "rootDom": "bromolla.se",
+  "url": "https://bromolla.se/evenemang",
+  "renderedDates": 0,
+  "top": [
+   {
+    "url": "https://evenemang.bromolla.se/sv/activitywidget/wheredoyouwanttogo",
+    "status": 200,
+    "len": 2187,
+    "score": 14,
+    "prefix": "[{\"text\":\"Bromölla\",\"value\":\"gid=69080\",\"description\":null,\"image\":null,\"icon\":\"cb--location-dot\"},{\"text\":\"Göra\",\"value\":\"c=3619\",\"description\":null,\"image\":null,\"icon\":\"cb--grid-"
+   },
+   {
+    "url": "https://evenemang.bromolla.se/sv/se-och-gora/filters",
+    "status": 200,
+    "len": 173,
+    "score": 10,
+    "prefix": "{\"filters\":[{\"name\":\"Kategori\",\"type\":\"checkbox-tree\",\"key\":\"c\",\"shortcut\":false,\"context\":{\"options\":[{\"name\":\"Evenemang\",\"value\":\"3652\",\"description\":\"\",\"options\":[]}]}}]}"
+   }
+  ],
+  "externals": [
+   {
+    "host": "www-bromolla-se.translate.goog",
+    "text": "Translate"
+   },
+   {
+    "host": "visit.com",
+    "text": "VISIT"
+   }
+  ]
+ },
+ {
+  "name": "Kävlinge",
+  "region": "skane",
+  "rootDom": "kavlinge.se",
+  "url": "https://www.kavlinge.se/evenemang",
+  "renderedDates": 1,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Danderyd",
+  "region": "stockholm",
+  "rootDom": "danderyd.se",
+  "url": "https://www.danderyd.se/uppleva-och-gora/sommarlov",
+  "renderedDates": 22,
+  "top": [
+   {
+    "url": "https://www.vizzit.se/myvizzit/api/tag?pbk=6f793139546d4864573159436944314b68725330576a554c733156723466734f746d68764c494d6d6c64553d&host=www.danderyd.se&path=%2Fuppleva-och-gora%2Fsommarlov",
+    "status": 200,
+    "len": 1563,
+    "score": 8,
+    "prefix": "{\"page\": {\"id\": \"20879\"}, \"tag\": [{\"id\": 1, \"criteria\": [{\"id\": 1, \"selector\": \"#pageFeedbackYesButton\", \"event\": [{\"id\": 1, \"read\": null, \"action\": 0}, {\"id\": 3, \"read\": null, \"ac"
+   }
+  ],
+  "externals": [
+   {
+    "host": "spoxy4.insipio.com",
+    "text": "volume_up\n                              "
+   },
+   {
+    "host": "studyalong.se",
+    "text": "Kurskatalog (extern länk, öppnas i ny fl"
+   },
+   {
+    "host": "forms.office.com",
+    "text": "Anmälan till Ungdomscentrums hantverkslä"
+   }
+  ]
+ },
+ {
+  "name": "Simrishamn",
+  "region": "skane",
+  "rootDom": "simrishamn.se",
+  "url": "https://www.simrishamn.se/evenemangskalender",
+  "renderedDates": 24,
+  "top": [
+   {
+    "url": "https://www.simrishamn.se/appresource/4.2b41ab0e18f3780f8c934a77/12.2b41ab0e18f3780f8c934c94/filter?fromDate=&toDate=&freeTextSearch=&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 10245,
+    "score": 41,
+    "prefix": "{\"articles\":[{\"reoccurringEvent\":0,\"image\":\"<img src=\\\"/images/200.1b7e780819e6408a9b160401/1780906364602/2021-Traning-ungdom-04%20(2).jpg\\\" loading=\\\"lazy\\\" width=\\\"400\\\" height=\\"
+   }
+  ],
+  "externals": [
+   {
+    "host": "citizen.dw3.dk",
+    "text": "Felanmälan"
+   }
+  ]
+ },
+ {
+  "name": "Skurup",
+  "region": "skane",
+  "rootDom": "skurup.se",
+  "url": "https://www.skurup.se/barn-och-utbildning/grundskola/kulturskola/aktuellt-schema-kalender",
+  "renderedDates": 5,
+  "top": [],
+  "externals": [
+   {
+    "host": "esmaker.net",
+    "text": "https://esmaker.net/a/Survey?id=affe4e36"
+   }
+  ]
+ },
+ {
+  "name": "Åstorp",
+  "region": "skane",
+  "rootDom": "astorp.se",
+  "url": "https://astorp.se/evenemang",
+  "renderedDates": 37,
+  "top": [
+   {
+    "url": "https://api.helsingborg.se/event/json/wp/v2/event/time?group-id=549&start=2026-08-26&end=2027-08-26&page=1&per_page=10",
+    "status": 200,
+    "len": 53205,
+    "score": 74,
+    "prefix": "[{\"id\":2128235,\"date\":\"2026-02-24T14:10:58\",\"date_gmt\":\"2026-02-24T13:10:58\",\"modified\":\"2026-02-24T14:10:58\",\"modified_gmt\":\"2026-02-24T13:10:58\",\"slug\":\"npf-cafe-kvall-26-augusti"
+   },
+   {
+    "url": "https://api.helsingborg.se/event/json/wp/v2/event_categories?per_page=100",
+    "status": 200,
+    "len": 64088,
+    "score": 14,
+    "prefix": "[{\"id\":332,\"count\":4487,\"description\":\"Aktivitet = bes\\u00f6karen deltar aktivt exempelvis kl\\u00e4ttring, l\\u00f6pning, vandring osv.\",\"name\":\"Aktiviteter\",\"slug\":\"aktiviteter\",\"p"
+   },
+   {
+    "url": "https://api.helsingborg.se/event/json/wp/v2/location?group-id=549&per_page=100",
+    "status": 200,
+    "len": 144532,
+    "score": 14,
+    "prefix": "[{\"id\":2128000,\"date\":\"2026-02-20T08:38:39\",\"date_gmt\":\"2026-02-20T07:38:39\",\"modified\":\"2026-02-20T08:38:39\",\"modified_gmt\":\"2026-02-20T07:38:39\",\"slug\":\"folkets-hus-hyllinge\",\"st"
+   }
+  ],
+  "externals": []
+ },
+ {
+  "name": "Hylte",
+  "region": "halland",
+  "rootDom": "hylte.se",
+  "url": "https://www.hylte.se/uppleva-och-gora/ornahallens-halsocenter/kontakt-och-oppettider",
+  "renderedDates": 1,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Kungsbacka",
+  "region": "halland",
+  "rootDom": "kungsbacka.se",
+  "url": "https://kungsbacka.se/uppleva-och-gora/evenemang/importerade-evenemang/guidning-brackan---gravarna",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "mynewsdesk.com",
+    "text": "Mynewsdesk, länk till annan webbplats."
+   },
+   {
+    "host": "kungsbackabredbandsnat.se",
+    "text": "Bredbandsnät, länk till annan webbplats."
+   },
+   {
+    "host": "kungsbackateater.se",
+    "text": "Kungsbacka Teater, länk till annan webbp"
+   },
+   {
+    "host": "naturumfjarasbracka.se",
+    "text": "Naturum Fjärås Bräcka, länk till annan w"
+   },
+   {
+    "host": "askhultsby.se",
+    "text": "Äskhults by, länk till annan webbplats."
+   }
+  ]
+ },
+ {
+  "name": "Vellinge",
+  "region": "skane",
+  "rootDom": "vellinge.se",
+  "url": "https://vellinge.se/evenemang",
+  "renderedDates": 1,
+  "top": [
+   {
+    "url": "https://app-cdn.puzzel.com/public/config/461008/a62b0675-68af-4a79-bdeb-c38d4f24ad6f/32/interactions/c413aa75-7bb3-4c16-b4c2-72d4ea1ed329.json",
+    "status": 200,
+    "len": 8790,
+    "score": 14,
+    "prefix": "{ \"name\": \"Busy/Closed\", \"description\": \"Panel template\", \"type\": \"render\", \"templateType\": \"panel\", \"persistenceType\": \"disabled\", \"renderDelay\": { \"behavior\": \"of"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/translations/sv",
+    "status": 200,
+    "len": 286669,
+    "score": 14,
+    "prefix": "{\"test\":\"\",\"da32eb86079a9fa1d482f18fb6\":\"\",\"b027e41fcf256df81d29581e25\":\"\",\"32f15e5ebad053528208e73378\":\"\",\"a301c5a0924b784e6e85fdd5f698\":\"\",\"e03d073beb6d92c279933293d1\":\"\",\"8b872f"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/translations/en",
+    "status": 200,
+    "len": 286439,
+    "score": 14,
+    "prefix": "{\"da32eb86079a9fa1d482f18fb6\":\"\",\"b027e41fcf256df81d29581e25\":\"\",\"32f15e5ebad053528208e73378\":\"\",\"a301c5a0924b784e6e85fdd5f698\":\"\",\"e03d073beb6d92c279933293d1\":\"\",\"8b872f9406e26ca4"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/landing-page/recommendations?destination=vellinge&size=24&offset=0",
+    "status": 200,
+    "len": 117913,
+    "score": 14,
+    "prefix": "[{\"additionalBookingUrl\":null,\"address\":\"Strandbadsvägen 30, 239 42 Falsterbo, Sweden\",\"apiRatings\":[],\"availableApis\":[\"crunchoEvent\"],\"availableTranslations\":[],\"bookProvider\":nu"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/categories/with-events/vellinge?destination=vellinge&l1=events",
+    "status": 200,
+    "len": 232,
+    "score": 10,
+    "prefix": "{\"l1\":[\"events\"],\"l2\":[\"other-events\"],\"l3\":[\"food-drink\",\"senior\",\"culture-literature\",\"children-and-family\",\"knowledge-conversation\",\"festivals-major-events\",\"shopping\",\"nature-e"
+   }
+  ],
+  "externals": [
+   {
+    "host": "greaterfalsterbo.se",
+    "text": "Greater Falsterbo"
+   }
+  ]
+ },
+ {
+  "name": "Bollebygd",
+  "region": "vastragotaland",
+  "rootDom": "bollebygd.se",
+  "url": "https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html",
+  "renderedDates": 9,
+  "top": [],
+  "externals": [
+   {
+    "host": "bollebygd.maps.arcgis.com",
+    "text": "Karta Länk till annan webbplats, öppnas "
+   }
+  ]
+ },
+ {
+  "name": "Essunga",
+  "region": "vastragotaland",
+  "rootDom": "essunga.se",
+  "url": "https://essunga.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Färgelanda",
+  "region": "vastragotaland",
+  "rootDom": "fargelanda.se",
+  "url": "https://fargelanda.se/uppleva-och-gora/evenemang",
+  "renderedDates": 8,
+  "top": [],
+  "externals": [
+   {
+    "host": "vastsverige.com",
+    "text": "Högsäters Hembygdsförenings sommarprogra"
+   },
+   {
+    "host": "fargelanda.varbi.com",
+    "text": "Lediga jobb"
+   }
+  ]
+ },
+ {
+  "name": "Dals-Ed",
+  "region": "vastragotaland",
+  "rootDom": "dalsed.se",
+  "url": "https://www.dalsed.se/uppleva-och-gora/turism/evenemangskalender",
+  "renderedDates": 49,
+  "top": [],
+  "externals": [
+   {
+    "host": "mellerud.se",
+    "text": "Dödsfall och begravning"
+   },
+   {
+    "host": "amal.se",
+    "text": "Adoption"
+   },
+   {
+    "host": "umo.se",
+    "text": "Ungdomsmottagning"
+   },
+   {
+    "host": "narhalsan.se",
+    "text": "Vårdcentral"
+   },
+   {
+    "host": "edshus.se",
+    "text": "Edshus AB"
+   },
+   {
+    "host": "site201.reachmee.com",
+    "text": "Lediga jobb - RSS"
+   },
+   {
+    "host": "vastsverige.com",
+    "text": "Visning av Gäserudsstugan"
+   }
+  ]
+ },
+ {
+  "name": "Grästorp",
+  "region": "vastragotaland",
+  "rootDom": "grastorp.se",
+  "url": "https://www.grastorp.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Gullspång",
+  "region": "vastragotaland",
+  "rootDom": "gullspang.se",
+  "url": "https://gullspang.se/uppleva-och-gora",
+  "renderedDates": 4,
+  "top": [],
+  "externals": [
+   {
+    "host": "skr.se",
+    "text": "Arbetsgivarvarumärke, SKR:s webbplats"
+   },
+   {
+    "host": "vastsverige.com",
+    "text": "Visa mer"
+   }
+  ]
+ },
+ {
+  "name": "Kungälv",
+  "region": "vastragotaland",
+  "rootDom": "kungalv.se",
+  "url": "https://www.kungalv.se/kultur--fritid/evenemang-kungalv/oppet-hus-pa-nordiska-folkhogskolan",
+  "renderedDates": 5,
+  "top": [
+   {
+    "url": "https://policy.app.cookieinformation.com/cookie-data/kungalv.se/cabl.json",
+    "status": 200,
+    "len": 2578,
+    "score": 4,
+    "prefix": "{\"metadata\":{\"last_updated\":\"2026-08-22T17:36:19.867Z\",\"autoblocking_enabled\":true},\"cookies\":[{\"name\":\"ARRAffinitySameSite\",\"domain\":\".www.kungalv.se\",\"category\":\"cookie_cat_neces"
+   }
+  ],
+  "externals": [
+   {
+    "host": "cookieinformation.com",
+    "text": "Cookie Information"
+   },
+   {
+    "host": "microsoft.com",
+    "text": "Microsoft Azure - Integritetspolicy"
+   },
+   {
+    "host": "newrelic.com",
+    "text": "New Relic - Integritetspolicy"
+   },
+   {
+    "host": "matomo.org",
+    "text": "Matomo - Integritetspolicy"
+   },
+   {
+    "host": "cloudflare.com",
+    "text": "Cloudflare - Integritetspolicy"
+   },
+   {
+    "host": "support.microsoft.com",
+    "text": "Internet Explorer"
+   },
+   {
+    "host": "support.mozilla.org",
+    "text": "Mozilla Firefox"
+   },
+   {
+    "host": "help.opera.com",
+    "text": "Opera"
+   },
+   {
+    "host": "support.apple.com",
+    "text": "Safari"
+   },
+   {
+    "host": "macromedia.com",
+    "text": "Flash cookies"
+   },
+   {
+    "host": "timeread.hubpages.com",
+    "text": "Android"
+   },
+   {
+    "host": "stim.se",
+    "text": "Musiklicens - evenemang(0)"
+   },
+   {
+    "host": "kungalv.tromanpublik.se",
+    "text": "Hitta din politiker(0)"
+   },
+   {
+    "host": "nordiska.fhsk.se",
+    "text": "Anmäl dig och läs mer om öppet hus"
+   },
+   {
+    "host": "xn--bohusrddningstjnstfrbund-vbcj40c.se",
+    "text": "Bohus räddningstjänstförbund"
+   },
+   {
+    "host": "bokab.nu",
+    "text": "Bokab"
+   },
+   {
+    "host": "xn--frbo-5qa.se",
+    "text": "Förbo"
+   },
+   {
+    "host": "kungalvsbostader.se",
+    "text": "Kungälvsbostäder"
+   },
+   {
+    "host": "kungalvenergi.se",
+    "text": "Kungälv Energi"
+   },
+   {
+    "host": "soltakab.se",
+    "text": "SOLTAK AB"
+   },
+   {
+    "host": "t-d.se",
+    "text": ""
+   }
+  ]
+ },
+ {
+  "name": "Lerum",
+  "region": "vastragotaland",
+  "rootDom": "lerum.se",
+  "url": "https://kalender.lerum.se/events/familjegympa-MjMwNTM5LDIwMjYtMDgtMjcgMTI6MzA=",
+  "renderedDates": 12,
+  "top": [
+   {
+    "url": "https://maps.googleapis.com/$rpc/google.internal.maps.mapsjs.v1.MapsJsInternalService/GetViewportInfo",
+    "status": 200,
+    "len": 11222,
+    "score": 4,
+    "prefix": "[\"Kartdata ©2026 Google\",[[\"report_map_issue\",[[57.79794388498275,12.216796875],[57.844750992890987,12.3046875]]],[\"traffic\",[[57.841827328870956,12.290267944335938],[57.8421927998"
+   }
+  ],
+  "externals": [
+   {
+    "host": "vastsverige.com",
+    "text": "Visit LerumAktivitetskalender för besöka"
+   },
+   {
+    "host": "innocode.com",
+    "text": "Tillgänglighetsredogörelse"
+   }
+  ]
+ },
+ {
+  "name": "Burlöv",
+  "region": "skane",
+  "rootDom": "burlov.se",
+  "url": "https://burlov.se/evenemang",
+  "renderedDates": 6,
+  "top": [
+   {
+    "url": "https://api-ts.cruncho.co/landing-page/featured-recommendations?destination=lomma&l1=events",
+    "status": 200,
+    "len": 51310,
+    "score": 14,
+    "prefix": "[{\"additionalBookingUrl\":null,\"address\":\"Folkungavägen 4B, 237 34 Bjärred, Sweden\",\"apiRatings\":[],\"availableApis\":[\"crunchoEvent\"],\"availableTranslations\":[],\"bookProvider\":\"crunc"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/translations/en",
+    "status": 200,
+    "len": 286439,
+    "score": 14,
+    "prefix": "{\"da32eb86079a9fa1d482f18fb6\":\"\",\"b027e41fcf256df81d29581e25\":\"\",\"32f15e5ebad053528208e73378\":\"\",\"a301c5a0924b784e6e85fdd5f698\":\"\",\"e03d073beb6d92c279933293d1\":\"\",\"8b872f9406e26ca4"
+   },
+   {
+    "url": "https://api-ts.cruncho.co/translations/sv",
+    "status": 200,
+    "len": 286669,
+    "score": 14,
+    "prefix": "{\"test\":\"\",\"da32eb86079a9fa1d482f18fb6\":\"\",\"b027e41fcf256df81d29581e25\":\"\",\"32f15e5ebad053528208e73378\":\"\",\"a301c5a0924b784e6e85fdd5f698\":\"\",\"e03d073beb6d92c279933293d1\":\"\",\"8b872f"
+   }
+  ],
+  "externals": [
+   {
+    "host": "burlovlommastaffanstorp.eventmanager.cruncho.co",
+    "text": "Publicera ditt evenemang"
+   },
+   {
+    "host": "biblioteklb.se",
+    "text": "Boka"
+   },
+   {
+    "host": "rsvp.cruncho.co",
+    "text": "Boka"
+   }
+  ]
+ },
+ {
+  "name": "Härryda",
+  "region": "vastragotaland",
+  "rootDom": "harryda.se",
+  "url": "https://www.harryda.se/evenemang",
+  "renderedDates": 1,
+  "top": [
+   {
+    "url": "https://www.harryda.se/evenemang?sv.target=12.24ed023b18093f73c8783a4f&sv.12.24ed023b18093f73c8783a4f.route=/search",
+    "status": 200,
+    "len": 19696,
+    "score": 22,
+    "prefix": "{\"items\":[{\"date\":\"28 aug\",\"preamble\":\"En avlappnad pianokonsert på Caféscenen\",\"img\":\"/images/18.29a12e5819ed466c2af6a99/1782392851581/Bild_relaxedperformance_webb.jpg\",\"cities\":["
+   },
+   {
+    "url": "https://www.harryda.se/evenemang?sv.target=12.24ed023b18093f73c8783a4f&sv.12.24ed023b18093f73c8783a4f.route=/search",
+    "status": 200,
+    "len": 30808,
+    "score": 22,
+    "prefix": "{\"items\":[{\"date\":\"28 aug\",\"preamble\":\"En avlappnad pianokonsert på Caféscenen\",\"img\":\"/images/18.29a12e5819ed466c2af6a99/1782392851581/Bild_relaxedperformance_webb.jpg\",\"cities\":["
+   }
+  ],
+  "externals": [
+   {
+    "host": "t-d.se",
+    "text": ""
+   }
+  ]
+ },
+ {
+  "name": "Lomma",
+  "region": "skane",
+  "rootDom": "lomma.se",
+  "url": "https://lomma.se/upplevaochgora.770.html",
+  "renderedDates": 0,
+  "top": [
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=2&v30=1&dlv=30&p=10641111&ubl=sv-SE&nr=4&subtree=%2Fupplevaochgora&pagetype=svpage&pl=sv&singletab=upplevaochgora&domain=lommawebb&seed=41043828a&currentp=%2Fupplevaochgora.770.html&currentid=4.190f311118fa3fd74d590fe&pn=Uppleva%20och%20g%C3%B6ra%20-%20Lomma%20kommun&p0=4.190f311118fa3fd74d590fe&renderstyle=pills",
+    "status": 200,
+    "len": 1025,
+    "score": 0,
+    "prefix": "{\"predictions\":[{\"title\":\"Långa bryggan, Bjärred\",\"url\":\"/upplevaochgora/idrottmotionochfriluftsliv/friluftslivochmotion/stranderochbadplatser/langabrygganbjarred.1053.html\",\"perce"
+   }
+  ],
+  "externals": []
+ },
+ {
+  "name": "Mark",
+  "region": "vastragotaland",
+  "rootDom": "mark.se",
+  "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-valkommen-pa-ljusmanifestation-i---skene-kyrka",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "vastsverige.com",
+    "text": "Upplev Mark"
+   }
+  ]
+ },
+ {
+  "name": "Munkedal",
+  "region": "vastragotaland",
+  "rootDom": "munkedal.se",
+  "url": "https://munkedal.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "t-d.se",
+    "text": "Tillgänglighet Länk till annan webbplats"
+   }
+  ]
+ },
+ {
+  "name": "Orust",
+  "region": "vastragotaland",
+  "rootDom": "orust.se",
+  "url": "https://www.orust.se/uppleva-och-gora",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "spoxy4.insipio.com",
+    "text": "Lyssna"
+   },
+   {
+    "host": "orustkommun.sharepoint.com",
+    "text": "Intranät Länk till annan webbplats, öppn"
+   }
+  ]
+ },
+ {
+  "name": "Sotenäs",
+  "region": "vastragotaland",
+  "rootDom": "sotenas.se",
+  "url": "https://sotenas.se/evenemang",
+  "renderedDates": 1,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Stenungsund",
+  "region": "vastragotaland",
+  "rootDom": "stenungsund.se",
+  "url": "https://www.stenungsund.se/uppleva-och-gora",
+  "renderedDates": 3,
+  "top": [
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=2&v30=1&dlv=30&p=10481546&ubl=sv-SE&nr=5&subtree=%2Fuppleva-och-gora&pl=sv&singletab=uppleva-och-gora&domain=stenungsundweb%2Cstenungsundwebetjanst&entitytype=rekai-qna&seed=41040255525q&currentp=%2Fuppleva-och-gora&currentid=4.684d2bab189dd6a7931212&pn=Uppleva%20och%20g%C3%B6ra%20%7C%20Stenungsunds%20kommun&p0=4.684d2bab189dd6a7931212",
+    "status": 200,
+    "len": 2917,
+    "score": 4,
+    "prefix": "{\"predictions\":[{\"url\":\"/uppleva-och-gora/bad-och-batliv/gasthamn-i-stenungsund\",\"pageid\":\"4.7866575218ba2cf84542ff\",\"percent\":0.0034439486917108297,\"isCategory\":false,\"question\":\""
+   },
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=2&v30=1&dlv=30&p=10481546&ubl=sv-SE&nr=5&subtree=%2Fuppleva-och-gora&pl=sv&singletab=uppleva-och-gora&seed=41040255525q&currentp=%2Fuppleva-och-gora&currentid=4.684d2bab189dd6a7931212&pn=Uppleva%20och%20g%C3%B6ra%20%7C%20Stenungsunds%20kommun&p0=4.684d2bab189dd6a7931212",
+    "status": 200,
+    "len": 1042,
+    "score": 0,
+    "prefix": "{\"predictions\":[{\"title\":\"Getskärs havsbad i Stora Höga\",\"url\":\"/uppleva-och-gora/bad-och-batliv/badplatser/getskars-havsbad-i-stora-hoga\",\"percent\":0.006054822821170092,\"pageid\":\""
+   }
+  ],
+  "externals": [
+   {
+    "host": "cookiebot.com",
+    "text": ""
+   },
+   {
+    "host": "visma.com",
+    "text": "Läs mer om den här leverantören"
+   }
+  ]
+ },
+ {
+  "name": "Trollhättan",
+  "region": "vastragotaland",
+  "rootDom": "trollhattan.se",
+  "url": "https://www.trollhattan.se/evenemang",
+  "renderedDates": 55,
+  "top": [],
+  "externals": [
+   {
+    "host": "app-eu.readspeaker.com",
+    "text": "Lyssna"
+   },
+   {
+    "host": "vastsverige.com",
+    "text": "Hittaut  i Trollhättan Trollhättan\n     "
+   }
+  ]
+ },
+ {
+  "name": "Töreboda",
+  "region": "vastragotaland",
+  "rootDom": "toreboda.se",
+  "url": "https://toreboda.se/uppleva-och-gora/bibliotek/oppettider-och-kontakt",
+  "renderedDates": 8,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Tidaholm",
+  "region": "vastragotaland",
+  "rootDom": "tidaholm.se",
+  "url": "https://www.tidaholm.se/upplevaochgora/evenemangtidaholmskommun.702.html",
+  "renderedDates": 1,
+  "top": [],
+  "externals": [
+   {
+    "host": "vastsverige.com",
+    "text": "Lägg in ditt evenemang (länk till annan "
+   },
+   {
+    "host": "tidaholm.mediaflowportal.com",
+    "text": "Play-kanalen, länk till annan webbplats."
+   }
+  ]
+ },
+ {
+  "name": "Degerfors",
+  "region": "orebro",
+  "rootDom": "degerfors.se",
+  "url": "https://degerfors.se/naringsliv-och-arbete/evenemang.html",
+  "renderedDates": 3,
+  "top": [
+   {
+    "url": "https://degerfors.se/appresource/4.357048be19c479905119628/12.357048be19c47990511965f/page?p=1&f=&t=&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 620,
+    "score": 19,
+    "prefix": "{\"items\":[{\"img\":\"/images/200.357048be19c479905119ac9/1771248862530/Frukost%20f%C3%B6retag.jpeg\",\"endDate\":1.7956962E12,\"displayName\":\"Företagslunch på Bruksmässen i Degerfors\",\"pu"
+   }
+  ],
+  "externals": [
+   {
+    "host": "degerforsgymnasiet.se",
+    "text": "Degerforsgymnasiet Länk till annan webbp"
+   },
+   {
+    "host": "degerforspweb.aspenterprise.visma.se",
+    "text": "Självservice extern"
+   }
+  ]
+ },
+ {
+  "name": "Hällefors",
+  "region": "orebro",
+  "rootDom": "hellefors.se",
+  "url": "https://hellefors.se/evenemang",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "gis.sb-bergslagen.se",
+    "text": "Kartor"
+   }
+  ]
+ },
+ {
+  "name": "Laxå",
+  "region": "orebro",
+  "rootDom": "laxa.se",
+  "url": "https://www.laxa.se/Kalendern.html",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "www-laxa-se.translate.goog",
+    "text": ""
+   },
+   {
+    "host": "sms.schoolsoft.se",
+    "text": "Vårdnadshavare och skolelev (SchoolSoft)"
+   }
+  ]
+ },
+ {
+  "name": "Nora",
+  "region": "orebro",
+  "rootDom": "nora.se",
+  "url": "https://www.nora.se/upplevagora/sommarinora.4.49ed30a3162eafaa0dedff55.html",
+  "renderedDates": 24,
+  "top": [],
+  "externals": [
+   {
+    "host": "eur05.safelinks.protection.outlook.com",
+    "text": "www.stadrateater.se Länk till annan webb"
+   },
+   {
+    "host": "nora.ungapped.io",
+    "text": "Nora BK:s hemsida Länk till annan webbpl"
+   },
+   {
+    "host": "web.inexchange.se",
+    "text": "Fakturaportal Länk till annan webbplats,"
+   },
+   {
+    "host": "cookieinfoscript.com",
+    "text": "Cookie Info Script"
+   }
+  ]
+ },
+ {
+  "name": "Skinnskatteberg",
+  "region": "vastmanland",
+  "rootDom": "skinnskatteberg.se",
+  "url": "https://www.skinnskatteberg.se/gora-och-uppleva",
+  "renderedDates": 4,
+  "top": [
+   {
+    "url": "https://ts.naturkartan.se/collections/site%3Aproduction/documents/search?q=*&limit=250&page=1&filter_by=(guide_ids:%3D260)+%26%26+(published:%3Dtrue)+%26%26+(importance:%3D3)&sort_by=importance:asc&include_fields=id,type,name_sv,name_sv,path,published,importance,average_rating,length,popularity,difficulty,time,wheelchair_tested,trail_status_reported_at,imgix_url,guide_ids,county_id,municipality_id,organization_id,trip_ids,category_ids,main_category_icon,main_icon_id,marker_point,show_elevations,show_on_naturkartan&x-typesense-api-key=zD4qweZ97XrEwYgV1gXIhDNTlKe1uIuL",
+    "status": 200,
+    "len": 27789,
+    "score": 22,
+    "prefix": "{\"facet_counts\":[],\"found\":45,\"hits\":[{\"document\":{\"average_rating\":4.2503894080996885,\"category_ids\":[7,85,109],\"county_id\":15,\"difficulty\":\"green\",\"guide_ids\":[260],\"id\":\"149440\""
+   },
+   {
+    "url": "https://api.naturkartan.se/v3.2/sites/21710",
+    "status": 200,
+    "len": 58587,
+    "score": 15,
+    "prefix": "{\"data\":{\"attributes\":{\"hills\":null,\"trail_status_report_enabled\":false,\"regulations\":{},\"postal_code\":null,\"tagline\":{},\"importance\":3,\"communications\":{},\"show_elevations\":true,\""
+   },
+   {
+    "url": "https://api.naturkartan.se/v3.2/sites/48874",
+    "status": 200,
+    "len": 3843,
+    "score": 15,
+    "prefix": "{\"data\":{\"attributes\":{\"hills\":null,\"trail_status_report_enabled\":false,\"regulations\":{},\"postal_code\":null,\"tagline\":{},\"importance\":3,\"communications\":{},\"show_elevations\":true,\""
+   },
+   {
+    "url": "https://api.naturkartan.se/v3.2/sites/6799",
+    "status": 200,
+    "len": 19018,
+    "score": 15,
+    "prefix": "{\"data\":{\"attributes\":{\"hills\":null,\"trail_status_report_enabled\":false,\"regulations\":{\"de\":[{\"data\":{\"text\":\"Willkommen zum Besuch des Naturschutzgebietes!\"},\"id\":\"0n1AUZfLUm\",\"ty"
+   },
+   {
+    "url": "https://api.naturkartan.se/v3.2/sites/85403",
+    "status": 200,
+    "len": 10380,
+    "score": 15,
+    "prefix": "{\"data\":{\"attributes\":{\"hills\":{},\"trail_status_report_enabled\":false,\"regulations\":{},\"postal_code\":null,\"tagline\":{},\"importance\":3,\"communications\":{},\"show_elevations\":true,\"ti"
+   }
+  ],
+  "externals": [
+   {
+    "host": "skinnskatteberg.allocate-cloud.com",
+    "text": "Timecare planering"
+   },
+   {
+    "host": "prod-lcsse.service.tieto.com",
+    "text": "Ekonomiskt bistånd"
+   }
+  ]
+ },
+ {
+  "name": "Avesta",
+  "region": "dalarna",
+  "rootDom": "avesta.se",
+  "url": "https://avesta.se/gora-och-uppleva",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "cookiebot.com",
+    "text": ""
+   },
+   {
+    "host": "cludo.com",
+    "text": "Läs mer om den här leverantören"
+   },
+   {
+    "host": "solidtango.com",
+    "text": "Läs mer om den här leverantören"
+   },
+   {
+    "host": "matomo.org",
+    "text": "Läs mer om den här leverantören"
+   },
+   {
+    "host": "avesta.ibgo.se",
+    "text": "InterbookGO"
+   },
+   {
+    "host": "verket.se",
+    "text": "Verket/Avesta Art"
+   },
+   {
+    "host": "dalabiblioteken.se",
+    "text": "26 - 2\n                                 "
+   },
+   {
+    "host": "boka.visitdalarna.se",
+    "text": "27\n                                     "
+   }
+  ]
+ },
+ {
+  "name": "Sala",
+  "region": "vastmanland",
+  "rootDom": "sala.se",
+  "url": "https://www.sala.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Smedjebacken",
+  "region": "dalarna",
+  "rootDom": "smedjebacken.se",
+  "url": "https://www.smedjebacken.se/pa-gang/2026-08-19-fortidsrostning.html",
+  "renderedDates": 3,
+  "top": [],
+  "externals": [
+   {
+    "host": "barkehus.se",
+    "text": "Bärkehus Länk till annan webbplats, öppn"
+   },
+   {
+    "host": "smedjebackenenergi.se",
+    "text": "Smedjebacken Energi Länk till annan webb"
+   },
+   {
+    "host": "wbab.se",
+    "text": "WBAB Länk till annan webbplats, öppnas i"
+   },
+   {
+    "host": "val.se",
+    "text": "Läs mer om förtidsröstning på Valmyndigh"
+   }
+  ]
+ },
+ {
+  "name": "Ludvika",
+  "region": "dalarna",
+  "rootDom": "ludvika.se",
+  "url": "https://www.ludvika.se/jobb-och-foretagande/foretagande/aktuellt-fran-naringslivet/naringsliv---kalendarium",
+  "renderedDates": 62,
+  "top": [
+   {
+    "url": "https://predict.rekai.se/predict?mb=-1&vt=2&v30=1&dlv=30&p=10191487&ubl=sv-SE&nr=6&pagetype=svpage&pl=sv&tabs=jobb-och-foretagande&seed=41040634a&currentp=%2Fjobb-och-foretagande%2Fforetagande%2Faktuellt-fran-naringslivet%2Fnaringsliv---kalendarium&currentid=4.34a57c681969f62a72a4a4bf&pn=N%C3%A4ringsliv%20%E2%80%93%20Kalendarium%20-%20Ludvika%20kommun&p0=4.34a57c681969f62a72a4a4bf&renderstyle=pills",
+    "status": 200,
+    "len": 1339,
+    "score": 10,
+    "prefix": "{\"predictions\":[{\"title\":\"Bo och leva i Ludvika\",\"url\":\"/jobb-och-foretagande/guldlaget---var-exceptionella-tillvaxt/bo-och-leva-i-ludvika\",\"percent\":0.02901581861078739,\"pageid\":\""
+   }
+  ],
+  "externals": [
+   {
+    "host": "ludvikakf.se",
+    "text": "Ludvika kommunfastigheter Länk till anna"
+   },
+   {
+    "host": "ludvikahem.se",
+    "text": "LudvikaHem Länk till annan webbplats, öp"
+   },
+   {
+    "host": "upphandlingscenterfbr.se",
+    "text": "Upphandlingscenter Länk till annan webbp"
+   },
+   {
+    "host": "vbkraft.se",
+    "text": "VB Kraft Länk till annan webbplats, öppn"
+   },
+   {
+    "host": "vbu.se",
+    "text": "VBU Länk till annan webbplats, öppnas i "
+   },
+   {
+    "host": "wbab.se",
+    "text": "WBAB Länk till annan webbplats, öppnas i"
+   },
+   {
+    "host": "forms.cloud.microsoft",
+    "text": "Mer information och anmälan till Digital"
+   },
+   {
+    "host": "pages.upsales.com",
+    "text": "Mer information och anmälan Länk till an"
+   },
+   {
+    "host": "forms.office.com",
+    "text": "Information och anmälan till Digital mar"
+   },
+   {
+    "host": "inbjudan.visitdalarna.se",
+    "text": "Mer information VisitDalarnas digitala t"
+   }
+  ]
+ },
+ {
+  "name": "Hofors",
+  "region": "gavleborg",
+  "rootDom": "hofors.se",
+  "url": "https://hofors.se/uppleva--gora.html",
+  "renderedDates": 5,
+  "top": [],
+  "externals": [
+   {
+    "host": "konsumentgastrikland.se",
+    "text": "Konsumentvägledning Länk till annan webb"
+   },
+   {
+    "host": "logiq.se",
+    "text": "e-faktura till Hofors kommun Länk till a"
+   },
+   {
+    "host": "goo.gl",
+    "text": "Folkets hus, Skolgatan 21, 813 30 Hofors"
+   }
+  ]
+ },
+ {
+  "name": "Hudiksvall",
+  "region": "gavleborg",
+  "rootDom": "hudiksvall.se",
+  "url": "https://hudiksvall.se/Sidor/Uppleva-och-gora.html",
+  "renderedDates": 1,
+  "top": [
+   {
+    "url": "https://www.vizzit.se/myvizzit/api/tag?pbk=3271575330525930376843564d486d4a58767731736b6a43687a475438785449384a6f2f36424f684b61303d&host=hudiksvall.se&path=%2FSidor%2FUppleva-och-gora.html",
+    "status": 200,
+    "len": 189,
+    "score": 8,
+    "prefix": "{\"page\": {\"id\": \"4.5039e29815b61c258fd7a0e\"}, \"tag\": [{\"id\": 44, \"criteria\": [{\"id\": 44, \"selector\": \".sv-se-soleil-goToContactInfo a\", \"event\": [{\"id\": 49, \"read\": null, \"action\":"
+   }
+  ],
+  "externals": [
+   {
+    "host": "visitgladahudik.se",
+    "text": "27\n          aug\n        Konst i Hamn - "
+   },
+   {
+    "host": "gladahudik.se",
+    "text": "Evenemangskalender (gladahudik.se) Länk "
+   }
+  ]
+ },
+ {
+  "name": "Mariestad",
+  "region": "vastragotaland",
+  "rootDom": "mariestad.se",
+  "url": "https://mariestad.se/uppleva-och-gora/bibliotek/slaktforskning",
+  "renderedDates": 13,
+  "top": [],
+  "externals": [
+   {
+    "host": "skr.se",
+    "text": "Arbetsgivarvarumärke, SKR:s webbplats"
+   }
+  ]
+ },
+ {
+  "name": "Mellerud",
+  "region": "vastragotaland",
+  "rootDom": "mellerud.se",
+  "url": "https://mellerud.se/evenemang",
+  "renderedDates": 1,
+  "top": [],
+  "externals": [
+   {
+    "host": "vgregion.se",
+    "text": "Mini-Maria"
+   },
+   {
+    "host": "dalslandcenter.se",
+    "text": "Dalsland Center"
+   },
+   {
+    "host": "t-d.se",
+    "text": "Tillgänglighetsdatabasen"
+   }
+  ]
+ },
+ {
+  "name": "Ljusdal",
+  "region": "gavleborg",
+  "rootDom": "ljusdal.se",
+  "url": "https://www.ljusdal.se/upplevagora/bibliotek.4.19618b314ae81f501e6cd35.html",
+  "renderedDates": 5,
+  "top": [],
+  "externals": [
+   {
+    "host": "app-eu.readspeaker.com",
+    "text": "LyssnaReadSpeaker webReader: Lyssna"
+   },
+   {
+    "host": "helgebiblioteken.se",
+    "text": ""
+   },
+   {
+    "host": "nordanstig.se",
+    "text": "Nordanstig Länk till annan webbplats, öp"
+   },
+   {
+    "host": "hudiksvall.se",
+    "text": "Hudiksvall Länk till annan webbplats, öp"
+   },
+   {
+    "host": "soderhamn.se",
+    "text": "Söderhamn Länk till annan webbplats, öpp"
+   },
+   {
+    "host": "ovanaker.se",
+    "text": "Ovanåker Länk till annan webbplats, öppn"
+   },
+   {
+    "host": "bollnas.se",
+    "text": "Bollnäs Länk till annan webbplats, öppna"
+   },
+   {
+    "host": "ljusdal.mediaflowportal.com",
+    "text": ""
+   }
+  ]
+ },
+ {
+  "name": "Ockelbo",
+  "region": "gavleborg",
+  "rootDom": "ockelbo.se",
+  "url": "https://ockelbo.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": [
+   {
+    "host": "gis.sandviken.se",
+    "text": "Karta"
+   },
+   {
+    "host": "recruit.visma.com",
+    "text": "Se lediga jobb i kommunen Länk till anna"
+   }
+  ]
+ },
+ {
+  "name": "Ovanåker",
+  "region": "gavleborg",
+  "rootDom": "ovanaker.se",
+  "url": "https://www.ovanaker.se/kulturochfritid/upplevovanakerskommun/dettahander.11286.html",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Örnsköldsvik",
+  "region": "vasternorrland",
+  "rootDom": "ornskoldsvik.se",
+  "url": "https://www.ornskoldsvik.se/evenemang",
+  "renderedDates": 2,
+  "top": [],
+  "externals": [
+   {
+    "host": "www-ornskoldsvik-se.translate.goog",
+    "text": "Translate"
+   },
+   {
+    "host": "pagang.7an.se",
+    "text": ""
+   },
+   {
+    "host": "vadhander.hogakusten.com",
+    "text": ""
+   },
+   {
+    "host": "ornskoldsvik.ibgo.se",
+    "text": "Söker du en förening?"
+   },
+   {
+    "host": "cesam.nu",
+    "text": "Cesam- centrum i samverkan"
+   },
+   {
+    "host": "ovikenergi.se",
+    "text": "Övik Energi"
+   },
+   {
+    "host": "miva.se",
+    "text": "Miva"
+   },
+   {
+    "host": "ovikshem.se",
+    "text": "Övikshem"
+   },
+   {
+    "host": "ornskoldsvikshamn.se",
+    "text": "Örnsköldsviks hamn och logistik"
+   },
+   {
+    "host": "oer.se",
+    "text": "Örnsköldsvik Airport"
+   }
+  ]
+ },
+ {
+  "name": "Härnösand",
+  "region": "vasternorrland",
+  "rootDom": "harnosand.se",
+  "url": "https://harnosand.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Ånge",
+  "region": "vasternorrland",
+  "rootDom": "ange.se",
+  "url": "https://www.ange.se/evenemang",
+  "renderedDates": 0,
+  "top": [
+   {
+    "url": "https://www.ange.se/evenemang?sv.target=12.4f871cfb198bb7d44fb63e&sv.12.4f871cfb198bb7d44fb63e.route=/events&fromDate=2026-08-26&selectedTags=&page=1&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 12196,
+    "score": 20,
+    "prefix": "{\"noHits\":51,\"events\":[{\"venue\":\"Järnvägsgatan 3\",\"address\":\"Järnvägsgatan 3, 841 33 Ånge, Sverige\",\"organizer\":null,\"imageUrl\":\"https://s3.cruncho.co/eventmanager-assets/public/eu"
+   },
+   {
+    "url": "https://www.ange.se/evenemang?sv.target=12.4f871cfb198bb7d44fb63e&sv.12.4f871cfb198bb7d44fb63e.route=/tags&fromDate=2026-08-26&selectedTags=&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 1295,
+    "score": 10,
+    "prefix": "{\"selectedTags\":[],\"avaliableTags\":[{\"name\":\"christmas-new-year\",\"hits\":1,\"title\":\"Jul och nyår\",\"selected\":false},{\"name\":\"school-break\",\"hits\":4,\"title\":\"Skollov\",\"selected\":fals"
+   },
+   {
+    "url": "https://www.ange.se/evenemang?sv.target=12.4f871cfb198bb7d44fb63e&sv.12.4f871cfb198bb7d44fb63e.route=/tags&fromDate=2026-08-26&selectedTags=&svAjaxReqParam=ajax",
+    "status": 200,
+    "len": 1295,
+    "score": 10,
+    "prefix": "{\"selectedTags\":[],\"avaliableTags\":[{\"name\":\"christmas-new-year\",\"hits\":1,\"title\":\"Jul och nyår\",\"selected\":false},{\"name\":\"school-break\",\"hits\":4,\"title\":\"Skollov\",\"selected\":fals"
+   }
+  ],
+  "externals": []
+ },
+ {
+  "name": "Lycksele",
+  "region": "vasterbotten",
+  "rootDom": "lycksele.se",
+  "url": "https://lycksele.se/evenemang",
+  "renderedDates": 0,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Ragunda",
+  "region": "jamtland",
+  "rootDom": "ragunda.se",
+  "url": "https://ragunda.se/upplevaochgora.605.html",
+  "renderedDates": 3,
+  "top": [],
+  "externals": [
+   {
+    "host": "dodafallet.se",
+    "text": "Döda fallet"
+   },
+   {
+    "host": "ragundadalen.se",
+    "text": "Flytta till Ragundadalen"
+   },
+   {
+    "host": "geoparkindalsalven.se",
+    "text": "Geopark Indalsälven"
+   },
+   {
+    "host": "thaipaviljongen.se",
+    "text": "Thailändska Paviljongen"
+   }
+  ]
+ },
+ {
+  "name": "Malå",
+  "region": "vasterbotten",
+  "rootDom": "mala.se",
+  "url": "https://www.mala.se/evenemang",
+  "renderedDates": 1,
+  "top": [
+   {
+    "url": "https://cdn-cookieyes.com/client_data/29dbb680a5910614f1f4fad3e943409b/config/-8-e-vAa.json",
+    "status": 200,
+    "len": 35015,
+    "score": 4,
+    "prefix": "{\"reloadOnAccept\":false,\"dataShortCodes\":[{\"key\":\"cky_show_desc\",\"content\":{\"button\":\"<button class=\\\"cky-show-desc-btn\\\" data-cky-tag=\\\"show-desc-button\\\" aria-label=\\\"[cky_showmo"
+   },
+   {
+    "url": "https://cdn-cookieyes.com/client_data/29dbb680a5910614f1f4fad3e943409b/audit-table/TWsivBbO.json",
+    "status": 200,
+    "len": 7241,
+    "score": 4,
+    "prefix": "{\"cookies\":{\"JSESSIONID\":{\"cookie_id\":\"JSESSIONID\",\"duration\":\"session\",\"description\":\"New Relic använder denna cookie för att spara en sessionsidentifierare så att New Relic kan ö"
+   },
+   {
+    "url": "https://cdn-cookieyes.com/client_data/29dbb680a5910614f1f4fad3e943409b/translations/8Eg7vHqs.json",
+    "status": 200,
+    "len": 1874,
+    "score": 0,
+    "prefix": "{\"cky_notice_title\":\"Vi värdesätter din integritet\",\"cky_notice_description\":\"<p>Vi använder cookies för att förbättra din surfupplevelse, visa personligt anpassade annonser eller "
+   }
+  ],
+  "externals": [
+   {
+    "host": "cookieyes.com",
+    "text": ""
+   }
+  ]
+ },
+ {
+  "name": "Vännäs",
+  "region": "vasterbotten",
+  "rootDom": "vannas.se",
+  "url": "https://vannas.se/aktivitetskalendern/vara-aktiviteter/2026-07-20-nyinflyttarkvall-i-vannas-8-september",
+  "renderedDates": 5,
+  "top": [],
+  "externals": [
+   {
+    "host": "forms.office.com",
+    "text": "Anmäl dig/er via vårt formulär här Länk "
+   }
+  ]
+ },
+ {
+  "name": "Kalix",
+  "region": "norrbotten",
+  "rootDom": "kalix.se",
+  "url": "https://www.kalix.se/evenemang",
+  "renderedDates": 15,
+  "top": [
+   {
+    "url": "https://data.accentapi.com/feed/35230.json?nocache=2026.08.26.21.15",
+    "status": 200,
+    "len": 210172,
+    "score": 74,
+    "prefix": "{\"user_info\":{\"website_builder\":\"Website\",\"activation_date\":\"2019-02-14 20:44:00\",\"cancellation_date\":\"0000-00-00 00:00:00\",\"updated_at\":\"2026-08-25 09:57:50\",\"created_at\":\"1970-01"
+   }
+  ],
+  "externals": [
+   {
+    "host": "educationwebregistration.idrottonline.se",
+    "text": "https://educationwebregistration.idrotto"
+   },
+   {
+    "host": "rfsisu.se",
+    "text": "https://www.rfsisu.se/.../aktuella.../go"
+   },
+   {
+    "host": "kalixtennis.se",
+    "text": "www.kalixtennis.se"
+   },
+   {
+    "host": "abf.se",
+    "text": "www.abf.se/norr/kalix/"
+   }
+  ]
+ },
+ {
+  "name": "Vindeln",
+  "region": "vasterbotten",
+  "rootDom": "vindeln.se",
+  "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2026-06-18-kvallsoppet-pa-retra-aterbruksbutik",
+  "renderedDates": 4,
+  "top": [],
+  "externals": []
+ },
+ {
+  "name": "Överkalix",
+  "region": "norrbotten",
+  "rootDom": "overkalix.se",
+  "url": "https://www.overkalix.se/evenemangskalender",
+  "renderedDates": 10,
+  "top": [],
+  "externals": [
+   {
+    "host": "cloudflare.com",
+    "text": "Länk till policy (cloudflare.com)"
+   },
+   {
+    "host": "cookietractor.se",
+    "text": "Länk till policy (cookietractor.se)"
+   },
+   {
+    "host": "sitevision.se",
+    "text": "Länk till policy (sitevision.se)"
+   },
+   {
+    "host": "privacy.microsoft.com",
+    "text": "Länk till policy (privacy.microsoft.com)"
+   },
+   {
+    "host": "vimeo.com",
+    "text": "Länk till policy (vimeo.com)"
+   }
+  ]
+ },
+ {
+  "name": "Sorsele",
+  "region": "vasterbotten",
+  "rootDom": "sorsele.se",
+  "url": "https://portal.sorsele.se/kalender/lagets-oppettider",
+  "renderedDates": 3,
+  "top": [
+   {
+    "url": "https://portal.sorsele.se/OneTrust/oneTrust_production/scripttemplates/202402.1.0/assets/otCookieSettingsButton.json",
+    "status": 200,
+    "len": 4738,
+    "score": 4,
+    "prefix": " { \"name\": \"otCookieSettingsButton\", \"html\": \"PGRpdiBpZD0ib3Qtc2RrLWJ0bi1mbG9hdGluZyIgdGl0bGU9Ik1hbmFnZSBQcml2YWN5IFByZWZlcmVuY2VzIiBjbG"
+   },
+   {
+    "url": "https://portal.sorsele.se/OneTrust/oneTrust_production/scripttemplates/202402.1.0/assets/otFlat.json",
+    "status": 200,
+    "len": 13614,
+    "score": 4,
+    "prefix": " { \"name\": \"otFlat\", \"html\": \"PGRpdiBpZD0ib25ldHJ1c3QtYmFubmVyLXNkayIgY2xhc3M9Im90RmxhdCI+PGRpdiByb2xlPSJhbGVydGRpYWxvZyIgYXJpYS1kZXNjcm"
+   }
+  ],
+  "externals": []
+ },
+ {
+  "name": "Bräcke",
+  "region": "jamtland",
+  "rootDom": "bracke.se",
+  "url": "https://www.bracke.se/evenemang",
+  "renderedDates": 1,
+  "top": [],
+  "externals": [
+   {
+    "host": "brackenasta.se",
+    "text": "bräckenästa.se/turism Länk till annan we"
+   },
+   {
+    "host": "vattenmiljoresurs.se",
+    "text": "vattenmiljoresurs.se Länk till annan web"
+   },
+   {
+    "host": "brackekommun.ondemand.formpipe.com",
+    "text": "brackekommun.ondemand.formpipe.com Länk "
+   },
+   {
+    "host": "maps.app.goo.gl",
+    "text": "Kommunen på kartan, länk till annan webb"
+   },
+   {
+    "host": "zporten.sharepoint.com",
+    "text": "Intranät Communis"
+   }
+  ]
+ }
+]

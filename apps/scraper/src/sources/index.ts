@@ -44,6 +44,8 @@ import { goteborgStadEngine } from '../scrapers/goteborgstad';
 import { gotlandComEngine } from '../scrapers/gotlandcom';
 import { bergmancenterEngine } from '../scrapers/bergmancenter';
 import { turidEngine } from '../scrapers/turid';
+import { hbgEventEngine } from '../scrapers/hbgevent';
+import { bestEventEngine } from '../scrapers/bestevent';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -110,4 +112,6 @@ export const ENGINES: Record<string, Engine> = {
     'gotlandcom': gotlandComEngine,
     'bergmancenter': bergmancenterEngine,
     'turid': turidEngine,
+    'hbgevent': hbgEventEngine,
+    'bestevent': bestEventEngine,
 };
