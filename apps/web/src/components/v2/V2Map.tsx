@@ -4064,6 +4064,33 @@ export default function V2Map({
                             </div>
                         )}
 
+                        {/* Zoom in/ut — lodrät kolumn MITT PÅ högerkanten (Josef 26/8),
+                            klar av både topphögerns sök/kategorikolumn och stad för
+                            stad-pillen nere till höger. Samma vita husknappsstil som
+                            sökknappen. zoomIn/zoomOut går genom kartans vanliga
+                            zoom-maskineri (zoomstart → nål-läge osv), precis som en
+                            nyp-zoom — reveal-ankaret rörs aldrig vid ren zoom. */}
+                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1151] flex flex-col gap-2 pointer-events-auto">
+                            <button
+                                type="button"
+                                onClick={() => mapRef.current?.zoomIn()}
+                                aria-label="Zooma in"
+                                title="Zooma in"
+                                className="h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors bg-white/90 text-slate-700 border-white/50 hover:bg-white active:scale-95"
+                            >
+                                <Plus size={20} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => mapRef.current?.zoomOut()}
+                                aria-label="Zooma ut"
+                                title="Zooma ut"
+                                className="h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors bg-white/90 text-slate-700 border-white/50 hover:bg-white active:scale-95"
+                            >
+                                <Minus size={20} />
+                            </button>
+                        </div>
+
                         {/* Lager-knappen (Funktioner) — vänsterkolumnen under profilen
                             (top-[72px] left-4). Klick öppnar/stänger funktions-popupen. */}
                         {/* HIDDEN per Josef 2026-06-23 - test layout without these. Functions still wired. */}
