@@ -35,7 +35,9 @@
     },
     "nykoping": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-26",
+      "emptyRetries": 1
     },
     "orebro": {
       "since": "2026-08-19",
@@ -59,7 +61,9 @@
     },
     "rotary": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-26",
+      "emptyRetries": 1
     },
     "sater": {
       "since": "2026-08-19",
