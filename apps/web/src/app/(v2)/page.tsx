@@ -2816,9 +2816,6 @@ export default function HomePage() {
                 // och stadshoppet tar över.
                 introGlide={introMapMode}
                 onUserInteraction={handleMapUserInteraction}
-                // Under pinn-placeringen drar man KARTAN för att sikta —
-                // urvals-flytten (drag i brickområdet) får inte kapa draget.
-                areaDragDisabled={creationMode !== 'idle'}
             />
 
 

@@ -61,27 +61,28 @@ function bucketByDay(list: LinkEvent[], nowMs: number): DayBucket[] {
 interface V2MapGroupListProps {
     /** Eventen på platsen (alltid ≥ 1; panelen visas bara vid > 1). */
     events: LinkEvent[];
-    /** Brickans projicerade skärmposition (px), null → fallback top-center. */
+    /** Brickans projicerade skärmposition (px). Sedan 26/8 (kväll) används
+     *  den INTE för placeringen — listan ligger alltid precis under dag/
+     *  vecka-väljaren — men proppen ligger kvar så V2Maps projektion inte
+     *  behöver rivas ut. */
     anchorPos: { x: number; y: number } | null;
     selectedEvent: LinkEvent | null;
     onSelect: (ev: LinkEvent) => void;
     onClose: () => void;
 }
 
-export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSelect, onClose }: V2MapGroupListProps) {
+export default function V2MapGroupList({ events, selectedEvent, onSelect, onClose }: V2MapGroupListProps) {
     // Passerade event ligger hopfällda tills man ber om dem.
     const [pastOpen, setPastOpen] = useState(false);
 
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
     const W = Math.min(vw * 0.86, 320);          // listbredd (px)
-    // Brickans ungefärliga bredd: nål-tippen sitter PÅ geo-punkten,
-    // kroppen ~BRICK_W px bred (centrerad i x).
-    const BRICK_W = 30, GAP = 6;
-    // TOP_MARGIN rymmer navbaren OCH dag/vecka-väljaren — listans header
-    // (platsnamnet) får aldrig hamna bakom dem (Josef 26/8).
-    const TOP_MARGIN = 116, BOTTOM_MARGIN = 12;
-    const HEADER_H = 46, ROW_H = 52, DAY_H = 30, PAST_H = 34, MAX_ROWS = 6;
+    // TOP_MARGIN rymmer navbaren OCH dag/vecka-väljaren (i standardläge) —
+    // listan ska ligga PRECIS under väljaren (Josef 26/8 kväll).
+    const TOP_MARGIN = 116;
+    // (PAST_H utgick med höjdklampen 26/8 — historiken ryms i listMaxH-scrollen.)
+    const HEADER_H = 46, ROW_H = 52, DAY_H = 30, MAX_ROWS = 6;
 
     // Kommande event överst (kronologiskt, dag för dag), passerade sist —
     // dämpade med "har varit" (samma isEventPast som kartans dämpning: start
@@ -96,22 +97,15 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     // de bara brus — alla rader hör ju ändå till samma dag).
     const showDays = dayBuckets.length > 1;
 
-    // KORTARE maxhöjd + ungefärlig faktisk höjd (för klamp på skärmen).
+    // KORTARE maxhöjd (för klamp på skärmen).
     const listMaxH = Math.min(vh * 0.55, HEADER_H + MAX_ROWS * ROW_H + (showDays ? 2 * DAY_H : 0));
-    const bodyH = upcoming.length * ROW_H
-        + (showDays ? dayBuckets.length * DAY_H : 0)
-        + (past.length > 0 ? PAST_H + (pastOpen ? past.length * ROW_H : 0) : 0);
-    const contentH = Math.min(listMaxH, HEADER_H + bodyH);
-    // Listan relaterar HORISONTELLT till brickans övre högra hörn.
-    const cornerX = anchorPos ? anchorPos.x + BRICK_W / 2 + GAP : vw / 2 - W / 2;
-    const left = Math.max(8, Math.min(cornerX, vw - W - 8));
-    // Vertikalt: UNDER brickan (Josef 26/8 — förut växte listan uppåt och
-    // headern med platsnamnet hamnade bakom dag/vecka-togglen). Nålens tipp
-    // står på geo-punkten, så listan börjar strax under den. Klampa så HELA
-    // boxen alltid syns (top ≥ TOP_MARGIN, bottom ≤ vh − margin) — då ligger
-    // scrollporten på skärmen och in-container-scrollen är användbar.
-    const belowY = anchorPos ? anchorPos.y + GAP : TOP_MARGIN;
-    const top = Math.max(TOP_MARGIN, Math.min(belowY, vh - contentH - BOTTOM_MARGIN));
+    // PLACERING (Josef 26/8 kväll): listan ligger ALLTID centrerad PRECIS
+    // under dag/vecka-väljaren — inte längre förankrad vid den klickade
+    // brickan (den placeringen hoppade runt och kunde hamna långt ner på
+    // skärmen). Väljaren är flyttbar i höjdled (#33) men listan utgår från
+    // standardläget; TOP_MARGIN är navbar + väljare.
+    const left = Math.max(8, Math.min(vw / 2 - W / 2, vw - W - 8));
+    const top = TOP_MARGIN;
     // Platsens namn (alla event i gruppen delar koordinat → samma plats).
     const placeName = events[0]?.locationName?.trim() || 'Den här platsen';
     // "Nästa" stegar markeringen till nästa KOMMANDE event (wrap), listan
