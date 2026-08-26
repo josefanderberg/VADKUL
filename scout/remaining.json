@@ -1,0 +1,347 @@
+[
+ {
+  "n": "Botkyrka",
+  "r": "stockholm",
+  "d": "botkyrka.se"
+ },
+ {
+  "n": "Ekerö",
+  "r": "stockholm",
+  "d": "ekero.se"
+ },
+ {
+  "n": "Huddinge",
+  "r": "stockholm",
+  "d": "huddinge.se"
+ },
+ {
+  "n": "Solna",
+  "r": "stockholm",
+  "d": "solna.se"
+ },
+ {
+  "n": "Vallentuna",
+  "r": "stockholm",
+  "d": "vallentuna.se"
+ },
+ {
+  "n": "Strängnäs",
+  "r": "sodermanland",
+  "d": "strangnas.se"
+ },
+ {
+  "n": "Boxholm",
+  "r": "ostergotland",
+  "d": "boxholm.se"
+ },
+ {
+  "n": "Kinda",
+  "r": "ostergotland",
+  "d": "kinda.se"
+ },
+ {
+  "n": "Mjölby",
+  "r": "ostergotland",
+  "d": "mjolby.se"
+ },
+ {
+  "n": "Söderköping",
+  "r": "ostergotland",
+  "d": "soderkoping.se"
+ },
+ {
+  "n": "Vadstena",
+  "r": "ostergotland",
+  "d": "vadstena.se"
+ },
+ {
+  "n": "Åtvidaberg",
+  "r": "ostergotland",
+  "d": "atvidaberg.se"
+ },
+ {
+  "n": "Ödeshög",
+  "r": "ostergotland",
+  "d": "odeshog.se"
+ },
+ {
+  "n": "Aneby",
+  "r": "jonkoping",
+  "d": "aneby.se"
+ },
+ {
+  "n": "Gnosjö",
+  "r": "jonkoping",
+  "d": "gnosjo.se"
+ },
+ {
+  "n": "Värnamo",
+  "r": "jonkoping",
+  "d": "varnamo.se"
+ },
+ {
+  "n": "Markaryd",
+  "r": "kronoberg",
+  "d": "markaryd.se"
+ },
+ {
+  "n": "Högsby",
+  "r": "kalmar",
+  "d": "hogsby.se"
+ },
+ {
+  "n": "Torsås",
+  "r": "kalmar",
+  "d": "torsas.se"
+ },
+ {
+  "n": "Bromölla",
+  "r": "skane",
+  "d": "bromolla.se"
+ },
+ {
+  "n": "Burlöv",
+  "r": "skane",
+  "d": "burlov.se"
+ },
+ {
+  "n": "Kävlinge",
+  "r": "skane",
+  "d": "kavlinge.se"
+ },
+ {
+  "n": "Lomma",
+  "r": "skane",
+  "d": "lomma.se"
+ },
+ {
+  "n": "Simrishamn",
+  "r": "skane",
+  "d": "simrishamn.se"
+ },
+ {
+  "n": "Vellinge",
+  "r": "skane",
+  "d": "vellinge.se"
+ },
+ {
+  "n": "Kungsbacka",
+  "r": "halland",
+  "d": "kungsbacka.se"
+ },
+ {
+  "n": "Bollebygd",
+  "r": "vastragotaland",
+  "d": "bollebygd.se"
+ },
+ {
+  "n": "Dals-Ed",
+  "r": "vastragotaland",
+  "d": "dalsed.se"
+ },
+ {
+  "n": "Essunga",
+  "r": "vastragotaland",
+  "d": "essunga.se"
+ },
+ {
+  "n": "Färgelanda",
+  "r": "vastragotaland",
+  "d": "fargelanda.se"
+ },
+ {
+  "n": "Grästorp",
+  "r": "vastragotaland",
+  "d": "grastorp.se"
+ },
+ {
+  "n": "Gullspång",
+  "r": "vastragotaland",
+  "d": "gullspang.se"
+ },
+ {
+  "n": "Härryda",
+  "r": "vastragotaland",
+  "d": "harryda.se"
+ },
+ {
+  "n": "Kungälv",
+  "r": "vastragotaland",
+  "d": "kungalv.se"
+ },
+ {
+  "n": "Mariestad",
+  "r": "vastragotaland",
+  "d": "mariestad.se"
+ },
+ {
+  "n": "Mark",
+  "r": "vastragotaland",
+  "d": "mark.se"
+ },
+ {
+  "n": "Mellerud",
+  "r": "vastragotaland",
+  "d": "mellerud.se"
+ },
+ {
+  "n": "Munkedal",
+  "r": "vastragotaland",
+  "d": "munkedal.se"
+ },
+ {
+  "n": "Orust",
+  "r": "vastragotaland",
+  "d": "orust.se"
+ },
+ {
+  "n": "Sotenäs",
+  "r": "vastragotaland",
+  "d": "sotenas.se"
+ },
+ {
+  "n": "Stenungsund",
+  "r": "vastragotaland",
+  "d": "stenungsund.se"
+ },
+ {
+  "n": "Tidaholm",
+  "r": "vastragotaland",
+  "d": "tidaholm.se"
+ },
+ {
+  "n": "Trollhättan",
+  "r": "vastragotaland",
+  "d": "trollhattan.se"
+ },
+ {
+  "n": "Töreboda",
+  "r": "vastragotaland",
+  "d": "toreboda.se"
+ },
+ {
+  "n": "Hällefors",
+  "r": "orebro",
+  "d": "hellefors.se"
+ },
+ {
+  "n": "Laxå",
+  "r": "orebro",
+  "d": "laxa.se"
+ },
+ {
+  "n": "Nora",
+  "r": "orebro",
+  "d": "nora.se"
+ },
+ {
+  "n": "Sala",
+  "r": "vastmanland",
+  "d": "sala.se"
+ },
+ {
+  "n": "Skinnskatteberg",
+  "r": "vastmanland",
+  "d": "skinnskatteberg.se"
+ },
+ {
+  "n": "Avesta",
+  "r": "dalarna",
+  "d": "avesta.se"
+ },
+ {
+  "n": "Ludvika",
+  "r": "dalarna",
+  "d": "ludvika.se"
+ },
+ {
+  "n": "Smedjebacken",
+  "r": "dalarna",
+  "d": "smedjebacken.se"
+ },
+ {
+  "n": "Vansbro",
+  "r": "dalarna",
+  "d": "vansbro.se"
+ },
+ {
+  "n": "Hofors",
+  "r": "gavleborg",
+  "d": "hofors.se"
+ },
+ {
+  "n": "Hudiksvall",
+  "r": "gavleborg",
+  "d": "hudiksvall.se"
+ },
+ {
+  "n": "Ljusdal",
+  "r": "gavleborg",
+  "d": "ljusdal.se"
+ },
+ {
+  "n": "Ockelbo",
+  "r": "gavleborg",
+  "d": "ockelbo.se"
+ },
+ {
+  "n": "Ovanåker",
+  "r": "gavleborg",
+  "d": "ovanaker.se"
+ },
+ {
+  "n": "Härnösand",
+  "r": "vasternorrland",
+  "d": "harnosand.se"
+ },
+ {
+  "n": "Örnsköldsvik",
+  "r": "vasternorrland",
+  "d": "ornskoldsvik.se"
+ },
+ {
+  "n": "Bräcke",
+  "r": "jamtland",
+  "d": "bracke.se"
+ },
+ {
+  "n": "Ragunda",
+  "r": "jamtland",
+  "d": "ragunda.se"
+ },
+ {
+  "n": "Lycksele",
+  "r": "vasterbotten",
+  "d": "lycksele.se"
+ },
+ {
+  "n": "Malå",
+  "r": "vasterbotten",
+  "d": "mala.se"
+ },
+ {
+  "n": "Sorsele",
+  "r": "vasterbotten",
+  "d": "sorsele.se"
+ },
+ {
+  "n": "Vindeln",
+  "r": "vasterbotten",
+  "d": "vindeln.se"
+ },
+ {
+  "n": "Vännäs",
+  "r": "vasterbotten",
+  "d": "vannas.se"
+ },
+ {
+  "n": "Kalix",
+  "r": "norrbotten",
+  "d": "kalix.se"
+ },
+ {
+  "n": "Överkalix",
+  "r": "norrbotten",
+  "d": "overkalix.se"
+ }
+]

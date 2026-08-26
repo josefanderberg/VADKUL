@@ -46,6 +46,7 @@ import { bergmancenterEngine } from '../scrapers/bergmancenter';
 import { turidEngine } from '../scrapers/turid';
 import { hbgEventEngine } from '../scrapers/hbgevent';
 import { bestEventEngine } from '../scrapers/bestevent';
+import { accentFeedEngine } from '../scrapers/accentfeed';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -114,4 +115,5 @@ export const ENGINES: Record<string, Engine> = {
     'turid': turidEngine,
     'hbgevent': hbgEventEngine,
     'bestevent': bestEventEngine,
+    'accentfeed': accentFeedEngine,
 };
