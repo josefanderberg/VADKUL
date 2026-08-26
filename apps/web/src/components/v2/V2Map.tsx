@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
+import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng } from '../../utils/mapUtils';
@@ -32,6 +32,13 @@ import CitySignposts, { type SignpostCity } from './CitySignposts';
 // emojis som får plats innan resten blir "+N".
 const HOVER_PEEK_LIFT_PX = 62;
 const HOVER_PEEK_MAX_EMOJI = 8;
+
+// Etikett-stegen: från vilken zoom kategorinamnet under brickorna syns, och
+// från vilken den kapade eventtiteln tar över. Delas mellan etikettlagret
+// (minzoom + text-field-steget) och zoomknapparnas steg-banner — banern ska
+// alltid tala sanning om vad etikettlagret gör vid aktuell zoom.
+const LABEL_CAT_MIN_ZOOM = 9;
+const LABEL_TITLE_MIN_ZOOM = 13;
 
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
@@ -1560,14 +1567,14 @@ export default function V2Map({
                     id: layerId,
                     type: 'symbol',
                     source: 'plain-events-labels',
-                    // Under z9 (Sverige-vyn) är etiketter meningslösa brus.
-                    minzoom: 9,
+                    // Under stegtröskeln (Sverige-vyn) är etiketter meningslösa brus.
+                    minzoom: LABEL_CAT_MIN_ZOOM,
                     // Vald grupp = sortKey ≥ 1e6 (samma gräns som brick-staplingen).
                     filter: isTop
                         ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
                         : ['<', ['coalesce', ['get', 'sortKey'], 0], 1_000_000],
                     layout: {
-                        'text-field': ['step', ['zoom'], ['get', 'labelCat'], 13, ['get', 'labelTitle']],
+                        'text-field': ['step', ['zoom'], ['get', 'labelCat'], LABEL_TITLE_MIN_ZOOM, ['get', 'labelTitle']],
                         'text-font': ['Open Sans Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
                         // Spetsen (icon-anchor bottom) står på koordinaten → texten
@@ -3103,6 +3110,32 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
+    // 2e. Zoomknapparna på högerkanten (Josef 26/8): +/− med en steg-banner
+    //     emellan som säger vilket etikettsteg zoomen står i — "zooma in för
+    //     kategorinamn" → "kategorinamn syns" → "titlar syns". Banern läser
+    //     BARA zoomen, aldrig etikett-toggeln (labelsHiddenRef): har man råkat
+    //     släcka texterna med samma-plats-klicket ska banern ändå visa när
+    //     stegen är MÖJLIGA. Standardsteget ±1 nivå per klick (pillens egna
+    //     zoomknappar kör ±2 — de hoppar mot ett valt event, detta är finlir).
+    const [labelStage, setLabelStage] = useState<'none' | 'cat' | 'title'>('none');
+    useEffect(() => {
+        const map = mapInstance;
+        if (!map) return;
+        const update = () => {
+            const z = map.getZoom();
+            setLabelStage(z >= LABEL_TITLE_MIN_ZOOM ? 'title' : z >= LABEL_CAT_MIN_ZOOM ? 'cat' : 'none');
+        };
+        update();
+        map.on('zoom', update);
+        return () => { map.off('zoom', update); };
+    }, [mapInstance]);
+    const handleZoomInBtn = useCallback(() => {
+        mapRef.current?.zoomIn({ duration: 300 });
+    }, []);
+    const handleZoomOutBtn = useCallback(() => {
+        mapRef.current?.zoomOut({ duration: 300 });
+    }, []);
+
     // 2d. Stads-bildspelet med mjuk övergång:
     //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
     //     hoppar direkt dit (jumpTo), väntar på att MapLibre ska ladda färdigt alla
@@ -4095,6 +4128,42 @@ export default function V2Map({
                                 </button>
                             </div>
                         )}
+                        {/* Zoomknapparna — högerkanten, ovanför stad-för-stad-
+                            pillen (bottom-3) och under kategorikolumnen som
+                            växer uppifrån. Steg-BANNERN ovanför knapparna visar
+                            etikettsteget för AKTUELL zoom (kategorinamn från
+                            z9, titlar från z13) och läser bara zoomen — den
+                            gäller alltså även när etiketterna är avtogglade
+                            via samma-plats-klicket, precis som avsett: man ska
+                            alltid se när stegen är möjliga. */}
+                        <div className="fixed right-3 bottom-16 z-[1100] pointer-events-none flex flex-col items-end gap-2">
+                            <span
+                                aria-live="polite"
+                                className="rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-lg border border-white/50 whitespace-nowrap"
+                            >
+                                {labelStage === 'title'
+                                    ? 'Eventtitlar syns'
+                                    : labelStage === 'cat'
+                                        ? 'Kategorinamn syns — zooma in för titlar'
+                                        : 'Zooma in för kategorinamn'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={handleZoomInBtn}
+                                aria-label="Zooma in"
+                                className="pointer-events-auto h-10 w-10 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white active:scale-95 transition-all flex items-center justify-center text-slate-700"
+                            >
+                                <Plus size={20} strokeWidth={2.5} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleZoomOutBtn}
+                                aria-label="Zooma ut"
+                                className="pointer-events-auto h-10 w-10 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white active:scale-95 transition-all flex items-center justify-center text-slate-700"
+                            >
+                                <Minus size={20} strokeWidth={2.5} />
+                            </button>
+                        </div>
                     </>,
                     document.body
                 );
