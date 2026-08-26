@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-    buildCityPostText, endOfPublishWeek, formatCityRow, isNoiseEvent,
-    pickCityRows, shortVenue, type CityEventRow,
+    buildCityPostText, buildIgCaption, endOfPublishWeek, formatCityRow, hashtagFor,
+    IG_CAPTION_MAX, isNoiseEvent, pickCityRows, shortVenue, type CityEventRow,
 } from './cityPostText';
 
 const ev = (over: Partial<CityEventRow>): CityEventRow => ({
@@ -119,5 +119,28 @@ describe('buildCityPostText', () => {
         const towns = ['Kalmar', 'Borås', 'Norrtälje', 'Sollefteå', 'Umeå', 'Lund'];
         const openers = new Set(towns.map(t => buildCityPostText(t, 'x', rows, FRI).split('\n')[0].replace(t, 'X')));
         expect(openers.size).toBeGreaterThan(1);
+    });
+});
+
+
+describe('buildIgCaption', () => {
+    const text = 'Veckan i Malmö 👇\n\n🎵 Kishi Bashi — Babel (tisdag kl 19)\n\nvadkul.se/evenemang/malmo';
+
+    it('lämnar den kurerade texten orörd och lägger taggarna sist', () => {
+        const caption = buildIgCaption(text, 'Malmö');
+        expect(caption.startsWith(text)).toBe(true);
+        expect(caption.endsWith('#vadkul #malmö #evenemang #dethänder')).toBe(true);
+    });
+
+    it('gör ortnamnet till en hashtag utan mellanslag', () => {
+        expect(hashtagFor('Malmö')).toBe('malmö');
+        expect(hashtagFor('Upplands Väsby')).toBe('upplandsväsby');
+        expect(hashtagFor('Säffle-Åmål')).toBe('säffleåmål');
+    });
+
+    it('kapar brödtexten men aldrig taggarna när IG:s tak nås', () => {
+        const caption = buildIgCaption('x'.repeat(IG_CAPTION_MAX + 500), 'Lund');
+        expect(caption.length).toBeLessThanOrEqual(IG_CAPTION_MAX);
+        expect(caption.endsWith('#vadkul #lund #evenemang #dethänder')).toBe(true);
     });
 });

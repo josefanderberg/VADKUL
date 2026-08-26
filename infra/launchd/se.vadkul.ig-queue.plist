@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      VADKUL: stadsinläggens Instagram-tvillingar.
+
+      Kör varje hel timme 06–21 och publicerar det som förfallit i IG-kön
+      (apps/scraper/ig-queue.json). Kön fylls av schedule-city-posts.ts
+      --commit, som schemalägger FB-inlägget hos Meta och lägger
+      IG-versionen här.
+
+      VARFÖR ETT EGET JOBB: Facebooks Graph API kan schemalägga sidinlägg,
+      Instagrams Content Publishing API kan inte schemalägga alls — bara
+      "publicera nu". Kön + det här jobbet ÄR schemaläggningen för IG.
+
+      Timvis räcker: stadsinläggen ligger på hela timmar. En post som blivit
+      mer än 6 timmar gammal publiceras inte alls utan markeras förfallen —
+      ett veckoinlägg ska inte trilla ut ett dygn försent.
+
+      Publicerar bara det som redan ligger i kön; skapar aldrig nya inlägg.
+    -->
+    <key>Label</key>
+    <string>se.vadkul.ig-queue</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/ai/Repos/VADKUL/apps/scraper &amp;&amp; /usr/local/bin/npx ts-node src/scripts/publish-ig-queue.ts --publicera</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>2</integer></dict>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/ai</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/ig-queue.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/ig-queue-err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

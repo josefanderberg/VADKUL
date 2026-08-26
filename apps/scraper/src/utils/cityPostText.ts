@@ -222,3 +222,31 @@ export function buildCityPostText(
     );
     return parts.join('\n');
 }
+
+/* ── Instagram-varianten ──────────────────────────────────────────────────── */
+
+/** IG:s tak för bildtext. Stadsinläggen ligger på ~1000, men en ort med
+ *  många rader ska kapas i stället för att avvisas av Meta. */
+export const IG_CAPTION_MAX = 2200;
+
+/** "Västerås" → "västerås", "Upplands Väsby" → "upplandsväsby". */
+export function hashtagFor(townName: string): string {
+    return townName.toLowerCase().replace(/[^a-zåäöéü0-9]/g, '');
+}
+
+/**
+ * Samma inlägg, anpassat för Instagram.
+ *
+ * Texten är ORÖRD — den är kurerad för hand (se docs/outreach/stadsinlagg-*)
+ * och ska se likadan ut på båda ytorna. Skillnaden är hashtaggarna: FB
+ * rankar dem inte, IG hittar inlägget genom dem. Länken i texten blir inte
+ * klickbar på Instagram, men den säger fortfarande vart man ska.
+ */
+export function buildIgCaption(postText: string, townName: string): string {
+    const tags = ['#vadkul', `#${hashtagFor(townName)}`, '#evenemang', '#dethänder'].join(' ');
+    const full = `${postText.trimEnd()}\n\n${tags}`;
+    if (full.length <= IG_CAPTION_MAX) return full;
+    // Kapa brödtexten, aldrig taggarna — de är hela poängen med IG-varianten.
+    const room = IG_CAPTION_MAX - tags.length - 4;
+    return `${postText.slice(0, room).trimEnd()}…\n\n${tags}`;
+}

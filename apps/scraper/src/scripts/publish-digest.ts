@@ -22,6 +22,13 @@
  *
  * Körning:  npm run digest
  * Daemon:   /list10 spawnar detta script
+ *
+ * ⚠️ ENBART MANUELLT sedan 2026-08-26. Det schemalagda 07:00-jobbet
+ * (se.vadkul.digest-daily → `--auto`) är BORTTAGET på ägarens begäran: de
+ * auto-publicerade 10-listorna fick inget engagemang, och Telegram-utkastet
+ * varje morgon fyllde ingen funktion. Både launchd-jobbet och `--auto`-läget
+ * är borta — listan byggs numera bara när någon skriver /list10, och inget
+ * publiceras utan "klar". Återinför inte automatiken utan att fråga ägaren.
  */
 
 import Database from 'better-sqlite3';
@@ -739,33 +746,6 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
     await sendMessage('⏰ Timeout — avslutar.');
 }
 
-// ── Auto-läge (schemalagt: bygg → leverera → publicera utan approval) ────────
-
-/**
- * Icke-interaktivt läge för det dagliga 07:00-jobbet. Bygger 10-listan,
- * skickar den till Telegram (så Josef får dagens lista i handen), och
- * publicerar sedan DIREKT till Instagram-karusell + Facebook utan att vänta
- * på "klar". Ingen approval-loop, inga inkommande kommandon.
- */
-async function runAuto(db: Database.Database): Promise<void> {
-    const totalToday = countTodayTotal(db);
-    const picks = await selectDigest(db, new Set<string>());
-
-    if (picks.length === 0) {
-        await sendMessage('🤷 <b>Dagens 10-lista</b> — inga event idag som matchar filtren (fungerande bild, titel ≤ 40 tecken, verifierad plats, en per stad). Inget publiceras.');
-        return;
-    }
-
-    const state: DigestState = { picks, totalToday, excludedUrls: new Set<string>() };
-
-    // Leverera listan till Telegram (utan interaktiv HELP-fot — inget att svara på).
-    await sendMessage('🌅 <b>Dagens 10-lista</b> — auto-publiceras till Instagram + Facebook nu.');
-    await sendMessage(buildDigestText(state.picks, state.totalToday));
-
-    // Publicera direkt (samma väg som "klar" i det manuella flödet).
-    await publishDigest(state);
-}
-
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 /** Smoke-test: bygg listan (inkl. bildprober) och skriv ut den utan att röra Telegram. */
@@ -785,8 +765,7 @@ async function runDry(db: Database.Database): Promise<void> {
 }
 
 async function main() {
-    const dry  = process.argv.includes('--dry');
-    const auto = process.argv.includes('--auto');
+    const dry = process.argv.includes('--dry');
 
     if (!dry && !isTelegramConfigured()) {
         console.error('❌ TG_BOT_TOKEN / TG_CHAT_ID saknas');
@@ -806,11 +785,7 @@ async function main() {
     if (!acquireLock()) process.exit(0);
     const db = new Database(DB_PATH, { readonly: true });
     try {
-        if (auto) {
-            await runAuto(db);
-        } else {
-            await runApprovalLoop(db);
-        }
+        await runApprovalLoop(db);
     } finally {
         db.close();
     }

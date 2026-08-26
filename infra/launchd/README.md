@@ -39,39 +39,68 @@ launchctl kickstart gui/$(id -u)/se.vadkul.scraper.nightly   # kör nu
 tail -f ~/Library/Logs/vadkul-scraper/nightly.log            # kedjans logg
 ```
 
-## se.vadkul.digest-daily
+## se.vadkul.digest-daily — AVVECKLAD 2026-08-26
 
-Daglig 10-lista → Telegram + auto-publicering. Startar **07:00** och kör
-`publish-digest.ts --auto`: bygger dagens 10-event-lista (IDAG, en per stad,
-kategori-spridning), levererar den till Telegram OCH publicerar direkt till
-Instagram-karusell + Facebook — ingen approval-loop, inget `/list10` behövs.
-
-07:00 (inte natten) så nattkedjan (00:30) hunnit skrapa + efterbehandla +
-geokoda dagens events innan listan byggs. Bara event med publik bild blir
-IG-slides (resten hoppas tyst över); bildtexten renumreras för att matcha.
+Jobbet (07:00: bygg dagens 10-lista → Telegram-utkast → auto-publicera till
+Instagram-karusell + Facebook) är **borttaget på ägarens begäran**. Listorna
+drog inget engagemang, och morgonutkastet i Telegram fyllde ingen funktion.
+`--auto`-läget är borta ur `publish-digest.ts` och plisten är avinstallerad
+(`~/Library/LaunchAgents/se.vadkul.digest-daily.plist.disabled-20260826`).
 
 Det manuella `/list10` (bot-daemon → `npm run digest`) finns kvar för ad
-hoc-listor med `byt`/`bild`/`klar`. Båda tar samma lock
-(`/tmp/vadkul-publish-digest.lock`), så de krockar aldrig.
+hoc-listor med `byt`/`bild`/`klar` — inget publiceras utan att någon svarar
+"klar". Torrkörning utan Telegram/IG/FB:
+
+```sh
+cd apps/scraper && npm run digest -- --dry
+```
+
+Återinför inte automatiken utan att fråga ägaren.
+
+## se.vadkul.ig-queue
+
+Stadsinläggens **Instagram-tvillingar**. Kör varje hel timme 06–21 och
+publicerar det som förfallit i IG-kön (`apps/scraper/ig-queue.json`).
+
+Varför ett eget jobb: Facebooks Graph API kan schemalägga sidinlägg,
+Instagrams Content Publishing API kan inte schemalägga alls — bara
+"publicera nu". Kön + det här jobbet ÄR schemaläggningen för IG.
+`schedule-city-posts.ts --commit` schemalägger FB-inlägget hos Meta och
+lägger IG-versionen i kön; jobbet tömmer den.
+
+En post som blivit mer än 6 timmar gammal publiceras inte utan markeras
+`förfallen` — ett veckoinlägg ska inte trilla ut ett dygn försent. Jobbet
+skapar aldrig nya inlägg, det tömmer bara kön.
 
 ### Installera
 
 ```sh
-cp infra/launchd/se.vadkul.digest-daily.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.digest-daily.plist
-launchctl list | grep vadkul.digest
+cp infra/launchd/se.vadkul.ig-queue.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.ig-queue.plist
+launchctl list | grep vadkul.ig
 ```
 
 ### Köra manuellt / felsöka
 
 ```sh
-# OBS: kickstart av --auto-jobbet publicerar PÅ RIKTIGT till IG + FB.
-launchctl kickstart gui/$(id -u)/se.vadkul.digest-daily   # kör nu (publicerar!)
-tail -f ~/Library/Logs/vadkul-scraper/digest-daily.log
-
-# Torrkörning utan Telegram/IG/FB (bara skriver ut listan):
-cd apps/scraper && npm run digest -- --dry
+cd apps/scraper
+npm run ig-ko                                    # visa kön
+npm run ig-ko -- --kolla                         # behörigheter + IG-koppling
+npm run ig-ko -- --importera-fb-schema           # dry-run: vad skulle läggas till
+npm run ig-ko -- --importera-fb-schema --commit  # fyll kön ur FB:s schemakö
+npm run ig-ko -- --provkör                       # bild + IG-container, publicerar INTE
+tail -f ~/Library/Logs/vadkul-scraper/ig-queue.log
 ```
+
+`--provkör` är vägen att verifiera behörigheter och bildformat utan att
+något hamnar i flödet: den bygger bilden, laddar upp den och skapar en
+IG-container — men hoppar över `media_publish`, så containern förfaller av
+sig själv efter 24 h.
+
+⚠️ **Kräver att FB_PAGE_TOKEN har `instagram_basic` +
+`instagram_content_publish`.** Saknas de svarar Meta `(#10) Application does
+not have permission for this action` och inget går ut på Instagram — se
+`docs/outreach/instagram-behorigheter.md`.
 
 ## se.vadkul.audit-pending
 
