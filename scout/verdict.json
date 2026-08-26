@@ -1,0 +1,794 @@
+[
+ {
+  "n": "Botkyrka",
+  "r": "stockholm",
+  "d": "botkyrka.se",
+  "evNow": 640,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Danderyd",
+  "r": "stockholm",
+  "d": "danderyd.se",
+  "evNow": 597,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Ekerö",
+  "r": "stockholm",
+  "d": "ekero.se",
+  "evNow": 751,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Huddinge",
+  "r": "stockholm",
+  "d": "huddinge.se",
+  "evNow": 841,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Solna",
+  "r": "stockholm",
+  "d": "solna.se",
+  "evNow": 0,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Vallentuna",
+  "r": "stockholm",
+  "d": "vallentuna.se",
+  "evNow": 110,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Värmdö",
+  "r": "stockholm",
+  "d": "varmdo.se",
+  "evNow": 114,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 2 framtida"
+ },
+ {
+  "n": "Österåker",
+  "r": "stockholm",
+  "d": "osteraker.se",
+  "evNow": 229,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Östhammar",
+  "r": "uppsala",
+  "d": "osthammar.se",
+  "evNow": 59,
+  "verdict": "LÖST",
+  "detalj": "osthammar-kommun + Axiell-bibliotek"
+ },
+ {
+  "n": "Strängnäs",
+  "r": "sodermanland",
+  "d": "strangnas.se",
+  "evNow": 132,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Boxholm",
+  "r": "ostergotland",
+  "d": "boxholm.se",
+  "evNow": 21,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Kinda",
+  "r": "ostergotland",
+  "d": "kinda.se",
+  "evNow": 40,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Mjölby",
+  "r": "ostergotland",
+  "d": "mjolby.se",
+  "evNow": 81,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Söderköping",
+  "r": "ostergotland",
+  "d": "soderkoping.se",
+  "evNow": 36,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Vadstena",
+  "r": "ostergotland",
+  "d": "vadstena.se",
+  "evNow": 74,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Åtvidaberg",
+  "r": "ostergotland",
+  "d": "atvidaberg.se",
+  "evNow": 59,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Ödeshög",
+  "r": "ostergotland",
+  "d": "odeshog.se",
+  "evNow": 16,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Aneby",
+  "r": "jonkoping",
+  "d": "aneby.se",
+  "evNow": 30,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Gnosjö",
+  "r": "jonkoping",
+  "d": "gnosjo.se",
+  "evNow": 36,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Vaggeryd",
+  "r": "jonkoping",
+  "d": "vaggeryd.se",
+  "evNow": 34,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 19 framtida"
+ },
+ {
+  "n": "Värnamo",
+  "r": "jonkoping",
+  "d": "varnamo.se",
+  "evNow": 122,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Markaryd",
+  "r": "kronoberg",
+  "d": "markaryd.se",
+  "evNow": 40,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 4 framtida"
+ },
+ {
+  "n": "Högsby",
+  "r": "kalmar",
+  "d": "hogsby.se",
+  "evNow": 6,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Torsås",
+  "r": "kalmar",
+  "d": "torsas.se",
+  "evNow": 9,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Bjuv",
+  "r": "skane",
+  "d": "bjuv.se",
+  "evNow": 133,
+  "verdict": "LÖST",
+  "detalj": "bjuv-kommun"
+ },
+ {
+  "n": "Bromölla",
+  "r": "skane",
+  "d": "bromolla.se",
+  "evNow": 57,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Burlöv",
+  "r": "skane",
+  "d": "burlov.se",
+  "evNow": 30,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Kävlinge",
+  "r": "skane",
+  "d": "kavlinge.se",
+  "evNow": 156,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Lomma",
+  "r": "skane",
+  "d": "lomma.se",
+  "evNow": 63,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Simrishamn",
+  "r": "skane",
+  "d": "simrishamn.se",
+  "evNow": 75,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Sjöbo",
+  "r": "skane",
+  "d": "sjobo.se",
+  "evNow": 50,
+  "verdict": "LÖST",
+  "detalj": "Axiell-bibliotek"
+ },
+ {
+  "n": "Skurup",
+  "r": "skane",
+  "d": "skurup.se",
+  "evNow": 16,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Vellinge",
+  "r": "skane",
+  "d": "vellinge.se",
+  "evNow": 40,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Åstorp",
+  "r": "skane",
+  "d": "astorp.se",
+  "evNow": 118,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Hylte",
+  "r": "halland",
+  "d": "hylte.se",
+  "evNow": 41,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Kungsbacka",
+  "r": "halland",
+  "d": "kungsbacka.se",
+  "evNow": 225,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Bollebygd",
+  "r": "vastragotaland",
+  "d": "bollebygd.se",
+  "evNow": 23,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 2 framtida"
+ },
+ {
+  "n": "Dals-Ed",
+  "r": "vastragotaland",
+  "d": "dalsed.se",
+  "evNow": 1,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Essunga",
+  "r": "vastragotaland",
+  "d": "essunga.se",
+  "evNow": 17,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Färgelanda",
+  "r": "vastragotaland",
+  "d": "fargelanda.se",
+  "evNow": 9,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Grästorp",
+  "r": "vastragotaland",
+  "d": "grastorp.se",
+  "evNow": 7,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Gullspång",
+  "r": "vastragotaland",
+  "d": "gullspang.se",
+  "evNow": 33,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Härryda",
+  "r": "vastragotaland",
+  "d": "harryda.se",
+  "evNow": 118,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Kungälv",
+  "r": "vastragotaland",
+  "d": "kungalv.se",
+  "evNow": 57,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Lerum",
+  "r": "vastragotaland",
+  "d": "lerum.se",
+  "evNow": 96,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Lilla Edet",
+  "r": "vastragotaland",
+  "d": "lillaedet.se",
+  "evNow": 21,
+  "verdict": "LÖST",
+  "detalj": "lillaedet-kommun"
+ },
+ {
+  "n": "Mariestad",
+  "r": "vastragotaland",
+  "d": "mariestad.se",
+  "evNow": 65,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Mark",
+  "r": "vastragotaland",
+  "d": "mark.se",
+  "evNow": 108,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Mellerud",
+  "r": "vastragotaland",
+  "d": "mellerud.se",
+  "evNow": 48,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Munkedal",
+  "r": "vastragotaland",
+  "d": "munkedal.se",
+  "evNow": 36,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Orust",
+  "r": "vastragotaland",
+  "d": "orust.se",
+  "evNow": 39,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Sotenäs",
+  "r": "vastragotaland",
+  "d": "sotenas.se",
+  "evNow": 18,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Stenungsund",
+  "r": "vastragotaland",
+  "d": "stenungsund.se",
+  "evNow": 68,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Tidaholm",
+  "r": "vastragotaland",
+  "d": "tidaholm.se",
+  "evNow": 35,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Trollhättan",
+  "r": "vastragotaland",
+  "d": "trollhattan.se",
+  "evNow": 174,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Töreboda",
+  "r": "vastragotaland",
+  "d": "toreboda.se",
+  "evNow": 8,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Eda",
+  "r": "varmland",
+  "d": "eda.se",
+  "evNow": 13,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Filipstad",
+  "r": "varmland",
+  "d": "filipstad.se",
+  "evNow": 14,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Grums",
+  "r": "varmland",
+  "d": "grums.se",
+  "evNow": 20,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Hagfors",
+  "r": "varmland",
+  "d": "hagfors.se",
+  "evNow": 110,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Kristinehamn",
+  "r": "varmland",
+  "d": "kristinehamn.se",
+  "evNow": 77,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Munkfors",
+  "r": "varmland",
+  "d": "munkfors.se",
+  "evNow": 31,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Storfors",
+  "r": "varmland",
+  "d": "storfors.se",
+  "evNow": 43,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Torsby",
+  "r": "varmland",
+  "d": "torsby.se",
+  "evNow": 23,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Årjäng",
+  "r": "varmland",
+  "d": "arjang.se",
+  "evNow": 21,
+  "verdict": "LÖST",
+  "detalj": "visitvarmland"
+ },
+ {
+  "n": "Degerfors",
+  "r": "orebro",
+  "d": "degerfors.se",
+  "evNow": 3,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Hällefors",
+  "r": "orebro",
+  "d": "hellefors.se",
+  "evNow": 86,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Laxå",
+  "r": "orebro",
+  "d": "laxa.se",
+  "evNow": 1,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Nora",
+  "r": "orebro",
+  "d": "nora.se",
+  "evNow": 59,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Hallstahammar",
+  "r": "vastmanland",
+  "d": "hallstahammar.se",
+  "evNow": 38,
+  "verdict": "LÖST",
+  "detalj": "visithallstahammar"
+ },
+ {
+  "n": "Kungsör",
+  "r": "vastmanland",
+  "d": "kungsor.se",
+  "evNow": 22,
+  "verdict": "LÖST",
+  "detalj": "visitvastramalardalen"
+ },
+ {
+  "n": "Köping",
+  "r": "vastmanland",
+  "d": "koping.se",
+  "evNow": 21,
+  "verdict": "LÖST",
+  "detalj": "visitvastramalardalen"
+ },
+ {
+  "n": "Sala",
+  "r": "vastmanland",
+  "d": "sala.se",
+  "evNow": 56,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Skinnskatteberg",
+  "r": "vastmanland",
+  "d": "skinnskatteberg.se",
+  "evNow": 5,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Avesta",
+  "r": "dalarna",
+  "d": "avesta.se",
+  "evNow": 59,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Ludvika",
+  "r": "dalarna",
+  "d": "ludvika.se",
+  "evNow": 61,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 2 framtida"
+ },
+ {
+  "n": "Smedjebacken",
+  "r": "dalarna",
+  "d": "smedjebacken.se",
+  "evNow": 16,
+  "verdict": "TUNN",
+  "detalj": "sitevision-HTML 1 framtida"
+ },
+ {
+  "n": "Vansbro",
+  "r": "dalarna",
+  "d": "vansbro.se",
+  "evNow": 13,
+  "verdict": "KANDIDAT",
+  "detalj": "RESTApp 4 framtida"
+ },
+ {
+  "n": "Hofors",
+  "r": "gavleborg",
+  "d": "hofors.se",
+  "evNow": 24,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Hudiksvall",
+  "r": "gavleborg",
+  "d": "hudiksvall.se",
+  "evNow": 49,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Ljusdal",
+  "r": "gavleborg",
+  "d": "ljusdal.se",
+  "evNow": 27,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Nordanstig",
+  "r": "gavleborg",
+  "d": "nordanstig.se",
+  "evNow": 16,
+  "verdict": "LÖST",
+  "detalj": "nordanstig-bibliotek"
+ },
+ {
+  "n": "Ockelbo",
+  "r": "gavleborg",
+  "d": "ockelbo.se",
+  "evNow": 10,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Ovanåker",
+  "r": "gavleborg",
+  "d": "ovanaker.se",
+  "evNow": 15,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Härnösand",
+  "r": "vasternorrland",
+  "d": "harnosand.se",
+  "evNow": 86,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Timrå",
+  "r": "vasternorrland",
+  "d": "timra.se",
+  "evNow": 5,
+  "verdict": "LÖST",
+  "detalj": "Axiell-bibliotek"
+ },
+ {
+  "n": "Ånge",
+  "r": "vasternorrland",
+  "d": "ange.se",
+  "evNow": 20,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Örnsköldsvik",
+  "r": "vasternorrland",
+  "d": "ornskoldsvik.se",
+  "evNow": 117,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Bräcke",
+  "r": "jamtland",
+  "d": "bracke.se",
+  "evNow": 20,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Ragunda",
+  "r": "jamtland",
+  "d": "ragunda.se",
+  "evNow": 21,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Åre",
+  "r": "jamtland",
+  "d": "are.se",
+  "evNow": 39,
+  "verdict": "LÖST",
+  "detalj": "Axiell-bibliotek"
+ },
+ {
+  "n": "Lycksele",
+  "r": "vasterbotten",
+  "d": "lycksele.se",
+  "evNow": 35,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Malå",
+  "r": "vasterbotten",
+  "d": "mala.se",
+  "evNow": 16,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Sorsele",
+  "r": "vasterbotten",
+  "d": "sorsele.se",
+  "evNow": 0,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Vindeln",
+  "r": "vasterbotten",
+  "d": "vindeln.se",
+  "evNow": 18,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Vännäs",
+  "r": "vasterbotten",
+  "d": "vannas.se",
+  "evNow": 41,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Kalix",
+  "r": "norrbotten",
+  "d": "kalix.se",
+  "evNow": 26,
+  "verdict": "INGEN KALENDER",
+  "detalj": ""
+ },
+ {
+  "n": "Överkalix",
+  "r": "norrbotten",
+  "d": "overkalix.se",
+  "evNow": 11,
+  "verdict": "JS-VÄGG",
+  "detalj": "kalendersida finns, inga strukturerade datum"
+ },
+ {
+  "n": "Övertorneå",
+  "r": "norrbotten",
+  "d": "overtornea.se",
+  "evNow": 5,
+  "verdict": "LÖST",
+  "detalj": "overtornea-evenemang"
+ }
+]

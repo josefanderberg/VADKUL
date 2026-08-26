@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -343,5 +343,37 @@ describe('parseSearchAppDetail', () => {
 
     it('sida utan fälten → tomt objekt, inget kast', () => {
         expect(parseSearchAppDetail('<html><body><p>404</p></body></html>')).toEqual({});
+    });
+});
+
+describe('pickCityFromVenue', () => {
+    const CITIES = ['Köping', 'Arboga', 'Kungsör'];
+
+    it('plockar orten ur venue-namnets suffix', () => {
+        expect(pickCityFromVenue('Mötesplats Tallåsgården, Kungsör', CITIES, 'Köping')).toBe('Kungsör');
+    });
+
+    it('matchar orten var som helst i namnet', () => {
+        expect(pickCityFromVenue('Arboga bibliotek', CITIES, 'Köping')).toBe('Arboga');
+        expect(pickCityFromVenue('Medborgarhuset Arboga', CITIES, 'Köping')).toBe('Arboga');
+    });
+
+    it('faller tillbaka på defaultCity utan träff', () => {
+        expect(pickCityFromVenue('Malmberga Loge', CITIES, 'Köping')).toBe('Köping');
+        expect(pickCityFromVenue(undefined, CITIES, 'Köping')).toBe('Köping');
+    });
+
+    it('rör inte källor utan cities-lista', () => {
+        expect(pickCityFromVenue('Arboga bibliotek', undefined, 'Eskilstuna')).toBe('Eskilstuna');
+        expect(pickCityFromVenue('Arboga bibliotek', [], 'Eskilstuna')).toBe('Eskilstuna');
+    });
+
+    it('längsta träffen vinner när ett ortnamn är prefix till ett annat', () => {
+        expect(pickCityFromVenue('Bygdegården i Västra Ämtervik', ['Ämtervik', 'Västra Ämtervik'], 'Sunne'))
+            .toBe('Västra Ämtervik');
+    });
+
+    it('är skiftlägesokänslig', () => {
+        expect(pickCityFromVenue('KÖPINGS STADSHOTELL', CITIES, 'Arboga')).toBe('Köping');
     });
 });

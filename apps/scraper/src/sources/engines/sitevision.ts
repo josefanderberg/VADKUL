@@ -34,6 +34,13 @@ const DEFAULT_UA =
 export interface SiteVisionConfig {
     urls: string[];
     defaultCity?: string;
+    /**
+     * Flerkommuns-källor (regionala eventguider): orterna källan täcker.
+     * Venue-namnen bär orten i klartext ("Arboga bibliotek", "Mötesplats
+     * Tallåsgården, Kungsör") — matchar ett namn i listan sätts det som city
+     * i stället för defaultCity, så geokodningen inte drar allt till en ort.
+     */
+    cities?: string[];
     pathFilter?: string;
     maxItems?: number;
     userAgent?: string;
@@ -164,6 +171,25 @@ export function mapSoleilItem(
     };
 }
 
+/**
+ * Vilken ort hör eventet till? Regionala guider bär orten i venue-namnet.
+ * Längsta träffen vinner ("Västra Ämtervik" före "Ämtervik"). Exporterad för test.
+ */
+export function pickCityFromVenue(
+    venueName: string | undefined,
+    cities: string[] | undefined,
+    defaultCity: string | undefined,
+): string | undefined {
+    if (!venueName || !cities?.length) return defaultCity;
+    const hay = venueName.toLowerCase();
+    let best: string | undefined;
+    for (const c of cities) {
+        if (!hay.includes(c.toLowerCase())) continue;
+        if (!best || c.length > best.length) best = c;
+    }
+    return best ?? defaultCity;
+}
+
 /** Rått hit ur RESTApp-API:t (bara fälten vi läser). */
 interface RestAppHit {
     id?: string;
@@ -197,6 +223,7 @@ export function mapRestAppHit(
     hit: RestAppHit,
     baseUrl: string,
     defaultCity: string | undefined,
+    cities?: string[],
 ): RawEvent | null {
     const title = (hit.title || '').trim();
     const parsed = parseRestAppDate(hit.info?.start);
@@ -206,6 +233,7 @@ export function mapRestAppHit(
     const end = parseRestAppDate(hit.info?.end);
     const venueName = hit.info?.location?.name?.trim() || undefined;
     const isDigital = !!venueName && /^digitalt/i.test(venueName);
+    const city = pickCityFromVenue(venueName, cities, defaultCity);
 
     return {
         externalId: hit.id,
@@ -214,9 +242,9 @@ export function mapRestAppHit(
         endDate: end && end.date.getTime() >= parsed.date.getTime() ? end.date : undefined,
         url: eventUrl,
         venueName,
-        city: defaultCity,
+        city,
         // "Digitalt evenemang" är ingen geocodebar plats — ankra på staden.
-        geocodeCandidates: isDigital && defaultCity ? [defaultCity] : undefined,
+        geocodeCandidates: isDigital && city ? [city] : undefined,
         description: hit.description?.trim() || undefined,
         imageUrl: makeAbsoluteUrl(hit.image?.src || hit.image?.mediumSrc, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
@@ -257,7 +285,7 @@ async function scrapeRestAppApi(
         if (hits.length === 0) break;
 
         for (const hit of hits) {
-            const ev = mapRestAppHit(hit, base, config.defaultCity);
+            const ev = mapRestAppHit(hit, base, config.defaultCity, config.cities);
             if (!ev || seenUrls.has(ev.url)) continue;
             seenUrls.add(ev.url);
             events.push(ev);

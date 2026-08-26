@@ -43,6 +43,7 @@ import { fhpEngine } from '../scrapers/fhp';
 import { goteborgStadEngine } from '../scrapers/goteborgstad';
 import { gotlandComEngine } from '../scrapers/gotlandcom';
 import { bergmancenterEngine } from '../scrapers/bergmancenter';
+import { turidEngine } from '../scrapers/turid';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -108,4 +109,5 @@ export const ENGINES: Record<string, Engine> = {
     'goteborgstad': goteborgStadEngine,
     'gotlandcom': gotlandComEngine,
     'bergmancenter': bergmancenterEngine,
+    'turid': turidEngine,
 };

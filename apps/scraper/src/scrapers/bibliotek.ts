@@ -125,6 +125,12 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'varberg',       customerId: '62431e61ae077e04267bebc4', eventsUrl: 'https://bibliotek.varberg.se/kalender',      name: 'Varbergs bibliotek',           cityHint: 'Varberg' },
     { id: 'blekinge',      customerId: '61447a53e9a84303da337d16', eventsUrl: 'https://blekingebiblioteken.se/evenemang',   name: 'Blekingebiblioteken',
       cities: ['Karlskrona', 'Karlshamn', 'Ronneby', 'Sölvesborg', 'Olofström'] },
+    // Runda 5 (2026-08-26, kommun-svans-svepet): fyra Arena-tenants till ur
+    // otäckta kommuner. Sjöbo ligger på biblioteksso.se (inte bibliotek.sjobo.se).
+    { id: 'sjobo',         customerId: '5dceb8149cf47722f2bb9838', eventsUrl: 'https://www.biblioteksso.se/evenemang',     name: 'Sjöbo bibliotek',              cityHint: 'Sjöbo' },
+    { id: 'osthammar',     customerId: '64f194758094f34fdca7fb02', eventsUrl: 'https://bibliotek.osthammar.se/evenemang',  name: 'Östhammars bibliotek',         cityHint: 'Östhammar' },
+    { id: 'timra',         customerId: '60c9e48d4cfcfc2892c167d4', eventsUrl: 'https://bibliotek.timra.se/evenemang',      name: 'Timrå bibliotek',              cityHint: 'Timrå' },
+    { id: 'are',           customerId: '68b68fa7a2fccd7fbf6612a6', eventsUrl: 'https://bibliotek.are.se/evenemang',        name: 'Åre bibliotek',                cityHint: 'Åre' },
 ];
 
 interface AxiellHit {

@@ -1,0 +1,101 @@
+[
+ {
+  "name": "Köping",
+  "domain": "koping.se",
+  "region": "vastmanland",
+  "routes": [
+   "https://visitvastramalardalen.se/rest-api/evenemang"
+  ],
+  "best": {
+   "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+   "tot": 200,
+   "fut": 198
+  },
+  "all": [
+   {
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "tot": 200,
+    "fut": 198
+   }
+  ]
+ },
+ {
+  "name": "Hallstahammar",
+  "domain": "hallstahammar.se",
+  "region": "vastmanland",
+  "routes": [
+   "https://visithallstahammar.se/rest-api/events-rest"
+  ],
+  "best": {
+   "url": "https://visithallstahammar.se/rest-api/events-rest/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+   "tot": 61,
+   "fut": 59
+  },
+  "all": [
+   {
+    "url": "https://visithallstahammar.se/rest-api/events-rest/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "tot": 61,
+    "fut": 59
+   }
+  ]
+ },
+ {
+  "name": "Vansbro",
+  "domain": "vansbro.se",
+  "region": "dalarna",
+  "routes": [
+   "https://www.vansbro.se/rest-api/ArticleService",
+   "https://www.vansbro.se/rest-api/EventService",
+   "https://morakommun.se/rest-api/EventService",
+   "https://alvdalen.se/rest-api/EventService",
+   "https://orsa.se/rest-api/EventService"
+  ],
+  "best": {
+   "url": "https://www.vansbro.se/rest-api/EventService/items?start=0&num=200&paths=3.2a0514cf167c6092224998a4",
+   "tot": 30,
+   "fut": 4
+  },
+  "all": [
+   {
+    "url": "https://www.vansbro.se/rest-api/EventService/items?start=0&num=200&paths=3.2a0514cf167c6092224998a4",
+    "tot": 30,
+    "fut": 4
+   },
+   {
+    "url": "https://morakommun.se/rest-api/EventService/items?start=0&num=200&paths=3.166aa05167c62dff5d3cf27",
+    "tot": 111,
+    "fut": 3
+   },
+   {
+    "url": "https://www.vansbro.se/rest-api/ArticleService/items?start=0&num=200&paths=3.693ef0fc19cc4857f1b5fbc4",
+    "tot": 150,
+    "fut": 0
+   },
+   {
+    "url": "https://alvdalen.se/rest-api/EventService/items?start=0&num=200&paths=3.2a0514cf167c60922247a9d7",
+    "tot": 200,
+    "fut": 0
+   }
+  ]
+ },
+ {
+  "name": "Hagfors",
+  "domain": "hagfors.se",
+  "region": "varmland",
+  "routes": [
+   "https://www.hagfors.se/rest-api/visit-varmland"
+  ],
+  "best": {
+   "url": "https://www.hagfors.se/rest-api/visit-varmland/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+   "tot": 10,
+   "fut": 0
+  },
+  "all": [
+   {
+    "url": "https://www.hagfors.se/rest-api/visit-varmland/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "tot": 10,
+    "fut": 0
+   }
+  ]
+ }
+]

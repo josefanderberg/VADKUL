@@ -1,0 +1,997 @@
+[
+ {
+  "name": "Aneby",
+  "url": "https://aneby.se/arkiv/evenemang.html",
+  "city": "Aneby",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-28T22:00 Spinnträff med växtfärgning"
+  ]
+ },
+ {
+  "name": "Aneby",
+  "url": "https://aneby.se/evenemang",
+  "city": "Aneby",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-28T22:00 Spinnträff med växtfärgning"
+  ]
+ },
+ {
+  "name": "Bjuv",
+  "url": "https://www.bjuv.se/kultur-och-fritid/evenemangskalender.html",
+  "city": "Bjuv",
+  "total": 10,
+  "future": 10,
+  "inWindow": 10,
+  "sample": [
+   "2026-08-30T22:00 Sommarprogram",
+   "2026-09-11T22:00 Biblioteksval, biblioteken i Bjuvs kommun"
+  ]
+ },
+ {
+  "name": "Bjuv",
+  "url": "https://www.bjuv.se/evenemang",
+  "city": "Bjuv",
+  "total": 10,
+  "future": 10,
+  "inWindow": 10,
+  "sample": [
+   "2026-08-30T22:00 Sommarprogram",
+   "2026-09-11T22:00 Biblioteksval, biblioteken i Bjuvs kommun"
+  ]
+ },
+ {
+  "name": "Bollebygd",
+  "url": "https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html",
+  "city": "Bollebygd",
+  "total": 4,
+  "future": 2,
+  "inWindow": 2,
+  "sample": [
+   "2026-08-29T07:30 Hestraforsdagen",
+   "2026-08-30T08:00 Cykelkurs på Bollekollen"
+  ]
+ },
+ {
+  "name": "Bollebygd",
+  "url": "https://www.bollebygd.se/upplevaochgora.4.4d349e8f14f48a3fac122541.html",
+  "city": "Bollebygd",
+  "total": 3,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-29T07:30 Evenemang"
+  ]
+ },
+ {
+  "name": "Botkyrka",
+  "url": "https://www.botkyrka.se/stod-trygghet-och-familj/pengar-och-ekonomi/ekonomiskt-bistand/aktivitetskrav-for-dig-som-far-ekonomiskt-bistand",
+  "city": "Botkyrka",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Boxholm",
+  "url": "https://www.boxholm.se/uppleva-och-gora/bibliotek/intresseanmalan-volontar-sprakcafe",
+  "city": "Boxholm",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Boxholm",
+  "url": "https://www.boxholm.se/uppleva-och-gora/besok-boxholm/boende/timmero-camping",
+  "city": "Boxholm",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Boxholm",
+  "url": "https://www.boxholm.se/evenemangskalender",
+  "city": "Boxholm",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Degerfors",
+  "url": "https://degerfors.se/naringsliv-och-arbete/evenemang.html",
+  "city": "Degerfors",
+  "total": 1,
+  "future": 1,
+  "inWindow": 0,
+  "sample": [
+   "2026-11-26T11:00 Företagslunch på Bruksmässen i Degerfors"
+  ]
+ },
+ {
+  "name": "Ekerö",
+  "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott",
+  "city": "Ekerö",
+  "total": 6,
+  "future": 5,
+  "inWindow": 0,
+  "sample": [
+   "2027-05-12T22:00 Fira nationaldagen i Ekebyhovs slottspark",
+   "2027-05-07T22:00 Beställ sommarsallad från slottet!"
+  ]
+ },
+ {
+  "name": "Ekerö",
+  "url": "https://www.ekero.se/uppleva-gora",
+  "city": "Ekerö",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ekerö",
+  "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott/mat-pa-slottet/dagens-lunch",
+  "city": "Ekerö",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T11:45 Priser & betalning"
+  ]
+ },
+ {
+  "name": "Gnosjö",
+  "url": "https://gnosjo.se/uppleva-och-gora",
+  "city": "Gnosjö",
+  "total": 4,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Gullspång",
+  "url": "https://gullspang.se/uppleva-och-gora",
+  "city": "Gullspång",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hofors",
+  "url": "https://hofors.se/kultur--fritid/foreningsbidrag/aktivitetsbidrag.html",
+  "city": "Hofors",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hofors",
+  "url": "https://hofors.se/uppleva--gora.html",
+  "city": "Hofors",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Huddinge",
+  "url": "https://www.huddinge.se/kommunkalender",
+  "city": "Huddinge",
+  "total": 10,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hofors",
+  "url": "https://hofors.se/barn--utbildning/kommunalt-aktivitetsansvar-kaa.html",
+  "city": "Hofors",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Huddinge",
+  "url": "https://www.huddinge.se/nyheter/nyheter/2026-08-25-flemingsbergsfesten---gratis-aktiviteter-for-hela-familjen",
+  "city": "Huddinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Huddinge",
+  "url": "https://www.huddinge.se/kommunkalender/kommunkalender/2026-02-26-nyboda-museum",
+  "city": "Huddinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hylte",
+  "url": "https://www.hylte.se/uppleva-och-gora/ornahallens-halsocenter/kontakt-och-oppettider",
+  "city": "Hylte",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hylte",
+  "url": "https://www.hylte.se/uppleva-och-gora/evenemang",
+  "city": "Hylte",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hylte",
+  "url": "https://www.hylte.se/uppleva-och-gora",
+  "city": "Hylte",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hällefors",
+  "url": "https://hellefors.se/evenemang",
+  "city": "Hällefors",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Hylte",
+  "url": "https://www.hylte.se/evenemang",
+  "city": "Hylte",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kinda",
+  "url": "https://www.kinda.se/upplevaochgora/friluftsliv/badplatser.4.15d59a7c151bb4254b7e7147.html",
+  "city": "Kinda",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kinda",
+  "url": "https://www.kinda.se/upplevaochgora/lotterier.4.5b72a6f9153276d6ee0d128a.html",
+  "city": "Kinda",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kristinehamn",
+  "url": "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/hallbara-evenemang",
+  "city": "Kristinehamn",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kinda",
+  "url": "https://www.kinda.se/naringslivocharbete/arbete/kommunaltaktivitetsansvar.106.47c5f8811707620d4de38f6a.html",
+  "city": "Kinda",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kristinehamn",
+  "url": "https://www.kristinehamn.se/stod-och-omsorg/stod-vid-funktionsnedsattning/aktivitetskalender-lss",
+  "city": "Kristinehamn",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kristinehamn",
+  "url": "https://www.kristinehamn.se/kultur-och-fritid/kristinehamns-bibliotek/kalender",
+  "city": "Kristinehamn",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kävlinge",
+  "url": "https://www.kavlinge.se/evenemang",
+  "city": "Kävlinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kävlinge",
+  "url": "https://www.kavlinge.se/uppleva-och-gora/evenemang",
+  "city": "Kävlinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Kävlinge",
+  "url": "https://www.kavlinge.se/uppleva-och-gora",
+  "city": "Kävlinge",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Laxå",
+  "url": "https://www.laxa.se/Kalendern.html",
+  "city": "Laxå",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Lilla Edet",
+  "url": "https://lillaedet.se/uppleva-och-gora/evenemang-och-aktiviteter/evenemangskalender",
+  "city": "Lilla Edet",
+  "total": 10,
+  "future": 10,
+  "inWindow": 10,
+  "sample": [
+   "2026-08-29T22:00 Utställning på Lödöse museum ända fram till hösten: Djuren i st",
+   "2026-08-27T22:00 Bamse och demokrati - affischutställning"
+  ]
+ },
+ {
+  "name": "Lilla Edet",
+  "url": "https://lillaedet.se/evenemang",
+  "city": "Lilla Edet",
+  "total": 10,
+  "future": 10,
+  "inWindow": 10,
+  "sample": [
+   "2026-08-29T22:00 Utställning på Lödöse museum ända fram till hösten: Djuren i st",
+   "2026-08-27T22:00 Bamse och demokrati - affischutställning"
+  ]
+ },
+ {
+  "name": "Ljusdal",
+  "url": "https://www.ljusdal.se/upplevagora/bibliotek.4.19618b314ae81f501e6cd35.html",
+  "city": "Ljusdal",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Lilla Edet",
+  "url": "https://lillaedet.se/upplevaochgora",
+  "city": "Lilla Edet",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ludvika",
+  "url": "https://www.ludvika.se/jobb-och-foretagande/foretagande/aktuellt-fran-naringslivet/naringsliv---kalendarium",
+  "city": "Ludvika",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ludvika",
+  "url": "https://www.ludvika.se/uppleva-och-gora",
+  "city": "Ludvika",
+  "total": 10,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T14:12 [2026-08-26] Dags för årets medborgarundersökning"
+  ]
+ },
+ {
+  "name": "Ludvika",
+  "url": "https://www.ludvika.se/uppleva-och-gora/turism-evenemang-sevardheter",
+  "city": "Ludvika",
+  "total": 6,
+  "future": 2,
+  "inWindow": 2,
+  "sample": [
+   "2026-08-26T14:12 Dags för årets medborgarundersökning",
+   "2026-08-26T09:05 Säkrare övergångsställe vid Kyrkskolan"
+  ]
+ },
+ {
+  "name": "Mariestad",
+  "url": "https://mariestad.se/uppleva-och-gora/bibliotek/slaktforskning",
+  "city": "Mariestad",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mariestad",
+  "url": "https://mariestad.se/uppleva-och-gora/bibliotek/lyrestads-bibliotek",
+  "city": "Mariestad",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mark",
+  "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-valkommen-pa-ljusmanifestation-i---skene-kyrka",
+  "city": "Mark",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mariestad",
+  "url": "https://mariestad.se/uppleva-och-gora/bibliotek/oppettider-och-kontaktuppgifter",
+  "city": "Mariestad",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mark",
+  "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-foraldramote-for-ak-1-pa-marks-gymnasieskola",
+  "city": "Mark",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mariestad",
+  "url": "https://mariestad.se/evenemang",
+  "city": "Mariestad",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Mark",
+  "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-24-lunch-pa-restaurang-lovisa",
+  "city": "Mark",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Markaryd",
+  "url": "https://www.markaryd.se/sidor/uppleva-och-gora.html",
+  "city": "Markaryd",
+  "total": 4,
+  "future": 4,
+  "inWindow": 2,
+  "sample": [
+   "2026-09-04T22:00 Välkommen till första spadtaget för Skanlux satsning i Traryd",
+   "2026-08-28T22:00 Öppet hus på Strömsnäsbruks bibliotek"
+  ]
+ },
+ {
+  "name": "Mjölby",
+  "url": "https://www.mjolby.se/uppleva-och-gora",
+  "city": "Mjölby",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Nora",
+  "url": "https://www.nora.se/upplevagora/sommarinora.4.49ed30a3162eafaa0dedff55.html",
+  "city": "Nora",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Nordanstig",
+  "url": "https://nordanstig.se/startsida/sidor/uppleva-och-gora/bibliotek.html",
+  "city": "Nordanstig",
+  "total": 23,
+  "future": 23,
+  "inWindow": 9,
+  "sample": [
+   "2026-09-17T22:00 Fotoutställning – Bergsjö hembygdsförening 100 år",
+   "2026-09-03T22:00 Sagofredag – skogen"
+  ]
+ },
+ {
+  "name": "Orust",
+  "url": "https://www.orust.se/uppleva-och-gora",
+  "city": "Orust",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ragunda",
+  "url": "https://ragunda.se/upplevaochgora.605.html",
+  "city": "Ragunda",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ovanåker",
+  "url": "https://www.ovanaker.se/evenemang",
+  "city": "Ovanåker",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ragunda",
+  "url": "https://ragunda.se/upplevaochgora/bibliotek.1000.html",
+  "city": "Ragunda",
+  "total": 5,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Ragunda",
+  "url": "https://ragunda.se/upplevaochgora/bibliotek/nyhetsarkiv/nyhetsarkiv/folkbiblioteketistugunflyttartillnornanskolbibiblioteketblirkvar.5638.html",
+  "city": "Ragunda",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Simrishamn",
+  "url": "https://www.simrishamn.se/evenemangskalender",
+  "city": "Simrishamn",
+  "total": 3,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T14:07 Nu tar vi nästa steg för Magdalenaparken och lekplatsen i Hamme"
+  ]
+ },
+ {
+  "name": "Simrishamn",
+  "url": "https://www.simrishamn.se/evenemang",
+  "city": "Simrishamn",
+  "total": 3,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T14:07 Nu tar vi nästa steg för Magdalenaparken och lekplatsen i Hamme"
+  ]
+ },
+ {
+  "name": "Simrishamn",
+  "url": "https://www.simrishamn.se/stod-och-omsorg/stod-till-dig-som-ar-aldre/motesplats-och-dagverksamhet/aktiviteter-for-seniorer",
+  "city": "Simrishamn",
+  "total": 3,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T14:07 Nu tar vi nästa steg för Magdalenaparken och lekplatsen i Hamme"
+  ]
+ },
+ {
+  "name": "Skinnskatteberg",
+  "url": "https://www.skinnskatteberg.se/stod-och-omsorg/aldreomsorg/aktiviteter-stod-och-frivilligverksamhet/veckoprogram-65",
+  "city": "Skinnskatteberg",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Skinnskatteberg",
+  "url": "https://www.skinnskatteberg.se/gora-och-uppleva",
+  "city": "Skinnskatteberg",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Skinnskatteberg",
+  "url": "https://www.skinnskatteberg.se/fb-evenemang",
+  "city": "Skinnskatteberg",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Smedjebacken",
+  "url": "https://www.smedjebacken.se/pa-gang/2026-08-19-fortidsrostning.html",
+  "city": "Smedjebacken",
+  "total": 24,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-09-09T22:00 [2026-08-25] 10 september – Suicidpreventiva dagen"
+  ]
+ },
+ {
+  "name": "Smedjebacken",
+  "url": "https://www.smedjebacken.se/pa-gang/2026-06-23-oppet-hus-hos-individ--och-familjeomsorgen.html",
+  "city": "Smedjebacken",
+  "total": 24,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-09-09T22:00 [2026-08-25] 10 september – Suicidpreventiva dagen"
+  ]
+ },
+ {
+  "name": "Smedjebacken",
+  "url": "https://www.smedjebacken.se/pa-gang/2026-08-25-10-september---suicidpreventiva-dagen.html",
+  "city": "Smedjebacken",
+  "total": 24,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-09-09T22:00 [2026-08-25] 10 september – Suicidpreventiva dagen"
+  ]
+ },
+ {
+  "name": "Solna",
+  "url": "https://www.solna.se/uppleva--gora",
+  "city": "Solna",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Solna",
+  "url": "https://www.solna.se/omsorg--stod/stod-for-seniorer/friskvard-och-aktiviteter-for-seniorer",
+  "city": "Solna",
+  "total": 3,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T12:42 Nu kan du rösta"
+  ]
+ },
+ {
+  "name": "Sorsele",
+  "url": "https://portal.sorsele.se/kalender/lagets-oppettider",
+  "city": "Sorsele",
+  "total": 4,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Sorsele",
+  "url": "https://portal.sorsele.se/kalender/vetenskapsluncher-vem-lar-lararna-undervisa-om-demokrati-i-ai-eran",
+  "city": "Sorsele",
+  "total": 4,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Sorsele",
+  "url": "https://portal.sorsele.se/kalender/skrivkurs-for-unga",
+  "city": "Sorsele",
+  "total": 4,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Stenungsund",
+  "url": "https://www.stenungsund.se/uppleva-och-gora",
+  "city": "Stenungsund",
+  "total": 2,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Storfors",
+  "url": "https://www.storfors.se/upplevaochgora.4.789155f3143f6bce326330.html",
+  "city": "Storfors",
+  "total": 3,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Storfors",
+  "url": "https://www.storfors.se/upplevaochgora/nyhetsarkivupplevaochgora/nyheterupplevaochgora/storforsfestivalenlordag29augusti.5.406c7f661a01f42c2733dbd7.html",
+  "city": "Storfors",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Strängnäs",
+  "url": "https://www.strangnas.se/evenemang",
+  "city": "Strängnäs",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Storfors",
+  "url": "https://www.storfors.se/upplevaochgora/evenemang.4.34c20d5713f759f032516cb.html",
+  "city": "Storfors",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Strängnäs",
+  "url": "https://www.strangnas.se/evenemangskalender",
+  "city": "Strängnäs",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Timrå",
+  "url": "https://www.timra.se/evenemangsarkiv/osynligasidor/nyheter.4.1025512d16cc5d46a3610c.html",
+  "city": "Timrå",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Timrå",
+  "url": "https://timra.se/evenemangsarkiv/osynligasidor/nyheter.4.1025512d16cc5d46a3610c.html",
+  "city": "Timrå",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Torsås",
+  "url": "https://www.torsas.se/evenemang",
+  "city": "Torsås",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T00:00 Aktuellt"
+  ]
+ },
+ {
+  "name": "Torsås",
+  "url": "https://www.torsas.se/kalender",
+  "city": "Torsås",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T00:00 Aktuellt"
+  ]
+ },
+ {
+  "name": "Torsås",
+  "url": "https://www.torsas.se/uppleva-och-gora/evenemang",
+  "city": "Torsås",
+  "total": 1,
+  "future": 1,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-26T00:00 Aktuellt"
+  ]
+ },
+ {
+  "name": "Torsås",
+  "url": "https://www.torsas.se/evenemangskalender",
+  "city": "Torsås",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vaggeryd",
+  "url": "https://www.vaggeryd.se/uppleva-och-gora/upplev-vaggeryds--kommun.html",
+  "city": "Vaggeryd",
+  "total": 21,
+  "future": 19,
+  "inWindow": 19,
+  "sample": [
+   "2026-08-27T00:00 Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd",
+   "2026-08-29T00:00 Evenemang WIK-dagen 2026 Vaggeryds centrum"
+  ]
+ },
+ {
+  "name": "Vaggeryd",
+  "url": "https://www.vaggeryd.se/evenemang",
+  "city": "Vaggeryd",
+  "total": 21,
+  "future": 19,
+  "inWindow": 19,
+  "sample": [
+   "2026-08-27T00:00 Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd",
+   "2026-08-29T00:00 Evenemang WIK-dagen 2026 Vaggeryds centrum"
+  ]
+ },
+ {
+  "name": "Vaggeryd",
+  "url": "https://www.vaggeryd.se/naringsliv-och-arbete/kalender-for-naringslivet.html",
+  "city": "Vaggeryd",
+  "total": 5,
+  "future": 5,
+  "inWindow": 1,
+  "sample": [
+   "2026-08-27T00:00 Klustermöte: Säsongsförlängning – uppföljning efter Attraktivit",
+   "2026-09-30T00:00 Vision Days 2026. Mötesplatsen för hela regionens näringsliv. 3"
+  ]
+ },
+ {
+  "name": "Vellinge",
+  "url": "https://vellinge.se/evenemang",
+  "city": "Vellinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vindeln",
+  "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2026-06-18-kvallsoppet-pa-retra-aterbruksbutik",
+  "city": "Vindeln",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vindeln",
+  "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2025-12-12-sammantrade-kommunfullmaktige",
+  "city": "Vindeln",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vellinge",
+  "url": "https://vellinge.se/evenemangskalender",
+  "city": "Vellinge",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vännäs",
+  "url": "https://vannas.se/aktivitetskalendern/vara-aktiviteter/2026-07-20-nyinflyttarkvall-i-vannas-8-september",
+  "city": "Vännäs",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vindeln",
+  "url": "https://vindeln.se/varaaktiviteter/aktiviteterevenemangsmall/sammantradekommunfullmaktige.5.5092937f19b0a28ec1e68.html",
+  "city": "Vindeln",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vännäs",
+  "url": "https://vannas.se/aktivitetskalendern",
+  "city": "Vännäs",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Vännäs",
+  "url": "https://vannas.se/evenemang",
+  "city": "Vännäs",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Värmdö",
+  "url": "https://www.varmdo.se/upplevaochgora.4.18c983316e0536cb18b5897.html",
+  "city": "Värmdö",
+  "total": 4,
+  "future": 2,
+  "inWindow": 2,
+  "sample": [
+   "2026-08-26T06:00 Förtidsröstningen är öppen",
+   "2026-08-26T06:00 Direktsändning från kommun­fullmäktige"
+  ]
+ },
+ {
+  "name": "Åtvidaberg",
+  "url": "https://www.atvidaberg.se/uppleva-och-gora",
+  "city": "Åtvidaberg",
+  "total": 4,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Åtvidaberg",
+  "url": "https://www.atvidaberg.se/uppleva-och-gora/ung-i-atvidaberg",
+  "city": "Åtvidaberg",
+  "total": 1,
+  "future": 0,
+  "inWindow": 0,
+  "sample": []
+ },
+ {
+  "name": "Östhammar",
+  "url": "https://www.osthammar.se/roslagen/evenemang",
+  "city": "Östhammar",
+  "total": 40,
+  "future": 35,
+  "inWindow": 35,
+  "sample": [
+   "2026-08-26T11:00 Storbrunn Makerspace",
+   "2026-08-27T13:30 Veteranbilsträffar på Sjötorget"
+  ]
+ },
+ {
+  "name": "Östhammar",
+  "url": "https://www.osthammar.se/evenemang",
+  "city": "Östhammar",
+  "total": 40,
+  "future": 35,
+  "inWindow": 35,
+  "sample": [
+   "2026-08-26T11:00 Storbrunn Makerspace",
+   "2026-08-27T13:30 Veteranbilsträffar på Sjötorget"
+  ]
+ }
+]

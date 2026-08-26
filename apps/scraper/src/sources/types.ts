@@ -186,7 +186,7 @@ export type EngineName =
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
     | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'fhp'
-    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter';
+    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter' | 'turid';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

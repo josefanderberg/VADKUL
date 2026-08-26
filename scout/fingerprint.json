@@ -1,0 +1,3697 @@
+[
+ {
+  "name": "Aneby",
+  "region": "jonkoping",
+  "domain": "aneby.se",
+  "calendars": [
+   {
+    "url": "https://aneby.se/arkiv/evenemang.html",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 5,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://aneby.se/evenemang",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 5,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://aneby.se/"
+ },
+ {
+  "name": "Avesta",
+  "region": "dalarna",
+  "domain": "avesta.se",
+  "calendars": [
+   {
+    "url": "https://avesta.se/gora-och-uppleva",
+    "score": 34,
+    "sig": {
+     "axiell": true,
+     "svDates": 2,
+     "isoDates": 3,
+     "vendors": [
+      "bokning",
+      "visitgroup"
+     ]
+    },
+    "platform": []
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://avesta.se/",
+  "sitemap": {
+   "sm": "https://avesta.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://avesta.se/-/evenemang/stod-och-omsorg/vo-collegeveckan-v.42/vo-collegeveckan-den-15-oktober/",
+    "https://avesta.se/-/evenemang/stod-och-omsorg/vo-collegeveckan-v.42/vo-collegeveckan-den-16-oktober/",
+    "https://avesta.se/-/evenemang/stod-och-omsorg/vo-collegeveckan-v.42/vo-collegeveckan-den-18-oktober/",
+    "https://avesta.se/-/evenemang/arbete-och-naringsliv/foretagarfrukost-i-verket/foretagarfrukost-hos-karl-hedin-ab/"
+   ],
+   "eventUrlCount": 505,
+   "sample": [
+    "https://avesta.se/-/evenemang/stod-och-omsorg/vo-collegeveckan-v.42/vo-collegeveckan-den-15-oktober/",
+    "https://avesta.se/-/evenemang/stod-och-omsorg/vo-collegeveckan-v.42/vo-collegeveckan-den-16-oktober/"
+   ]
+  }
+ },
+ {
+  "name": "Bjuv",
+  "region": "skane",
+  "domain": "bjuv.se",
+  "calendars": [
+   {
+    "url": "https://www.bjuv.se/kultur-och-fritid/evenemangskalender.html",
+    "score": 76,
+    "sig": {
+     "restApi": [
+      "/rest-api/mobile-menu/"
+     ],
+     "registerInitialState": true,
+     "svDates": 36,
+     "isoDates": 20
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.bjuv.se/evenemang",
+    "score": 76,
+    "sig": {
+     "restApi": [
+      "/rest-api/mobile-menu/"
+     ],
+     "registerInitialState": true,
+     "svDates": 36,
+     "isoDates": 20
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.bjuv.se/kultur-och-fritid/evenemangskalender/evenemangs-arkiv-anvand-denna/2026-08-10-sprakcafe-bjuvs-bibliotek.html",
+    "score": 35,
+    "sig": {
+     "restApi": [
+      "/rest-api/mobile-menu/"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 2,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.bjuv.se/kultur-och-fritid/evenemangskalender/evenemangs-arkiv-anvand-denna/2026-05-27-sommarprogram.html",
+    "score": 34,
+    "sig": {
+     "restApi": [
+      "/rest-api/mobile-menu/"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 1,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.bjuv.se/"
+ },
+ {
+  "name": "Bollebygd",
+  "region": "vastragotaland",
+  "domain": "bollebygd.se",
+  "calendars": [
+   {
+    "url": "https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html",
+    "score": 42,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 8,
+     "svDates": 33,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.bollebygd.se/upplevaochgora.4.4d349e8f14f48a3fac122541.html",
+    "score": 18,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 6,
+     "svDates": 11,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.bollebygd.se/upplevaochgora/evenemangskalender/evenemang/konstutstallningmedanthonaltogimfalk.5.1003f451a00e5619a8efb3.html",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 5,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.bollebygd.se/"
+ },
+ {
+  "name": "Botkyrka",
+  "region": "stockholm",
+  "domain": "botkyrka.se",
+  "calendars": [
+   {
+    "url": "https://www.botkyrka.se/stod-trygghet-och-familj/pengar-och-ekonomi/ekonomiskt-bistand/aktivitetskrav-for-dig-som-far-ekonomiskt-bistand",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 6,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.botkyrka.se/stod-trygghet-och-familj/aldreomsorg/sallskap-och-aktiviteter/motesplatser-for-dig-som-ar-over-60-ar/motesplats-hallunda-norsborg",
+    "score": 7,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 5,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.botkyrka.se/stod-trygghet-och-familj/aldreomsorg/sallskap-och-aktiviteter/motesplatser-for-dig-som-ar-over-60-ar",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 3,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.botkyrka.se/stod-trygghet-och-familj/aldreomsorg/sallskap-och-aktiviteter/motesplatser-for-dig-som-ar-over-60-ar/motesplats-grodinge",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 3,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.botkyrka.se/"
+ },
+ {
+  "name": "Boxholm",
+  "region": "ostergotland",
+  "domain": "boxholm.se",
+  "calendars": [
+   {
+    "url": "https://www.boxholm.se/uppleva-och-gora/bibliotek/intresseanmalan-volontar-sprakcafe",
+    "score": 9,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 7,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.boxholm.se/uppleva-och-gora/besok-boxholm/boende/timmero-camping",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.boxholm.se/"
+ },
+ {
+  "name": "Bromölla",
+  "region": "skane",
+  "domain": "bromolla.se",
+  "calendars": [
+   {
+    "url": "https://bromolla.se/omsorg-och-stod/aldre/aktiviteter-for-seniorer",
+    "score": 8,
+    "sig": {
+     "svDates": 8,
+     "vendors": [
+      "visitgroup"
+     ]
+    },
+    "platform": [
+     "episerver"
+    ]
+   }
+  ],
+  "platform": [
+   "episerver"
+  ],
+  "notes": [],
+  "finalUrl": "https://bromolla.se/",
+  "sitemap": {
+   "sm": "https://bromolla.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.bromolla.se/jobb-foretagande/arrangera-evenemang/lokaler-och-platser/ifotorget/torghandel/",
+    "https://www.bromolla.se/kommun-och-politik/press--och-informationsmaterial/nyhetsarkiv/installda-arrangemang-pa-kulturpunkten/",
+    "https://www.bromolla.se/kommun-och-politik/press--och-informationsmaterial/nyhetsarkiv/camilla-stark-nominerad-till-arets-eventskaning/",
+    "https://www.bromolla.se/kommun-och-politik/press--och-informationsmaterial/nyhetsarkiv/suicidpreventiva-dagen/"
+   ],
+   "eventUrlCount": 0,
+   "sample": []
+  }
+ },
+ {
+  "name": "Bräcke",
+  "region": "jamtland",
+  "domain": "bracke.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.bracke.se/"
+ },
+ {
+  "name": "Burlöv",
+  "region": "skane",
+  "domain": "burlov.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://burlov.se/"
+ },
+ {
+  "name": "Dals-Ed",
+  "region": "vastragotaland",
+  "domain": "dalsed.se",
+  "calendars": [
+   {
+    "url": "https://www.dalsed.se/uppleva-och-gora/turism/evenemangskalender",
+    "score": 52,
+    "sig": {
+     "svDates": 51,
+     "isoDates": 2
+    },
+    "platform": [
+     "umbraco"
+    ]
+   },
+   {
+    "url": "https://www.dalsed.se/uppleva-och-gora/evenemang",
+    "score": 52,
+    "sig": {
+     "svDates": 51,
+     "isoDates": 2
+    },
+    "platform": [
+     "umbraco"
+    ]
+   },
+   {
+    "url": "https://www.dalsed.se/uppleva-och-gora/evenemang/kaffe-med-bok-hosten-2026-bokcirkel-pa-biblioteket-tisdagar-1500",
+    "score": 20,
+    "sig": {
+     "svDates": 19,
+     "isoDates": 2
+    },
+    "platform": [
+     "umbraco"
+    ]
+   },
+   {
+    "url": "https://www.dalsed.se/uppleva-och-gora/bio",
+    "score": 9,
+    "sig": {
+     "svDates": 8,
+     "isoDates": 2
+    },
+    "platform": [
+     "umbraco"
+    ]
+   }
+  ],
+  "platform": [
+   "umbraco"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.dalsed.se/"
+ },
+ {
+  "name": "Danderyd",
+  "region": "stockholm",
+  "domain": "danderyd.se",
+  "calendars": [
+   {
+    "url": "https://www.danderyd.se/uppleva-och-gora/sommarlov",
+    "score": 25,
+    "sig": {
+     "svDates": 24,
+     "isoDates": 1
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.danderyd.se/uppleva-och-gora/idrott-motion-och-friluftsliv/idrott/fotbollsplaner",
+    "score": 11,
+    "sig": {
+     "svDates": 10,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "episerver"
+    ]
+   }
+  ],
+  "platform": [
+   "episerver"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.danderyd.se/",
+  "sitemap": {
+   "sm": "https://www.danderyd.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.danderyd.se/naringsliv/tillstandsguiden/servering-mat-och-dryck/tillfalliga-evenemang/",
+    "https://www.danderyd.se/ovriga-verksamheter/djursholms-slott/information-in-english/conferences-and-business-events/",
+    "https://www.danderyd.se/skolor/baldersskolan/kalender-lasarsdata/",
+    "https://www.danderyd.se/evenemang/evenemang-2026/nationaldagen-2026/"
+   ],
+   "eventUrlCount": 111,
+   "sample": [
+    "https://www.danderyd.se/evenemang/evenemang-2026/nationaldagen-2026/",
+    "https://www.danderyd.se/evenemang/evenemang-2026/valborg-2026/"
+   ]
+  }
+ },
+ {
+  "name": "Degerfors",
+  "region": "orebro",
+  "domain": "degerfors.se",
+  "calendars": [
+   {
+    "url": "https://degerfors.se/naringsliv-och-arbete/evenemang.html",
+    "score": 37,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-resume",
+      "/rest-api/svg-sources/lp-icons.svg#lp-whatsapp",
+      "/rest-api/svg-sources/lp-icons.svg#lp-scandinavian"
+     ],
+     "registerInitialState": true,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://degerfors.se/uppleva-och-gora/foreningar-och-foreningsstod.html",
+    "score": 34,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-resume",
+      "/rest-api/svg-sources/lp-icons.svg#lp-whatsapp",
+      "/rest-api/svg-sources/lp-icons.svg#lp-scandinavian"
+     ],
+     "registerInitialState": true,
+     "svDates": 3,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://degerfors.se/uppleva-och-gora/bibliotek/hela-degerfors-laser.html",
+    "score": 32,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-resume",
+      "/rest-api/svg-sources/lp-icons.svg#lp-whatsapp",
+      "/rest-api/svg-sources/lp-icons.svg#lp-scandinavian"
+     ],
+     "registerInitialState": true,
+     "svDates": 1,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://degerfors.se/uppleva-och-gora/turistinformation.html",
+    "score": 31,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-resume",
+      "/rest-api/svg-sources/lp-icons.svg#lp-whatsapp",
+      "/rest-api/svg-sources/lp-icons.svg#lp-scandinavian"
+     ],
+     "registerInitialState": true,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://degerfors.se/"
+ },
+ {
+  "name": "Eda",
+  "region": "varmland",
+  "domain": "eda.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://eda.se/"
+ },
+ {
+  "name": "Ekerö",
+  "region": "stockholm",
+  "domain": "ekero.se",
+  "calendars": [
+   {
+    "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 7,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.ekero.se/uppleva-gora",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 6,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott/mat-pa-slottet/dagens-lunch",
+    "score": 7,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ekero.se/"
+ },
+ {
+  "name": "Essunga",
+  "region": "vastragotaland",
+  "domain": "essunga.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://essunga.se/"
+ },
+ {
+  "name": "Filipstad",
+  "region": "varmland",
+  "domain": "filipstad.se",
+  "calendars": [
+   {
+    "url": "https://www.filipstad.se/toppmeny/upplevaochgora.1194.html",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 8
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.filipstad.se/"
+ },
+ {
+  "name": "Färgelanda",
+  "region": "vastragotaland",
+  "domain": "fargelanda.se",
+  "calendars": [
+   {
+    "url": "https://fargelanda.se/uppleva-och-gora/evenemang",
+    "score": 8,
+    "sig": {
+     "svDates": 8
+    },
+    "platform": [
+     "umbraco"
+    ]
+   }
+  ],
+  "platform": [
+   "umbraco"
+  ],
+  "notes": [],
+  "finalUrl": "https://fargelanda.se/"
+ },
+ {
+  "name": "Gnosjö",
+  "region": "jonkoping",
+  "domain": "gnosjo.se",
+  "calendars": [
+   {
+    "url": "https://gnosjo.se/uppleva-och-gora",
+    "score": 15,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 4,
+     "svDates": 8,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://gnosjo.se/"
+ },
+ {
+  "name": "Grums",
+  "region": "varmland",
+  "domain": "grums.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.grums.se/"
+ },
+ {
+  "name": "Grästorp",
+  "region": "vastragotaland",
+  "domain": "grastorp.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.grastorp.se/"
+ },
+ {
+  "name": "Gullspång",
+  "region": "vastragotaland",
+  "domain": "gullspang.se",
+  "calendars": [
+   {
+    "url": "https://gullspang.se/uppleva-och-gora",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 4,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://gullspang.se/omsorg-och-stod/ekonomisk-radgivning-och-forsorjningsstod/aktivitetskrav-for-forsorjningsstod",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://gullspang.se/"
+ },
+ {
+  "name": "Hagfors",
+  "region": "varmland",
+  "domain": "hagfors.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.hagfors.se/"
+ },
+ {
+  "name": "Hallstahammar",
+  "region": "vastmanland",
+  "domain": "hallstahammar.se",
+  "calendars": [
+   {
+    "url": "https://visithallstahammar.se/evenemang",
+    "score": 108,
+    "sig": {
+     "restApi": [
+      "https://visithallstahammar.se/rest-api/events-rest"
+     ],
+     "registerInitialState": true,
+     "isoDates": 156
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://visithallstahammar.se/evenemang/evenemang/ithjalppabiblioteket.5.e18e14619ed45666e48d932.html",
+    "score": 58,
+    "sig": {
+     "restApi": [
+      "https://visithallstahammar.se/rest-api/events-rest"
+     ],
+     "registerInitialState": true,
+     "svDates": 17,
+     "isoDates": 21,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://visithallstahammar.se/evenemang/evenemang/ithjalppabiblioteket.5.e18e14619ed45666e48d940.html",
+    "score": 58,
+    "sig": {
+     "restApi": [
+      "https://visithallstahammar.se/rest-api/events-rest"
+     ],
+     "registerInitialState": true,
+     "svDates": 17,
+     "isoDates": 21,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://visithallstahammar.se/evenemang/evenemang/ithjalppabiblioteket.5.e18e14619ed45666e48d94e.html",
+    "score": 58,
+    "sig": {
+     "restApi": [
+      "https://visithallstahammar.se/rest-api/events-rest"
+     ],
+     "registerInitialState": true,
+     "svDates": 17,
+     "isoDates": 21,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.hallstahammar.se/"
+ },
+ {
+  "name": "Hofors",
+  "region": "gavleborg",
+  "domain": "hofors.se",
+  "calendars": [
+   {
+    "url": "https://hofors.se/kultur--fritid/foreningsbidrag/aktivitetsbidrag.html",
+    "score": 17,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 7,
+     "isoDates": 9,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://hofors.se/uppleva--gora.html",
+    "score": 15,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 5,
+     "isoDates": 9,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://hofors.se/barn--utbildning/kommunalt-aktivitetsansvar-kaa.html",
+    "score": 15,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 5,
+     "isoDates": 9,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://hofors.se/kultur--fritid/entre-ungdom/lovaktiviteter.html",
+    "score": 15,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 5,
+     "isoDates": 9,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://hofors.se/"
+ },
+ {
+  "name": "Huddinge",
+  "region": "stockholm",
+  "domain": "huddinge.se",
+  "calendars": [
+   {
+    "url": "https://www.huddinge.se/kommunkalender",
+    "score": 107,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 19,
+     "svDates": 49,
+     "isoDates": 78
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.huddinge.se/nyheter/nyheter/2026-08-25-flemingsbergsfesten---gratis-aktiviteter-for-hela-familjen",
+    "score": 11,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 7,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.huddinge.se/kommunkalender/kommunkalender/2026-02-26-nyboda-museum",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 3,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.huddinge.se/kommunkalender/kommunkalender/2026-02-27-anhorigkafe-for-erfarenhetsutbyte-och-samvaro",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 3,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.huddinge.se/"
+ },
+ {
+  "name": "Hudiksvall",
+  "region": "gavleborg",
+  "domain": "hudiksvall.se",
+  "calendars": [
+   {
+    "url": "https://hudiksvall.se/Sidor/Uppleva-och-gora.html",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 2,
+     "isoDates": 20
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://hudiksvall.se/"
+ },
+ {
+  "name": "Hylte",
+  "region": "halland",
+  "domain": "hylte.se",
+  "calendars": [
+   {
+    "url": "https://www.hylte.se/uppleva-och-gora/ornahallens-halsocenter/kontakt-och-oppettider",
+    "score": 34,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 32,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.hylte.se/uppleva-och-gora/evenemang",
+    "score": 28,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 5,
+     "isoDates": 43
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.hylte.se/uppleva-och-gora",
+    "score": 9,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 4,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.hylte.se/nyheter/nyhetsarkiv/2026-06-16-sommaraktiviteter-i-hylte-kommun-2026",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 1,
+     "isoDates": 7
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.hylte.se/"
+ },
+ {
+  "name": "Hällefors",
+  "region": "orebro",
+  "domain": "hellefors.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://hellefors.se/"
+ },
+ {
+  "name": "Härnösand",
+  "region": "vasternorrland",
+  "domain": "harnosand.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://harnosand.se/"
+ },
+ {
+  "name": "Härryda",
+  "region": "vastragotaland",
+  "domain": "harryda.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.harryda.se/"
+ },
+ {
+  "name": "Högsby",
+  "region": "kalmar",
+  "domain": "hogsby.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [
+   "home fetch failed"
+  ],
+  "finalUrl": "https://hogsby.se"
+ },
+ {
+  "name": "Kalix",
+  "region": "norrbotten",
+  "domain": "kalix.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.kalix.se/",
+  "sitemap": {
+   "sm": "https://www.kalix.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.kalix.se/Omsorg/Hjalpmedel/digitalt-valfardsbibliotek/sjalvstandighet/digital-kalender/",
+    "https://www.kalix.se/Aktuellt/bygga-bo-miljo/hjalp-frizons-preventionspatrull-att-fokusera-sitt-arbete/"
+   ],
+   "eventUrlCount": 0,
+   "sample": []
+  }
+ },
+ {
+  "name": "Kinda",
+  "region": "ostergotland",
+  "domain": "kinda.se",
+  "calendars": [
+   {
+    "url": "https://www.kinda.se/upplevaochgora/friluftsliv/badplatser.4.15d59a7c151bb4254b7e7147.html",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 6,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.kinda.se/upplevaochgora/lotterier.4.5b72a6f9153276d6ee0d128a.html",
+    "score": 9,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.kinda.se/naringslivocharbete/arbete/kommunaltaktivitetsansvar.106.47c5f8811707620d4de38f6a.html",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 4,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.kinda.se/upplevaochgora/idrottochmotion.4.15d59a7c151bb4254b7984a5.html",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 4,
+     "isoDates": 3,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.kinda.se/"
+ },
+ {
+  "name": "Kristinehamn",
+  "region": "varmland",
+  "domain": "kristinehamn.se",
+  "calendars": [
+   {
+    "url": "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/hallbara-evenemang",
+    "score": 8,
+    "sig": {
+     "timeTags": 1,
+     "svDates": 6,
+     "isoDates": 1
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.kristinehamn.se/stod-och-omsorg/stod-vid-funktionsnedsattning/aktivitetskalender-lss",
+    "score": 6,
+    "sig": {
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 1
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.kristinehamn.se/kultur-och-fritid/kristinehamns-bibliotek/kalender",
+    "score": 6,
+    "sig": {
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 1
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.kristinehamn.se/kultur-och-fritid/kristinehamns-historiska-och-bildarkiv/programverksamhet-och-evenemang",
+    "score": 6,
+    "sig": {
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 1
+    },
+    "platform": [
+     "episerver"
+    ]
+   }
+  ],
+  "platform": [
+   "episerver"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.kristinehamn.se/",
+  "sitemap": {
+   "sm": "https://www.kristinehamn.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/varfor-valja-att-arrangera-evenemang-i-kristinehamn/",
+    "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/marknadsfor-ditt-evenemang/",
+    "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/evenemangsstod-till-foretag/",
+    "https://www.kristinehamn.se/naringsliv-och-arbete/arrangera-evenemang/arenor-och-platser/"
+   ],
+   "eventUrlCount": 2,
+   "sample": [
+    "https://www.kristinehamn.se/kultur-och-fritid/kristinehamns-bibliotek/kalender/",
+    "https://www.kristinehamn.se/kultur-och-fritid/evenemang/"
+   ]
+  }
+ },
+ {
+  "name": "Kungsbacka",
+  "region": "halland",
+  "domain": "kungsbacka.se",
+  "calendars": [
+   {
+    "url": "https://kungsbacka.se/uppleva-och-gora/evenemang/importerade-evenemang/guidning-brackan---gravarna",
+    "score": 68,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-jobb",
+      "/rest-api/svg-sources/lp-icons.svg#lp-info-circle",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-alt",
+      "/rest-api/svg-sources/lp-icons.svg#lp-facebook",
+      "/rest-api/svg-sources/lp-icons.svg#lp-linkedin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-instagram"
+     ],
+     "registerInitialState": true,
+     "timeTags": 12,
+     "svDates": 25,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://kungsbacka.se/uppleva-och-gora/evenemang",
+    "score": 67,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-jobb",
+      "/rest-api/svg-sources/lp-icons.svg#lp-info-circle",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-alt",
+      "/rest-api/svg-sources/lp-icons.svg#lp-facebook",
+      "/rest-api/svg-sources/lp-icons.svg#lp-linkedin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-instagram"
+     ],
+     "registerInitialState": true,
+     "svDates": 24,
+     "isoDates": 25
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://kungsbacka.se/evenemang",
+    "score": 67,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-jobb",
+      "/rest-api/svg-sources/lp-icons.svg#lp-info-circle",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-alt",
+      "/rest-api/svg-sources/lp-icons.svg#lp-facebook",
+      "/rest-api/svg-sources/lp-icons.svg#lp-linkedin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-instagram"
+     ],
+     "registerInitialState": true,
+     "svDates": 24,
+     "isoDates": 25
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://kungsbacka.se/uppleva-och-gora",
+    "score": 42,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-jobb",
+      "/rest-api/svg-sources/lp-icons.svg#lp-info-circle",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-alt",
+      "/rest-api/svg-sources/lp-icons.svg#lp-facebook",
+      "/rest-api/svg-sources/lp-icons.svg#lp-linkedin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-instagram"
+     ],
+     "registerInitialState": true,
+     "svDates": 8,
+     "isoDates": 7
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://kungsbacka.se/"
+ },
+ {
+  "name": "Kungsör",
+  "region": "vastmanland",
+  "domain": "kungsor.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://kungsor.se/"
+ },
+ {
+  "name": "Kungälv",
+  "region": "vastragotaland",
+  "domain": "kungalv.se",
+  "calendars": [
+   {
+    "url": "https://www.kungalv.se/kultur--fritid/evenemang-kungalv/oppet-hus-pa-nordiska-folkhogskolan",
+    "score": 6,
+    "sig": {
+     "svDates": 6
+    },
+    "platform": [
+     "episerver"
+    ]
+   }
+  ],
+  "platform": [
+   "episerver"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.kungalv.se/",
+  "sitemap": {
+   "sm": "https://www.kungalv.se/sitemap.xml",
+   "eventSubmaps": [
+    "http://www.kungalv.se/foretagande/tillstandsguide/livsmedelsverksamhet-vid-evenemang/",
+    "http://www.kungalv.se/kultur--fritid/evenemang-kungalv/smabarnsmys223112222/",
+    "http://www.kungalv.se/kultur--fritid/evenemang-kungalv/sprakcafe/",
+    "http://www.kungalv.se/kultur--fritid/evenemang-kungalv/stickcafe/"
+   ],
+   "eventUrlCount": 0,
+   "sample": []
+  }
+ },
+ {
+  "name": "Kävlinge",
+  "region": "skane",
+  "domain": "kavlinge.se",
+  "calendars": [
+   {
+    "url": "https://www.kavlinge.se/evenemang",
+    "score": 34,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-close-menu\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu\\"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 1,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.kavlinge.se/uppleva-och-gora/evenemang",
+    "score": 34,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-close-menu\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu\\"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 1,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.kavlinge.se/uppleva-och-gora",
+    "score": 32,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sok\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-close-menu\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu",
+      "/rest-api/svg-sources/lp-icons.svg#lp-menu\\"
+     ],
+     "registerInitialState": true,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.kavlinge.se/"
+ },
+ {
+  "name": "Köping",
+  "region": "vastmanland",
+  "domain": "koping.se",
+  "calendars": [
+   {
+    "url": "https://koping.se/evenemang",
+    "score": 66,
+    "sig": {
+     "restApi": [
+      "https://visitvastramalardalen.se/rest-api/evenemang"
+     ],
+     "registerInitialState": true,
+     "isoDates": 72
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://koping.se/"
+ },
+ {
+  "name": "Laxå",
+  "region": "orebro",
+  "domain": "laxa.se",
+  "calendars": [
+   {
+    "url": "https://www.laxa.se/Kalendern.html",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 5,
+     "isoDates": 8
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.laxa.se/"
+ },
+ {
+  "name": "Lerum",
+  "region": "vastragotaland",
+  "domain": "lerum.se",
+  "calendars": [
+   {
+    "url": "https://kalender.lerum.se/events/familjegympa-MjMwNTM5LDIwMjYtMDgtMjcgMTI6MzA=",
+    "score": 19,
+    "sig": {
+     "svDates": 11,
+     "isoDates": 16
+    },
+    "platform": [
+     "nextjs"
+    ]
+   },
+   {
+    "url": "https://kalender.lerum.se/events/sagostund-pa-sjoviks-bibliotek-MjIzMTE1LDIwMjYtMDgtMjcgMTM6MzA=",
+    "score": 18,
+    "sig": {
+     "svDates": 9,
+     "isoDates": 18,
+     "vendors": [
+      "ticketing"
+     ]
+    },
+    "platform": [
+     "nextjs"
+    ]
+   },
+   {
+    "url": "https://kalender.lerum.se/events/mindfulness-for-anhoriga-MjA4NzE0LDIwMjYtMDgtMjcgMDk6MDA=",
+    "score": 17,
+    "sig": {
+     "svDates": 8,
+     "isoDates": 18
+    },
+    "platform": [
+     "nextjs"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://lerum.se/"
+ },
+ {
+  "name": "Lilla Edet",
+  "region": "vastragotaland",
+  "domain": "lillaedet.se",
+  "calendars": [
+   {
+    "url": "https://lillaedet.se/uppleva-och-gora/evenemang-och-aktiviteter/evenemangskalender",
+    "score": 51,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 39,
+     "isoDates": 21
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://lillaedet.se/evenemang",
+    "score": 51,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 39,
+     "isoDates": 21
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://lillaedet.se/upplevaochgora",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://lillaedet.se/uppleva-och-gora",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://lillaedet.se/"
+ },
+ {
+  "name": "Ljusdal",
+  "region": "gavleborg",
+  "domain": "ljusdal.se",
+  "calendars": [
+   {
+    "url": "https://www.ljusdal.se/upplevagora/bibliotek.4.19618b314ae81f501e6cd35.html",
+    "score": 10,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ljusdal.se/"
+ },
+ {
+  "name": "Lomma",
+  "region": "skane",
+  "domain": "lomma.se",
+  "calendars": [
+   {
+    "url": "https://lomma.se/upplevaochgora.770.html",
+    "score": 31,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-chevron-right",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\"
+     ],
+     "registerInitialState": true,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://lomma.se/"
+ },
+ {
+  "name": "Ludvika",
+  "region": "dalarna",
+  "domain": "ludvika.se",
+  "calendars": [
+   {
+    "url": "https://www.ludvika.se/jobb-och-foretagande/foretagande/aktuellt-fran-naringslivet/naringsliv---kalendarium",
+    "score": 69,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 67,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.ludvika.se/uppleva-och-gora",
+    "score": 31,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 10,
+     "svDates": 8,
+     "isoDates": 26,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.ludvika.se/uppleva-och-gora/turism-evenemang-sevardheter",
+    "score": 22,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 6,
+     "svDates": 10,
+     "isoDates": 12,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.ludvika.se/uppleva-och-gora/turism-evenemang-sevardheter/sommar-i-ludvika",
+    "score": 20,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 6,
+     "svDates": 8,
+     "isoDates": 12,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ludvika.se/"
+ },
+ {
+  "name": "Lycksele",
+  "region": "vasterbotten",
+  "domain": "lycksele.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://lycksele.se/"
+ },
+ {
+  "name": "Malå",
+  "region": "vasterbotten",
+  "domain": "mala.se",
+  "calendars": [],
+  "platform": [
+   "umbraco"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.mala.se/"
+ },
+ {
+  "name": "Mariestad",
+  "region": "vastragotaland",
+  "domain": "mariestad.se",
+  "calendars": [
+   {
+    "url": "https://mariestad.se/uppleva-och-gora/bibliotek/slaktforskning",
+    "score": 14,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 13,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://mariestad.se/uppleva-och-gora/bibliotek/lyrestads-bibliotek",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 11,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://mariestad.se/uppleva-och-gora/bibliotek/oppettider-och-kontaktuppgifter",
+    "score": 9,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 8,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://mariestad.se/"
+ },
+ {
+  "name": "Mark",
+  "region": "vastragotaland",
+  "domain": "mark.se",
+  "calendars": [
+   {
+    "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-valkommen-pa-ljusmanifestation-i---skene-kyrka",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 5,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-foraldramote-for-ak-1-pa-marks-gymnasieskola",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 2,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-24-lunch-pa-restaurang-lovisa",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 2,
+     "isoDates": 6,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.mark.se/"
+ },
+ {
+  "name": "Markaryd",
+  "region": "kronoberg",
+  "domain": "markaryd.se",
+  "calendars": [
+   {
+    "url": "https://www.markaryd.se/sidor/uppleva-och-gora/bad/hannabadet.html",
+    "score": 7,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 4,
+     "isoDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.markaryd.se/sidor/uppleva-och-gora.html",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 3,
+     "isoDates": 4
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.markaryd.se/"
+ },
+ {
+  "name": "Mellerud",
+  "region": "vastragotaland",
+  "domain": "mellerud.se",
+  "calendars": [],
+  "platform": [
+   "umbraco"
+  ],
+  "notes": [],
+  "finalUrl": "https://mellerud.se/"
+ },
+ {
+  "name": "Mjölby",
+  "region": "ostergotland",
+  "domain": "mjolby.se",
+  "calendars": [
+   {
+    "url": "https://www.mjolby.se/uppleva-och-gora",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 3,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.mjolby.se/"
+ },
+ {
+  "name": "Munkedal",
+  "region": "vastragotaland",
+  "domain": "munkedal.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://munkedal.se/"
+ },
+ {
+  "name": "Munkfors",
+  "region": "varmland",
+  "domain": "munkfors.se",
+  "calendars": [],
+  "platform": [
+   "wordpress"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.munkfors.se/"
+ },
+ {
+  "name": "Nora",
+  "region": "orebro",
+  "domain": "nora.se",
+  "calendars": [
+   {
+    "url": "https://www.nora.se/upplevagora/sommarinora.4.49ed30a3162eafaa0dedff55.html",
+    "score": 26,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 24,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.nora.se/"
+ },
+ {
+  "name": "Nordanstig",
+  "region": "gavleborg",
+  "domain": "nordanstig.se",
+  "calendars": [
+   {
+    "url": "https://nordanstig.se/startsida/sidor/uppleva-och-gora/bibliotek.html",
+    "score": 16,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 4,
+     "isoDates": 23
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://nordanstig.se/"
+ },
+ {
+  "name": "Ockelbo",
+  "region": "gavleborg",
+  "domain": "ockelbo.se",
+  "calendars": [
+   {
+    "url": "https://ockelbo.se/evenemang",
+    "score": 42,
+    "sig": {
+     "registerInitialState": true,
+     "isoDates": 84
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://ockelbo.se/evenemangskalender",
+    "score": 42,
+    "sig": {
+     "registerInitialState": true,
+     "isoDates": 84
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://ockelbo.se/kalender",
+    "score": 42,
+    "sig": {
+     "registerInitialState": true,
+     "isoDates": 84
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://ockelbo.se/kultur--fritid/sommarlovsaktiviteter-2026",
+    "score": 32,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 29,
+     "isoDates": 2
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://ockelbo.se/"
+ },
+ {
+  "name": "Orust",
+  "region": "vastragotaland",
+  "domain": "orust.se",
+  "calendars": [
+   {
+    "url": "https://www.orust.se/uppleva-och-gora",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 2,
+     "isoDates": 4
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.orust.se/"
+ },
+ {
+  "name": "Ovanåker",
+  "region": "gavleborg",
+  "domain": "ovanaker.se",
+  "calendars": [
+   {
+    "url": "https://www.ovanaker.se/kulturochfritid/upplevovanakerskommun/dettahander.11286.html",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 5,
+     "isoDates": 2
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ovanaker.se/"
+ },
+ {
+  "name": "Ragunda",
+  "region": "jamtland",
+  "domain": "ragunda.se",
+  "calendars": [
+   {
+    "url": "https://ragunda.se/upplevaochgora.605.html",
+    "score": 41,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-arrow-right",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\"
+     ],
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 3,
+     "isoDates": 6,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://ragunda.se/upplevaochgora/bibliotek.1000.html",
+    "score": 40,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-arrow-right",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\"
+     ],
+     "registerInitialState": true,
+     "timeTags": 5,
+     "svDates": 2,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://ragunda.se/upplevaochgora/bibliotek/nyhetsarkiv/nyhetsarkiv/folkbiblioteketistugunflyttartillnornanskolbibiblioteketblirkvar.5638.html",
+    "score": 35,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-arrow-right",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 3,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://ragunda.se/"
+ },
+ {
+  "name": "Sala",
+  "region": "vastmanland",
+  "domain": "sala.se",
+  "calendars": [
+   {
+    "url": "https://www.sala.se/evenemang",
+    "score": 76,
+    "sig": {
+     "isoDates": 152
+    },
+    "platform": []
+   },
+   {
+    "url": "https://www.sala.se/evenemangskalender",
+    "score": 76,
+    "sig": {
+     "isoDates": 152
+    },
+    "platform": []
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.sala.se/"
+ },
+ {
+  "name": "Simrishamn",
+  "region": "skane",
+  "domain": "simrishamn.se",
+  "calendars": [
+   {
+    "url": "https://www.simrishamn.se/evenemangskalender",
+    "score": 22,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 8,
+     "isoDates": 22,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.simrishamn.se/evenemang",
+    "score": 22,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 8,
+     "isoDates": 22,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.simrishamn.se/stod-och-omsorg/stod-till-dig-som-ar-aldre/motesplats-och-dagverksamhet/aktiviteter-for-seniorer",
+    "score": 13,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 8,
+     "isoDates": 3,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.simrishamn.se/kultur/osterlens-museum/bokningsbara-aktiviteter",
+    "score": 11,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 6,
+     "isoDates": 3,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.simrishamn.se/"
+ },
+ {
+  "name": "Sjöbo",
+  "region": "skane",
+  "domain": "sjobo.se",
+  "calendars": [
+   {
+    "url": "https://www.sjobo.se/arkiv/evenemang/evenemang/budgetradgivningdropin.5.54250d0219e6349dfa3504f.html",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "serviceUrl": [
+      "/menu-service"
+     ],
+     "svDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.sjobo.se/"
+ },
+ {
+  "name": "Skinnskatteberg",
+  "region": "vastmanland",
+  "domain": "skinnskatteberg.se",
+  "calendars": [
+   {
+    "url": "https://www.skinnskatteberg.se/stod-och-omsorg/aldreomsorg/aktiviteter-stod-och-frivilligverksamhet/veckoprogram-65",
+    "score": 18,
+    "sig": {
+     "timeTags": 2,
+     "svDates": 13,
+     "isoDates": 5
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://www.skinnskatteberg.se/gora-och-uppleva",
+    "score": 10,
+    "sig": {
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 5,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://www.skinnskatteberg.se/fb-evenemang",
+    "score": 10,
+    "sig": {
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 5
+    },
+    "platform": [
+     "wordpress"
+    ]
+   }
+  ],
+  "platform": [
+   "wordpress"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.skinnskatteberg.se/",
+  "sitemap": {
+   "sm": "https://www.skinnskatteberg.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.skinnskatteberg.se/event-directory/",
+    "https://www.skinnskatteberg.se/fb-evenemang/",
+    "https://www.skinnskatteberg.se/barn-och-utbildning/elev-6-16-ar/klockarbergsskolan/kalendarium/",
+    "https://www.skinnskatteberg.se/nyheter/fallpreventionsveckan-2025/"
+   ],
+   "eventUrlCount": 1,
+   "sample": [
+    "https://www.skinnskatteberg.se/barn-och-utbildning/elev-6-16-ar/klockarbergsskolan/kalendarium/"
+   ]
+  }
+ },
+ {
+  "name": "Skurup",
+  "region": "skane",
+  "domain": "skurup.se",
+  "calendars": [
+   {
+    "url": "https://www.skurup.se/barn-och-utbildning/grundskola/kulturskola/aktuellt-schema-kalender",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 2
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.skurup.se/"
+ },
+ {
+  "name": "Smedjebacken",
+  "region": "dalarna",
+  "domain": "smedjebacken.se",
+  "calendars": [
+   {
+    "url": "https://www.smedjebacken.se/pa-gang/2026-08-19-fortidsrostning.html",
+    "score": 61,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 9,
+     "isoDates": 99
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.smedjebacken.se/pa-gang/2026-06-23-oppet-hus-hos-individ--och-familjeomsorgen.html",
+    "score": 58,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 6,
+     "isoDates": 99
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.smedjebacken.se/pa-gang/2026-08-25-10-september---suicidpreventiva-dagen.html",
+    "score": 57,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 99
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.smedjebacken.se/"
+ },
+ {
+  "name": "Solna",
+  "region": "stockholm",
+  "domain": "solna.se",
+  "calendars": [
+   {
+    "url": "https://www.solna.se/uppleva--gora/evenemang",
+    "score": 15,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 14,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.solna.se/uppleva--gora",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 6,
+     "isoDates": 6,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.solna.se/omsorg--stod/stod-for-seniorer/friskvard-och-aktiviteter-for-seniorer",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 6,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.solna.se/omsorg--stod/stod-for-seniorer/friskvard-och-aktiviteter-for-seniorer/friskvard-for-seniorer",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 3,
+     "svDates": 6,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.solna.se/"
+ },
+ {
+  "name": "Sorsele",
+  "region": "vasterbotten",
+  "domain": "sorsele.se",
+  "calendars": [
+   {
+    "url": "https://portal.sorsele.se/kalender/lagets-oppettider",
+    "score": 10,
+    "sig": {
+     "timeTags": 4,
+     "svDates": 3,
+     "isoDates": 6
+    },
+    "platform": []
+   },
+   {
+    "url": "https://portal.sorsele.se/kalender/vetenskapsluncher-vem-lar-lararna-undervisa-om-demokrati-i-ai-eran",
+    "score": 10,
+    "sig": {
+     "timeTags": 4,
+     "svDates": 3,
+     "isoDates": 5
+    },
+    "platform": []
+   },
+   {
+    "url": "https://portal.sorsele.se/kalender/skrivkurs-for-unga",
+    "score": 10,
+    "sig": {
+     "timeTags": 4,
+     "svDates": 3,
+     "isoDates": 6
+    },
+    "platform": []
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://portal.sorsele.se/"
+ },
+ {
+  "name": "Sotenäs",
+  "region": "vastragotaland",
+  "domain": "sotenas.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://sotenas.se/"
+ },
+ {
+  "name": "Stenungsund",
+  "region": "vastragotaland",
+  "domain": "stenungsund.se",
+  "calendars": [
+   {
+    "url": "https://www.stenungsund.se/uppleva-och-gora",
+    "score": 7,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 3,
+     "isoDates": 4
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.stenungsund.se/"
+ },
+ {
+  "name": "Storfors",
+  "region": "varmland",
+  "domain": "storfors.se",
+  "calendars": [
+   {
+    "url": "https://www.storfors.se/upplevaochgora.4.789155f3143f6bce326330.html",
+    "score": 9,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 4,
+     "svDates": 2,
+     "isoDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.storfors.se/upplevaochgora/nyhetsarkivupplevaochgora/nyheterupplevaochgora/storforsfestivalenlordag29augusti.5.406c7f661a01f42c2733dbd7.html",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 5,
+     "isoDates": 2,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.storfors.se/upplevaochgora/evenemang.4.34c20d5713f759f032516cb.html",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 3,
+     "isoDates": 2
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.storfors.se/upplevaochgora/nyhetsarkivupplevaochgora/nyheterupplevaochgora/staffanhellstrandspelaristorforskulturhus168.5.4f64abec19fcf969a9755e92.html",
+    "score": 5,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 2,
+     "isoDates": 2
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.storfors.se/"
+ },
+ {
+  "name": "Strängnäs",
+  "region": "sodermanland",
+  "domain": "strangnas.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.strangnas.se/"
+ },
+ {
+  "name": "Söderköping",
+  "region": "ostergotland",
+  "domain": "soderkoping.se",
+  "calendars": [],
+  "platform": [
+   "episerver"
+  ],
+  "notes": [],
+  "finalUrl": "https://soderkoping.se/"
+ },
+ {
+  "name": "Tidaholm",
+  "region": "vastragotaland",
+  "domain": "tidaholm.se",
+  "calendars": [
+   {
+    "url": "https://www.tidaholm.se/upplevaochgora/evenemangtidaholmskommun.702.html",
+    "score": 61,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-close\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-contact",
+      "/rest-api/svg-sources/lp-icons.svg#lp-hamburger"
+     ],
+     "registerInitialState": true,
+     "svDates": 21,
+     "isoDates": 19
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.tidaholm.se/upplevaochgora.27.html",
+    "score": 31,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-search\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-close\\",
+      "/rest-api/svg-sources/lp-icons.svg#lp-contact",
+      "/rest-api/svg-sources/lp-icons.svg#lp-hamburger"
+     ],
+     "registerInitialState": true,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.tidaholm.se/"
+ },
+ {
+  "name": "Timrå",
+  "region": "vasternorrland",
+  "domain": "timra.se",
+  "calendars": [
+   {
+    "url": "https://www.timra.se/evenemangsarkiv/osynligasidor/nyheter.4.1025512d16cc5d46a3610c.html",
+    "score": 291,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 101,
+     "isoDates": 377
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://timra.se/evenemangsarkiv/osynligasidor/nyheter.4.1025512d16cc5d46a3610c.html",
+    "score": 291,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 101,
+     "isoDates": 377
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://timra.se/"
+ },
+ {
+  "name": "Torsby",
+  "region": "varmland",
+  "domain": "torsby.se",
+  "calendars": [
+   {
+    "url": "https://torsby.se/kalender",
+    "score": 27,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 24,
+     "isoDates": 2,
+     "vendors": [
+      "kalendertjanst"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://torsby.se/"
+ },
+ {
+  "name": "Torsås",
+  "region": "kalmar",
+  "domain": "torsas.se",
+  "calendars": [
+   {
+    "url": "https://www.torsas.se/evenemang",
+    "score": 110,
+    "sig": {
+     "timeTags": 32,
+     "svDates": 45,
+     "isoDates": 65
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://www.torsas.se/kalender",
+    "score": 110,
+    "sig": {
+     "timeTags": 32,
+     "svDates": 45,
+     "isoDates": 65
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://www.torsas.se/uppleva-och-gora/evenemang",
+    "score": 110,
+    "sig": {
+     "timeTags": 32,
+     "svDates": 45,
+     "isoDates": 65
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "http://visittorsas.se/evenemang",
+    "score": 49,
+    "sig": {
+     "svDates": 19,
+     "isoDates": 60
+    },
+    "platform": [
+     "wordpress"
+    ]
+   }
+  ],
+  "platform": [
+   "wordpress"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.torsas.se/"
+ },
+ {
+  "name": "Trollhättan",
+  "region": "vastragotaland",
+  "domain": "trollhattan.se",
+  "calendars": [
+   {
+    "url": "https://www.trollhattan.se/evenemang",
+    "score": 20,
+    "sig": {
+     "svDates": 1,
+     "isoDates": 37
+    },
+    "platform": [
+     "episerver"
+    ]
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.trollhattan.se/startsida/",
+  "sitemap": {
+   "sm": "https://trollhattan.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.trollhattan.se/startsida/uppleva-och-gora/kultur/kulturevenemang/nationaldagen/arets-brobyggare/",
+    "https://www.trollhattan.se/startsida/uppleva-och-gora/kultur/kulturevenemang/fallens-dagar/",
+    "https://www.trollhattan.se/startsida/uppleva-och-gora/kultur/kulturevenemang/novemberfestivalen/",
+    "https://www.trollhattan.se/startsida/omsorg-och-hjalp/aldre/motesplatser-seniorer/kalender-motesplatser-for-seniorer/"
+   ],
+   "eventUrlCount": 3,
+   "sample": [
+    "https://www.trollhattan.se/startsida/uppleva-och-gora/evenemang/",
+    "https://www.trollhattan.se/konsthallen/kalender/"
+   ]
+  }
+ },
+ {
+  "name": "Töreboda",
+  "region": "vastragotaland",
+  "domain": "toreboda.se",
+  "calendars": [
+   {
+    "url": "https://toreboda.se/uppleva-och-gora/bibliotek/oppettider-och-kontakt",
+    "score": 8,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 8
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://toreboda.se/"
+ },
+ {
+  "name": "Vadstena",
+  "region": "ostergotland",
+  "domain": "vadstena.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [
+   "home fetch failed"
+  ],
+  "finalUrl": "https://vadstena.se"
+ },
+ {
+  "name": "Vaggeryd",
+  "region": "jonkoping",
+  "domain": "vaggeryd.se",
+  "calendars": [
+   {
+    "url": "https://www.vaggeryd.se/uppleva-och-gora/upplev-vaggeryds--kommun.html",
+    "score": 74,
+    "sig": {
+     "registerInitialState": true,
+     "jsonLdEvent": true,
+     "timeTags": 27,
+     "isoDates": 54,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.vaggeryd.se/evenemang",
+    "score": 74,
+    "sig": {
+     "registerInitialState": true,
+     "jsonLdEvent": true,
+     "timeTags": 27,
+     "isoDates": 54,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.vaggeryd.se/naringsliv-och-arbete/kalender-for-naringslivet.html",
+    "score": 21,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 8,
+     "isoDates": 25,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.vaggeryd.se/uppleva-och-gora.html",
+    "score": 14,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 6,
+     "svDates": 2,
+     "isoDates": 11,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.vaggeryd.se/"
+ },
+ {
+  "name": "Vallentuna",
+  "region": "stockholm",
+  "domain": "vallentuna.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.vallentuna.se/",
+  "sitemap": {
+   "sm": "https://www.vallentuna.se/sitemap.xml",
+   "eventSubmaps": [
+    "https://www.vallentuna.se/evenemang-och-upplevelser/evenemangskalender/2024/02/mikael-rickfors-och-med-the-big-sleep/",
+    "https://www.vallentuna.se/evenemang-och-upplevelser/evenemangskalender/2024/02/bim-bam-bom/",
+    "https://www.vallentuna.se/evenemang-och-upplevelser/evenemangskalender/2026/01/musik-i-handlingstider/",
+    "https://www.vallentuna.se/evenemang-och-upplevelser/evenemangskalender/2026/01/kubenstories/"
+   ],
+   "eventUrlCount": 0,
+   "sample": []
+  }
+ },
+ {
+  "name": "Vansbro",
+  "region": "dalarna",
+  "domain": "vansbro.se",
+  "calendars": [
+   {
+    "url": "https://www.vansbro.se/arkiv/evenemang.html",
+    "score": 31,
+    "sig": {
+     "restApi": [
+      "/rest-api/EventService",
+      "https://morakommun.se/rest-api/EventService/items?start=0&num=50&paths=3.166aa05167c62dff5d3cf27",
+      "https://alvdalen.se/rest-api/EventService/items?start=0&num=50&paths=3.2a0514cf167c60922247a9d7",
+      "https://orsa.se/rest-api/EventService/items?start=0&num=50&paths=3.166aa05167c62dff5d3cf27"
+     ],
+     "registerInitialState": true,
+     "svDates": 1,
+     "vendors": [
+      "visitgroup"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.vansbro.se/evenemang",
+    "score": 31,
+    "sig": {
+     "restApi": [
+      "/rest-api/EventService",
+      "https://morakommun.se/rest-api/EventService/items?start=0&num=50&paths=3.166aa05167c62dff5d3cf27",
+      "https://alvdalen.se/rest-api/EventService/items?start=0&num=50&paths=3.2a0514cf167c60922247a9d7",
+      "https://orsa.se/rest-api/EventService/items?start=0&num=50&paths=3.166aa05167c62dff5d3cf27"
+     ],
+     "registerInitialState": true,
+     "svDates": 1,
+     "vendors": [
+      "visitgroup"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.vansbro.se/"
+ },
+ {
+  "name": "Vellinge",
+  "region": "skane",
+  "domain": "vellinge.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://vellinge.se/"
+ },
+ {
+  "name": "Vindeln",
+  "region": "vasterbotten",
+  "domain": "vindeln.se",
+  "calendars": [
+   {
+    "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2026-06-18-kvallsoppet-pa-retra-aterbruksbutik",
+    "score": 38,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-home",
+      "/rest-api/svg-sources/lp-icons.svg#lp-intranat"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2025-12-12-sammantrade-kommunfullmaktige",
+    "score": 38,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-home",
+      "/rest-api/svg-sources/lp-icons.svg#lp-intranat"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 5,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vindeln.se/varaaktiviteter/aktiviteterevenemangsmall/sammantradekommunfullmaktige.5.5092937f19b0a28ec1e68.html",
+    "score": 37,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-home",
+      "/rest-api/svg-sources/lp-icons.svg#lp-intranat"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 5,
+     "isoDates": 1
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vindeln.se/uppleva-och-gora/idrottsanlaggningar/fritidscentrum",
+    "score": 33,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-home",
+      "/rest-api/svg-sources/lp-icons.svg#lp-intranat"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 1,
+     "isoDates": 1,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://vindeln.se/"
+ },
+ {
+  "name": "Vännäs",
+  "region": "vasterbotten",
+  "domain": "vannas.se",
+  "calendars": [
+   {
+    "url": "https://vannas.se/aktivitetskalendern/vara-aktiviteter/2026-07-20-nyinflyttarkvall-i-vannas-8-september",
+    "score": 42,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-translate",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-groups"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 8,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vannas.se/aktivitetskalendern",
+    "score": 42,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-translate",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-groups"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 13
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vannas.se/evenemang",
+    "score": 42,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-translate",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-groups"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 4,
+     "isoDates": 13
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://vannas.se/aktivitetskalendern/vara-aktiviteter/2026-07-13-delta-i-naturpasset-sommaren-2026",
+    "score": 41,
+    "sig": {
+     "restApi": [
+      "/rest-api/svg-sources/lp-icons.svg#lp-search",
+      "/rest-api/svg-sources/lp-icons.svg#lp-laptop",
+      "/rest-api/svg-sources/lp-icons.svg#lp-pin",
+      "/rest-api/svg-sources/lp-icons.svg#lp-sound",
+      "/rest-api/svg-sources/lp-icons.svg#lp-translate",
+      "/rest-api/svg-sources/lp-icons.svg#lp-user-groups"
+     ],
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 7,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://vannas.se/"
+ },
+ {
+  "name": "Värmdö",
+  "region": "stockholm",
+  "domain": "varmdo.se",
+  "calendars": [
+   {
+    "url": "https://www.varmdo.se/upplevaochgora/evenemang.4.62b6567e177d2c33d13c3489.html",
+    "score": 33,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 33
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.varmdo.se/evenemang",
+    "score": 33,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 33
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.varmdo.se/upplevaochgora.4.18c983316e0536cb18b5897.html",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 4,
+     "isoDates": 4,
+     "vendors": [
+      "bokning"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.varmdo.se/"
+ },
+ {
+  "name": "Värnamo",
+  "region": "jonkoping",
+  "domain": "varnamo.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [
+   "home fetch failed"
+  ],
+  "finalUrl": "https://varnamo.se"
+ },
+ {
+  "name": "Ånge",
+  "region": "vasternorrland",
+  "domain": "ange.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ange.se/"
+ },
+ {
+  "name": "Åre",
+  "region": "jamtland",
+  "domain": "are.se",
+  "calendars": [
+   {
+    "url": "https://are.se/uppleva-och-gora/evenemangskalender/evenemang/2024-07-31-nordic-soundscapes",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 3,
+     "isoDates": 5,
+     "vendors": [
+      "ticketing"
+     ]
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://are.se/uppleva-och-gora/evenemangskalender/evenemang/2026-08-12-jamtlitt",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "svDates": 3,
+     "isoDates": 5
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://are.se/"
+ },
+ {
+  "name": "Årjäng",
+  "region": "varmland",
+  "domain": "arjang.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.arjang.se/"
+ },
+ {
+  "name": "Åstorp",
+  "region": "skane",
+  "domain": "astorp.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://astorp.se/"
+ },
+ {
+  "name": "Åtvidaberg",
+  "region": "ostergotland",
+  "domain": "atvidaberg.se",
+  "calendars": [
+   {
+    "url": "https://www.atvidaberg.se/uppleva-och-gora",
+    "score": 12,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 4,
+     "svDates": 5,
+     "isoDates": 6
+    },
+    "platform": [
+     "sitevision"
+    ]
+   },
+   {
+    "url": "https://www.atvidaberg.se/uppleva-och-gora/ung-i-atvidaberg",
+    "score": 6,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 1,
+     "svDates": 3,
+     "isoDates": 3
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.atvidaberg.se/"
+ },
+ {
+  "name": "Ödeshög",
+  "region": "ostergotland",
+  "domain": "odeshog.se",
+  "calendars": [
+   {
+    "url": "https://www.odeshog.se/forskolaskolaochutbildning/kulturskolan/kulturskolansevenemang.106.1256cf2c195adccf7597a15.html",
+    "score": 17,
+    "sig": {
+     "registerInitialState": true,
+     "timeTags": 2,
+     "svDates": 15
+    },
+    "platform": [
+     "sitevision"
+    ]
+   }
+  ],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.odeshog.se/"
+ },
+ {
+  "name": "Örnsköldsvik",
+  "region": "vasternorrland",
+  "domain": "ornskoldsvik.se",
+  "calendars": [],
+  "platform": [
+   "sitevision"
+  ],
+  "notes": [],
+  "finalUrl": "https://www.ornskoldsvik.se/"
+ },
+ {
+  "name": "Österåker",
+  "region": "stockholm",
+  "domain": "osteraker.se",
+  "calendars": [],
+  "platform": [],
+  "notes": [
+   "home fetch failed"
+  ],
+  "finalUrl": "https://osteraker.se"
+ },
+ {
+  "name": "Östhammar",
+  "region": "uppsala",
+  "domain": "osthammar.se",
+  "calendars": [
+   {
+    "url": "https://www.osthammar.se/roslagen/evenemang",
+    "score": 107,
+    "sig": {
+     "timeTags": 40,
+     "svDates": 47,
+     "isoDates": 40
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.osthammar.se/evenemang",
+    "score": 107,
+    "sig": {
+     "timeTags": 40,
+     "svDates": 47,
+     "isoDates": 40
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.osthammar.se/kalender",
+    "score": 24,
+    "sig": {
+     "svDates": 24
+    },
+    "platform": [
+     "episerver"
+    ]
+   },
+   {
+    "url": "https://www.osthammar.se/uppleva-och-gora",
+    "score": 8,
+    "sig": {
+     "timeTags": 3,
+     "svDates": 3,
+     "isoDates": 3
+    },
+    "platform": []
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.osthammar.se/"
+ },
+ {
+  "name": "Överkalix",
+  "region": "norrbotten",
+  "domain": "overkalix.se",
+  "calendars": [
+   {
+    "url": "https://www.overkalix.se/evenemangskalender",
+    "score": 12,
+    "sig": {
+     "svDates": 11,
+     "isoDates": 1
+    },
+    "platform": []
+   },
+   {
+    "url": "https://www.overkalix.se/evenemangskalender/aktuella-evenemang/mikaelidagarna-skorde-och-matmarknad-samt-lokala-hantverk-25-26-september-2026",
+    "score": 6,
+    "sig": {
+     "svDates": 6
+    },
+    "platform": []
+   }
+  ],
+  "platform": [],
+  "notes": [],
+  "finalUrl": "https://www.overkalix.se/"
+ },
+ {
+  "name": "Övertorneå",
+  "region": "norrbotten",
+  "domain": "overtornea.se",
+  "calendars": [
+   {
+    "url": "https://overtornea.se/uppleva-och-gora/evenemang",
+    "score": 414,
+    "sig": {
+     "svDates": 46,
+     "isoDates": 735
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://overtornea.se/se-och-gora/evenemang",
+    "score": 414,
+    "sig": {
+     "svDates": 46,
+     "isoDates": 735
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://overtornea.se/uppleva/evenemang",
+    "score": 414,
+    "sig": {
+     "svDates": 46,
+     "isoDates": 735
+    },
+    "platform": [
+     "wordpress"
+    ]
+   },
+   {
+    "url": "https://overtornea.se/uppleva-och-gora/kultur-och-fritid/evenemang",
+    "score": 414,
+    "sig": {
+     "svDates": 46,
+     "isoDates": 735
+    },
+    "platform": [
+     "wordpress"
+    ]
+   }
+  ],
+  "platform": [
+   "wordpress",
+   "drupal",
+   "umbraco"
+  ],
+  "notes": [],
+  "finalUrl": "https://overtornea.se/"
+ }
+]
