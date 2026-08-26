@@ -22,6 +22,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
+import { toggleCategory } from '@/utils/categoryToggle';
 import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -1832,13 +1833,12 @@ export default function HomePage() {
     // avbrytbar och blockerar inte tappen (INP på kartsidan låg >500 ms mobil).
     const [, startTransition] = useTransition();
 
+    // Toggle-regeln bor i utils/categoryToggle (ren + testad): PÅ-slag av en
+    // vanlig kategori släcker opt-in-källorna (kyrkan/PRO, 🧸 i opt-in-läget)
+    // så "filtrera på Musik" betyder bara Musik (Josef 26/8).
     const handleToggleCategory = useCallback((id: string) => {
-        startTransition(() => setSelectedCategories(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
-            return next;
-        }));
-    }, []);
+        startTransition(() => setSelectedCategories(prev => toggleCategory(prev, id, { familyOptIn })));
+    }, [familyOptIn]);
     // Rensa-krysset heter "Visa alla" — då måste det landa i STANDARDLÄGET, inte
     // i tom set: för en besökare (och för 65+) ingår opt-in-källorna i "allt",
     // och ett tomt set hade tvärtom SLÄCKT dem. Under 65 ⇒ tomt som förut.

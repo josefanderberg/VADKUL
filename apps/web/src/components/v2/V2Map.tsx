@@ -4047,8 +4047,11 @@ export default function V2Map({
                             stad-pillen nere till höger. Samma vita husknappsstil som
                             sökknappen. zoomIn/zoomOut går genom kartans vanliga
                             zoom-maskineri (zoomstart → nål-läge osv), precis som en
-                            nyp-zoom — reveal-ankaret rörs aldrig vid ren zoom. */}
-                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1151] flex flex-col gap-2 pointer-events-auto">
+                            nyp-zoom — reveal-ankaret rörs aldrig vid ren zoom.
+                            z-[1149]: UNDER kategorikolumnen (1150) — en öppen
+                            kategorilista som når hit ska rita sina cirklar
+                            ÖVER zoomknapparna, inte tvärtom (Josef 26/8). */}
+                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1149] flex flex-col gap-2 pointer-events-auto">
                             <button
                                 type="button"
                                 onClick={() => mapRef.current?.zoomIn()}
