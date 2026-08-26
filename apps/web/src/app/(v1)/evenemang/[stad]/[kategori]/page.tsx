@@ -10,6 +10,7 @@ import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd,
 import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
 import { DayFilterProvider } from '../../dayFilter';
+import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -111,6 +112,10 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
+            {/* Kategorisidan räknas som besök på SIN STAD i topplistans
+                besök-kolumn (beaconen dedupar per dag, så stad+kategori
+                samma dag blir ändå ett besök). */}
+            <CityVisitBeacon stad={city.slug} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />

@@ -9,6 +9,7 @@ import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd,
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
 import { DayFilterProvider } from '../dayFilter';
+import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -120,6 +121,10 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
+            {/* Besöksräknaren: en ping per webbläsare/dag → topplistans
+                besök-kolumn på /evenemang. Sidan är statisk, så räknandet
+                måste ske klient-side. */}
+            <CityVisitBeacon stad={city.slug} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
