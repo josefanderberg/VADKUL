@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractCrunchoState, pickOccurrence, mapCrunchoEvent, CrunchoEvent } from './cruncho';
+import { extractCrunchoState, pickOccurrence, mapCrunchoEvent, mapCrunchoRouteEvent, CrunchoEvent } from './cruncho';
 
 const CFG = { pageUrl: 'https://visitlund.se/evenemangskalender', defaultCity: 'Lund' };
 const WINDOW_START = new Date('2026-07-09T00:00:00+02:00');
@@ -98,5 +98,56 @@ describe('mapCrunchoEvent', () => {
     it('nollkoordinater skickas inte vidare', () => {
         const ev = mapCrunchoEvent({ ...base, mapCoordinates: { lat: 0, lng: 0 } }, CFG, WINDOW_START)!;
         expect(ev.coords).toBeUndefined();
+    });
+});
+
+describe('mapCrunchoRouteEvent', () => {
+    const CFG = { pageUrl: 'https://www.ange.se/evenemang', defaultCity: 'Ånge' };
+    const E = {
+        id: 'OnA5R0gdaQTG8OAGgErG',
+        name: 'Kulturskolan - pop-up i Konsthallen!',
+        from: '2026-08-27T10:00:00.000+02:00',
+        to: '2026-08-27T16:00:00.000+02:00',
+        uri: '/evenemang/evenemang/2026-08-21-kulturskolan---pop-up-i-konsthallen',
+        venue: 'Järnvägsgatan 3',
+        address: 'Järnvägsgatan 3, 841 33 Ånge, Sverige',
+        organizer: 'Kulturskolan',
+        imageUrl: 'https://s3.cruncho.co/eventmanager-assets/utstallning.jpg',
+        description: 'Välkommen att ta del av Kulturskolans verksamhet.',
+    };
+
+    it('gör uri absolut mot kalendersidan', () => {
+        expect(mapCrunchoRouteEvent(E, CFG)!.url)
+            .toBe('https://www.ange.se/evenemang/evenemang/2026-08-21-kulturskolan---pop-up-i-konsthallen');
+    });
+
+    it('läser from/to som lokal tid med offset', () => {
+        const e = mapCrunchoRouteEvent(E, CFG)!;
+        expect(e.startDate.toISOString()).toBe('2026-08-27T08:00:00.000Z');
+        expect(e.endDate?.toISOString()).toBe('2026-08-27T14:00:00.000Z');
+        expect(e.hasSpecificTime).toBe(true);
+    });
+
+    it('sätter arrangören som hostName och bär full adress', () => {
+        const e = mapCrunchoRouteEvent(E, CFG)!;
+        expect(e.hostName).toBe('Kulturskolan');
+        expect(e.address).toBe('Järnvägsgatan 3, 841 33 Ånge, Sverige');
+        expect(e.city).toBe('Ånge');
+    });
+
+    it('lämnar hasSpecificTime öppen för heldagsposter', () => {
+        expect(mapCrunchoRouteEvent({ ...E, from: '2026-08-27T00:00:00.000+02:00' }, CFG)!.hasSpecificTime).toBeUndefined();
+    });
+
+    it('avvisar poster utan namn, from eller uri', () => {
+        expect(mapCrunchoRouteEvent({ ...E, name: '' }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, from: undefined }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, uri: undefined }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, from: 'aldrig' }, CFG)).toBeNull();
+    });
+
+    it('klarar arrangör satt till null', () => {
+        const e = mapCrunchoRouteEvent({ ...E, organizer: null }, CFG)!;
+        expect(e.hostName).toBeUndefined();
     });
 });

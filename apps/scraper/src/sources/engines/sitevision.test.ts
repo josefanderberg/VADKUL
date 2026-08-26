@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -409,5 +409,46 @@ describe('cleanCardTitle', () => {
 
     it('klarar saknad venue', () => {
         expect(cleanCardTitle('Evenemang WIK-dagen 2026', undefined, OPTS)).toBe('WIK-dagen 2026');
+    });
+});
+
+describe('mapPageApiItem', () => {
+    const BASE = 'https://www.varmdo.se/upplevaochgora/evenemang.html';
+    const ITEM = {
+        id: '5.3a37c4d819e632d26612cf',
+        displayName: 'Pratb&auml;nk p&aring; Gustavsg&aring;rden',
+        URI: '/upplevaochgora/evenemang/pratbank.5.467d267619ed4689c71472.html',
+        startDate: 1787832000000,
+        endDate: 1787835600000,
+        img: '/images/200.360bac7a19ed441e94fd67/fotoparken.jpg',
+        text: 'Kom och prata bort en stund.',
+    };
+
+    it('läser epoch-ms som riktig tid', () => {
+        const e = mapPageApiItem(ITEM, BASE, 'Gustavsberg')!;
+        expect(e.startDate.getTime()).toBe(1787832000000);
+        expect(e.endDate?.getTime()).toBe(1787835600000);
+    });
+
+    it('avkodar entiteter i titeln', () => {
+        expect(mapPageApiItem(ITEM, BASE, 'Gustavsberg')!.title).toBe('Pratbänk på Gustavsgården');
+    });
+
+    it('gör URI och bild absoluta', () => {
+        const e = mapPageApiItem(ITEM, BASE, 'Gustavsberg')!;
+        expect(e.url).toBe('https://www.varmdo.se/upplevaochgora/evenemang/pratbank.5.467d267619ed4689c71472.html');
+        expect(e.imageUrl).toBe('https://www.varmdo.se/images/200.360bac7a19ed441e94fd67/fotoparken.jpg');
+    });
+
+    it('struntar i sluttid som inte ligger efter starttid', () => {
+        expect(mapPageApiItem({ ...ITEM, endDate: ITEM.startDate }, BASE, 'X')!.endDate).toBeUndefined();
+        expect(mapPageApiItem({ ...ITEM, endDate: undefined }, BASE, 'X')!.endDate).toBeUndefined();
+    });
+
+    it('avvisar poster utan titel, URI eller giltig epoch', () => {
+        expect(mapPageApiItem({ ...ITEM, displayName: '' }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, URI: undefined }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, startDate: 0 }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, startDate: undefined }, BASE, 'X')).toBeNull();
     });
 });

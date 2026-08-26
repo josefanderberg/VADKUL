@@ -121,6 +121,18 @@ export interface SiteVisionConfig {
      * resultatet mellan seriens tillfällen.
      */
     searchAppApi?: { portletId: string; fetchDetail?: boolean };
+    /**
+     * SiteVision-webappens `/page`-route (upptäckt på varmdo.se 2026-08-26):
+     *   GET <origin>/appresource/<pageId>/<portletId>/page?p=<N>&f=&t=&c=&svAjaxReqParam=ajax
+     *   Header: X-Requested-With: XMLHttpRequest
+     *   → { hitCount, items: [{ displayName, URI, startDate, endDate, eventDate,
+     *                           img, text, id }] }
+     *
+     * startDate/endDate är EPOCH-MILLISEKUNDER (inte ISO) och bär riktig tid.
+     * 9 träffar/sida, p är 1-indexerad och INTE kumulativ — alla sidor krävs.
+     * Samma app kör degerfors.se; c-parametern (kategori) utelämnas där.
+     */
+    pageApi?: { pageId: string; portletId: string };
 }
 
 /** Rått item ur soleil items-API:t (bara fälten vi läser). */
@@ -416,6 +428,81 @@ export function mapEventSearchHit(
         imageUrl: makeAbsoluteUrl(hit.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/** Rått item ur /page-routen (bara fälten vi läser). */
+interface PageApiItem {
+    id?: string;
+    displayName?: string;
+    URI?: string;
+    startDate?: number;      // epoch ms
+    endDate?: number;
+    img?: string;
+    text?: string;
+}
+
+/** Mappa ett /page-item → RawEvent. Exporterad för test. */
+export function mapPageApiItem(
+    item: PageApiItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = decodeHtmlEntities(item.displayName || '').trim();
+    const eventUrl = makeAbsoluteUrl(item.URI, baseUrl);
+    if (!title || !eventUrl) return null;
+    if (typeof item.startDate !== 'number' || !isFinite(item.startDate) || item.startDate <= 0) return null;
+
+    const start = new Date(item.startDate);
+    if (isNaN(start.getTime())) return null;
+    const end = typeof item.endDate === 'number' && item.endDate > item.startDate
+        ? new Date(item.endDate) : undefined;
+
+    return {
+        externalId: item.id,
+        title,
+        startDate: start,
+        endDate: end,
+        url: eventUrl,
+        city: defaultCity,
+        description: item.text?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.img, baseUrl),
+    };
+}
+
+/** SiteVision-webappens /page-route — paginera igenom (9/sida, ej kumulativ). */
+async function scrapePageApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const { pageId, portletId } = config.pageApi!;
+    const cap = config.maxItems ?? 400;
+    const events: RawEvent[] = [];
+    const seenUrls = new Set<string>();
+
+    let hitCount = Infinity;
+    for (let page = 1; events.length < cap; page++) {
+        const url = `${origin}/appresource/${pageId}/${portletId}/page?p=${page}&f=&t=&c=&svAjaxReqParam=ajax`;
+        const body = await fetchHtml(url, config, { 'X-Requested-With': 'XMLHttpRequest' });
+        if (!body) { ctx.log(`  /page svarade inte (p=${page})`); break; }
+
+        let data: { hitCount?: number; items?: PageApiItem[] };
+        try { data = JSON.parse(body); } catch { ctx.log('  /page gav icke-JSON'); break; }
+        if (typeof data.hitCount === 'number') hitCount = data.hitCount;
+
+        const items = data.items ?? [];
+        if (items.length === 0) break;
+        for (const it of items) {
+            const ev = mapPageApiItem(it, base, config.defaultCity);
+            if (!ev || seenUrls.has(ev.url)) continue;
+            seenUrls.add(ev.url);
+            events.push(ev);
+        }
+        if (page * items.length >= hitCount) break;
+    }
+    ctx.log(`/page-API: ${events.length} event (hitCount=${hitCount})`);
+    return events;
 }
 
 /** soleilit.eventSearch: hela kalendern i ETT anrop (fönsterstyrt). */
@@ -828,6 +915,7 @@ export const sitevisionEngine = async (
     if (config.eventSearchApi) return scrapeEventSearchApi(config, ctx);
     if (config.guideApi) return scrapeGuideApi(config, ctx);
     if (config.searchAppApi) return scrapeSearchAppApi(config, ctx);
+    if (config.pageApi) return scrapePageApi(config, ctx);
 
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();

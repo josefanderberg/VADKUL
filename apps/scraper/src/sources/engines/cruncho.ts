@@ -18,7 +18,8 @@
  *  - e.city är stadsdel+stad ("Centrala staden, Lund") → defaultCity vinner.
  */
 
-import { RawEvent, EngineContext } from '../types';
+import { RawEvent, EngineContext, Engine } from '../types';
+import { dedupeSeries } from '../../scrapers/pro';
 import { domainLimiter } from '../rateLimiter';
 import { cleanDescription } from '../../utils/text';
 
@@ -29,6 +30,18 @@ const DEFAULT_UA =
 export interface CrunchoConfig {
     /** Kalendersidan som bär registerInitialState-blobben */
     pageUrl: string;
+    /**
+     * Nyare Cruncho-webapp (ange.se 2026-08-26): listan ligger INTE i sidans
+     * initialState utan bakom portletens egen route:
+     *   GET <pageUrl>?sv.target=<portletId>&sv.<portletId>.route=/events
+     *       &fromDate=YYYY-MM-DD&selectedTags=&page=N&svAjaxReqParam=ajax
+     *   Header: X-Requested-With: XMLHttpRequest
+     *   → { noHits, noPages, events: [{ name, from, to, uri, venue, address,
+     *                                   organizer, imageUrl, description, tags }] }
+     * 12/sida, INTE kumulativ. En rad per TILLFÄLLE (samma event återkommer
+     * med olika uri per dag) → serie-dedup på (arrangör, titel).
+     */
+    eventsRoute?: { portletId: string };
     /** Detaljsidans mall — '{id}' ersätts med eventets id. Default: <pageUrl>/evenemang?id={id} */
     eventUrlTemplate?: string;
     defaultCity?: string;
@@ -181,10 +194,103 @@ export function mapCrunchoEvent(
     };
 }
 
+/** Rå post ur /events-routen (bara fälten vi läser). */
+export interface CrunchoRouteEvent {
+    id?: string;
+    name?: string;
+    from?: string;           // "2026-08-27T10:00:00.000+02:00"
+    to?: string;
+    uri?: string;            // relativ sidsökväg
+    venue?: string;
+    address?: string;
+    organizer?: string | null;
+    imageUrl?: string;
+    description?: string;
+}
+
+/** Mappa en /events-post → RawEvent. Exporterad för test. */
+export function mapCrunchoRouteEvent(
+    e: CrunchoRouteEvent,
+    cfg: CrunchoConfig,
+): RawEvent | null {
+    const title = (e.name || '').trim();
+    if (!title || !e.from || !e.uri) return null;
+    const start = new Date(e.from);
+    if (isNaN(start.getTime())) return null;
+    const end = e.to ? new Date(e.to) : null;
+
+    let url: string;
+    try { url = new URL(e.uri, cfg.pageUrl).toString(); } catch { return null; }
+
+    const organizer = e.organizer?.trim() || undefined;
+    return {
+        externalId: e.id,
+        title,
+        startDate: start,
+        endDate: end && !isNaN(end.getTime()) && end > start ? end : undefined,
+        url,
+        venueName: e.venue?.trim() || undefined,
+        address: e.address?.trim() || undefined,
+        city: cfg.defaultCity,
+        description: cleanDescription(e.description || '') || undefined,
+        imageUrl: e.imageUrl || undefined,
+        organizer,
+        hostName: organizer,
+        hasSpecificTime: !/T00:00:00/.test(e.from) ? true : undefined,
+    };
+}
+
+/** Nyare Cruncho-webapp: paginera igenom portletens /events-route. */
+async function scrapeEventsRoute(
+    config: CrunchoConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const { portletId } = config.eventsRoute!;
+    const from = ctx.windowStart.toISOString().slice(0, 10);
+    const all: RawEvent[] = [];
+    let noPages = 1;
+
+    for (let page = 1; page <= Math.min(noPages, 30); page++) {
+        const url = `${config.pageUrl}?sv.target=${portletId}`
+            + `&sv.${portletId}.route=/events&fromDate=${from}&selectedTags=&page=${page}&svAjaxReqParam=ajax`;
+        let data: { noHits?: number; noPages?: number; events?: CrunchoRouteEvent[] };
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    'User-Agent': config.userAgent ?? DEFAULT_UA,
+                    'Accept': 'application/json',
+                    // UTAN denna svarar servern med hela HTML-sidan.
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: ctx.signal ?? AbortSignal.timeout(config.timeoutMs ?? 25_000),
+            });
+            if (!res.ok) { ctx.log(`/events HTTP ${res.status} (page=${page})`); break; }
+            data = await res.json();
+        } catch (err) {
+            ctx.log(`/events-fel page=${page}: ${(err as Error).message}`);
+            break;
+        }
+        if (typeof data.noPages === 'number') noPages = data.noPages;
+        const items = data.events ?? [];
+        if (!items.length) break;
+        for (const it of items) {
+            const ev = mapCrunchoRouteEvent(it, config);
+            if (ev) all.push(ev);
+        }
+    }
+
+    // En rad per tillfälle → behåll första tillfället per (arrangör, titel).
+    const deduped = dedupeSeries(all.sort((a, b) => a.startDate.getTime() - b.startDate.getTime()));
+    ctx.log(`cruncho /events: ${all.length} tillfällen → ${deduped.length} efter serie-dedup`);
+    return deduped;
+}
+
 export const crunchoEngine = async (
     config: CrunchoConfig,
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
+    if (config.eventsRoute) return scrapeEventsRoute(config, ctx);
+
     const sep = config.pageUrl.includes('?') ? '&' : '?';
     const url = `${config.pageUrl}${sep}offset=${config.offset ?? 1000}`;
 
