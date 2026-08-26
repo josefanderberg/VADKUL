@@ -17,7 +17,7 @@ import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
-import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, ZoomIn, Lock } from 'lucide-react';
+import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, ZoomIn } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
@@ -293,16 +293,6 @@ const pickNearestToPoint =(point: { lat: number; lng: number } | null, dayEvents
 // vecka × hela Sverige tusentals brickor (kartan kör medvetet ingen
 // klustring). Zoom 9 ≈ en stad med omnejd i mobilviewporten.
 const WEEK_VIEW_MIN_ZOOM = 9;
-/** Hur länge actionrutan är på väg upp mot plusset. Delas med CSS-animationen
- *  .action-intro-out (globals.css) — håll dem i synk från ETT ställe. */
-const ACTION_INTRO_FLY_MS = 420;
-/** Paus mellan att välkomstrutan stängs och att actionrutan glider upp. Ska
- *  räcka för att stadshoppet ska hinna landa — man ska ha SETT var man hamnade
- *  innan nästa ruta kommer (Josef 14/8). */
-const ACTION_INTRO_DELAY_MS = 2000;
-/** Hur länge plusset blinkar efter hem-flygningen. Måste matcha antalet varv i
- *  .plus-hint-pulse (globals.css): 3 × 1,1 s. */
-const PLUS_HINT_MS = 3400;
 /**
  * "Varje torsdag kl 19:00" — veckodagen och tiden en serie skulle ärva från
  * det valda datumet. Tar datetime-local-strängen rakt av (den är redan lokal
@@ -491,11 +481,9 @@ export default function HomePage() {
 
     /**
      * Öppna skapa-/tipsa-formuläret på KARTANS MITT, med tiden förifylld till
-     * nästa hela timme. Två vägar hit: bekräfta-knappen i slutet av placerings-
-     * varvet (plusset), och onboardingens actionruta — den ska landa direkt i
-     * rätt formulär i stället för att bara stänga sig och lämna en i
-     * placeringsläget (Josef 14/8: "vi kan ju lika väl hamna på den rätta
-     * rutan"). Platsen går att flytta efteråt via "Ändra plats" i formuläret.
+     * nästa hela timme. Hit kommer man via bekräfta-knappen i slutet av
+     * placeringsvarvet (plusset). Platsen går att flytta efteråt via
+     * "Ändra plats" i formuläret.
      */
     const openCreateFormHere = useCallback(() => {
         const here = mapCenterRef.current;
@@ -554,51 +542,10 @@ export default function HomePage() {
     // modalen). Grinden öppnas först när rutan KLICKATS NER — eller direkt för
     // inloggade, som aldrig får rutan.
     const [welcomeDone, setWelcomeDone] = useState(false);
-    // STEG 2 i onboardingen: en liten ruta med de tre sakerna man själv kan göra
-    // (tipsa / önska / skapa). Den kommer EFTER att stadshoppet landat och
-    // ligger LÅGT på skärmen, så staden man hamnat i syns med sina event bakom
-    // (Josef 14/8). Klickar man utanför flyger rutan upp MOT skapa-knappen uppe
-    // till vänster, som samtidigt tänds: det är där de bor i fortsättningen.
-    // Flyttas knappen igen måste .action-intro-fly-home i globals.css flyttas
-    // med — annars pekar hela steget åt fel håll.
-    const [actionIntroPending, setActionIntroPending] = useState(false);
-    const [actionIntroOpen, setActionIntroOpen] = useState(false);
-    // Rutan kommer INTE i samma andetag som välkomstrutan stängs (Josef 14/8):
-    // först får stadshoppet landa så man ser var man hamnat, sedan glider den
-    // upp. Fördröjningen är räknad från stängningen och täcker hoppet.
-    useEffect(() => {
-        if (!actionIntroPending) return;
-        const t = setTimeout(() => { setActionIntroOpen(true); setActionIntroPending(false); }, ACTION_INTRO_DELAY_MS);
-        return () => clearTimeout(t);
-    }, [actionIntroPending]);
-    // Sant medan plusset blinkar (efter att actionrutan flugit hem). Sidan äger
-    // tidtagningen — navbaren bara läser flaggan, så den slipper egen state.
-    const [plusHint, setPlusHint] = useState(false);
-    // Sant medan hem-flygningen spelas. Rutan avmonteras FÖRST när animationen
-    // är klar — rycker vi bort den direkt syns ingen rörelse alls, och då är
-    // steget bara en ruta som försvinner.
-    const [actionIntroFlyingHome, setActionIntroFlyingHome] = useState(false);
-    const dismissActionIntro = useCallback(() => {
-        setActionIntroFlyingHome(true);
-        setPlusHint(true);                     // plusset tänds MEDAN rutan är på väg
-        setTimeout(() => {
-            setActionIntroOpen(false);
-            setActionIntroFlyingHome(false);
-        }, ACTION_INTRO_FLY_MS);
-        setTimeout(() => setPlusHint(false), PLUS_HINT_MS);
-    }, []);
-    // Escape stänger actionrutan på samma sätt som ett klick utanför — samma
-    // väg ut, samma blink på plusset.
-    useEffect(() => {
-        if (!actionIntroOpen) return;
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') dismissActionIntro(); };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [actionIntroOpen, dismissActionIntro]);
+    // (STEG 2 i onboardingen — actionrutan med tipsa/önska/skapa — är borttagen
+    // 26/8: för många popups. Plusset uppe till vänster är enda vägen in.)
     // Kromet (navbar, kategorikolumn, stadsruta …) ligger nere BARA under
-    // välkomstrutan. Actionrutan i steg 2 kommer först när man landat i sin
-    // stad, och då ska allt annat redan vara på plats — inklusive plusset uppe
-    // till höger, som rutan ska flyga hem till.
+    // välkomstrutan.
     const chromeHidden = welcomeOpen;
     const welcomeAutoShownRef = useRef(false);
     useEffect(() => {
@@ -2471,7 +2418,6 @@ export default function HomePage() {
                 closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                plusHint={plusHint}
             />
             )}
 
@@ -3288,113 +3234,8 @@ export default function HomePage() {
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
                     soonEventCount={soonEventCount}
-                    onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); setActionIntroPending(true); }}
+                    onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
                 />
-            )}
-
-            {/* STEG 2: de tre sakerna man själv kan göra. Egen liten ruta efter
-                välkomstrutan (Josef 14/8) — inte fler punkter inuti den, den var
-                redan full. Kommer först när stadshoppet landat, och sitter LÅGT:
-                staden man hamnat i ska synas med sina event ovanför rutan.
-                Duken är därför en svag gradient underifrån i stället för en
-                heltäckande skugga — den får inte släcka kartan den just visat.
-                Klick UTANFÖR = "jag fattar" → rutan flyger upp mot det gröna
-                plusset, som samtidigt blinkar till. Det är hela poängen med
-                steget: man ska veta VAR de finns sen. */}
-            {actionIntroOpen && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Vad vill du göra?"
-                    /* Under hem-flygningen tar rutan inte längre emot klick:
-                       valde man en åtgärd ligger formuläret redan bakom, och
-                       duken hade svalt de första klicken i det. */
-                    className={`fixed inset-0 z-[1500] flex items-end justify-center p-4 pb-[76px] ${
-                        actionIntroFlyingHome ? 'pointer-events-none' : ''
-                    }`}
-                >
-                    <div
-                        className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent animate-in fade-in duration-300"
-                        onClick={dismissActionIntro}
-                    />
-                    <div className={`action-intro-card relative w-full max-w-[340px] rounded-[26px] bg-white p-5 shadow-2xl ${
-                        actionIntroFlyingHome ? 'action-intro-out' : ''
-                    }`}>
-                        <p className="text-center text-[17px] font-black text-slate-900">Du kan fylla på kartan</p>
-                        <p className="mt-1 mb-4 text-center text-[12.5px] font-semibold leading-snug text-slate-500">
-                            Saknas något? Lägg in det själv — det tar en halv minut.
-                        </p>
-
-                        <div className="flex flex-col gap-2">
-                            {[
-                                {
-                                    key: 'tip' as const,
-                                    emoji: '📣',
-                                    title: 'Tipsa om ett event',
-                                    hint: 'Något du sett — inget konto behövs',
-                                    locked: false,
-                                    onPick: () => { setCreateKind('event'); setNewEventRole('tip'); },
-                                },
-                                {
-                                    key: 'wish' as const,
-                                    emoji: '✨',
-                                    title: 'Önska ett event',
-                                    hint: 'Något du vill skulle hända här',
-                                    locked: true,
-                                    onPick: () => { setCreateKind('wish'); setNewEventRole('tip'); },
-                                },
-                                {
-                                    key: 'host' as const,
-                                    emoji: '📅',
-                                    title: 'Skapa eget event',
-                                    hint: 'Du är arrangören',
-                                    locked: true,
-                                    onPick: () => { setCreateKind('event'); setNewEventRole('host'); },
-                                },
-                            ].map(action => (
-                                <button
-                                    key={action.key}
-                                    type="button"
-                                    onClick={() => {
-                                        action.onPick();
-                                        // Rakt in i RÄTT formulär, på kartans mitt —
-                                        // inte bara stänga och lämna en i
-                                        // placeringsläget (Josef 14/8). Platsen går
-                                        // att flytta i efterhand via "Ändra plats".
-                                        dismissActionIntro();
-                                        openCreateFormHere();
-                                    }}
-                                    className="group flex w-full items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2.5 text-left transition-all hover:border-[#006AA7] hover:shadow-md active:scale-[0.98] outline-none focus-visible:ring-4 focus-visible:ring-[#006AA7]/40"
-                                >
-                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-50 text-[20px] transition-transform group-hover:scale-110">
-                                        {action.emoji}
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="text-[14px] font-extrabold text-slate-900">{action.title}</span>
-                                            {/* Kräver konto = ett litet grått lås, inget mer.
-                                                De färgade "KONTO"-brickorna gjorde raderna
-                                                rosa och blå utan att säga mer (Josef 14/8). */}
-                                            {action.locked && (
-                                                <Lock size={12} className="shrink-0 text-slate-400" aria-label="Kräver konto" />
-                                            )}
-                                        </span>
-                                        <span className="block truncate text-[11.5px] font-semibold text-slate-500">{action.hint}</span>
-                                    </span>
-                                    <ChevronRight size={16} className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-400" />
-                                </button>
-                            ))}
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={dismissActionIntro}
-                            className="mt-3 w-full rounded-xl py-2 text-[12.5px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
-                        >
-                            Bara titta först
-                        </button>
-                    </div>
-                </div>
             )}
 
             {/* Info-knappen — öppnar onboarding-rutan när man själv vill ha den.

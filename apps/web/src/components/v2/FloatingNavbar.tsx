@@ -27,10 +27,8 @@ interface FloatingNavbarProps {
        försvann med den. Sparat-panelen öppnas numera bara därifrån.) */
     /* (Skylt-knappen och dess signsOn/onToggleSigns låg här. Borttagna 14/8 —
        Josef: "we don't need that anymore". Skapa-knappen ärvde platsen.) */
-    /** Sant en kort stund efter att onboardingens actionruta flugit hem hit:
-     *  plusset blinkar till så man ser VAR tipsa/önska/skapa bor i
-     *  fortsättningen. Sidan äger tidtagningen (den startar flygningen). */
-    plusHint?: boolean;
+    /* (plusHint låg här: plusset blinkade när onboardingens actionruta flugit
+       hem hit. Actionrutan är borttagen 26/8 — för många popups.) */
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -84,7 +82,6 @@ export default function FloatingNavbar({
     closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
-    plusHint = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -222,7 +219,7 @@ export default function FloatingNavbar({
                                     onClick={handlePlusClick}
                                     disabled={plusDropping}
                                     aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
-                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 group ${plusHint ? 'plus-hint-pulse' : 'gold-glow-pulse'}`}
+                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
                                 >
                                     {creationMode === 'placing'
                                         ? <Check size={20} className="text-white shrink-0" />
