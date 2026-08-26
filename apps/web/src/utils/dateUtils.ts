@@ -14,8 +14,8 @@ export const formatTime = (date: Date): string => {
     return date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 };
 
-export const formatEventDate = (date: Date, hasSpecificTime: boolean = true): string => {
-    const today = new Date();
+export const formatEventDate = (date: Date, hasSpecificTime: boolean = true, now: Date = new Date()): string => {
+    const today = now;
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -47,4 +47,24 @@ export const formatEventDate = (date: Date, hasSpecificTime: boolean = true): st
 
         return `${capitalizedDateStr}${time}`;
     }
+};
+
+/**
+ * Datum för event MED slutdatum (flerdagars): "Idag 10:00 – Lör 5 sep" /
+ * "Ons 2 sep – Lör 5 sep". Slut samma kalenderdag (eller saknat/bakvänt) →
+ * vanliga formatEventDate — sluttid samma dag är inte värd platsen på kortet.
+ * `now` är injicerbar för testerna.
+ */
+export const formatEventDateSpan = (
+    start: Date,
+    end: Date | undefined,
+    hasSpecificTime: boolean = true,
+    now: Date = new Date(),
+): string => {
+    const startLabel = formatEventDate(start, hasSpecificTime, now);
+    if (!end || isNaN(end.getTime()) || end.getTime() <= start.getTime()) return startLabel;
+    if (end.toDateString() === start.toDateString()) return startLabel;
+    const endStr = end.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
+    const endLabel = endStr.charAt(0).toUpperCase() + endStr.slice(1);
+    return `${startLabel} – ${endLabel}`;
 };

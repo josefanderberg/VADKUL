@@ -81,6 +81,21 @@ describe('formatCityRow + shortVenue', () => {
         const noTime = ev({ title: 'Marknad', time: '2026-08-22T00:00:00+02:00', category: 'market', locationName: 'Torget' });
         expect(formatCityRow(noTime)).toBe('🛍️ Marknad — Torget (lördag)');
     });
+
+    it('flerdagarsevent skrivs som spann (Live at Heart-regeln 26/8)', () => {
+        const fest = ev({
+            title: 'Live at Heart', time: '2026-09-02T10:00:00+02:00',
+            endDate: '2026-09-05T23:00:00+02:00', category: 'music', locationName: 'Örebro',
+        });
+        expect(formatCityRow(fest)).toBe('🎵 Live at Heart — Örebro (onsdag–lördag kl 10)');
+        expect(formatCityRow(fest, { withDate: true })).toContain('onsdag 2/9–lördag 5/9 kl 10');
+        // Sluttid SAMMA dag är brus i det täta formatet — inget spann.
+        const konsert = ev({
+            title: 'Konsert', time: '2026-08-28T19:30:00+02:00',
+            endDate: '2026-08-28T23:00:00+02:00', locationName: 'Kapellet',
+        });
+        expect(formatCityRow(konsert)).toBe('🎵 Konsert — Kapellet (fredag kl 19.30)');
+    });
 });
 
 describe('buildCityPostText', () => {

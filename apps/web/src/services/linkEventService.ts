@@ -304,6 +304,10 @@ function hasSpecificTimeOf(evt: any, time: Date): boolean {
 function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
     return events.map((evt: any) => {
         const time = new Date(evt.time);
+        // Slutdatum (flerdagarsevent) — pipelinen validerar redan, men en
+        // trasig/omvänd sträng ska inte ge kortet ett bakvänt spann.
+        const end = evt.endDate ? new Date(evt.endDate) : null;
+        const endDate = end && !isNaN(end.getTime()) && end.getTime() > time.getTime() ? end : undefined;
         // Sanera koordinater redan här: en projicerad koord (lat=6129956) som
         // slinker förbi pipelinens vakt får annars Maplibre att kasta och
         // släcker hela kartan. Ogiltigt → 0,0 ("oplacerad", döljs på kartan).
@@ -327,6 +331,7 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
             isLocationVerified: evt.isLocationVerified || false,
             emoji: evt.emoji || undefined,
             hasSpecificTime: hasSpecificTimeOf(evt, time),
+            endDate,
         };
     });
 }

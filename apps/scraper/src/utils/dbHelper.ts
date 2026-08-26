@@ -1,5 +1,6 @@
 import { db } from '../config/firebase';
 import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, getSyncMeta } from './sqliteHelper';
+import { sanitizeEndDate } from './eventEnd';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
 
@@ -203,6 +204,11 @@ export async function addEventToDb(eventData: any) {
     // 0. Normalisera date-only-tid (annars lokal midnatt → 22:00/23:00Z). Görs
     //    här så BÅDE SQLite och Firestore (som läser eventData.time) får samma.
     eventData.time = afternoonForDateOnly(eventData.time, eventData.hasSpecificTime);
+    // Slutdatum saneras CENTRALT (validEventEnd-reglerna: slut > start, max
+    // 30 dygn) — legacy-scrapers får skicka källans råa värde; ogiltigt/
+    // saknat fält skrivs inte alls.
+    const cleanEnd = sanitizeEndDate(eventData.time, eventData.endDate);
+    if (cleanEnd) eventData.endDate = cleanEnd; else delete eventData.endDate;
 
     // 1. Skriv ALLTID till lokal SQLite först — snabbt, offline-säkert.
     try {
@@ -277,9 +283,14 @@ export async function addEventsBatch(
     if (events.length === 0) return { written: 0, errors };
 
     // Dedup på url inom batchen (sista vinner) + normalisera date-only-tid.
+    // Slutdatum saneras centralt (samma regel som addEventToDb) — runnern
+    // skickar redan validerat, men regeln ska gälla ALLA anropare.
     const byUrl = new Map<string, any>();
     for (const e of events) {
-        byUrl.set(e.url, { ...e, time: afternoonForDateOnly(e.time, e.hasSpecificTime) });
+        const norm: any = { ...e, time: afternoonForDateOnly(e.time, e.hasSpecificTime) };
+        const cleanEnd = sanitizeEndDate(norm.time, norm.endDate);
+        if (cleanEnd) norm.endDate = cleanEnd; else delete norm.endDate;
+        byUrl.set(e.url, norm);
     }
     const prepared = [...byUrl.values()];
 

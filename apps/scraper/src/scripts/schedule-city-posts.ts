@@ -124,6 +124,8 @@ interface EventRow {
     url: string;
     title: string;
     time: string;
+    /** Validerat slutdatum (ISO) — flerdagarsevent skrivs "onsdag–lördag". */
+    endDate?: string | null;
     locationName: string;
     category: string;
     lat: number;
@@ -230,7 +232,7 @@ function eventsForTown(sqlite: Database.Database, town: Town, from: Date, to: Da
     const lngSpan = radiusKm / (111.32 * Math.cos((town.lat * Math.PI) / 180));
 
     const rows = sqlite.prepare(`
-        SELECT url, title, time, locationName, category, lat, lng
+        SELECT url, title, time, endDate, locationName, category, lat, lng
         FROM link_events
         WHERE datetime(time) >= datetime(?)
           AND datetime(time) <= datetime(?)
