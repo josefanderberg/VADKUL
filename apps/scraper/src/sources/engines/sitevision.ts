@@ -26,6 +26,7 @@ import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
 import { decodeHtmlEntities } from '../../utils/text';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { getSharedBrowser } from './sitemap';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -50,6 +51,21 @@ export interface SiteVisionConfig {
      * i stället för defaultCity, så geokodningen inte drar allt till en ort.
      */
     cities?: string[];
+    /**
+     * Rendera kalendersidan i Puppeteer innan extraktionen. Flera kommuner
+     * (Trollhättan, Botkyrka, Mark, Dals-Ed …) skickar en tom skal-HTML och
+     * bygger korten i JS — utan detta ser motorn noll <time datetime>, trots
+     * att sidan är full av datum i browsern. Delar browser-instans med
+     * sitemap-motorn. Kostar ~3 s per URL; slå bara på när HTML-läget ger 0.
+     */
+    useBrowser?: boolean;
+    /**
+     * Filtrera bort kommunala sammanträden ur kalendern. Botkyrkas och Marks
+     * kommunkalendrar blandar nämndmöten med publika event i samma lista.
+     * OPT-IN: sitemap-motorn har en URL-blacklist för samma sak, men den
+     * körs inte här och ~150 befintliga sitevision-källor ska inte påverkas.
+     */
+    dropMunicipalMeetings?: boolean;
     pathFilter?: string;
     maxItems?: number;
     userAgent?: string;
@@ -237,6 +253,18 @@ export function cleanCardTitle(
  * Vilken ort hör eventet till? Regionala guider bär orten i venue-namnet.
  * Längsta träffen vinner ("Västra Ämtervik" före "Ämtervik"). Exporterad för test.
  */
+/**
+ * Kommunalt sammanträde snarare än publikt event? Matchar på titel ELLER URL
+ * (sluggen bär oftast samma ord). "nämnden" matchas UTAN inledande ordgräns —
+ * nämnderna heter nästan alltid något sammansatt ("utbildningsnämnden",
+ * "socialnämnden"), men den bestämda ändelsen krävs så att "benämnd" går fri.
+ * Exporterad för test.
+ */
+export function isMunicipalMeeting(title: string, url = ''): boolean {
+    const hay = `${title} ${url}`.toLowerCase();
+    return /sammantr(a|ä)d|kommunfullm(a|ä)ktige|kommunstyrelse|n(a|ä)mnd(en|er|ens)\b|\bn(a|ä)mnd\b|styrelsem(o|ö)te|(a|å)rsm(o|ö)te|protokoll|\butskott\b/.test(hay);
+}
+
 export function pickCityFromVenue(
     venueName: string | undefined,
     cities: string[] | undefined,
@@ -965,6 +993,9 @@ async function fetchHtml(
     extraHeaders?: Record<string, string>,
 ): Promise<string | null> {
     await domainLimiter.wait(url);
+    // API-lägena skickar extraHeaders och ska ALLTID gå via fetch — browsern
+    // används bara för att rendera list-sidans HTML.
+    if (cfg.useBrowser && !extraHeaders) return fetchHtmlViaBrowser(url, cfg);
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
@@ -984,6 +1015,24 @@ async function fetchHtml(
         return null;
     } finally {
         clearTimeout(t);
+    }
+}
+
+/** Rendera sidan i den delade Puppeteer-browsern och returnera DOM:en. */
+async function fetchHtmlViaBrowser(url: string, cfg: SiteVisionConfig): Promise<string | null> {
+    let page: Awaited<ReturnType<Awaited<ReturnType<typeof getSharedBrowser>>['newPage']>> | null = null;
+    try {
+        const browser = await getSharedBrowser();
+        page = await browser.newPage();
+        await page.setUserAgent(cfg.userAgent ?? DEFAULT_UA);
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: cfg.timeoutMs ?? 45000 });
+        // Korten kommer ofta ett andetag efter networkidle.
+        await new Promise((r) => setTimeout(r, 3000));
+        return await page.content();
+    } catch {
+        return null;
+    } finally {
+        if (page) await page.close().catch(() => { });
     }
 }
 
@@ -1110,6 +1159,8 @@ export const sitevisionEngine = async (
             const venueEl = container.find('[class*="location"], [class*="venue"], [class*="place"]').first();
             const venueName = venueEl.text().trim() || undefined;
 
+            if (config.dropMunicipalMeetings && isMunicipalMeeting(title, eventUrl)) continue;
+
             const cleanTitle = cleanCardTitle(title, venueName, {
                 titleStripRe: config.titleStripRe,
                 stripVenue: config.stripVenueFromTitle,
@@ -1169,6 +1220,9 @@ export const sitevisionEngine = async (
                 const title = (innerHeading.length > 0 ? innerHeading.text() : ($(a).attr('title') || aClone.text())).replace(/\s+/g, ' ').trim();
                 if (title.length < 3 || title.length > 150) return;
                 if (/^(läs mer|visa alla|visa mer|mer info|boka|anmäl dig|till evenemanget)\.?$/i.test(title)) return;   // länktext, inte titel
+                // Samma filter som i huvudloopen — Botkyrkas kalender når hit
+                // (inga <time datetime>) och blandar in nämndsammanträden.
+                if (config.dropMunicipalMeetings && isMunicipalMeeting(title, abs)) return;
                 seenUrls.add(abs);
                 events.push({ title, startDate, url: abs, city: config.defaultCity });
                 slugCards++;

@@ -55,6 +55,11 @@ async function getSitemapBrowser(): Promise<Browser> {
     return _sitemapBrowser;
 }
 
+/** Delas med sitevision-motorns useBrowser-läge — en browser per process. */
+export async function getSharedBrowser(): Promise<Browser> {
+    return getSitemapBrowser();
+}
+
 export async function closeSitemapBrowser(): Promise<void> {
     if (_sitemapBrowser) { await _sitemapBrowser.close(); _sitemapBrowser = null; }
 }

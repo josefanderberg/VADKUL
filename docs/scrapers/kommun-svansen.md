@@ -30,7 +30,7 @@ svepet gick på.
 Yield-lärdom: **gissade domäner gav 11 träffar på 891 försök**; att skörda de
 länkar kommunen själv publicerar gav 12 på 73. Skörda, gissa inte.
 
-## Resultat: 30 kommuner in, 18 källor, ~1 376 event i 30-dagarsfönstret
+## Resultat: 49 kommuner in, 32 källor, ~2 100 event i 30-dagarsfönstret
 
 ### Vända 1 — HTTP-svep (20 kommuner, 535 event)
 
@@ -95,6 +95,71 @@ kalmar.com stavar `URl`, och bär ort per hit. Båda accepteras nu.
 **Vaggeryd** aktiverad med nya opt-in-fälten `titleStripRe` +
 `stripVenueFromTitle` — korten renderade rubriken som
 `"Evenemang <titel> <venue>"`.
+
+
+### Vända 3–4 — plattformssvep och browser-rendering (19 kommuner till)
+
+| Källa | Motor | Kommun | Event |
+|---|---|---|---|
+| `cruncho-varnamo` | `cruncho` hostedApi (NY) | Värnamo | 103 |
+| `cruncho-burlov-lomma-staffanstorp` | `cruncho` hostedApi | Burlöv, Lomma (+Staffanstorp) | 94 |
+| `cruncho-kungsbacka` | `cruncho` hostedApi | Kungsbacka | 85 |
+| `cruncho-strangnas` | `cruncho` hostedApi | Strängnäs | 45 |
+| `cruncho-vellinge` | `cruncho` hostedApi | Vellinge | 43 |
+| `vallentuna-kommun` | `optimizely-events` (NY) | Vallentuna | 37 |
+| `soderkoping-guide` | `sitemap` | Söderköping | 36 |
+| `visittorsas` | `sitemap` | Torsås | 27 |
+| `cruncho-ljusdal` | `cruncho` hostedApi | Ljusdal | 26 |
+| `kalix-kommun` | `accentfeed` (NY) | Kalix | 17 |
+| `kinda-turism` | `cbis` | Kinda | 14 |
+| `mark-kommun` | `sitevision` useBrowser (NY) | Mark | 10 |
+| `botkyrka-kommun` | `sitevision` useBrowser | Botkyrka | 9 |
+| `boxholm-kommun` | `sitevision` pageApi | Boxholm | 9 |
+| `skinnskatteberg-kommun` | `accentfeed` | Skinnskatteberg | 8 |
+| `vansbro-kommun` | `sitevision` eventServiceApi (NY) | Vansbro | 3 |
+| `bollebygd-kommun`, `aneby-kommun` | `sitevision` useBrowser | Bollebygd, Aneby | 3 |
+
+**`cruncho.hostedApi` — störst i den här vändan.** Flera kommuner bäddar in
+Crunchos hostade widget i en iframe. Genombrottet var att
+`GET api-ts.cruncho.co/categories/with-events/<slug>?destination=<slug>&l1=events`
+är ett billigt anrop som avslöjar om en destination finns. Ett svep över alla
+kommunslugs gav sju destinationer, varav fem nya. Fällor:
+- Datan hämtas med **POST** — GET på `/landing-page/recommendations` 404:ar.
+- Med tomma `l2`/`l3` svarar API:t `[]` **utan att fela**, så kategorilistorna
+  måste hämtas först. Ett tomt svar betyder alltså inte "inga event".
+- `price` är ett **tal**, inte en sträng (kraschade första implementationen).
+- En destination kan spänna flera kommuner (`lomma` = Burlöv + Lomma +
+  Staffanstorp); orten står per event.
+- Detaljlänken är `/sv-SE/place/<id>` — `/recommendation/<id>` 404:ar.
+- Åtvidaberg HAR en destination (17 event) men ingen nåbar `<dest>.cruncho.co`
+  — utelämnad tills länken går att bygga.
+
+**`sitevision.useBrowser`.** Flera kommuner skickar tom skal-HTML och bygger
+korten i JS. Motorn renderar nu sidan i Puppeteer (delad browser med
+sitemap-motorn) och kör sedan samma cheerio-extraktion. Kostar ~5–10 s per
+källa. Följdbehov: `dropMunicipalMeetings` — Botkyrkas och Marks
+kommunkalendrar blandar nämndsammanträden med publika event. Opt-in, så de
+~150 befintliga sitevision-källorna påverkas inte.
+
+**`accentfeed`.** Accent APIs kurerade ström av lokala Facebook-event
+(`data.accentapi.com/feed/<id>.json`). Kalix 26 poster, Skinnskatteberg 21,
+båda med exakta koordinater. **Kritiskt:** feeden skriver
+`facebook.com/events/<id>` utan avslutande slash, vår FB-scraper med — utan
+normalisering blir varje post en dubblett. Feed-id:t injiceras av JS och syns
+inte i server-HTML (ett svep efter det gav noll); bara browser-scouten hittar det.
+
+**`optimizely-events`.** `GET /api/v1/eventsselection?CurrentPageId=<guid>`,
+hela kalendern i ett anrop. Fälla: toppnivåns `StartDate` är null för
+återkommande event — datumen ligger bara i `Dates[]`.
+
+**CBIS fick ett tredje korttema** (Kinda): `.cbis-product-title`,
+veckodagsprefixat datum ("ons 26 aug – sön 06 sep 11:00") och beskrivning i
+bar `<p>`. Klockslaget på kortet tas nu till vara.
+
+**Söderköping och Torsås via turistsajten.** Båda kommunerna saknar egen
+kalender men turistsajten har en full event-sitemap — Söderköpingsguiden med
+JSON-LD Event, Visit Torsås med textdatum. Torsås kommunsajt har 32
+`<time>`-taggar, men de är nyhetsdatum: en fälla att bygga på.
 
 ### Störst fynd: TURID
 

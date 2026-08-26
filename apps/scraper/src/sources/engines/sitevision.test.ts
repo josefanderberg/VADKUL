@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -489,5 +489,32 @@ describe('mapEventServiceItem', () => {
         expect(mapEventServiceItem({ ...IT, uri: undefined }, BASE, 'X')).toBeNull();
         expect(mapEventServiceItem({ ...IT, startDate: undefined }, BASE, 'X')).toBeNull();
         expect(mapEventServiceItem({ ...IT, startDate: 'aldrig' }, BASE, 'X')).toBeNull();
+    });
+});
+
+describe('isMunicipalMeeting', () => {
+    it('fångar nämnder och sammanträden i titeln', () => {
+        expect(isMunicipalMeeting('Arbetsmarknads- och vuxenutbildningsnämnden sammanträder')).toBe(true);
+        expect(isMunicipalMeeting('Kommunstyrelsen sammaträder')).toBe(true);
+        expect(isMunicipalMeeting('Kommunfullmäktige')).toBe(true);
+        expect(isMunicipalMeeting('Socialnämnden')).toBe(true);
+        expect(isMunicipalMeeting('Årsmöte i föreningen')).toBe(true);
+    });
+
+    it('fångar dem via URL:en när titeln är intetsägande', () => {
+        expect(isMunicipalMeeting('Möte', 'https://x.se/2026-08-10-kommunstyrelsen')).toBe(true);
+        expect(isMunicipalMeeting('Möte', 'https://x.se/2026-08-10-sammantrade')).toBe(true);
+    });
+
+    it('släpper igenom publika event', () => {
+        expect(isMunicipalMeeting('Schackklubb')).toBe(false);
+        expect(isMunicipalMeeting('Open Mic Night med Mariama Jobe')).toBe(false);
+        expect(isMunicipalMeeting('Promenad med korvgrillning')).toBe(false);
+        expect(isMunicipalMeeting('Politiska ideologier – snabbkurs för förstagångsväljare')).toBe(false);
+    });
+
+    it('klarar både a och ä i stavningarna', () => {
+        expect(isMunicipalMeeting('Barn- och utbildningsnamnden')).toBe(true);
+        expect(isMunicipalMeeting('Barn- och utbildningsnämnden')).toBe(true);
     });
 });
