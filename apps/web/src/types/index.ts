@@ -176,6 +176,10 @@ export interface LinkEvent {
   title: string;
   url: string;
   time: Date;
+  /** Validerat slutdatum (pipelinens validEventEnd: slut > start, max 30
+   *  dygn). Bara satt för flerdagars-/sluttids-event — kortet visar då
+   *  "Ons 2 sep – Lör 5 sep" (dagfiltreringen går fortsatt på startdagen). */
+  endDate?: Date;
   hasSpecificTime?: boolean; // <--- NY: Anger om en specifik tid hämtades
   createdAt: Date;
   locationName: string;

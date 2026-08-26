@@ -207,6 +207,9 @@ export async function scrapeEventim() {
                         title: item.name,
                         url: item.eventUrl,
                         time: startDate,
+                        // Rå JSON-LD-sträng — dbHelper sanerar centralt
+                        // (validEventEnd: slut > start, max 30 dygn).
+                        endDate: item.endDate,
                         hasSpecificTime: item.startDate.includes('T'),
                         locationName,
                         lat: coords ? coords[0] : 0,

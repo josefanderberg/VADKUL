@@ -3,20 +3,19 @@ name: Deploy till Firebase
 # Deployar vid KOD-push till main. Kan även triggas manuellt under
 # Actions-fliken (Run workflow).
 #
-# Morgon-cronen (06:00 UTC) är AVSTÄNGD tills senaste frontend-versionen
-# ligger på main — den byggde om sajten från main och skrev över manuella
-# deployer gjorda från arbetsmaskinen. Eventdatan är färsk ändå:
-# /api/events/[layer] läser live ur Firestore (1 h CDN-cache), så deployen
-# behövs bara för att baka om de statiska stadssidorna (SEO). Återaktivera
-# cronen när main är i kapp:
-#   schedule:
-#     - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
+# Morgon-cronen (06:00 UTC) ÅTERAKTIVERAD 26/8 — main är i kapp (allt
+# frontend-arbete går numera via main, inga manuella deployer från
+# arbetsmaskinen att skriva över). Den bakar om de statiska stadssidorna
+# (SEO) varje morgon; eventdatan i /api/events/[layer] är färsk ändå
+# (läser live ur Firestore, 1 h CDN-cache).
 #
 # Kräver två repo-secrets (Settings → Secrets and variables → Actions):
 #   FIREBASE_SERVICE_ACCOUNT — hela JSON-nyckeln från Firebase Console →
 #       Projektinställningar → Tjänstkonton → Generera ny privat nyckel
 #   WEB_ENV — hela innehållet i apps/web/.env (NEXT_PUBLIC_*-raderna)
 on:
+  schedule:
+    - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
   push:
     branches: [main]
     # Auto-pushar ska inte bygga om frontenden: Mac minins nattliga

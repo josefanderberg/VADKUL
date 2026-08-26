@@ -1,6 +1,6 @@
 import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
-import { formatEventDate } from '../../utils/dateUtils';
+import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
@@ -499,7 +499,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
-                        <span className="whitespace-nowrap">{formatEventDate(linkEvent.time, linkEvent.hasSpecificTime !== false)}</span>
+                        <span className="whitespace-nowrap">{formatEventDateSpan(linkEvent.time, linkEvent.endDate, linkEvent.hasSpecificTime !== false)}</span>
                     </div>
                     {/* Avstånd från användarens plats (kartans blå prick) — visas
                         bara när positionen är känd (distance-propen satt). */}

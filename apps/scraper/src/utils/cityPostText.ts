@@ -19,6 +19,10 @@ export interface CityEventRow {
     url: string;
     title: string;
     time: string;          // ISO
+    /** Validerat slutdatum (ISO) — flerdagarsevent skrivs "onsdag–lördag"
+     *  (FB-kommentaren om Live at Heart 26/8: festivalen visades bara på
+     *  startdagen). null/utelämnad = en-dags. */
+    endDate?: string | null;
     locationName: string;
     category: string;
     lat: number;
@@ -149,6 +153,14 @@ export function formatCityRow(e: CityEventRow, { withDate = false, townName }: {
     const hasTime = !(d.getHours() === 0 && d.getMinutes() === 0);
     let when = WEEKDAY[d.getDay()];
     if (withDate) when += ` ${d.getDate()}/${d.getMonth() + 1}`;
+    // Flerdagarsevent: "onsdag–lördag" (med datum: "onsdag 2/9–lördag 5/9").
+    // Bara när slutet är en SENARE kalenderdag — sluttid samma dag är brus i
+    // det här täta formatet. Starttiden hängs på efter spannet som förut.
+    const end = e.endDate ? new Date(e.endDate) : null;
+    if (end && !isNaN(end.getTime()) && end.toDateString() !== d.toDateString() && end.getTime() > d.getTime()) {
+        when += `–${WEEKDAY[end.getDay()]}`;
+        if (withDate) when += ` ${end.getDate()}/${end.getMonth() + 1}`;
+    }
     if (hasTime) {
         when += ` kl ${d.getHours()}${d.getMinutes() > 0 ? `.${String(d.getMinutes()).padStart(2, '0')}` : ''}`;
     }

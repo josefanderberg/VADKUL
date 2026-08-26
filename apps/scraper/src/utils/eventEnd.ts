@@ -13,6 +13,23 @@
  */
 export const MAX_EVENT_SPAN_MS = 30 * 86_400_000;
 
+/** Som validEventEnd men tål strängar/okända värden — den centrala saneringen
+ *  i dbHelper kör den på ALLT som skrivs, så legacy-scrapers kan skicka
+ *  källans råa värde (ISO-sträng eller Date) utan egen validering. */
+export function sanitizeEndDate(start: unknown, end: unknown): Date | null {
+    const coerce = (v: unknown): Date | null => {
+        if (v instanceof Date) return v;
+        if (typeof v === 'string' && v) {
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+    };
+    const s = coerce(start);
+    const e = coerce(end);
+    return s && e ? validEventEnd(s, e) : null;
+}
+
 /** Validerat slutdatum, eller null när värdet saknas/är orimligt. */
 export function validEventEnd(start: Date | undefined, end: Date | undefined | null): Date | null {
     if (!end || !(end instanceof Date) || isNaN(end.getTime())) return null;
