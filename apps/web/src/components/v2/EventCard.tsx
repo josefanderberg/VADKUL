@@ -188,6 +188,10 @@ interface NearbyEventsListProps {
      *  färre) — när det syns har användaren scrollat ända ner till listan och
      *  ser minst 5 event, och scroll-coachen kan släckas. */
     coachMarkerRef?: React.Ref<HTMLLIElement>;
+    /** LISTVYN (lista-toggeln i headern) är ett rent BILDFLÖDE (Josef 26/8):
+     *  bilderna tvingas på (kompakt-valet ignoreras, toggeln göms) och rader
+     *  vars bild saknas ELLER inte går att ladda göms helt. */
+    imagesOnly?: boolean;
 }
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -256,7 +260,7 @@ function LazyRowImage({ src, alt, className, onFailed }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true }: {
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
@@ -264,6 +268,10 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true }: {
     /** False = användaren har slagit av bilderna i listhuvudet → alla rader
      *  renderas i den kompakta bildlösa layouten. */
     showImages?: boolean;
+    /** Bildflödes-läget (listvyn): en rad utan visningsbar bild — saknad
+     *  ELLER trasig länk — renderas inte alls i stället för att falla
+     *  tillbaka till den bildlösa layouten. */
+    hideWithoutImage?: boolean;
 }) {
     const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
@@ -272,6 +280,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true }: {
     // Trasig bildlänk → rendera den kompakta bildlösa raden i stället.
     const [imgFailed, setImgFailed] = useState(false);
     const hasImage = showImages && !!evt.coverImage && !imgFailed;
+    if (hideWithoutImage && !hasImage) return null;
 
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
     // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
@@ -385,10 +394,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true }: {
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Bilder på/av i listan. Av = varje rad blir den kompakta emoji-raden, så
     // man ser många fler event per skärm. Valet minns mellan besök.
+    // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const [showImages, setShowImages] = useState(true);
     useEffect(() => {
         try {
@@ -408,12 +418,16 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
     // om listan är kortare — så "ser minst 4"-villkoret blir sant först när man
     // scrollat ända ner hit.
     const markerIdx = Math.min(3, upcomingItems.length - 1);
+    const effectiveShowImages = imagesOnly || showImages;
     return (
         <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
             <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Fler event i närheten · {upcomingTotal}
                 </span>
+                {/* Bilder på/av-toggeln göms i bildflödes-läget — där är
+                    bilderna hela poängen och kan inte slås av. */}
+                {!imagesOnly && (
                 <button
                     type="button"
                     onClick={toggleImages}
@@ -428,12 +442,13 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
                     Bilder
                 </button>
+                )}
             </div>
 
             <ul className="divide-y divide-border">
                 {upcomingItems.map(({ evt, distanceKm }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -473,7 +488,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
                             {pastItems.map(({ evt, distanceKm }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
                             ))}
                         </ul>
                     )}
@@ -1836,6 +1851,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             coachMarkerRef={coachMarkerRef}
+                            imagesOnly={listViewOnly}
                         />
                     )}
                 </div>
