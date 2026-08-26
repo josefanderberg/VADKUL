@@ -28,7 +28,8 @@ interface CategoryFilterProps {
  * (lagren) öppnar den när man vill ha kartans "vad ser jag?"-sammanfattning.
  * En rund emoji-cirkel per kategori som syns i kartrutan (mest event överst),
  * med ANTALET som badge på cirkeln — panorerar man ändras både urval och
- * siffror med vyn. Ett tryck togglar filtret direkt; namn som hover-pill/aria.
+ * siffror med vyn. Ett tryck togglar filtret direkt; namnet står som en pill
+ * till vänster om cirkeln så länge kolumnen är öppen (Josef 26/8).
  *
  * Opt-in-källorna (Svenska kyrkan/PRO) ligger ALLTID överst, avstängda tills
  * man kryssar i dem — de har så många event att de annars dränker kartan, och
@@ -97,13 +98,12 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
     // Gemensam cirkel-rendering för både vanliga kategorier och opt-in-källor:
     // samma 40px-cirkel som navbar-knapparna ovanför, nu med ANTALET i vyn som
     // badge uppe till höger (badge bara när det finns något — en nolla på
-    // opt-in-raderna vore brus). Vid hover/fokus visas kategorinamnet som en
-    // pill till vänster om cirkeln (peer-hover — native title är för långsam/
-    // osynlig på touch). Raden är flex-row-reverse så pillen kan ligga EFTER
-    // knappen i DOM (krav för peer-selektorn) men ändå visas till vänster.
-    // Pillen ligger KVAR i flödet (tar osynlig layoutplats) — den måste rymmas
-    // innanför kolumnens padding-box, annars klipper scroll-containern bort
-    // den vågrätt.
+    // opt-in-raderna vore brus). Kategorinamnet visas som en pill till vänster
+    // om cirkeln — ALLTID synlig när kolumnen är öppen (Josef 26/8: hover-
+    // varianten dolde namnen på touch; kolumnen är ändå stängd när den inte
+    // används). Raden är flex-row-reverse så pillen ligger EFTER knappen i DOM
+    // men visas till vänster. Pillen ligger i flödet och måste rymmas innanför
+    // kolumnens padding-box, annars klipper scroll-containern bort den vågrätt.
     const renderCircle = (cat: { id: string; label: string; emoji: string; markerHex: string }) => {
         const active = selected.has(cat.id);
         // Cirkeln bär SAMMA brick-gradient som eventmarkörerna på kartan
@@ -141,7 +141,11 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                 </button>
                 <span
                     aria-hidden
-                    className="pointer-events-none opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-lg border border-white/50 dark:border-slate-700"
+                    // Urblekt namn på urblekt (bortfiltrerad) cirkel — namnraden
+                    // ska spegla cirkelns eget aktiv/inaktiv-språk.
+                    className={`pointer-events-none whitespace-nowrap rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-lg border border-white/50 dark:border-slate-700 ${
+                        shownOnMap ? '' : 'opacity-50'
+                    }`}
                 >
                     {cat.label}
                 </span>
