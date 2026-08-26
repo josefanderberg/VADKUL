@@ -188,8 +188,11 @@ interface NearbyEventsListProps {
      *  färre) — när det syns har användaren scrollat ända ner till listan och
      *  ser minst 5 event, och scroll-coachen kan släckas. */
     coachMarkerRef?: React.Ref<HTMLLIElement>;
-    showImages: boolean;
-    onToggleImages: () => void;
+    /** Bildflödes-läget — sedan 26/8 (kväll) INFOVYNS lista längst ner, inte
+     *  lista-toggelns vy: bilderna tvingas på (kompakt-valet ignoreras,
+     *  toggeln göms) och rader vars bild saknas ELLER inte går att ladda
+     *  göms helt. Lista-toggeln i headern visar ALLA event. */
+    imagesOnly?: boolean;
 }
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -1049,9 +1052,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // LISTVYN (lista-toggeln i headern) visar BARA event med bild (Josef 26/8):
     // den vyn är ett bildflöde. Infovyns lista längst ner visar som förut alla
     // event, med eller utan bild.
-    const showAllEvents = cardView === 'nearby' || !showImages;
-    const listedUpcoming = showAllEvents ? upcomingNearby : upcomingNearby.filter(n => !!n.evt.coverImage);
-    const listedPast = showAllEvents ? pastNearby : pastNearby.filter(n => !!n.evt.coverImage);
+    const listViewOnly = cardView === 'nearby';
+    const listedUpcoming = listViewOnly ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
+    const listedPast = listViewOnly ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -1841,8 +1844,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             coachMarkerRef={coachMarkerRef}
-                            showImages={showImages}
-                            onToggleImages={toggleImages}
+                            imagesOnly={listViewOnly}
                         />
                     )}
                 </div>
