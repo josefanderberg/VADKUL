@@ -5888,7 +5888,7 @@ export const SOURCES: Source[] = [
             probeUrl: 'https://api.helsingborg.se/event/json/wp/v2/event/time?group-id=549&start=2026-08-26&end=2026-09-26&per_page=100',
             date: '2026-08-26',
             rawEventCount: 42,
-            notes: 'Fångad med scout/xhr-batch-scout.cjs mot astorp.se/evenemang — kalendern anropar en ANNAN kommuns API. URL-mallen läst ur listsidans renderade länkar.',
+            notes: 'Fångad med apps/scraper/scout/xhr-batch-scout.cjs mot astorp.se/evenemang — kalendern anropar en ANNAN kommuns API. URL-mallen läst ur listsidans renderade länkar.',
         },
     },
     {
@@ -5932,7 +5932,7 @@ export const SOURCES: Source[] = [
             probeUrl: 'https://www.osteraker.se/appresource/4.592cfecd176fc0db87818e/12.367d658917909e8fc2b8984/events?fromDate=2026-08-26T00:00:00.000Z&toDate=2026-09-26T23:59:59.999Z&categories=&limit=500',
             date: '2026-08-26',
             rawEventCount: 44,
-            notes: 'pageId/portletId sniffade med scout/xhr-batch-scout.cjs mot osteraker.se/uppleva-och-gora/evenemang.',
+            notes: 'pageId/portletId sniffade med apps/scraper/scout/xhr-batch-scout.cjs mot osteraker.se/uppleva-och-gora/evenemang.',
         },
     },
     {
@@ -5945,7 +5945,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Innocode BestEvent på egen subdomän — kommunsajten länkar den knappt. 289 event i kalendern vid upptäckt. Störst av de tre. Venue-NAMN utan adress/koordinater → geokodas mot orten.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.lerum.se/api/events?page=1', date: '2026-08-26', rawEventCount: 289, notes: 'Hittad med scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.lerum.se/api/events?page=1', date: '2026-08-26', rawEventCount: 289, notes: 'Hittad med apps/scraper/scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
     },
     {
         id: 'hylte-kalender',
@@ -5957,7 +5957,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Innocode BestEvent på egen subdomän — kommunsajten länkar den knappt. 40 event i kalendern vid upptäckt. Venue-NAMN utan adress/koordinater → geokodas mot orten.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.hylte.se/api/events?page=1', date: '2026-08-26', rawEventCount: 40, notes: 'Hittad med scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.hylte.se/api/events?page=1', date: '2026-08-26', rawEventCount: 40, notes: 'Hittad med apps/scraper/scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
     },
     {
         id: 'danderyd-kalender',
@@ -5969,7 +5969,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Innocode BestEvent på egen subdomän — kommunsajten länkar den knappt. 28 event i kalendern vid upptäckt. Venue-NAMN utan adress/koordinater → geokodas mot orten.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.danderyd.se/api/events?page=1', date: '2026-08-26', rawEventCount: 28, notes: 'Hittad med scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://kalender.danderyd.se/api/events?page=1', date: '2026-08-26', rawEventCount: 28, notes: 'Hittad med apps/scraper/scout/bestevent-probe.cjs (kalender.<kommun>.se/api/events över alla 99 otäckta).' },
     },
     {
         id: 'varmdo-kommun',
@@ -5986,7 +5986,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Värmdös kalender är en JS-webapp mot SiteVisions /page-route — 274 event i kalendern, störst av svansens JS-väggar. startDate/endDate är epoch-ms med riktig tid. Ingen venue i listsvaret; geokodas mot Gustavsberg (centralorten).',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://www.varmdo.se/appresource/4.62b6567e177d2c33d13c3489/12.467d267619ed4689c71a97c/page?p=1&f=&t=&c=&svAjaxReqParam=ajax', date: '2026-08-26', rawEventCount: 274, notes: 'pageId/portletId sniffade med scout/xhr-batch-scout.cjs.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.varmdo.se/appresource/4.62b6567e177d2c33d13c3489/12.467d267619ed4689c71a97c/page?p=1&f=&t=&c=&svAjaxReqParam=ajax', date: '2026-08-26', rawEventCount: 274, notes: 'pageId/portletId sniffade med apps/scraper/scout/xhr-batch-scout.cjs.' },
     },
     {
         id: 'degerfors-kommun',
@@ -6018,7 +6018,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Nyare Cruncho-webapp där listan ligger bakom portletens /events-route i stället för i sidans initialState (X-Requested-With krävs). 51 tillfällen, full gatuadress + arrangör + bild. Serie-dedup nödvändig: samma event listas per dag, och dess uri skiljer sig mellan tillfällena.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://www.ange.se/evenemang?sv.target=12.4f871cfb198bb7d44fb63e&sv.12.4f871cfb198bb7d44fb63e.route=/events&fromDate=2026-08-26&selectedTags=&page=1&svAjaxReqParam=ajax', date: '2026-08-26', rawEventCount: 51, notes: 'portletId sniffad med scout/xhr-batch-scout.cjs mot ange.se/evenemang.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.ange.se/evenemang?sv.target=12.4f871cfb198bb7d44fb63e&sv.12.4f871cfb198bb7d44fb63e.route=/events&fromDate=2026-08-26&selectedTags=&page=1&svAjaxReqParam=ajax', date: '2026-08-26', rawEventCount: 51, notes: 'portletId sniffad med apps/scraper/scout/xhr-batch-scout.cjs mot ange.se/evenemang.' },
     },
     {
         id: 'kalix-kommun',
@@ -6030,7 +6030,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Kalix kalender är en kurerad ström av lokala Facebook-event (Accent API). 26 poster, 96 % exakta koordinater, 100 % bild. Vid upptäckt fanns 0 av de 16 i fönstret redan i DB:n — feeden når FB-sidor vårt eget flöde missar. URL:erna normaliseras till slash-formen så de dedupar mot facebook-scrapern.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/35230.json', date: '2026-08-26', rawEventCount: 26, notes: 'Feed-id sniffat med scout/xhr-batch-scout.cjs mot kalix.se/evenemang. Ingen katalog över feeds finns — id:t står i widgetens script-tagg.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/35230.json', date: '2026-08-26', rawEventCount: 26, notes: 'Feed-id sniffat med apps/scraper/scout/xhr-batch-scout.cjs mot kalix.se/evenemang. Ingen katalog över feeds finns — id:t står i widgetens script-tagg.' },
     },
     {
         id: 'soderkoping-guide',
@@ -6047,7 +6047,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Söderköpings kommun har ingen egen kalender — turistguiden har 212 event-URL:er med JSON-LD Event (startDate + Place). Hittad som utgående länk från soderkoping.se/turism/evenemang. Next.js, server-renderad.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.soderkoping.guide/sitemap.xml', date: '2026-08-26', rawEventCount: 212, notes: 'Domänen skördad ur kommunsajtens externa länkar med scout/deep-scout.cjs.' },
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.soderkoping.guide/sitemap.xml', date: '2026-08-26', rawEventCount: 212, notes: 'Domänen skördad ur kommunsajtens externa länkar med apps/scraper/scout/deep-scout.cjs.' },
     },
     {
         id: 'cruncho-burlov-lomma-staffanstorp',
@@ -6063,7 +6063,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Tre kommuner delar EN hostad Cruncho-widget (Burlöv/Arlöv/Åkarp, Lomma/Bjärred, Staffanstorp/Hjärup) — två av dem saknade egen källa. 97 poster, 100 % koordinater/bild/beskrivning/venue. Orten står per event, så defaultCity används sällan.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/landing-page/recommendations?destination=lomma&size=200&offset=0&sponsored=false', date: '2026-08-26', rawEventCount: 97, notes: 'POST-anropet sniffat inifrån iframen (burlovlommastaffanstorp.cruncho.co) med scout/sniff-one.cjs — kommunsajtens egen trafik visar bara featured-anropet.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/landing-page/recommendations?destination=lomma&size=200&offset=0&sponsored=false', date: '2026-08-26', rawEventCount: 97, notes: 'POST-anropet sniffat inifrån iframen (burlovlommastaffanstorp.cruncho.co) med apps/scraper/scout/sniff-one.cjs — kommunsajtens egen trafik visar bara featured-anropet.' },
     },
     {
         id: 'cruncho-vellinge',
@@ -6091,7 +6091,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Andra Accent-feeden i svansen (efter Kalix) — 21 poster, 100 % koordinater. Höst-tung: bara 7 i 30-dagarsfönstret vid upptäckt, resten ligger nov–dec.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/25407127.json', date: '2026-08-26', rawEventCount: 21, notes: 'Feed-id:t injiceras av JS — syns bara i browsern, inte i server-HTML:en (scout/accent-sweep.cjs hittade noll). Fångat med scout/deep-scout.cjs.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/25407127.json', date: '2026-08-26', rawEventCount: 21, notes: 'Feed-id:t injiceras av JS — syns bara i browsern, inte i server-HTML:en (apps/scraper/scout/accent-sweep.cjs hittade noll). Fångat med apps/scraper/scout/deep-scout.cjs.' },
     },
     {
         id: 'cruncho-varnamo',
@@ -6107,7 +6107,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 108 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/varnamo?destination=varnamo&l1=events', date: '2026-08-26', rawEventCount: 108, notes: 'scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/varnamo?destination=varnamo&l1=events', date: '2026-08-26', rawEventCount: 108, notes: 'apps/scraper/scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
     },
     {
         id: 'cruncho-kungsbacka',
@@ -6123,7 +6123,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 85 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/kungsbacka?destination=kungsbacka&l1=events', date: '2026-08-26', rawEventCount: 85, notes: 'scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/kungsbacka?destination=kungsbacka&l1=events', date: '2026-08-26', rawEventCount: 85, notes: 'apps/scraper/scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
     },
     {
         id: 'cruncho-strangnas',
@@ -6139,7 +6139,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 45 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/strangnas?destination=strangnas&l1=events', date: '2026-08-26', rawEventCount: 45, notes: 'scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/strangnas?destination=strangnas&l1=events', date: '2026-08-26', rawEventCount: 45, notes: 'apps/scraper/scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
     },
     {
         id: 'cruncho-ljusdal',
@@ -6155,7 +6155,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 29 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/ljusdal?destination=ljusdal&l1=events', date: '2026-08-26', rawEventCount: 29, notes: 'scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/ljusdal?destination=ljusdal&l1=events', date: '2026-08-26', rawEventCount: 29, notes: 'apps/scraper/scout/cruncho-dest-sweep.cjs. Värdnamnet är <destination>.cruncho.co — verifiera det, Åtvidaberg har destination men ingen nåbar värd.' },
     },
     {
         id: 'vallentuna-kommun',
@@ -6171,7 +6171,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Optimizely-kommunens egen /api/v1/eventsselection — 82 event i ETT anrop, ingen paginering. FÄLLA: toppnivåns StartDate är null för återkommande event, datumen ligger bara i Dates[].',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://www.vallentuna.se/api/v1/eventsselection?CurrentPageId=c36b6e1a-5da0-4719-9b5e-c586df601ec6', date: '2026-08-26', rawEventCount: 82, notes: 'CurrentPageId sniffat med scout/deep-scout.cjs. Prova samma endpoint på andra Optimizely-kommuner.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.vallentuna.se/api/v1/eventsselection?CurrentPageId=c36b6e1a-5da0-4719-9b5e-c586df601ec6', date: '2026-08-26', rawEventCount: 82, notes: 'CurrentPageId sniffat med apps/scraper/scout/deep-scout.cjs. Prova samma endpoint på andra Optimizely-kommuner.' },
     },
     {
         id: 'kinda-turism',
@@ -6189,7 +6189,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'Kindas evenemangssajt kör Visit Group/CBIS. TREDJE korttemat (efter Umeå och Karlskrona): .cbis-product-title, .cbis-occasions med VECKODAGSPREFIX ("ons 26 aug – sön 06 sep 11:00") och beskrivning i bar <p>. Parsern hanterar alla tre sedan 2026-08-26. 29 event.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://evenemang.kindaturism.se/api/cbis-product-list?nodeId=409&page=0', date: '2026-08-26', rawEventCount: 29, notes: 'nodeId sniffat med scout/deep-scout.cjs mot kinda.se.' },
+        discovery: { method: 'probe-xhr', probeUrl: 'https://evenemang.kindaturism.se/api/cbis-product-list?nodeId=409&page=0', date: '2026-08-26', rawEventCount: 29, notes: 'nodeId sniffat med apps/scraper/scout/deep-scout.cjs mot kinda.se.' },
     },
     {
         id: 'boxholm-kommun',
@@ -6240,7 +6240,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'JS-renderad kommunkalender — hämtas via Puppeteer (delad browser med sitemap-motorn) och extraheras sedan som vanligt. 10 event i fönstret vid upptäckt. Kalendern blandar in nämndsammanträden, därav dropMunicipalMeetings.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-sitevision', probeUrl: 'https://www.botkyrka.se/evenemang', date: '2026-08-26', rawEventCount: 10, notes: 'Ingen XHR att fånga (scout/deep-scout.cjs hittade inget API) — men sidan renderar datumen i DOM:en, så browser-läget räcker.' },
+        discovery: { method: 'probe-sitevision', probeUrl: 'https://www.botkyrka.se/evenemang', date: '2026-08-26', rawEventCount: 10, notes: 'Ingen XHR att fånga (apps/scraper/scout/deep-scout.cjs hittade inget API) — men sidan renderar datumen i DOM:en, så browser-läget räcker.' },
     },
     {
         id: 'mark-kommun',
@@ -6259,7 +6259,7 @@ export const SOURCES: Source[] = [
         status: 'experimental',
         notes: 'JS-renderad kommunkalender — hämtas via Puppeteer (delad browser med sitemap-motorn) och extraheras sedan som vanligt. 10 event i fönstret vid upptäckt. Kalendern blandar in nämndsammanträden, därav dropMunicipalMeetings.',
         lastVerified: '2026-08-26',
-        discovery: { method: 'probe-sitevision', probeUrl: 'https://www.mark.se/kommunkalender', date: '2026-08-26', rawEventCount: 10, notes: 'Ingen XHR att fånga (scout/deep-scout.cjs hittade inget API) — men sidan renderar datumen i DOM:en, så browser-läget räcker.' },
+        discovery: { method: 'probe-sitevision', probeUrl: 'https://www.mark.se/kommunkalender', date: '2026-08-26', rawEventCount: 10, notes: 'Ingen XHR att fånga (apps/scraper/scout/deep-scout.cjs hittade inget API) — men sidan renderar datumen i DOM:en, så browser-läget räcker.' },
     },
     {
         id: 'visittorsas',

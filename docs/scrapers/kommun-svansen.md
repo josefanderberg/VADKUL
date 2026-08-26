@@ -17,7 +17,7 @@ LOKAL källa?** Det är stadens egna arrangörer — scener, museer, marknader,
 föreningsliv — som gör kalendern läsvärd en vanlig söndag. Det var den luckan
 svepet gick på.
 
-## Metod (fem pass, alla i `scout/`)
+## Metod (fem pass, alla i `apps/scraper/scout/`)
 
 | Pass | Skript | Vad det gör |
 |---|---|---|
@@ -49,7 +49,7 @@ länkar kommunen själv publicerar gav 12 på 73. Skörda, gissa inte.
 
 ### Vända 2 — puppeteer-scout bakom JS-väggen (10 kommuner till, 383 event)
 
-`scout/xhr-batch-scout.cjs` laddade de 78 kvarvarande i browser, fångade alla
+`apps/scraper/scout/xhr-batch-scout.cjs` laddade de 78 kvarvarande i browser, fångade alla
 JSON-svar och rankade dem på event-innehåll. Tre nya plattformar föll ut.
 
 | Källa | Motor | Kommun | Event i fönstret |
@@ -78,7 +78,7 @@ har kommande event (Simrishamn och Sjöbo finns men är tomma).
 kommunsajten knappt länkar till. Fälla: pagineringen är **per dygn** —
 `page=1` är i dag, `page=2` i morgon, och `start`/`end`/`per_page`/`interval`
 ignoreras tyst. Ett 30-dagarsfönster = 30 anrop. Probade alla 99 med
-`scout/bestevent-probe.cjs`; tre träffar.
+`apps/scraper/scout/bestevent-probe.cjs`; tre träffar.
 
 **`sitevision.pageApi` — /page-routen.** `appresource/<pageId>/<portletId>/page?p=N`
 med `X-Requested-With`. `startDate`/`endDate` är **epoch-millisekunder**, inte ISO.
@@ -259,7 +259,7 @@ kalender-fliken, eller längre väntetid.
 Kalendersida finns men inga strukturerade datum i HTML:en. Största först:
 Huddinge, Botkyrka, Danderyd, Kungsbacka, Trollhättan, Kävlinge, Mark, Lerum,
 Mjölby, Stenungsund, Mariestad, Lomma, Avesta, Nora, Sala, Kungälv.
-Verktyget finns nu i batch-form: `node scout/xhr-batch-scout.cjs <tasks.json> <ut.json>`.
+Verktyget finns nu i batch-form: `node apps/scraper/scout/xhr-batch-scout.cjs <tasks.json> <ut.json>`.
 Kungsbacka, Ljusdal, Strängnäs, Mark, Lerum-listsidan och Kävlinge gav inga
 XHR alls i första körningen — antingen laddade sidan inte klart eller så sitter
 kalendern bakom en flik. Kör om med klick på kalender-fliken och längre väntetid.
@@ -283,6 +283,6 @@ Kvar som riktigt tomma: Grästorp, Högsby, Essunga, Malå, Bräcke, Sorsele.
 
 ## Filer
 
-- `scout/*.cjs` — alla probe-pass, körbara igen som de är
-- `scout/verdict.json` — dom per kommun
-- `scout/fingerprint.json`, `restapp-hits.json`, `axiell-tenants.json` — rådata
+- `apps/scraper/scout/*.cjs` — alla probe-pass, körbara igen som de är
+- `apps/scraper/scout/verdict.json` — dom per kommun
+- `apps/scraper/scout/fingerprint.json`, `restapp-hits.json`, `axiell-tenants.json` — rådata

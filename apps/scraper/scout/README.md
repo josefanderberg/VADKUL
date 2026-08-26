@@ -1,4 +1,4 @@
-# scout/ — recon-verktyg för källjakt
+# apps/scraper/scout/ — recon-verktyg för källjakt
 
 Fristående probe-skript (ren node, inga deps utom puppeteer för Axiell).
 Körs manuellt, skriver aldrig till DB eller registry. Byggda under
