@@ -386,40 +386,8 @@
   animation: welcome-fade-out var(--welcome-exit-ms, 300ms) ease-out forwards;
 }
 
-/* ── Steg 2: rutan med tipsa/önska/skapa ────────────────────────────────────
-   Kommer in med en liten studs. Vid stängning krymper den INTE på stället utan
-   mot skärmens övre VÄNSTRA hörn, där skapa-knappen sitter — rörelsen är hela
-   budskapet: "de här tre bor där uppe i fortsättningen". Plusset blinkar till
-   samtidigt (.plus-hint-pulse i FloatingNavbar). */
-@keyframes action-intro-in {
-  from { opacity: 0; transform: translateY(46px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.action-intro-card {
-  animation: action-intro-in 0.34s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-}
-/* Hem-flygningen: från rutans plats NERE i bild upp till övre VÄNSTRA hörnet,
-   där skapa-knappen sitter (den flyttade dit 14/8, på skylt-knappens gamla
-   plats — flyger kortet åt fel håll pekar hela steget fel). Måttet är i
-   viewport-enheter så den siktar mot navbarens hörn oavsett skärmstorlek
-   (kortet är centrerat i sidled och sitter lågt → drygt en tredjedel åt vänster
-   och nästan hela skärmhöjden upp). Längden måste matcha ACTION_INTRO_FLY_MS
-   i page.tsx. */
-@keyframes action-intro-fly-home {
-  to { opacity: 0; transform: translate(-36vw, -72vh) scale(0.15); }
-}
-.action-intro-out {
-  animation: action-intro-fly-home 420ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
-}
-
-/* Uppmärksamhetsblink på plusset när actionrutan flugit hem. Ringen ritas med
-   box-shadow så den följer knappens rundning (samma grepp som feature-blink). */
-@keyframes plus-hint-pulse {
-  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(254, 204, 2, 0); transform: scale(1); }
-  35%      { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 8px rgba(254, 204, 2, 0.75); transform: scale(1.12); }
-  70%      { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 14px rgba(254, 204, 2, 0); transform: scale(1); }
-}
-.plus-hint-pulse { animation: plus-hint-pulse 1.1s ease-out 3; }
+/* (Steg 2-rutan med tipsa/önska/skapa och plussets .plus-hint-pulse låg här.
+   Borttagna 26/8 — för många popups i onboardingen.) */
 
 /* Återbesökare (.welcome-fast): hela intro-koreografin hoppas över — allt står
    framme direkt. Ambient-animationerna (moln, sol, shimmer) rullar som vanligt. */
