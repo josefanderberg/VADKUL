@@ -34,9 +34,8 @@ const HOVER_PEEK_LIFT_PX = 62;
 const HOVER_PEEK_MAX_EMOJI = 8;
 
 // Etikett-stegen: från vilken zoom kategorinamnet under brickorna syns, och
-// från vilken den kapade eventtiteln tar över. Delas mellan etikettlagret
-// (minzoom + text-field-steget) och zoomknapparnas steg-banner — banern ska
-// alltid tala sanning om vad etikettlagret gör vid aktuell zoom.
+// från vilken den kapade eventtiteln tar över (minzoom + text-field-steget i
+// etikettlagret läser båda härifrån så de aldrig glider isär).
 const LABEL_CAT_MIN_ZOOM = 9;
 const LABEL_TITLE_MIN_ZOOM = 13;
 
@@ -3110,31 +3109,10 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
-    // 2e. Zoomknapparna på högerkanten (Josef 26/8): +/− med en steg-banner
-    //     emellan som säger vilket etikettsteg zoomen står i — "zooma in för
-    //     kategorinamn" → "kategorinamn syns" → "titlar syns". Banern läser
-    //     BARA zoomen, aldrig etikett-toggeln (labelsHiddenRef): har man råkat
-    //     släcka texterna med samma-plats-klicket ska banern ändå visa när
-    //     stegen är MÖJLIGA. Standardsteget ±1 nivå per klick (pillens egna
-    //     zoomknappar kör ±2 — de hoppar mot ett valt event, detta är finlir).
-    const [labelStage, setLabelStage] = useState<'none' | 'cat' | 'title'>('none');
-    useEffect(() => {
-        const map = mapInstance;
-        if (!map) return;
-        const update = () => {
-            const z = map.getZoom();
-            setLabelStage(z >= LABEL_TITLE_MIN_ZOOM ? 'title' : z >= LABEL_CAT_MIN_ZOOM ? 'cat' : 'none');
-        };
-        update();
-        map.on('zoom', update);
-        return () => { map.off('zoom', update); };
-    }, [mapInstance]);
-    const handleZoomInBtn = useCallback(() => {
-        mapRef.current?.zoomIn({ duration: 300 });
-    }, []);
-    const handleZoomOutBtn = useCallback(() => {
-        mapRef.current?.zoomOut({ duration: 300 });
-    }, []);
+    // (2e. Zoomknapparna vid stad-för-stad-pillen med etikettsteg-banner låg
+    //  här — borttagna 26/8 på ägarbeslut samma dag: kolumnen mitt på höger-
+    //  kanten räcker. LABEL_*_MIN_ZOOM-konstanterna lever kvar som etikett-
+    //  lagrets gemensamma trösklar.)
 
     // 2d. Stads-bildspelet med mjuk övergång:
     //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
@@ -4155,42 +4133,11 @@ export default function V2Map({
                                 </button>
                             </div>
                         )}
-                        {/* Zoomknapparna — högerkanten, ovanför stad-för-stad-
-                            pillen (bottom-3) och under kategorikolumnen som
-                            växer uppifrån. Steg-BANNERN ovanför knapparna visar
-                            etikettsteget för AKTUELL zoom (kategorinamn från
-                            z9, titlar från z13) och läser bara zoomen — den
-                            gäller alltså även när etiketterna är avtogglade
-                            via samma-plats-klicket, precis som avsett: man ska
-                            alltid se när stegen är möjliga. */}
-                        <div className="fixed right-3 bottom-16 z-[1100] pointer-events-none flex flex-col items-end gap-2">
-                            <span
-                                aria-live="polite"
-                                className="rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-lg border border-white/50 whitespace-nowrap"
-                            >
-                                {labelStage === 'title'
-                                    ? 'Eventtitlar syns'
-                                    : labelStage === 'cat'
-                                        ? 'Kategorinamn syns — zooma in för titlar'
-                                        : 'Zooma in för kategorinamn'}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={handleZoomInBtn}
-                                aria-label="Zooma in"
-                                className="pointer-events-auto h-10 w-10 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white active:scale-95 transition-all flex items-center justify-center text-slate-700"
-                            >
-                                <Plus size={20} strokeWidth={2.5} />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleZoomOutBtn}
-                                aria-label="Zooma ut"
-                                className="pointer-events-auto h-10 w-10 rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 hover:bg-white active:scale-95 transition-all flex items-center justify-center text-slate-700"
-                            >
-                                <Minus size={20} strokeWidth={2.5} />
-                            </button>
-                        </div>
+                        {/* (Den ANDRA zoomknapp-uppsättningen +/− med etikett-
+                            steg-banner låg här, ovanför stad-för-stad-pillen.
+                            BORTTAGEN 26/8 på ägarbeslut samma dag: kolumnen
+                            mitt på högerkanten ovanför räcker — lägg inte
+                            tillbaka dubbletten.) */}
                     </>,
                     document.body
                 );
