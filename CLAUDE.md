@@ -31,6 +31,7 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - Icke-interaktiv shell får gammal node — prefixa: `PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"`.
 - Deploy-nätverksflakighet: `NODE_OPTIONS=--dns-result-order=ipv4first`.
 - Konstiga JSON-/curl-fel kan vara full disk — kolla `df -h`.
+- **Ta inte bort `overrides.sharp` i `apps/web/package.json`.** Den gäller bara firebase-tools genererade SSR-bundle (firebase-frameworks har optional peer `sharp ^0.32 || ^0.33`, och Nexts egen sharp hoistas annars dit och fäller Cloud Builds `npm ci`). Rotens lockfil påverkas inte — workspace-overrides ignoreras där. Deployerna var röda 23–26/8 av exakt det här.
 
 ## Test & verifiering
 

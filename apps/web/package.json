@@ -12,6 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "overrides": {
+    "sharp": "^0.33.5"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
     "@tanstack/react-query": "^5.90.20",
