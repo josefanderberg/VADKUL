@@ -13,8 +13,6 @@ interface WelcomeOverlayProps {
     /** Antal event den närmaste veckan — HUVUDSIFFRAN (Josef 11/8): dags-
      *  siffran sålde inte databasens storlek, veckovolymen gör det. */
     weekEventCount?: number;
-    /** Antal event som börjar inom 1 timme */
-    soonEventCount?: number;
     /** Fyrar när rutan stängts klart. Föräldern avmonterar den då — overlayn
      *  visas inte längre automatiskt vid sidladdning utan öppnas från
      *  info-knappen, och måste kunna öppnas igen efteråt. */
@@ -80,7 +78,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, soonEventCount, onClose }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -231,14 +229,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                                 ? <> — <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} redan idag</span></>
                                 : null}
                         </p>
-                        {soonEventCount && soonEventCount >= 1 ? (
-                            <span className="mt-0.5 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1">
-                                <span className="welcome-live-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span className="text-amber-700 font-extrabold text-[11.5px] uppercase tracking-wide">
-                                    {soonEventCount} börjar inom en timme
-                                </span>
-                            </span>
-                        ) : null}
+                        {/* ("N börjar inom en timme"-badgen låg här — borttagen
+                            26/8 på ägarbeslut: lägg inte tillbaka den.) */}
                     </div>
 
                     {/* (Här låg tre riktiga event ur datan. Borttaget 14/8: rutan

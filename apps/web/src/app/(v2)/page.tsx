@@ -22,6 +22,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
+import { toggleCategory } from '@/utils/categoryToggle';
 import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -1684,15 +1685,8 @@ export default function HomePage() {
         return events.filter(evt => evt.time >= start && evt.time < end).length;
     }, [events]);
 
-    // Antal event som börjar inom 1 timme (för välkomstmodalen)
-    const soonEventCount = useMemo(() => {
-        const now = Date.now();
-        const oneHourFromNow = now + 60 * 60 * 1000;
-        return events.filter(evt => {
-            const timeMs = evt.time.getTime();
-            return timeMs > now && timeMs <= oneHourFromNow;
-        }).length;
-    }, [events]);
+    // ("Börjar inom en timme"-räknaren i välkomstmodalen är borttagen —
+    // ägarbeslut 26/8: rutan ska inte visa den infon.)
 
     /**
      * ENDA GEO-REGELN I HELA GRÄNSSNITTET (Josef 9/8): varje tal räknar det som
@@ -1832,13 +1826,12 @@ export default function HomePage() {
     // avbrytbar och blockerar inte tappen (INP på kartsidan låg >500 ms mobil).
     const [, startTransition] = useTransition();
 
+    // Toggle-regeln bor i utils/categoryToggle (ren + testad): PÅ-slag av en
+    // vanlig kategori släcker opt-in-källorna (kyrkan/PRO, 🧸 i opt-in-läget)
+    // så "filtrera på Musik" betyder bara Musik (Josef 26/8).
     const handleToggleCategory = useCallback((id: string) => {
-        startTransition(() => setSelectedCategories(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
-            return next;
-        }));
-    }, []);
+        startTransition(() => setSelectedCategories(prev => toggleCategory(prev, id, { familyOptIn })));
+    }, [familyOptIn]);
     // Rensa-krysset heter "Visa alla" — då måste det landa i STANDARDLÄGET, inte
     // i tom set: för en besökare (och för 65+) ingår opt-in-källorna i "allt",
     // och ett tomt set hade tvärtom SLÄCKT dem. Under 65 ⇒ tomt som förut.
@@ -2823,6 +2816,9 @@ export default function HomePage() {
                 // och stadshoppet tar över.
                 introGlide={introMapMode}
                 onUserInteraction={handleMapUserInteraction}
+                // Under pinn-placeringen drar man KARTAN för att sikta —
+                // urvals-flytten (drag i brickområdet) får inte kapa draget.
+                areaDragDisabled={creationMode !== 'idle'}
             />
 
 
@@ -3305,7 +3301,6 @@ export default function HomePage() {
                     onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
-                    soonEventCount={soonEventCount}
                     onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
                 />
             )}
