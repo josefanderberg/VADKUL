@@ -193,6 +193,10 @@ interface NearbyEventsListProps {
      *  toggeln göms) och rader vars bild saknas ELLER inte går att ladda
      *  göms helt. Lista-toggeln i headern visar ALLA event. */
     imagesOnly?: boolean;
+    /** Bildtoggeln i listhuvudet — state ägs av EventCard (persisteras i
+     *  localStorage). Ignoreras i bildflödes-läget (imagesOnly). */
+    showImages: boolean;
+    onToggleImages: () => void;
 }
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -395,8 +399,10 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef, showImages, onToggleImages }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
+    // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
+    const effectiveShowImages = imagesOnly || showImages;
     // Ankaret sätts efter det 4:e eventet (0-indexerat: 3) — eller sista raden
     // om listan är kortare — så "ser minst 4"-villkoret blir sant först när man
     // scrollat ända ner hit.
@@ -407,26 +413,28 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Fler event i närheten · {upcomingTotal}
                 </span>
-                <button
-                    type="button"
-                    onClick={onToggleImages}
-                    aria-pressed={showImages}
-                    title={showImages ? 'Dölj bilderna — kompakt lista' : 'Visa bilderna'}
-                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                        showImages
-                            ? 'bg-[#006AA7] text-white'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                    }`}
-                >
-                    {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
-                    Bilder
-                </button>
+                {!imagesOnly && (
+                    <button
+                        type="button"
+                        onClick={onToggleImages}
+                        aria-pressed={showImages}
+                        title={showImages ? 'Dölj bilderna — kompakt lista' : 'Visa bilderna'}
+                        className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                            showImages
+                                ? 'bg-[#006AA7] text-white'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                        }`}
+                    >
+                        {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
+                        Bilder
+                    </button>
+                )}
             </div>
 
             <ul className="divide-y divide-border">
                 {upcomingItems.map(({ evt, distanceKm }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -466,7 +474,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
                             {pastItems.map(({ evt, distanceKm }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={showImages} />
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
                             ))}
                         </ul>
                     )}
@@ -589,11 +597,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // vyskiftes-läget). Kortet växer samtidigt till full höjd och scrollas
     // till toppen — ett riktigt vyskifte, inte en scroll-genväg.
     const [cardView, setCardView] = useState<'info' | 'chat' | 'nearby'>('info');
-    const [showImages, setShowImages] = useState(true);
+    // Bilder AV som default i listan (Josef 26/8) — 'on' i storage slår på dem.
+    const [showImages, setShowImages] = useState(false);
     useEffect(() => {
         try {
-            if (localStorage.getItem(NEARBY_IMAGES_KEY) === 'off') setShowImages(false);
-        } catch { /* privat läge / blockad storage — kör vidare med bilder på */ }
+            if (localStorage.getItem(NEARBY_IMAGES_KEY) === 'on') setShowImages(true);
+        } catch { /* privat läge / blockad storage — kör vidare med bilder av */ }
     }, []);
     const toggleImages = () => {
         setShowImages(prev => {
@@ -1049,12 +1058,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         () => nearbyEvents.filter(n => getEventStatus(n.evt.time, now, n.evt.hasSpecificTime !== false) === 'past'),
         [nearbyEvents, now]
     );
-    // LISTVYN (lista-toggeln i headern) visar BARA event med bild (Josef 26/8):
-    // den vyn är ett bildflöde. Infovyns lista längst ner visar som förut alla
-    // event, med eller utan bild.
-    const listViewOnly = cardView === 'nearby';
-    const listedUpcoming = listViewOnly ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
-    const listedPast = listViewOnly ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
+    // INFOVYNS lista längst ner är bildflödet (Josef 26/8 kväll): bara event
+    // med bild, bilderna tvingade på. Lista-toggeln i headern visar ALLA
+    // event, med bildtoggeln (default av).
+    const imagesOnlyList = cardView !== 'nearby';
+    const listedUpcoming = imagesOnlyList ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
+    const listedPast = imagesOnlyList ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -1844,7 +1853,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             coachMarkerRef={coachMarkerRef}
-                            imagesOnly={listViewOnly}
+                            imagesOnly={imagesOnlyList}
+                            showImages={showImages}
+                            onToggleImages={toggleImages}
                         />
                     )}
                 </div>
