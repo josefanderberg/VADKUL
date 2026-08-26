@@ -155,6 +155,10 @@ addColumnIfMissing('link_events', 'geoRefineAttempts', 'INTEGER DEFAULT 0');
 // den filtrerar stadsinlägg/digest/aggregat och får inte byta semantik utan
 // att alla konsumenter ses över. geoPrecision är kvalitetssanningen.
 addColumnIfMissing('link_events', 'geoPrecision', 'TEXT');
+// endDate (ISO): eventets SLUTTID när källan ger en giltig (validEventEnd i
+// utils/eventEnd — slut > start, max 30 dygn). NULL = okänd/en-dags. Infört
+// 26/8: flerdagarsfestivaler (Live at Heart ons–lör) visades bara på startdagen.
+addColumnIfMissing('link_events', 'endDate', 'TEXT');
 // precision i geocode_cache: cache-träffar ska inte tappa kvalitetsmärkningen.
 addColumnIfMissing('geocode_cache', 'precision', 'TEXT');
 {
@@ -331,12 +335,12 @@ const upsertStmt = sqlite.prepare(`
         url, title, time, hasSpecificTime, locationName, extractedAddress, geocodedQuery,
         lat, lng, geoPrecision, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
-        firestoreId, updatedAt, status, price
+        firestoreId, updatedAt, status, price, endDate
     ) VALUES (
         @url, @title, @time, @hasSpecificTime, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @geoPrecision, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
-        @firestoreId, @updatedAt, @status, @price
+        @firestoreId, @updatedAt, @status, @price, @endDate
     )
     ON CONFLICT(url) DO UPDATE SET
         title              = excluded.title,
@@ -362,7 +366,10 @@ const upsertStmt = sqlite.prepare(`
         updatedAt          = excluded.updatedAt,
         -- price: bevara LLM-extraherat pris även om scrapern råkar skicka ''
         --        NULLIF tomma strängar till NULL så COALESCE faller tillbaka på sparat värde.
-        price              = COALESCE(NULLIF(excluded.price, ''), link_events.price)
+        price              = COALESCE(NULLIF(excluded.price, ''), link_events.price),
+        -- endDate: bevara känt slutdatum när en skrivning saknar det (t.ex.
+        -- Firestore-sync av äldre dokument eller källa som slutat leverera).
+        endDate            = COALESCE(NULLIF(excluded.endDate, ''), link_events.endDate)
         -- status bevaras avsiktligt vid re-scrape; ändras bara via setEventStatus()
 `);
 
@@ -408,6 +415,8 @@ export interface SqliteEvent {
     firestoreId?: string;
     /** Entrépris från strukturerad källa (t.ex. json-ld offers.price). */
     price?: string;
+    /** Validerat slutdatum (utils/eventEnd) — null/utelämnad = okänd/en-dags. */
+    endDate?: Date | string | null;
     /**
      * Pipeline-status. Default 'published' för bakåtkompatibilitet —
      * alla gamla anropare som inte sätter status får published direkt.
@@ -442,6 +451,7 @@ export function upsertEvent(event: SqliteEvent): void {
         updatedAt:          new Date().toISOString(),
         status:             event.status ?? 'published',
         price:              event.price ?? null,
+        endDate:            toIso(event.endDate),
     });
 }
 
@@ -582,6 +592,12 @@ const setTimeStmt = sqlite.prepare(
 /** Sätt ny tid + tidskvalitets-flagga för ett event (SQLite-delen). */
 export function setEventTime(url: string, timeIso: string, hasSpecificTime: boolean): void {
     setTimeStmt.run(timeIso, hasSpecificTime ? 1 : 0, new Date().toISOString(), url);
+}
+
+const setEndDateStmt = sqlite.prepare('UPDATE link_events SET endDate = ?, updatedAt = ? WHERE url = ?');
+/** Sätt validerat slutdatum (refresh-körningar fyller på kända event). */
+export function setEventEndDate(url: string, endIso: string): void {
+    setEndDateStmt.run(endIso, new Date().toISOString(), url);
 }
 
 const bumpAttemptsStmt = sqlite.prepare(

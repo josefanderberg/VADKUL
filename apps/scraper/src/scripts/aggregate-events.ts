@@ -41,6 +41,8 @@ interface DestinationLayer {
     id: string;
     title: string;
     time: string;
+    /** Validerat slutdatum (ISO) — bara med när det finns (flerdagarsevent). */
+    endDate?: string;
     /** false = källan gav bara datum (midnatt är platshållare) — webben visar då ingen klocktid. */
     hasSpecificTime: boolean;
     lat: number;
@@ -55,6 +57,8 @@ interface CardLayer {
     id: string;
     title: string;
     time: string;
+    /** Validerat slutdatum (ISO) — bara med när det finns (flerdagarsevent). */
+    endDate?: string;
     /** false = källan gav bara datum — webben visar då ingen klocktid. */
     hasSpecificTime: boolean;
     locationName: string;
@@ -133,6 +137,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             id,
             title: row.title || '',
             time: row.time,
+            // Utelämnas när okänt — bara flerdagars-/sluttids-event bär fältet
+            // (bytes × 30k event i aggregatet).
+            endDate: row.endDate || undefined,
             hasSpecificTime,
             lat: safeLat,
             lng: safeLng,
@@ -145,6 +152,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             id,
             title: row.title || '',
             time: row.time,
+            endDate: row.endDate || undefined,
             hasSpecificTime,
             locationName: row.locationName || '',
             category: row.category || 'other',

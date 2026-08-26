@@ -11,7 +11,8 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate } from '../utils/dbHelper';
+import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
@@ -230,6 +231,15 @@ export async function runSource(
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
                         }
                     }
+                    // Slutdatum: kända event fylls på när källan ger ett
+                    // GILTIGT (slut > start, max 30 dygn) — så flerdagars-
+                    // festivaler som redan låg i DB (Live at Heart) får sitt
+                    // spann utan re-skrapning från noll.
+                    const validEnd = validEventEnd(e.startDate, e.endDate);
+                    if (validEnd && await refreshEventEndDate(e.url, validEnd.toISOString())) {
+                        result.updated++;
+                        ctx.log(`  📅 slutdatum satt: ${e.title.slice(0, 50)} → ${validEnd.toISOString().slice(0, 10)}`);
+                    }
                 }
                 result.skipped.duplicate++;
                 continue;
@@ -322,10 +332,16 @@ export async function runSource(
                 // Om upload misslyckas: behåll originalet (kanske funkar ett tag)
             }
 
+            // Slutdatum bara när källan ger ett GILTIGT (slut > start, max
+            // 30 dygn — utils/eventEnd); annars utelämnat helt så Firestore-
+            // dokumentet inte bär ett null-fält i onödan.
+            const validEnd = validEventEnd(e.startDate, e.endDate);
+
             pendingWrites.push({
                 title: e.title,
                 url: e.url,
                 time: e.startDate,
+                ...(validEnd ? { endDate: validEnd } : {}),
                 hasSpecificTime,
                 locationName: cleanLocationName(e.venueName || e.city || 'Sverige') || 'Sverige',
                 extractedAddress: e.address || '',
