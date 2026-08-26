@@ -424,10 +424,6 @@ interface V2MapProps {
      *  är uppe (Josef 11/8, 12/8): eventmängden över hela landet ska hinna ses
      *  innan stadshoppet. false = ingen resa (avbryter en pågående). */
     introGlide?: boolean;
-    /** Stänger av "drag inom brickområdet flyttar reveal-urvalet" — sidan
-     *  sätter true under skapa-flödets pinn-placering, där man drar KARTAN för
-     *  att sikta och draget aldrig får kapas av urvals-flytten. */
-    areaDragDisabled?: boolean;
 }
 
 export default function V2Map({
@@ -464,7 +460,6 @@ export default function V2Map({
     cityTourTarget = null,
     onUserInteraction,
     introGlide = false,
-    areaDragDisabled = false,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -528,10 +523,6 @@ export default function V2Map({
     // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
     const isZoomingRef = useRef<boolean>(false);
-    // Speglar areaDragDisabled så init-effektens pointer-handlers (registrerade
-    // en gång) ser aktuellt värde.
-    const areaDragDisabledRef = useRef(areaDragDisabled);
-    areaDragDisabledRef.current = areaDragDisabled;
     // Speglar introGlide-prop:en så map-init-effektens event-handlers (som bara
     // skapas en gång) kan läsa den. Medan intron pågår (välkomstrutan uppe) ska
     // kartan stanna i NÅL-läget — bara prickar, inga brickor (Josef 11/8:
@@ -669,11 +660,6 @@ export default function V2Map({
     // lista/ett önskekort. Ett sådant klick ska inte också växla dag/vecka —
     // man klickade bort kortet, inte på kartan. Nollas när tap-handlern läst den.
     const suppressMapTapRef = useRef(false);
-    // Tidsstämpel när ett områdes-drag (flytt av reveal-urvalet) just släppts:
-    // kartan rörde sig inte under gesten (dragPan avstängd) så MapLibre fyrar
-    // ett 'click' på uppsläppet — det klicket ska varken öppna, stänga eller
-    // flytta något. Läses (med kort fönster) överst i klick-handlern.
-    const revealDragClickGuardRef = useRef(0);
 
     // Samma sak för multi-event-listan: sidan gömmer vägskyltarna medan den är
     // uppe, så de inte lägger sig över listan man just öppnat.
@@ -2594,10 +2580,6 @@ export default function V2Map({
         // reveal-write-cachen och är immun mot query-indexet.
 
         map.on('click', (e) => {
-            // Uppsläpps-klicket efter ett områdes-drag (reveal-flytten nedan)
-            // ska inte tolkas som tap — kartan stod still så MapLibre kan inte
-            // skilja det från ett riktigt klick.
-            if (performance.now() - revealDragClickGuardRef.current < 400) return;
             // Klick på en SYNLIG GL-markör = öppna. pickHoverKey tillämpar
             // samma regler som hovern: bara avslöjade brickor är valbara
             // (dolda ska skrapas fram av det allmänna klicket, inte öppnas),
