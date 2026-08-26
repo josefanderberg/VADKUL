@@ -133,6 +133,24 @@ export interface SiteVisionConfig {
      * Samma app kör degerfors.se; c-parametern (kategori) utelämnas där.
      */
     pageApi?: { pageId: string; portletId: string };
+    /**
+     * SiteVision RESTApp "EventService" (Dalarna-mallen — vansbro.se,
+     * morakommun.se, orsa.se, alvdalen.se; upptäckt 2026-08-26):
+     *   GET <origin>/rest-api/EventService/items?start=0&num=200&paths=<nodId>
+     *   → { categories, data: [{ name, uri, startDate, endDate, startTime,
+     *       endTime, location, description, image:{uri}, identifier }],
+     *       meta:{ totalItems } }
+     *
+     * `paths` är OBLIGATORISK (utan den svarar servern med ett felmeddelande)
+     * och är arkivnodens id. Den står som `"paths":["3.…"]` intill
+     * `"eventServiceRoute"` i kalendersidans registerInitialState-blob.
+     *
+     * FÄLLA: sidan listar även GRANNKOMMUNERNAS endpoints med deras paths —
+     * ta rätt id, annars skrapar du fel kommun (och ofta ett gammalt arkiv).
+     * `location` bär hela adressen ("Medborgarhuset, Norra Allégatan 30, 78631
+     * Vansbro"), `startDate` är ISO med offset.
+     */
+    eventServiceApi?: { paths: string };
 }
 
 /** Rått item ur soleil items-API:t (bara fälten vi läser). */
@@ -428,6 +446,75 @@ export function mapEventSearchHit(
         imageUrl: makeAbsoluteUrl(hit.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/** Rått item ur EventService (bara fälten vi läser). */
+interface EventServiceItem {
+    identifier?: string;
+    name?: string;
+    uri?: string;
+    startDate?: string;      // "2026-01-09T21:00:00+01:00"
+    endDate?: string;
+    startTime?: string;      // "21:00"
+    location?: string;       // hela adressen
+    description?: string;
+    image?: { uri?: string };
+}
+
+/** Mappa ett EventService-item → RawEvent. Exporterad för test. */
+export function mapEventServiceItem(
+    item: EventServiceItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = decodeHtmlEntities(item.name || '').trim();
+    const eventUrl = makeAbsoluteUrl(item.uri, baseUrl);
+    if (!title || !eventUrl || !item.startDate) return null;
+    const start = new Date(item.startDate);
+    if (isNaN(start.getTime())) return null;
+    const end = item.endDate ? new Date(item.endDate) : null;
+
+    return {
+        externalId: item.identifier,
+        title,
+        startDate: start,
+        endDate: end && !isNaN(end.getTime()) && end > start ? end : undefined,
+        url: eventUrl,
+        address: item.location?.trim() || undefined,
+        city: defaultCity,
+        description: item.description?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.image?.uri, baseUrl),
+        // startTime finns bara när arrangören satt klockslag.
+        hasSpecificTime: item.startTime?.trim() ? true : undefined,
+    };
+}
+
+/** SiteVision EventService — hela arkivnoden i ETT anrop. */
+async function scrapeEventServiceApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const cap = config.maxItems ?? 300;
+    const url = `${origin}/rest-api/EventService/items?start=0&num=${cap}`
+        + `&paths=${encodeURIComponent(config.eventServiceApi!.paths)}`;
+
+    const body = await fetchHtml(url, config);
+    if (!body) { ctx.log('EventService svarade inte'); return []; }
+    let data: { data?: EventServiceItem[]; meta?: { totalItems?: number } };
+    try { data = JSON.parse(body); } catch { ctx.log('EventService gav icke-JSON'); return []; }
+
+    const events: RawEvent[] = [];
+    const seen = new Set<string>();
+    for (const it of data.data ?? []) {
+        const ev = mapEventServiceItem(it, base, config.defaultCity);
+        if (!ev || seen.has(ev.url)) continue;
+        seen.add(ev.url);
+        events.push(ev);
+    }
+    ctx.log(`EventService: ${events.length} event (totalItems=${data.meta?.totalItems})`);
+    return events;
 }
 
 /** Rått item ur /page-routen (bara fälten vi läser). */
@@ -916,6 +1003,7 @@ export const sitevisionEngine = async (
     if (config.guideApi) return scrapeGuideApi(config, ctx);
     if (config.searchAppApi) return scrapeSearchAppApi(config, ctx);
     if (config.pageApi) return scrapePageApi(config, ctx);
+    if (config.eventServiceApi) return scrapeEventServiceApi(config, ctx);
 
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();

@@ -52,24 +52,42 @@ async function getJson(url: string, signal?: AbortSignal): Promise<any | null> {
 
 /**
  * Parsa ett HTML-kort → RawEvent (utan detaljside-data). Exporterad för test.
- * Tema-varianter: Umeå (.title/.cbis-date/.cbis-event-arena) och Karlskrona
- * (.card-title/.cbis-occasions med datumintervall/.card-text-beskrivning).
+ * Tema-varianter: Umeå (.title/.cbis-date/.cbis-event-arena), Karlskrona
+ * (.card-title/.cbis-occasions med datumintervall/.card-text-beskrivning) och
+ * Kinda (.cbis-product-title/.cbis-occasions MED veckodagsprefix "ons 26 aug –
+ * sön 06 sep 11:00"/beskrivning i bar <p> i .cbis-product-body).
  */
+/**
+ * "ons 26 aug" → "26 aug". Kinda-temat prefixar datumet med veckodag, vilket
+ * parseSwedishDate inte klarar. Exporterad för test.
+ */
+export function stripWeekday(s: string): string {
+    return s.replace(/^(mån|tis|ons|tors?|fre|lör|sön)(dag)?\.?\s+/i, '').trim();
+}
+
 export function parseCbisCard(cardHtml: string, cfg: CbisConfig, now: Date): RawEvent | null {
     const $ = cheerio.load(cardHtml);
-    const title = ($('.title').first().text().trim() || $('.card-title').first().text().trim());
+    const title = ($('.title').first().text().trim()
+        || $('.card-title').first().text().trim()
+        || $('.cbis-product-title').first().text().trim());
     const href = $('a[href]').first().attr('href') || '';
     if (!title || !href) return null;
 
     // Datum: enkelvärde ELLER intervall ("03 Jul - 13 Aug") → första datumet.
-    const dateText = ($('.cbis-date span').first().text().trim()
-        || $('.cbis-occasions').first().text().replace(/\s+/g, ' ').trim())
-        .split(/\s*[-–]\s*/)[0].trim();
+    const occText = ($('.cbis-date span').first().text().trim()
+        || $('.cbis-occasions').first().text().replace(/\s+/g, ' ').trim());
+    const dateText = stripWeekday(occText.split(/\s*[-–]\s*/)[0].trim());
     const startDate = parseSwedishDate(dateText, now);
     if (!startDate) return null;
 
+    // Kinda-varianten lägger klockslaget sist i occasions-raden ("… 11:00").
+    const clock = occText.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    let hasClock = false;
+    if (clock) { startDate.setHours(parseInt(clock[1], 10), parseInt(clock[2], 10), 0, 0); hasClock = true; }
+
     const venue = $('.cbis-event-arena span').first().text().trim() || undefined;
-    const cardDesc = $('.card-text').first().text().replace(/\s+/g, ' ').trim();
+    const cardDesc = ($('.card-text').first().text() || $('.cbis-product-body p').first().text())
+        .replace(/\s+/g, ' ').trim();
     let imageUrl = $('img').first().attr('src') || undefined;
 
     let url: string;
@@ -86,8 +104,9 @@ export function parseCbisCard(cardHtml: string, cfg: CbisConfig, now: Date): Raw
         city: cfg.defaultCity,
         imageUrl,
         description: cardDesc.length >= 20 ? cardDesc.slice(0, 600) : undefined,
-        // Kortdatumet saknar klockslag → låt runnerns midnatts-heuristik gälla
-        // tills detaljsidan ev. ger tid.
+        // Kortdatumet saknar oftast klockslag → låt runnerns midnatts-heuristik
+        // gälla tills detaljsidan ev. ger tid. Kinda-varianten bär det på kortet.
+        hasSpecificTime: hasClock ? true : undefined,
     };
 }
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -450,5 +450,44 @@ describe('mapPageApiItem', () => {
         expect(mapPageApiItem({ ...ITEM, URI: undefined }, BASE, 'X')).toBeNull();
         expect(mapPageApiItem({ ...ITEM, startDate: 0 }, BASE, 'X')).toBeNull();
         expect(mapPageApiItem({ ...ITEM, startDate: undefined }, BASE, 'X')).toBeNull();
+    });
+});
+
+describe('mapEventServiceItem', () => {
+    const BASE = 'https://www.vansbro.se/arkiv/evenemang.html';
+    const IT = {
+        identifier: '5.4755fb0619b828d3dbd7cb0b',
+        name: 'Vansbro Bio &ndash; Five Nights at Freddy&apos;s 2',
+        uri: 'https://www.vansbro.se/arkiv/evenemang/evenemang/2026-01-08-vansbro-bio.html',
+        startDate: '2026-01-09T21:00:00+01:00',
+        endDate: '2026-01-09T22:44:00+01:00',
+        startTime: '21:00',
+        location: 'Medborgarhuset, Norra Allégatan 30, 78631 Vansbro',
+        description: 'Skräckfenomenet är tillbaka.',
+        image: { uri: 'https://www.vansbro.se/images/18.x/fnaf.jpg' },
+    };
+
+    it('läser ISO-datum med offset och full adress', () => {
+        const e = mapEventServiceItem(IT, BASE, 'Vansbro')!;
+        expect(e.startDate.toISOString()).toBe('2026-01-09T20:00:00.000Z');
+        expect(e.endDate?.toISOString()).toBe('2026-01-09T21:44:00.000Z');
+        expect(e.address).toBe('Medborgarhuset, Norra Allégatan 30, 78631 Vansbro');
+        expect(e.city).toBe('Vansbro');
+        expect(e.hasSpecificTime).toBe(true);
+    });
+
+    it('avkodar entiteter i titeln', () => {
+        expect(mapEventServiceItem(IT, BASE, 'Vansbro')!.title).toBe("Vansbro Bio – Five Nights at Freddy's 2");
+    });
+
+    it('litar inte på klockslag utan startTime', () => {
+        expect(mapEventServiceItem({ ...IT, startTime: '' }, BASE, 'X')!.hasSpecificTime).toBeUndefined();
+    });
+
+    it('avvisar poster utan namn, uri eller startDate', () => {
+        expect(mapEventServiceItem({ ...IT, name: '' }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, uri: undefined }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, startDate: undefined }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, startDate: 'aldrig' }, BASE, 'X')).toBeNull();
     });
 });

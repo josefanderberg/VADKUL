@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCbisCard, applyCbisDetail } from './cbis';
+import { parseCbisCard, applyCbisDetail, stripWeekday } from './cbis';
 
 const NOW = new Date('2026-07-02T10:00:00');
 const CFG = { baseUrl: 'https://visitumea.se', nodeId: 1262, defaultCity: 'Umeå' };
@@ -68,5 +68,23 @@ describe('applyCbisDetail', () => {
         applyCbisDetail('<meta name="description" content="Något helt annat innehåll här."/><p>08:00</p>', ev);
         expect(ev.description).toBe(before);
         expect(ev.startDate.getHours()).toBe(19);
+    });
+});
+
+describe('stripWeekday', () => {
+    it('kapar Kinda-temats veckodagsprefix', () => {
+        expect(stripWeekday('ons 26 aug')).toBe('26 aug');
+        expect(stripWeekday('sön 06 sep')).toBe('06 sep');
+        expect(stripWeekday('tors 3 juli')).toBe('3 juli');
+        expect(stripWeekday('måndag 1 maj')).toBe('1 maj');
+    });
+
+    it('rör inte datum utan veckodag', () => {
+        expect(stripWeekday('26 aug')).toBe('26 aug');
+        expect(stripWeekday('2026-08-26')).toBe('2026-08-26');
+    });
+
+    it('kapar inte ord som bara börjar likadant', () => {
+        expect(stripWeekday('Onsdagsklubben 5 maj')).toBe('Onsdagsklubben 5 maj');
     });
 });
