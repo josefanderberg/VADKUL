@@ -7,7 +7,9 @@
     },
     "dalhalla": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -19,11 +21,15 @@
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "huddinge-hembygdsforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "nordmaling": {
       "since": "2026-08-19",
@@ -31,7 +37,9 @@
     },
     "nybro": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "nykoping": {
       "since": "2026-08-19",
@@ -75,7 +83,9 @@
     },
     "stockholm": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "tingsryd": {
       "since": "2026-08-19",
@@ -83,7 +93,9 @@
     },
     "tjorn": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "tjorns-hembygdsforening": {
       "since": "2026-08-19",
