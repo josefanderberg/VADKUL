@@ -48,6 +48,7 @@ import { hbgEventEngine } from '../scrapers/hbgevent';
 import { bestEventEngine } from '../scrapers/bestevent';
 import { accentFeedEngine } from '../scrapers/accentfeed';
 import { optimizelyEventsEngine } from '../scrapers/optimizely-events';
+import { sportalityEngine } from '../scrapers/sportality';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -118,4 +119,5 @@ export const ENGINES: Record<string, Engine> = {
     'bestevent': bestEventEngine,
     'accentfeed': accentFeedEngine,
     'optimizely-events': optimizelyEventsEngine,
+    'sportality': sportalityEngine,
 };
