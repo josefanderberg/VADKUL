@@ -1,0 +1,119 @@
+[
+ {
+  "host": "nojesfabriken.se",
+  "origin": "https://www.nojesfabriken.se",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://www.nojesfabriken.se/wp-json/wp/v2/event?per_page=3",
+    "len": 37710
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.nojesfabriken.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://www.nojesfabriken.se/event-sitemap.xml",
+     "https://www.nojesfabriken.se/event-category-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "host": "wermlandopera.com",
+  "origin": "https://www.wermlandopera.com",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.wermlandopera.com//sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://www.wermlandopera.com/evenemang-sitemap.xml",
+     "https://www.wermlandopera.com/evenemang_tax-sitemap.xml",
+     "https://www.wermlandopera.com/evenemang_plats-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "host": "varmlandsmuseum.se",
+  "origin": "https://varmlandsmuseum.se",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://varmlandsmuseum.se/wp-json/wp/v2/event?per_page=3",
+    "len": 23428
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://varmlandsmuseum.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://varmlandsmuseum.se/event-sitemap.xml",
+     "https://varmlandsmuseum.se/skolprogram-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "host": "scalateatern.se",
+  "origin": "https://www.scalateatern.se",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.scalateatern.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://www.scalateatern.se/show-eventim-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "host": "vastmanlandsteater.se",
+  "origin": "https://vastmanlandsteater.se",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://vastmanlandsteater.se/sitemap.xml",
+    "events": 111,
+    "subs": []
+   }
+  ]
+ },
+ {
+  "host": "vasteraskonserthus.se",
+  "origin": "https://vastmanlandsmusiken.se",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://vastmanlandsmusiken.se/wp-json/wp/v2/event?per_page=3",
+    "len": 7554
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://vastmanlandsmusiken.se/sitemap.xml",
+    "events": 0,
+    "subs": [
+     "https://vastmanlandsmusiken.se/wp-sitemap-posts-ekfa-event-1.xml",
+     "https://vastmanlandsmusiken.se/wp-sitemap-posts-digitala-event-1.xml",
+     "https://vastmanlandsmusiken.se/wp-sitemap-posts-event-1.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "host": "vastmanlandslansmuseum.se",
+  "origin": "https://vastmanlandslansmuseum.se",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://vastmanlandslansmuseum.se/wp-sitemap.xml",
+    "events": 0,
+    "subs": [
+     "https://vastmanlandslansmuseum.se/wp-sitemap-posts-evenemang-1.xml"
+    ]
+   }
+  ]
+ }
+]
