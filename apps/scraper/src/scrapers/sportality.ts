@@ -24,6 +24,10 @@
  *    felaktigt sitter på flera tjeckiska/slovakiska lag. Matcha på `sv`.
  *  - Samma lagkod förekommer flera gånger i `allTeamsInSite` (en post per
  *    serie laget spelar i) — bygg ett Set, räkna inte.
+ *  - Matcher utan fastställd speltid hamnar i en `2001-01-01`-hink (SSL) —
+ *    filtreras bort på årtal.
+ *  - Flera ligor svarar 302 till sin kanoniska domän (basketligandam.se →
+ *    sbldam.se). Konfigurera den slutliga domänen, inte omdirigeringen.
  *
  * Ingen koordinat i datan; arenanamnet geokodas av runnern (known_venues
  * täcker de flesta hockeyarenor).
@@ -86,6 +90,9 @@ export function mapSportalityGame(
 
     const start = new Date(game.startDateTime);
     if (isNaN(start.getTime())) return null;
+    // SSL lägger matcher utan fastställd tid i en 2001-01-01-hink — släpp dem
+    // hellre än att skicka in uppenbart felaktiga datum i pipelinen.
+    if (start.getFullYear() < 2020) return null;
 
     const venue = game.venue?.trim() || undefined;
     const series = game.seriesCode?.trim();
