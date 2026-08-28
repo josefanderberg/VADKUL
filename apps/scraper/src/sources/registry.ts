@@ -6502,6 +6502,22 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-08-28',
         discovery: { method: 'manual', probeUrl: 'https://www.karlstadccc.se/17/38/program-biljetter/', date: '2026-08-28', rawEventCount: 28 },
     },
+    {
+        id: 'cruncho-halmstad',
+        hostName: 'Destination Halmstad',
+        region: 'halmstad',
+        engine: 'cruncho',
+        config: {
+            pageUrl: 'https://www.destinationhalmstad.se/evenemang',
+            hostedApi: { destination: 'halmstad', siteBase: 'https://halmstad.cruncho.co' },
+            defaultCity: 'Halmstad',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Destination Halmstads kalender är en SiteVision-portlet mot Crunchos hostade API — 194+ event, långt mer än gamla halmstad-källans 41 sitemap-URL:er (behålls, olika URL-rymder). OBS: svaret klipps vid 200 poster oavsett size-param — event kan falla utanför (Laxön Hälsofestival gjorde det; skrevs in för hand 2026-08-28). Kolla offset-paginering vid tillfälle.',
+        lastVerified: '2026-08-28',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://api-ts.cruncho.co/categories/with-events/halmstad?destination=halmstad&l1=events', date: '2026-08-28', rawEventCount: 194, notes: 'Avslöjades av ik.imagekit.io/cruncho-bilder i portlettens initialState efter ett community-tips om ett saknat event.' },
+    },
 
     // ─── WEBB-SNÖBOLLEN (auto-upptäckta, se registry-snowball.ts) ───────────
     ...SNOWBALL_SOURCES,
