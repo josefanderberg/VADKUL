@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-28T10:38:46.417Z",
+  "updatedAt": "2026-08-28T11:21:33.385Z",
   "events": [
     {
       "id": "https://www.facebook.com/events/3129907550525716/",
@@ -26336,7 +26336,8 @@
       "lat": 59.3868,
       "lng": 13.5216,
       "locationName": "Sundsta, Karlstad",
-      "category": "social"
+      "category": "party",
+      "emoji": "🏳️‍🌈"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/k8xzh0zf1dwzama/2026-08-29/breddtrav",
@@ -132173,7 +132174,8 @@
       "lat": 59.6178282,
       "lng": 16.2301266,
       "locationName": "Hallstahammar",
-      "category": "party"
+      "category": "party",
+      "emoji": "🎉"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=00fadb3c086b4c52b94c92688a2d94eb",
@@ -132283,7 +132285,8 @@
       "lat": 57.727930868782856,
       "lng": 12.005130564063593,
       "locationName": "Safirgatan 14",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/yOlz61#2026-09-03",
@@ -132294,7 +132297,8 @@
       "lat": 55.6438279,
       "lng": 13.0880263,
       "locationName": "Burlövsbadet",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏊"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b94d111e8791446bb71b3ebe9e2c3abe",
@@ -132924,7 +132928,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=10634b8bdac041a8afddb1c90e4e611d",
@@ -133012,7 +133017,8 @@
       "lat": 57.75681308759249,
       "lng": 12.073790740875465,
       "locationName": "Bergsjöns Kulturhusväg 4A",
-      "category": "art"
+      "category": "course",
+      "emoji": "🏺"
     },
     {
       "id": "https://pro.se/distrikt/jonkoping/kommun/vetlanda/pro-holsbybrunn/vara-aktiviteter/aktivitet?id=230054",
@@ -133897,7 +133903,8 @@
       "lat": 57.723697646533736,
       "lng": 11.892501147548376,
       "locationName": "Friskväderstorget 2",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=aedb939f-5220-4f3a-99bd-a4df3a7c1093",
@@ -133908,7 +133915,8 @@
       "lat": 57.754248656933555,
       "lng": 12.076591498893203,
       "locationName": "Saturnusgatan 1",
-      "category": "social"
+      "category": "sport",
+      "emoji": "🏋️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=af5503d5-322f-4b34-9388-ab9bbea5eba6",
@@ -133919,7 +133927,8 @@
       "lat": 57.79589188284789,
       "lng": 12.050885913351987,
       "locationName": "Angereds Torg 13",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=648ce831-6a8d-4a4c-b0ae-2e1fa9f7a59a",
@@ -133930,7 +133939,8 @@
       "lat": 57.75681308759249,
       "lng": 12.073790740875465,
       "locationName": "Bergsjöns Kulturhusväg 4A",
-      "category": "art"
+      "category": "stage",
+      "emoji": "💃"
     },
     {
       "id": "https://varnamo.cruncho.co/sv-SE/place/NMyxA2#2026-09-03",
@@ -133941,7 +133951,8 @@
       "lat": 57.1885706,
       "lng": 14.0372201,
       "locationName": "Värnamo stadsbibliotek",
-      "category": "social"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://pro.se/distrikt/jonkoping/kommun/varnamo/pro-varnamo/vara-aktiviteter/aktivitet?id=237732",
@@ -133952,7 +133963,8 @@
       "lat": 57.184902,
       "lng": 14.0410977,
       "locationName": "PRO Värnamo",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://visitvarmland.com/evenemang/barn-2/fritidsgard-knutboa#2026-09-03",
@@ -133962,7 +133974,8 @@
       "lat": 60.40736797359319,
       "lng": 13.269548266063309,
       "locationName": "Knutboa Norra Ny",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://bibliotek.nykoping.se/evenemang#55e88657-ee00-412f-9710-e1cffc99deb6",
@@ -134445,7 +134458,8 @@
       "lat": 60.6750132,
       "lng": 17.1467019,
       "locationName": "Gävle",
-      "category": "other"
+      "category": "social",
+      "emoji": "♟️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d5443d5e98e84587a329b5dd765b9bf9",
@@ -135109,7 +135123,8 @@
       "lat": 57.72104381620587,
       "lng": 11.94680335091304,
       "locationName": "Borstbindaregatan 12A",
-      "category": "social"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=b5d782f8-bc9c-4786-a471-b90c95e979d5",
@@ -135120,7 +135135,8 @@
       "lat": 57.71678779886364,
       "lng": 12.01713115674698,
       "locationName": "Kålltorpsgatan 2",
-      "category": "social"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/infoboxochdropintillbudgetochskuldradgivningpakulturhuset.5.5e596bbf19ed4536d5e48b68.html",
@@ -135131,7 +135147,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎓"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/9qNENE#2026-09-03",
@@ -135142,7 +135159,8 @@
       "lat": 55.673258,
       "lng": 13.0673227,
       "locationName": "Havsblick Restaurang",
-      "category": "social"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/dvnPAl#2026-09-03",
@@ -135153,7 +135171,8 @@
       "lat": 55.6327672,
       "lng": 13.0795823,
       "locationName": "Mötesplatsen",
-      "category": "social"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://pro.se/distrikt/skaraborg/kommun/falkoping/pro-falkoping/vara-aktiviteter/aktivitet?id=213891",
@@ -135694,7 +135713,8 @@
       "lat": 57.79589229271875,
       "lng": 12.050884751591123,
       "locationName": "Angereds Torg 13",
-      "category": "music"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=fddf2a46-ffc4-4091-8be0-508ff12b6872",
@@ -135705,7 +135725,8 @@
       "lat": 57.75681308759249,
       "lng": 12.073790740875465,
       "locationName": "Bergsjöns Kulturhusväg 4A",
-      "category": "art"
+      "category": "course",
+      "emoji": "🏺"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=ed01aa81-de13-4f2b-865c-c6bde13ece4a",
@@ -135716,7 +135737,8 @@
       "lat": 57.70217660936726,
       "lng": 11.95337829075377,
       "locationName": "Heurlins Plats 1",
-      "category": "course"
+      "category": "social",
+      "emoji": "📚"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=5e0f7ea904d2437292673e8b05a16b7d",
@@ -135726,7 +135748,8 @@
       "lat": 56.6628826,
       "lng": 16.3662382,
       "locationName": "Nicodemusgården - Nicodemussalen, Kalmar domkyrkoförsamling",
-      "category": "music"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=875f0bbc96ab42f7bb9be3444828c7c0",
@@ -135736,7 +135759,8 @@
       "lat": 59.1274727,
       "lng": 18.1666192,
       "locationName": "Vendelsö kyrka, Österhaninge församling",
-      "category": "family"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1093fd7963764c1d99cea835089e44ee",
@@ -136756,7 +136780,8 @@
       "lat": 57.79589188284789,
       "lng": 12.050885913351987,
       "locationName": "Angereds Torg 13",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=5f7e1d64-4368-4291-a428-d875fc964475",
@@ -136767,7 +136792,8 @@
       "lat": 57.681568127342814,
       "lng": 11.935036182403566,
       "locationName": "Idrotts- och föreningsförvaltningen",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏋️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=a9035064-7cc4-4015-98b1-0f7b92fafb05",
@@ -136778,7 +136804,8 @@
       "lat": 57.79589188284789,
       "lng": 12.050885913351987,
       "locationName": "Angereds Torg 13",
-      "category": "course"
+      "category": "social",
+      "emoji": "🗣️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=08fc1cc8-5054-4bf1-b606-363d255791c1",
@@ -136789,7 +136816,8 @@
       "lat": 57.79589188284789,
       "lng": 12.050885913351987,
       "locationName": "Angereds Torg 13",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=f190dc65-84b3-4ce2-a79f-d36ac5a7f662",
@@ -136800,7 +136828,8 @@
       "lat": 57.75237330140319,
       "lng": 12.031739720176347,
       "locationName": "Kortedala Torg 9",
-      "category": "other"
+      "category": "social",
+      "emoji": "🗣️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=b5d40c74-1183-4d73-8453-b5b52b1a2ca8",
@@ -136811,7 +136840,8 @@
       "lat": 57.6710112,
       "lng": 11.9272185,
       "locationName": "Axel Dahlströms torg 3",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.hoganas.se/arkiv/evenemang/evenemang/2026-08-26-septemberljus---galleri-plume-5-ar.html",
@@ -136821,7 +136851,8 @@
       "lat": 56.2,
       "lng": 12.566667,
       "locationName": "Höganäs",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "http://www.formdesigncenter.com/en/program/opening-autumn-architecture-exhibitions",
@@ -136831,7 +136862,8 @@
       "lat": 55.5471274,
       "lng": 13.0835755,
       "locationName": "Malmö",
-      "category": "other"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/1E05q1#2026-09-03",
@@ -136842,7 +136874,8 @@
       "lat": 55.6327672,
       "lng": 13.0795823,
       "locationName": "Mötesplatsen i Arlöv",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://visitvarmland.com/evenemang/hammaroloppet-och-race4-kids#2026-09-03",
@@ -136852,7 +136885,8 @@
       "lat": 59.3317666283093,
       "lng": 13.477131181595109,
       "locationName": "Hammarö Arena",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏃"
     },
     {
       "id": "https://visitvarmland.com/evenemang/barn-2/maten-ar-klar#2026-09-03",
@@ -136862,7 +136896,8 @@
       "lat": 60.136175,
       "lng": 13.014868,
       "locationName": "Fryksände Församlingshem",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4b0e1f6dba92441c90aa96088db71b07",
@@ -137338,7 +137373,8 @@
       "lat": 60.6750132,
       "lng": 17.1467019,
       "locationName": "Gävle",
-      "category": "stage"
+      "category": "stage",
+      "emoji": "🎭"
     },
     {
       "id": "https://korpenvaxjo.zoezi.se/schema#pass-41399",
@@ -139198,7 +139234,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://pro.se/distrikt/norrbotten/kommun/kiruna/pro-kiruna/vara-aktiviteter/aktivitet?id=247153",
@@ -139209,7 +139246,8 @@
       "lat": 67.8496111,
       "lng": 20.30625,
       "locationName": "PRO Kiruna",
-      "category": "other"
+      "category": "social",
+      "emoji": "🗣️"
     },
     {
       "id": "https://pro.se/distrikt/ostergotland/kommun/kinda/pro-rimforsa/vara-aktiviteter/aktivitet?id=228391",
@@ -139220,7 +139258,8 @@
       "lat": 58.1378296,
       "lng": 15.6762024,
       "locationName": "PRO Rimforsa",
-      "category": "sport"
+      "category": "social",
+      "emoji": "🤝"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9eb7d36ba7f2404384e50fd05e4b05a5",
@@ -139230,7 +139269,8 @@
       "lat": 59.3286957,
       "lng": 17.915711,
       "locationName": "S:ta Birgitta kyrka, S:ta Birgitta församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://visitvarmland.com/evenemang/ovriga-evenemang/korpen-bingokvall#2026-09-03",
@@ -139240,7 +139280,8 @@
       "lat": 59.72315550792734,
       "lng": 12.503644179316787,
       "locationName": "Fiskeviks idrottshus",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎲"
     },
     {
       "id": "https://visitvarmland.com/evenemang/ovriga-evenemang/modellbygge#2026-09-03",
@@ -139250,7 +139291,8 @@
       "lat": 59.6614,
       "lng": 12.5911,
       "locationName": "Arvika Fordonsmuseum",
-      "category": "social"
+      "category": "course",
+      "emoji": "🛠️"
     },
     {
       "id": "https://visitvarmland.com/evenemang/forelasning-och-workshop/pride-i-tro-och-liv#2026-09-03",
@@ -139260,7 +139302,8 @@
       "lat": 60.032376,
       "lng": 13.698126,
       "locationName": "Hagfors Församlingshem",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.karlstadccc.se/17/170/art-meet-med-ingela-johansson/",
@@ -139270,7 +139313,8 @@
       "lat": 59.3833531,
       "lng": 13.509807,
       "locationName": "Karlstad",
-      "category": "other"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://korpentimra.zoezi.se/schema#pass-5583",
@@ -140326,7 +140370,8 @@
       "lat": 64.6256988,
       "lng": 16.6543924,
       "locationName": "Vilhelmina",
-      "category": "music"
+      "category": "course",
+      "emoji": "🧶"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=99fe10e38fed437a9f098d1a1cb5f1e1",
@@ -141888,7 +141933,8 @@
       "lat": 61.3481832,
       "lng": 16.3932257,
       "locationName": "Bollnäs",
-      "category": "art"
+      "category": "art",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.abf.se/jamtland-harjedalen/kurs/filmvisning-hjartat-mitt-3946672/",
@@ -141898,7 +141944,8 @@
       "lat": 63.1793655,
       "lng": 14.6357061,
       "locationName": "Östersund",
-      "category": "stage"
+      "category": "stage",
+      "emoji": "🎬"
     },
     {
       "id": "https://www.abf.se/mitt-i-lappland/kurs/artros-forelasning-med-ortoped-kjell-nilsson-3947016/",
@@ -141908,7 +141955,8 @@
       "lat": 65.7144283,
       "lng": 15.2944777,
       "locationName": "Tärnaby",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://allsvenskan.se/matcher/2026/6529905",
@@ -141918,7 +141966,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Strandvallen A-plan",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=01beec7942a1477581ca06edd0f3e0d1",
@@ -141928,7 +141977,8 @@
       "lat": 57.7953435,
       "lng": 12.6325438,
       "locationName": "Töllsjö kyrka, Töllsjö församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎶"
     },
     {
       "id": "https://visitvarmland.com/evenemang/bingo-i-rada#2026-09-03",
@@ -141938,7 +141988,8 @@
       "lat": 60.0091,
       "lng": 13.587,
       "locationName": "Råda IP",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎲"
     },
     {
       "id": "https://korpengoteborg.zoezi.se/schema#pass-67881",
@@ -142146,7 +142197,8 @@
       "lat": 59.309803,
       "lng": 14.103486,
       "locationName": "Restaurang Mastmagasinet",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎷"
     },
     {
       "id": "https://korpenstockholm.zoezi.se/schema#pass-409292",
@@ -143909,7 +143961,8 @@
       "lat": 57.4815659,
       "lng": 12.0777931,
       "locationName": "Kungsbacka Sporthall",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏀"
     },
     {
       "id": "https://www.nortic.se/ticket/event/77310#a24106",
@@ -145044,7 +145097,8 @@
       "lat": 57.75230980093339,
       "lng": 12.032339012926437,
       "locationName": "Kortedala Torg 1",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f7242612d894453f9024a26afb9b8b67",
@@ -145054,7 +145108,8 @@
       "lat": 59.7416839,
       "lng": 17.3292637,
       "locationName": "Mariakyrkan, Lagunda församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://korpenlinkoping.zoezi.se/schema#pass-177611",
@@ -145923,7 +145978,8 @@
       "lat": 55.64428789999999,
       "lng": 13.2085675,
       "locationName": "Staffanstorps bibliotek",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/gvnPAQ#2026-09-04",
@@ -145934,7 +145990,8 @@
       "lat": 55.6373687,
       "lng": 13.0886667,
       "locationName": "Vårbogården",
-      "category": "sport"
+      "category": "stage",
+      "emoji": "💃"
     },
     {
       "id": "https://pro.se/distrikt/skane/kommun/bromolla/pro-bromolla/vara-aktiviteter/aktivitet?id=247249",
@@ -145944,7 +146001,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "PRO Bromölla",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.friluftsframjandet.se/lat-aventyret-borja/hitta-aventyr/vatten--paddling/kajak/med-sikte-pa-tarnskar/",
@@ -147384,7 +147442,8 @@
       "lat": 59.1901534,
       "lng": 17.6263364,
       "locationName": "Södertälje",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏃"
     },
     {
       "id": "https://www.sodertalje.se/kommun-och-politik/for-medborgare/demokrati/allmanna-valen-2026/Aktiviteter/fortidsrostning-valbussen-torekallgymnasiet-vastergatan-4/",
@@ -147394,7 +147453,8 @@
       "lat": 59.1964289,
       "lng": 17.6271663,
       "locationName": "Södertälje",
-      "category": "other"
+      "category": "social",
+      "emoji": "🗳️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=68d64149-024a-487a-83a4-3b8b35d684b2",
@@ -147405,7 +147465,8 @@
       "lat": 57.75554733775684,
       "lng": 11.926854285987206,
       "locationName": "Tuve Torg 5",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.hembygd.se/svenneby-hembygdsforening?a=56783",
@@ -147415,7 +147476,8 @@
       "lat": 58.6207054,
       "lng": 11.2684331,
       "locationName": "Väddö naturreservat, Fjällbacka, Svenneby Hembygdsförening",
-      "category": "social"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/dropinfikapaseniorcenterdiamanten.5.467d267619ed4689c71aa6c.html",
@@ -147426,7 +147488,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/0BREK4#2026-09-04",
@@ -147437,7 +147500,8 @@
       "lat": 55.6327672,
       "lng": 13.0795823,
       "locationName": "Mötesplatsen i Arlöv",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎱"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/7D9y6B#2026-09-04",
@@ -147448,7 +147512,8 @@
       "lat": 55.64428789999999,
       "lng": 13.2085675,
       "locationName": "Staffanstorps bibliotek",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://varnamo.cruncho.co/sv-SE/place/jdBnrR#2026-09-04",
@@ -147459,7 +147524,8 @@
       "lat": 57.1885706,
       "lng": 14.0372201,
       "locationName": "Värnamo stadsbibliotek",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://pro.se/distrikt/norrbotten/kommun/kalix/pro-kalix/vara-aktiviteter/aktivitet?id=233745",
@@ -147470,7 +147536,8 @@
       "lat": 66,
       "lng": 23,
       "locationName": "PRO Kalix",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏊"
     },
     {
       "id": "https://kungsbacka.cruncho.co/sv-SE/place/rMG67p#2026-09-04",
@@ -147481,7 +147548,8 @@
       "lat": 57.49151029999999,
       "lng": 12.0750215,
       "locationName": "Kungsmässans Köpcentrum",
-      "category": "music"
+      "category": "social",
+      "emoji": "🗣️"
     },
     {
       "id": "https://kungsbacka.cruncho.co/sv-SE/place/eZPX2X#2026-09-04",
@@ -147492,7 +147560,8 @@
       "lat": 57.49151029999999,
       "lng": 12.0750215,
       "locationName": "Kungsmässans Köpcentrum",
-      "category": "music"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c1046b25d6f443b9842116e104f07b8a",
@@ -147502,7 +147571,8 @@
       "lat": 65.6443791,
       "lng": 22.0288116,
       "locationName": "Församlingshemmet, Dunker-Lilla Malma församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/nyhet-kurs---grundsvenska-for-arabisktalande-pa-tom-tits/",
@@ -148380,7 +148450,8 @@
       "lat": 59.1901534,
       "lng": 17.6263364,
       "locationName": "Södertälje",
-      "category": "art"
+      "category": "social",
+      "emoji": "🛍️"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=a8f88d9c-c3e5-4c92-b700-d954c88e5892",
@@ -148391,7 +148462,8 @@
       "lat": 57.75235223857385,
       "lng": 12.030810445561386,
       "locationName": "Hundraårsgatan 32B",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/bingoihemmesta.5.467d267619ed4689c71aae2.html",
@@ -148402,7 +148474,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎲"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/KleReR#2026-09-04",
@@ -148413,7 +148486,8 @@
       "lat": 55.6732015,
       "lng": 13.0673642,
       "locationName": "Havsblick",
-      "category": "food"
+      "category": "food",
+      "emoji": "🍎"
     },
     {
       "id": "https://visittorsas.se/evenemangslista/1-arsfirande/",
@@ -148423,7 +148497,8 @@
       "lat": 56.41280917117409,
       "lng": 16.002700870364524,
       "locationName": "Bergkvaravägen, 17, Torsås",
-      "category": "party"
+      "category": "party",
+      "emoji": "🎉"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bea0f7a0de2c4280b427123ce18882d0",
@@ -148433,7 +148508,8 @@
       "lat": 57.8325735,
       "lng": 12.014742,
       "locationName": "Nödinge församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=34813f25965f45ef8ac6f35f5cfd2ead",
@@ -148443,7 +148519,8 @@
       "lat": 56.0587305,
       "lng": 14.1014376,
       "locationName": "Araslövs församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://visitvarmland.com/evenemang/teater-och-underhallning/bio-carola#2026-09-04",
@@ -148453,7 +148530,8 @@
       "lat": 60.134469,
       "lng": 13.007447,
       "locationName": "Biograf Stjärnan",
-      "category": "stage"
+      "category": "stage",
+      "emoji": "🎬"
     },
     {
       "id": "https://visitvarmland.com/evenemang/sport-motion-och-halsa/tipspromenad-moln#2026-09-04",
@@ -148463,7 +148541,8 @@
       "lat": 59.366968844818345,
       "lng": 13.486361079810434,
       "locationName": "Naturum Värmland, Mariebergsskogen",
-      "category": "social"
+      "category": "sport",
+      "emoji": "⚽"
     },
     {
       "id": "https://www.sodertalje.se/omsorg-och-socialt-stod/aldreomsorg/aktiviteter-och-service-for-seniorer/motesplatser-for-seniorer/aktiviteter/rorelse-till-musik-bergvik23/",
@@ -149138,7 +149217,8 @@
       "lat": 59.37827929999999,
       "lng": 17.0247395,
       "locationName": "Strängnäs bibliotek",
-      "category": "food"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://visitvarmland.com/evenemang/lan-pa-degernas-herrgard#2026-09-04",
@@ -149148,7 +149228,8 @@
       "lat": 59.253651,
       "lng": 14.452217,
       "locationName": "Degernäs Herrgård",
-      "category": "other"
+      "category": "party",
+      "emoji": "🎲"
     },
     {
       "id": "https://portal.clubrunner.ca/15989/Event/anita-nilsson--assisterande-guvernörens-möte",
@@ -150033,7 +150114,8 @@
       "lat": 61.3481832,
       "lng": 16.3932257,
       "locationName": "Bollnäs",
-      "category": "art"
+      "category": "art",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/pratbankdjuro.5.6b47da3419ed42d0f03ef2.html",
@@ -150044,7 +150126,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Gustavsberg",
-      "category": "other"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/A0zND2#2026-09-04",
@@ -150055,7 +150138,8 @@
       "lat": 55.6345471,
       "lng": 13.0854687,
       "locationName": "Familjecentralen Samovaren",
-      "category": "social"
+      "category": "social",
+      "emoji": "🎲"
     },
     {
       "id": "https://pro.se/distrikt/skane/kommun/hoganas/pro-hoganas/vara-aktiviteter/aktivitet?id=230381",
@@ -151313,7 +151397,8 @@
       "lat": 55.5471274,
       "lng": 13.0835755,
       "locationName": "Malmö",
-      "category": "music"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://nordanstig.se/startsida/sidor/uppleva-och-gora/bibliotek/evenemang/2026/2026-07-24-sagofredag---skogen.html",
@@ -151323,7 +151408,8 @@
       "lat": 62,
       "lng": 17,
       "locationName": "Nordanstig",
-      "category": "other"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://kalender.danderyd.se/events/konstutstallning-margareta-nasmark-MjMxNDc2LDIwMjYtMDktMDMgMjI6MDA=",
@@ -151334,7 +151420,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Djursholms bibliotek",
-      "category": "other"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://kalender.hylte.se/events/handarbetscafe-pa-hylte-bibliotek-MjI5MjQyLDIwMjYtMDktMDQgMTI6MDA=",
@@ -151345,7 +151432,8 @@
       "lat": 56.9999142,
       "lng": 13.2403039,
       "locationName": "Hylte bibliotek",
-      "category": "other"
+      "category": "social",
+      "emoji": "🧶"
     },
     {
       "id": "https://visitvarmland.com/evenemang/marknad-massa-auktion-och-loppis/oxhalja-marknad#2026-09-04",
@@ -151355,7 +151443,8 @@
       "lat": 59.711058237852804,
       "lng": 14.168073786454718,
       "locationName": "Filipstad",
-      "category": "market"
+      "category": "market",
+      "emoji": "🛍️"
     },
     {
       "id": "https://visitvarmland.com/evenemang/musik/drangarna-pa-stora-torget#2026-09-04",
@@ -151365,7 +151454,8 @@
       "lat": 59.71235149115414,
       "lng": 14.167503153281405,
       "locationName": "Stora Torget Filipstad",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎸"
     },
     {
       "id": "https://www.nojesfabriken.se/event/kasino-genom-natten/",
@@ -151375,7 +151465,8 @@
       "lat": 59.3809146,
       "lng": 13.5027631,
       "locationName": "Karlstad",
-      "category": "other"
+      "category": "party",
+      "emoji": "🎉"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c237fb68dd0648e9a6c62d7b567c87eb",
@@ -151496,7 +151587,8 @@
       "lat": 59.1982425,
       "lng": 17.6212166,
       "locationName": "Södertälje",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=005da9c867f24a0299f354b90f0a3e10",
@@ -151882,7 +151974,8 @@
       "lat": 57.80296089737506,
       "lng": 12.027517700284154,
       "locationName": "Peppargatan 43",
-      "category": "social"
+      "category": "party",
+      "emoji": "🎉"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8044f9c3c2b14db1b9e593e62ee5d1a4",
@@ -152313,7 +152406,8 @@
       "lat": 56.6739826,
       "lng": 12.8574827,
       "locationName": "Halmstad",
-      "category": "other"
+      "category": "other",
+      "emoji": "🗓️"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/Z4Vl1P#2026-09-04",
@@ -152324,7 +152418,8 @@
       "lat": 55.6753618,
       "lng": 13.0714404,
       "locationName": "Järnvägsparken",
-      "category": "social"
+      "category": "other",
+      "emoji": "🏗️"
     },
     {
       "id": "https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/9qNbPM#2026-09-04",
@@ -152335,7 +152430,8 @@
       "lat": 55.6438279,
       "lng": 13.0880263,
       "locationName": "Burlövsbadet",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🏊"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=63b533f8cc57483b9863466c8a7a2b72",
@@ -152963,7 +153059,8 @@
       "lat": 57.70689138969687,
       "lng": 11.966045757276357,
       "locationName": "Positivet i Positivparken",
-      "category": "stage"
+      "category": "stage",
+      "emoji": "🎬"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6ad3a6f28b834a7ba65be8d5bd3f0e8f",
@@ -152973,7 +153070,8 @@
       "lat": 58.776571,
       "lng": 17.086447,
       "locationName": "Braås församlingshem, Sjösås församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🎲"
     },
     {
       "id": "https://bibliotek.botkyrka.se/evenemang#3dfe9a79-1f14-4a3c-a5a2-bc5fad5529e4",
@@ -153184,7 +153282,8 @@
       "lat": 59.3594577,
       "lng": 17.2068428,
       "locationName": "Mötesplats Stallarholmen",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎹"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/yb2yv80hxrg012r/2026-09-04/speed-dating-event-mingle-and-match-30-45y",
@@ -153955,7 +154054,8 @@
       "lat": 57.81280778576808,
       "lng": 12.052686414631617,
       "locationName": "Kryddnejlikegatan 7",
-      "category": "social"
+      "category": "stage",
+      "emoji": "💃"
     },
     {
       "id": "https://www.abf.se/malmo-sydvast/kurs/ngbg-fyller-10-ar-3947279/",
@@ -153965,7 +154065,8 @@
       "lat": 55.6052931,
       "lng": 13.0001566,
       "locationName": "Malmö",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://kalender.hylte.se/events/tagdagarna-i-landeryd-fredag-4-sept-after-MjIyMjI0LDIwMjYtMDktMDQgMTY6MDA=",
@@ -153976,7 +154077,8 @@
       "lat": 56.9999142,
       "lng": 13.2403039,
       "locationName": "Centrumvägen 7 LANDERYD",
-      "category": "other"
+      "category": "party",
+      "emoji": "🍺"
     },
     {
       "id": "https://kungsbacka.cruncho.co/sv-SE/place/p76e4J#2026-09-04",
@@ -153987,7 +154089,8 @@
       "lat": 57.4053426,
       "lng": 11.9849506,
       "locationName": "Råövägen 4",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://visitvarmland.com/evenemang/musik/kasino-genom-natten-live-pa-innergarden#2026-09-04",
@@ -153997,7 +154100,8 @@
       "lat": 59.379675,
       "lng": 13.514158,
       "locationName": "Nöjesfabriken",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎸"
     },
     {
       "id": "https://visitvarmland.com/evenemang/sport-motion-och-halsa/ifk-olme-a-lag-herr#2026-09-04",
@@ -166247,6 +166351,16 @@
       "lng": 13.5027631,
       "locationName": "Karlstad",
       "category": "music"
+    },
+    {
+      "id": "https://www.facebook.com/events/1034169505658417/",
+      "title": "Great Lake Run #49",
+      "time": "2026-09-05T12:00:00.000Z",
+      "hasSpecificTime": true,
+      "lat": 63.196044,
+      "lng": 14.6609381,
+      "locationName": "Arenaparkeringen, Stadsdel Norr, Östersund",
+      "category": "other"
     },
     {
       "id": "https://goteborg.se/wps/portal/kalendarium/kalendarium-start?activityId=f8a8081f-bb7d-40e3-9924-426850a1ecc7",

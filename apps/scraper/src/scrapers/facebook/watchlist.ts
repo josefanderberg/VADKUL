@@ -82,4 +82,8 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'ifknorrkoping', name: 'IFK Norrköping', city: 'Norrköping' },            // allsvenskan
     { slug: 'vitahasten', name: 'Vita Hästen', city: 'Norrköping' },                  // hockeyallsvenskan
     { slug: 'kolmarden', name: 'Kolmårdens djurpark', city: 'Kolmården' },
+    // ── Östersund (community-tips 2026-08-28) ───────────────────────────
+    // Great Lake Run-tipset: SHRA:s cruisingar syns bara på deras FB-sida.
+    // Verifierad headless 2026-08-28: /upcoming_hosted_events renderar utloggat.
+    { slug: 'shraostersund', name: 'SHRA Östersund', city: 'Östersund' },
 ];
