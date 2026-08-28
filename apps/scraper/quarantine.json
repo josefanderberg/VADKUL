@@ -3,7 +3,9 @@
   "sources": {
     "cirkus": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "dalhalla": {
       "since": "2026-08-19",
@@ -13,11 +15,15 @@
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "folk-goteborg": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -33,7 +39,9 @@
     },
     "nordmaling": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "nybro": {
       "since": "2026-08-19",
@@ -57,7 +65,9 @@
     },
     "pitea": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "pustervik": {
       "since": "2026-08-21",
@@ -89,7 +99,9 @@
     },
     "tingsryd": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "tjorn": {
       "since": "2026-08-19",
@@ -103,7 +115,9 @@
     },
     "trelleborg": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "vasteras": {
       "since": "2026-08-19",
