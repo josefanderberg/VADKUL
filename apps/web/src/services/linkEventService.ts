@@ -426,6 +426,8 @@ export const linkEventService = {
     async createUserEvent(input: {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
+        /** Färdig etikett ("120 kr", "Gratis") — normaliseras i formuläret. */
+        price?: string;
         hostName: string; hostUid: string; coverImage?: string; url?: string;
         isTip?: boolean; anonTip?: boolean; repeatWeekly?: boolean;
         repeatWeeks?: number;
@@ -451,6 +453,10 @@ export const linkEventService = {
         // Lägg bara med coverImage när det faktiskt finns en bild — då fungerar
         // event UTAN bild även innan de uppdaterade Firestore-reglerna deployats.
         if (input.coverImage) payload.coverImage = input.coverImage;
+        // Samma sak för priset: tomt fält betyder "vet inte / står inget", och
+        // det är INTE detsamma som gratis. Utan fältet visar korten inget
+        // pris-chip alls, precis som för skrapade event utan pris.
+        if (input.price) payload.price = input.price.slice(0, 40);
         // Bara på faktiska tips — annars skulle varje eget event bära ett
         // isTip: false som reglernas hasOnly-lista måste känna till i onödan.
         if (input.isTip) payload.isTip = true;
@@ -467,8 +473,24 @@ export const linkEventService = {
                 payload.repeatWeeks = Math.floor(input.repeatWeeks);
             }
         }
-        const ref = await addDoc(collection(db, 'linkEvents'), payload);
-        return ref.id;
+        try {
+            const ref = await addDoc(collection(db, 'linkEvents'), payload);
+            return ref.id;
+        } catch (e: any) {
+            // Reglernas hasOnly-lista avvisar HELA skrivningen om den känner
+            // igen ett fält den inte har — och rules deployas separat från
+            // bundlen. Faller skapandet på just priset släpper vi priset och
+            // sparar eventet ändå: ett event utan pris-etikett är oändligt
+            // mycket bättre än "kunde inte skapa" för alla som fyller i rutan
+            // i fönstret innan de nya reglerna är ute.
+            if (e?.code === 'permission-denied' && payload.price !== undefined) {
+                console.warn('[event] pris avvisat av reglerna — sparar utan pris (deploya rules)');
+                delete payload.price;
+                const ref = await addDoc(collection(db, 'linkEvents'), payload);
+                return ref.id;
+            }
+            throw e;
+        }
     },
 
     // ── Anmälningar (RSVP) ────────────────────────────────────────────────

@@ -23,6 +23,7 @@ import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory } from '@/utils/categoryToggle';
+import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -295,6 +296,13 @@ const weeklyLabelFor = (datetimeLocal: string): string => {
     const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     return `Varje ${weekday} kl ${time}`;
 };
+/**
+ * Hur många veckor en serie kan pågå (inkl. första tillfället). VARJE vecka
+ * 2–12 finns med — bara jämna tal räckte inte: en kurs på 3 eller 5 gånger är
+ * lika vanlig som en på 4, och den som inte hittade sitt tal fick välja "tills
+ * vidare" och sedan städa serien själv. Därefter glesare terminslängder.
+ */
+const REPEAT_WEEK_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 26, 52];
 // Radie kring en SÖKT stads centrum när träfflistan räknar "X event den
 // närmaste veckan". 2,5 mil ≈ orten plus dess byar (Hudiksvall + Forsa/Hög/
 // Iggesund). Siffran är alltså en CIRKEL kring centrum, medan stadsrutan man
@@ -406,6 +414,12 @@ export default function HomePage() {
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
     const [newEventCategory, setNewEventCategory] = useState<EventCategoryType>('other');
     const [newEventPlace, setNewEventPlace] = useState('');         // platsnamn, valfritt
+    // Entré/pris som fritext: "120", "Gratis", "50-100", "Medlemmar halva
+    // priset". Normaliseras genom normalizePriceLabel vid Skapa — samma
+    // etikett som de skrapade eventen bär, så "120" blir "120 kr". Tomt fält
+    // = inget pris sparas och kortet visar inget pris-chip alls (VET INTE är
+    // inte samma sak som gratis).
+    const [newEventPrice, setNewEventPrice] = useState('');
     const [newEventDescription, setNewEventDescription] = useState(''); // valfri
     const [newEventImage, setNewEventImage] = useState<File | null>(null);
     const [newEventImagePreview, setNewEventImagePreview] = useState('');
@@ -456,6 +470,7 @@ export default function HomePage() {
         setNewEventTime('');
         setNewEventCategory('other');
         setNewEventPlace('');
+        setNewEventPrice('');
         setNewEventDescription('');
         setNewEventImage(null);
         setNewEventImagePreview('');
@@ -1060,6 +1075,7 @@ export default function HomePage() {
         setNewEventCategory(wish.category in EVENT_CATEGORIES ? wish.category : 'other');
         setNewEventDescription(wish.description || '');
         setNewEventPlace('');
+        setNewEventPrice('');
         const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
@@ -1292,6 +1308,10 @@ export default function HomePage() {
                     console.warn('Kunde inte ladda upp eventbilden — skapar utan bild:', e);
                 }
             }
+            // "120" → "120 kr", "fri entré" → "Gratis", tomt → undefined
+            // (inget fält skrivs alls). Samma normalisering som korten kör på
+            // skrapade priser, gjord EN gång vid skapandet.
+            const price = normalizePriceLabel(newEventPrice) ?? undefined;
             const docId = await linkEventService.createUserEvent({
                 title: newEventTitle,
                 time,
@@ -1299,6 +1319,7 @@ export default function HomePage() {
                 lng: pickedLocation.lng,
                 locationName: newEventPlace,
                 description: newEventDescription,
+                price,
                 category: newEventCategory,
                 hostName,
                 hostUid: authorUid,
@@ -1313,7 +1334,7 @@ export default function HomePage() {
                 id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
                 locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
                 hostName,
-                category: newEventCategory, coverImage, description: newEventDescription.trim(), attendees: 0,
+                category: newEventCategory, coverImage, description: newEventDescription.trim(), price, attendees: 0,
                 isLocationVerified: true, userCreated: true, isTip, anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
                 repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
@@ -1358,7 +1379,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -1640,6 +1661,7 @@ export default function HomePage() {
         setPickedLocation(mapCenterRef.current);
         setNewEventTitle('');
         setNewEventPlace('');
+        setNewEventPrice('');
         setNewEventDescription('');
         setNewEventUrl('');
         setNewEventHost('');
@@ -3005,11 +3027,11 @@ export default function HomePage() {
                                                 className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-green-500 focus:outline-none"
                                             >
                                                 <option value="">Tills vidare</option>
-                                                <option value="2">2 veckor</option>
-                                                <option value="4">4 veckor</option>
-                                                <option value="6">6 veckor</option>
-                                                <option value="8">8 veckor</option>
-                                                <option value="12">12 veckor</option>
+                                                {REPEAT_WEEK_CHOICES.map(n => (
+                                                    <option key={n} value={n}>
+                                                        {n === 52 ? '52 veckor (ett år)' : `${n} veckor`}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </span>
                                     )}
@@ -3036,6 +3058,22 @@ export default function HomePage() {
                                 placeholder="Plats — t.ex. Vasaparken (valfritt)"
                                 aria-label="Plats (valfritt)"
                                 maxLength={120}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
+                            />
+                        )}
+                        {/* Entré/pris (valfritt). Fritext med flit: källorna
+                            levererar allt från "Gratis" till "20-50" och
+                            "Medlemmar halva priset", och normalizePriceLabel
+                            städar båda vägarna. Lämnas rutan tom sparas inget
+                            pris — kortet visar då inget pris-chip. */}
+                        {createKind === 'event' && (
+                            <input
+                                type="text"
+                                value={newEventPrice}
+                                onChange={e => setNewEventPrice(e.target.value)}
+                                placeholder="Pris — t.ex. 120 kr eller Gratis (valfritt)"
+                                aria-label="Pris (valfritt)"
+                                maxLength={40}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:outline-none"
                             />
                         )}

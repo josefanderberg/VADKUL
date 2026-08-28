@@ -28,6 +28,21 @@ describe('expandWeekly', () => {
         expect(out.map(e => e.id)).toEqual(['doc1__2026-08-19', 'doc1__2026-08-26']);
     });
 
+    // Udda antal veckor (3, 5, …) valbara sedan 28/8 — dropdownen bjöd bara på
+    // jämna tal, och en femveckorskurs fick väljas som "tills vidare".
+    it('udda antal veckor: 5 veckor = basen + fyra till', () => {
+        const out = expandWeekly(base(seriesStart, 5), from);
+        // Serie 5/8–2/9; den 19/8 återstår 19/8, 26/8 och 2/9.
+        expect(out.map(e => e.id)).toEqual([
+            'doc1__2026-08-19', 'doc1__2026-08-26', 'doc1__2026-09-02',
+        ]);
+    });
+
+    it('udda antal veckor: 3 veckor är slut den 19/8 (sista gången 19/8)', () => {
+        const out = expandWeekly(base(seriesStart, 3), from);
+        expect(out.map(e => e.id)).toEqual(['doc1__2026-08-19']);
+    });
+
     it('färdigspelad serie ger tomt — försvinner från kartan av sig själv', () => {
         expect(expandWeekly(base(seriesStart, 2), from)).toEqual([]);
     });
