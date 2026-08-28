@@ -6478,6 +6478,30 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-08-28',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://vastmanlandsmusiken.se/wp-sitemap-posts-event-1.xml', date: '2026-08-28', rawEventCount: 2, notes: 'Hittad med scout/venue-probe.cjs — svep över Karlstads och Västerås egna scener.' },
     },
+    {
+        id: 'karlstadccc',
+        hostName: 'Karlstad CCC',
+        region: 'karlstad',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.karlstadccc.se/17/38/program-biljetter/',
+            isHtmlCatalog: true,
+            urlPatterns: [/\/17\/\d+\/[a-z0-9-]+\/$/i],
+            urlBlacklist: [
+                /kontakta|offert|om-kccc|konferens|motesstaden|konsert-noje|infor-besoket|program-biljetter|moten-events|referenser|hallbarhet|massa|mat-dryck|restaurang|integritet/i,
+                // Gamla årssidor ligger kvar i programmet och år-inferensen
+                // skjuter dem framåt (musikhjalpen-karlstad-2025 blev dec 2026).
+                /-(201\d|202[0-5])\/?$/i,
+            ],
+            defaultCity: 'Karlstad',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Karlstads kongress- och konserthus. Ingen sitemap — programsidan som HTML-katalog, textdatum på detaljsidorna. 28 event vid upptäckt. Byggd efter användarrapport på Facebook om att KCCC-afterworken saknades.',
+        lastVerified: '2026-08-28',
+        discovery: { method: 'manual', probeUrl: 'https://www.karlstadccc.se/17/38/program-biljetter/', date: '2026-08-28', rawEventCount: 28 },
+    },
 
     // ─── WEBB-SNÖBOLLEN (auto-upptäckta, se registry-snowball.ts) ───────────
     ...SNOWBALL_SOURCES,
