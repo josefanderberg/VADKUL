@@ -23,7 +23,7 @@ import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory } from '@/utils/categoryToggle';
-import { searchCities, CITY_POINTS, type CityPoint } from '@/utils/cityPoints';
+import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -141,24 +141,13 @@ const nearestTourCityIndex = (lat: number, lng: number) => {
     return best;
 };
 
-/**
- * Närmsta ORT ur den stora söklistan (CITY_POINTS, ~290 orter — samma lista
- * som stadssökets navigationer). Stadsrutan högst upp visar den här ortens
- * namn och FÖLJER KARTAN när man drar (Josef 10/8) — bor man i Hudiksvall ska
- * rutan säga Hudiksvall, inte närmsta storstad ur bildspelsrundan. Samma
- * uppslag används när skylt-knappen fäster kameran vid närmsta stad.
- */
-const nearestCityPoint = (lat: number, lng: number): CityPoint => {
-    let best = CITY_POINTS[0];
-    let bestDist = Infinity;
-    for (const c of CITY_POINTS) {
-        const dy = c.lat - lat;
-        const dx = (c.lng - lng) * Math.cos((((c.lat + lat) / 2) * Math.PI) / 180);
-        const d = Math.hypot(dy, dx);
-        if (d < bestDist) { bestDist = d; best = c; }
-    }
-    return best;
-};
+// Närmsta ORT ur den stora söklistan (CITY_POINTS, ~290 orter — samma lista
+// som stadssökets navigationer) — nearestCityPoint bor i utils/cityPoints
+// sedan multi-event-listan behövde samma uppslag. Stadsrutan högst upp visar
+// den här ortens namn och FÖLJER KARTAN när man drar (Josef 10/8) — bor man i
+// Hudiksvall ska rutan säga Hudiksvall, inte närmsta storstad ur bildspels-
+// rundan. Samma uppslag används när skylt-knappen fäster kameran vid närmsta
+// stad.
 
 // Under den här zoomnivån är "en stad" fel abstraktion — vyn täcker halva
 // landskap och mer. Stadsrutan skriver då "Sverige" i stället för att låtsas

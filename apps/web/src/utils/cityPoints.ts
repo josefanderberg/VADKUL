@@ -321,6 +321,25 @@ export const CITY_POINTS: CityPoint[] = [
 ];
 
 /**
+ * Närmsta ort ur listan för en koordinat. Longituden längdkorrigeras med
+ * cos(latitud) så "närmst" betyder närmst på marken även uppe i norr — utan
+ * det vinner fel ort öst/väst-ledes. Stadsrutan på kartan använder samma
+ * uppslag (den följer kartmitten), multi-event-listan använder det som
+ * platsrubrik när högen inte är EN lokal utan stans centroid-hög.
+ */
+export const nearestCityPoint = (lat: number, lng: number): CityPoint => {
+    let best = CITY_POINTS[0];
+    let bestDist = Infinity;
+    for (const c of CITY_POINTS) {
+        const dy = c.lat - lat;
+        const dx = (c.lng - lng) * Math.cos((((c.lat + lat) / 2) * Math.PI) / 180);
+        const d = Math.hypot(dy, dx);
+        if (d < bestDist) { bestDist = d; best = c; }
+    }
+    return best;
+};
+
+/**
  * Söknyckel: gemener, å/ä → a och ö → o, plus diakriter bortplockade. Gör att
  * "malmo", "vaxjo" och "angelholm" träffar rätt — folk skriver sällan åäö i en
  * sökruta på mobil, och en sökning som kräver rätt prickar känns trasig.
