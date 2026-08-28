@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { EventWish, LinkEvent } from '@/types';
-import { linkEventService } from '@/services/linkEventService';
+import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
@@ -1160,7 +1160,12 @@ export default function HomePage() {
         endOfDay.setDate(endOfDay.getDate() + (effectiveRangeDays - 1));
         endOfDay.setHours(23, 59, 59, 999);
 
-        const inRange = events.filter(evt => evt.time >= startOfDay && evt.time <= endOfDay);
+        // Boostade event kringgår dagklippet: 99 kr/vecka köper synlighet
+        // ALLA dagar t.o.m. featuredUntil, inte bara eventets egen dag (som
+        // annars är regeln för varenda event på kartan). Villkoren — aktiv
+        // boost + eventet inte passerat — bor i isBoostShownEveryDay.
+        const inRange = events.filter(evt =>
+            (evt.time >= startOfDay && evt.time <= endOfDay) || isBoostShownEveryDay(evt));
         if (!weekAreaKey) return inRange;
 
         // Veckoläge: behåll bara event inom radien kring kartans (rundade)

@@ -12,6 +12,28 @@ export function isEventFeatured(e: { featuredUntil?: Date } | null | undefined):
     return !!e?.featuredUntil && e.featuredUntil.getTime() > Date.now();
 }
 
+/**
+ * Ska eventet synas VARJE dag, inte bara sin egen? Det är själva boost-löftet
+ * (99 kr/vecka): alla andra event visas bara den dag de händer, men ett
+ * boostat event ligger kvar på kartan ALLA dagar t.o.m. featuredUntil —
+ * annars köper arrangören en vecka och syns en enda kväll av den.
+ *
+ * Två villkor: boosten är aktiv OCH eventets egen dag har inte passerat.
+ * Dagen efter eventet är det färdigspelat och ska bort oavsett hur många
+ * boostdagar som råkar återstå — en boost gör inte ett passerat event
+ * odödligt. (Under själva eventdagen gäller samma regel som för alla event:
+ * det ligger kvar dagen ut, ev. nedtonat som "har varit".)
+ */
+export function isBoostShownEveryDay(
+    e: { featuredUntil?: Date; time: Date } | null | undefined,
+    now: Date = new Date(),
+): boolean {
+    if (!e?.featuredUntil || e.featuredUntil.getTime() <= now.getTime()) return false;
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    return e.time.getTime() >= startOfToday.getTime();
+}
+
 /** Lättviktig anmälan (RSVP) på ett event — bor i linkEvents/{id}/attendees/{uid}. */
 export interface RsvpAttendee {
     uid: string;
