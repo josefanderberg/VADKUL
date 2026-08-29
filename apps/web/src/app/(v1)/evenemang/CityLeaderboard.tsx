@@ -14,16 +14,15 @@ import { todayKey, weekKeys } from './periods';
 // som växlade mellan bildsatta event. Det är borttaget: bilderna kommer från
 // skrapade omslag och är delvis skräp (platshållare, trasiga länkar — kortet
 // hade en egen "broken"-lista för att gömma dem), och ingen layout räddar
-// opålitligt material. Nu visar varje rad FYRA tal: besök, idag, i veckan och
-// totalt. Det är den information man faktiskt är ute efter, och den går att
-// jämföra mellan städer på en blick.
+// opålitligt material. Nu visar varje rad TRE tal: idag, i veckan och totalt.
+// Det är den information man faktiskt är ute efter, och den går att jämföra
+// mellan städer på en blick.
 //
-// BESÖKEN (Josef 26/8): varje stadssida räknar sina besök (CityVisitBeacon →
-// outreachStats/cityVisits) och topplistan hämtar siffrorna från
-// /api/stats/city-visits (CDN-cachat 5 min). Default-sorteringen är BESÖK I
-// VECKAN — "vilken stad leder den här veckan?" — och ett klick till på samma
-// knapp växlar till besök totalt. Besökskolumnen visar talet för det läge
-// knappen står i.
+// INGA BESÖKSSIFFROR (Josef 29/8): besökskolumnen + "Flest besök"-sorteringen
+// från 26/8 är BORTTAGNA på ägarbeslut — trafiksiffror är interna
+// (outreach-konsolen), inte publika. Insamlingen (CityVisitBeacon →
+// outreachStats/cityVisits) är kvar; det publika läs-API:et
+// /api/stats/city-visits är raderat. Lägg inte tillbaka kolumnen.
 //
 // Ingen kartbild per rad, trots att kartan är produkten: stads-heron
 // (CityMapHero) renderar en RIKTIG MapLibre-canvas ovanpå kaklen, och 31 av dem
@@ -34,22 +33,16 @@ import { todayKey, weekKeys } from './periods';
 // sifferkolumn). Sorteringsnycklarna är samma som kolumnerna, så listan och
 // rubrikerna aldrig kan säga olika saker.
 
-type SortKey = 'visits' | 'today' | 'week' | 'total';
-type CityVisits = Record<string, { week: number; total: number }>;
+type SortKey = 'today' | 'week' | 'total';
 
 const SORTS: { key: SortKey; label: string }[] = [
-    // Besök först (default) — vänster om Flest totalt (Josef 26/8).
-    { key: 'visits', label: 'Flest besök' },
     { key: 'total', label: 'Flest totalt' },
     { key: 'week', label: 'Mest i veckan' },
     { key: 'today', label: 'Mest idag' },
 ];
 
 export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] }) {
-    const [sort, setSort] = useState<SortKey>('visits');
-    // Besöksknappens läge: veckan (default) ↔ totalt antal klick. Ett klick
-    // till på den redan aktiva knappen växlar (Josef 26/8).
-    const [visitsMode, setVisitsMode] = useState<'week' | 'total'>('week');
+    const [sort, setSort] = useState<SortKey>('total');
     // Omsorteringen renderar om hela listan — som transition blockerar det inte
     // tappen (INP, mobil).
     const [, startTransition] = useTransition();
@@ -60,26 +53,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
     const [mounted, setMounted] = useState(false);
     useEffect(() => startTransition(() => setMounted(true)), []);
 
-    // Besökssiffrorna hämtas efter mount (sidan är statisk). null = inte
-    // laddat än → tankstreck i kolumnen och eventtotalen som sorteringsstöd.
-    const [visits, setVisits] = useState<CityVisits | null>(null);
-    useEffect(() => {
-        let alive = true;
-        fetch('/api/stats/city-visits')
-            .then(r => (r.ok ? r.json() : null))
-            .then(data => { if (alive && data) startTransition(() => setVisits(data)); })
-            .catch(() => { /* utan siffror visas tankstreck — listan funkar ändå */ });
-        return () => { alive = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const handleSort = (key: SortKey) => startTransition(() => {
-        if (key === 'visits') {
-            // Redan vald → växla veckan ↔ totalt antal klick.
-            setVisitsMode(prev => (sort === 'visits' ? (prev === 'week' ? 'total' : 'week') : prev));
-        }
-        setSort(key);
-    });
+    const handleSort = (key: SortKey) => startTransition(() => setSort(key));
 
     const rows = useMemo(() => {
         const tKey = mounted ? todayKey() : null;
@@ -89,22 +63,18 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                 ...c,
                 today: tKey ? (c.byDay[tKey] ?? 0) : null,
                 week: wKeys ? wKeys.reduce((sum, k) => sum + (c.byDay[k] ?? 0), 0) : null,
-                visitCount: visits ? (visitsMode === 'week' ? visits[c.slug]?.week ?? 0 : visits[c.slug]?.total ?? 0) : null,
             }))
-            // Innan klockan/besöken lästs finns bara eventtotalen att sortera
-            // på — då hoppar listan rätt när siffrorna landar (samma mönster
-            // som mounted-hoppet).
+            // Innan klockan lästs finns bara eventtotalen att sortera på — då
+            // hoppar listan rätt när dagstalen landar (mounted-hoppet).
             .sort((a, b) => {
                 const pick = (r: typeof a) =>
-                    sort === 'total' ? r.total
-                        : sort === 'visits' ? (r.visitCount ?? r.total)
-                            : (sort === 'week' ? r.week : r.today) ?? r.total;
+                    sort === 'total' ? r.total : ((sort === 'week' ? r.week : r.today) ?? r.total);
                 return pick(b) - pick(a) || b.total - a.total;
             });
-    }, [cities, sort, mounted, visits, visitsMode]);
+    }, [cities, sort, mounted]);
 
     /** Sifferruta i raden. Aktiv sorteringskolumn markeras — annars är det inte
-     *  uppenbart vilket av fyra tal listan är ordnad efter. */
+     *  uppenbart vilket av tre tal listan är ordnad efter. */
     const Stat = ({ value, label, active }: { value: number | null; label: string; active: boolean }) => (
         <span className="w-[52px] shrink-0 text-right">
             <span className={`block text-sm font-black tabular-nums ${
@@ -122,8 +92,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
 
     return (
         <div className="mt-8">
-            {/* Sorteringsval. Besöksknappen bär sitt läge i etiketten så det
-                syns vad ett klick till kommer att göra ("i veckan" ↔ "totalt"). */}
+            {/* Sorteringsval */}
             <div className="flex flex-wrap items-center gap-2">
                 {SORTS.map(s => (
                     <button
@@ -137,9 +106,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                                 : 'bg-white border-slate-200 text-slate-600 hover:border-[#006AA7]/40 hover:text-[#006AA7]'
                         }`}
                     >
-                        {s.key === 'visits'
-                            ? `Flest besök ${visitsMode === 'week' ? 'i veckan' : 'totalt'}`
-                            : s.label}
+                        {s.label}
                     </button>
                 ))}
             </div>
@@ -168,14 +135,6 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                                 {c.name}
                                 <span className="hidden font-semibold text-slate-400 sm:inline"> — vad händer?</span>
                             </span>
-                            {/* Besöken vänster om idag (Josef 26/8) — talet
-                                följer besöksknappens läge (veckan/totalt),
-                                tankstreck tills API-svaret laddat. */}
-                            <Stat
-                                value={c.visitCount}
-                                label={visitsMode === 'week' ? 'besök/v' : 'besök tot'}
-                                active={sort === 'visits'}
-                            />
                             <Stat value={c.today} label="idag" active={sort === 'today'} />
                             <Stat value={c.week} label="i veckan" active={sort === 'week'} />
                             <Stat value={c.total} label="totalt" active={sort === 'total'} />

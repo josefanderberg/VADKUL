@@ -7,8 +7,9 @@
 
 export const VISITS_DOC = 'siteVisits';          // i collection 'outreachStats'
 // Per-stad-räknaren (Josef 26/8): stadssidornas besök, ett dokument med
-// cities.<slug>.total + cities.<slug>.days.<ÅÅÅÅ-MM-DD>. Läses av
-// /api/stats/city-visits och visas i topplistan på /evenemang.
+// cities.<slug>.total + cities.<slug>.days.<ÅÅÅÅ-MM-DD>. INTERN statistik —
+// det publika läs-API:et (/api/stats/city-visits) och besökskolumnen på
+// /evenemang togs bort 29/8 på ägarbeslut; siffrorna ska inte visas publikt.
 export const CITY_VISITS_DOC = 'cityVisits';     // i collection 'outreachStats'
 
 export function stockholmDayKey(ms: number): string {
