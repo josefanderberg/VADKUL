@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, type BoostTier } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -2071,6 +2071,7 @@ export default function HomePage() {
                     // Nivåns längd (1/7/30 dagar) ägs av backend och är okänd
                     // här efter redirecten — håll bekräftelsen generell.
                     toast.success('Boostat! Eventet lyfts fram på kartan. 🚀');
+                    logBoostPurchase(sessionId, res);
                 } else if (res.alreadyApplied) {
                     toast.success('Boosten är redan aktiverad. 🚀');
                 } else {
@@ -2178,6 +2179,13 @@ export default function HomePage() {
     // det hittas eller datat är definitivt klart (eventsSettled).
     const pendingEventIdRef = useRef<string | null>(null);
 
+    // Djuplänksöppningen sker i HELSKÄRM (Josef 29/8): den som klickat ett
+    // event på en stadssida ska se hela eventet direkt — kortet täcker skärmen
+    // och lägger sig ÖVER välkomstrutan (som har lägre z-index när ett kort är
+    // öppet och står kvar framför först när kortet stängts). Engångsräknare —
+    // EventCard förbrukar den per bump, vanliga kartklick öppnar som vanligt.
+    const [fullOpenNonce, setFullOpenNonce] = useState(0);
+
     // Öppna det djuplänkade eventet: härled eventets dag så dagfiltret inte
     // gömmer det — och markera dagbytet som "redan hanterat" så day-switch-
     // effekten inte byter bort vårt val mot närmaste-event-heuristiken.
@@ -2187,6 +2195,7 @@ export default function HomePage() {
         prevDayKey.current = `${offset}:1`;
         setDayOffset(offset);
         setSelectedEvent(target);
+        setFullOpenNonce(n => n + 1);
         // Landa där eventet ÄR — som ett skylt-hopp (samma kamerahopp OCH
         // reveal-ankare, annars står staden med bara nål-prickar). Rundan är
         // avstängd (?event= i auto-start-effekten), men pekas mot eventets
@@ -3331,6 +3340,7 @@ export default function HomePage() {
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
                     onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
+                    underCard={!!selectedEvent}
                 />
             )}
 
@@ -3379,6 +3389,7 @@ export default function HomePage() {
                 starredEventIds={starredEventIds}
                 canPlaceStar={starsAvailable > 0}
                 onPlaceStar={handlePlaceStar}
+                fullOpenNonce={fullOpenNonce}
             />
 
         </main>

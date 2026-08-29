@@ -564,9 +564,15 @@ interface EventCardProps {
     starredEventIds?: Set<string>;
     canPlaceStar?: boolean;
     onPlaceStar?: (eventId: string) => void;
+    /** Engångsbegäran (räknare, 0 = ingen): nästa FÄRSKA öppning sker i
+     *  HELSKÄRM med hela innehållet uppfällt. Bumpas av djuplänken
+     *  (?event= från stadssidorna) — den som klickat sig hit från en
+     *  stadssida ska se hela eventet direkt, ovanpå välkomstrutan
+     *  (Josef 29/8). Förbrukas per bump; vanliga kartklick påverkas inte. */
+    fullOpenNonce?: number;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -688,6 +694,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // "användaren klickade på kartan" från "vi tryckte Nästa".
     const expectedNextIdRef = useRef<string | null>(null);
     const isFreshOpenRef = useRef(false);
+    // Senast förbrukade helskärmsbegäran (fullOpenNonce) — se ankar-effekten.
+    const consumedFullOpenNonceRef = useRef(0);
 
     // Notify parent about card expansion state for map center offsets
     useEffect(() => {
@@ -887,12 +895,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         isFreshOpenRef.current = freshOpen;
+        // Helskärmsbegäran (djuplänken från stadssidorna): förbrukas här, en
+        // gång per bump — efterföljande kartklick öppnar som vanligt. En
+        // djuplänk är explicit navigering, så den vinner även om ett kort
+        // redan råkade vara öppet (då är freshOpen false).
+        const wantsFullOpen = fullOpenNonce > consumedFullOpenNonceRef.current;
+        if (wantsFullOpen) consumedFullOpenNonceRef.current = fullOpenNonce;
         const raf = requestAnimationFrame(() => {
             const collapsed = measureCollapsedHeight();
             collapsedVhRef.current = collapsed;
-            if (freshOpen) updateHeightVh(measureDefaultHeight());
+            if (wantsFullOpen) updateHeightVh(MAX_HEIGHT_VH);
+            else if (freshOpen) updateHeightVh(measureDefaultHeight());
         });
         return () => cancelAnimationFrame(raf);
+        // fullOpenNonce bumpas i samma commit som selectedEvent sätts (djup-
+        // länken) — den behöver inte trigga effekten själv.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent]);
 
     // Reset pagination and scroll position when the active event changes.
@@ -1786,6 +1804,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         isAdmin={false}
                         distance={distanceFromUserKm}
                         showFullAddress
+                        // Djuplänksöppningen (helskärm) startar med ALLT uppfällt —
+                        // ett 100vh-kort med bara headern vore mest tomyta. Läses
+                        // vid mount; nonce-förbrukningen (ref-skrivningen) sker i
+                        // ankar-effekten ovan.
+                        initialRevealStep={fullOpenNonce > consumedFullOpenNonceRef.current ? 2 : 0}
                         groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
                         groupTotal={sameSpotGroup.length}
                         onGroupNext={handleSameSpotNext}

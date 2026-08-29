@@ -13,7 +13,7 @@ import BoostTierPicker from './BoostTierPicker';
 import { getEventViews, recordEventClick } from '../../services/eventStatsService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
@@ -56,6 +56,10 @@ interface LinkEventCardProps {
     isPanelMode?: boolean;
     showFullAddress?: boolean;
     onRevealStepChange?: (step: number) => void;
+    /** Reveal-steget kortet MONTERAS med (default 0 = bara header). Djuplänks-
+     *  öppningen i helskärm (EventCard) monterar med 2 så hela innehållet syns
+     *  direkt. Läses bara vid mount — senare eventbyten stegar som vanligt. */
+    initialRevealStep?: 0 | 1 | 2;
     // När true: kortet är alltid fullt utvecklat. peek-bilden + "Stäng
     // detaljer"-knappen visas inte. Klick på header/bild/beskrivning fäller i
     // stället ihop bottensheeten via onContentTap (se nedan).
@@ -97,10 +101,10 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
-    const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+    const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
 
     // VADKUL-värdat = skapat här UTAN länk (anmälan sker på sidan). Användar-
@@ -165,7 +169,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // Byt event (Nästa/Bakåt): var kortet redan uppfällt ska det FÖRBLI uppfällt
     // så bilden fortsatt syns — men i topp-läget (steg 1). Var det hopfällt börjar
     // det hopfällt som vanligt. (Sheet-höjden bevaras separat i föräldern.)
-    useEffect(() => { setInternalRevealStep(prev => (prev >= 1 ? 1 : 0)); }, [linkEvent.id]);
+    // Körs bara vid FAKTISKT eventbyte (id-jämförelsen, inte deps): på mount
+    // var effekten alltid ett no-op (0 → 0) tills initialRevealStep kom — nu
+    // skulle den nolla djuplänkens uppfällda start (och StrictModes dubbel-
+    // körning i dev gör en ren "skippa första varvet"-flagga opålitlig).
+    const prevRevealIdRef = useRef(linkEvent.id);
+    useEffect(() => {
+        if (prevRevealIdRef.current === linkEvent.id) return;
+        prevRevealIdRef.current = linkEvent.id;
+        setInternalRevealStep(prev => (prev >= 1 ? 1 : 0));
+    }, [linkEvent.id]);
 
     // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
     const [reportOpen, setReportOpen] = useState(false);

@@ -17,6 +17,12 @@ interface WelcomeOverlayProps {
      *  visas inte längre automatiskt vid sidladdning utan öppnas från
      *  info-knappen, och måste kunna öppnas igen efteråt. */
     onClose?: () => void;
+    /** Sant när ett eventkort är öppet (t.ex. djuplänk från en stadssida).
+     *  Då lägger sig rutan UNDER kortet (Josef 29/8): den som klickat sig hit
+     *  från en stadssida ska se eventet direkt, inte mötas av onboarding.
+     *  Rutan väntar bakom och står kvar framför när kortet stängts. Även
+     *  tangenterna (Escape/Tab-fällan) släpps så länge kortet ligger överst. */
+    underCard?: boolean;
 }
 
 /** Exit-animationens längd — skickas till CSS via --welcome-exit-ms så de inte kan glida isär. */
@@ -78,7 +84,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -116,7 +122,10 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     }, []);
 
     // Escape stänger; Tab hålls kvar inne i dialogen (kartkontrollerna ligger bakom).
+    // Under ett eventkort släpps tangenterna helt — annars stal Tab-fällan
+    // fokus från kortet (chattfältet m.m.) och Escape stängde rutan osynligt.
     useEffect(() => {
+        if (underCard) return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 track('welcome_dismiss');
@@ -141,7 +150,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [dismiss]);
+    }, [dismiss, underCard]);
 
     if (!open) return null;
 
@@ -165,9 +174,9 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     return (
         <div
             role="dialog"
-            aria-modal="true"
+            aria-modal={!underCard}
             aria-label="Välkommen till VADKUL"
-            className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
+            className={`fixed inset-0 ${underCard ? 'z-[1240]' : 'z-[2000]'} flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
             style={{ '--welcome-exit-ms': `${EXIT_MS}ms` } as React.CSSProperties}
         >
             {/* Duken är MEDVETET tunn (Josef 13/8): bakom den reser kartan genom
