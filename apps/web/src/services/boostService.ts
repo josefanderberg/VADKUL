@@ -18,7 +18,7 @@
  * Pris och eventId/boostDays-metadata ägs numera av backend — klienten skickar
  * bara vilket event det gäller och vilken nivå (tier) man valt.
  */
-import { functions } from '../lib/firebase';
+import { analytics, functions } from '../lib/firebase';
 
 /** Boost-nivåerna: hur länge eventet lyfts fram. Backend mappar tier → pris. */
 export type BoostTier = 'day' | 'week' | 'month';
@@ -90,12 +90,44 @@ export async function startEventBoostCheckout(eventId: string, tier: BoostTier):
  * `applied: false` utan fel betyder att betalningen inte var klar (avbruten
  * eller fördröjd betalmetod) eller att boosten redan var applicerad.
  */
-export async function confirmEventBoost(sessionId: string): Promise<{ applied: boolean; alreadyApplied?: boolean }> {
+export interface BoostConfirmation {
+    applied: boolean;
+    alreadyApplied?: boolean;
+    /** Belopp i minsta enhet (öre) resp. valutakod — från Stripe-sessionen via backend. */
+    amountTotal?: number;
+    currency?: string;
+}
+
+export async function confirmEventBoost(sessionId: string): Promise<BoostConfirmation> {
     const { httpsCallable } = await import('firebase/functions');
-    const confirm = httpsCallable<{ sessionId: string }, { applied: boolean; alreadyApplied?: boolean }>(
+    const confirm = httpsCallable<{ sessionId: string }, BoostConfirmation>(
         functions,
         'confirmBoost',
     );
     const res = await confirm({ sessionId });
     return res.data ?? { applied: false };
+}
+
+/**
+ * Loggar ett genomfört boostköp som GA4:s standardhändelse `purchase` — då
+ * hamnar det under Intäktsgenerering i Google Analytics/Firebase-konsolen.
+ * transaction_id = checkout-sessionen, så GA dedupar om samma köp skulle
+ * loggas två gånger. Loggas ENDAST vid applied — aldrig på alreadyApplied
+ * (omladdning av success-URL:en ska inte bli ett nytt köp i statistiken).
+ * Belopp saknas tills functions-versionen som skickar med det är deployad;
+ * köpet räknas ändå, bara utan intäktssiffra.
+ */
+export function logBoostPurchase(sessionId: string, confirmation: BoostConfirmation): void {
+    analytics.then(async instance => {
+        if (!instance) return;
+        const { logEvent } = await import('firebase/analytics');
+        logEvent(instance, 'purchase', {
+            transaction_id: sessionId,
+            currency: (confirmation.currency ?? 'sek').toUpperCase(),
+            ...(typeof confirmation.amountTotal === 'number'
+                ? { value: confirmation.amountTotal / 100 }
+                : {}),
+            items: [{ item_id: 'event_boost', item_name: 'Event-boost' }],
+        });
+    }).catch(() => { /* analytics avstängt */ });
 }
