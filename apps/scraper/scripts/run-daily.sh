@@ -84,6 +84,20 @@ if [ "$JOB_NAME" = "nightly" ]; then
     fi
 fi
 
+# ─── IG-inbox (bara nightly): IG-tvillingar schemalagda från annan maskin ───
+# schedule-city-posts kört på MacBooken lämnar IG-kön i en LOKAL, gitignorerad
+# ig-queue.json som bara DEN HÄR maskinens launchd-jobb tömmer. Bryggan är den
+# incheckade apps/scraper/ig-inbox.json: posterna merge:as in här efter pullen.
+# Idempotent (bara saknade id:n läggs till, publicerade rörs aldrig) och
+# inboxfilen lämnas orörd i trädet — whitelist-pushen får aldrig se lokala
+# ändringar. Ett fel här får ALDRIG stoppa kedjan.
+if [ "$JOB_NAME" = "nightly" ] && [ -f "$SCRAPER_DIR/ig-inbox.json" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── IG-INBOX → IG-KÖN ──" >> "$LOG_FILE"
+    node "$SCRAPER_DIR/scripts/merge-ig-inbox.js" >> "$LOG_FILE" 2>&1 \
+        || echo "⚠️ IG-inbox-mergen misslyckades — IG-kön lämnad orörd." >> "$LOG_FILE"
+fi
+
 # ─── Sync Firestore→SQLite (bara nightly): håll spegeln färsk ───────────────
 # INKREMENTELL (updatedAt > cursor) — några hundra reads, inte hela ~29k-
 # kollektionen. Hel sync körs automatiskt var 7:e dag (självläkning). Körs FÖRE
