@@ -265,6 +265,22 @@ function awaitHeavyLayersGate(): Promise<void> {
     return heavyGate;
 }
 
+// ── Beskrivningar hämtas först när någon öppnar ett eventkort ───────────────
+// descriptions-lagret är det största (~4 MB gzippat för 40k+ event) men
+// renderas BARA i ett öppet LinkEventCard. Räknare, markörer, listor och sök
+// bygger på destinations(+cards). Därför laddas lagret inte alls vid start —
+// LinkEventCard anropar requestDescriptions() vid mount, och först då hämtas
+// och mergas det (och följer därefter med i 5-minuterspollarna, där ETag/304
+// gör oförändrade omfrågningar nästan gratis). Besökare som aldrig öppnar ett
+// kort laddar aldrig lagret.
+let descriptionsRequested = false;
+let releaseDescriptionsGate: (() => void) | null = null;
+const descriptionsGate = new Promise<void>((res) => { releaseDescriptionsGate = res; });
+let signalDescriptionsSettled: (() => void) | null = null;
+// Löser ut när ett descriptions-svar behandlats (även tomt/misslyckat —
+// kortet ska visa "Ingen beskrivning tillgänglig", inte vänta för evigt).
+const descriptionsSettled = new Promise<void>((res) => { signalDescriptionsSettled = res; });
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). 30s-pollen är också gratis här:
@@ -394,15 +410,24 @@ export const linkEventService = {
      *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
     releaseHeavyLayers() { releaseHeavyGate?.(); },
 
+    /** Ett eventkort har öppnats → descriptions-lagret behövs. Idempotent.
+     *  Löftet löser ut när första svaret behandlats (även tomt), så kortet
+     *  kan skilja "hämtas fortfarande" från "har ingen beskrivning". */
+    requestDescriptions(): Promise<void> {
+        descriptionsRequested = true;
+        releaseDescriptionsGate?.();
+        return descriptionsSettled;
+    },
+
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            // Alla tre lagren parallellt — descriptions hämtades tidigare SERIELLT
-            // efter de andra två, vilket bara adderade väntetid före första kartritningen.
+            // Destinations + cards parallellt; descriptions (största lagret)
+            // bara om något eventkort redan bett om det (se descriptions-gaten).
             const [destData, cardsData, descData] = await Promise.all([
                 fetchLayer('destinations'),
                 fetchLayer('cards'),
-                fetchLayer('descriptions'),
+                descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
             ]);
 
             if (!destData) return [];
@@ -660,6 +685,10 @@ export const linkEventService = {
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
         let boostOverlay: Map<string, Date> = new Map(); // skrapat eventId → featuredUntil (eventBoosts)
+        // Engångsvakt: descriptions-gatens efterhäng får bara kopplas en gång
+        // per prenumeration (varje 5-min-poll går annars in här på nytt och
+        // staplar identiska hämtningar som alla fyrar när gaten släpps).
+        let descriptionsWaiterAttached = false;
         let initialLoadSignaled = false;
         const signalInitialLoad = () => {
             if (initialLoadSignaled || !active) return;
@@ -766,24 +795,43 @@ export const linkEventService = {
                 // moment 22 och allt väntade ut säkerhetsnätet.
                 signalInitialLoad();
 
-                // 2+3. Cards + descriptions PARALLELLT (laddades förr i serie =
-                // onödigt lång svans innan bilder/arrangörer/beskrivningar fanns)
-                // — men först när kartan målat klart (eller säkerhetsnätet gått):
-                // de ska inte konkurrera med tiles + prickar om bandbredden.
+                // 2. Cards — men först när kartan målat klart (eller säkerhets-
+                // nätet gått): ska inte konkurrera med tiles + prickar om
+                // bandbredden. Descriptions (största lagret) hämtas INTE här om
+                // inget eventkort bett om det — se descriptions-gaten.
                 await awaitHeavyLayersGate();
                 if (!active) return;
                 const [cardsData, descData] = await Promise.all([
                     fetchLayer('cards'),
-                    fetchLayer('descriptions'),
+                    descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
                 ]);
                 if (!active) return;
                 if (cardsData) {
                     baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
                     emit();
                 }
-                if (descData && descData.data) {
-                    baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
-                    emit();
+                if (descriptionsRequested) {
+                    if (descData && descData.data) {
+                        baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
+                        emit();
+                    }
+                    // Även tomt/misslyckat svar räknas som "avgjort" — kortet
+                    // visar då sin vanliga fallbacktext; nästa poll försöker om.
+                    signalDescriptionsSettled?.();
+                } else if (!descriptionsWaiterAttached) {
+                    descriptionsWaiterAttached = true;
+                    descriptionsGate.then(async () => {
+                        if (!active) return;
+                        try {
+                            const dd = await fetchLayer('descriptions');
+                            if (active && dd && dd.data) {
+                                baseEvents = mergeDescriptionsWithEvents(baseEvents, dd.data);
+                                emit();
+                            }
+                        } finally {
+                            signalDescriptionsSettled?.();
+                        }
+                    });
                 }
             } catch (err) {
                 console.error("Error loading events progressively:", err);
