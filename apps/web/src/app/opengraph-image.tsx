@@ -5,9 +5,16 @@ import path from 'path';
 // Delningsbilden (Open Graph) — det folk ser när en VADKUL-länk delas i
 // Messenger/Facebook/iMessage m.fl. Renderas EN gång vid build (force-static),
 // så fs-läsning och font-hämtning sker på byggmaskinen, inte per request.
+//
+// Bakgrunden (og-karta.jpg) är en riktig fångst av nöjesfältskartan över
+// Stockholm med eventbrickorna INBAKADE (guld-⭐, gröna "skapat på VADKUL"-
+// brickan m.fl. — bakade med kartans egen brick-ritkod, 30/8). Görs om:
+// se scratch-receptet i commit-meddelandet för og-karta.jpg. Siffrorna i
+// pillsen är golv tagna ur aggregaten 30/8 (1 538 idag / 12 466 veckan) —
+// välkomstrutan visar de exakta, här står trygga "1 000+"/"10 000+".
 export const dynamic = 'force-static';
 
-export const alt = 'VADKUL – hitta events och saker att göra nära dig, på en karta';
+export const alt = 'VADKUL – eventkartan med 1 000+ event idag och 10 000+ i veckan';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -29,10 +36,12 @@ async function loadFredoka(): Promise<ArrayBuffer | null> {
 }
 
 export default async function OpengraphImage() {
-    const [fredoka, iconPng] = await Promise.all([
+    const [fredoka, kartaJpg, iconPng] = await Promise.all([
         loadFredoka(),
+        readFile(path.join(process.cwd(), 'public', 'og-karta.jpg')),
         readFile(path.join(process.cwd(), 'public', 'pwa-icon-512.png')),
     ]);
+    const kartaSrc = `data:image/jpeg;base64,${kartaJpg.toString('base64')}`;
     const iconSrc = `data:image/png;base64,${iconPng.toString('base64')}`;
 
     return new ImageResponse(
@@ -42,40 +51,92 @@ export default async function OpengraphImage() {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 56,
-                    background: 'linear-gradient(180deg, #7dd3fc 0%, #38bdf8 55%, #0ea5e9 100%)',
-                    fontFamily: 'Fredoka, sans-serif',
                     position: 'relative',
+                    fontFamily: 'Fredoka, sans-serif',
                 }}
             >
-                {/* Småmoln i bakgrunden */}
-                <div style={{ position: 'absolute', top: 48, left: 80, width: 150, height: 52, borderRadius: 999, background: 'rgba(255,255,255,0.55)', display: 'flex' }} />
-                <div style={{ position: 'absolute', top: 96, left: 150, width: 90, height: 40, borderRadius: 999, background: 'rgba(255,255,255,0.4)', display: 'flex' }} />
-                <div style={{ position: 'absolute', top: 70, right: 110, width: 180, height: 56, borderRadius: 999, background: 'rgba(255,255,255,0.5)', display: 'flex' }} />
-                <div style={{ position: 'absolute', bottom: 70, left: 210, width: 120, height: 44, borderRadius: 999, background: 'rgba(255,255,255,0.35)', display: 'flex' }} />
-                <div style={{ position: 'absolute', bottom: 110, right: 170, width: 140, height: 48, borderRadius: 999, background: 'rgba(255,255,255,0.4)', display: 'flex' }} />
-
-                {/* Molnet (logotypen) */}
+                {/* Kartfångsten med inbakade brickor — hela ytan */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={iconSrc} width={310} height={310} alt="" />
+                <img src={kartaSrc} width={1200} height={630} alt="" style={{ position: 'absolute', top: 0, left: 0 }} />
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 18 }}>
+                {/* Mörkblå scrim från vänster så text/logga bär mot kartan;
+                    brickorna till höger lämnas orörda. */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        background: 'linear-gradient(100deg, rgba(5,40,70,0.88) 0%, rgba(5,40,70,0.60) 32%, rgba(5,40,70,0.16) 52%, rgba(5,40,70,0) 63%)',
+                    }}
+                />
+
+                {/* Vänsterkolumnen: logga, ordmärke, pills */}
+                <div style={{ position: 'absolute', top: 44, left: 52, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={iconSrc} width={128} height={128} alt="" />
+                        <div
+                            style={{
+                                fontSize: 84,
+                                fontWeight: 600,
+                                color: '#ffffff',
+                                letterSpacing: 3,
+                                textShadow: '0 5px 22px rgba(2, 30, 55, 0.75)',
+                                display: 'flex',
+                            }}
+                        >
+                            VADKUL
+                        </div>
+                    </div>
                     <div
                         style={{
-                            fontSize: 120,
-                            fontWeight: 600,
-                            color: '#ffffff',
-                            letterSpacing: 4,
-                            textShadow: '0 6px 28px rgba(3, 105, 161, 0.45)',
+                            marginTop: 6,
+                            fontSize: 27,
+                            color: '#eaf6ff',
+                            textShadow: '0 2px 10px rgba(2, 30, 55, 0.75)',
                             display: 'flex',
+                            maxWidth: 520,
                         }}
                     >
-                        VADKUL
+                        Hitta events och saker att göra nära dig
                     </div>
-                    <div style={{ fontSize: 38, color: '#f0f9ff', display: 'flex', maxWidth: 620 }}>
-                        Hitta events och saker att göra nära dig – på en karta
+
+                    {/* Vägskylts-stacken: gul idag-rad + mörk vecko-rad + vit totalpill
+                        (samma färgspråk som kartans stadsskyltar). */}
+                    <div
+                        style={{
+                            marginTop: 34,
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: '#ffc53d',
+                            color: '#1f2937',
+                            fontSize: 34,
+                            fontWeight: 600,
+                            padding: '13px 30px',
+                            borderRadius: 16,
+                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.4)',
+                        }}
+                    >
+                        1 000+ event bara idag
+                    </div>
+                    <div
+                        style={{
+                            marginTop: 14,
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: 'rgba(37, 42, 51, 0.94)',
+                            color: '#ffffff',
+                            fontSize: 34,
+                            fontWeight: 600,
+                            padding: '13px 30px',
+                            borderRadius: 16,
+                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.4)',
+                        }}
+                    >
+                        10 000+ den kommande veckan
                     </div>
                     <div
                         style={{
@@ -84,15 +145,37 @@ export default async function OpengraphImage() {
                             alignItems: 'center',
                             background: '#ffffff',
                             color: '#0284c7',
-                            fontSize: 32,
+                            fontSize: 26,
                             fontWeight: 600,
-                            padding: '14px 34px',
+                            padding: '10px 24px',
                             borderRadius: 999,
-                            boxShadow: '0 8px 24px rgba(3, 105, 161, 0.3)',
+                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.35)',
                         }}
                     >
-                        20 000+ event i hela Sverige
+                        20 000+ event i hela Sverige – gratis
                     </div>
+                </div>
+
+                {/* Etiketten under gröna brickan (inbakad på ~(906,338)) —
+                    positionen är matchad mot compose-skriptets placering. */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 386,
+                        left: 906,
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        background: '#ffffff',
+                        color: '#047857',
+                        fontSize: 21,
+                        fontWeight: 600,
+                        padding: '6px 16px',
+                        borderRadius: 999,
+                        boxShadow: '0 4px 14px rgba(2, 30, 55, 0.35)',
+                    }}
+                >
+                    Skapat på VADKUL
                 </div>
             </div>
         ),
