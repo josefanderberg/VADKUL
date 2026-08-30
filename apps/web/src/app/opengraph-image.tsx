@@ -138,8 +138,8 @@ export default async function OpengraphImage() {
                         guldkant + guldglöd. Knapparnas animerade ljussvep funkar
                         inte fruset i stillbild (två identiska stråk lästes som
                         kopior — ägarfeedback 31/8); i stället en glasig topp-
-                        glans + mjuk specular vid vänsterkurvan, så de skiner som
-                        blanka knappar. */}
+                        glans så de skiner som blanka knappar (glint-pricken i
+                        vänsterkurvan provades och togs bort på ägar-nej). */}
                     <div
                         style={{
                             marginTop: 16,
@@ -156,7 +156,6 @@ export default async function OpengraphImage() {
                         }}
                     >
                         <div style={{ position: 'absolute', top: 5, left: 18, right: 18, height: '44%', borderRadius: 999, background: 'linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 65%, rgba(255,255,255,0) 100%)', display: 'flex' }} />
-                        <div style={{ position: 'absolute', top: 9, left: 12, width: 34, height: 16, borderRadius: 999, background: 'rgba(255,255,255,0.45)', transform: 'rotate(-24deg)', display: 'flex' }} />
                         <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>1 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>event idag</div>
                     </div>
@@ -176,7 +175,6 @@ export default async function OpengraphImage() {
                         }}
                     >
                         <div style={{ position: 'absolute', top: 5, left: 18, right: 18, height: '44%', borderRadius: 999, background: 'linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 65%, rgba(255,255,255,0) 100%)', display: 'flex' }} />
-                        <div style={{ position: 'absolute', top: 9, left: 12, width: 34, height: 16, borderRadius: 999, background: 'rgba(255,255,255,0.45)', transform: 'rotate(-24deg)', display: 'flex' }} />
                         <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>10 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>i veckan</div>
                     </div>
