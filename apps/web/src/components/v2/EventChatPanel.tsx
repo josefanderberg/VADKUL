@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { linkEventChatService } from '@/services/eventChatService';
 import type { ChatMessage } from '@/types';
@@ -18,18 +18,26 @@ interface Props {
 /**
  * Kompakt chatt för ett kart-event — bor i eventkortets utfällda läge.
  * Alla kan läsa; skriva kräver konto (CTA öppnar auth-modalen).
+ * INFÄLLD tills någon faktiskt skrivit något (Josef 30/8): en tom chatt är
+ * mest en tom ruta — utan meddelanden visas bara en rad man kan fälla upp.
  */
 export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: Props) {
     const { user } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
+    // Manuellt uppfälld trots tom chatt (för att bli först att skriva).
+    const [expanded, setExpanded] = useState(false);
     // Scrolla ENBART chattens egen meddelandelista (aldrig scrollIntoView —
     // den scrollar alla scrollbara föräldrar och drog ner hela eventkortet
     // till chatten när serverns första snapshot landade efter mount).
     const listRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // Eventbyte återanvänder komponenten (ingen key i EventCard) — börja
+        // om hopfällt och utan förra eventets meddelanden.
+        setExpanded(false);
+        setMessages([]);
         const unsubscribe = linkEventChatService.subscribeToMessages(eventId, setMessages);
         return () => unsubscribe();
     }, [eventId]);
@@ -58,6 +66,26 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
             setSending(false);
         }
     };
+
+    // Hopfällt läge: inga meddelanden och inte manuellt uppfälld — bara en
+    // rad som visar att chatten finns. Klick fäller upp hela panelen.
+    if (messages.length === 0 && !expanded) {
+        return (
+            <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                aria-expanded={false}
+                className="flex items-center gap-2 rounded-xl border border-border bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5 text-left hover:border-[#006AA7]/40 transition-colors"
+            >
+                <MessageCircle size={14} className="text-[#006AA7] shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 shrink-0">Chatt</span>
+                <span className="flex-1 min-w-0 truncate text-xs font-semibold text-slate-400">
+                    Inga meddelanden än — bli först att säga hej! 👋
+                </span>
+                <ChevronDown size={14} className="text-slate-400 shrink-0" aria-hidden />
+            </button>
+        );
+    }
 
     return (
         <div className="flex flex-col rounded-xl border border-border bg-slate-50 dark:bg-slate-900/40 overflow-hidden">

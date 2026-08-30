@@ -592,6 +592,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // stannade det på 83vh med en kartremsa ovanför, men kortet ska kunna
     // fylla skärmen).
     const MAX_HEIGHT_VH = 100;
+    // Djuplänksöppningen (?event= från stadssidorna): INTE hela skärmen —
+    // en kartremsa ska synas ovanför så man ser att man landat på kartan
+    // (Josef 30/8). Användaren kan själv dra upp till MAX_HEIGHT_VH.
+    const DEEPLINK_HEIGHT_VH = 80;
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
@@ -904,7 +908,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const raf = requestAnimationFrame(() => {
             const collapsed = measureCollapsedHeight();
             collapsedVhRef.current = collapsed;
-            if (wantsFullOpen) updateHeightVh(MAX_HEIGHT_VH);
+            if (wantsFullOpen) updateHeightVh(DEEPLINK_HEIGHT_VH);
             else if (freshOpen) updateHeightVh(measureDefaultHeight());
         });
         return () => cancelAnimationFrame(raf);
@@ -1804,10 +1808,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         isAdmin={false}
                         distance={distanceFromUserKm}
                         showFullAddress
-                        // Djuplänksöppningen (helskärm) startar med ALLT uppfällt —
-                        // ett 100vh-kort med bara headern vore mest tomyta. Läses
-                        // vid mount; nonce-förbrukningen (ref-skrivningen) sker i
-                        // ankar-effekten ovan.
+                        // Djuplänksöppningen (DEEPLINK_HEIGHT_VH) startar med ALLT
+                        // uppfällt — ett nästan-fullhöjdskort med bara headern vore
+                        // mest tomyta. Läses vid mount; nonce-förbrukningen (ref-
+                        // skrivningen) sker i ankar-effekten ovan.
                         initialRevealStep={fullOpenNonce > consumedFullOpenNonceRef.current ? 2 : 0}
                         groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
                         groupTotal={sameSpotGroup.length}

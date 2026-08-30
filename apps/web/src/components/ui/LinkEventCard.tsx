@@ -1,10 +1,9 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
-import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
@@ -254,19 +253,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             hostName: linkEvent.hostName,
         });
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
-    };
-
-    // Vägbeskrivning i Google Maps (öppnar appen på mobil). Koordinaterna är
-    // pålitligare än adressträngen, så de används som destination.
-    const hasCoords = typeof linkEvent.lat === 'number' && typeof linkEvent.lng === 'number'
-        && !(linkEvent.lat === 0 && linkEvent.lng === 0);
-    const handleDirections = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(
-            `https://www.google.com/maps/dir/?api=1&destination=${linkEvent.lat},${linkEvent.lng}`,
-            '_blank', 'noopener,noreferrer'
-        );
     };
 
     const handleToggleSave = (e: React.MouseEvent) => {
@@ -653,14 +639,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">
-                                {/* Skrapade event länkar ut till arrangörens sida. */}
+                                {/* Skrapade event länkar ut till arrangörens sida.
+                                    Samma formspråk som ANMÄL-pillret uppe i headern
+                                    (helrundad gradient, inre ljuskant, pil som glider
+                                    vid hover) — fast i CTA-storlek. */}
                                 {linkEvent.url && (
                                     <button
                                         onClick={handleVisitSite}
-                                        className="flex items-center justify-center gap-4 w-full py-4 bg-[#006AA7] hover:bg-[#005590] text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
+                                        className="group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white text-lg md:text-xl font-black uppercase tracking-widest shadow-lg shadow-sky-900/30 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-xl transition-all active:scale-[0.97]"
                                     >
-                                        <span>ANMÄL DIG HÄR</span>
-                                        <ExternalLink size={24} />
+                                        <span>Anmäl dig här</span>
+                                        <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
                                     </button>
                                 )}
 
@@ -673,10 +662,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             onClick={handleRsvpToggle}
                                             disabled={rsvpBusy}
                                             aria-pressed={isAttending}
-                                            className={`flex items-center justify-center gap-3 w-full py-4 text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97] disabled:opacity-60 ${
+                                            className={`flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest text-white shadow-lg ring-1 ring-inset ring-white/25 transition-all active:scale-[0.97] disabled:opacity-60 ${
                                                 isAttending
-                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                                    : 'bg-[#006AA7] hover:bg-[#005590] text-white'
+                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-400 hover:to-emerald-600 shadow-emerald-900/30'
+                                                    : 'bg-gradient-to-r from-[#0077BC] to-[#005590] hover:from-[#0083CE] hover:to-[#00619F] shadow-sky-900/30'
                                             }`}
                                         >
                                             {isAttending ? <Check size={24} /> : <Users size={24} />}
@@ -713,84 +702,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         </div>
                                     </div>
                                 )}
-                                {/* Spara / Hitta hit / Dela — samlade direkt under
-                                    anmälningsknappen i stället för utspridda
-                                    småknappar uppe vid titeln. */}
-                                <div className="flex gap-3">
-                                    {/* Stjärn-gåvan ⭐ bredvid Spara: samma logik som
-                                        header-stjärnan (knapp när man kan placera,
-                                        annars indikator på stjärnmärkta event). */}
-                                    {canPlaceStar && onPlaceStar ? (
-                                        <button
-                                            onClick={handlePlaceStar}
-                                            aria-label="Sätt din stjärna på eventet"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] border-amber-400 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                                        >
-                                            <Star size={20} fill={hasStar ? 'currentColor' : 'none'} />
-                                            Sätt stjärna
-                                        </button>
-                                    ) : hasStar ? (
-                                        <div
-                                            aria-label="Det här eventet har fått en stjärna"
-                                            title="Det här eventet har fått en stjärna av en tidig VADKUL-användare"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30 dark:border-amber-900/60"
-                                        >
-                                            <Star size={20} fill="currentColor" />
-                                            Stjärnmärkt
-                                        </div>
-                                    ) : null}
-                                    {onToggleSave && (
-                                        <button
-                                            onClick={handleToggleSave}
-                                            aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
-                                            className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] ${
-                                                saved
-                                                    ? 'bg-rose-500 border-rose-500 text-white hover:bg-rose-400'
-                                                    : 'border-rose-300 text-rose-500 hover:bg-rose-50'
-                                            }`}
-                                        >
-                                            <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
-                                            {saved ? 'Sparad' : 'Spara'}
-                                        </button>
-                                    )}
-                                    {hasCoords && (
-                                        <button
-                                            onClick={handleDirections}
-                                            aria-label="Vägbeskrivning (Google Maps)"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
-                                        >
-                                            <Navigation size={20} />
-                                            Hitta hit
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleShare}
-                                        aria-label="Dela eventet"
-                                        className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
-                                    >
-                                        <Share2 size={20} />
-                                        Dela
-                                    </button>
-                                </div>
-
-                                {/* Lägg till i kalender — Google-länk + .ics för Apple/Outlook */}
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(googleCalendarUrl(linkEvent), '_blank', 'noopener,noreferrer'); }}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
-                                    >
-                                        <CalendarPlus size={16} className="shrink-0" />
-                                        Google Kalender
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadIcs(linkEvent); }}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
-                                    >
-                                        <CalendarPlus size={16} className="shrink-0" />
-                                        Kalenderfil (.ics)
-                                    </button>
-                                </div>
-
                                 {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
                                 <div className="flex flex-col items-center gap-1 pt-1">
                                     {/* Veckoserie: utan den här raden ser tolv utvecklade
