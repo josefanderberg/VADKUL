@@ -5,9 +5,14 @@
  * ladda ner och hosta den hos oss får vi en permanent URL som inte expirar
  * och som inte är CORS-blockerad.
  *
- * Path-konvention: `scraped-events/<sha1-of-eventUrl>.<ext>`
- *   - eventUrl är primärnyckeln så uppload är idempotent
+ * Path-konvention: `scraped-events/shared/<sha1-of-remoteImageUrl>.<ext>`
+ *   - hashen tas på BILDENS URL, inte eventets: event som delar bild
+ *     (turnédatum, serieevent) delar då ett enda storage-objekt.
+ *     Före 2026-08-30 hashades på eventUrl — det gav en kopia per event
+ *     (Södertälje-loggan låg i 152 exemplar, ~5 GB dubbletter totalt).
  *   - SHA-1 ger 40 hex-tecken (stabilt + URL-safe)
+ *   - Legacy-objekt `scraped-events/<sha1-of-eventUrl>.<ext>` finns kvar
+ *     och städas av cleanup-storage-images; deleteEventImage träffar bara dem.
  *
  * Public URL: `https://storage.googleapis.com/<bucket>/<path>`
  */
@@ -16,12 +21,18 @@ import crypto from 'crypto';
 import { bucket, STORAGE_BUCKET } from '../config/firebase';
 
 const STORAGE_FOLDER = 'scraped-events';
+const SHARED_FOLDER = 'scraped-events/shared';
 const FETCH_TIMEOUT_MS = 20000;
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB tak per bild
 
-/** SHA-1 av event-URL → storage-path-segment */
-function hashUrl(eventUrl: string): string {
-    return crypto.createHash('sha1').update(eventUrl).digest('hex');
+/** SHA-1 av en URL → storage-path-segment */
+function hashUrl(url: string): string {
+    return crypto.createHash('sha1').update(url).digest('hex');
+}
+
+/** Delad storage-path (utan ext) för en remote bild-URL. */
+export function sharedPathBase(remoteUrl: string): string {
+    return `${SHARED_FOLDER}/${hashUrl(remoteUrl)}`;
 }
 
 /** Avgör filändelse från content-type eller URL */
@@ -70,11 +81,11 @@ export async function uploadEventImage(
     if (!bucket) { uploadStats.noBucket++; return null; }
     if (!remoteUrl || !remoteUrl.startsWith('http')) { uploadStats.badUrl++; return null; }
 
-    const hash = hashUrl(eventUrl);
+    const base = sharedPathBase(remoteUrl);
 
     // 1. Kolla om vi redan har bilden i någon av de vanliga formaten
     for (const ext of ['jpg', 'png', 'webp', 'gif', 'avif']) {
-        const path = `${STORAGE_FOLDER}/${hash}.${ext}`;
+        const path = `${base}.${ext}`;
         try {
             const [exists] = await bucket.file(path).exists();
             if (exists) { uploadStats.alreadyExists++; return publicUrlFor(path); }
@@ -108,7 +119,7 @@ export async function uploadEventImage(
 
     // 3. Upload till Storage + gör public
     const ext = detectExt(contentType, remoteUrl);
-    const path = `${STORAGE_FOLDER}/${hash}.${ext}`;
+    const path = `${base}.${ext}`;
     try {
         const file = bucket.file(path);
         await file.save(buf, {
@@ -134,7 +145,10 @@ export async function uploadEventImage(
 }
 
 /**
- * Radera ett events bild från storage (alla format-varianter).
+ * Radera ett events LEGACY-bild från storage (alla format-varianter).
+ * Träffar bara gamla per-event-objekt (`scraped-events/<sha1(eventUrl)>`)
+ * — delade objekt under shared/ rörs aldrig här, de kan ha fler ägare
+ * och städas i stället av orphan-svepet i cleanup-storage-images.
  * Idempotent — fel ignoreras om filen inte finns.
  */
 export async function deleteEventImage(eventUrl: string): Promise<boolean> {
