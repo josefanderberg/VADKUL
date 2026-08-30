@@ -140,19 +140,16 @@ export default async function OpengraphImage() {
                     </div>
                     <div
                         style={{
-                            marginTop: 14,
+                            marginTop: 18,
                             display: 'flex',
                             alignItems: 'center',
-                            background: '#ffffff',
-                            color: '#0284c7',
-                            fontSize: 26,
+                            color: '#eaf6ff',
+                            fontSize: 25,
                             fontWeight: 600,
-                            padding: '10px 24px',
-                            borderRadius: 999,
-                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.35)',
+                            textShadow: '0 2px 10px rgba(2, 30, 55, 0.75)',
                         }}
                     >
-                        20 000+ event i hela Sverige – gratis
+                        Gratis att utforska – inget konto behövs
                     </div>
                 </div>
 
