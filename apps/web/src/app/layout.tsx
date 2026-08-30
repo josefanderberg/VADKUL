@@ -94,12 +94,12 @@ export default function RootLayout({
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
-                {/* Två favicons med olika roller: Google (och iOS-hemskärmen) tar den
-                    STÖRSTA deklarerade — blå platta så det vita molnet syns i sökresultatens
-                    vita cirkel. Fliken tar 32:an — transparent, som förr. Ordningen är
+                {/* ALLA favicons på blå platta (#006AA7) sedan 30/8 — vitt moln på
+                    transparent syns inte i sökresultatens vita cirkel. Nytt filnamn
+                    (-bla) i stället för överskrivning: favicons cachas hårt. Ordningen är
                     medveten: Safari väljer sist deklarerade ikonen, Chrome går på sizes. */}
                 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192-bla.png" />
-                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32-bla.png" />
                 <link rel="apple-touch-icon" href="/favicon-192-bla.png" />
                 <meta name="theme-color" content="#38bdf8" />
                 {/* Impact kräver value-attributet (inte content) — spread eftersom Reacts typer saknar value på meta */}
