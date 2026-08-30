@@ -20,13 +20,13 @@ export const contentType = 'image/png';
 
 // Google Fonts serverar TTF (som satori kräver — inte woff2) när requesten
 // saknar modern User-Agent. Misslyckas hämtningen faller vi tillbaka på
-// standardfonten i stället för att fälla bygget.
-async function loadFredoka(): Promise<ArrayBuffer | null> {
+// standardfonten i stället för att fälla bygget. Fredoka bär brödtext/pills;
+// Inter Black Italic bär ordmärket — välkomstrutans VADKUL är font-black
+// italic i SYSTEM-sans (inte Fredoka), och Inter 900 kursiv är närmsta
+// nedladdningsbara motsvarighet.
+async function loadGoogleFont(cssUrl: string): Promise<ArrayBuffer | null> {
     try {
-        const css = await fetch(
-            'https://fonts.googleapis.com/css2?family=Fredoka:wght@600&display=swap',
-            { headers: { 'User-Agent': 'curl/8' } },
-        ).then((r) => r.text());
+        const css = await fetch(cssUrl, { headers: { 'User-Agent': 'curl/8' } }).then((r) => r.text());
         const url = css.match(/src:\s*url\((https:[^)]+)\)\s*format\('truetype'\)/)?.[1];
         if (!url) return null;
         return await fetch(url).then((r) => r.arrayBuffer());
@@ -34,10 +34,15 @@ async function loadFredoka(): Promise<ArrayBuffer | null> {
         return null;
     }
 }
+const loadFredoka = () =>
+    loadGoogleFont('https://fonts.googleapis.com/css2?family=Fredoka:wght@600&display=swap');
+const loadInterBlackItalic = () =>
+    loadGoogleFont('https://fonts.googleapis.com/css2?family=Inter:ital,wght@1,900&display=swap');
 
 export default async function OpengraphImage() {
-    const [fredoka, kartaJpg, iconPng] = await Promise.all([
+    const [fredoka, interBlackItalic, kartaJpg, iconPng] = await Promise.all([
         loadFredoka(),
+        loadInterBlackItalic(),
         readFile(path.join(process.cwd(), 'public', 'og-karta.jpg')),
         readFile(path.join(process.cwd(), 'public', 'pwa-icon-512.png')),
     ]);
@@ -75,20 +80,27 @@ export default async function OpengraphImage() {
 
                 {/* Vänsterkolumnen: logga, ordmärke, pills */}
                 <div style={{ position: 'absolute', top: 44, left: 52, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    {/* Ordmärket matchar välkomstrutans: font-black + kursivt +
+                        tight spärrning, med det gula strecket under. */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={iconSrc} width={128} height={128} alt="" />
-                        <div
-                            style={{
-                                fontSize: 84,
-                                fontWeight: 600,
-                                color: '#ffffff',
-                                letterSpacing: 3,
-                                textShadow: '0 5px 22px rgba(2, 30, 55, 0.75)',
-                                display: 'flex',
-                            }}
-                        >
-                            VADKUL
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <div
+                                style={{
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: 84,
+                                    fontWeight: 900,
+                                    fontStyle: 'italic',
+                                    color: '#ffffff',
+                                    letterSpacing: -3,
+                                    textShadow: '0 5px 22px rgba(2, 30, 55, 0.75)',
+                                    display: 'flex',
+                                }}
+                            >
+                                VADKUL
+                            </div>
+                            <div style={{ marginTop: 8, marginLeft: 6, width: 150, height: 8, borderRadius: 999, background: '#FECC02', display: 'flex', boxShadow: '0 2px 10px rgba(2, 30, 55, 0.5)' }} />
                         </div>
                     </div>
                     <div
@@ -122,34 +134,46 @@ export default async function OpengraphImage() {
                     >
                         JUST NU I HELA SVERIGE
                     </div>
+                    {/* Pillsen bär guld-CTA:ns look (city-cta): blå gradient +
+                        guldkant + guldglöd, med ljussvepet FRUSET mitt i — samma
+                        skewX(-18°)-stråk som .welcome-cta/.city-cta::before, på
+                        olika läge i de två pillsen så det läses som ett svep. */}
                     <div
                         style={{
                             marginTop: 16,
+                            position: 'relative',
                             display: 'flex',
                             alignItems: 'baseline',
-                            background: '#ffc53d',
-                            color: '#1f2937',
-                            padding: '10px 32px 16px',
-                            borderRadius: 20,
-                            boxShadow: '0 10px 30px rgba(2, 30, 55, 0.5)',
+                            overflow: 'hidden',
+                            background: 'linear-gradient(90deg, #006AA7, #004B78)',
+                            border: '3px solid #FECC02',
+                            color: '#ffffff',
+                            padding: '10px 36px 16px',
+                            borderRadius: 999,
+                            boxShadow: '0 0 30px rgba(254, 204, 2, 0.4), 0 10px 30px rgba(2, 30, 55, 0.55)',
                         }}
                     >
-                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600 }}>1 000+</div>
+                        <div style={{ position: 'absolute', top: -12, bottom: -12, left: '30%', width: 110, background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))', transform: 'skewX(-18deg)', display: 'flex' }} />
+                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>1 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>event idag</div>
                     </div>
                     <div
                         style={{
                             marginTop: 16,
+                            position: 'relative',
                             display: 'flex',
                             alignItems: 'baseline',
-                            background: 'rgba(37, 42, 51, 0.95)',
+                            overflow: 'hidden',
+                            background: 'linear-gradient(90deg, #006AA7, #004B78)',
+                            border: '3px solid #FECC02',
                             color: '#ffffff',
-                            padding: '10px 32px 16px',
-                            borderRadius: 20,
-                            boxShadow: '0 10px 30px rgba(2, 30, 55, 0.5)',
+                            padding: '10px 36px 16px',
+                            borderRadius: 999,
+                            boxShadow: '0 0 30px rgba(254, 204, 2, 0.4), 0 10px 30px rgba(2, 30, 55, 0.55)',
                         }}
                     >
-                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#ffc53d' }}>10 000+</div>
+                        <div style={{ position: 'absolute', top: -12, bottom: -12, left: '62%', width: 110, background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))', transform: 'skewX(-18deg)', display: 'flex' }} />
+                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>10 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>i veckan</div>
                     </div>
                 </div>
@@ -157,8 +181,13 @@ export default async function OpengraphImage() {
         ),
         {
             ...size,
-            fonts: fredoka
-                ? [{ name: 'Fredoka', data: fredoka, weight: 600 as const, style: 'normal' as const }]
+            // Tom fonts-array fäller satori — utebliven hämtning ger undefined
+            // (standardfont) precis som förr.
+            fonts: fredoka || interBlackItalic
+                ? [
+                      ...(fredoka ? [{ name: 'Fredoka', data: fredoka, weight: 600 as const, style: 'normal' as const }] : []),
+                      ...(interBlackItalic ? [{ name: 'Inter', data: interBlackItalic, weight: 900 as const, style: 'italic' as const }] : []),
+                  ]
                 : undefined,
         },
     );
