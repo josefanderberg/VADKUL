@@ -18,7 +18,7 @@
     ],
     "icons": [
         {
-            "src": "/pwa-icon-bla-192.png",
+            "src": "/pwa-icon-bla-192-rund.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
@@ -30,7 +30,7 @@
             "purpose": "maskable"
         },
         {
-            "src": "/pwa-icon-bla-512.png",
+            "src": "/pwa-icon-bla-512-rund.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
