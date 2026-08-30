@@ -176,6 +176,9 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
 // ~N synliga samtidigt = ingen lagg.
 const REVEAL_NEAREST_COUNT = 50;      // antal markörer kring ett tap (de N närmaste)
 const REVEAL_SEED_COUNT = 50;         // antal tända vid start kring användarens plats (utan tap)
+// (Ett spridningstak — max N brickor per skärmruta så täta vyer inte klumpar —
+// byggdes och REVS SAMMA DAG 31/8, Josef: "alla de 50 som är närmast
+// mittpunkten ska visas, det gör inget om de är i en hög". Sprid inte seedet.)
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
@@ -234,8 +237,9 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
 // höger/öster.
 // 24/8 flyttad norrut (Josef: "vara lite mer norr ut") — punkten ligger PÅ
 // den gamla reslinjen mot INTRO_PAN_TO, så rutten är identisk men resan
-// börjar ~11 mil längre fram.
-const START_CENTER: [number, number] = [14.75, 57.5]; // [lng, lat] — sänk lat = söderut
+// börjar ~11 mil längre fram. 30/8 ytterligare ~12 mil norrut av samma skäl
+// (Josef: "den börjar för långt ner i sverige") — fortfarande på reslinjen.
+const START_CENTER: [number, number] = [15.26, 58.6]; // [lng, lat] — sänk lat = söderut
 // Höjden intron ligger på. Zoom-NIVÅN kan inte hårdkodas — samma zoom täcker
 // helt olika många kilometer på mobil och desktop — så vi räknar fram den ur
 // containerns mått (startZoomFor nedan). Breddmåttet styr normalt på desktop;
@@ -261,7 +265,8 @@ const INTRO_PAN_TO: [number, number] = [17.6, 63.6]; // [lng, lat] — Ångerman
 // hela landet på en gång (samma resa = under en skärmhöjd) medan en bred
 // desktop ser ett smalt band. Med en fast restid hade resan blivit omärklig på
 // mobilen och rusat på desktop.
-const INTRO_PAN_MS_PER_SCREEN = 26_000;
+// 30/8 sänkt fart 26 s → 40 s per skärmhöjd (Josef: "den går för fort").
+const INTRO_PAN_MS_PER_SCREEN = 40_000;
 // Resan görs i två etapper: marschfart från första bildrutan, mjuk inbromsning
 // i norr. Sträckorna anges i skärmhöjder; etapptiderna räknas ur farten ovan så
 // skarven blir ryckfri (se `leg`). Accelerationsrampen i starten är BORTTAGEN
@@ -412,14 +417,31 @@ interface V2MapProps {
     /** Speglar symbolsPainted-latchen (till skillnad från onFirstPaint, som
      *  fyrar en enda gång): true = prickarna är faktiskt utritade, false =
      *  en målningsrunda är på väg mot skärmen. Sidan använder den för att
-     *  hålla tyst med "inget här"-prompten så länge kartan fortfarande ritar. */
+     *  hålla tyst med "inget här"-prompten så länge kartan fortfarande ritar.
+     *  OBS: latchen sätts EN gång — den kvitterar inte senare pushar; för det
+     *  finns onPaintRoundDone nedan. */
     onPaintedChange?: (painted: boolean) => void;
+    /** Fyrar varje gång en push-runda faktiskt MÅLATS klart (källans
+     *  isSourceLoaded + en render-frame, idle som säkerhetsnät) — även efter
+     *  att symbolsPainted-latchen satts, där pill-bokföringen inte längre
+     *  följer rundorna. Landningspulsen använder kvittot för att starta sin
+     *  hålltid först när VECKANS markörer verkligen står på skärmen (bak-
+     *  ningen + utritningen av en hel ny period tar annars upp hälften av
+     *  visningstiden). En avbruten runda (ny push mitt i) kvitterar aldrig —
+     *  det gör i stället rundan som ersätter den. */
+    onPaintRoundDone?: () => void;
     /** Styr stads-bildspelet: sätts till ett nytt objekt (ny nyckel) för varje
      *  stad → kartan flyger dit smidigt. null = inget flyg pågår. */
     cityTourTarget?: { lat: number; lng: number; zoom: number; key: number; cityName: string } | null;
     /** Fyrar när användaren aktivt interagerar med kartan (drag, zoom, klick) —
      *  sidan stoppar bildspelet vid det. */
     onUserInteraction?: () => void;
+    /** Fyrar när ett stadshopps övergångsöverlägg tonat bort HELT — staden är
+     *  synlig och brickorna kring centrum tända. Nyckeln = cityTourTarget.key
+     *  för hoppet som landade, så sidan kan skilja "framme i den här staden"
+     *  från ett tidigare hopp. Landningspulsen (dag→vecka-blinken) väntar in
+     *  den — den får inte gå av bakom överlägget. */
+    onCityLandingDone?: (key: number) => void;
     /** Långsam ambient resa söder→norr på oförändrad zoom medan välkomstrutan
      *  är uppe (Josef 11/8, 12/8): eventmängden över hela landet ska hinna ses
      *  innan stadshoppet. false = ingen resa (avbryter en pågående). */
@@ -457,8 +479,10 @@ export default function V2Map({
     starredEventIds = new Set(),
     onFirstPaint,
     onPaintedChange,
+    onPaintRoundDone,
     cityTourTarget = null,
     onUserInteraction,
+    onCityLandingDone,
     introGlide = false,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -1065,7 +1089,20 @@ export default function V2Map({
     // proppen som dep. firstPaintFiredRef = fyra EN gång per sidladdning.
     const onFirstPaintRef = useRef(onFirstPaint);
     onFirstPaintRef.current = onFirstPaint;
+    const onPaintRoundDoneRef = useRef(onPaintRoundDone);
+    onPaintRoundDoneRef.current = onPaintRoundDone;
+    // Samma ref-spegling för landningskvittot: stadshopp-effekten körs per
+    // cityTourTarget och ska inte behöva callbacken som dep.
+    const onCityLandingDoneRef = useRef(onCityLandingDone);
+    onCityLandingDoneRef.current = onCityLandingDone;
     const firstPaintFiredRef = useRef(false);
+    // Reveal-avstämningen (reconcileRevealWithData, deklarerad långt nedan)
+    // via ref + uppskovsflagga: pågår en push när plainData byts väntar
+    // avstämningen på målat-kvittot i beginPaintRound — körs den direkt
+    // släcks gamla brickor ~1 s innan den nya datan ens nått källan (det
+    // döda fönstret vid dag/vecka-byten, 31/8).
+    const reconcileRevealRef = useRef<() => void>(() => {});
+    const reconcileAfterPaintRef = useRef(false);
     // Antal features som FAKTISKT pushats till källan (nollställs när källan
     // återskapas, t.ex. vid stilbyte) — skiljer "initial stor påfyllnad" (streamas
     // pö om pö) från små uppdateringar (en enda setData).
@@ -1220,19 +1257,35 @@ export default function V2Map({
     const beginPaintRound = useCallback((map: maplibregl.Map): (() => void) => {
         const prev = paintRoundRef.current;
         if (prev) { prev.canceled = true; prev.detach?.(); }
-        if (paintLatchRef.current) { paintRoundRef.current = null; return () => {}; }
+        // Efter latchen (pillen släckt för gott) drivs rundan BARA för målat-
+        // kvittot onPaintRoundDone — pill-bokföringen (pendingPaintRef/
+        // hasPaintedOnceRef/paintDoneNonce) rörs inte, så latch-effekten och
+        // pillen beter sig exakt som innan kvittot fanns. (Tidigare kort-
+        // slöts hela rundan här; då fanns ingen signal alls för när ett
+        // dag→vecka-byte faktiskt målats.)
+        const latched = paintLatchRef.current;
         const round: { canceled: boolean; detach?: () => void } = { canceled: false };
         paintRoundRef.current = round;
-        pendingPaintRef.current = 1;
+        if (!latched) pendingPaintRef.current = 1;
         return () => {
             if (round.canceled) return;
             const finish = () => {
                 if (round.canceled) return;
                 round.canceled = true;
                 round.detach?.();
-                pendingPaintRef.current = 0;
-                hasPaintedOnceRef.current = true;
-                setPaintDoneNonce(n => n + 1);
+                if (!latched) {
+                    pendingPaintRef.current = 0;
+                    hasPaintedOnceRef.current = true;
+                    setPaintDoneNonce(n => n + 1);
+                }
+                // Uppskjuten reveal-avstämning (se sync-effekten): nu är den
+                // nya datan i källan — FÖRE kvittot, så landningspulsens
+                // hålltid börjar med brickorna redan tända.
+                if (reconcileAfterPaintRef.current) {
+                    reconcileAfterPaintRef.current = false;
+                    reconcileRevealRef.current();
+                }
+                onPaintRoundDoneRef.current?.();
             };
             const onData = (e: maplibregl.MapSourceDataEvent) => {
                 if (e.sourceId === 'plain-events' && e.isSourceLoaded) map.once('render', finish);
@@ -1294,6 +1347,14 @@ export default function V2Map({
             pendingPaintRef.current = 0;
             setData(target);
             setPaintDoneNonce(n => n + 1);
+            // Tom push = "klar" direkt — även kvittot och en ev. uppskjuten
+            // avstämning ska köras (en väntande lyssnare får aldrig hänga på
+            // en runda som inte kommer).
+            if (reconcileAfterPaintRef.current) {
+                reconcileAfterPaintRef.current = false;
+                reconcileRevealRef.current();
+            }
+            onPaintRoundDoneRef.current?.();
             return;
         }
         const arm = beginPaintRound(map);
@@ -2076,8 +2137,8 @@ export default function V2Map({
     // Håll reveal-systemet i synk med datan: rensa bort nycklar som inte längre
     // finns (inkl. MapLibres interna feature-state, så en återanvänd nyckel börjar
     // dold) och välj om seed via recomputeRevealSeed.
-    useEffect(() => {
-        const present = new Set(plainData.features.map(f => f.properties.key));
+    const reconcileRevealWithData = useCallback(() => {
+        const present = new Set(plainFeaturesRef.current.map(f => f.properties.key));
         const map = mapRef.current;
         const hasLayer = !!(map && layerExists(map, 'plain-events'));
         const drop = (k: string) => { if (hasLayer) { try { map!.removeFeatureState({ source: 'plain-events', id: k }); } catch { /* */ } } };
@@ -2090,7 +2151,48 @@ export default function V2Map({
         for (const k of [...revealStickyRef.current]) if (!k.startsWith('wish:') && !groupsRef.current.has(k)) revealStickyRef.current.delete(k);
         for (const k of [...revealWrittenRef.current.keys()]) if (!present.has(k)) { revealWrittenRef.current.delete(k); drop(k); }
         recomputeRevealSeedRef.current();
-    }, [plainData]);
+    }, []);
+    reconcileRevealRef.current = reconcileRevealWithData;
+    // TAJMINGEN ÄR HELA POÄNGEN (31/8, "rester vid dag/vecka-byte"): körs
+    // avstämningen direkt när plainData byts släcker den gamla seedens brickor
+    // och tänder NYA nycklar — men källan får sin nya data först när bak-
+    // ningen är klar (~1 s för en hel ny period). Resultatet var ett dött
+    // fönster där ALLT stod som nakna prickar, och etikettspegeln visade
+    // kategorinamn utan brickor. Pågår en push (bakning/stream i flykt, eller
+    // räknaren ur fas med målet) väntar avstämningen därför på målat-kvittot
+    // i beginPaintRound — nycklar som finns i BÅDA perioderna behåller då sin
+    // feature-state genom hela setData:n och deras brickor blinkar aldrig.
+    useEffect(() => {
+        const inFlight = streamCleanupRef.current != null
+            || pushedCountRef.current !== plainFeaturesRef.current.length;
+        if (inFlight) {
+            reconcileAfterPaintRef.current = true;
+            // FÖRTÄNDNING (31/8, Josef: "det laggar så man knappt fattar att
+            // dagen bytt"): skriv reveal-state för de inkommande 50 närmsta
+            // REDAN NU, medan bakningen pågår — feature-state per nyckel
+            // överlever setData, så de nya brickorna lyser i SAMMA bildruta
+            // som datan landar (ingen prickar-först-mellanfas). TYST: ingen
+            // etikettsync (en etikett vars bricka inte finns i källan än är
+            // exakt "bara kategorierna syns"-buggen). Nycklarna läggs som
+            // UNION i seedet — annars släcker nästa pump-varv antingen för-
+            // tändningen (inte i gamla seedet) eller de gamla brickorna
+            // (inte i nya). Unionen är ~50–100 tända en knapp sekund, så
+            // reportRevealCounts >80-varning kan blinka förbi i konsolen —
+            // avstämningen i paint-finish krymper till de riktiga 50.
+            // Under intron gäller nål-läget — inget att förtända.
+            const map = mapRef.current;
+            if (map && !introActiveRef.current && layerExists(map, 'plain-events')) {
+                const c = map.getCenter();
+                for (const k of nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT)) {
+                    try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
+                    revealWrittenRef.current.set(k, 1);
+                    revealSeedRef.current.add(k);
+                }
+            }
+            return;
+        }
+        reconcileRevealWithData();
+    }, [plainData, reconcileRevealWithData, nearestKeysTo]);
 
     // Tvinga fram det VALDA eventets GL-bricka oavsett var den ligger (även när
     // den inte är bland de N närmaste senaste tappet, t.ex. efter Nästa till ett
@@ -3418,6 +3520,9 @@ export default function V2Map({
                 setOverlayVisible(false);
                 setTimeout(() => {
                     setIsTransitioning(false);
+                    // Först NU är staden faktiskt synlig — kvittera landningen
+                    // uppåt (landningspulsen på sidan väntar på det här).
+                    onCityLandingDoneRef.current?.(cityTourTarget.key);
                 }, 400); // matchar CSS transition duration (300-400ms)
             };
 

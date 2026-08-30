@@ -163,14 +163,19 @@ const CITY_NAME_MAX_KM = 60;
 // WEEK_VIEW_MIN_ZOOM (9) — annars slår zoom-vakten av veckoläget direkt och
 // blinket blir en no-op.
 const TOUR_ZOOM = 10;
-// Landningspulsen (se effekten i komponenten): hur länge efter landningen
-// veckan visas, och hur länge den står kvar innan vi går tillbaka till dagen.
-// Fördröjningen ska räcka för att kameran ska ha landat och stadsöverlägget
-// tonat bort — annars pulsar den bakom en heltäckande fade. Hålltiden ska
-// räcka för att hinna se att kartan fylls på, men inte kännas som ett läge man
-// fastnat i.
+// Landningspulsen (se STEG 1–3 i komponenten): andhämtningen efter att allt
+// är armerat (dagsvyn ska hinna ses färdig innan veckan visas), och hålltiden
+// veckan står synlig. Hålltiden räknas från MÅLAT-KVITTOT (onPaintRoundDone:
+// veckans markörer står faktiskt på skärmen) — inte från växlingen: bakningen
+// + utritningen av en hel ny period åt annars upp hälften av visningstiden
+// (Josef 30/8: "annars hinner de ändå inte visas"; höjd 2,2 s → 3,2 s samma
+// vända).
 const TOUR_PULSE_DELAY_MS = 1400;
-const TOUR_PULSE_HOLD_MS = 2200;
+const TOUR_PULSE_HOLD_MS = 3200;
+// Säkerhetsnät om målat-kvittot uteblir — t.ex. när veckan är identisk med
+// dagen (inget nytt att visa: pushen kortsluts av samePlainFeatures och ingen
+// runda startas). Veckoläget får ändå bara stå en begränsad stund.
+const TOUR_PULSE_PAINT_FALLBACK_MS = 4500;
 // Under den här zoomnivån döljs vägskyltarna. Utzoomat ligger grannstäderna
 // redan i vyn — skyltarna skulle bara peka på det man ser, och en 150 px platta
 // täcker då ett halvt landskap.
@@ -588,6 +593,12 @@ export default function HomePage() {
     const tourCityIndexRef = useRef(0);
     const [cityTourTarget, setCityTourTarget] = useState<{ lat: number; lng: number; zoom: number; key: number; cityName: string } | null>(null);
     const tourKeyRef = useRef(0); // unik nyckel per hopp-anrop
+    // Landningskvittot från V2Map (onCityLandingDone): nyckeln för det stads-
+    // hopp vars övergångsöverlägg tonat bort HELT. Jämförs mot
+    // cityTourTarget.key — landningspulsen ska vänta in just DEN stadens
+    // landning, inte nöja sig med ett gammalt hopps kvitto.
+    const [landedTourKey, setLandedTourKey] = useState<number | null>(null);
+    const handleCityLandingDone = useCallback((key: number) => setLandedTourKey(key), []);
     // Läses av effekter som inte ska störa (eller störas av) bildspelet.
     const tourPlayingRef = useRef(tourPlaying);
     tourPlayingRef.current = tourPlaying;
@@ -666,20 +677,79 @@ export default function HomePage() {
     // handleToggleTourRange nedan behöver den, medan själva värdet räknas ut
     // långt senare i filen (det beror på mapZoom).
     const weekUnlockedRef = useRef(false);
+    // STEG 1 — BEREDSKAPSVAKTEN (Josef 30/8, andra varvet: "det är först när
+    // markörerna är helt klara den ska växla — inte tidigare"). Pulsen armeras
+    // för stadens nonce först när HELA kedjan är avklarad samtidigt:
+    //   1. välkomstrutan nedklickad (welcomeDone),
+    //   2. stadshoppet framme och övergångsöverlägget borttonat (landedTourKey
+    //      === cityTourTarget.key — kvittot från V2Map:s onCityLandingDone),
+    //   3. dagens markörer FÄRDIGMÅLADE (eventsSettled && mapPainted — exakt
+    //      samma "kartan är färdig"-mått som tom-prompten använder).
+    // Armeringen är en EGEN effekt med egen state i stället för villkor i
+    // puls-stegen nedan, och det är ingen stilfråga: villkoren kan röra sig
+    // efter armeringen (mapPainted kan återöppnas av hang-guard-vägen,
+    // cityTourTarget byts av nästa hopp) — som deps i timer-effekterna hade
+    // varje sådan rörelse rivit en pågående timer mitt i pulsen och kunnat
+    // lämna kartan fast i veckovyn. Armerad nonce sätts till samma värde vid
+    // varje senare omkörning (no-op) och backas aldrig — per stad armeras
+    // exakt en gång.
+    const [pulseArmedNonce, setPulseArmedNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
+        if (!welcomeDone || !eventsSettled || !mapPainted) return;
+        if (!cityTourTarget || landedTourKey !== cityTourTarget.key) return;
+        setPulseArmedNonce(n => (n === tourCycleNonce ? n : tourCycleNonce));
+    }, [tourPlaying, pulseSuppressed, welcomeDone, eventsSettled, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
+
+    // Målat-kvittot från V2Map (onPaintRoundDone): bumpas varje gång en
+    // push-runda faktiskt målats klart på skärmen. Ref-spegeln låter timers
+    // läsa av "nuläget" utan att bli deps.
+    const [paintRoundNonce, setPaintRoundNonce] = useState(0);
+    const paintRoundNonceRef = useRef(0);
+    paintRoundNonceRef.current = paintRoundNonce;
+    const handlePaintRoundDone = useCallback(() => setPaintRoundNonce(n => n + 1), []);
+
+    // STEG 2 — VISNINGEN. Kör bara när steg 1 armerat den nuvarande stadens
+    // nonce; ett nytt stadshopp bumpar noncen och pulsen väntar då tyst på
+    // nästa armering. Andhämtningen: dagsvyn får stå färdig en stund innan
+    // veckan visas — växlar den i samma ögonblick som sista markören målats
+    // läses den som ett fel, inte som en hint. Själva växlingen bokför
+    // paintRoundNonce-nuläget: nästa kvitto EFTER den tillhör veckopushen.
+    const pulseBackRef = useRef(1);
+    const [weekShown, setWeekShown] = useState<{ nonce: number; paintBase: number } | null>(null);
+    useEffect(() => {
+        if (!tourPlaying || pulseSuppressed) return;
+        if (pulseArmedNonce !== tourCycleNonce) return;
         // Står man redan på veckan finns inget att visa — och vi ska definitivt
         // inte kasta ner en till dagsvyn (man behåller den fas man valt).
         const back = dayRangeDaysRef.current;
         if (back >= WEEK_RANGE_MIN_DAYS) return;
-        // Först efter att kameran landat (hoppet ligger ~300 ms bakom
-        // stadsöverlägget) — annars pulsar den bakom en heltäckande fade.
-        const show = setTimeout(() => setDayRangeDays(7), TOUR_PULSE_DELAY_MS);
-        const hide = setTimeout(() => setDayRangeDays(back), TOUR_PULSE_DELAY_MS + TOUR_PULSE_HOLD_MS);
-        // Avbryter man (rör kartan, eller väljer period själv) rivs timrarna →
+        const show = setTimeout(() => {
+            pulseBackRef.current = back;
+            setWeekShown({ nonce: tourCycleNonce, paintBase: paintRoundNonceRef.current });
+            setDayRangeDays(7);
+        }, TOUR_PULSE_DELAY_MS);
+        // Avbryter man (rör kartan, eller väljer period själv) rivs timern →
         // man blir kvar i exakt den fas som visades i det ögonblicket.
-        return () => { clearTimeout(show); clearTimeout(hide); };
-    }, [tourPlaying, tourCycleNonce, pulseSuppressed]);
+        return () => clearTimeout(show);
+    }, [tourPlaying, tourCycleNonce, pulseSuppressed, pulseArmedNonce]);
+
+    // STEG 3 — HÅLL OCH GÅ TILLBAKA. Veckan är pushad; kartan bakar + målar
+    // den i bakgrunden medan dagens markörer står kvar. Först när målat-
+    // kvittot kommit (veckans markörer PÅ skärmen) börjar hålltiden räknas —
+    // fram till dess löper bara säkerhetsnätet. weekPulsePainted är en boolean
+    // med flit: den flippar false→true EN gång, så senare kvitton (poll,
+    // cards-merge) inte startar om hålltimern och förlänger veckovisningen.
+    const weekPulsePainted = weekShown != null && paintRoundNonce > weekShown.paintBase;
+    useEffect(() => {
+        if (!tourPlaying || pulseSuppressed) return;
+        if (!weekShown || weekShown.nonce !== tourCycleNonce) return;
+        const hide = setTimeout(() => {
+            setWeekShown(null);
+            setDayRangeDays(pulseBackRef.current);
+        }, weekPulsePainted ? TOUR_PULSE_HOLD_MS : TOUR_PULSE_PAINT_FALLBACK_MS);
+        return () => clearTimeout(hide);
+    }, [tourPlaying, tourCycleNonce, pulseSuppressed, weekShown, weekPulsePainted]);
 
     /** Ny stad → kör pulsen igen, och glöm ett tidigare eget periodval. */
     const startCityPulse = useCallback(() => {
@@ -719,6 +789,9 @@ export default function HomePage() {
      * Som stadsrutans egen växel tystar den landningspulsen (ett eget val ska
      * inte kastas om ett par sekunder senare) och stoppar INTE bildspelet.
      */
+    // (Vecko-hinten vid dagsteg — ⇄-snurr + halv guld på båda periodraderna —
+    // byggdes och REVS SAMMA DAG 30/8, Josef: "såg bara skumt ut". Dagsteget
+    // ska inte blinka något alls.)
     const handleTourDayStep = useCallback((delta: number) => {
         setPulseSuppressed(true);
         startTransition(() => setDayOffset(o => Math.max(0, o + delta)));
@@ -2789,6 +2862,9 @@ export default function HomePage() {
                 onFirstPaint={linkEventService.releaseHeavyLayers}
                 // Prickarna utritade → tom-läget får äntligen uttala sig.
                 onPaintedChange={setMapPainted}
+                // Målat-kvitto per push-runda → landningspulsens hålltid
+                // startar när veckans markörer faktiskt står på skärmen.
+                onPaintRoundDone={handlePaintRoundDone}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
                 daySwitchNonce={daySwitchNonce}
@@ -2833,6 +2909,9 @@ export default function HomePage() {
                 onSelectWish={handleSelectWish}
                 wishCardOpen={!!selectedWish}
                 cityTourTarget={cityTourTarget}
+                // Stadshoppets överlägg helt borttonat → landningspulsens
+                // beredskapsvakt får sitt kvitto (steg 1 av pulsen).
+                onCityLandingDone={handleCityLandingDone}
                 // Långsam resa söder→norr på samma höjd medan välkomstrutan är
                 // uppe — landningen hålls av gaten i tour-starten så hela
                 // landets eventmängd hinner ses. Kameran äger sig själv under
