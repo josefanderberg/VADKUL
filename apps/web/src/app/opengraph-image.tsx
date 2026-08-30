@@ -135,9 +135,11 @@ export default async function OpengraphImage() {
                         JUST NU I HELA SVERIGE
                     </div>
                     {/* Pillsen bär guld-CTA:ns look (city-cta): blå gradient +
-                        guldkant + guldglöd, med ljussvepet FRUSET mitt i — samma
-                        skewX(-18°)-stråk som .welcome-cta/.city-cta::before, på
-                        olika läge i de två pillsen så det läses som ett svep. */}
+                        guldkant + guldglöd. Knapparnas animerade ljussvep funkar
+                        inte fruset i stillbild (två identiska stråk lästes som
+                        kopior — ägarfeedback 31/8); i stället en glasig topp-
+                        glans + mjuk specular vid vänsterkurvan, så de skiner som
+                        blanka knappar. */}
                     <div
                         style={{
                             marginTop: 16,
@@ -153,7 +155,8 @@ export default async function OpengraphImage() {
                             boxShadow: '0 0 30px rgba(254, 204, 2, 0.4), 0 10px 30px rgba(2, 30, 55, 0.55)',
                         }}
                     >
-                        <div style={{ position: 'absolute', top: -12, bottom: -12, left: '30%', width: 110, background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))', transform: 'skewX(-18deg)', display: 'flex' }} />
+                        <div style={{ position: 'absolute', top: 5, left: 18, right: 18, height: '44%', borderRadius: 999, background: 'linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 65%, rgba(255,255,255,0) 100%)', display: 'flex' }} />
+                        <div style={{ position: 'absolute', top: 9, left: 12, width: 34, height: 16, borderRadius: 999, background: 'rgba(255,255,255,0.45)', transform: 'rotate(-24deg)', display: 'flex' }} />
                         <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>1 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>event idag</div>
                     </div>
@@ -172,7 +175,8 @@ export default async function OpengraphImage() {
                             boxShadow: '0 0 30px rgba(254, 204, 2, 0.4), 0 10px 30px rgba(2, 30, 55, 0.55)',
                         }}
                     >
-                        <div style={{ position: 'absolute', top: -12, bottom: -12, left: '62%', width: 110, background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))', transform: 'skewX(-18deg)', display: 'flex' }} />
+                        <div style={{ position: 'absolute', top: 5, left: 18, right: 18, height: '44%', borderRadius: 999, background: 'linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 65%, rgba(255,255,255,0) 100%)', display: 'flex' }} />
+                        <div style={{ position: 'absolute', top: 9, left: 12, width: 34, height: 16, borderRadius: 999, background: 'rgba(255,255,255,0.45)', transform: 'rotate(-24deg)', display: 'flex' }} />
                         <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#FECC02' }}>10 000+</div>
                         <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>i veckan</div>
                     </div>
