@@ -104,75 +104,54 @@ export default async function OpengraphImage() {
                         Hitta events och saker att göra nära dig
                     </div>
 
-                    {/* Vägskylts-stacken: gul idag-rad + mörk vecko-rad + vit totalpill
-                        (samma färgspråk som kartans stadsskyltar). */}
+                    {/* Siffrorna är bildens huvudnummer (ägarfeedback 31/8: de ska
+                        poppa, Sverige nämnas, övrig text hållas nere). Kicker-raden
+                        bär Sverige; sifferdelen är dubbelt så stor som orden.
+                        Vägskyltarnas färgspråk: gul idag-rad + mörk vecko-rad. */}
                     <div
                         style={{
-                            marginTop: 34,
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: '#ffc53d',
-                            color: '#1f2937',
-                            fontSize: 34,
-                            fontWeight: 600,
-                            padding: '13px 30px',
-                            borderRadius: 16,
-                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.4)',
-                        }}
-                    >
-                        1 000+ event bara idag
-                    </div>
-                    <div
-                        style={{
-                            marginTop: 14,
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: 'rgba(37, 42, 51, 0.94)',
-                            color: '#ffffff',
-                            fontSize: 34,
-                            fontWeight: 600,
-                            padding: '13px 30px',
-                            borderRadius: 16,
-                            boxShadow: '0 8px 24px rgba(2, 30, 55, 0.4)',
-                        }}
-                    >
-                        10 000+ den kommande veckan
-                    </div>
-                    <div
-                        style={{
-                            marginTop: 18,
+                            marginTop: 30,
                             display: 'flex',
                             alignItems: 'center',
                             color: '#eaf6ff',
-                            fontSize: 25,
+                            fontSize: 24,
                             fontWeight: 600,
+                            letterSpacing: 4,
                             textShadow: '0 2px 10px rgba(2, 30, 55, 0.75)',
                         }}
                     >
-                        Gratis att utforska – inget konto behövs
+                        JUST NU I HELA SVERIGE
                     </div>
-                </div>
-
-                {/* Etiketten under gröna brickan (inbakad på ~(906,338)) —
-                    positionen är matchad mot compose-skriptets placering. */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 386,
-                        left: 906,
-                        transform: 'translateX(-50%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        background: '#ffffff',
-                        color: '#047857',
-                        fontSize: 21,
-                        fontWeight: 600,
-                        padding: '6px 16px',
-                        borderRadius: 999,
-                        boxShadow: '0 4px 14px rgba(2, 30, 55, 0.35)',
-                    }}
-                >
-                    Skapat på VADKUL
+                    <div
+                        style={{
+                            marginTop: 16,
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            background: '#ffc53d',
+                            color: '#1f2937',
+                            padding: '10px 32px 16px',
+                            borderRadius: 20,
+                            boxShadow: '0 10px 30px rgba(2, 30, 55, 0.5)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600 }}>1 000+</div>
+                        <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>event idag</div>
+                    </div>
+                    <div
+                        style={{
+                            marginTop: 16,
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            background: 'rgba(37, 42, 51, 0.95)',
+                            color: '#ffffff',
+                            padding: '10px 32px 16px',
+                            borderRadius: 20,
+                            boxShadow: '0 10px 30px rgba(2, 30, 55, 0.5)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', fontSize: 66, fontWeight: 600, color: '#ffc53d' }}>10 000+</div>
+                        <div style={{ display: 'flex', fontSize: 33, fontWeight: 600, marginLeft: 14 }}>i veckan</div>
+                    </div>
                 </div>
             </div>
         ),
