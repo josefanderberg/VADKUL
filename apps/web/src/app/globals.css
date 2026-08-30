@@ -347,19 +347,6 @@
   will-change: transform;
 }
 
-/* Fokus från kart-heron: raden man valde i kart-popupen blinkar till när
-   listan scrollat fram den (DayFilteredList lägger på/tar bort klassen). */
-@keyframes event-row-flash {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 106, 167, 0); }
-  30%      { box-shadow: 0 0 0 4px rgba(0, 106, 167, 0.45); }
-}
-.event-row-flash {
-  animation: event-row-flash 1.2s ease-in-out 2;
-}
-@media (prefers-reduced-motion: reduce) {
-  .event-row-flash { animation: none; }
-}
-
 /* Exit: kortet zoomar "ner i kartan" medan backdropen tonar bort.
    Längden styrs av --welcome-exit-ms som komponenten sätter (håller JS-timeouten
    och animationen i synk från ETT ställe: EXIT_MS i WelcomeOverlay.tsx). */

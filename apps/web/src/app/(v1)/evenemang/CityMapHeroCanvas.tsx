@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
 import {
     THEMEPARK_LAND_COLOR_NEAR,
 } from '@/components/v2/v2MapBaseStyles';
@@ -15,10 +14,12 @@ import { useDayFilter } from './dayFilter';
 // innan kartan laddat och "stämde inte överens" med de levande markörerna som
 // tog över, och panorering i en liten hero-yta tillförde inget. Nu gäller:
 // KARTAN FÖRST, EVENTEN SEN — inga brickor förrän GL-kartan är uppe — och
-// inga kartgester alls: klick på kartbotten (miss på en bricka) öppnar STORA
-// kartan centrerad på staden (bigMapHref). Dagchipsen delar filter med
-// daglistan (dayFilter) och brick-klick öppnar popupen vars rader scrollar
-// till eventet i listan (requestFocus), precis som förr.
+// inga kartgester alls. ALLA klick leder till STORA kartan (Josef 30/8 —
+// sidorna ska mata kartan, inte hålla kvar besökaren i en miniatyr):
+// kartbotten öppnar den centrerad på staden (bigMapHref) och brick-klick
+// öppnar den med eventet uppslaget (?event= via href). Platspopupen som
+// tidigare öppnades i heron är BORTTAGEN — lägg inte tillbaka den.
+// Dagchipsen delar fortfarande filter med daglistan (dayFilter).
 //
 // Lagren (i hero-containern i CityMapHero):
 //   1. Serverrenderade Carto-rasterkakel — reservväg om GL fallerar.
@@ -46,9 +47,8 @@ const MAX_LIVE = 140;
 
 /** Ett event som kartan kan visa levande — byggt på servern i CityMapHero.
  *  `hex` i stället för färdig gradient-CSS: gradienten byggs här (sparar
- *  ~30 kB HTML på stora städer). `day` = 'YYYY-MM-DD' (svensk tid),
- *  `listed` = finns bland daglistans 14 listade dagar (annars länkar popupen
- *  till stora kartan via `href`). */
+ *  ~30 kB HTML på stora städer). `day` = 'YYYY-MM-DD' (svensk tid). `href`
+ *  = stora kartan med eventet uppslaget (?event=) — dit går brick-klicket. */
 export type HeroLiveEvent = {
     id: string;
     href: string;
@@ -56,13 +56,9 @@ export type HeroLiveEvent = {
     lng: number;
     emoji: string;
     hex: string | null;
-    title: string;
-    place: string;
-    clock: string | null;
     t: number;
     hour: number | null;
     day: string;
-    listed: boolean;
 };
 
 /** Samma "har varit"-trappa som daglistan och stora kartan: klockslag = 1 h
@@ -105,11 +101,6 @@ function buildBrickaEl(e: HeroLiveEvent, count: number, delayMs: number): HTMLDi
     return root;
 }
 
-const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const popupDayFmt = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Stockholm', weekday: 'short', day: 'numeric', month: 'numeric',
-});
-
 type MapLibreMap = import('maplibre-gl').Map;
 type MapLibreMarker = import('maplibre-gl').Marker;
 
@@ -121,7 +112,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
     /** Stadens kommande event, tidssorterade (byggda i CityMapHero). */
     markers: HeroLiveEvent[];
     /** Stora kartan centrerad på staden (cityMapHref) — dit går klick på
-     *  kartbotten när ingen popup är öppen. */
+     *  kartbotten. */
     bigMapHref: string;
     /** De statiska SSR-brickorna — visas bara i GL-fallerade reservläget. */
     children?: ReactNode;
@@ -132,20 +123,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
     // Voyager-kaklen under. Tills dess täcker landfärgs-plattan dem, så heron
     // ser ut som kartan redan från server-HTML:en.
     const [failed, setFailed] = useState(false);
-    // Öppen platspopup: eventen på den klickade koordinaten. `key` är
-    // filternyckeln popupen öppnades under — byter filtret (chips här eller i
-    // listans filterrad) matchar nyckeln inte längre och popupen försvinner i
-    // renderingen, utan någon setState-i-effekt.
-    const [popup, setPopup] = useState<{ events: HeroLiveEvent[]; key: string } | null>(null);
-
-    const { sel, setSel, hours, requestFocus } = useDayFilter();
-    const filterKey = JSON.stringify([sel, hours]);
-
-    // Kartklick-lyssnaren binds en gång (utanför React) men måste veta om en
-    // popup är öppen JUST NU: öppen popup → klicket stänger den; annars →
-    // vidare till stora kartan. Spegel-ref i stället för stale closure.
-    const popupOpenRef = useRef(false);
-    useEffect(() => { popupOpenRef.current = popup !== null; });
+    const { sel, setSel, hours } = useDayFilter();
 
     const mapRef = useRef<MapLibreMap | null>(null);
     const markerCtorRef = useRef<(new (o: object) => MapLibreMarker) | null>(null);
@@ -189,9 +167,12 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
             if (placed.some(q => (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < MIN_DIST_PX ** 2)) continue;
             placed.push(p);
             const el = buildBrickaEl(rep, group.length, Math.min(i * 45, 500));
+            // Rakt till stora kartan med gruppens tidigaste event uppslaget —
+            // ligger fler event på koordinaten har stora kartan sin egen
+            // "3/7"-pager på kortet.
             el.addEventListener('click', ev => {
                 ev.stopPropagation();
-                setPopup({ events: group, key: filterKey });
+                window.location.assign(rep.href);
             });
             const mk = new Marker({ element: el }).setLngLat([rep.lng, rep.lat]).addTo(map);
             liveMarkersRef.current.push(mk);
@@ -227,12 +208,11 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
                 mapRef.current = m;
                 markerCtorRef.current = Marker as unknown as new (o: object) => MapLibreMarker;
                 m.on('load', () => { if (!cancelled) setReady(true); });
-                // Klick på kartbotten (inte på en markör): öppen popup stängs;
-                // annars öppnas STORA kartan över staden — "missar man en
-                // bricka ska man se eventen på riktiga kartan" (Josef 24/8).
+                // Klick på kartbotten (inte på en markör) öppnar STORA kartan
+                // över staden — "missar man en bricka ska man se eventen på
+                // riktiga kartan" (Josef 24/8).
                 m.on('click', () => {
                     if (cancelled) return;
-                    if (popupOpenRef.current) { setPopup(null); return; }
                     window.location.assign(bigMapHref);
                 });
             } catch {
@@ -265,8 +245,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
         };
     }, [lat, lng, zoom, bigMapHref]);
 
-    // Filterbyte (eller GL-klart) → bygg om markörerna. Ren extern synk —
-    // en popup för ett inaktuellt urval döljs av filternyckeln i renderingen.
+    // Filterbyte (eller GL-klart) → bygg om markörerna. Ren extern synk.
     useEffect(() => {
         if (!ready) return;
         rebuild();
@@ -328,60 +307,6 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
                     );
                 })}
             </div>
-
-            {/* Platspopup: eventen på den klickade brickans koordinat. Rader
-                för listade event scrollar till raden i daglistan (fokus-
-                flödet); event bortom listhorisonten öppnar stora kartan. */}
-            {popup && popup.key === filterKey && (
-                <div className="absolute inset-x-2 bottom-2 z-40 rounded-xl bg-white/95 backdrop-blur shadow-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-                    <div className="flex items-center justify-between gap-2 pl-3 pr-1.5 pt-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 truncate">
-                            {popup.events[0].place || `${popup.events.length} event`}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => setPopup(null)}
-                            aria-label="Stäng"
-                            className="shrink-0 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                        >
-                            <X size={14} />
-                        </button>
-                    </div>
-                    <ul className="max-h-[170px] sm:max-h-[200px] overflow-y-auto px-1.5 pb-1.5">
-                        {popup.events.map(e => {
-                            const meta = `${capFirst(popupDayFmt.format(new Date(e.t)))}${e.clock ? ` · kl ${e.clock}` : ''}`;
-                            const inner = (
-                                <>
-                                    <span className="shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-base leading-none" aria-hidden>
-                                        {e.emoji || '📍'}
-                                    </span>
-                                    <span className="min-w-0 flex-1 text-left">
-                                        <span className="block text-xs font-bold text-slate-900 truncate">{e.title}</span>
-                                        <span className="block text-[10px] font-bold text-slate-500 truncate">{meta}</span>
-                                    </span>
-                                    <span aria-hidden className="shrink-0 text-slate-300 font-black">›</span>
-                                </>
-                            );
-                            const cls = 'w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors';
-                            return (
-                                <li key={e.id}>
-                                    {e.listed ? (
-                                        <button
-                                            type="button"
-                                            className={cls}
-                                            onClick={() => { requestFocus(e.id, e.day); setPopup(null); }}
-                                        >
-                                            {inner}
-                                        </button>
-                                    ) : (
-                                        <a href={e.href} className={cls}>{inner}</a>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </div>
-            )}
         </>
     );
 }

@@ -41,6 +41,8 @@ const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: fals
 //    dag monteras först när man scrollar nära listans slut (sentinel +
 //    scroll-lyssnare). Pre-mount renderas alla dagar (crawlbart); filterbyte
 //    nollställer avtäckningen.
+//  - BILDLÖSA KAPAS: max IMGLESS_SHOWN rader utan omslagsbild per dag, resten
+//    bakom en "Visa fler"-rad (Josef 30/8) — bildkorten ska bära listan.
 
 export type ListedEvent = {
     id: string;
@@ -82,6 +84,11 @@ export type ListedDay = {
 // — staten delas med kart-heron via DayFilterProvider.
 
 const HOUR_MS = 3_600_000;
+// Max antal BILDLÖSA rader som visas per dag — bildkorten gör listan visuellt
+// tilltalande, de kompakta raderna får inte dränka dem (Josef 30/8). Resten
+// ligger bakom en "Visa fler"-rad per dag. SSR:en renderar allt (crawlbart);
+// kapningen slår till först efter mount (nowTs), precis som dagfiltren.
+const IMGLESS_SHOWN = 3;
 // Samma nyckel som kartan — hjärtan här hamnar i kartans Sparat-panel.
 const SAVED_KEY = 'vadkul_saved_events';
 
@@ -237,7 +244,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li data-event-id={e.id} className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
+            <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
                 <Link href={e.href} className="block">
                     <div className="relative">
                         <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
@@ -267,7 +274,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
 
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
     return (
-        <li data-event-id={e.id} className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
+        <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
             <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3">
                 <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
                 <span className="min-w-0 flex-1">
@@ -304,7 +311,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
     // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
     // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours, focus, clearFocus } = useDayFilter();
+    const { sel, setSel, hours, setHours } = useDayFilter();
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
     // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).
@@ -318,6 +325,8 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     const [nowTs, setNowTs] = useState(0);
     // Dagar vars "har redan varit"-sektion är uppfälld.
     const [openPast, setOpenPast] = useState<Set<string>>(new Set());
+    // Dagar vars bildlösa svans är uppfälld — se IMGLESS_SHOWN.
+    const [openImgless, setOpenImgless] = useState<Set<string>>(new Set());
     // Dag-för-dag-avtäckning (se filhuvudet): antal dagar som renderats.
     // Gäller först efter mount (nowTs) — pre-mount renderas alla dagar.
     const [revealed, setRevealed] = useState(1);
@@ -333,6 +342,13 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
         // för att blockera tråden direkt efter hydreringen.
         startTransition(() => setNowTs(Date.now()));
     }, []);
+
+    const toggleImgless = (key: string) =>
+        setOpenImgless(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+        });
 
     const toggleSave = (id: string) => {
         // Gilla kräver konto (Josef 22/8) — samma regel som på kartan. Redan
@@ -386,33 +402,6 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
     // Filterbyte → börja om från första dagen i det nya urvalet.
     useEffect(() => { setRevealed(1); }, [sel, hours]);
-
-    // ── Fokus från kartan ─────────────────────────────────────────────────
-    // Kart-popupens klick har redan valt eventets dag (requestFocus i
-    // dayFilter.tsx) — här återstår att scrolla till raden och blinka den.
-    // Effekten är ren DOM-synk (ingen state) och körs varje render tills
-    // raden dykt upp (dagbytet är en transition och kan ta ett varv);
-    // noncen ser till att varje begäran bara hanteras en gång.
-    const handledFocusRef = useRef(0);
-    useEffect(() => {
-        if (!focus || handledFocusRef.current === focus.nonce) return;
-        const el = document.querySelector(`[data-event-id="${CSS.escape(focus.id)}"]`);
-        if (!el) return;
-        handledFocusRef.current = focus.nonce;
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('event-row-flash');
-        const t = window.setTimeout(() => {
-            el.classList.remove('event-row-flash');
-            // Var det fokuserade eventet ett passerat sådant hölls "har varit"
-            // uppe av derivatet nedan — persistera uppfällningen INNAN fokus
-            // släpps, annars slår sektionen igen mitt framför ögonen på en.
-            const day = days.find(d => d.key === focus.dayKey);
-            const ev = day?.events.find(e => e.id === focus.id);
-            if (ev && isPast(ev)) setOpenPast(prev => new Set(prev).add(focus.dayKey));
-            clearFocus();
-        }, 2600);
-        return () => clearTimeout(t);
-    });
 
     // Nästa dag monteras när sentineln ligger OVANFÖR laddlinjen (viewport-
     // botten + 700 px) — "ovanför" i stället för "inom" så att en snabb
@@ -550,11 +539,16 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
             <div className="mt-6 flex flex-col gap-10">
                 {renderDays.map((day, di) => {
-                    // Kart-fokus på ett redan-passerat event: fäll upp dagens
-                    // "har varit"-sektion automatiskt (deriverat — annars
-                    // finns raden inte i DOM:en när scrollen letar).
-                    const pastOpen = openPast.has(day.key)
-                        || (!!focus && focus.dayKey === day.key && day.past.some(e => e.id === focus.id));
+                    const pastOpen = openPast.has(day.key);
+                    // Bildsatta rader visas alltid; av de bildlösa visas max
+                    // IMGLESS_SHOWN tills dagens "Visa fler" fälls upp.
+                    // (Servern sorterar redan bild-först — splitten här gör
+                    // kapningen robust även om ordningen skulle ändras.)
+                    const withImg = day.upcoming.filter(e => !!e.coverImage);
+                    const imgless = day.upcoming.filter(e => !e.coverImage);
+                    const imglessOpen = openImgless.has(day.key);
+                    const shownImgless = (nowTs === 0 || imglessOpen) ? imgless : imgless.slice(0, IMGLESS_SHOWN);
+                    const imglessMore = imgless.length - IMGLESS_SHOWN;
                     // "Idag"/"Imorgon" är klockberoende → bara efter mount.
                     const rel = nowTs === 0 ? null : relativeDayLabel(day.key);
                     return (
@@ -605,9 +599,24 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                 {pastOpen && day.past.map(e => (
                                     <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
                                 ))}
-                                {day.upcoming.map(e => (
+                                {withImg.map(e => (
                                     <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
                                 ))}
+                                {shownImgless.map(e => (
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
+                                ))}
+                                {nowTs !== 0 && imglessMore > 0 && (
+                                    <li>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleImgless(day.key)}
+                                            aria-expanded={imglessOpen}
+                                            className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-xs font-black text-slate-500 hover:text-[#006AA7] hover:border-[#006AA7]/40 transition-colors"
+                                        >
+                                            {imglessOpen ? 'Visa färre ▴' : `Visa ${imglessMore} evenemang till ▾`}
+                                        </button>
+                                    </li>
+                                )}
                             </ul>
                         </section>
                     );
