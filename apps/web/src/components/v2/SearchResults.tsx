@@ -43,7 +43,11 @@ export default function SearchResults({ query, results, onPick, cities = [], onP
     const hasCities = cities.length > 0 && !!onPickCity;
 
     return (
-        <div className="absolute top-[4.6rem] right-4 left-4 sm:left-auto sm:w-[420px] z-[1040] pointer-events-auto">
+        // z-[1165]: samma lager som Sparat-/profilpanelen — ÖVER navbaren (1160),
+        // kategorikolumnen (1150), zoomknapparna (1149) och stadsrutans
+        // dag/vecka-väljare (1090). Låg tidigare på 1040 och hamnade då UNDER
+        // både knappkolumnerna och dagväljaren (Josef 31/8).
+        <div className="absolute top-[4.6rem] right-4 left-4 sm:left-auto sm:w-[420px] z-[1165] pointer-events-auto">
             <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[min(60vh,30rem)] animate-in fade-in slide-in-from-top-2 duration-200">
 
                 {/* Städer — egen sektion högst upp, alltid synlig (scrollar inte
