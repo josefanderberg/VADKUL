@@ -34,6 +34,11 @@ VADKUL hjälper folk att upptäcka vad som händer just nu. Enkel sökning, bra 
 - [ ] Autocomplete-sökning på alla events
 - [ ] Kartvy (redan klar ✅)
 - [ ] Snabb-modal / detaljsida när man klickar på ett event
+- [ ] VERIFIERA på mobil i prod: eventkortet ska gå att dra/scrolla även när
+      fingret börjar på en knapp (Anmäl/chatten/listan) — fixat 31/8
+      (`fe1f0c3`, pointer-capture på knappen själv + klick-svalning efter
+      drag). Rena klick och chattfältets textmarkering ska funka som vanligt.
+      **Ta bort den här raden så fort det är bekräftat klart.**
 
 ### 2. Event-scraping
 **Mål:** Fyll appen med lokalt innehåll automatiskt.
