@@ -17,7 +17,7 @@ import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
-import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight, ZoomIn } from 'lucide-react';
+import { X, ImagePlus, Building2, Info, ChevronLeft, ChevronRight, CalendarDays, ArrowLeftRight } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { familyIsOptIn } from '@/utils/familyFilter';
@@ -2735,25 +2735,16 @@ export default function HomePage() {
                 </span>
 
                 {/* 3. Tryckhänvisningen. Liten och lugn, men uttalad — den är
-                       enda stället som säger att rutan är en växel.
-                       Utzoomad är veckan zoom-gatad (weekUnlocked), men sedan
-                       31/8 är klicket inte dött: det zoomar in kartan till
-                       tröskeln åt en och växlar sedan (handleToggleTourRange) —
-                       raden säger därför att det händer. Står man redan på
-                       veckan går det alltid att gå tillbaka till dagen, så det
-                       är bara vägen TILL veckan som är gatad. */}
+                       enda stället som säger att rutan är en växel. SAMMA text
+                       i alla lägen (Josef 31/8: den låsta variantens "zoomar
+                       in till veckan" blev för bred) — och sedan auto-
+                       inzoomningen samma dag är klicket aldrig dött: utzoomad
+                       zoomar det in till tröskeln och växlar sedan
+                       (handleToggleTourRange), så "Tryck för att växla" är
+                       sant i båda lägena. */}
                 <span className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.14em] text-white/45">
-                    {tourRangeToggleLocked ? (
-                        <>
-                            <ZoomIn size={11} strokeWidth={3} className="shrink-0" />
-                            Tryck — zoomar in till veckan
-                        </>
-                    ) : (
-                        <>
-                            <ArrowLeftRight size={11} strokeWidth={3} className="shrink-0" />
-                            Tryck för att växla
-                        </>
-                    )}
+                    <ArrowLeftRight size={11} strokeWidth={3} className="shrink-0" />
+                    Tryck för att växla
                 </span>
             </button>
 
