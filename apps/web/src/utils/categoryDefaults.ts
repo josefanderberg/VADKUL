@@ -1,13 +1,12 @@
 /**
- * Standardläget för opt-in-källorna Svenska kyrkan + PRO (Josef 20/8).
+ * Standardläget för opt-in-källorna Svenska kyrkan + PRO.
  *
- * UTLOGGADE besökare får BÅDA förvalda — den som inte har någon profil att gå
- * på ska mötas av kartans fylligaste läge, inte av ett tomt Hudiksvall
- * (jfr tom-karta-diagnosen: opt-in-källorna var en av orsakerna).
+ * UTLOGGADE besökare får INGA förvalda (Josef 31/8, river 20/8-beslutet som
+ * förvalde båda): källorna bär väldigt många event och dränkte det övriga
+ * utbudet för förstagångsbesökaren. De är rena opt-in-kryss i kategorikolumnen.
  *
  * INLOGGADE medlemmar får dem bara vid **65 år eller äldre**. För alla andra
- * förblir de opt-in precis som förut: källorna bär väldigt många event och
- * skulle annars dränka det övriga utbudet för den som inte vill ha dem.
+ * förblir de opt-in: samma dränknings-skäl som för besökarna.
  *
  * VIKTIGT — att förvälja dem GÖMMER inget annat: page.tsx räknar bort
  * opt-in-nycklarna ur normal-valet (`selectedNormal`), så ett ikryssat PRO
@@ -23,7 +22,7 @@ export const SPECIAL_DEFAULT_KEYS = ['pro', 'svenskakyrkan'] as const;
 export function defaultSpecialCategories(
     opts: { loggedIn: boolean; age?: unknown },
 ): string[] {
-    if (!opts.loggedIn) return [...SPECIAL_DEFAULT_KEYS];
+    if (!opts.loggedIn) return [];
     const { age } = opts;
     if (typeof age === 'number' && Number.isFinite(age) && age >= 65) {
         return [...SPECIAL_DEFAULT_KEYS];

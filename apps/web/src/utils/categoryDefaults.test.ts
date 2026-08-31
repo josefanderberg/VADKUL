@@ -12,20 +12,18 @@ describe('nycklarna hänger ihop med SPECIAL_CATEGORIES', () => {
         }
     });
 
-    it('ALLA opt-in-källor är förvalda — tillkommer en ny måste den tas ställning till', () => {
+    it('ALLA opt-in-källor omfattas av 65+-defaulten — tillkommer en ny måste den tas ställning till', () => {
         expect([...SPECIAL_DEFAULT_KEYS].sort()).toEqual([...SPECIAL_CATEGORY_KEYS].sort());
     });
 });
 
 describe('defaultSpecialCategories', () => {
-    it('utloggad besökare får BÅDA källorna — kartan ska visa mest möjliga', () => {
-        expect(defaultSpecialCategories({ loggedIn: false }).sort())
-            .toEqual(['pro', 'svenskakyrkan']);
+    it('utloggad besökare får INGA källorna förvalda (Josef 31/8, river 20/8-beslutet)', () => {
+        expect(defaultSpecialCategories({ loggedIn: false })).toEqual([]);
     });
 
-    it('utloggad påverkas inte av en ålder som råkar följa med', () => {
-        expect(defaultSpecialCategories({ loggedIn: false, age: 30 }).sort())
-            .toEqual(['pro', 'svenskakyrkan']);
+    it('utloggad påverkas inte av en ålder som råkar följa med — 65+ gäller bara inloggade', () => {
+        expect(defaultSpecialCategories({ loggedIn: false, age: 70 })).toEqual([]);
     });
 
     it('inloggad 65+ får båda källorna', () => {
@@ -53,9 +51,9 @@ describe('defaultSpecialCategories', () => {
     });
 
     it('returnerar en NY array varje gång — anroparen sorterar/muterar fritt', () => {
-        const a = defaultSpecialCategories({ loggedIn: false });
+        const a = defaultSpecialCategories({ loggedIn: true, age: 70 });
         a.sort().push('music');
-        expect(defaultSpecialCategories({ loggedIn: false }).sort())
+        expect(defaultSpecialCategories({ loggedIn: true, age: 70 }).sort())
             .toEqual(['pro', 'svenskakyrkan']);
         expect([...SPECIAL_DEFAULT_KEYS].sort()).toEqual(['pro', 'svenskakyrkan']);
     });
@@ -63,13 +61,13 @@ describe('defaultSpecialCategories', () => {
 
 describe('specialDefaultsKey', () => {
     it('ger samma sorterade nyckelformat som mapCategories-jämförelsen', () => {
-        expect(specialDefaultsKey({ loggedIn: false })).toBe('pro,svenskakyrkan');
+        expect(specialDefaultsKey({ loggedIn: false })).toBe('');
         expect(specialDefaultsKey({ loggedIn: true, age: 70 })).toBe('pro,svenskakyrkan');
         expect(specialDefaultsKey({ loggedIn: true, age: 40 })).toBe('');
     });
 
     it('matchar nyckeln som byggs ur ett Set på samma sätt som page.tsx', () => {
-        const set = new Set(defaultSpecialCategories({ loggedIn: false }));
-        expect([...set].sort().join(',')).toBe(specialDefaultsKey({ loggedIn: false }));
+        const set = new Set(defaultSpecialCategories({ loggedIn: true, age: 70 }));
+        expect([...set].sort().join(',')).toBe(specialDefaultsKey({ loggedIn: true, age: 70 }));
     });
 });
