@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
-import { isValidLatLng } from '../../utils/mapUtils';
+import { isValidLatLng, WEEK_VIEW_MIN_ZOOM } from '../../utils/mapUtils';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
 // Baskartstilar (Voyager/satellit/mörk/nöjesfält) + klot/terräng/relief-hjälpare.
@@ -350,6 +350,10 @@ interface V2MapProps {
     zoomToEventTrigger?: number;
     /** Bumpas av zooma-ut-knappen i Nästa-pillen → zooma UT (samma center). */
     zoomOutTrigger?: number;
+    /** Bumpas av stadsrutans "Hela veckan"-klick i utzoomat läge (31/8) →
+     *  zooma IN till veckotröskeln kring samma center; page.tsx växlar sedan
+     *  till veckan när weekUnlocked kvitterat att zoomen är framme. */
+    weekZoomInTrigger?: number;
     /** Bumpas vid dagbyte. Då väljer sidan eventet närmast kartans mitt OCH vi
      *  låter bli att flytta kameran till det — vyn ska stå still vid dagbyte. */
     daySwitchNonce?: number;
@@ -461,6 +465,7 @@ export default function V2Map({
     eventsSettled = true,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
+    weekZoomInTrigger = 0,
     daySwitchNonce = 0,
     navSelectNonce = 0,
     onFeatureFlagsChange,
@@ -3292,6 +3297,21 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
+    // 2c2. Auto-inzoomning till veckovyn (31/8): stadsrutans "Hela veckan"-
+    //      klick i utzoomat läge bumpar triggern → zooma in till veckotröskeln
+    //      kring samma center. REN zoom genom kartans vanliga maskineri —
+    //      reveal-ankaret rörs aldrig vid ren zoom (samma regel som zoom-
+    //      knapparna). +0.2 över tröskeln så flyttalsavrundning i easeTo-slutet
+    //      aldrig lämnar page.tsx:s weekUnlocked-kvitto (>= tröskeln) ohört.
+    const prevWeekZoomInRef = useRef(weekZoomInTrigger);
+    useEffect(() => {
+        if (weekZoomInTrigger === prevWeekZoomInRef.current) return;
+        prevWeekZoomInRef.current = weekZoomInTrigger;
+        const map = mapRef.current;
+        if (!map || map.getZoom() >= WEEK_VIEW_MIN_ZOOM) return;
+        map.easeTo({ zoom: WEEK_VIEW_MIN_ZOOM + 0.2, duration: 700 });
+    }, [weekZoomInTrigger]);
+
     // (2e. Zoomknapparna vid stad-för-stad-pillen med etikettsteg-banner låg
     //  här — borttagna 26/8 på ägarbeslut samma dag: kolumnen mitt på höger-
     //  kanten räcker. LABEL_*_MIN_ZOOM-konstanterna lever kvar som etikett-
@@ -3911,15 +3931,23 @@ export default function V2Map({
             )}
             {/* Multi-event-lista: egen komponent (V2MapGroupList). Ankras vid den
                 klickade brickans övre högra hörn; groupListPos projiceras om på
-                move/zoom (updateCloudPosition) så den följer kartan. */}
-            {groupList && groupList.length > 0 && (
+                move/zoom (updateCloudPosition) så den följer kartan.
+                PORTAL till <body> (Josef 31/8): V2Map-roten är z-0 (stacking
+                context) — inuti roten cappades panelens z-index vid 0 och de
+                portalade zoomknapparna ritades ÖVER panelen. Nu: panelen 1149,
+                zoomknapparna 1148 — BARA de ska ligga under; eventkortet
+                (1250) och Nästa-pillen (1150) ligger kvar över panelen. Kartan
+                är fullskärm, så positionen (fixed i komponenten) blir densamma.
+                Stängningen sköts av kartklicket (setGroupList(null) ovan) —
+                panelens kryss är borttaget samma dag. */}
+            {groupList && groupList.length > 0 && typeof document !== 'undefined' && createPortal(
                 <V2MapGroupList
                     events={groupList}
                     anchorPos={groupListPos}
                     selectedEvent={selectedEvent}
                     onSelect={onSelectEvent}
-                    onClose={() => { setGroupList(null); setGroupListAnchor(null); }}
-                />
+                />,
+                document.body
             )}
             {/* Diskret "laddar fortfarande"-pill i TVÅ faser: (1) aggregat-lagren
                 strömmar ännu ("Laddar fler event…"), (2) allt är hämtat men GL-
@@ -4249,10 +4277,13 @@ export default function V2Map({
                             sökknappen. zoomIn/zoomOut går genom kartans vanliga
                             zoom-maskineri (zoomstart → nål-läge osv), precis som en
                             nyp-zoom — reveal-ankaret rörs aldrig vid ren zoom.
-                            z-[1149]: UNDER kategorikolumnen (1150) — en öppen
+                            z-[1148]: UNDER kategorikolumnen (1150) — en öppen
                             kategorilista som når hit ska rita sina cirklar
-                            ÖVER zoomknapparna, inte tvärtom (Josef 26/8). */}
-                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1149] flex flex-col gap-2 pointer-events-auto">
+                            ÖVER zoomknapparna, inte tvärtom (Josef 26/8) —
+                            och UNDER multievent-panelen (1149, Josef 31/8:
+                            zoomknapparna är det ENDA krom som viker sig för
+                            panelen; kortet/Nästa-pillen ligger kvar över). */}
+                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1148] flex flex-col gap-2 pointer-events-auto">
                             <button
                                 type="button"
                                 onClick={() => mapRef.current?.zoomIn()}

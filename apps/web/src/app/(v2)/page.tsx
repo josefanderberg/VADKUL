@@ -25,6 +25,7 @@ import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDe
 import { toggleCategory } from '@/utils/categoryToggle';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
+import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isEventPast } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -287,8 +288,8 @@ const pickNearestToPoint =(point: { lat: number; lng: number } | null, dayEvents
 // tiden". Veckoalternativet i dagväljaren låses upp först på stadsnivå, och i
 // veckoläge geo-avgränsas eventlistan kring kartans mitt — annars vore en
 // vecka × hela Sverige tusentals brickor (kartan kör medvetet ingen
-// klustring). Zoom 9 ≈ en stad med omnejd i mobilviewporten.
-const WEEK_VIEW_MIN_ZOOM = 9;
+// klustring). Tröskeln (WEEK_VIEW_MIN_ZOOM) bor i utils/mapUtils — V2Map
+// behöver samma värde för stadsrutans auto-inzoomning till veckan (31/8).
 /**
  * "Varje torsdag kl 19:00" — veckodagen och tiden en serie skulle ärva från
  * det valda datumet. Tar datetime-local-strängen rakt av (den är redan lokal
@@ -366,7 +367,7 @@ export default function HomePage() {
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tomt NORMAL-val = visa alla kategorier; opt-in-
     // källorna (Svenska kyrkan/PRO) räknas separat och göms om de inte står i
-    // seten. Startläget är BESÖKARENS (utloggad ⇒ båda källorna på,
+    // seten. Startläget är BESÖKARENS (utloggad ⇒ inga källor på, Josef 31/8 —
     // utils/categoryDefaults) — hydreringen nedan skriver över det med
     // profilens standardläge så fort ett konto landat.
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
@@ -768,13 +769,27 @@ export default function HomePage() {
      * ett par sekunder senare.
      *
      * Veckoläget är zoom-gatat (utzoomad vecka = tusentals brickor): är det
-     * låst gör klicket ingenting, i stället för att slå om och genast slås
-     * tillbaka av zoom-vakten.
+     * låst zoomar klicket i stället IN kartan till veckotröskeln åt en (Josef
+     * 31/8 — t.o.m. 30/8 var klicket dött) och växlingen till veckan fullföljs
+     * först när upplåsningen kvitterats via weekUnlocked (effekten där nere).
+     * Att slå om direkt hade studsat: zoom-vakten normaliserar veckan tillbaka
+     * till dag så länge zoomen ligger under tröskeln.
      */
+    // Bump → V2Map easeTo:ar in till veckotröskeln kring samma center;
+    // ref-flaggan säger att veckoväxlingen ska fullföljas när zoomen är framme.
+    // Kort livstid (timeouten nedan) så en avbruten inzoomning — egen gest
+    // mitt i — inte växlar period långt senare när man råkar zooma in själv.
+    const [weekZoomInTrigger, setWeekZoomInTrigger] = useState(0);
+    const pendingWeekZoomRef = useRef(false);
     const handleToggleTourRange = useCallback(() => {
         const toWeek = dayRangeDaysRef.current < WEEK_RANGE_MIN_DAYS;
-        if (toWeek && !weekUnlockedRef.current) return;
         setPulseSuppressed(true);
+        if (toWeek && !weekUnlockedRef.current) {
+            pendingWeekZoomRef.current = true;
+            setWeekZoomInTrigger(n => n + 1);
+            window.setTimeout(() => { pendingWeekZoomRef.current = false; }, 2500);
+            return;
+        }
         startTransition(() => setDayRangeDays(toWeek ? 7 : 1));
     }, []);
 
@@ -1678,10 +1693,11 @@ export default function HomePage() {
      * Antalet gäller den närmaste veckan inom CITY_SEARCH_RADIUS_KM från
      * centrum: man ska kunna se om det är värt att åka dit INNAN man klickar,
      * och en tunn ort ska säga det rakt ut i stället för att låta en flyga till
-     * en tom karta. Räknebasen är densamma som dagchipens siffra — utan eget
-     * kategori-val räknas allt med (även de dolda opt-in-källorna), annars
-     * speglar den filtret. Tills aggregaten landat är antalet null ("Räknar…"),
-     * annars hade en halvfylld lista påstått att orten var tom.
+     * en tom karta. Räknebasen speglar ALLTID kartfiltret (matchesFilter,
+     * Josef 31/8 — förr räknades dolda opt-in-källor/Korpen med utan eget val,
+     * och siffran ljög då mot kartan, se areaCounts). Tills aggregaten landat
+     * är antalet null ("Räknar…"), annars hade en halvfylld lista påstått att
+     * orten var tom.
      */
     const cityHits = useMemo(() => {
         const matches = searchCities(searchQuery);
@@ -1689,8 +1705,8 @@ export default function HomePage() {
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const end = new Date(start); end.setDate(end.getDate() + 7);
         const pool = eventsSettled
-            ? (selectedCategories.size === 0 ? events : events.filter(matchesFilter))
-                .filter(evt => hasValidCoords(evt) && evt.time >= start && evt.time < end)
+            ? events.filter(evt =>
+                matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end)
             : null;
         return matches.map(city => ({
             city,
@@ -1698,7 +1714,7 @@ export default function HomePage() {
                 ? pool.filter(evt => haversineKm(city.lat, city.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM).length
                 : null,
         }));
-    }, [searchQuery, events, eventsSettled, selectedCategories, matchesFilter]);
+    }, [searchQuery, events, eventsSettled, matchesFilter]);
 
     // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
     // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
@@ -1708,10 +1724,22 @@ export default function HomePage() {
     // långt ovanför, uppe i bildspels-blocket.
     weekUnlockedRef.current = weekUnlocked;
 
+    // Fullfölj stadsrutans "visa veckan"-klick från utzoomat läge (31/8): när
+    // auto-inzoomningen (weekZoomInTrigger) fört zoomen över tröskeln slår vi
+    // om till veckan. Flaggan har kort livstid (timeouten i handlern) så en
+    // avbruten inzoomning inte växlar period vid en senare egen zoom.
+    useEffect(() => {
+        if (!weekUnlocked || !pendingWeekZoomRef.current) return;
+        pendingWeekZoomRef.current = false;
+        startTransition(() => setDayRangeDays(7));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [weekUnlocked]);
+
     /**
      * Är stadsrutans växel låst just nu? Sant bara på väg TILL veckan medan man
      * är utzoomad — tillbaka till dagen går alltid. Styr hjälpraden i rutan:
-     * den ska inte lova "tryck för att växla" när klicket inte gör något.
+     * sedan 31/8 betyder "låst" inte dött klick utan att klicket zoomar in
+     * till veckan åt en (handleToggleTourRange) — raden ska säga det.
      */
     const tourRangeToggleLocked = dayRangeDays < WEEK_RANGE_MIN_DAYS && !weekUnlocked;
 
@@ -1834,16 +1862,20 @@ export default function HomePage() {
             const end = new Date(start);
             end.setDate(end.getDate() + (days - 1));
             end.setHours(23, 59, 59, 999);
-            // Utan kategori-val räknas opt-in-källorna med — man ska se hur
-            // mycket som faktiskt händer; med eget val speglas filtret.
+            // Siffran speglar ALLTID kartfiltret (Josef 31/8). Den gamla
+            // regeln "utan kategori-val räknas allt med" räknade även dolda
+            // opt-in-källor OCH knapplösa Korpen — Växjö sa "39 idag" medan
+            // kartan visade 9 (och att kryssa I källorna SÄNKTE siffran,
+            // eftersom ett val slog på filtret som tog bort Korpen). Rutan
+            // får aldrig lova event man inte kan se på kartan.
             return events.filter(evt =>
                 evt.time >= start && evt.time <= end
-                && (selectedCategories.size === 0 || matchesFilter(evt))
+                && matchesFilter(evt)
                 && inMapView(evt),
             );
         };
         return { day: until(1).length, week: until(7).length };
-    }, [cityTourTarget, mapBounds, boundsCityKey, inMapView, dayOffset, events, selectedCategories, matchesFilter]);
+    }, [cityTourTarget, mapBounds, boundsCityKey, inMapView, dayOffset, events, matchesFilter]);
 
     /**
      * "Här händer ingenting"-läget: stadsrutans siffra för valt läge är NOLL.
@@ -2343,17 +2375,20 @@ export default function HomePage() {
         // inkommande ?event=-läsningen ovan öppnar det hos mottagaren.
         if (dayOffset !== 0) params.set('dag', String(dayOffset));
         if (dayRangeDays > 1) params.set('dagar', String(dayRangeDays));
-        // Skriv INTE standardläget till adressen. Annars hade varje besökare
-        // fått ?kategori=pro,svenskakyrkan i URL:en direkt vid ankomst, och
-        // delade länkar burit med sig ett filter ingen valt — som dessutom
-        // låser mottagarens hydrering (urlHadCategoriesRef vinner över profilen).
+        // Skriv INTE standardläget till adressen — delade länkar ska inte bära
+        // med sig ett filter ingen valt (det låser dessutom mottagarens
+        // hydrering: urlHadCategoriesRef vinner över profilen). Jämförelsen
+        // gäller DEN HÄR användarens standardläge: besökarens är tomt sedan
+        // 31/8, men en inloggad 65+ har kyrkan+PRO som default och ska inte få
+        // ?kategori=pro,svenskakyrkan i adressen bara för att stå i det.
         const catsKey = [...selectedCategories].sort().join(',');
-        if (selectedCategories.size > 0 && catsKey !== specialDefaultsKey({ loggedIn: false })) {
+        if (selectedCategories.size > 0
+            && catsKey !== specialDefaultsKey({ loggedIn: !!user, age: profileAgeRef.current })) {
             params.set('kategori', [...selectedCategories].join(','));
         }
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying]);
+    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user]);
 
     // ── Sparade kategorifilter (inloggade) ──────────────────────────────────
     // Aktiverar man t.ex. Svenska kyrkan eller PRO ska valet överleva nästa
@@ -2397,15 +2432,16 @@ export default function HomePage() {
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
                         baseline = [...valid].sort().join(',');
                         // Sätts ÄVEN när listan är tom: staten startar i
-                        // BESÖKARLÄGET (opt-in-källorna på), och ett sparat
-                        // aktivt "visa alla" måste kunna släcka dem igen.
+                        // BESÖKARLÄGET, och ett sparat aktivt val måste alltid
+                        // vinna över det — oavsett vad besökardefaulten råkar
+                        // vara den dagen.
                         if (!cancelled) setSelectedCategories(new Set(valid));
                     } else {
                         // Aldrig rört filtret → profilens standardläge:
-                        // 65+ ⇒ Svenska kyrkan + PRO på, annars opt-in som förut
+                        // 65+ ⇒ Svenska kyrkan + PRO på, annars opt-in
                         // (utils/categoryDefaults). Sätts ovillkorligt av samma
-                        // skäl som ovan — en 40-åring ska INTE ärva besökarens
-                        // förvalda källor bara för att defaulten är tom.
+                        // skäl som ovan — profilens läge ska aldrig ärva
+                        // besökarläget av en slump.
                         const defaults = defaultSpecialCategories({ loggedIn: true, age: data?.age });
                         baseline = [...defaults].sort().join(',');
                         if (!cancelled) setSelectedCategories(new Set(defaults));
@@ -2421,11 +2457,11 @@ export default function HomePage() {
     }, [user, eventsLoaded, catPrefsUid, selectedCategories]);
 
     // Utloggning ⇒ tillbaka till BESÖKARLÄGET: familj-opt-in nollas (besökare
-    // ska alltid se familjeeventen) och opt-in-källorna slås på igen. Körs även
-    // vid mount medan Firebase återställer sessionen — då är läget redan
-    // besökarens, så det är en no-op. catPrefsUid nollas så att en ny
-    // inloggning hydrerar om profilens standardläge i stället för att ärva
-    // besökarens källor.
+    // ska alltid se familjeeventen) och kategorivalet nollställs (besökare har
+    // sedan 31/8 inga förvalda källor). Körs även vid mount medan Firebase
+    // återställer sessionen — då är läget redan besökarens, så det är en
+    // no-op. catPrefsUid nollas så att en ny inloggning hydrerar om profilens
+    // standardläge i stället för att ärva besökarens.
     useEffect(() => {
         if (user) return;
         setFamilyOptIn(false);
@@ -2640,11 +2676,10 @@ export default function HomePage() {
                 aria-label={dayRangeDays >= WEEK_RANGE_MIN_DAYS
                     ? `Visa bara ${getDayLabel(dayOffset, 1).toLowerCase()} i ${liveCityName}`
                     : tourRangeToggleLocked
-                        ? `Zooma in för att visa hela veckan i ${liveCityName}`
+                        ? `Zooma in och visa hela veckan i ${liveCityName}`
                         : `Visa hela veckan i ${liveCityName}`}
-                aria-disabled={tourRangeToggleLocked || undefined}
                 title={tourRangeToggleLocked
-                    ? 'Zooma in för att kunna visa hela veckan'
+                    ? 'Zoomar in kartan och visar hela veckan'
                     : 'Växla mellan dagen och hela veckan'}
                 className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-9 py-3 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
             >
@@ -2701,17 +2736,17 @@ export default function HomePage() {
 
                 {/* 3. Tryckhänvisningen. Liten och lugn, men uttalad — den är
                        enda stället som säger att rutan är en växel.
-                       LOVA INTE EN VÄXEL SOM INTE FINNS (Josef 14/8): veckan är
-                       zoom-gatad (weekUnlocked), och utzoomad gör klicket
-                       ingenting — då säger raden i stället vad man ska göra för
-                       att få växeln, alltså zooma in. Står man redan på veckan
-                       går det alltid att gå tillbaka till dagen, så då är det
-                       bara vägen TILL veckan som kan vara låst. */}
+                       Utzoomad är veckan zoom-gatad (weekUnlocked), men sedan
+                       31/8 är klicket inte dött: det zoomar in kartan till
+                       tröskeln åt en och växlar sedan (handleToggleTourRange) —
+                       raden säger därför att det händer. Står man redan på
+                       veckan går det alltid att gå tillbaka till dagen, så det
+                       är bara vägen TILL veckan som är gatad. */}
                 <span className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.14em] text-white/45">
                     {tourRangeToggleLocked ? (
                         <>
                             <ZoomIn size={11} strokeWidth={3} className="shrink-0" />
-                            Zooma in för att växla
+                            Tryck — zoomar in till veckan
                         </>
                     ) : (
                         <>
@@ -2867,6 +2902,10 @@ export default function HomePage() {
                 onPaintRoundDone={handlePaintRoundDone}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
+                // Stadsrutans "Hela veckan" i utzoomat läge: zooma in till
+                // veckotröskeln åt användaren (31/8) — växlingen fullföljs av
+                // weekUnlocked-effekten när zoomen är framme.
+                weekZoomInTrigger={weekZoomInTrigger}
                 daySwitchNonce={daySwitchNonce}
                 navSelectNonce={navSelectNonce}
                 onFeatureFlagsChange={handleFeatureFlagsChange}
@@ -2929,8 +2968,9 @@ export default function HomePage() {
                 kartan går att panorera; formulär-staten lever kvar. */}
             {creationMode === 'editing' && pickedLocation && !repicking && (
                 <div
-                    // z-[1300] = modal-lagret (AuthModal, grupplistan) — måste
-                    // ligga över eventkortet som numera är z-[1250].
+                    // z-[1300] = modal-lagret (AuthModal) — måste ligga över
+                    // eventkortet som numera är z-[1250]. (Grupplistan hör inte
+                    // hit längre: den är en väljare på z-1149 sedan 31/8.)
                     className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
                     // Klick på bakgrunden stänger modalen (samma städning som
                     // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —

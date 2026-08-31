@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useState } from 'react';
-import { ChevronRight, Clock, X } from 'lucide-react';
+import { Fragment, useRef, useState } from 'react';
+import { ChevronRight, Clock } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { eventEmoji, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
@@ -14,7 +14,17 @@ import { nearestCityPoint } from '@/utils/cityPoints';
 // punkten när kartan pannas/zoomas (V2Map projicerar om anchorPos på move/zoom).
 // Saknas projicerad position (ogiltig koordinat) faller den tillbaka till
 // top-center. Radval STÄNGER INTE listan — man ska kunna bläddra flera event på
-// samma plats; den stängs av kart-klicket (onClose).
+// samma plats; den stängs av kart-klicket (V2Map nollar groupList själv).
+// Kryss-knappen är BORTTAGEN 31/8 (Josef) — kartklicket är stängningen.
+//
+// PORTAL + FIXED: panelen renderas via portal till <body> (se V2Map) —
+// V2Map-roten är z-0 och skapar en stacking context, så panelens z-index
+// cappades annars vid 0 och zoomknapparna (portalade till body) ritades ÖVER
+// panelen. Kartan är fullskärm (inset-0), så anchorPos px == viewport-px och
+// position:fixed ger exakt samma placering som förr.
+// Z-ORDNING (Josef 31/8): BARA zoomknapparna ska ligga under panelen —
+// eventkortet, Nästa-pillen och övrigt krom ligger kvar ÖVER (se z-[1149]
+// vid rot-diven nedan).
 //
 // DAGRUBRIKER: när man tittar på hela veckan kan en scen ha 30+ event i högen
 // och då räcker inte klockslaget — man måste se VILKEN DAG raden gäller. Listan
@@ -67,12 +77,15 @@ interface V2MapGroupListProps {
     anchorPos: { x: number; y: number } | null;
     selectedEvent: LinkEvent | null;
     onSelect: (ev: LinkEvent) => void;
-    onClose: () => void;
 }
 
-export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSelect, onClose }: V2MapGroupListProps) {
+export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSelect }: V2MapGroupListProps) {
     // Passerade event ligger hopfällda tills man ber om dem.
     const [pastOpen, setPastOpen] = useState(false);
+    // Scrollporten + raderna — nästa-bläddringen scrollar det valda eventet
+    // högst upp i porten (se goNextInList).
+    const listRef = useRef<HTMLUListElement | null>(null);
+    const rowRefs = useRef(new Map<string, HTMLLIElement>());
 
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
@@ -85,7 +98,9 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     // hamna bakom dem. 116 låg för högt och kröp in under väljaren
     // (Josef 27/8: +53 px, intrimmat i steg).
     const TOP_MARGIN = 169, BOTTOM_MARGIN = 12;
-    const HEADER_H = 46, ROW_H = 52, DAY_H = 30, PAST_H = 34, MAX_ROWS = 6;
+    // MAX_ROWS 6 → 4 (Josef 31/8, intrimmat i steg: 3 blev för snålt): sex
+    // rader gjorde panelen överdrivet hög på datorn.
+    const HEADER_H = 46, ROW_H = 52, DAY_H = 30, PAST_H = 34, MAX_ROWS = 4;
 
     // Kommande event överst (kronologiskt, dag för dag), passerade sist —
     // dämpade med "har varit" (samma isEventPast som kartans dämpning: start
@@ -101,11 +116,28 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     const showDays = dayBuckets.length > 1;
 
     // KORTARE maxhöjd + ungefärlig faktisk höjd (för klamp på skärmen).
-    const listMaxH = Math.min(vh * 0.55, HEADER_H + MAX_ROWS * ROW_H + (showDays ? 2 * DAY_H : 0));
+    // Maxhöjden är EN dagrubrik + ett fåtal eventrader (Josef 31/8): TVÅ på
+    // mobil (under Tailwinds sm-gräns — högre skymde halva kartan), FYRA på
+    // datorn (MAX_ROWS — sex blev överdrivet högt även där). Resten nås via
+    // nästa-knappen (som auto-scrollar, se goNextInList) eller egen scroll.
+    const isMobile = vw < 640;
+    // vh-klampen biter aldrig i normala fönster (radtaket är långt under
+    // 55 vh) — den finns kvar som skydd för extremt låga fönster.
+    const listMaxH = Math.min(vh * 0.55,
+        HEADER_H + (showDays ? DAY_H : 0) + (isMobile ? 2 : MAX_ROWS) * ROW_H);
     const bodyH = upcoming.length * ROW_H
         + (showDays ? dayBuckets.length * DAY_H : 0)
         + (past.length > 0 ? PAST_H + (pastOpen ? past.length * ROW_H : 0) : 0);
     const contentH = Math.min(listMaxH, HEADER_H + bodyH);
+    // TOM UTFYLLNAD i listbotten (Josef 31/8): nästa-bläddringen topp-ankrar
+    // varje event, och för att även det SISTA ska kunna stå högst upp (med sin
+    // dagrubrik över) fylls botten ut med en tom ruta — panelen håller då
+    // samma höjd hela vägen ner. Bara när innehållet faktiskt scrollar; korta
+    // högar ska inte bli högre än sitt innehåll.
+    const scrollportH = listMaxH - HEADER_H;
+    const overflowing = bodyH > scrollportH;
+    const spacerH = Math.max(0, scrollportH - (showDays ? DAY_H : 0) - ROW_H
+        - (past.length > 0 ? PAST_H : 0));
     // PLACERING (Josef 27/8, ersätter 26/8-kvällens fasta läge): förankrad vid
     // brickan igen — listan relaterar HORISONTELLT till brickans övre högra
     // hörn och FÖLJER kartan när man pannar (V2Map projicerar om anchorPos) —
@@ -130,7 +162,25 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     // Har ALLA varit bläddras hela listan som förr.
     const pool = upcoming.length > 0 ? dayBuckets.flatMap(b => b.events) : pastOrdered;
     const selIdx = pool.findIndex(ev => ev.id === selectedEvent?.id);
-    const goNextInList = () => onSelect(pool[(selIdx + 1) % pool.length]);
+    const goNextInList = () => {
+        const next = pool[(selIdx + 1) % pool.length];
+        onSelect(next);
+        // Auto-scrolla det nya eventet HÖGST UPP i porten med sin klistrade
+        // dagrubrik ovanför (Josef 31/8) — bläddringen ska aldrig kräva egen
+        // scroll, och vid wrap åker listan tillbaka till toppen av sig själv.
+        // rAF: låt markeringsrendern landa innan positionen mäts.
+        requestAnimationFrame(() => {
+            const ul = listRef.current;
+            const li = rowRefs.current.get(next.id);
+            if (!ul || !li) return;
+            // Faktisk rubrikhöjd hellre än DAY_H-uppskattningen — raden ska
+            // stå kant i kant under den klistrade rubriken.
+            const headH = showDays
+                ? (ul.querySelector<HTMLLIElement>('li.sticky')?.offsetHeight ?? DAY_H)
+                : 0;
+            ul.scrollTo({ top: Math.max(0, li.offsetTop - headH), behavior: 'smooth' });
+        });
+    };
 
     // En eventrad: emoji, titel, klockslag · kategorinamn (+ "har varit" på
     // passerade). Kategorinamnet till höger om klockslaget (Josef 26/8) —
@@ -143,7 +193,11 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
         const catLabel = EVENT_CATEGORIES[catKey].label;
         const isSel = selectedEvent?.id === ev.id;
         return (
-            <li key={ev.id}>
+            <li
+                key={ev.id}
+                // Rad-registret för nästa-bläddringens auto-scroll (goNextInList).
+                ref={el => { if (el) rowRefs.current.set(ev.id, el); else rowRefs.current.delete(ev.id); }}
+            >
                 <button
                     type="button"
                     onClick={() => onSelect(ev)}
@@ -170,7 +224,12 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
     };
 
     return (
-        <div className="z-[1300] pointer-events-auto" style={{ position: 'absolute', left, top, width: W }}>
+        // position:fixed — portalad till <body> (se filkommentaren högst upp).
+        // z-[1149] (Josef 31/8): ÖVER zoomknapparna (1148) men UNDER allt annat
+        // arbetskrom — Nästa-pillen/kategorikolumnen (1150), navbaren (1160)
+        // och framför allt eventkortet (1250). Panelen är en väljare, inte en
+        // modal: bara zoomknapparna ska vika sig för den.
+        <div className="z-[1149] pointer-events-auto" style={{ position: 'fixed', left, top, width: W }}>
             <div className="flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border border-white/60 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200" style={{ maxHeight: listMaxH }}>
                 <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70">
                     <div className="min-w-0 flex-1">
@@ -181,25 +240,26 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                             {past.length > 0 && past.length < events.length ? ` · ${past.length} har varit` : ''}
                         </span>
                     </div>
+                    {/* Nästa-knappen bär räknaren "3/12" = vilket event i högen
+                        man står på ("–" innan något valts). Bredare tryckyta än
+                        gamla cirkeln (Josef 31/8). Kryss-knappen som stod här
+                        är borttagen samma dag — kartklicket stänger listan. */}
                     <button
                         type="button"
                         onClick={goNextInList}
                         aria-label="Nästa event här"
                         title="Nästa event här"
-                        className="shrink-0 w-8 h-8 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] active:scale-95 flex items-center justify-center transition-all"
+                        className="shrink-0 h-8 rounded-full bg-[#006AA7] text-white hover:bg-[#005590] active:scale-95 flex items-center gap-1 pl-3 pr-1.5 transition-all"
                     >
+                        <span className="text-[11px] font-black tabular-nums leading-none">
+                            {selIdx >= 0 ? selIdx + 1 : '–'}/{pool.length}
+                        </span>
                         <ChevronRight size={18} />
                     </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label="Stäng listan"
-                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                        <X size={16} />
-                    </button>
                 </div>
-                <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100 dark:divide-slate-800">
+                {/* relative: gör ul till offsetParent så radernas offsetTop är
+                    scrollkoordinater rakt av (auto-scrollen i goNextInList). */}
+                <ul ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100 dark:divide-slate-800">
                     {dayBuckets.map(day => (
                         <Fragment key={day.key}>
                             {/* DAGRUBRIKEN: klistrad i scrollporten så man aldrig kan
@@ -238,6 +298,9 @@ export default function V2MapGroupList({ events, anchorPos, selectedEvent, onSel
                         </li>
                     )}
                     {pastOpen && pastOrdered.map(ev => row(ev, true))}
+                    {/* Tomrutan som låter sista eventet topp-ankras — se
+                        spacerH-kommentaren ovan. */}
+                    {overflowing && <li aria-hidden className="pointer-events-none" style={{ height: spacerH }} />}
                 </ul>
             </div>
         </div>

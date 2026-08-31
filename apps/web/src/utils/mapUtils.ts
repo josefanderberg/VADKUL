@@ -14,6 +14,14 @@ import type { EventCategoryType } from './categories';
  * Guineabukten) kan aldrig träffa ett riktigt svenskt event (lat ~55–69).
  * Eventen finns kvar i DB och i list-/sökvyn — de döljs bara på kartan.
  */
+/**
+ * Veckovyn är zoom-gatad: "ju närmare du zoomar i rummet, desto längre får du
+ * zooma ut i tiden". Veckoalternativet låses upp först på stadsnivå — zoom 9 ≈
+ * en stad med omnejd i mobilviewporten. Delas av page.tsx (upplåsningen +
+ * zoom-vakten) och V2Map (stadsrutans auto-inzoomning till veckan, 31/8).
+ */
+export const WEEK_VIEW_MIN_ZOOM = 9;
+
 export function isValidLatLng(lat: unknown, lng: unknown): boolean {
     return (
         typeof lat === 'number' && typeof lng === 'number' &&
