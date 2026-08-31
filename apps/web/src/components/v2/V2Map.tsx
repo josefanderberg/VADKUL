@@ -8,6 +8,7 @@ import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Sparkles,
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM } from '../../utils/mapUtils';
+import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
 // Baskartstilar (Voyager/satellit/mörk/nöjesfält) + klot/terräng/relief-hjälpare.
@@ -84,7 +85,7 @@ type PlainFeature = {
 type CycleRotation = {
     icon: string;
     count: number;
-    frames: { emoji: string; color?: string; saved?: boolean; eventId: string }[];
+    frames: { emoji: string; color?: string; saved?: boolean; gold?: boolean; eventId: string }[];
 };
 
 // Det event vars frame en cyklande multibricka visar JUST NU. frameIdx (pumpens
@@ -879,7 +880,7 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; count?: number }>();
+        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; count?: number }>();
         // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
         // en EGEN cykel-bild (`cycle:<gruppnyckel>:<frame-ids>`) vars PIXLAR
         // cykelpumpen byter på plats via map.updateImage — ingen setData, ingen
@@ -943,14 +944,19 @@ export default function V2Map({
             // still på det stjärnmärkta/boostade eventet, samma beslut som för
             // stjärnan.)
             const drawStar = starredRep != null || boostedRep != null;
+            // Ticketmaster-grupp (minst ett ej passerat TM-event) → samma GULD-
+            // kropp som boost/stjärna (ägarbeslut 1/9: "ska se ut som boost-
+            // eventen") men UTAN ⭐-badge — stjärnan förblir boostens kvitto.
+            // Ingen sortKey-/sticky-lyftning: guldkroppen är hela framlyftet.
+            const drawGold = drawStar || group.some(e => isTicketmasterEvent(e) && !isEventPast(e, nowMs));
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
             // så två grupper med samma emoji men olika antal får OLIKA bilder —
             // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
             // aldrig med fel siffra).
             const badgeCount = group.length > 1 ? group.length : 0;
-            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, count: badgeCount });
+            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, count: badgeCount });
             // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
             // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
             // stället för rep-ikonen.
@@ -982,8 +988,11 @@ export default function V2Map({
                     const catKey = `${ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other'}|${col ?? ''}`;
                     if (seenCat.has(catKey)) continue;
                     seenCat.add(catKey);
-                    frames.push({ emoji: em, color: col, saved: drawSav, eventId: ev.id });
-                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}`);
+                    // drawGold följer med varje frame: en TM-grupp cyklar vidare
+                    // (till skillnad från stjärnmärkta) men får inte blinka
+                    // mellan guld och kategori-färg när pumpen byter pixlar.
+                    frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, eventId: ev.id });
+                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}`);
                 }
                 if (frames.length > 1) {
                     // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
@@ -995,7 +1004,7 @@ export default function V2Map({
                     const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
                     // Registrera cykel-bilden med frame 0 som utgångsutseende så
                     // syncPlainLayer bakar + addImage:ar den som alla andra.
-                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, count: badgeCount });
+                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, count: badgeCount });
                     rotations.set(key, { icon: cycleId, count: badgeCount, frames });
                     finalIcon = cycleId;
                 }
@@ -1075,7 +1084,7 @@ export default function V2Map({
     // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
     // i stället för att loopa alla tiotusentals features per klick/mousemove.
     const plainFeatureByKeyRef = useRef<Map<string, PlainFeature>>(new Map());
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; count?: number }>>(new Map());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; count?: number }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
     // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
@@ -1247,7 +1256,7 @@ export default function V2Map({
             if (!info) continue;
             let baked = bakedIconsRef.current.get(id);
             if (!baked) {
-                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0);
+                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold);
                 if (b) { bakedIconsRef.current.set(id, b); baked = b; }
             }
             if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -2364,10 +2373,10 @@ export default function V2Map({
             // siffra och får ALDRIG delas med en bild utan (eller med annan)
             // badge, annars byter pumpen bort siffran vid nästa tick.
             const bakedFrame = (fr: CycleRotation['frames'][number]) => {
-                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}:c${pick.rot.count}`;
+                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}${fr.gold ? ':tm' : ''}:c${pick.rot.count}`;
                 let baked = bakedIconsRef.current.get(frameId);
                 if (!baked) {
-                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count);
+                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count, fr.gold);
                     if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
                 }
                 return baked;
@@ -3620,13 +3629,19 @@ export default function V2Map({
             // staplingen via sortKey, precis som userCreated.
             const isFeatured = count === 1 && isEventFeatured(rep);
 
+            // Ticketmaster: guldbricka som boosten (ägarbeslut 1/9) — bara
+            // enskilda markörer, precis som featured. Guldet gäller kropp/kant/
+            // gloria; ⭐-badgen förblir boostens kvitto. Passerat TM-event =
+            // vanlig bricka (samma isEventPast som all dämpning).
+            const isTicketmasterGold = count === 1 && !isFeatured && isTicketmasterEvent(rep) && !isEventPast(rep, Date.now());
+
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
             // att stateKey inte ändras varje slideshow-tick (annars rivs brickan
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isUserCreated}:${isFeatured}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isUserCreated}:${isFeatured}:${isTicketmasterGold}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -3726,7 +3741,7 @@ export default function V2Map({
                 // bricka (samma gröna som skapa-flödet); guld = rätt svar i spelet.
                 // Prioritet: vald (blå) > guld > inom 1 timme (orange) > VADKUL-
                 // skapad (grön) > sparad (ljusblå) > kategori-färg > standard (mörk).
-                const pinBg = isFeatured
+                const pinBg = isFeatured || isTicketmasterGold
                     ? 'linear-gradient(145deg, #fde68a 0%, #f59e0b 52%, #b45309 100%)'
                     : isUserCreated
                     ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
@@ -3737,7 +3752,7 @@ export default function V2Map({
                     : BRICKA_DARK_BG;
                 const pinBorder = isSelected
                     ? '3px solid #ffffff'
-                    : isFeatured
+                    : isFeatured || isTicketmasterGold
                     ? '3px solid #fbbf24'
                     : isSaved
                     ? '2px solid #5BA3CC'
@@ -3753,7 +3768,7 @@ export default function V2Map({
                 // gloria och VADKUL-skapade en mjuk grön — båda ska synas på avstånd.
                 const pinShadow = isSelected
                     ? '0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)'
-                    : isFeatured
+                    : isFeatured || isTicketmasterGold
                     ? '0 0 0 4px rgba(245,158,11,0.30), 0 6px 20px rgba(180,83,9,0.50)'
                     : startsWithinHour
                     ? '0 0 0 3px rgba(249,115,22,0.28), 0 6px 18px rgba(249,115,22,0.40)'

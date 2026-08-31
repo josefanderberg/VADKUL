@@ -5,6 +5,7 @@ import { normalizePriceLabel } from '../../utils/priceLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
+import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
 import EventReminderBell from './EventReminderBell';
@@ -240,6 +241,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         }
     };
 
+    // Ticketmaster = biljettköp, inte anmälan (ägarbeslut 1/9): utlänk-
+    // knapparna säger BOKA och går i guld — samma guld som boost-brickan.
+    const tmEvent = isTicketmasterEvent(linkEvent);
+
     const handleVisitSite = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -473,9 +478,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         {linkEvent.url && (
                             <button
                                 onClick={handleVisitSite}
-                                className="group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-lg active:scale-[0.97] transition-all"
+                                className={`group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${tmEvent
+                                    ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                    : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
                             >
-                                ANMÄL
+                                {tmEvent ? 'BOKA' : 'ANMÄL'}
                                 <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
                             </button>
                         )}
@@ -646,9 +653,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 {linkEvent.url && (
                                     <button
                                         onClick={handleVisitSite}
-                                        className="group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white text-lg md:text-xl font-black uppercase tracking-widest shadow-lg shadow-sky-900/30 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-xl transition-all active:scale-[0.97]"
+                                        className={`group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${tmEvent
+                                            ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                            : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
                                     >
-                                        <span>Anmäl dig här</span>
+                                        <span>{tmEvent ? 'Boka biljetter' : 'Anmäl dig här'}</span>
                                         <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
                                     </button>
                                 )}

@@ -212,7 +212,9 @@ const BADGE_SIDE_PAD = 6;
 // pumpen, och därför är wish/starred grenar HÄR i stället för egna bakfunktioner
 // (måtten kan aldrig glida isär). count > 1 → "+N"-pillen bakas in i hörnet
 // (se COUNT_BADGE-kommentaren ovan för varför den inte är ett eget lager).
-export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0): { data: ImageData; pixelRatio: number } | null {
+// gold = GULD-kropp UTAN ⭐ (Ticketmaster, ägarbeslut 1/9: "som boost-eventen")
+// — ⭐-badgen förblir boostens/stjärngåvans kvitto och följer bara starred.
+export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0, gold = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = BRICKA_IMG_S;      // brickans kropp (logiska px), nära DOM:ens 44
@@ -246,9 +248,10 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     // Sparad (gillad) bricka = ljus/vit kropp (matchar DOM-markörens vita bakgrund);
     // önskan = halvtransparent lila "dröm" (kartan skiner igenom → skiljs direkt
     // från riktiga event); annars källans/kategorins färg eller mörk standard.
+    const goldBody = starred || gold;
     const stops = wish
         ? ['rgba(221,190,254,0.80)', 'rgba(167,139,250,0.66)', 'rgba(109,40,217,0.58)']
-        : starred
+        : goldBody
         ? ['#ffe9a3', '#f0b429', '#a8730a']
         : saved
         ? ['#ffffff', '#f3f6fa', '#e3e9f1']
@@ -268,8 +271,8 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     // ljusgul kant mot guldkroppen; sparad = ljusblå (#5BA3CC, samma som DOM);
     // önskan = STRECKAD vit (drömlinje); annars svag vit kant för djup.
     if (wish) ctx.setLineDash([5, 4]);
-    ctx.lineWidth = selected ? 3.5 : starred || saved ? 2.5 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : starred ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : 2;
+    ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)';
     ctx.stroke();
     ctx.restore();
 
