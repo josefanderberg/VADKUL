@@ -21,6 +21,7 @@ import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
+import { isLikelyLogoOrPlaceholderImage } from '../utils/imageFilter';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
@@ -304,6 +305,10 @@ export async function runSource(
                     ctx.log(`  ⚠️  audit-fel på "${e.title.slice(0, 40)}": ${(auditErr as Error).message}`);
                 }
             }
+
+            // Loggor/platshållare (kommunsajters generiska og:image) blir
+            // hellre bildlöst kort än en stadssida full av samma logga.
+            if (isLikelyLogoOrPlaceholderImage(e.imageUrl)) e.imageUrl = undefined;
 
             if (opts.dryRun) {
                 const fieldHealth = {

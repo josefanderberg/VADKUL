@@ -37,6 +37,10 @@
       "lastRetry": "2026-08-27",
       "emptyRetries": 1
     },
+    "louisdegeer": {
+      "since": "2026-08-30",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -57,7 +61,9 @@
     },
     "orebro": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-30",
+      "emptyRetries": 1
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -73,7 +79,9 @@
     },
     "pustervik": {
       "since": "2026-08-21",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-30",
+      "emptyRetries": 1
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",

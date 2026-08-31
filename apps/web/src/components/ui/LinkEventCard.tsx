@@ -107,6 +107,23 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
 
+    // Beskrivningslagret laddas först när ett kort faktiskt öppnas (störst av
+    // aggregaten — ska inte belasta besökare som aldrig öppnar ett kort).
+    // Mergen pekar om selectedEvent i page.tsx → description dyker upp här
+    // via props när svaret landat; descriptionsPending styr bara fallbacktexten.
+    const [descriptionsPending, setDescriptionsPending] = useState(
+        () => !linkEvent.userCreated && (linkEvent as any).description === undefined,
+    );
+    useEffect(() => {
+        let mounted = true;
+        linkEventService.requestDescriptions().then(() => {
+            if (mounted) setDescriptionsPending(false);
+        });
+        // Säkerhetsnät: hänger nätet ska kortet inte stå på "Hämtar…" för evigt.
+        const guard = setTimeout(() => { if (mounted) setDescriptionsPending(false); }, 12000);
+        return () => { mounted = false; clearTimeout(guard); };
+    }, []);
+
     // VADKUL-värdat = skapat här UTAN länk (anmälan sker på sidan). Användar-
     // skapade event MED länk är TIPS — de presenteras som vanliga länk-event
     // (favicon-värd, ANMÄL ut) så tipsaren aldrig ser ut som arrangör.
@@ -642,7 +659,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         onClick={handleContentClick}
                     >
                         <p data-event-description className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                            {withRecoveredLineBreaks((linkEvent as any).description) || 'Ingen beskrivning tillgänglig.'}
+                            {withRecoveredLineBreaks((linkEvent as any).description)
+                                || (descriptionsPending ? 'Hämtar beskrivning…' : 'Ingen beskrivning tillgänglig.')}
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">
