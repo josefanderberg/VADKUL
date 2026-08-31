@@ -37,6 +37,8 @@ import { findFirstDateInText } from '../../utils/swedishDate';
 import { decodeHtmlEntities } from '../../utils/text';
 import { extractStreetAddress } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
+import { extractEventFacts, type EventFacts } from '../../utils/factTable';
+import { isLikelyLogoOrPlaceholderImage } from '../../utils/imageFilter';
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -213,7 +215,16 @@ const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     /^trafikstart/i,
     /^\d+\s+(parkering|p-plats|p-rute)/i,
     /\bv[äa]g(en|s|arna)?\s+avst[äa]ngd/i,
+    // SiteVision-kommunernas kontaktruta har en egen h1 på varje sida
+    /^kontakta\s+kommunen\b/i,
 ];
+
+/**
+ * Sidhuvudets kontaktruta på kommunsajter — öppettider och växelnummer, aldrig
+ * en eventbeskrivning. Fångades av 40-teckensgränsen i brödtext-fallbacken.
+ */
+const CONTACT_BOILERPLATE =
+    /(m[åa]ndag\s*[-–]\s*(torsdag|fredag|s[öo]ndag)|[öo]ppettider|^telefon\b|^e-post\b|^v[äa]xel\b)/i;
 
 const DEFAULT_MAX_URLS = 300;
 const DEFAULT_MAX_SUB_SITEMAPS = 10;
@@ -492,8 +503,56 @@ function titleFromUrl(url: string): string {
 function stripChrome(html: string): string {
     const $c = cheerio.load(html);
     $c('script, style, noscript, nav, [role="navigation"], footer, .site-footer, '
-        + '.menu, .main-menu, .nav-menu, .navbar, .breadcrumb, .breadcrumbs, .cookie, .cookies').remove();
+        + '.menu, .main-menu, .nav-menu, .navbar, .breadcrumb, .breadcrumbs, .cookie, .cookies, '
+        // Kontakt-/sidokolumnsrutor: kommunsajternas "Besök: <kommunhuset>"
+        // överlevde annars och blev adress på event utan egen gatuadress.
+        + 'aside, [class*="contact"], [class*="kontakt"], [class*="sidebar"]').remove();
     return $c('body').text();
+}
+
+/**
+ * Sidans HUVUDINNEHÅLL som cheerio-scope — null när sidan saknar en tydlig
+ * innehållsbehållare.
+ *
+ * Skillnaden mot stripChrome (som tar bort meny/footer ur hela body) är att
+ * den här POSITIVT väljer ut innehållskolumnen. Kommunala CMS:er lägger
+ * kontaktrutan ("Öppet / Telefon / Besök: Centralgatan 3, Skutskär") i en
+ * egen sidokolumn som varken är <nav> eller <footer> — den överlever
+ * stripChrome och vann både beskrivnings- och adress-fallbacken.
+ *
+ * `.pagecontent` är SiteVisions standardklass för mittenspalten; övriga är
+ * semantiska taggar och vanliga WordPress/Episerver-klasser.
+ */
+// Ordningen är medvetet SPECIFIK → generisk: SiteVisions <main> omsluter även
+// sidhuvudets kontaktruta, medan .pagecontent är exakt mittenspalten.
+const CONTENT_SELECTORS = ['.pagecontent', '.page-content', '#main-content', '#content-area', 'article', 'main', '[role="main"]'];
+
+/** Kontakt-/sidokolumn-behållare som kan ligga INNE i scopet (SiteVisions .lp-contact-box). */
+const CHROME_ANCESTORS = 'aside, [class*="contact"], [class*="kontakt"], [class*="sidebar"], [class*="marginal"], nav, footer, header';
+
+/**
+ * Scopets text med chrome (footer/nav/kontaktruta) bortklippt. Klonar först —
+ * dokumentet får INTE muteras, resten av extraktionen läser samma träd.
+ * visitlinkoping.se lägger sin <footer> INNE i <main>, så bara scopet räcker
+ * inte: bolagets besöksadress (Konsistoriegatan 7) blev annars adress på
+ * varje event.
+ */
+export function scopedCleanText($: cheerio.CheerioAPI): string {
+    const scope = contentScope($);
+    if (!scope) return '';
+    const clone = scope.clone();
+    clone.find(`script, style, noscript, ${CHROME_ANCESTORS}`).remove();
+    return clone.text();
+}
+
+export function contentScope($: cheerio.CheerioAPI): cheerio.Cheerio<any> | null {
+    for (const sel of CONTENT_SELECTORS) {
+        const el = $(sel).first();
+        // Tom/dekorativ container (t.ex. <main> som bara håller ett ankare)
+        // räknas inte — då är dokumentbred läsning fortfarande bättre.
+        if (el.length && el.text().replace(/\s+/g, ' ').trim().length >= 120) return el;
+    }
+    return null;
 }
 
 function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
@@ -509,6 +568,7 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     // Sajtnamnet = svans-segmentet ("Eventtitel - Kalmar läns museum") — en h1
     // som ÄR sajtnamnet (logga-h1) får aldrig vinna som fallback.
     const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
+    const scope = contentScope($);
     let title = '';
     $('h1').each((_i, el) => {
         const t = $(el).text().replace(/\s+/g, ' ').trim();
@@ -517,6 +577,21 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
         if (pageName && tl === pageName) { title = t; return false; }
     });
+    // Exakt sidtitel-matchning ovan är starkast. Träffade den inte vinner
+    // h1:an i HUVUDINNEHÅLLET före dokumentets första h1: kommunsajternas
+    // kontaktruta ligger före mittenspalten och har en egen h1 ("Kontakta
+    // kommunen och lämna synpunkter") som annars blev eventets titel så fort
+    // sidtiteln inte gick att matcha exakt (alvkarleby.se "Terminator 2 -
+    // Judgment Day" — bindestreck i titeln bröt segmenteringen).
+    if (scope && (!pageName || title.toLowerCase() !== pageName)) {
+        scope.find('h1').each((_i, el) => {
+            if ($(el).closest(CHROME_ANCESTORS).length) return;   // kontaktrutans egen h1
+            const t = $(el).text().replace(/\s+/g, ' ').trim();
+            if (!t || t.toLowerCase() === siteName) return;
+            title = t;
+            return false;
+        });
+    }
     if (!title) title = ogTitle;
     if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
     if (!title) title = titleFromUrl(url);
@@ -524,6 +599,10 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
 
     // Skippa sidor vars titel matchar blacklist (cookie-banners, trafikinfo etc)
     if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(title))) return null;
+
+    // Fakta-tabellen ("Tid: / Plats: / Pris: / Arrangör:") i huvudinnehållet.
+    // Scopad — mot hela dokumentet skulle den läsa kommunhusets kontaktruta.
+    const facts: EventFacts = scope ? extractEventFacts($, scope) : {};
 
     // 1) Strukturerade datumkällor (microdata + <time datetime>)
     let startDate: Date | null = null;
@@ -576,6 +655,8 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     if (!startDate || structuredIsPast) {
         // Prioritera text nära header/event-info, fall sedan tillbaka till hela body
         const candidateText = [
+            // "Tid:"-raden ur fakta-tabellen — sidans egen, entydiga datumtext
+            facts.time || '',
             $('.event-info, .event-date, .event-date-time, #event-dates-list, .evenemang-datum, .datum, .date').text(),
             $('main, article, .content').first().text(),
             // Meny-strippad body FÖRE den orörda: sajter utan <main>/<article>
@@ -628,7 +709,20 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
             const anchor = stripped.indexOf(title.replace(/\s+/g, ' ').slice(0, 40));
             content = stripped.slice(anchor >= 0 ? anchor : 0, (anchor >= 0 ? anchor : 0) + 2500);
         }
-        for (const mt of content.matchAll(/(?:kl[.\s]*)?\b(\d{1,2})[:.](\d{2})\b/gi)) push(parseInt(mt[1], 10), parseInt(mt[2], 10));
+        // Fakta-tabellens "Tid"-rad är AUKTORITATIV när den finns: sidans egen
+        // uppgift, och första klockslaget i den är starttiden ("16.00-17.00").
+        // Brödtextsskanningen nedan plockar annars både sluttiden och sidans
+        // publiceringsstämpel ("Publicerad: 25 augusti kl 11:09").
+        // (?!\d) i stället för avslutande \b — cheerio konkatenerar celler utan
+        // separator ("…kl 12.00Plats:…"), och ordgräns mellan "0" och "P" finns
+        // inte, så klockslaget föll bort och eventet fick platshållartid.
+        const CLOCK = /(?:kl[.\s]*)?\b(\d{1,2})[:.](\d{2})(?!\d)/i;
+        const factClock = facts.time ? facts.time.match(CLOCK) : null;
+        if (factClock) {
+            push(parseInt(factClock[1], 10), parseInt(factClock[2], 10));
+        } else {
+            for (const mt of content.matchAll(new RegExp(CLOCK.source, 'gi'))) push(parseInt(mt[1], 10), parseInt(mt[2], 10));
+        }
         if (cands.length) {
             // Heuristik: kvällstid (>=17) först (konserter); annars tidigaste kronologiskt.
             const evening = cands.find(c => c.h >= 17);
@@ -642,7 +736,10 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     const description = decodeHtmlEntities(
         ($('meta[property="og:description"]').attr('content') ||
             $('meta[name="description"]').attr('content') || '').trim());
-    const imageUrl = $('meta[property="og:image"]').attr('content') || undefined;
+    // Generisk og:image (kommunlogga/platshållare) räknas som ingen bild —
+    // då får backfillFromHtml chansen att hitta en riktig content-bild.
+    const rawOgImage = $('meta[property="og:image"]').attr('content') || undefined;
+    const imageUrl = isLikelyLogoOrPlaceholderImage(rawOgImage) ? undefined : rawOgImage;
     // Key/value-metadata ("Plats" → värde) — Episerver-sajter (Studiefrämjandet
     // m.fl.) lägger platsen i c-articlemeta-par utan microdata. #placeItem är
     // Studiefrämjandets id; key-matchningen tar generiska nyckel/värde-listor.
@@ -657,6 +754,7 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     }
     const venueName =
         $('[itemprop="location"] [itemprop="name"]').first().text().trim() ||
+        facts.venueName ||
         (kvPlats && kvPlats.toLowerCase() !== 'sverige' ? kvPlats : '') ||
         $('.event-location, .plats, .location, .venue').first().text().trim() ||
         undefined;
@@ -669,6 +767,7 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
     const locScope = $('[itemprop="location"]');
     let address =
         locScope.find('[itemprop="streetAddress"]').first().text().trim() ||
+        facts.address ||
         (locScope.find('[itemprop="streetAddress"]').first().attr('content') || '').trim() ||
         (locScope.length === 0
             ? ($('[itemprop="streetAddress"]').first().text().trim() ||
@@ -686,7 +785,11 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         imageUrl,
         venueName,
         address,
-        city: defaultCity,
+        // Fakta-tabellens ort slår defaultCity: kommunkällor täcker flera
+        // tätorter ("Biblioteket, Ågatan 7, Skutskär" i Älvkarleby kommun).
+        city: facts.city || defaultCity,
+        price: facts.price || undefined,
+        organizer: facts.organizer || undefined,
     };
 }
 
@@ -730,9 +833,23 @@ function applyUrlTime(ev: RawEvent, url: string): void {
  * stadens mittpunkt.
  */
 function fallbackAddress(html: string): string | undefined {
-    const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 8000);
-    const labelled = text.match(/(?:besöksadress|adress)\s*:\s*([^.|]{5,80})/i);
-    return extractStreetAddress(labelled?.[1]) ?? extractStreetAddress(text) ?? undefined;
+    // Huvudinnehållet först: kommunsajternas kontaktruta ("Besök: Centralgatan
+    // 3, Skutskär") ligger före brödtexten och blev annars adress på VARJE
+    // event i kommunen — alla på samma punkt, aldrig på eventets faktiska hus.
+    let scoped = '';
+    try { scoped = scopedCleanText(cheerio.load(html)); } catch { /* trasig HTML */ }
+    // Meny-strippad helsida som ANDRAHANDSVAL: innehållsbehållaren är ibland
+    // smalare än eventinfon (katrineholm.se lägger "Evenemangsplats" utanför
+    // .pagecontent). Kommunhusets footer-adress är bortklippt i båda stegen,
+    // så andrahandsvalet drar inte in Kanaltorget 1 igen.
+    for (const raw of [scoped, stripChrome(html)]) {
+        const text = raw.replace(/\s+/g, ' ').slice(0, 8000);
+        if (!text.trim()) continue;
+        const labelled = text.match(/(?:besöksadress|adress|evenemangsplats|plats)\s*:\s*([^.|]{5,80})/i);
+        const hit = extractStreetAddress(labelled?.[1]) ?? extractStreetAddress(text);
+        if (hit) return hit;
+    }
+    return undefined;
 }
 
 /**
@@ -764,10 +881,32 @@ function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
             // OBS: sök över ALLA innehålls-containrar — .first() på container-listan
             // fastnade på en tom .content/portlet före <main> (Katrineholm) och
             // gav upp trots att brödtexten fanns längre ner i dokumentet.
-            $('main p, article p, .content p, .sv-text-portlet p').each((_i, el) => {
-                const t = $(el).text().replace(/\s+/g, ' ').trim();
-                if (t.length >= 40) { d = t; return false; }
-            });
+            const scope = contentScope($);
+            const pickParagraph = (sel: cheerio.Cheerio<any>) => {
+                sel.each((_i, el) => {
+                    // Fakta-tabellens celler är inte brödtext, och sidhuvudets
+                    // kontaktruta ("Måndag - torsdag 8-12, 13-16Fredag 8-12,
+                    // 13-15") passerade 40-teckensgränsen och blev beskrivning
+                    // på samtliga 23 event i Älvkarleby kommun.
+                    if ($(el).closest(`table, dl, ${CHROME_ANCESTORS}`).length) return;
+                    const t = $(el).text().replace(/\s+/g, ' ').trim();
+                    if (CONTACT_BOILERPLATE.test(t)) return;
+                    if (t.length >= 40) { d = t; return false; }
+                });
+            };
+            if (scope) pickParagraph(scope.find('p'));
+            if (d.length < 20) pickParagraph($('main p, article p, .content p, .sv-text-portlet p'));
+
+            // Ingressen (svenska CMS:ers standardklass för sammanfattnings-
+            // raden) är för kort för 40-teckensgränsen men bär ofta det som
+            // gör eventet begripligt — och som kategoriseringen behöver:
+            // alvkarleby.se skriver "Film på Rio Bio" över brödtexten, utan
+            // den blev varje biovisning kategori "other" i stället för "stage".
+            const lead = (scope ?? $('body')).find('.ingress, .preamble, .lead, .intro, .summary')
+                .first().text().replace(/\s+/g, ' ').trim();
+            if (d && lead && lead.length <= 200 && !d.toLowerCase().includes(lead.toLowerCase())) {
+                d = `${lead.replace(/[.!?]$/, '')}. ${d}`;
+            }
         }
         if (d.length >= 20) ev.description = d.slice(0, 600);
     }
@@ -775,6 +914,8 @@ function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
     if (needsImg) {
         let img = ($('meta[property="og:image"]').attr('content') ||
             $('meta[name="twitter:image"]').attr('content') || '').trim();
+        // Sajtvid logga/platshållare som og:image → leta vidare i sidan i stället.
+        if (isLikelyLogoOrPlaceholderImage(img)) img = '';
         if (!img) {
             // Västervik m.fl.: hero i inline style="background-image:url('…')"
             $('[style*="background-image"]').each((_i, el) => {
@@ -899,7 +1040,7 @@ export function applyPlacePage(html: string, ev: RawEvent): void {
     }
 }
 
-function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
     const nodes: any[] = [];

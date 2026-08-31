@@ -2377,11 +2377,18 @@ export const SOURCES: Source[] = [
         config: {
                     sitemapUrl: 'https://www.alvkarleby.se/sitemap.xml',
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    // Landningssidan /evenemang/pagaende-evenemang.html matchar
+                    // mönstret men är en LISTA, inte ett event.
+                    urlBlacklist: [/\/pagaende-evenemang/i],
                     defaultCity: 'Älvkarleby',
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 23 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-04: 23 event-URLs (evenemang-mönster). '
+            + '2026-08-30: sidorna saknar JSON-LD — all eventinfo ligger i SiteVisions '
+            + 'lp-event-details-tabell (Tid/Plats/Pris/Arrangör). Läses nu av motorns '
+            + 'fakta-tabellsteg; dessförinnan fick alla 23 event kommunhusets '
+            + 'besöksadress (Centralgatan 3) och växelns öppettider som beskrivning.',
+        lastVerified: '2026-08-30',
     },
     {
         id: 'boras',

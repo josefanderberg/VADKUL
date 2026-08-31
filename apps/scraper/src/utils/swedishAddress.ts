@@ -25,6 +25,13 @@ const STREET_RE = new RegExp(
 );
 const STOP_FIRST_WORD =
     /^(?:följ|längs|via|mot|från|till|ta|tag|kör|gå|vid|efter|innan|korsa|sväng|på|i|och|eller|samt|nära|intill|bakom|framför|genom|över|under)\s/i;
+/**
+ * Ord som aldrig ingår i ett gatunamn, var som helst i frasen. Utan detta blev
+ * biljettinformation adresser: "Biljettpris På plats 150" matchar mönstret
+ * "två namnord + platsord + nummer" (kalmarlansmuseum.se 2026-08-30).
+ */
+const STOP_WORD_ANYWHERE =
+    /(?:^|\s)(?:på|i|för|pris|biljettpris|entré|entre|kostnad|avgift|från|till|vid)(?=\s)/i;
 
 /** Plocka första rimliga svenska gatuadressen ("Storgatan 12") ur en text. */
 export function extractStreetAddress(text: string | null | undefined): string | null {
@@ -32,7 +39,7 @@ export function extractStreetAddress(text: string | null | undefined): string | 
     const m = text.match(STREET_RE);
     if (!m) return null;
     const street = m[1].trim();
-    if (street.includes(' ') && STOP_FIRST_WORD.test(street)) return null;
+    if (street.includes(' ') && (STOP_FIRST_WORD.test(street) || STOP_WORD_ANYWHERE.test(street))) return null;
     const nr = m[2].trim();
     return `${street} ${nr}`;
 }

@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect } from 'vitest';
-import { backfillPlaceFromHtml } from './sitemap';
+import { backfillPlaceFromHtml, extractFromHtml } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -91,5 +91,106 @@ describe('backfillPlaceFromHtml', () => {
         backfillPlaceFromHtml('<p>Bara text utan struktur</p>', e);
         expect(e.coords).toBeUndefined();
         expect(e.city).toBeUndefined();
+    });
+});
+
+/**
+ * Kommunsajt-chrome (SiteVision): kontaktrutan ligger i sidhuvudet med EGEN
+ * h1, egen tabell och egen besöksadress — och den kommer FÖRE mittenspalten i
+ * DOM:en. Före 2026-08-30 vann den alla tre fallback-vägarna: titel,
+ * beskrivning och adress. Fixture = nedskalad alvkarleby.se/…/carola.html.
+ */
+const KOMMUN_HTML = `<!doctype html><html><head>
+<title>Carola! - Älvkarleby.se</title>
+<meta name="description" content="Film">
+</head><body>
+<main>
+  <div class="sv-layout lp-contact-box">
+    <h1 class="heading">Kontakta kommunen och lämna synpunkter</h1>
+    <table>
+      <thead><tr><th><p>Öppet:</p></th><td><p>Måndag - torsdag 8-12, 13-16<br>Fredag 8-12, 13-15</p></td></tr></thead>
+      <tbody><tr><th><p>Besök:</p></th><td><p>Centralgatan 3, Skutskär</p></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagecontent">
+    <h1 class="heading">TITLE_HERE</h1>
+    <p class="ingress">Film på Rio Bio</p>
+    <table>
+      <thead><tr><th><p><strong>Tid:</strong></p></th><td><p>2 september kl 19.00</p></td></tr></thead>
+      <tbody>
+        <tr><th><p><strong>Plats:</strong></p></th><td><p>Rio Bio Gävlevägen 24</p></td></tr>
+        <tr><th><p><strong>Pris:</strong></p></th><td><p>110 kr (Swish, kontanter och kort)<br></p></td></tr>
+      </tbody>
+    </table>
+    <table><thead><tr><th><p><strong>Arrangör:</strong></p></th><td><p>Folkets Hus Rio Bio Skutskär</p></td></tr></thead></table>
+    <p>Med tillgång till ett unikt material ger filmen Carola! en inblick i människan Carola Häggkvists liv.</p>
+  </div>
+</main>
+<footer><p>Box 4, 814 21 Skutskär</p></footer>
+</body></html>`;
+
+const kommunPage = (title: string) => KOMMUN_HTML.replace('TITLE_HERE', title);
+
+describe('extractFromHtml — kommunsajt utan JSON-LD', () => {
+    const parse = (title = 'Carola!') =>
+        extractFromHtml(kommunPage(title), 'https://www.alvkarleby.se/e/carola.html', 'Älvkarleby')!;
+
+    it('tar eventets plats — inte kommunhusets besöksadress', () => {
+        const ev = parse();
+        expect(ev.venueName).toBe('Rio Bio');
+        expect(ev.address).toBe('Gävlevägen 24');
+    });
+
+    it('tar eventets brödtext — inte kontaktrutans öppettider', () => {
+        expect(parse().description).toMatch(/Med tillgång till ett unikt material/);
+        expect(parse().description).not.toMatch(/Måndag - torsdag/);
+    });
+
+    it('läser pris och arrangör ur faktatabellen', () => {
+        const ev = parse();
+        expect(ev.price).toBe('110 kr (Swish, kontanter och kort)');
+        expect(ev.organizer).toBe('Folkets Hus Rio Bio Skutskär');
+    });
+
+    it('tar h1 ur mittenspalten när sidtiteln inte kan matchas exakt', () => {
+        // Bindestreck i titeln ("Terminator 2 - Judgment Day - Älvkarleby.se")
+        // bryter segmenteringen mot <title> → exaktmatchningen missar, och
+        // dokumentets FÖRSTA h1 är kontaktrutans.
+        expect(parse('Terminator 2 - Judgment Day').title).toBe('Terminator 2 - Judgment Day');
+    });
+});
+
+describe('extractFromHtml — ingress', () => {
+    it('lägger ingressen först i beskrivningen (bär kategorisignalen)', () => {
+        const ev = extractFromHtml(kommunPage('Carola!'), 'https://x.se/e/1', 'Älvkarleby')!;
+        expect(ev.description).toMatch(/^Film på Rio Bio\. Med tillgång till/);
+    });
+
+    it('dubblerar inte en ingress som redan står i brödtexten', () => {
+        const html = kommunPage('Carola!').replace('<p class="ingress">Film på Rio Bio</p>', '');
+        expect(extractFromHtml(html, 'https://x.se/e/1', 'Älvkarleby')!.description)
+            .toMatch(/^Med tillgång till/);
+    });
+});
+
+describe('extractFromHtml — klockslag ur faktatabellen', () => {
+    it('läser klockslaget även när cellerna klistras ihop och månaden är felstavad', () => {
+        // alvkarleby.se skrev "13 septeber kl 12.00" (kommunens stavfel) och
+        // cheerio ger texten som "…kl 12.00Plats:…" — utan ordgräns efter "00".
+        const html = kommunPage('Bus och mysterier med Alfons Åberg')
+            .replace('2 september kl 19.00', '13 septeber kl 12.00');
+        const ev = extractFromHtml(html, 'https://x.se/e/1', 'Älvkarleby')!;
+        expect(ev.startDate.getHours()).toBe(12);
+        expect(ev.startDate.getMinutes()).toBe(0);
+    });
+});
+
+describe('extractFromHtml — event utan egen gatuadress', () => {
+    it('ärver ALDRIG kommunhusets besöksadress när platsen saknar gatunummer', () => {
+        const html = kommunPage('​Gemensam sådd')
+            .replace('Rio Bio Gävlevägen 24', 'Brandstationen Skutskär');
+        const ev = extractFromHtml(html, 'https://x.se/e/2', 'Älvkarleby')!;
+        expect(ev.venueName).toBe('Brandstationen Skutskär');
+        expect(ev.address).toBeUndefined();
     });
 });
