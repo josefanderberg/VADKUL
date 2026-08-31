@@ -1240,15 +1240,35 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Sätts när en press blir en riktig drag (>5px). Används för att INTE
     // navigera när man dragit i Föregående/Nästa-knappen i stället för klickat.
     const didDragRef = useRef(false);
+    // Elementet som bär pointer-capturen för kortets pågående gest: kortet
+    // självt, ELLER knappen/länken gesten började på (se onPointerDown — det
+    // är så ett rent klick på knappen överlever). null = ingen gest.
+    const dragCaptureElRef = useRef<HTMLElement | null>(null);
+    // Sant när gesten började på en knapp/länk — då ska tap-utan-rörelse INTE
+    // toggla kortets höjd (knappens eget onClick är tappens betydelse).
+    const dragFromInteractiveRef = useRef(false);
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (e.button !== 0) return;
         didDragRef.current = false;
 
         const target = e.target as HTMLElement;
-        if (target.closest('button') || target.closest('a') || target.closest('input')) {
+        // Textfält behåller sina egna pekgester (markera text, flytta
+        // markören) — kortet ska inte börja åka för att man drar i chattfältet.
+        if (target.closest('input, textarea, select')) {
             return;
         }
+        // KNAPPAR OCH LÄNKAR ÄR OCKSÅ DRAGYTA (Josef 31/8: "det måste man
+        // kunna oavsett var man börjar dra i eventkortet" — förr dog gesten
+        // helt på Anmäl/chatten/listan och kortet gick varken att dra eller
+        // scrolla därifrån). Tricket är VAR pointer-capturen sätts: på det
+        // interaktiva elementet SJÄLVT, inte på kortet. Då pekar pointerup
+        // fortfarande på knappen och ett RENT klick (ingen rörelse) når dess
+        // onClick som vanligt — capture på kortet hade retargetat bort
+        // klicket. Händelserna bubblar ändå hit upp, så drag-logiken nedan
+        // är densamma; blir gesten ett drag sväljer onClickCapture på kortet
+        // knappens efterföljande klick (didDragRef).
+        const interactive = target.closest('button, a') as HTMLElement | null;
 
         // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
         // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens
@@ -1264,7 +1284,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
         }
 
-        e.currentTarget.setPointerCapture(e.pointerId);
+        const captureEl = interactive ?? e.currentTarget;
+        captureEl.setPointerCapture(e.pointerId);
+        dragCaptureElRef.current = captureEl;
+        dragFromInteractiveRef.current = interactive != null;
         isDragging.current = true;
         dragDirection.current = 'none';
         startX.current = e.clientX;
@@ -1280,7 +1303,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
         if (!isDragging.current) return;
-        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        // Capturen kan sitta på en knapp/länk i stället för kortet (se
+        // onPointerDown) — fråga elementet som faktiskt bär den.
+        if (!dragCaptureElRef.current?.hasPointerCapture(e.pointerId)) return;
 
         const deltaX = e.clientX - startX.current;
         const deltaY = startY.current - e.clientY; // drag up is positive deltaY
@@ -1315,10 +1340,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
         if (!isDragging.current) return;
         isDragging.current = false;
-        
-        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-            e.currentTarget.releasePointerCapture(e.pointerId);
+
+        const captureEl = dragCaptureElRef.current ?? e.currentTarget;
+        if (captureEl.hasPointerCapture(e.pointerId)) {
+            captureEl.releasePointerCapture(e.pointerId);
         }
+        dragCaptureElRef.current = null;
 
         setIsAnimating(true);
 
@@ -1368,11 +1395,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // I chatt-/listvyn görs inget: ett tap i sektionen (t.ex. på en
             // bubbla eller mellan listraderna) ska inte fälla ihop kortet mitt
             // i läsningen.
-            if (cardView === 'info') {
+            // Började tappen på en knapp/länk är knappens onClick tappens hela
+            // betydelse — höjdtoggeln ska inte också slå till.
+            if (cardView === 'info' && !dragFromInteractiveRef.current) {
                 updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
             }
         }
 
+        dragFromInteractiveRef.current = false;
         dragDirection.current = 'none';
     };
 
@@ -1748,6 +1778,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
+                // Blev gesten ett drag skickar webbläsaren ÄNDÅ ett click till
+                // knappen/länken den började på (capturen sitter på elementet
+                // självt, se onPointerDown) — svälj det i capture-fasen så ett
+                // kortdrag från Anmäl/chatten aldrig också ÖPPNAR dem.
+                onClickCapture={(e) => {
+                    if (didDragRef.current) {
+                        didDragRef.current = false;
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }}
                 onAnimationEnd={(e) => { if (e.animationName === 'scroll-nudge') setScrollNudgeActive(false); }}
                 style={{
                     // Höjden går via --sheet-h så scroll-nudge-animationen kan
