@@ -6,9 +6,8 @@
  * URL:en i DB rörs inte (primärnyckel + share-slug-bas); både städningen
  * och spårningen sker här i utkanten, vid aggregeringen.
  *
- * Sedan Impact-godkännandet 2026-08-27 wrappas ticketmaster.se-länkar i vår
- * Impact-redirect — samma form som Discovery-API:t själv returnerar för
- * vårt konto (verifierad mot API-svar 2026-09-01).
+ * Sedan Impact-godkännandet 2026-08-27 wrappas ticketmaster-länkar i vår
+ * Impact-redirect — per marknad (se/dk/no), se OUR_IMPACT_REDIRECTS nedan.
  */
 const FOREIGN_AFFILIATE_PARAMS: Record<string, string[]> = {
     'ticketmaster.': ['c', 'ac'],
@@ -16,10 +15,19 @@ const FOREIGN_AFFILIATE_PARAMS: Record<string, string[]> = {
 };
 /** Impact Radius-/affiliate-redirectdomäner: länken bär destinationen i ?u= */
 const AFFILIATE_REDIRECT_HOST = /\.(evyy\.net|sjv\.io|pxf\.io|7eer\.net|ojrq\.net|i\d+\.net|prf\.hn|go2cloud\.org)$/i;
-/** Vår spårningslänk: publisher 7528311, ad 2038747, program 23885. */
-const OUR_IMPACT_REDIRECT = 'https://ticketmaster.evyy.net/c/7528311/2038747/23885';
-/** Bara .se — ägarbeslut: djuplänka aldrig till andra TM-marknader. */
-const WRAPPABLE_HOST = /(^|\.)ticketmaster\.se$/i;
+/**
+ * Våra spårningslänkar per TM-marknad (publisher 7528311). Impact kör EN
+ * kampanj per land — SE-mallen svarar 404 för .dk/.no-destinationer, så
+ * varje marknad MÅSTE wrappas med sin egen (alla tre hämtade ur Impacts
+ * länkverktyg + skarptestade 31/8). Ägarbeslut 31/8: se+dk+no — fler
+ * marknader kräver sin egen mall här, wrappa ALDRIG med fel lands länk.
+ */
+const OUR_IMPACT_REDIRECTS: Record<string, string> = {
+    se: 'https://ticketmaster.evyy.net/c/7528311/2038747/23885',
+    dk: 'https://ticketmaster.evyy.net/c/7528311/1958964/23893',
+    no: 'https://ticketmaster.evyy.net/c/7528311/1958977/23900',
+};
+const WRAPPABLE_HOST = /(^|\.)ticketmaster\.(se|dk|no)$/i;
 
 export function publicUrl(raw: string): string {
     try {
@@ -37,8 +45,9 @@ export function publicUrl(raw: string): string {
             params.forEach((k) => u.searchParams.delete(k));
         }
         if (u.searchParams.get('utm_medium') === 'affiliate') u.searchParams.delete('utm_medium');
-        if (WRAPPABLE_HOST.test(u.hostname)) {
-            const wrapped = new URL(OUR_IMPACT_REDIRECT);
+        const market = u.hostname.match(WRAPPABLE_HOST)?.[2]?.toLowerCase();
+        if (market && OUR_IMPACT_REDIRECTS[market]) {
+            const wrapped = new URL(OUR_IMPACT_REDIRECTS[market]);
             wrapped.searchParams.set('u', u.toString().replace(/\?$/, ''));
             wrapped.searchParams.set('utm_medium', 'affiliate');
             return wrapped.toString();

@@ -36,9 +36,26 @@ describe('publicUrl', () => {
         expect(publicUrl(fb)).toBe(fb);
     });
 
-    it('wrappar ALDRIG andra TM-marknader än .se (ägarbeslutet)', () => {
+    it('wrappar .dk och .no med SINA marknadslänkar (SE-mallen ger 404 där)', () => {
+        expect(publicUrl('https://www.ticketmaster.dk/event/foo/123'))
+            .toBe('https://ticketmaster.evyy.net/c/7528311/1958964/23893?u=https%3A%2F%2Fwww.ticketmaster.dk%2Fevent%2Ffoo%2F123&utm_medium=affiliate');
+        expect(publicUrl('https://www.ticketmaster.no/event/foo/123'))
+            .toBe('https://ticketmaster.evyy.net/c/7528311/1958977/23900?u=https%3A%2F%2Fwww.ticketmaster.no%2Fevent%2Ffoo%2F123&utm_medium=affiliate');
+    });
+
+    it('är idempotent även för dk/no', () => {
+        const once = publicUrl('https://www.ticketmaster.dk/event/foo/123');
+        expect(publicUrl(once)).toBe(once);
+    });
+
+    it('marknader utan egen mall (.com) wrappas INTE — fel lands länk är värre än ingen', () => {
         const com = 'https://www.ticketmaster.com/event/foo/123';
         expect(publicUrl(com)).toBe(com);
+    });
+
+    it('gamla .dk-länkar med främmande ?c=8469859 städas och wrappas med DK-mallen', () => {
+        expect(publicUrl('https://www.ticketmaster.dk/event/foredrag/120173681?language=en-us&c=8469859&ac=1'))
+            .toBe('https://ticketmaster.evyy.net/c/7528311/1958964/23893?u=https%3A%2F%2Fwww.ticketmaster.dk%2Fevent%2Fforedrag%2F120173681%3Flanguage%3Den-us&utm_medium=affiliate');
     });
 
     it('universe.com med ref strippas men wrappas inte', () => {
