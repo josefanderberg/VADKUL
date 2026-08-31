@@ -8,7 +8,7 @@
  * (144 kr, 76 % av Firebase-notan). listDocuments() hämtar bara namnen.
  */
 import { describe, it, expect } from 'vitest';
-import { deleteShards } from './aggregate-events';
+import { deleteShards, uploadShardedLayer } from './aggregate-events';
 
 function fakeDb(ids: string[]) {
     const deleted: string[] = [];
@@ -51,5 +51,40 @@ describe('deleteShards', () => {
         const f = fakeDb(['cards', 'cards_0']);
         await deleteShards(f.db, 'cards_');
         expect(f.deleted).toEqual(['cards_0']);
+    });
+});
+
+/**
+ * Ordningsvakt: API-routen cachar på index-docens updatedAt, så indexet får
+ * ALDRIG skrivas före shardsen — en läsare mitt i fönstret cachar annars
+ * nytt index + gamla shards en hel aggregatgeneration (hände 2026-08-31).
+ */
+function orderedFakeDb(existingIds: string[]) {
+    const ops: string[] = [];
+    const db: any = {
+        collection: () => ({
+            doc: (id: string) => ({ set: async () => { ops.push(`set:${id}`); } }),
+            listDocuments: async () =>
+                existingIds.map(id => ({ id, delete: async () => { ops.push(`del:${id}`); } })),
+        }),
+    };
+    return { db, ops };
+}
+
+describe('uploadShardedLayer', () => {
+    it('skriver ALLA shards före index-dokumentet, städar sist', async () => {
+        const f = orderedFakeDb(['cards', 'cards_0', 'cards_1', 'cards_2']);
+        await uploadShardedLayer(f.db, 'cards', { shardCount: 2 }, [{ shardIndex: 0 }, { shardIndex: 1 }]);
+        expect(f.ops).toEqual(['set:cards_0', 'set:cards_1', 'set:cards', 'del:cards_2']);
+    });
+
+    it('krympande shard-antal: gamla överskott raderas först EFTER att indexet pekar rätt', async () => {
+        const f = orderedFakeDb(['descriptions_0', 'descriptions_1', 'descriptions_2']);
+        await uploadShardedLayer(f.db, 'descriptions', { shardCount: 1 }, [{ shardIndex: 0 }]);
+        const idxAt = f.ops.indexOf('set:descriptions');
+        for (const op of f.ops.filter(o => o.startsWith('del:'))) {
+            expect(f.ops.indexOf(op)).toBeGreaterThan(idxAt);
+        }
+        expect(f.ops.filter(o => o.startsWith('del:'))).toEqual(['del:descriptions_1', 'del:descriptions_2']);
     });
 });

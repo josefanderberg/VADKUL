@@ -219,15 +219,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             }
             if (current.length > 0) shards.push(current);
             console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar (byte-budget)`);
-            await db.collection('aggregatedEvents').doc('destinations').set({
-                updatedAt, shardCount: shards.length, totalEvents: destinations.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`destinations_${i}`).set({
-                    updatedAt, shardIndex: i, events: shards[i],
-                });
-            }
-            await deleteShards(db, 'destinations_', shards.length);
+            await uploadShardedLayer(db, 'destinations',
+                { updatedAt, shardCount: shards.length, totalEvents: destinations.length },
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
             console.log(`      ✅ Uploaded "destinations" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -251,15 +245,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
                 shards.push(cards.slice(i, i + SHARD_SIZE));
             }
             console.log(`      ℹ️  Cards är ${(cardsBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
-            await db.collection('aggregatedEvents').doc('cards').set({
-                updatedAt, shardCount: shards.length, totalEvents: cards.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`cards_${i}`).set({
-                    updatedAt, shardIndex: i, events: shards[i],
-                });
-            }
-            await deleteShards(db, 'cards_', shards.length);
+            await uploadShardedLayer(db, 'cards',
+                { updatedAt, shardCount: shards.length, totalEvents: cards.length },
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
             console.log(`      ✅ Uploaded "cards" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -297,15 +285,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             }
             if (Object.keys(current).length > 0) shards.push(current);
             console.log(`      ℹ️  Descriptions är ${(descBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
-            await db.collection('aggregatedEvents').doc('descriptions').set({
-                updatedAt, shardCount: shards.length, totalEntries: entries.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`descriptions_${i}`).set({
-                    updatedAt, shardIndex: i, data: shards[i],
-                });
-            }
-            await deleteShards(db, 'descriptions_', shards.length);
+            await uploadShardedLayer(db, 'descriptions',
+                { updatedAt, shardCount: shards.length, totalEntries: entries.length },
+                shards.map((data, i) => ({ updatedAt, shardIndex: i, data })));
             console.log(`      ✅ Uploaded "descriptions" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -318,6 +300,29 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
 /** Radera cards_<N> shards som inte längre används. */
 async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: number = 0): Promise<void> {
     return deleteShards(db, 'cards_', keepBelow);
+}
+
+/**
+ * Shardad uppladdning i LÄSSÄKER ordning: alla shards FÖRST, index-dokumentet
+ * SIST, städning av överblivna shards därefter. Webbens API-route läser index
+ * → shards och CACHAR resultatet nycklat på index-docens updatedAt — skrevs
+ * indexet först (som t.o.m. 31/8) kunde en läsare mitt i fönstret få nytt
+ * index + gamla shards, och den blandningen fastnade i cachen en hel
+ * aggregatgeneration (hände skarpt 2026-08-31 ~13:26Z). Med index sist pekar
+ * en färsk updatedAt alltid på fullt skrivna shards.
+ */
+export async function uploadShardedLayer(
+    db: FirebaseFirestore.Firestore,
+    baseDocId: string,
+    indexPayload: Record<string, unknown>,
+    shardPayloads: Record<string, unknown>[],
+): Promise<void> {
+    const prefix = `${baseDocId}_`;
+    for (let i = 0; i < shardPayloads.length; i++) {
+        await db.collection('aggregatedEvents').doc(`${prefix}${i}`).set(shardPayloads[i]);
+    }
+    await db.collection('aggregatedEvents').doc(baseDocId).set(indexPayload);
+    await deleteShards(db, prefix, shardPayloads.length);
 }
 
 /**
