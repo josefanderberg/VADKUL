@@ -85,4 +85,14 @@ describe('usableImageUrl', () => {
         expect(usableImageUrl(undefined)).toBeUndefined();
         expect(usableImageUrl(42)).toBeUndefined();
     });
+
+    it('reparerar default-mismatchad port (Axiell-bibliotekens https://…:80)', () => {
+        expect(usableImageUrl('https://bibliotekuppsala.se:80/documents/a%20b.jpg?t=1'))
+            .toBe('https://bibliotekuppsala.se/documents/a%20b.jpg?t=1');
+        expect(usableImageUrl('http://a.se:443/b.jpg')).toBe('http://a.se/b.jpg');
+        // Uttrycklig icke-defaultport är avsiktlig — rör den inte.
+        expect(usableImageUrl('https://a.se:8443/b.jpg')).toBe('https://a.se:8443/b.jpg');
+        // Rätt defaultport normaliseras redan av URL-parsern — släpps som den är.
+        expect(usableImageUrl('https://a.se:443/b.jpg')).toBe('https://a.se:443/b.jpg');
+    });
 });

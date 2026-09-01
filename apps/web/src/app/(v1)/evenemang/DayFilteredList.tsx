@@ -8,6 +8,7 @@ import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
+import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
 
 // Inloggningsmodalen (samma som kartans) — laddas först när någon utloggad
@@ -76,6 +77,10 @@ export type ListedEvent = {
     category: string;
     hostName: string | null;
     description: string | null;
+    /** Dagens dubbletter (samma titel eller omslagsbild — groupDups): ÖVRIGA tillfällen utöver
+     *  radens representant. Det som skiljer (tid & plats) radas upp bakom
+     *  radens utfällning; representanten bär bild, status och hjärta. */
+    dups?: Omit<ListedEvent, 'dups'>[];
 };
 
 /** Skriv klick-överlämningen — kortet på /?event= läser den vid boot.
@@ -116,6 +121,10 @@ export type ListedDay = {
 // — staten delas med kart-heron via DayFilterProvider.
 
 const HOUR_MS = 3_600_000;
+
+// Dagrubrikens "N event" ska räkna EVENT, inte rader — en grupprad (dups)
+// bär flera tillfällen.
+const countEvents = (rows: ListedEvent[]) => rows.reduce((sum, e) => sum + 1 + (e.dups?.length ?? 0), 0);
 // Max antal BILDLÖSA rader som visas per dag — bildkorten gör listan visuellt
 // tilltalande, de kompakta raderna får inte dränka dem (Josef 30/8). Resten
 // ligger bakom en "Visa fler"-rad per dag. SSR:en renderar allt (crawlbart);
@@ -146,7 +155,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
             className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black transition-colors border ${
                 active
                     ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-[#006AA7]/40 hover:text-[#006AA7]'
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400'
             }`}
         >
             {label}
@@ -183,7 +192,7 @@ function StatusBadge({ status }: { status: RowStatus }) {
         soon: { label: 'Snart', cls: 'bg-amber-500 text-white' },
         within3: { label: 'Inom 3h', cls: 'bg-amber-300 text-amber-900' },
         within5: { label: 'Inom 5h', cls: 'bg-sky-300 text-sky-900' },
-        past: { label: 'Har varit', cls: 'bg-slate-300 text-slate-700' },
+        past: { label: 'Har varit', cls: 'bg-slate-300 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300' },
     }[status];
     return (
         <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${cfg.cls}`}>
@@ -210,7 +219,7 @@ function LazyRowImage({ src, className, onFailed }: {
         return () => io.disconnect();
     }, []);
     return (
-        <div ref={holderRef} className={`overflow-hidden bg-slate-200 ${className ?? ''}`}>
+        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-zinc-800 ${className ?? ''}`}>
             {inView && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -227,6 +236,42 @@ function LazyRowImage({ src, className, onFailed }: {
     );
 }
 
+// Utfällningen på en GRUPPRAD (dups): övriga tillfällen — bara det som
+// skiljer sig: tid & plats, ev. pris, och TITELN när den avviker från radens
+// (bildgrupperna — "Förtidsröstning Tenhult" under "Förtidsröstning i stan").
+// <details> i stället för state så SSR-HTML:en är komplett och länkarna
+// fungerar redan före hydreringen. Ligger UTANFÖR radens Link (klick ska
+// fälla ut, inte navigera).
+function DupList({ dups, repTitle }: { dups: NonNullable<ListedEvent['dups']>; repTitle: string }) {
+    const repKey = dupKey(repTitle);
+    return (
+        <details className="group/dups">
+            <summary className="inline-flex items-center gap-1 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11px] font-black text-[#006AA7] dark:text-sky-400 hover:underline">
+                <ChevronDown size={12} strokeWidth={3} className="transition-transform group-open/dups:rotate-180" aria-hidden />
+                {dups.length === 1 ? '+1 tillfälle till' : `+${dups.length} fler tider & platser`}
+            </summary>
+            <ul className="mt-1.5 flex flex-col gap-1.5 border-l-2 border-slate-200 dark:border-zinc-800 pl-3">
+                {dups.map(d => (
+                    <li key={d.id}>
+                        <Link
+                            href={d.href}
+                            onClick={() => seedMapHandoff(d)}
+                            className="flex items-center gap-x-2 max-w-full text-[11px] font-bold text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                        >
+                            {dupKey(d.title) !== repKey && (
+                                <span className="min-w-0 shrink truncate font-black text-slate-700 dark:text-zinc-300">{d.title}</span>
+                            )}
+                            {d.clock && <span className="shrink-0 tabular-nums">kl {d.clock}</span>}
+                            <span className="min-w-0 shrink truncate">{d.place}</span>
+                            {d.price && <span className="shrink-0 text-slate-400 dark:text-zinc-500">{d.price}</span>}
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+        </details>
+    );
+}
+
 function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     e: ListedEvent;
     dimmed?: boolean;
@@ -236,32 +281,33 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
 }) {
     const [imgFailed, setImgFailed] = useState(false);
     const hasImage = !!e.coverImage && !imgFailed;
+    const dups = e.dups ?? [];
     // Statusbadgen är klockberoende → bara efter mount (deterministisk SSR).
     const status = nowTs === 0 ? null : statusOf(e, nowTs);
 
     // Inforad (plats · tid · pris · antal) — samma stil/ikoner som eventkortets
     // närhetslista. Allt är server-strängar → deterministiskt vid SSR.
     const infoRow = (
-        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 overflow-hidden">
+        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-zinc-400 overflow-hidden">
             <span className="inline-flex items-center gap-1 min-w-0">
-                <MapPin size={11} className="text-[#006AA7] shrink-0" />
+                <MapPin size={11} className="text-[#006AA7] dark:text-sky-400 shrink-0" />
                 <span className="truncate">{e.place}</span>
             </span>
             {e.clock && (
                 <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Clock size={11} className="text-[#006AA7]" />
+                    <Clock size={11} className="text-[#006AA7] dark:text-sky-400" />
                     kl {e.clock}
                 </span>
             )}
             {e.price && (
                 <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Ticket size={11} className="text-[#006AA7]" />
+                    <Ticket size={11} className="text-[#006AA7] dark:text-sky-400" />
                     {e.price}
                 </span>
             )}
             {e.attendees > 0 && (
                 <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Users size={11} className="text-[#006AA7]" />
+                    <Users size={11} className="text-[#006AA7] dark:text-sky-400" />
                     {e.attendees} kommer
                 </span>
             )}
@@ -276,26 +322,32 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
+            <li className={`relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
                 <Link href={e.href} className="block" onClick={() => seedMapHandoff(e)}>
                     <div className="relative">
                         <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
                         <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
                             <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{e.emoji}</span>
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
+                            {dups.length > 0 && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-[10px] font-black text-white tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                    ×{dups.length + 1}
+                                </span>
+                            )}
                             {status && <StatusBadge status={status} />}
                         </div>
                     </div>
                     <div className="px-4 py-2">{infoRow}</div>
                 </Link>
+                {dups.length > 0 && <div className="px-4 pb-2.5 -mt-0.5"><DupList dups={dups} repTitle={e.title} /></div>}
                 <button
                     type="button"
                     onClick={() => onToggleSave(e.id)}
                     aria-pressed={isSaved}
                     aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
                     title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-                    className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow transition-colors ${
-                        isSaved ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
+                    className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+                        isSaved ? 'text-rose-500' : 'text-slate-400 dark:text-zinc-500 hover:text-rose-400'
                     }`}
                 >
                     <Heart size={16} fill={isSaved ? 'currentColor' : 'none'} />
@@ -305,30 +357,41 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     }
 
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
+    // En grupprad får dessutom ×N-brickan vid titeln och utfällningen under —
+    // utfällningen ligger utanför Link:en (klick ska fälla ut, inte navigera),
+    // så li:t är en kolumn med radinnehållet i en egen flex-div.
     return (
-        <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
-            <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={() => seedMapHandoff(e)}>
-                <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
-                <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-900 leading-snug truncate">{e.title}</span>
-                        {status && <StatusBadge status={status} />}
+        <li className={`rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
+            <div className="flex items-stretch">
+                <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={() => seedMapHandoff(e)}>
+                    <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
+                    <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-slate-900 dark:text-zinc-100 leading-snug truncate">{e.title}</span>
+                            {dups.length > 0 && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-500 dark:text-zinc-400 tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                    ×{dups.length + 1}
+                                </span>
+                            )}
+                            {status && <StatusBadge status={status} />}
+                        </span>
+                        <span className="block mt-1">{infoRow}</span>
                     </span>
-                    <span className="block mt-1">{infoRow}</span>
-                </span>
-            </Link>
-            <button
-                type="button"
-                onClick={() => onToggleSave(e.id)}
-                aria-pressed={isSaved}
-                aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-                className={`shrink-0 flex items-center px-3.5 rounded-r-xl transition-colors ${
-                    isSaved ? 'text-rose-500' : 'text-slate-300 hover:text-rose-400'
-                }`}
-            >
-                <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
-            </button>
+                </Link>
+                <button
+                    type="button"
+                    onClick={() => onToggleSave(e.id)}
+                    aria-pressed={isSaved}
+                    aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
+                    title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
+                    className={`shrink-0 flex items-center px-3.5 rounded-r-xl transition-colors ${
+                        isSaved ? 'text-rose-500' : 'text-slate-300 dark:text-zinc-600 hover:text-rose-400'
+                    }`}
+                >
+                    <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
+                </button>
+            </div>
+            {dups.length > 0 && <div className="pl-16 pr-4 pb-3 -mt-1"><DupList dups={dups} repTitle={e.title} /></div>}
         </li>
     );
 }
@@ -415,13 +478,18 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
         : [sel.key];
     const visDays = dayKeys ? days.filter(d => dayKeys.includes(d.key)) : days;
 
-    const rowMatch = (e: ListedEvent) =>
+    const hourMatch = (e: { hour: number | null }) =>
         hours.length ? e.hour !== null && hours.includes(e.hour) : true;
+    // En grupprad (dups) matchar timfiltret om NÅGOT av tillfällena gör det,
+    // och räknas som "har varit" först när ALLA tillfällen passerat — annars
+    // försvinner kvällens sagostund för att morgonens redan varit.
+    const rowMatch = (e: ListedEvent) => hourMatch(e) || (e.dups ?? []).some(hourMatch);
+    const rowPast = (e: ListedEvent) => isPast(e) && (e.dups ?? []).every(isPast);
     // Från nu och framåt: passerade rader göms bakom "har redan varit".
     const shownDays = visDays
         .map(d => {
             const rows = d.events.filter(rowMatch);
-            return { ...d, upcoming: rows.filter(e => !isPast(e)), past: rows.filter(isPast) };
+            return { ...d, upcoming: rows.filter(e => !rowPast(e)), past: rows.filter(rowPast) };
         })
         .filter(d => d.upcoming.length > 0 || d.past.length > 0);
 
@@ -519,7 +587,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                         onClick={() => startTransition(() => setSel({ kind: 'period', period: p.key }))}
                     />
                 ))}
-                <span className="shrink-0 mx-1 h-5 w-px bg-slate-200" aria-hidden />
+                <span className="shrink-0 mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden />
                 {days.slice(2).map(d => (
                     <Chip
                         key={d.key}
@@ -534,14 +602,14 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
             {showHist && (
                 <div className="mt-4">
                     <div className="flex items-baseline justify-between gap-2">
-                        <p className="text-[11px] font-bold text-slate-400">
+                        <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500">
                             När på dagen? Tryck på staplarna för att filtrera.
                         </p>
                         {hours.length > 0 && (
                             <button
                                 type="button"
                                 onClick={() => startTransition(() => setHours([]))}
-                                className="shrink-0 text-[11px] font-black text-[#006AA7] hover:underline"
+                                className="shrink-0 text-[11px] font-black text-[#006AA7] dark:text-sky-400 hover:underline"
                             >
                                 kl {hourRanges(hours)} · Rensa ✕
                             </button>
@@ -566,14 +634,14 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                         aria-hidden
                                         className={`w-full rounded-t transition-colors ${
                                             on ? 'bg-[#006AA7]'
-                                            : c > 0 ? 'bg-slate-300 group-hover:bg-[#006AA7]/50'
-                                            : 'bg-slate-100'
+                                            : c > 0 ? 'bg-slate-300 dark:bg-zinc-700 group-hover:bg-[#006AA7]/50 dark:group-hover:bg-sky-400/50'
+                                            : 'bg-slate-100 dark:bg-zinc-800'
                                         }`}
                                         style={{ height: c > 0 ? Math.max(5, Math.round((c / histMax) * 44)) : 2 }}
                                     />
                                     <span
                                         aria-hidden
-                                        className={`text-[9px] font-bold tabular-nums ${on ? 'text-[#006AA7]' : 'text-slate-400'}`}
+                                        className={`text-[9px] font-bold tabular-nums ${on ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-400 dark:text-zinc-500'}`}
                                     >
                                         {h % 3 === 0 ? String(h).padStart(2, '0') : ' '}
                                     </span>
@@ -616,8 +684,8 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                 klistrade rutan så den rullar bort som vanligt
                                 (annars hänger en lös linje kvar under naven).
                                 Första dagen har filterraden över sig i stället. */}
-                            {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200" />}
-                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 backdrop-blur-sm flex items-center gap-2">
+                            {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200 dark:bg-zinc-800" />}
+                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 dark:bg-zinc-950/95 backdrop-blur-sm flex items-center gap-2">
                                 <h2 className="flex items-center gap-2 min-w-0">
                                     <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#006AA7] text-white text-sm font-black shadow-sm">
                                         {rel && (
@@ -630,8 +698,8 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                         <span className="first-letter:uppercase">{day.label}</span>
                                     </span>
                                     {day.upcoming.length > 0 && (
-                                        <span className="text-[11px] font-black text-slate-400 tabular-nums">
-                                            {day.upcoming.length} event
+                                        <span className="text-[11px] font-black text-slate-400 dark:text-zinc-500 tabular-nums">
+                                            {countEvents(day.upcoming)} event
                                         </span>
                                     )}
                                 </h2>
@@ -654,7 +722,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                         }}
                                         aria-label={`Hoppa till nästa dag — ${nextDay.label}`}
                                         title={`Nästa dag: ${nextDay.label}`}
-                                        className="ml-auto shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 shadow-sm hover:text-[#006AA7] hover:border-[#006AA7]/40 active:scale-95 transition-all"
+                                        className="ml-auto shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 shadow-sm hover:text-[#006AA7] dark:hover:text-sky-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 active:scale-95 transition-all"
                                     >
                                         <ChevronDown size={16} strokeWidth={2.5} />
                                     </button>
@@ -666,10 +734,10 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                     type="button"
                                     onClick={() => togglePast(day.key)}
                                     aria-expanded={pastOpen}
-                                    className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-black text-slate-400 hover:text-[#006AA7] transition-colors"
+                                    className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-black text-slate-400 dark:text-zinc-500 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
                                 >
                                     <span aria-hidden>🕐</span>
-                                    {day.past.length} har redan varit · {pastOpen ? 'Dölj' : 'Visa'}
+                                    {countEvents(day.past)} har redan varit · {pastOpen ? 'Dölj' : 'Visa'}
                                 </button>
                             )}
                             <ul className="flex flex-col gap-2">
@@ -688,7 +756,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                             type="button"
                                             onClick={() => toggleImgless(day.key)}
                                             aria-expanded={imglessOpen}
-                                            className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-xs font-black text-slate-500 hover:text-[#006AA7] hover:border-[#006AA7]/40 transition-colors"
+                                            className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-zinc-700 text-xs font-black text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] dark:hover:text-sky-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 transition-colors"
                                         >
                                             {imglessOpen ? 'Visa färre ▴' : `Visa ${imglessMore} evenemang till ▾`}
                                         </button>
@@ -705,18 +773,18 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
             {hasMoreDays && <div ref={sentinelRef} aria-hidden className="h-px" />}
 
             {shownDays.length === 0 && (
-                <p className="mt-6 text-sm font-bold text-slate-500">
+                <p className="mt-6 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     Inga listade event {emptyPhrase} i {cityName}.{' '}
-                    <Link href="/" className="text-[#006AA7]">Se hela utbudet på kartan</Link>
+                    <Link href="/" className="text-[#006AA7] dark:text-sky-400">Se hela utbudet på kartan</Link>
                 </p>
             )}
 
             {/* Visas först när alla dagar är avtäckta — annars ser det ut som
                 att listan tar slut fast sentineln fyller på fler dagar. */}
             {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && !hasMoreDays && restCount > 0 && (
-                <p className="mt-8 text-sm font-bold text-slate-500">
+                <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restCount} evenemang längre fram.{' '}
-                    <Link href="/" className="text-[#006AA7]">Utforska hela utbudet på kartan</Link>
+                    <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>
                 </p>
             )}
 

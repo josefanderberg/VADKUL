@@ -27,14 +27,24 @@ export type DeepLinkEvent = {
     description?: string;
 };
 
-/** Samma vakt som stadssidorna (cityData.usableImageUrl): skrapade kort bär
+/** Bildvakt (delas med stadssidorna via cityData): skrapade kort bär
  *  data:-platshållare och rotrelativa /images-sökvägar som 404:ar hos oss —
- *  bara absoluta http(s)-adresser släpps vidare till kortet. */
+ *  bara absoluta http(s)-adresser släpps vidare till kortet.
+ *  Dessutom repareras PORT-MISMATCHEN från bibliotekens Axiell-sajter:
+ *  ~4 100 bilder kom som "https://host:80/…" (skrapan har uppgraderat schemat
+ *  utan att släppa porten). HTTPS mot port 80 kan aldrig ladda, så raderna
+ *  sorterades som "har bild" men visades utan (Uppsala 1/9). Utan default-
+ *  mismatchad port svarar värdarna 200 — släpp porten, behåll resten intakt. */
 export function usableImageUrl(raw: unknown): string | undefined {
     if (typeof raw !== 'string' || !raw) return undefined;
     try {
         const u = new URL(raw);
-        return u.protocol === 'http:' || u.protocol === 'https:' ? raw : undefined;
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined;
+        if ((u.protocol === 'https:' && u.port === '80') || (u.protocol === 'http:' && u.port === '443')) {
+            u.port = '';
+            return u.toString();
+        }
+        return raw; // orörd sträng när inget behöver lagas (ingen omkodning)
     } catch {
         return undefined;
     }

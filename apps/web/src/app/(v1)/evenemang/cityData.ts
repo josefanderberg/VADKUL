@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { emojiForCategory } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
@@ -155,26 +156,9 @@ type RawCard = { id: string; hostName?: string; coverImage?: string; price?: str
 
 const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').trim();
 
-/**
- * Duger omslagsbilden att skicka vidare (till <img>, till schema.org)?
- * Skrapade kort bär två sorters skräp som annars läcker rakt ut:
- *   • ROTRELATIVA sökvägar ("/images/…") — de pekar på källans domän, inte vår,
- *     så de 404:ar hos oss och Google svarar "Ogiltig webbadress i fältet image"
- *     (Search Console 9/8, /evenemang/ostersund/konserter).
- *   • data:-URI:er — lazy-load-platshållare (tomma 0×0-SVG:er) som scrapern
- *     råkat ta i stället för den riktiga bilden.
- * Bara absoluta http(s)-adresser släpps igenom; resten behandlas som "ingen
- * bild" och faller tillbaka på sajtens OG-kort.
- */
-function usableImageUrl(raw: string | undefined): string | undefined {
-    if (!raw) return undefined;
-    try {
-        const u = new URL(raw);
-        return u.protocol === 'http:' || u.protocol === 'https:' ? raw : undefined;
-    } catch {
-        return undefined; // relativ sökväg eller trasig sträng
-    }
-}
+// Bildvakten (data:-platshållare, rotrelativa sökvägar, port-mismatch) delas
+// med /api/event — EN implementation, EN testsvit: usableImageUrl i
+// lib/deepLinkEventIndex. Historiken (Search Console 9/8, Uppsala 1/9) bor där.
 
 // Modulnivå-cache: JSON-filerna (~21k event) läses en gång per build-process,
 // inte en gång per stad.

@@ -20,16 +20,16 @@ export default async function CityIndexPage() {
     const total = cities.reduce((sum, c) => sum + c.total, 0);
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-800">
+        <main className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-200">
             <TopNav backHref="/" backLabel="Till kartan" />
 
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
-                <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
+                <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">
                     Evenemang i Sverige — stad för stad
                 </h1>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-zinc-400 font-medium">
                     VADKUL samlar allt som händer på en karta — just nu{' '}
-                    <strong className="text-slate-900">{total.toLocaleString('sv-SE')} kommande evenemang</strong>{' '}
+                    <strong className="text-slate-900 dark:text-zinc-100">{total.toLocaleString('sv-SE')} kommande evenemang</strong>{' '}
                     kring städerna nedan. Välj din stad, eller öppna kartan direkt.
                 </p>
 

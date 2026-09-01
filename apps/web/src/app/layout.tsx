@@ -90,6 +90,18 @@ const buildJsonLd = (total: number) => ({
     ],
 });
 
+// Temat sätts FÖRE första målningen. ThemeProvider (context/ThemeContext) gör
+// samma sak, men först i en effekt efter hydreringen — och /evenemang-sidorna
+// är statiskt genererade, så den som kör mörkt läge hann se en vit blink innan
+// klassen kom på plats. Samma villkor som providern: ett sparat val vinner,
+// annars webbläsarens/OS:ets prefers-color-scheme. Inline och synkront i <head>
+// (därför suppressHydrationWarning på <html> — klassen finns inte i SSR-HTML:en).
+const THEME_BOOT = `(function(){try{
+var t=localStorage.theme;
+if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))
+document.documentElement.classList.add('dark');
+}catch(e){}})();`;
+
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
@@ -105,6 +117,7 @@ export default async function RootLayout({
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
+                <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
                 {/* ALLA favicons på blå platta (#006AA7) sedan 30/8 — vitt moln på
                     transparent syns inte i sökresultatens vita cirkel. Nytt filnamn
                     (-bla) i stället för överskrivning: favicons cachas hårt. Ordningen är

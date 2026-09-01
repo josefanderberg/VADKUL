@@ -166,7 +166,7 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
     const live = buildLiveEvents(events);
 
     return (
-        <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 transition-all">
+        <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 transition-all">
             {/* Kartbotten: rena bild-tiles, absolut positionerade runt mitten. */}
             {tiles.map(t => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -228,7 +228,7 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
             </Link>
 
             {/* Carto/OSM-attribution — licenskravet gäller även rastertiles. */}
-            <span className="absolute bottom-0 right-0 z-30 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 bg-white/70 rounded-tl pointer-events-none">
+            <span className="absolute bottom-0 right-0 z-30 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
                 © OpenStreetMap © CARTO
             </span>
         </div>

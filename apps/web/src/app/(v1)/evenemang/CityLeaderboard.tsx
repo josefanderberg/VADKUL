@@ -78,12 +78,12 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
     const Stat = ({ value, label, active }: { value: number | null; label: string; active: boolean }) => (
         <span className="w-[52px] shrink-0 text-right">
             <span className={`block text-sm font-black tabular-nums ${
-                active ? 'text-[#006AA7]' : value ? 'text-slate-900' : 'text-slate-300'
+                active ? 'text-[#006AA7] dark:text-sky-400' : value ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-300 dark:text-zinc-600'
             }`}>
                 {value === null ? '–' : value.toLocaleString('sv-SE')}
             </span>
             <span className={`block text-[9px] font-bold uppercase tracking-wide ${
-                active ? 'text-[#006AA7]/70' : 'text-slate-400'
+                active ? 'text-[#006AA7]/70 dark:text-sky-400/70' : 'text-slate-400 dark:text-zinc-500'
             }`}>
                 {label}
             </span>
@@ -103,7 +103,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                         className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-colors border ${
                             sort === s.key
                                 ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-[#006AA7]/40 hover:text-[#006AA7]'
+                                : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400'
                         }`}
                     >
                         {s.label}
@@ -116,12 +116,12 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                 {rows.map((c, i) => (
                     <li
                         key={c.slug}
-                        className="rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all"
+                        className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all"
                     >
                         <Link href={`/evenemang/${c.slug}`} className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4">
                             <span
                                 className={`w-6 shrink-0 text-right text-base font-black tabular-nums ${
-                                    i < 3 ? 'text-[#006AA7]' : 'text-slate-300'
+                                    i < 3 ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-300 dark:text-zinc-600'
                                 }`}
                                 aria-hidden
                             >
@@ -131,9 +131,9 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                                 bredare skärmar följer hela frågan med (bättre
                                 intern länktext för Google, men den får inte
                                 tränga ut siffrorna på en telefon). */}
-                            <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900">
+                            <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
                                 {c.name}
-                                <span className="hidden font-semibold text-slate-400 sm:inline"> — vad händer?</span>
+                                <span className="hidden font-semibold text-slate-400 dark:text-zinc-500 sm:inline"> — vad händer?</span>
                             </span>
                             <Stat value={c.today} label="idag" active={sort === 'today'} />
                             <Stat value={c.week} label="i veckan" active={sort === 'week'} />

@@ -11,6 +11,8 @@ import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
 import { DayFilterProvider } from '../../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
+// Kartans ettords-etiketter för chipsen — se stadssidan.
+import { categoryLabel } from '@/components/v2/v2MapLabel';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
@@ -111,7 +113,7 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     const faqLd = buildFaqJsonLd(faqs);
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-800">
+        <main className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-200">
             {/* Kategorisidan räknas som besök på SIN STAD i topplistans
                 besök-kolumn (beaconen dedupar per dag, så stad+kategori
                 samma dag blir ändå ett besök). */}
@@ -126,7 +128,7 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 ctaHref={cityMapHref(city)}
             />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
-                <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
+                <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">
                     <span aria-hidden>{cat.emoji}</span> {cat.h1(city.name)}
                 </h1>
                 {/* Samma delade dagfilter som stadssidan: kart-heron och
@@ -141,17 +143,17 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                     recommended={[]}
                     ctaLabel={`Öppna kartan över ${city.name}`}
                 />
-                <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
-                    Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> med
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-zinc-400 font-medium">
+                    Just nu ligger <strong className="text-slate-900 dark:text-zinc-100">{events.length} kommande evenemang</strong> med
                     {' '}{cat.intro(city.name)} i {city.name} med omnejd på VADKUL
                     {(todayCount > 0 || weekCount > 0) && (
-                        <> — <strong className="text-slate-900">{todayCount} idag</strong> och{' '}
-                        <strong className="text-slate-900">{weekCount} i veckan</strong></>
+                        <> — <strong className="text-slate-900 dark:text-zinc-100">{todayCount} idag</strong> och{' '}
+                        <strong className="text-slate-900 dark:text-zinc-100">{weekCount} i veckan</strong></>
                     )}.
                     Allt är gratis att utforska, utan konto.
                     {venues.length >= 2 && <> Vanliga platser: {svList(venues)}.</>}
                 </p>
-                <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
+                <p className="mt-1 text-xs font-bold text-slate-400 dark:text-zinc-500">Uppdaterad {dayLabel(updatedAt)}</p>
 
                 <EventDayList events={events} cityName={city.name} />
                 </DayFilterProvider>
@@ -159,18 +161,18 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 <FaqSection faqs={faqs} />
 
                 {siblingCategories.length > 0 && (
-                    <div className="mt-10 pt-6 border-t border-slate-200">
-                        <h2 className="text-sm font-black text-slate-900 mb-3">Mer i {city.name}</h2>
+                    <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
+                        <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">Mer i {city.name}</h2>
                         <div className="flex flex-wrap gap-2">
                             {siblingCategories.map(({ cat: c, count }) => (
                                 <Link
                                     key={c.slug}
                                     href={`/evenemang/${city.slug}/${c.slug}`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
                                 >
                                     <span aria-hidden>{c.emoji}</span>
-                                    {c.label}
-                                    <span className="text-slate-400 font-black">{count}</span>
+                                    {categoryLabel(c.dataKey)}
+                                    <span className="text-slate-400 dark:text-zinc-500 font-black">{count}</span>
                                 </Link>
                             ))}
                         </div>
@@ -179,13 +181,13 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
 
                 {sameCategoryElsewhere.length > 0 && (
                     <div className="mt-8">
-                        <h2 className="text-sm font-black text-slate-900 mb-3">{cat.label} i fler städer</h2>
+                        <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">{cat.label} i fler städer</h2>
                         <div className="flex flex-wrap gap-2">
                             {sameCategoryElsewhere.map(({ city: c }) => (
                                 <Link
                                     key={c.slug}
                                     href={`/evenemang/${c.slug}/${cat.slug}`}
-                                    className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
+                                    className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
                                 >
                                     {c.name}
                                 </Link>

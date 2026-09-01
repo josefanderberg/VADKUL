@@ -12,11 +12,11 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
     ctaHref?: string;
 }) {
     return (
-        <nav className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md border-b border-slate-200/70">
+        <nav className="sticky top-0 z-30 bg-slate-50/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/70 dark:border-zinc-800/70">
             <div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
                 <Link
                     href={backHref}
-                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] dark:text-sky-400 hover:text-[#005590] dark:hover:text-sky-300 transition-colors"
                 >
                     ← {backLabel}
                 </Link>

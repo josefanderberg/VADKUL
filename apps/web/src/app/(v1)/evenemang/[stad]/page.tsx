@@ -11,6 +11,9 @@ import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
+// Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
+// kartan — Musik, Sport, Familj …), inte kategorisidornas långa SEO-namn.
+import { categoryLabel } from '@/components/v2/v2MapLabel';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -137,7 +140,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         .map(x => x.c);
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-800">
+        <main className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-200">
             {/* Besöksräknaren: en ping per webbläsare/dag → topplistans
                 besök-kolumn på /evenemang. Sidan är statisk, så räknandet
                 måste ske klient-side. */}
@@ -147,7 +150,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
             <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" ctaHref={cityMapHref(city)} />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
-                <h1 className="text-3xl font-black text-[#006AA7] tracking-tight">
+                <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">
                     Vad händer i {city.name}?
                 </h1>
                 {/* Providern gör kart-heron och daglistan till SAMMA filter:
@@ -162,17 +165,17 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     recommended={recommended}
                     ctaLabel={`Öppna kartan över ${city.name}`}
                 />
-                <p className="mt-3 text-sm leading-relaxed text-slate-600 font-medium">
-                    Just nu ligger <strong className="text-slate-900">{events.length} kommande evenemang</strong> i
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-zinc-400 font-medium">
+                    Just nu ligger <strong className="text-slate-900 dark:text-zinc-100">{events.length} kommande evenemang</strong> i
                     {' '}{city.name} med omnejd på VADKUL
                     {(todayCount > 0 || weekCount > 0) && (
-                        <> — <strong className="text-slate-900">{todayCount} idag</strong> och{' '}
-                        <strong className="text-slate-900">{weekCount} i veckan</strong></>
+                        <> — <strong className="text-slate-900 dark:text-zinc-100">{todayCount} idag</strong> och{' '}
+                        <strong className="text-slate-900 dark:text-zinc-100">{weekCount} i veckan</strong></>
                     )}. Konserter, marknader, föreläsningar,
                     sport och saker att göra med barn. Allt är gratis att utforska, utan konto.
                     {venues.length >= 2 && <> Mest händer på {svList(venues)}.</>}
                 </p>
-                <p className="mt-1 text-xs font-bold text-slate-400">Uppdaterad {dayLabel(updatedAt)}</p>
+                <p className="mt-1 text-xs font-bold text-slate-400 dark:text-zinc-500">Uppdaterad {dayLabel(updatedAt)}</p>
 
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
                     i sektionen och styr allt under: kategorichipsen (children)
@@ -180,17 +183,17 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 <EventDayList events={events} cityName={city.name}>
                     {cityCategories.length > 0 && (
                         <div className="mt-8">
-                            <h2 className="text-sm font-black text-slate-900 mb-2">Populärt i {city.name}</h2>
+                            <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Populärt i {city.name}</h2>
                             <div className="flex flex-wrap gap-2">
                                 {cityCategories.map(({ cat, count }) => (
                                     <Link
                                         key={cat.slug}
                                         href={`/evenemang/${city.slug}/${cat.slug}`}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
                                     >
                                         <span aria-hidden>{cat.emoji}</span>
-                                        {cat.label}
-                                        <span className="text-slate-400 font-black">{count}</span>
+                                        {categoryLabel(cat.dataKey)}
+                                        <span className="text-slate-400 dark:text-zinc-500 font-black">{count}</span>
                                     </Link>
                                 ))}
                             </div>
@@ -201,23 +204,23 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
 
                 <FaqSection faqs={faqs} />
 
-                <div className="mt-10 pt-6 border-t border-slate-200">
-                    <h2 className="text-sm font-black text-slate-900 mb-3">Evenemang i fler städer</h2>
+                <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
+                    <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">Evenemang i fler städer</h2>
                     <div className="flex flex-wrap gap-2">
                         {otherCities.map(c => (
                             <Link
                                 key={c.slug}
                                 href={`/evenemang/${c.slug}`}
-                                className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors"
+                                className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
                             >
                                 {c.name}
                             </Link>
                         ))}
                     </div>
-                    <p className="mt-6 text-xs text-slate-400 font-medium">
+                    <p className="mt-6 text-xs text-slate-400 dark:text-zinc-500 font-medium">
                         Eventen hämtas från öppna källor — arrangörers webbplatser, biljettplattformar och
                         föreningskalendrar. Fel i ett event? Rapportera det via eventkortet på{' '}
-                        <Link href="/" className="text-[#006AA7]">kartan</Link>.
+                        <Link href="/" className="text-[#006AA7] dark:text-sky-400">kartan</Link>.
                     </p>
                 </div>
             </div>
