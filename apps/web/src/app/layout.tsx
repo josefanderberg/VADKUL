@@ -6,6 +6,7 @@ import { Providers } from '@/components/Providers';
 import Hotjar from '@/components/analytics/Hotjar';
 import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
 import SiteVisitBeacon from '@/components/analytics/SiteVisitBeacon';
+import { roundedEventTotal } from './(v1)/evenemang/cityData';
 
 // Rundad, vänlig display-font för moln-texten och andra "lockande" inslag.
 // Variabel font så vi får alla vikter (300–700) i en fil.
@@ -16,48 +17,57 @@ const fredoka = Fredoka({
     variable: '--font-fredoka',
 });
 
-export const metadata: Metadata = {
-    metadataBase: new URL('https://vadkul.se'),
-    title: {
-        default: 'VADKUL – Hitta events och saker att göra nära dig',
-        template: '%s – VADKUL',
-    },
-    description:
-        'Över 20 000 evenemang i hela Sverige på en karta – konserter, marknader, sport och saker att göra med barn. Se vad som händer nära dig idag. Gratis.',
-    applicationName: 'VADKUL',
-    // Delnings-länkar (?event=...) pekar alla på kartan — self-canonical håller
-    // ihop dem i Googles index. /integritet sätter sin egen canonical.
-    alternates: { canonical: '/' },
-    openGraph: {
-        type: 'website',
-        locale: 'sv_SE',
-        url: '/',
-        siteName: 'VADKUL',
-        title: 'VADKUL – Hitta events och saker att göra nära dig',
+// "Över X evenemang" räknas ur eventdatat vid build (nedåtavrundat till
+// 5 000-tal — alltid sant) i stället för att hårdkodas: "Över 20 000" hann
+// bli 44 000+ i verkligheten innan någon märkte det. Den dagliga auto-
+// deployen håller siffran ikapp av sig själv framöver.
+const overClaim = (n: number) => `Över ${n.toLocaleString('sv-SE')} evenemang i hela Sverige på en karta`;
+
+export async function generateMetadata(): Promise<Metadata> {
+    const claim = overClaim(await roundedEventTotal());
+    return {
+        metadataBase: new URL('https://vadkul.se'),
+        title: {
+            default: 'VADKUL – Hitta events och saker att göra nära dig',
+            template: '%s – VADKUL',
+        },
         description:
-            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'VADKUL – Hitta events och saker att göra nära dig',
-        description:
-            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
-    },
-    manifest: '/manifest.json',
-    appleWebApp: {
-        capable: true,
-        statusBarStyle: 'black-translucent',
-        title: 'VADKUL',
-    },
-    other: {
-        'mobile-web-app-capable': 'yes',
-    },
-};
+            `${claim} – konserter, marknader, sport och saker att göra med barn. Se vad som händer nära dig idag. Gratis.`,
+        applicationName: 'VADKUL',
+        // Delnings-länkar (?event=...) pekar alla på kartan — self-canonical håller
+        // ihop dem i Googles index. /integritet sätter sin egen canonical.
+        alternates: { canonical: '/' },
+        openGraph: {
+            type: 'website',
+            locale: 'sv_SE',
+            url: '/',
+            siteName: 'VADKUL',
+            title: 'VADKUL – Hitta events och saker att göra nära dig',
+            description:
+                `${claim}. Se vad som händer nära dig idag – gratis.`,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: 'VADKUL – Hitta events och saker att göra nära dig',
+            description:
+                `${claim}. Se vad som händer nära dig idag – gratis.`,
+        },
+        manifest: '/manifest.json',
+        appleWebApp: {
+            capable: true,
+            statusBarStyle: 'black-translucent',
+            title: 'VADKUL',
+        },
+        other: {
+            'mobile-web-app-capable': 'yes',
+        },
+    };
+}
 
 // Strukturerad data (schema.org) — hjälper Google förstå vad VADKUL är och visa
 // varumärket rätt i sökresultat. Event-markup per event hör hemma på kommande
 // stads-/kategorisidor; på sajtnivå räcker WebSite + Organization.
-const jsonLd = {
+const buildJsonLd = (total: number) => ({
     '@context': 'https://schema.org',
     '@graph': [
         {
@@ -66,7 +76,7 @@ const jsonLd = {
             url: 'https://vadkul.se',
             name: 'VADKUL',
             description:
-                'Över 20 000 evenemang i hela Sverige på en karta – se vad som händer nära dig idag.',
+                `${overClaim(total)} – se vad som händer nära dig idag.`,
             inLanguage: 'sv',
             publisher: { '@id': 'https://vadkul.se/#organization' },
         },
@@ -78,7 +88,7 @@ const jsonLd = {
             logo: 'https://vadkul.se/pwa-icon-512.png',
         },
     ],
-};
+});
 
 export const viewport: Viewport = {
     width: 'device-width',
@@ -86,11 +96,12 @@ export const viewport: Viewport = {
     maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const jsonLd = buildJsonLd(await roundedEventTotal());
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>

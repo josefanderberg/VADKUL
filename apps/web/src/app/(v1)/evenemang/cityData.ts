@@ -1,13 +1,20 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { emojiForCategory } from '@/utils/categories';
+import { classifySource } from '@/utils/sources';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
 // Datat uppdateras alltså vid deploy; kartan själv hämtar färskare data via
 // Firestore-aggregaten i drift. För SEO räcker deploy-takten gott.
 
-export type City = { name: string; slug: string; lat: number; lng: number; population: number };
+export type City = {
+    name: string; slug: string; lat: number; lng: number; population: number;
+    /** Mindre ort: 20 km-radie (i stället för 35), INGA kategorisidor, och
+     *  noindex-vakt när utbudet är tunt (MIN_INDEXABLE_EVENTS). Se blocket
+     *  vid småortslistan nedan. */
+    small?: true;
+};
 
 // Städer som får en egen landningssida. Ordningen spelar ingen roll —
 // sidorna sorterar själva efter eventantal. population = kommunens, ca
@@ -45,11 +52,71 @@ export const CITIES: City[] = [
     { name: 'Trollhättan', slug: 'trollhattan', lat: 58.28, lng: 12.29, population: 60000 },
     { name: 'Nyköping', slug: 'nykoping', lat: 58.75, lng: 17.01, population: 58000 },
     { name: 'Skövde', slug: 'skovde', lat: 58.39, lng: 13.85, population: 58000 },
+
+    // ── Småorter (small: true) — SEO-långsvansen, tillagda 1/9 2026 ──────────
+    // Urvalet är RÄKNAT, inte tyckt (analysscript i sessionen 1/9): av
+    // cityPoints 291 orter behölls de som (1) ligger ≥20 km från närmaste
+    // befintliga stadssida, och efter iterativ närmsta-ort-tilldelning har
+    // (2) ≥40 kommande källfiltrerade event, (3) spridda över ≥15 av 30 dagar
+    // och ≥8 av 16 helgdagar, samt (4) ≥40 % av eventen inom 10 km ("Evenemang
+    // i X" måste vara sant — Landskrona-läxan). 40 orter klarade golvet;
+    // listan är stabil ±små golvändringar (naturligt glapp i datat under den).
+    // Förorter (Solna, Mölndal…) faller på separationskravet — de vore
+    // doorway-sidor med storstadens utbud. Koordinater från utils/cityPoints.
+    { name: 'Kungsbacka', slug: 'kungsbacka', lat: 57.49, lng: 12.08, population: 87000, small: true },
+    { name: 'Varberg', slug: 'varberg', lat: 57.11, lng: 12.25, population: 67000, small: true },
+    { name: 'Norrtälje', slug: 'norrtalje', lat: 59.76, lng: 18.70, population: 65000, small: true },
+    { name: 'Märsta', slug: 'marsta', lat: 59.62, lng: 17.86, population: 51000, small: true },
+    { name: 'Åkersberga', slug: 'akersberga', lat: 59.48, lng: 18.30, population: 48000, small: true },
+    { name: 'Upplands Väsby', slug: 'upplands-vasby', lat: 59.52, lng: 17.91, population: 48000, small: true },
+    { name: 'Enköping', slug: 'enkoping', lat: 59.64, lng: 17.08, population: 48000, small: true },
+    { name: 'Falkenberg', slug: 'falkenberg', lat: 56.90, lng: 12.49, population: 47000, small: true },
+    { name: 'Landskrona', slug: 'landskrona', lat: 55.87, lng: 12.83, population: 47000, small: true },
+    { name: 'Motala', slug: 'motala', lat: 58.54, lng: 15.04, population: 44000, small: true },
+    { name: 'Ängelholm', slug: 'angelholm', lat: 56.25, lng: 12.86, population: 44000, small: true },
+    { name: 'Piteå', slug: 'pitea', lat: 65.32, lng: 21.48, population: 42000, small: true },
+    { name: 'Alingsås', slug: 'alingsas', lat: 57.93, lng: 12.53, population: 42000, small: true },
+    { name: 'Strängnäs', slug: 'strangnas', lat: 59.38, lng: 17.03, population: 40000, small: true },
+    { name: 'Västervik', slug: 'vastervik', lat: 57.76, lng: 16.64, population: 37000, small: true },
+    { name: 'Kinna', slug: 'kinna', lat: 57.51, lng: 12.69, population: 35000, small: true },
+    { name: 'Värnamo', slug: 'varnamo', lat: 57.19, lng: 14.04, population: 35000, small: true },
+    { name: 'Vallentuna', slug: 'vallentuna', lat: 59.53, lng: 18.08, population: 34000, small: true },
+    { name: 'Nödinge', slug: 'nodinge', lat: 57.90, lng: 12.05, population: 33000, small: true },
+    { name: 'Kungsängen', slug: 'kungsangen', lat: 59.48, lng: 17.75, population: 32000, small: true },
+    { name: 'Karlshamn', slug: 'karlshamn', lat: 56.17, lng: 14.86, population: 32000, small: true },
+    { name: 'Ystad', slug: 'ystad', lat: 55.43, lng: 13.82, population: 31000, small: true },
+    { name: 'Ljungby', slug: 'ljungby', lat: 56.83, lng: 13.94, population: 29000, small: true },
+    { name: 'Stenungsund', slug: 'stenungsund', lat: 58.07, lng: 11.82, population: 27000, small: true },
+    { name: 'Laholm', slug: 'laholm', lat: 56.51, lng: 13.04, population: 26000, small: true },
+    { name: 'Arvika', slug: 'arvika', lat: 59.65, lng: 12.59, population: 25000, small: true },
+    { name: 'Östhammar', slug: 'osthammar', lat: 60.26, lng: 18.37, population: 22000, small: true },
+    { name: 'Sjöbo', slug: 'sjobo', lat: 55.63, lng: 13.70, population: 20000, small: true },
+    { name: 'Tranås', slug: 'tranas', lat: 58.03, lng: 14.98, population: 19000, small: true },
+    { name: 'Älmhult', slug: 'almhult', lat: 56.55, lng: 14.14, population: 18000, small: true },
+    { name: 'Höör', slug: 'hoor', lat: 55.93, lng: 13.54, population: 17000, small: true },
+    { name: 'Sölvesborg', slug: 'solvesborg', lat: 56.05, lng: 14.58, population: 17000, small: true },
+    { name: 'Vimmerby', slug: 'vimmerby', lat: 57.67, lng: 15.86, population: 15000, small: true },
+    { name: 'Säffle', slug: 'saffle', lat: 59.13, lng: 12.92, population: 15000, small: true },
+    { name: 'Trosa', slug: 'trosa', lat: 58.90, lng: 17.55, population: 14000, small: true },
+    { name: 'Arboga', slug: 'arboga', lat: 59.39, lng: 15.84, population: 14000, small: true },
+    { name: 'Olofström', slug: 'olofstrom', lat: 56.28, lng: 14.53, population: 13000, small: true },
+    { name: 'Borgholm', slug: 'borgholm', lat: 56.88, lng: 16.66, population: 11000, small: true },
+    { name: 'Markaryd', slug: 'markaryd', lat: 56.46, lng: 13.60, population: 10000, small: true },
+    { name: 'Mullsjö', slug: 'mullsjo', lat: 57.92, lng: 13.88, population: 7000, small: true },
 ];
 
 // "I {stad}" = inom den här radien från stadskärnan. 35 km täcker pendlings-
 // omland utan att t.ex. Malmö-sidan fylls av Helsingborg.
 export const CITY_RADIUS_KM = 35;
+// Småorternas radie är snävare: 20 km är ett rimligt "med omnejd" för en
+// mindre ort — 35 km hade dammsugit grannstädernas utbud och gjort sid-
+// rubriken osann (tätortsandelsgolvet ovan räknades mot just 20 km).
+export const SMALL_TOWN_RADIUS_KM = 20;
+// Under så här få event är en småortssida tunnare än den gör nytta — sidan
+// byggs fortfarande (länkar ska inte 404:a) men får noindex och hålls ur
+// sitemapen tills utbudet kommer tillbaka. Säsongsvakt: golvet på 40 event
+// är satt på septemberdata, och t.ex. Borgholm i november är en annan sak.
+export const MIN_INDEXABLE_EVENTS = 15;
 
 export type CityEvent = {
     id: string;
@@ -153,7 +220,8 @@ function loadData() {
     return dataPromise;
 }
 
-function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+/** Storcirkelavstånd i km — exporterad för "fler städer"-länkarnas närhetsurval. */
+export function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     const R = 6371;
     const toRad = (d: number) => (d * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
@@ -163,10 +231,18 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// Närmsta-stad-tilldelning: varje event tillhör EN stad — den närmaste inom
-// CITY_RADIUS_KM. Utan detta överlappade 35 km-radierna så att t.ex. hela
-// Stockholms utbud även räknades in i Södertälje: topplistan dubbelräknade
-// och stadssidorna mixades ihop. Byggs en gång per build-process.
+// Närmsta-stad-tilldelning: varje event tillhör EN stad — den närmaste vars
+// radie (35 km, småorter 20 km) det ligger inom. Utan detta överlappade
+// radierna så att t.ex. hela Stockholms utbud även räknades in i Södertälje:
+// topplistan dubbelräknade och stadssidorna mixades ihop. Byggs en gång per
+// build-process.
+//
+// KÄLLFILTRET (1/9): opt-in-källorna (Svenska kyrkan/PRO/Korpen) räknas bort
+// här — stadssidorna är utloggade ytor och ska visa samma utbud som kartan
+// visar en utloggad besökare (categoryDefaults: inga opt-in förvalda). Innan
+// filtret var 39 % av eventen på sidorna sådant kartan döljer, och siffrorna
+// i metadata/FAQ ljög mot Google-besökaren. Klassningen går på event-URL:ens
+// värdnamn precis som kartans filter — destinationslagrets id ÄR url:en.
 let assignPromise: Promise<Map<string, RawDest[]>> | null = null;
 function assignEvents() {
     if (!assignPromise) {
@@ -174,11 +250,13 @@ function assignEvents() {
             const bySlug = new Map<string, RawDest[]>(CITIES.map(c => [c.slug, []]));
             for (const e of dests) {
                 if (!e.lat || !e.lng) continue;
+                if (classifySource(e.id)) continue; // opt-in-källa → inte på SEO-ytorna
                 let best: City | null = null;
-                let bestD = CITY_RADIUS_KM;
+                let bestD = Infinity;
                 for (const c of CITIES) {
                     const d = distKm(c.lat, c.lng, e.lat, e.lng);
-                    if (d <= bestD) { best = c; bestD = d; }
+                    const limit = c.small ? SMALL_TOWN_RADIUS_KM : CITY_RADIUS_KM;
+                    if (d <= limit && d < bestD) { best = c; bestD = d; }
                 }
                 if (best) bySlug.get(best.slug)!.push(e);
             }
@@ -463,6 +541,10 @@ export async function getCityCategoryEvents(city: City, dataKey: string) {
 export async function getCategoryCombos(): Promise<{ city: City; cat: CategoryPage; count: number }[]> {
     const combos: { city: City; cat: CategoryPage; count: number }[] = [];
     for (const city of CITIES) {
+        // Småorterna får INGA kategorisidor (ägarbeslut 1/9): kategorierna
+        // nämns i stället i stadssidans löptext, som ändå plockas upp av
+        // sökfraserna — egna sidor på det underlaget blir tunt innehåll.
+        if (city.small) continue;
         const { events } = await getCityEvents(city);
         const perKey = new Map<string, number>();
         for (const e of events) perKey.set(e.category, (perKey.get(e.category) ?? 0) + 1);
@@ -607,4 +689,28 @@ export function exampleTitles(events: CityEvent[], keys: string[], n = 3): strin
 export function svList(xs: string[]): string {
     if (xs.length <= 1) return xs.join('');
     return `${xs.slice(0, -1).join(', ')} och ${xs[xs.length - 1]}`;
+}
+
+/** Sajtens totala eventantal, avrundat NEDÅT till närmaste 5 000 — för
+ *  "Över X evenemang"-påståendet i root-metadatan. Nedåtavrundat så att
+ *  påståendet alltid är sant; räknat OFILTRERAT (inkl. opt-in-källorna)
+ *  eftersom kartan faktiskt har dem, bakom kryss. Hårdkodade "Över 20 000"
+ *  hann bli 44 000+ i verkligheten — den dagliga auto-deployen håller nu
+ *  siffran ikapp av sig själv.
+ *
+ *  Egen läsare (INTE loadData): root-layouten anropar den här, och loadData
+ *  parsar alla tre JSON-lagren (~60 MB) — onödigt dyrt om en dynamisk
+ *  rendering någonsin träffar layouten i SSR-bundlen. Faller tillbaka på
+ *  20 000 om filen saknas (t.ex. CI-bygge utan data). */
+let totalPromise: Promise<number> | null = null;
+export function roundedEventTotal(): Promise<number> {
+    if (!totalPromise) {
+        totalPromise = readFile(path.join(process.cwd(), 'public', 'events-destinations.json'), 'utf8')
+            .then(raw => {
+                const n = (JSON.parse(raw) as { events: unknown[] }).events.length;
+                return Math.max(20_000, Math.floor(n / 5000) * 5000);
+            })
+            .catch(() => 20_000);
+    }
+    return totalPromise;
 }

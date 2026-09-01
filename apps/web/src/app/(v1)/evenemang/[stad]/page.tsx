@@ -2,7 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
-    CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, getCityEvents, pickRecommended, dayLabel,
+    CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, MIN_INDEXABLE_EVENTS, distKm,
+    getCityEvents, pickRecommended, dayLabel,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
@@ -46,6 +47,11 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     return {
         title: `Vad händer i ${city.name}? Evenemang & saker att göra idag`,
         description,
+        // Säsongsvakt för småorterna: tunn sida → noindex (och ur sitemapen),
+        // tills utbudet kommer tillbaka. Sidan finns kvar så länkar inte 404:ar.
+        ...(city.small && events.length < MIN_INDEXABLE_EVENTS
+            ? { robots: { index: false, follow: true } }
+            : {}),
         alternates: { canonical: `/evenemang/${city.slug}` },
         openGraph: {
             title: `Vad händer i ${city.name}? ${events.length} evenemang på kartan`,
@@ -62,9 +68,11 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
     const { events, updatedAt } = await getCityEvents(city);
 
     // Kategorichips: bara kategorier med nog många event för en egen sida.
+    // Småorter har inga kategorisidor alls (getCategoryCombos hoppar dem) —
+    // chipsen skulle länka till 404:or.
     const perKey = new Map<string, number>();
     for (const e of events) perKey.set(e.category, (perKey.get(e.category) ?? 0) + 1);
-    const cityCategories = CATEGORY_PAGES
+    const cityCategories = city.small ? [] : CATEGORY_PAGES
         .map(cat => ({ cat, count: perKey.get(cat.dataKey) ?? 0 }))
         .filter(c => c.count >= MIN_CATEGORY_EVENTS);
 
@@ -117,7 +125,16 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         { name: city.name, path: `/evenemang/${city.slug}` },
     ]);
     const faqLd = buildFaqJsonLd(faqs);
-    const otherCities = CITIES.filter(c => c.slug !== city.slug);
+    // "Fler städer": de 12 NÄRMASTE, inte alla. Med 71 städer i listan blev
+    // full-mesh-länkningen (70 länkar på varje sida) sitewide-boilerplate;
+    // närhetsurvalet är dessutom det enda som är relevant för läsaren.
+    // /evenemang-indexet länkar fortfarande allihop — det är navet.
+    const otherCities = CITIES
+        .filter(c => c.slug !== city.slug)
+        .map(c => ({ c, d: distKm(city.lat, city.lng, c.lat, c.lng) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 12)
+        .map(x => x.c);
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800">
