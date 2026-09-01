@@ -32,8 +32,13 @@ const nextConfig = {
         return [
             { source: '/shop', destination: '/', permanent: false },
             { source: '/login', destination: '/', permanent: false },
-            // Webbläsare frågar alltid efter /favicon.ico — den finns bara som PNG.
-            { source: '/favicon.ico', destination: '/favicon.png', permanent: true },
+            // Webbläsare OCH Googles favicon-crawler frågar alltid efter
+            // /favicon.ico — skicka dem till BLÅ plattan (192 = Googles
+            // önskade 48-multipel). Pekade på gamla vita favicon.png t.o.m.
+            // 1/9 — det var därför sökresultaten fortsatte visa vit ikon
+            // trots att head-länkarna bytts 30/8. (favicon.png lever kvar
+            // som välkomstrutans molngrafik — skriv inte över den.)
+            { source: '/favicon.ico', destination: '/favicon-192-bla.png', permanent: true },
         ];
     },
 };

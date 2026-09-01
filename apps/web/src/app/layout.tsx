@@ -85,7 +85,10 @@ const buildJsonLd = (total: number) => ({
             '@id': 'https://vadkul.se/#organization',
             name: 'VADKUL',
             url: 'https://vadkul.se',
-            logo: 'https://vadkul.se/pwa-icon-512.png',
+            // Blå plattan sedan 1/9 — Organization-loggan kan dyka upp i
+            // sökresultat och vit-på-transparent försvinner där (samma skäl
+            // som favicon-bytet 30/8).
+            logo: 'https://vadkul.se/pwa-icon-bla-512.png',
         },
     ],
 });
