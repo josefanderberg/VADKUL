@@ -239,9 +239,10 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                         <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
                             event i hela Sverige den närmaste veckan
                             {todayEventCount && todayEventCount > 0
-                                // nowrap: bryter raden ska "· 2 551 idag" följas åt —
-                                // inte lämna punkten ensam kvar på raden ovanför.
-                                ? <>{' '}<span className="whitespace-nowrap">· <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} idag</span></span></>
+                                // Ingen avskiljare (punkten var överflödig, Josef 1/9) —
+                                // grönt + fetare gör jobbet i stället. nowrap håller
+                                // ihop "N idag" vid radbrytning.
+                                ? <>{' '}<span className="whitespace-nowrap font-black text-emerald-600">{todayEventCount.toLocaleString('sv-SE')} idag</span></>
                                 : null}
                         </p>
                         {/* ("N börjar inom en timme"-badgen låg här — borttagen
