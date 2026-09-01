@@ -7,7 +7,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
-import { isValidLatLng, WEEK_VIEW_MIN_ZOOM } from '../../utils/mapUtils';
+import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView } from '../../utils/mapUtils';
+import { readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
@@ -20,12 +21,11 @@ import {
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
-    brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
+    BRICKA_BODY_ALPHA, brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
     makeBrickaImageData, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
-import V2MapGroupList from './V2MapGroupList';
 import CitySignposts, { type SignpostCity } from './CitySignposts';
 
 // Hover-bubblan över en bricka med flera event: hur högt ovanför geopunkten den
@@ -232,16 +232,15 @@ const layerExists = (map: maplibregl.Map, id: string): boolean => {
     try { return !!map.getLayer(id); } catch { return false; }
 };
 
-// Startvy: södra Sverige — samma trakt som intro-bilden börjar i, så
-// överlämningen bild → karta landar på samma ställe.
+// Startvy: södra Sverige. Sedan 31/8 är det bara RESERVEN för det allra första
+// besöket — vet vi var besökaren är (sparad stad från förra besöket, se
+// utils/startCity, eller GPS-svaret som landar strax efter mount) öppnar kartan
+// direkt över den staden i stället.
 // Tunbart: sänk lat = mer söderut, höj lat = längre upp, höj lng = åt
-// höger/öster.
-// 24/8 flyttad norrut (Josef: "vara lite mer norr ut") — punkten ligger PÅ
-// den gamla reslinjen mot INTRO_PAN_TO, så rutten är identisk men resan
-// börjar ~11 mil längre fram. 30/8 ytterligare ~12 mil norrut av samma skäl
-// (Josef: "den börjar för långt ner i sverige") — fortfarande på reslinjen.
+// höger/öster. Flyttad norrut 24/8 och 30/8 (Josef: "den börjar för långt ner
+// i sverige").
 const START_CENTER: [number, number] = [15.26, 58.6]; // [lng, lat] — sänk lat = söderut
-// Höjden intron ligger på. Zoom-NIVÅN kan inte hårdkodas — samma zoom täcker
+// Höjden reservvyn ligger på. Zoom-NIVÅN kan inte hårdkodas — samma zoom täcker
 // helt olika många kilometer på mobil och desktop — så vi räknar fram den ur
 // containerns mått (startZoomFor nedan). Breddmåttet styr normalt på desktop;
 // höjdtaket hindrar att en smal mobilskärm hamnar ute i rymden för att den ska
@@ -254,56 +253,20 @@ const START_SPAN_W_M = 460_000;   // meter tvärs över skärmens BREDD
 const START_SPAN_H_M = 850_000;   // meter över skärmens HÖJD (tak, annars ser mobilen hela landet)
 const START_ZOOM_MIN = 4.2;       // kartans minZoom är 4 — gå inte under den
 const START_ZOOM_MAX = 7.4;
-// Intro-resan bakom välkomstrutan: från START_CENTER rakt upp genom landet, med
-// OFÖRÄNDRAD zoom. Ingen inzoomning — den kändes seg (Josef 12/8: "det känns som
-// det laggar mer än om vi är på samma höjd") medan en ren panorering återanvänder
-// samma tile-nivå hela vägen. Målpunkten ligger österut i takt med att Sverige
-// lutar åt öster norrut, så landet håller sig i bild. (En variant där resan var
-// en förbakad BILD provades 13/8 och slopades — kartan i bild såg kass ut mot
-// den riktiga.)
-const INTRO_PAN_TO: [number, number] = [17.6, 63.6]; // [lng, lat] — Ångermanland/Höga kusten
-// Farten anges per SKÄRMHÖJD, inte som en total restid: en mobil ser nästan
-// hela landet på en gång (samma resa = under en skärmhöjd) medan en bred
-// desktop ser ett smalt band. Med en fast restid hade resan blivit omärklig på
-// mobilen och rusat på desktop.
-// 30/8 sänkt fart 26 s → 40 s per skärmhöjd (Josef: "den går för fort").
-const INTRO_PAN_MS_PER_SCREEN = 40_000;
-// Resan görs i två etapper: marschfart från första bildrutan, mjuk inbromsning
-// i norr. Sträckorna anges i skärmhöjder; etapptiderna räknas ur farten ovan så
-// skarven blir ryckfri (se `leg`). Accelerationsrampen i starten är BORTTAGEN
-// (Josef 24/8: "den kan starta gåendes — inte rampa upp hastigheten"): även en
-// kort ramp lästes som att resan inte kommit igång.
-const INTRO_BRAKE_SCREENS = 0.3;
-// INGEN väntan innan avfärd (Josef 14/8: "börja rörelsen uppåt direkt vid
-// start"). Resan startade förut först när de första prick-vågorna landat, med
-// en andhämtning ovanpå — men all väntan i början läses som tröghet, och
-// prickarna hinner ändå tändas medan kameran redan rullar.
-// Nål-prickens storlek i vanligt läge …
+// INTRO-KAMERAN ÄR BORTTAGEN (ägarbeslut 31/8 kväll, Josef: "vi ska direkt
+// blicka över staden man är i — alltså inget intro, utan att det laddar över
+// den staden där man är direkt istället"). Kartan öppnar i din stad och står
+// still. Det som låg här — resan söder→norr (11–31/8), nedstigningen över egen
+// plats (31/8), nål-tvånget, intro-glöden och de fetare intro-prickarna —
+// finns i git-historiken. Bygg inte tillbaka något av det.
+// Nål-prickens storlek:
 const DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
     ['interpolate', ['linear'], ['zoom'], 4, 2.5, 10, 3.5, 14, 4.5];
-// … och under intron, där vi ligger på zoom ~5–7 och tittar på ett helt land
-// bakom välkomstrutans duk: en aning fetare prickar + glöd (nedan) gör
-// skillnaden mellan "dammkorn" och "landet lyser".
-const INTRO_DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
-    ['interpolate', ['linear'], ['zoom'], 4, 3.2, 7, 4, 10, 4.5];
-const INTRO_GLOW_RADIUS_EXPR: maplibregl.ExpressionSpecification =
-    ['interpolate', ['linear'], ['zoom'], 4, 8, 7, 11, 10, 13];
 // Hur brett fältet ska vara efter första event-klicket: 10 mil tvärs över
 // skärmen. Anges i meter i stället för som zoom-nivå eftersom samma zoom täcker
 // helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
-// men ≈ 8 km på mobil) — se zoomForSpan nedan.
+// men ≈ 8 km på mobil) — se zoomForSpan i utils/mapUtils.
 const FIRST_CLICK_SPAN_M = 100_000;
-
-/**
- * Zoom-nivån som visar ungefär spanMeters tvärs över kartans BREDD vid en given
- * latitud. MapLibre räknar zoom mot 512 px breda rutor, och en longitudgrad
- * krymper med cos(lat) — båda ligger i formeln.
- */
-const zoomForSpan = (widthPx: number, lat: number, spanMeters: number) => {
-    const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
-    const metersPerWorldPx = (EARTH_CIRCUMFERENCE_M * Math.cos((lat * Math.PI) / 180)) / 512;
-    return Math.log2((metersPerWorldPx * widthPx) / spanMeters);
-};
 
 /**
  * Zoomen som ger startvyns "lagom avstånd" på just den här skärmen: kust till
@@ -374,15 +337,19 @@ interface V2MapProps {
      *  använder det för att tillfälligt gömma poäng-brickan som annars ligger i
      *  samma vänsterkolumn och skulle krocka med utfällningen. */
     onFuncBagOpenChange?: (open: boolean) => void;
-    /** Fyrar när multi-event-listan (den som fälls ut vid en bricka med flera
-     *  event) öppnas/stängs. Sidan gömmer då vägskyltarna — de ligger fritt över
-     *  kartan och skulle annars hamna ovanpå listan. */
-    onGroupListOpenChange?: (open: boolean) => void;
-    /** Fyrar vid ett bart DUBBELklick/-tapp på kartan (inte på en bricka,
-     *  inte en dragning). Sidan växlar vald dag ↔ hela veckan med den —
-     *  enkelklick räknas inte längre, det växlade av misstag vid varje
-     *  inzoomat kartklick. */
-    onMapTap?: () => void;
+    /** Fyrar vid klick på en bricka med FLERA event: gruppen + det
+     *  representativa eventet (brickans visade frame). Sidan visar gruppen som
+     *  en väljarlista I EVENTKORTET (Josef 31/8 — ersätter multi-event-listan
+     *  som svävade över kartan, V2MapGroupList) och väljer rep samtidigt —
+     *  atomiskt, se handleSelectGroup i page.tsx. onSelectEvent(rep) kallas
+     *  också som vanligt (samma värde). */
+    onSelectGroup?: (events: LinkEvent[], rep: LinkEvent) => void;
+    /** Fyrar vid varje KLICK/tapp på själva kartan (bricka eller ej — men
+     *  aldrig efter en dragning: MapLibre skickar ingen 'click' efter en
+     *  pan). Sidan fäller ihop kategorikolumnen med den (Josef 31/8).
+     *  (Dubbelklickets dag/vecka-växel är borttagen samma dag — dubbelklick
+     *  zoomar nu in som på vanliga kartor, se doubleClickZoom i map-init.) */
+    onMapClick?: () => void;
     /** Städerna vägskyltarna kan peka mot (bildspelets rutt). Skyltarna bor
      *  inuti kartan för att kunna ankras i marken — se CitySignposts. */
     signpostCities?: SignpostCity[];
@@ -447,10 +414,11 @@ interface V2MapProps {
      *  från ett tidigare hopp. Landningspulsen (dag→vecka-blinken) väntar in
      *  den — den får inte gå av bakom överlägget. */
     onCityLandingDone?: (key: number) => void;
-    /** Långsam ambient resa söder→norr på oförändrad zoom medan välkomstrutan
-     *  är uppe (Josef 11/8, 12/8): eventmängden över hela landet ska hinna ses
-     *  innan stadshoppet. false = ingen resa (avbryter en pågående). */
-    introGlide?: boolean;
+    /** Välkomstrutan står uppe → INGET kartkrom alls (Josef 13/8: "vi behöver
+     *  inte ha några knappar eller något över kartan förrän welcome-modalen
+     *  försvinner") — lager-knappen, väskan och ladd-/bytessnurrorna göms.
+     *  (Bar villkoret hette introGlide t.o.m. 31/8, då intro-kameran fanns.) */
+    chromeHidden?: boolean;
 }
 
 export default function V2Map({
@@ -472,8 +440,8 @@ export default function V2Map({
     onFeatureFlagsChange,
     onActivateMultiplayer,
     onFuncBagOpenChange,
-    onGroupListOpenChange,
-    onMapTap,
+    onSelectGroup,
+    onMapClick,
     signpostCities = [],
     onPickSignpost,
     signpostsHidden = false,
@@ -489,7 +457,7 @@ export default function V2Map({
     cityTourTarget = null,
     onUserInteraction,
     onCityLandingDone,
-    introGlide = false,
+    chromeHidden = false,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -521,22 +489,12 @@ export default function V2Map({
     const [isTransitioning, setIsTransitioning] = useState(false);
 
     const [mapBounds, setMapBounds] = useState<maplibregl.LngLatBounds | null>(null);
-    // Klick på en MULTI-event-markör (grupp med >1 event) öppnar en lista (emoji +
-    // titel + tid) så man kan välja vilket event i högen man vill öppna. null = ingen.
-    // (Man kan ALTERNATIVT bläddra via pagern "3/7" på kortets platsrad.)
-    const [groupList, setGroupList] = useState<LinkEvent[] | null>(null);
-    // Live-spegel: kart-klickhandlern (registrerad en gång) måste kunna se om
-    // listan är öppen just nu — ett klick som STÄNGER något ska inte också
-    // flytta avslöjningen (se "tom karta-tap" nedan).
-    const groupListRef = useRef<LinkEvent[] | null>(null);
-    groupListRef.current = groupList;
-    // Geo-ankaret (lng/lat) för den klickade multi-event-brickan + dess projicerade
-    // skärmposition. Listan placeras i brickans ÖVRE HÖGRA hörn och följer punkten
-    // när kartan pannas/zoomas (uppdateras i updateCloudPosition på move/zoom).
-    const [groupListAnchor, setGroupListAnchor] = useState<{ lng: number; lat: number } | null>(null);
-    const groupListAnchorRef = useRef<{ lng: number; lat: number } | null>(null);
-    groupListAnchorRef.current = groupListAnchor;
-    const [groupListPos, setGroupListPos] = useState<{ x: number; y: number } | null>(null);
+    // (Multi-event-listan som svävade ÖVER KARTAN (V2MapGroupList) är BORTTAGEN
+    // 31/8 kväll — klick på en multi-bricka rapporteras nu till sidan via
+    // onSelectGroup, och LISTAN VISAS I EVENTKORTET i stället (EventCards
+    // groupChoice-läge): kortets innehåll är listan tills man valt ett event.
+    // Man kan fortfarande ALTERNATIVT bläddra via pagern "3/7" på kortets
+    // platsrad.)
     // Hover-bubblan: alla emojis i brickan man håller musen över, utan att
     // öppna den. x/y = brickans geopunkt projicerad när man förde dit musen.
     const [hoverPeek, setHoverPeek] = useState<{
@@ -553,12 +511,6 @@ export default function V2Map({
     // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
     const isZoomingRef = useRef<boolean>(false);
-    // Speglar introGlide-prop:en så map-init-effektens event-handlers (som bara
-    // skapas en gång) kan läsa den. Medan intron pågår (välkomstrutan uppe) ska
-    // kartan stanna i NÅL-läget — bara prickar, inga brickor (Josef 11/8:
-    // "det ska bara vara mer som ett intro").
-    const introActiveRef = useRef(false);
-    introActiveRef.current = introGlide === true;
     // Default = 'themepark' ("Nöjesfält"-kartan). Satellit m.fl. går fortfarande att
     // välja i Funktioner-väskan, men nöjesfält är förvald vid varje sidladdning.
     const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('themepark');
@@ -684,21 +636,13 @@ export default function V2Map({
 
     // Kartklick-callbacken läses ur en ref: den installeras en gång i kartans
     // init-effekt och ska inte kräva att lyssnaren sätts om vid varje render.
-    const onMapTapRef = useRef(onMapTap);
-    onMapTapRef.current = onMapTap;
-    // Sätts av tomma-kartan-klicket när det STÄNGDE ett eventkort/en multi-event-
-    // lista/ett önskekort. Ett sådant klick ska inte också växla dag/vecka —
-    // man klickade bort kortet, inte på kartan. Nollas när tap-handlern läst den.
-    const suppressMapTapRef = useRef(false);
+    const onMapClickRef = useRef(onMapClick);
+    onMapClickRef.current = onMapClick;
 
-    // Samma sak för multi-event-listan: sidan gömmer vägskyltarna medan den är
-    // uppe, så de inte lägger sig över listan man just öppnat.
-    const onGroupListOpenChangeRef = useRef(onGroupListOpenChange);
-    onGroupListOpenChangeRef.current = onGroupListOpenChange;
-    const groupListOpen = !!groupList && groupList.length > 0;
-    useEffect(() => {
-        onGroupListOpenChangeRef.current?.(groupListOpen);
-    }, [groupListOpen]);
+    // Samma sak för grupp-klicket: klickhandlarna registreras en gång och
+    // läser callbacken härifrån.
+    const onSelectGroupRef = useRef(onSelectGroup);
+    onSelectGroupRef.current = onSelectGroup;
 
     // Shop-flaggor: vilka funktioner som är "påslagna". Funktioner med egen
     // state i V2Map (globe/terräng/kartstil) hanteras separat i setFeatureActive
@@ -947,7 +891,11 @@ export default function V2Map({
             // Ticketmaster-grupp (minst ett ej passerat TM-event) → samma GULD-
             // kropp som boost/stjärna (ägarbeslut 1/9: "ska se ut som boost-
             // eventen") men UTAN ⭐-badge — stjärnan förblir boostens kvitto.
-            // Ingen sortKey-/sticky-lyftning: guldkroppen är hela framlyftet.
+            // Ingen sortKey-/staplingslyftning: TM-event trängs inte före
+            // andra i en multi-grupp och blir inte representant. STICKY-
+            // lyftningen är däremot PÅ sedan 31/8 (se sticky-effekten) — utan
+            // den syntes guldkroppen bara när reveal-systemet råkade tända
+            // just den brickan.
             const drawGold = drawStar || group.some(e => isTicketmasterEvent(e) && !isEventPast(e, nowMs));
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
@@ -1099,6 +1047,9 @@ export default function V2Map({
     const paintLatchRef = useRef(false);
     const [paintDoneNonce, setPaintDoneNonce] = useState(0);
     const [symbolsPainted, setSymbolsPainted] = useState(false);
+    // (SNURRAN VID DAG-/VECKOBYTE är BORTTAGEN 31/8 — ägarbeslut: ingen
+    // laddikon mitt på kartan. Med den gick även dess kvittoräkning
+    // (pushSeq/switchWaitSeq) och 6 s-failsafen. Lägg inte tillbaka.)
     // onFirstPaint via ref (som onMapDragRef) — latch-effekten ska inte få
     // proppen som dep. firstPaintFiredRef = fyra EN gång per sidladdning.
     const onFirstPaintRef = useRef(onFirstPaint);
@@ -1336,6 +1287,7 @@ export default function V2Map({
         if (!opts?.instant &&
             samePlainFeatures(target, lastPushedTargetRef.current) &&
             (streamActive || pushedCountRef.current === target.length)) {
+            // Källan visar redan exakt det här innehållet.
             return;
         }
         lastPushedTargetRef.current = target;
@@ -1687,26 +1639,8 @@ export default function V2Map({
             // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
             // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
             // kräver inga glyph-/krock-beräkningar, så zoom-animationen blir billig.
-            // INTRO-GLÖDEN: en bred, suddig halo under varje prick. Tänds bara
-            // under intron (enforceIntroNeedles) och ligger släckt annars.
-            // Poängen är läsbarhet på håll: bakom välkomstrutans duk försvinner
-            // 3-pixelsprickar helt, och då syns aldrig det som ska säljas in —
-            // att hela landet är fullt av event. Halorna går ihop där det är
-            // tätt, så städerna brinner och glesbygden glimmar.
-            if (!map.getLayer('intro-glow')) {
-                map.addLayer({
-                    id: 'intro-glow',
-                    type: 'circle',
-                    source: 'plain-events',
-                    layout: { 'visibility': 'none' },
-                    paint: {
-                        'circle-radius': INTRO_GLOW_RADIUS_EXPR,
-                        'circle-color': ['coalesce', ['get', 'color'], '#1e293b'],
-                        'circle-opacity': 0.32,
-                        'circle-blur': 1,
-                    },
-                });
-            }
+            // (INTRO-GLÖDEN — en bred suddig halo under varje prick, tänd bara
+            //  under intron — är borttagen 31/8 med intro-kameran.)
             if (!map.getLayer('plain-events-dots')) {
                 map.addLayer({
                     id: 'plain-events-dots',
@@ -1731,10 +1665,6 @@ export default function V2Map({
             }
             if (map.getLayer('plain-events-dots') && map.getLayer('plain-events')) {
                 map.moveLayer('plain-events-dots', 'plain-events');
-            }
-            // Glöden UNDER prickarna (annars läggs suddet ovanpå och gör dem grumliga).
-            if (map.getLayer('intro-glow') && map.getLayer('plain-events-dots')) {
-                map.moveLayer('intro-glow', 'plain-events-dots');
             }
             // Pusha datan — stor initial påfyllnad streamas i delmängder (pö om
             // pö), små ändringar går som en enda setData. Ladda-pillen i JSX:en
@@ -2026,12 +1956,7 @@ export default function V2Map({
         // Utgångspunkt: alltid SKÄRMENS MITT (de 50 kring mitten ska stå öppna).
         // GPS-positionen är bara sista fallback innan kartan finns.
         const count = REVEAL_SEED_COUNT;
-        // Under intro-resan gäller den gamla regeln (bara känd plats tänder) —
-        // kameran glider genom hela landet och mitten är ingen "plats" ännu;
-        // effekten på introGlide nedan tänder mitten så fort resan släppt.
-        const origin = introActiveRef.current
-            ? userPosRef.current
-            : ((map ? map.getCenter() : null) ?? userPosRef.current);
+        const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
         // BARA icke-passerade grupper (revealCoordsRef är förfiltrerad på past) —
         // "har varit"-grupper ritas aldrig som brickor (bara prickar) och får inte
         // äta upp seed-platser: sent på kvällen såg man annars en handfull brickor
@@ -2068,17 +1993,11 @@ export default function V2Map({
     recomputeRevealSeedRef.current = recomputeRevealSeed;
 
     // GPS-platsen kommer asynkront efter laddning. När den dyker upp (och man inte
-    // redan tryckt på kartan) → tänd seedet kring användarens plats (innan dess
-    // är inget tänt — bara nål-prickarna).
+    // redan tryckt på kartan) → räkna om seedet; stadshoppet som följer flyttar
+    // sedan ankaret till staden.
     useEffect(() => {
         if (userPos) recomputeRevealSeedRef.current();
     }, [userPos]);
-
-    // Intro-resan släppt (välkomstrutan stängd) → mitt-följningen tar över:
-    // tänd de 50 kring skärmens mitt direkt, utan att vänta på rörelse/tap.
-    useEffect(() => {
-        if (!introGlide) recomputeRevealSeedRef.current();
-    }, [introGlide]);
 
     // Pusha ny GL-data när de icke-speciella grupperna ELLER multi-event-prickarna
     // ändras. Väntar på att stilen är redo (annars finns ingen källa att skriva till).
@@ -2193,9 +2112,8 @@ export default function V2Map({
             // (inte i nya). Unionen är ~50–100 tända en knapp sekund, så
             // reportRevealCounts >80-varning kan blinka förbi i konsolen —
             // avstämningen i paint-finish krymper till de riktiga 50.
-            // Under intron gäller nål-läget — inget att förtända.
             const map = mapRef.current;
-            if (map && !introActiveRef.current && layerExists(map, 'plain-events')) {
+            if (map && layerExists(map, 'plain-events')) {
                 const c = map.getCenter();
                 for (const k of nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT)) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
@@ -2243,7 +2161,19 @@ export default function V2Map({
                     // SKRAPADE event: deras featuredUntil läggs på via
                     // eventBoosts-overlayn i linkEventService. Släcks när
                     // eventet passerat, precis som stjärnan.
-                    (isEventFeatured(e) && !isEventPast(e, stickyNowMs))
+                    (isEventFeatured(e) && !isEventPast(e, stickyNowMs)) ||
+                    // Ticketmaster-event lyser ALLTID (Josef 31/8: "då ökar
+                    // chanserna att folk klickar på dem" — de bär vår
+                    // affiliatelänk, se Impact-wrappen i aggregeringen).
+                    // REVIDERAR 1/9-beslutet "ingen sticky-lyftning,
+                    // guldkroppen är hela framlyftet": guldet syntes bara när
+                    // reveal-systemet råkade tända just den brickan.
+                    // sortKey-/staplingslyftningen är fortfarande INTE
+                    // påslagen — TM-event trängs inte före andra i en
+                    // multi-grupp. Volymen är ofarlig: ~1–15 TM-event/dag i
+                    // hela landet (~50 i veckovyn), mot userCreated + boost
+                    // som redan force-tänds.
+                    (isTicketmasterEvent(e) && !isEventPast(e, stickyNowMs))
                 )) sticky.add(key);
             }
         }
@@ -2407,12 +2337,9 @@ export default function V2Map({
     const visitedOrderRef = useRef<string[]>([]);
     const visitedGroupKeyRef = useRef<string | null>(null);
     useEffect(() => {
-        const map = mapRef.current;
         if (!selectedEvent || selectedEvent.lat == null || selectedEvent.lng == null) {
             visitedOrderRef.current = [];
             visitedGroupKeyRef.current = null;
-            setGroupList(null);
-            setGroupListAnchor(null);
             return;
         }
         const gk = groupKeyOf(selectedEvent.lat, selectedEvent.lng);
@@ -2422,20 +2349,9 @@ export default function V2Map({
         } else if (!visitedOrderRef.current.includes(selectedEvent.id)) {
             visitedOrderRef.current.push(selectedEvent.id);
         }
-
-        // Öppna automatiskt multi-event-listan om det valda eventet ingår i en grupp med flera event
-        const group = groups.get(gk);
-        if (group && group.length > 1) {
-            setGroupList(group);
-            setGroupListAnchor({ lng: selectedEvent.lng, lat: selectedEvent.lat });
-            if (map) {
-                setGroupListPos(map.project([selectedEvent.lng, selectedEvent.lat]));
-            }
-        } else {
-            setGroupList(null);
-            setGroupListAnchor(null);
-        }
-    }, [selectedEvent, groups]);
+        // (Auto-öppningen av den svävande multi-event-listan som låg här är
+        // borta med listan själv 31/8 — gruppvalet bor i eventkortet nu.)
+    }, [selectedEvent]);
 
     // 1. Initiera MapLibre kartan en gång
     useEffect(() => {
@@ -2460,6 +2376,20 @@ export default function V2Map({
                     startZoom = Number.isFinite(z) ? Math.min(Math.max(z, 4), 16) : 11;
                     revealAnchorPtRef.current = { lng: ln, lat: la };
                 }
+            } else {
+                // INGEN djuplänk: öppna i DIN STAD direkt (Josef 31/8 — "vi ska
+                // direkt blicka över staden man är i, inget intro"). Staden är
+                // den vi landade i förra besöket (writeStartCity i page.tsx);
+                // första besöket har ingen sparad och får Sverige-vyn ovan tills
+                // platstjänsten svarar — då tar stadshoppet över.
+                // Ankaret sätts med: utan flyttat reveal-ankare tänds inga
+                // brickor i staden, bara nål-prickar (kart-ui-regel).
+                const saved = readStartCity();
+                if (saved) {
+                    startCenter = [saved.lng, saved.lat];
+                    startZoom = saved.zoom;
+                    revealAnchorPtRef.current = { lng: saved.lng, lat: saved.lat };
+                }
             }
         }
 
@@ -2473,9 +2403,10 @@ export default function V2Map({
             // matchar themeparken → bytet syns inte som ett hopp (jfr. tidigare
             // satellit-bootstrap som blixtrade förbi en satellitvy).
             style: BOOTSTRAP_STYLE,
-            // Startvy: södra Sverige på kust-till-kust-avstånd — se START_CENTER
-            // och startZoomFor. Härifrån reser intron norrut på samma höjd.
-            // (?plats=-djuplänken ovan skriver över med stadens vy.)
+            // Startvy: DIN STAD om vi har en sparad (blocket ovan) — annars
+            // södra Sverige på kust-till-kust-avstånd (START_CENTER +
+            // startZoomFor) tills platstjänsten svarar och stadshoppet landar.
+            // (?plats=-djuplänken vinner över bägge.)
             center: startCenter,
             zoom: startZoom,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
@@ -2508,13 +2439,10 @@ export default function V2Map({
             // ner — vi vill i stället ha en egen i compact-läge (liten ⓘ-knapp) som
             // läggs till direkt efter init nedan.
             attributionControl: false,
-            // Dubbelklick/dubbeltapp är PERIODVÄXELN (Idag ↔ Hela veckan) — se
-            // click-handlern. Zoomen på den gesten MÅSTE av här: dels skulle
-            // varje växling annars också zooma, dels preventDefault:ar mobilens
-            // tap-zoom andra tappens touchend så inget andra click-event når
-            // oss och dubbeltappen aldrig skulle kännas igen. Nyp och scroll
-            // zoomar som vanligt.
-            doubleClickZoom: false
+            // Dubbelklick/dubbeltapp ZOOMAR IN som på vanliga kartor (Josef
+            // 31/8 — periodväxeln som ägde gesten 18–31/8 är borttagen;
+            // dag/vecka växlas numera bara i dagväljaren i botten).
+            // doubleClickZoom är MapLibres default och lämnas därför på.
         });
         } catch (err) {
             // WebGL kunde inte initieras (ofta "blocked" efter en tidigare
@@ -2605,9 +2533,6 @@ export default function V2Map({
             setGlLayer('plain-events-dots', true);
         };
         const showBricks = () => {
-            // Intro-gliden: rutan är uppe → stanna i nål-läget. Brickorna
-            // kommer först med stadshoppet efter att rutan klickats ner.
-            if (introActiveRef.current) return;
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
@@ -2649,11 +2574,6 @@ export default function V2Map({
         };
         const exitZooming = () => {
             zoomIdleTimer = null;
-            // Intro-gliden: gå INTE tillbaka till vilo-läget (DOM-brickor) i
-            // glid-pauserna eller när gliden nått fram — prickarna ska stå
-            // kvar tills välkomstrutan klickats ner. Stadshoppet efteråt kör
-            // markZooming→exitZooming på nytt och återställer allt normalt.
-            if (introActiveRef.current) return;
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
@@ -2696,6 +2616,10 @@ export default function V2Map({
         // reveal-write-cachen och är immun mot query-indexet.
 
         map.on('click', (e) => {
+            // Varje kartklick (bricka eller ej — men aldrig efter en pan,
+            // MapLibre skickar ingen 'click' då) rapporteras till sidan, som
+            // fäller ihop kategorikolumnen med det (Josef 31/8).
+            onMapClickRef.current?.();
             // Klick på en SYNLIG GL-markör = öppna. pickHoverKey tillämpar
             // samma regler som hovern: bara avslöjade brickor är valbara
             // (dolda ska skrapas fram av det allmänna klicket, inte öppnas),
@@ -2713,16 +2637,7 @@ export default function V2Map({
                 onGlMarkerClick(e as unknown as maplibregl.MapLayerMouseEvent);
                 return;
             }
-            // Tom karta-tap (eller bara dolda brickor under fingret) = stäng öppet eventkort + listan.
-            const closedSomething = !!selectedEventValRef.current
-                || !!groupListRef.current
-                || !!wishCardOpenRef.current;
-            // Samma sak gäller dag/vecka-växeln: ett klick som stänger kortet/
-            // listan ska BARA stänga — inte också byta period. Tap-handlern
-            // nedan kollar (och nollar) den här flaggan.
-            suppressMapTapRef.current = closedSomething;
-            setGroupList(null);            // stäng ev. öppen multi-event-lista
-            setGroupListAnchor(null);
+            // Tom karta-tap (eller bara dolda brickor under fingret) = stäng öppet eventkort.
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort
         });
@@ -2792,17 +2707,14 @@ export default function V2Map({
             // aldrig i groups, så de måste fångas FÖRE grupp-uppslaget.
             if (key?.startsWith('wish:')) {
                 const wish = wishesRef.current.find(w => `wish:${w.id}` === key);
-                if (wish) {
-                    setGroupList(null);
-                    setGroupListAnchor(null);
-                    onSelectWishRef.current?.(wish);
-                }
+                if (wish) onSelectWishRef.current?.(wish);
                 return;
             }
             const group = key ? groupsRef.current.get(key) : undefined;
             if (!group || group.length === 0) return;
-            // FLERA event på samma plats → öppna en LISTA (emoji + titel + tid) så man
-            // kan välja vilket. Ett enda event → öppna direkt.
+            // FLERA event på samma plats → skicka upp gruppen (onSelectGroup):
+            // sidan visar väljarlistan I EVENTKORTET (31/8 — ersätter den
+            // svävande listan). Ett enda event → öppna direkt.
             if (group.length > 1) {
                 // FRAMKLICKAD SORT FÖRST (Josef 10/8): har man valt 🎪 i emoji-
                 // raden och öppnar en multibricka ska listan slå upp på 🎪:an —
@@ -2823,21 +2735,13 @@ export default function V2Map({
                     || group.find(ev => ev.id === selectedEventValRef.current?.id)
                     || group.find(ev => !isEventPast(ev, Date.now()))
                     || group[0];
-                // Ankra listan vid brickans geo-punkt (projiceras i updateCloudPosition).
-                if (isValidLatLng(rep.lat, rep.lng)) {
-                    setGroupListAnchor({ lng: rep.lng!, lat: rep.lat! });
-                    setGroupListPos(map.project([rep.lng!, rep.lat!]));
-                } else {
-                    setGroupListAnchor(null);
-                    setGroupListPos(null);
-                }
-                setGroupList(group);
+                // rep väljs (kortet öppnas/kameran justeras som vanligt) och
+                // gruppen skickas upp — kortet visar väljarlistan tills valet.
+                onSelectGroupRef.current?.(group, rep);
                 onSelectEventRef.current(rep);
                 zoomInOnFirstEventClick(rep);
                 return;
             }
-            setGroupList(null);
-            setGroupListAnchor(null);
             onSelectEventRef.current(group[0]);
             zoomInOnFirstEventClick(group[0]);
         };
@@ -2902,66 +2806,24 @@ export default function V2Map({
         // syns i vyn, så att zooma ut och in ÄR att utforska — man ser talen
         // och brickorna växa och krympa. Därför ingen 'wheel'-avstängning,
         // och en tvåfingersnyp (pinch) räknas som zoom. (Dubbelklickzoomen är
-        // av sedan 18/8 — gesten är periodväxeln, se map-init — men det är en
-        // gest-omtolkning, inte en bildspels-stopp.)
+        // PÅ igen sedan 31/8 — periodväxeln som ägde gesten 18–31/8 är
+        // borttagen, se map-init. Klicken i ett dubbelklick stoppar dock
+        // bildspelet via click-handlern nedan, som varje annat klick.)
         // Ett enfingerstouch är däremot början på en panorering eller en tapp
         // och stoppar som förut.
         map.on('touchstart', (e) => {
             if (isPinch(e.originalEvent)) return;
             handleMapUserInteractionRef.current();
         });
-        // DUBBELKLICK krävs för periodväxlingen (Josef 18/8): inzoomad bytte
-        // varje bart kartklick Idag ↔ Hela veckan av misstag. Två bara klick
-        // inom fönstret nedan = växla; ett ensamt gör ingenting längre.
-        // Egen detektering via click-PARET (inte maplibres 'dblclick') så
-        // mobilens dubbeltapp räknas likadant — kräver att doubleClickZoom är
-        // avstängd i map-init, se kommentaren där.
-        const DOUBLE_TAP_MS = 350;
-        const DOUBLE_TAP_MAX_DIST = 40; // px — fingret träffar sällan exakt samma punkt
-        let lastBareTap: { time: number; x: number; y: number } | null = null;
-        map.on('click', (e) => {
+        // Varje klick (aldrig efter en pan — maplibre skickar ingen 'click'
+        // då) räknas som att användaren tog över kartan. (Dubbeltapp-
+        // detekteringen som bodde här 18–31/8 är borta med periodväxeln.)
+        map.on('click', () => {
             handleMapUserInteractionRef.current();
-            // Bara ett BART kartklick (inte på en bricka, och inte en dragning —
-            // maplibre skickar ingen 'click' efter en pan) räknas som halva
-            // dubbelklicket.
-            //
-            // MEN: stängde samma klick ett eventkort/en multi-event-lista gör det
-            // bara det — klicket räknas inte ens som första halvan (flaggan
-            // sätts i tomma-kartan-handlern ovan, som kör först).
-            const suppressed = suppressMapTapRef.current;
-            suppressMapTapRef.current = false;
-            if (suppressed || !onMapTapRef.current) { lastBareTap = null; return; }
-            // Markör under fingret? Samma skräp-immuna uppslag som klickvägen
-            // (queryRenderedFeatures är opålitlig — se kommentaren ovan).
-            if (pickHoverKey(map, e as unknown as maplibregl.MapLayerMouseEvent)) { lastBareTap = null; return; }
-            const prev = lastBareTap;
-            lastBareTap = { time: performance.now(), x: e.point.x, y: e.point.y };
-            if (prev
-                && lastBareTap.time - prev.time <= DOUBLE_TAP_MS
-                && Math.hypot(e.point.x - prev.x, e.point.y - prev.y) <= DOUBLE_TAP_MAX_DIST) {
-                lastBareTap = null; // ett trippelklick ska inte växla en gång till
-                onMapTapRef.current();
-            }
         });
-        // (Ingen 'wheel'-avstängning — ren zoom, se ovan. Dubbelklickets zoom
-        // är däremot av sedan gesten blev periodväxeln, se map-init.)
 
-        // Real-time projection updater: håller multi-event-listan fastnitad vid
-        // sin brickas geo-punkt när kartan pannas/zoomas.
-        const updateCloudPosition = () => {
-            // Multi-event-listan: håll dess skärmposition fast vid brickans geo-punkt
-            // när kartan pannas/zoomas, så den stannar i brickans övre högra hörn.
-            const ga = groupListAnchorRef.current;
-            if (ga) {
-                const pos = map.project([ga.lng, ga.lat]);
-                setGroupListPos((prev) =>
-                    prev && Math.round(prev.x) === Math.round(pos.x) && Math.round(prev.y) === Math.round(pos.y)
-                        ? prev : { x: pos.x, y: pos.y });
-            }
-        };
-
-        map.on('move', updateCloudPosition);
-        map.on('zoom', updateCloudPosition);
+        // (Projektions-uppdateraren som höll den svävande multi-event-listan
+        // fastnitad vid sin bricka är borta med listan 31/8.)
 
         // Uppdatera synliga bounds + center-callback. THROTTLAD: idle-driftens
         // panBy fyrar 'moveend' ~60fps och setMapBounds triggar marker-omsync —
@@ -3027,7 +2889,6 @@ export default function V2Map({
         map.once('load', () => {
             const b0 = map.getBounds();
             setMapBounds(b0);
-            updateCloudPosition();
             // Installera GL-markörlagret + pusha första datan.
             syncPlainLayerRef.current();
             if (onCenterChangeRef.current) {
@@ -3330,171 +3191,9 @@ export default function V2Map({
     //     När en ny stad sätts tonar vi ut kartan bakom ett frostat glas (300ms fade-in),
     //     hoppar direkt dit (jumpTo), väntar på att MapLibre ska ladda färdigt alla
     //     tiles (map.once('idle')), och tonar sedan in kartan igen.
-    // ── Intro-resan bakom välkomstrutan ─────────────────────────────────────
-    // Kartan startar i södra Sverige och panorerar LÅNGSAMT norrut på samma
-    // höjd medan rutan är uppe — besökaren ska hinna se eventmängden över hela
-    // landet (Josef 11/8: "man fattar inte annars vilken databas vi har").
-    // Ingen zoom alls: det gamla inzoomande glidet kändes segt och kostade en
-    // ny tile-nivå hela vägen (Josef 12/8). Konstant fart, ambient tempo. När
-    // prop:en blir false (rutan stängd, eller stadshoppet tar över) stoppar
-    // cleanup:en animationen där den står.
-    //
-    // Tvinga NÅL-läget under hela intron — bara prickar, inga brickor (Josef
-    // 11/8). zoomstart/zoomend-spärrarna räcker inte: brickorna hann tändas i
-    // boot-fönstren INNAN resans första rörelse, och stilbytet återskapar
-    // brick-lagret synligt. Körs vid start och vid varje styledata/idle (=
-    // efter varje stilbyte/datapush), så läget återställs hur lagren än ritas om.
-    const enforceIntroNeedles = useCallback(() => {
-        const map = mapRef.current;
-        const container = mapContainerRef.current;
-        if (!map || !container || !styleReady(map)) return;
-        container.classList.remove('map-state-full');
-        container.classList.add('map-state-needle');
-        if (layerExists(map, 'plain-events')) map.setLayoutProperty('plain-events', 'visibility', 'none');
-        for (const id of LABEL_LAYER_IDS) {
-            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'none');
-        }
-        if (layerExists(map, 'plain-events-dots')) {
-            map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
-            map.setPaintProperty('plain-events-dots', 'circle-stroke-opacity', ['*', 0.9, PAST_DIM_EXPR]);
-            map.setPaintProperty('plain-events-dots', 'circle-radius', INTRO_DOT_RADIUS_EXPR);
-            map.setLayoutProperty('plain-events-dots', 'visibility', 'visible');
-        }
-        if (layerExists(map, 'intro-glow')) {
-            map.setLayoutProperty('intro-glow', 'visibility', 'visible');
-        }
-        for (const id of ['multi-event-dots', 'multi-event-dots-count']) {
-            if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', 'visible');
-        }
-        // DOM-brickorna göms av nål-CSS-klassen; state-flaggan håller övrig
-        // logik (t.ex. multi-event-DOM:en) i zoom-läget tills stadshoppet.
-        isZoomingRef.current = true;
-        setIsZooming(true);
-    }, []);
-
-    useEffect(() => {
-        const map = mapRef.current;
-        if (!map || !introGlide) return;
-        let disposed = false;
-        let legEndsAt = 0;      // när etappen som rullar SKA vara framme (ms, performance.now)
-
-        // En etapp: åk `screens` skärmhöjder mot norr med given easing. `slow`
-        // = 2 betyder dubbla tiden mot marschfart, vilket är exakt vad en
-        // kvadratisk acceleration/inbromsning behöver för att SLUTA respektive
-        // BÖRJA i marschfart — annars rycker det till i skarven mellan etapperna.
-        const leg = (
-            fromPx: { x: number; y: number },
-            toPx: { x: number; y: number },
-            fraction: number,
-            screens: number,
-            easing: (t: number) => number,
-            slow = 1,
-        ) => {
-            // Skyddsnät mot noll-längds-etapper: en easeTo på ~0 ms fyrar ett
-            // nytt moveend direkt och kan snurra vidare i all oändlighet.
-            if (screens < 0.01) return;
-            const center = map.unproject([
-                fromPx.x + (toPx.x - fromPx.x) * fraction,
-                fromPx.y + (toPx.y - fromPx.y) * fraction,
-            ]);
-            const duration = screens * INTRO_PAN_MS_PER_SCREEN * slow;
-            legEndsAt = performance.now() + duration;
-            map.easeTo({
-                center,
-                // INGEN zoom här: easeTo behåller kartans nuvarande höjd, och
-                // det är hela poängen — resan går rakt norrut på samma nivå.
-                duration,
-                easing,
-            });
-        };
-
-        const travel = () => {
-            if (disposed || !styleReady(map)) return;
-            // Nål-läget + glöden ska gälla från första bildrutan.
-            enforceIntroNeedles();
-            // Redan på väg? Lägg inte en ease ovanpå en annan — MEN bara så
-            // länge etappen rimligen fortfarande pågår. isEasing() är bara
-            // `!!_easeFrameId`, så ett strandat id (avbruten animation, tappad
-            // WebGL-kontext) hade annars låst resan för gott. Tidsvillkoret gör
-            // spärren självläkande: easeTo röjer själv undan ett gammalt id.
-            if (map.isEasing() && performance.now() < legEndsAt) return;
-            const from = map.getCenter();
-            // Kvarvarande sträcka mätt i SKÄRMHÖJDER (via pixlar, så både zoom
-            // och skärmformat räknas in) → samma upplevda fart överallt.
-            const p0 = map.project(from);
-            const p1 = map.project(INTRO_PAN_TO);
-            const totalPx = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-            const screens = totalPx / Math.max(1, map.getContainer().clientHeight);
-            if (screens <= 0.02) return;                  // framme — stå still tills rutan stängs
-            // 2. Inbromsning: rulla ut till stillastående i norr. MARGINALEN är
-            // inte kosmetisk: marsch-etappen siktar på exakt den här gränsen, och
-            // utan slack landar kvarvarande sträcka en flyttalsgnutta OVANFÖR
-            // den → marsch-grenen igen, fast med noll längd. Resultatet var en
-            // evig moveend→easeTo(0 ms)-loop som stannade resan i Ångermanland.
-            if (screens <= INTRO_BRAKE_SCREENS + 0.02) {
-                leg(p0, p1, 1, screens, t => 1 - (1 - t) * (1 - t), 2);
-                return;
-            }
-            // 1. Marschfart: linjärt från stillastående (avsiktligt ingen
-            // uppvarvningsramp — resan ska "starta gåendes") fram till
-            // inbromsningspunkten.
-            const f = (screens - INTRO_BRAKE_SCREENS) / screens;
-            leg(p0, p1, f, screens - INTRO_BRAKE_SCREENS, t => t);
-        };
-
-        // NÄSTA ETAPP STARTAS ALDRIG INIFRÅN MAPLIBRES EGNA CALLBACKS — den
-        // läggs på nästa bildruta. Det här är inte försiktighet, det är en
-        // buggfix (Josef 14/8: "this._onEaseFrame is not a function",
-        // "Attempting to run(), but is already running", och kameran hamnade
-        // inte i Växjö efteråt):
-        //   Camera._renderFrameCallback anropar this._onEaseFrame(...), och
-        //   Camera._stop() RADERAR _onEaseFrame innan den fyrar 'moveend'.
-        //   Startade vi en ny easeTo direkt i den moveend-handlern låg vi mitt
-        //   i den avslutande frame-callbacken → nästa bildruta hittade ett
-        //   _easeFrameId utan _onEaseFrame och kastade. Undantaget dödade
-        //   animationsloopen och lämnade kameran i ett halvt läge, så
-        //   stadshoppet efter välkomstrutan aldrig kom fram.
-        // En rAF räcker: då har MapLibre vecklat ur sin egen stack först.
-        let queued: number | null = null;
-        const scheduleTravel = () => {
-            if (disposed || queued !== null) return;
-            queued = requestAnimationFrame(() => { queued = null; travel(); });
-        };
-        // Skarven mellan etapperna går via 'moveend' — den fyrar så fort
-        // KAMERAN stannat. 'idle' väntar dessutom in alla tiles, och eftersom
-        // panoreringen laddar nya tiles hela vägen hade etappbytet då blivit en
-        // paus av okänd längd mitt i resan. 'idle' + 'styledata' är kvar som
-        // RÄDDNING: hela intron är spärrad bakom styleReady, och stilen laddas
-        // asynkront över nätet — utan de krokarna stod kartan kvar i brick-
-        // läget (där ingenting är avslöjat) tills första idle kom. Alla tre är
-        // ofarliga att få dubbelt: travel() räknar om kvarvarande sträcka varje
-        // gång och avstår om en ease redan pågår.
-        map.on('styledata', scheduleTravel);
-        map.on('moveend', scheduleTravel);
-        map.on('idle', scheduleTravel);
-        scheduleTravel();
-        return () => {
-            disposed = true;
-            if (queued !== null) cancelAnimationFrame(queued);
-            map.off('styledata', scheduleTravel);
-            map.off('moveend', scheduleTravel);
-            map.off('idle', scheduleTravel);
-            // Stoppa resan — men låt inte ett trasigt kameraläge fälla
-            // cleanupen: gör den inte klart ligger lyssnarna kvar och stör
-            // stadshoppet som ska ta över.
-            try { map.stop(); } catch { /* kameran redan nedmonterad */ }
-            // Släck intro-utstyrseln: glöden bort och prickarna tillbaka till
-            // sin vanliga storlek. Görs här (inte i stadshoppet) så den ALLTID
-            // städas — oavsett hur intron tog slut.
-            const m = mapRef.current;
-            if (m && styleReady(m)) {
-                if (layerExists(m, 'intro-glow')) m.setLayoutProperty('intro-glow', 'visibility', 'none');
-                if (layerExists(m, 'plain-events-dots')) m.setPaintProperty('plain-events-dots', 'circle-radius', DOT_RADIUS_EXPR);
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [introGlide]);
-
+    // (Intro-kameran låg här: nål-tvånget bakom välkomstrutan + resan/
+    //  nedstigningen. BORTTAGET 31/8 — kartan öppnar i din stad och står
+    //  still, se INTRO-KAMERAN ÄR BORTTAGEN längst upp i filen.)
     const prevCityTourKeyRef = useRef<number | null>(null);
     useEffect(() => {
         if (!cityTourTarget) return;
@@ -3503,6 +3202,21 @@ export default function V2Map({
 
         const map = mapRef.current;
         if (!map) return;
+
+        // TYST LANDNING (31/8): kartan öppnar redan i din sparade stad, och
+        // GPS-svaret strax efteråt siktar på samma ortspunkt. Att då köra hela
+        // frost-in → hoppa → frost-ut för NOLL meters förflyttning läser bara
+        // som en blink vid start. Står vi redan i vyn: sätt ankaret, kvittera
+        // landningen (landningspulsen väntar på kvittot) och gå vidare.
+        const here = map.getCenter();
+        if (sameCityView({ lat: here.lat, lng: here.lng, zoom: map.getZoom() }, cityTourTarget)) {
+            revealAnchorPtRef.current = { lng: cityTourTarget.lng, lat: cityTourTarget.lat };
+            revealMarchPtRef.current = { lng: cityTourTarget.lng, lat: cityTourTarget.lat };
+            recomputeRevealSeedRef.current();
+            const key = cityTourTarget.key;
+            const receipt = setTimeout(() => onCityLandingDoneRef.current?.(key), 0);
+            return () => clearTimeout(receipt);
+        }
 
         setTransitionCityName(cityTourTarget.cityName);
         setIsTransitioning(true);
@@ -3710,22 +3424,11 @@ export default function V2Map({
                     ? `${count} event vid ${rep.locationName || 'samma plats'}`
                     : rep.title);
 
-                // Klick: multi-grupp → öppna listan; annars välj eventet direkt.
+                // Klick: multi-grupp → skicka upp gruppen (väljarlistan visas i
+                // eventkortet, 31/8); annars välj eventet direkt.
                 markerData.element.onclick = (e) => {
                     e.stopPropagation();
-                    if (count > 1) {
-                        const map = mapRef.current;
-                        if (map) {
-                            if (isValidLatLng(rep.lat, rep.lng)) {
-                                setGroupListAnchor({ lng: rep.lng!, lat: rep.lat! });
-                                setGroupListPos(map.project([rep.lng!, rep.lat!]));
-                            } else {
-                                setGroupListAnchor(null);
-                                setGroupListPos(null);
-                            }
-                        }
-                        setGroupList(group);
-                    }
+                    if (count > 1) onSelectGroupRef.current?.(group, rep);
                     // Ingen sticky (hopade en bricka per klick) — vald visas via DOM-markör.
                     onSelectEventRef.current(rep);
                     zoomInOnFirstEventClick(rep);
@@ -3748,7 +3451,7 @@ export default function V2Map({
                     : isSaved
                     ? 'linear-gradient(145deg, #ffffff 0%, #eef2f7 100%)'
                     : catColorHex
-                    ? sourceGradientCss(catColorHex)
+                    ? sourceGradientCss(catColorHex, BRICKA_BODY_ALPHA)
                     : BRICKA_DARK_BG;
                 const pinBorder = isSelected
                     ? '3px solid #ffffff'
@@ -3944,26 +3647,9 @@ export default function V2Map({
                     </div>
                 </div>
             )}
-            {/* Multi-event-lista: egen komponent (V2MapGroupList). Ankras vid den
-                klickade brickans övre högra hörn; groupListPos projiceras om på
-                move/zoom (updateCloudPosition) så den följer kartan.
-                PORTAL till <body> (Josef 31/8): V2Map-roten är z-0 (stacking
-                context) — inuti roten cappades panelens z-index vid 0 och de
-                portalade zoomknapparna ritades ÖVER panelen. Nu: panelen 1149,
-                zoomknapparna 1148 — BARA de ska ligga under; eventkortet
-                (1250) och Nästa-pillen (1150) ligger kvar över panelen. Kartan
-                är fullskärm, så positionen (fixed i komponenten) blir densamma.
-                Stängningen sköts av kartklicket (setGroupList(null) ovan) —
-                panelens kryss är borttaget samma dag. */}
-            {groupList && groupList.length > 0 && typeof document !== 'undefined' && createPortal(
-                <V2MapGroupList
-                    events={groupList}
-                    anchorPos={groupListPos}
-                    selectedEvent={selectedEvent}
-                    onSelect={onSelectEvent}
-                />,
-                document.body
-            )}
+            {/* (Multi-event-listan som portalades hit (V2MapGroupList) är
+                BORTTAGEN 31/8 kväll — gruppvalet visas i EVENTKORTET i stället,
+                se onSelectGroup + EventCards groupChoice-läge.) */}
             {/* Diskret "laddar fortfarande"-pill i TVÅ faser: (1) aggregat-lagren
                 strömmar ännu ("Laddar fler event…"), (2) allt är hämtat men GL-
                 symbolerna har inte målats klart än ("Ritar ut eventen…") — utan
@@ -3976,10 +3662,10 @@ export default function V2Map({
                 Mitten är den enda ytan som är fri i alla lägen — toppen har
                 navbar/stadsruta, botten har eventkortet. Den är dessutom det
                 man tittar på medan kartan fylls. */}
-            {/* Under intron (välkomstrutan uppe) visas INGET kartkrom alls —
-                inte ens laddpillen (Josef 13/8). Bakom rutan ska det bara ligga
-                karta och prickar. */}
-            {!introGlide && eventsLoaded && (!eventsSettled || !symbolsPainted) && (
+            {/* Medan välkomstrutan står uppe visas INGET kartkrom alls — inte
+                ens laddpillen (Josef 13/8). Bakom rutan ska det bara ligga
+                kartan över din stad. */}
+            {!chromeHidden && eventsLoaded && (!eventsSettled || !symbolsPainted) && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[900] pointer-events-none">
                     <div role="status" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 dark:border-slate-700 px-4 py-2 flex items-center gap-2 animate-in fade-in duration-300">
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-[#006AA7] border-t-transparent animate-spin shrink-0" aria-hidden />
@@ -3987,6 +3673,9 @@ export default function V2Map({
                     </div>
                 </div>
             )}
+            {/* (Dag-/veckobytets rena snurra mitt på kartan är BORTTAGEN 31/8 —
+                ägarbeslut. Ladd-pillen ovan står kvar för den FÖRSTA
+                inläsningen; periodbyten sker utan laddikon.) */}
             {/* CSS och Keyframes för en mjuk, progressiv animation */}
             <style>{`
                 .v2-custom-marker {
@@ -4219,10 +3908,10 @@ export default function V2Map({
 
                 const handleCrate = (it: CrateItem) => toggleFeature(it.key);
 
-                // Inget kartkrom under intron — lager-knappen och väskan med
-                // (Josef 13/8: "vi behöver inte ha några knappar eller något
+                // Inget kartkrom bakom välkomstrutan — lager-knappen och väskan
+                // med (Josef 13/8: "vi behöver inte ha några knappar eller något
                 // över kartan förrän welcome-modalen försvinner").
-                if (introGlide) return null;
+                if (chromeHidden) return null;
                 return typeof document === 'undefined' ? null : createPortal(
                     <>
                         {/* Funktions-popup: liten meny-panel under lager-knappen. Varje rad =
