@@ -27,6 +27,7 @@ import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { readStartCity, writeStartCity } from '@/utils/startCity';
+import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -348,6 +349,19 @@ export default function HomePage() {
     // vecka-växlingen) behöver bara veta OM ett kort är uppe.
     const selectedEventRef = useRef<LinkEvent | null>(null);
     selectedEventRef.current = selectedEvent;
+    // ── Djuplänks-snabbstart (?event=) ───────────────────────────────────────
+    // Bästa kända djuplänksdata UTANFÖR aggregaten: stadssidans sessionStorage-
+    // seed och/eller /api/event-svaret (se utils/eventSeed). Ligger kvar som
+    // backfill i selectedEvent-synken tills lagren bär fälten själva —
+    // destinations saknar värd/bild/beskrivning tills cards/descriptions mergat.
+    const deepLinkDataRef = useRef<LinkEvent | null>(null);
+    // Event-id vars kort öppnats av snabbstarten (seed/API) — djuplänks-
+    // effekterna längre ner ska då INTE applicera om (nonce-bump + omflygning).
+    const deepLinkAppliedRef = useRef<string | null>(null);
+    // Kameran har landat vid eventet. Falsk när seeden saknade koordinater
+    // (delningssidans överlämning) — då flyger catchup-effekten när API:t/
+    // aggregaten gett kortet en plats.
+    const deepLinkFlewRef = useRef(false);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
@@ -1121,7 +1135,13 @@ export default function HomePage() {
         setSelectedEvent(prev => {
             if (!prev) return prev;
             const fresh = events.find(e => e.id === prev.id);
-            return fresh && fresh !== prev ? fresh : prev;
+            if (!fresh || fresh === prev) return prev;
+            // Djuplänks-seedat kort: seeden/API-svaret kan vara RIKARE än
+            // aggregatobjektet (destinations bär varken värd, bild eller
+            // beskrivning förrän cards/descriptions mergats) — backfilla de
+            // fälten så kortet aldrig NEDGRADERAS av att lagren landar.
+            const dl = deepLinkDataRef.current;
+            return dl && dl.id === fresh.id ? mergeDeepLinkEvent(fresh, dl) : fresh;
         });
     }, [events]);
 
@@ -2447,6 +2467,71 @@ export default function HomePage() {
         }
     }, [flyToPoint]);
 
+    // ── DJUPLÄNKS-SNABBSTART ────────────────────────────────────────────────
+    // ?event= ska inte vänta på Sverige-lagren (16+ MB JSON): stadssidorna
+    // lämnar över det klickade eventets kortfält i sessionStorage, och
+    // /api/event?id= svarar med fulla fält (inkl. HELA beskrivningen, ~1 kB)
+    // ur aggregaten. Kortet öppnas komplett DIREKT vid boot; aggregaten tar
+    // sedan över per id via selectedEvent-synken (som backfillar från
+    // deepLinkDataRef tills lagren bär fälten själva).
+    const deepLinkBootRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkBootRef.current) return; // StrictMode kör effekter dubbelt
+        deepLinkBootRef.current = true;
+        let id: string | null = null;
+        try { id = new URLSearchParams(window.location.search).get('event'); } catch { /* ingen läsbar URL */ }
+        if (!id) return;
+        const eventId = id;
+        // Djuplänk = användaren har redan valt. Sätts här (före eventsLoaded)
+        // så auto-hoppet till Imorgon aldrig hinner flytta dagen under seedens
+        // öppna kort.
+        deepLinkedRef.current = true;
+        const seed = takeEventSeed(eventId);
+        if (seed) {
+            deepLinkDataRef.current = seed;
+            deepLinkAppliedRef.current = eventId;
+            deepLinkFlewRef.current = hasValidCoords(seed);
+            applyDeepLinkedEvent(seed);
+        }
+        // API-svaret hämtas ÄVEN när seeden öppnat kortet: stadssidans
+        // beskrivning är kapad vid ~300 tecken och delningssidans seed saknar
+        // koordinater — svaret fyller luckorna. (Ingen cleanup-avbrytning:
+        // StrictModes mount-unmount-mount skulle annars kasta bort svaret.)
+        fetchDeepLinkEvent(eventId).then((full) => {
+            if (!full) return;
+            deepLinkDataRef.current = mergeDeepLinkEvent(full, deepLinkDataRef.current);
+            const current = selectedEventRef.current;
+            if (deepLinkAppliedRef.current === eventId || current?.id === eventId) {
+                // Kortet står redan öppet (seed eller aggregat) → fyll bara
+                // luckorna, ingen ny apply (den skulle bumpa fullOpenNonce
+                // och flyga om kameran).
+                setSelectedEvent(prev => prev && prev.id === eventId
+                    ? mergeDeepLinkEvent(prev, deepLinkDataRef.current)
+                    : prev);
+            } else if (!current) {
+                // Inget kort öppet och aggregaten har inte hittat eventet än →
+                // öppna från API-svaret. (Har användaren hunnit öppna ett
+                // ANNAT kort kapar vi det inte.)
+                deepLinkAppliedRef.current = eventId;
+                deepLinkFlewRef.current = hasValidCoords(deepLinkDataRef.current!);
+                pendingEventIdRef.current = null; // retry-effekten ska varken applicera om eller toasta
+                applyDeepLinkedEvent(deepLinkDataRef.current!);
+            }
+        });
+    }, [applyDeepLinkedEvent]);
+
+    // Seed utan koordinater (delningssidans överlämning har inga): flyg när
+    // API-/aggregatdatan gett kortet en plats. Via flyToPoint så reveal-
+    // ankaret flyttar med kamerahoppet (kartregeln).
+    useEffect(() => {
+        if (!deepLinkAppliedRef.current || deepLinkFlewRef.current) return;
+        if (!selectedEvent || selectedEvent.id !== deepLinkAppliedRef.current || !hasValidCoords(selectedEvent)) return;
+        deepLinkFlewRef.current = true;
+        const city = nearestCityPoint(selectedEvent.lat, selectedEvent.lng);
+        tourCityIndexRef.current = nearestTourCityIndex(city.lat, city.lng);
+        flyToPoint(selectedEvent.lat, selectedEvent.lng, city.name);
+    }, [selectedEvent, flyToPoint]);
+
     useEffect(() => {
         if (!eventsLoaded || urlApplied.current) return;
         urlApplied.current = true;
@@ -2468,7 +2553,11 @@ export default function HomePage() {
         // att eventet ska dyka upp i en senare batch.
         if (eventId || !Number.isNaN(dag) || !Number.isNaN(dagar)) deepLinkedRef.current = true;
         const target = eventId ? events.find(e => e.id === eventId) : undefined;
-        if (target) {
+        if (eventId && deepLinkAppliedRef.current === eventId) {
+            // Snabbstarten (seed/API) har redan öppnat kortet — selectedEvent-
+            // synken pekar om till aggregatobjektet per id. En apply här skulle
+            // bara bumpa fullOpenNonce och flyga om kameran till samma plats.
+        } else if (target) {
             applyDeepLinkedEvent(target);
         } else if (eventId) {
             pendingEventIdRef.current = eventId;
@@ -2487,6 +2576,10 @@ export default function HomePage() {
     useEffect(() => {
         const id = pendingEventIdRef.current;
         if (!id) return;
+        // Snabbstarten hann öppna kortet medan id:t låg och väntade → klart.
+        // Varken ny apply eller "hittades inte"-toast för ett kort som redan
+        // står öppet (aggregaten kan sakna eventet fast API-snapshoten har det).
+        if (deepLinkAppliedRef.current === id) { pendingEventIdRef.current = null; return; }
         const target = events.find(e => e.id === id);
         if (target) {
             pendingEventIdRef.current = null;

@@ -197,6 +197,14 @@ export function EventDayList({ events, cityName, children }: {
                     attendees: e.attendees ?? 0,
                     hour: e.hasSpecificTime ? hourOf(e.time) : null,
                     t: Date.parse(e.time),
+                    // Överlämningen till kartan (sessionStorage-seed vid klick,
+                    // se utils/eventSeed): kortet på /?event= öppnar direkt på
+                    // radens data i stället för att vänta på Sverige-lagren.
+                    lat: e.lat,
+                    lng: e.lng,
+                    category: e.category,
+                    hostName: e.hostName ?? null,
+                    description: e.description ?? null,
                 })),
             };
         })

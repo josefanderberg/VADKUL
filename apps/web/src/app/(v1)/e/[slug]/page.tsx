@@ -60,7 +60,7 @@ export default async function EventSharePage({ params }: { params: Promise<{ slu
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center px-5">
-            <MapRedirect eventId={event.id} />
+            <MapRedirect event={event} />
             <div className="text-center max-w-sm">
                 <div className="text-5xl" aria-hidden>{event.emoji}</div>
                 <h1 className="mt-4 text-xl font-black text-slate-900">{event.title}</h1>

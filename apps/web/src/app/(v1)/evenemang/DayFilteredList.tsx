@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
@@ -66,7 +67,38 @@ export type ListedEvent = {
     hour: number | null;
     /** Epoch-ms — "har varit"-historiken jämför mot klientens klocka. */
     t: number;
+    /** Överlämningen till kartan (sessionStorage-seed vid klick, se
+     *  utils/eventSeed): eventkortet på /?event= öppnar direkt på radens data
+     *  i stället för att vänta på Sverige-lagren. description är stadssidans
+     *  schema.org-trimmade (~300 tecken) — kartan fyller på med hela texten. */
+    lat: number;
+    lng: number;
+    category: string;
+    hostName: string | null;
+    description: string | null;
 };
+
+/** Skriv klick-överlämningen — kortet på /?event= läser den vid boot.
+ *  hasSpecificTime återskapas ur clock (null ⇔ inget klockslag, samma
+ *  biconditional som radbygget i EventList). */
+function seedMapHandoff(e: ListedEvent): void {
+    writeEventSeed({
+        id: e.id,
+        title: e.title,
+        t: e.t,
+        hasSpecificTime: e.clock !== null,
+        lat: e.lat,
+        lng: e.lng,
+        locationName: e.place,
+        category: e.category,
+        emoji: e.emoji,
+        hostName: e.hostName ?? undefined,
+        coverImage: e.coverImage,
+        price: e.price ?? undefined,
+        attendees: e.attendees,
+        description: e.description ?? undefined,
+    });
+}
 
 export type ListedDay = {
     /** 'YYYY-MM-DD' (svensk tid) — matchas mot periodKeys. */
@@ -245,7 +277,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     if (hasImage) {
         return (
             <li className={`relative overflow-hidden rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
-                <Link href={e.href} className="block">
+                <Link href={e.href} className="block" onClick={() => seedMapHandoff(e)}>
                     <div className="relative">
                         <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
                         <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
@@ -275,7 +307,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
     return (
         <li className={`flex items-stretch rounded-xl bg-white border border-slate-200 hover:border-[#006AA7]/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
-            <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3">
+            <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={() => seedMapHandoff(e)}>
                 <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
                 <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
