@@ -2567,7 +2567,23 @@ export default function HomePage() {
                     if (Array.isArray(data?.mapCategories)) {
                         const valid = data.mapCategories.filter((k): k is string =>
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
+                        // baseline = listan SOM DEN LIGGER I FIRESTORE, alltså
+                        // FÖRE migreringen nedan. Skiljer den sig från valet vi
+                        // faktiskt sätter skriver spar-effekten tillbaka en
+                        // gång — det är så migreringen blir permanent, utan
+                        // extra flagga i dokumentet.
                         baseline = [...valid].sort().join(',');
+                        // MIGRERING (Josef 1/9): 'family' blev en OPT-IN-nyckel
+                        // samma dag. Listor sparade FÖRE det kan omöjligt bära
+                        // nyckeln — den var inte valbar då — och matchesFilter
+                        // gömmer numera familjeevent när den saknas. Utan den
+                        // här raden tappar alltså VARJE inloggad som någon gång
+                        // rört filtret sina familjeevent tyst, värst för
+                        // FÖRÄLDRAR som är just de som vill ha dem.
+                        // Läggs bara till för dem som ska ha den förvald:
+                        // 19/8-regeln pekar ut inloggade vuxna utan barn, och
+                        // de ska fortsatt ha 🧸 urkryssad.
+                        if (!familyIsOptIn(data) && !valid.includes('family')) valid.push('family');
                         // Sätts ÄVEN när listan är tom: staten startar i
                         // BESÖKARLÄGET, och ett sparat aktivt val måste alltid
                         // vinna över det — oavsett vad besökardefaulten råkar
