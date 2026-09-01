@@ -464,6 +464,36 @@ export default function V2Map({
     // Samma karta som mapRef, men som state — overlays som behöver projicera
     // geo-punkter (vägskyltarna) måste renderas om när kartan finns.
     const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+
+    // ── Ambient-zoom BAKOM välkomstrutan (ägarbeslut 1/9: "gör så att kartan
+    // i bakgrunden zoomar in jättejättesakta — rörelsen är utanför modalen").
+    // Detta är ett MEDVETET, AVGRÄNSAT undantag från 31/8-regeln "ingen
+    // ambient startrörelse": ingen resa, ingen panorering — bara en knappt
+    // märkbar linjär inzoomning på platsen medan rutan ligger överst.
+    //  - Bara när rutan faktiskt syns överst (chromeHidden = welcomeOpen)
+    //    och INTE under ett djuplänkat eventkort (selectedEvent).
+    //  - Aldrig vid prefers-reduced-motion: MapLibre hoppar då DIREKT till
+    //    easeTo-målet — en teleport i stället för stillhet.
+    //  - Stängs rutan FRYSER kartan där den är (map.stop, inget hopp till
+    //    målet). Andra kamerarörelser (stadshopp, GPS-hem) avbryter den
+    //    automatiskt och den återstartas inte — engångs per öppning.
+    const ambientZoomActiveRef = useRef(false);
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const active = chromeHidden && !selectedEvent;
+        if (!active) {
+            if (ambientZoomActiveRef.current) {
+                ambientZoomActiveRef.current = false;
+                map.stop();
+            }
+            return;
+        }
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        ambientZoomActiveRef.current = true;
+        // +0.7 zoom över 2 minuter, linjärt — rörelse man anar, inte ser.
+        map.easeTo({ zoom: map.getZoom() + 0.7, duration: 120_000, easing: t => t });
+    }, [chromeHidden, selectedEvent, mapInstance]);
     const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
     // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
     // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
