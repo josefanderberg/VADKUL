@@ -413,7 +413,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     title={backToGroupCount > 1
                                         ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
                                         : 'Tillbaka till listan'}
-                                    className="inline-flex items-center justify-center h-8 w-8 rounded-full border transition-all active:scale-[0.97] bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-full border transition-all active:scale-[0.97] bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
                                 >
                                     <ArrowLeft size={15} strokeWidth={2.5} />
                                 </button>
@@ -426,7 +426,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
                                         activityView
                                             ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
                                     }`}
                                 >
                                     <MessageCircle size={13} fill={activityView ? 'currentColor' : 'none'} />
@@ -441,7 +441,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
                                         nearbyView
                                             ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
                                     }`}
                                 >
                                     <List size={13} />
@@ -488,7 +488,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 className={`w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
                                     saved
                                         ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50'
-                                        : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
+                                        : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
                                 }`}
                             >
                                 <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
@@ -502,7 +502,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             onClick={handleShare}
                             aria-label="Dela eventet"
                             title="Dela eventet"
-                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
                         >
                             <Share2 size={15} />
                         </button>
@@ -538,7 +538,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     den får en egen rad (nedan) som radbryts fritt. Skrapade
                     event och tips behåller platsen inline (trunkerad) — där
                     finns alltid ANMÄL-länken med fullständig info. */}
-                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
+                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDateSpan(linkEvent.time, linkEvent.endDate, linkEvent.hasSpecificTime !== false)}</span>
@@ -558,7 +558,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             <MapPin size={14} className="text-primary shrink-0" />
                             <span className="text-sm truncate">{linkEvent.locationName}</span>
                             {secondaryAddress && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 shrink-0">
                                     · {secondaryAddress}
                                 </span>
                             )}
@@ -574,7 +574,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             onClick={(e) => { e.stopPropagation(); onGroupNext(); }}
                             aria-label={`Nästa av ${groupTotal} event på samma plats`}
                             title="Fler event på samma plats"
-                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 active:scale-95 transition-all"
                         >
                             <span className="text-[11px] font-black tabular-nums leading-none">{groupIndex + 1}/{groupTotal}</span>
                             <ArrowRight size={13} className="shrink-0" />
@@ -583,12 +583,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 </div>
 
                 {vadkulHosted && (
-                    <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-zinc-300">
                         <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
                         <span className="text-sm min-w-0 break-words">
                             {linkEvent.locationName}
                             {secondaryAddress && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
                                     {' '}· {secondaryAddress}
                                 </span>
                             )}
@@ -665,10 +665,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                     {/* Description Section */}
                     <div
-                        className={`p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
+                        className={`p-4 md:p-8 bg-slate-50 dark:bg-zinc-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
-                        <p data-event-description className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
+                        <p data-event-description className="text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                             {withRecoveredLineBreaks((linkEvent as any).description)
                                 || (descriptionsPending ? 'Hämtar beskrivning…' : 'Ingen beskrivning tillgänglig.')}
                         </p>
@@ -710,7 +710,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         </button>
 
                                         <div>
-                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">
                                                 <Users size={13} />
                                                 {attendees.length === 0
                                                     ? 'Ingen anmäld än — bli först!'
@@ -721,7 +721,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                     {attendees.map(a => (
                                                         <span
                                                             key={a.uid}
-                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700"
                                                         >
                                                             {a.photoURL ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
@@ -731,7 +731,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                                     {a.name.charAt(0).toUpperCase()}
                                                                 </span>
                                                             )}
-                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{a.name}</span>
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 max-w-[120px] truncate">{a.name}</span>
                                                         </span>
                                                     ))}
                                                 </div>
@@ -756,7 +756,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                 <button
                                                     key={reason}
                                                     onClick={(e) => handleReport(e, reason)}
-                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 dark:border-zinc-600 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                                                 >
                                                     {reason}
                                                 </button>
@@ -765,7 +765,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     ) : (
                                         <button
                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpen(true); }}
-                                            className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 py-1.5 transition-colors"
+                                            className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 py-1.5 transition-colors"
                                         >
                                             Rapportera event
                                         </button>

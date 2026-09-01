@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import { isVadkulHostedEvent, LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { type BoostTier } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
@@ -176,12 +177,25 @@ const getDayLabel = (offset: number, days = 1) => {
     return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'long' }));
 };
 
+/** En rad i närhetslistan: eventet + ev. dagens dubbletter — samma titel
+ *  ELLER omslagsbild under samma dag (grupperat i EventCard via
+ *  utils/groupDups, samma regel som stadssidornas daglista, Josef 1/9).
+ *  Dubbletterna radas upp bakom radens utfällning (NearbyDupList). */
+type NearbyItem = {
+    evt: LinkEvent;
+    distanceKm: number | null;
+    dups?: { evt: LinkEvent; distanceKm: number | null }[];
+};
+
 interface NearbyEventsListProps {
-    /** Kommande (ej passerade) event, redan sliced till synligt antal. */
-    upcomingItems: { evt: LinkEvent; distanceKm: number | null }[];
+    /** Kommande (ej passerade) RADER (grupperade), redan sliced till synligt antal. */
+    upcomingItems: NearbyItem[];
+    /** Totalt antal RADER — pagineringens "Visa fler"-gräns. */
     upcomingTotal: number;
-    /** Alla event som redan varit — visas under en hopfällbar flik. */
-    pastItems: { evt: LinkEvent; distanceKm: number | null }[];
+    /** Totalt antal EVENT (rader + deras dubbletter) — rubrikens siffra. */
+    upcomingCount: number;
+    /** Rader som redan varit — visas under en hopfällbar flik. */
+    pastItems: NearbyItem[];
     now: number;
     onSelect: (evt: LinkEvent) => void;
     onLoadMore: () => void;
@@ -251,7 +265,7 @@ function LazyRowImage({ src, alt, className, onFailed }: {
         return () => io.disconnect();
     }, []);
     return (
-        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-slate-800 ${className ?? ''}`}>
+        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-zinc-800 ${className ?? ''}`}>
             {inView && (
                 <img
                     src={src}
@@ -266,7 +280,54 @@ function LazyRowImage({ src, alt, className, onFailed }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false }: {
+/** "kl 10:30" för utfällningens variantrader — bara för event med klockslag. */
+const dupClock = (evt: LinkEvent): string | null =>
+    evt.hasSpecificTime !== false
+        ? new Date(evt.time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+        : null;
+
+// Utfällningen på en GRUPPRAD i närhetslistan — samma mönster som stads-
+// sidornas DupList: bara det som skiljer sig (titeln när den avviker från
+// radens, tid, plats). Variantklick väljer eventet precis som radklicket.
+// Ligger UTANFÖR radens knapp (klick ska fälla ut, inte välja).
+function NearbyDupList({ dups, repTitle, onSelect, className }: {
+    dups: NonNullable<NearbyItem['dups']>;
+    repTitle: string;
+    onSelect: (evt: LinkEvent) => void;
+    className?: string;
+}) {
+    const repKey = dupKey(repTitle);
+    return (
+        <details className={`group/dups ${className ?? ''}`}>
+            <summary className="inline-flex items-center gap-1 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11px] font-black text-[#006AA7] dark:text-sky-400 hover:underline">
+                <ChevronDown size={12} strokeWidth={3} className="transition-transform group-open/dups:rotate-180" aria-hidden />
+                {dups.length === 1 ? '+1 tillfälle till' : `+${dups.length} fler tider & platser`}
+            </summary>
+            <ul className="mt-1.5 flex flex-col gap-1.5 border-l-2 border-slate-200 dark:border-zinc-800 pl-3">
+                {dups.map(d => {
+                    const clock = dupClock(d.evt);
+                    return (
+                        <li key={d.evt.id}>
+                            <button
+                                type="button"
+                                onClick={() => onSelect(d.evt)}
+                                className="flex items-center gap-x-2 max-w-full text-left text-[11px] font-bold text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                            >
+                                {dupKey(d.evt.title) !== repKey && (
+                                    <span className="min-w-0 shrink truncate font-black text-slate-700 dark:text-zinc-300">{d.evt.title}</span>
+                                )}
+                                {clock && <span className="shrink-0 tabular-nums">kl {clock}</span>}
+                                <span className="min-w-0 shrink truncate">{d.evt.locationName}</span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+        </details>
+    );
+}
+
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
@@ -278,6 +339,8 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
      *  ELLER trasig länk — renderas inte alls i stället för att falla
      *  tillbaka till den bildlösa layouten. */
     hideWithoutImage?: boolean;
+    /** Dagens dubbletter (se NearbyItem) — ger ×N-brickan + utfällningen. */
+    dups?: NearbyItem['dups'];
 }) {
     const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
@@ -291,7 +354,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
     // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
     const infoRow = (
-        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 overflow-hidden">
+        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-zinc-400 overflow-hidden">
             <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <MapPin size={11} className="text-primary" />
                 {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
@@ -328,7 +391,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                 <button
                     type="button"
                     onClick={() => onSelect(evt)}
-                    className="w-full text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                    className="w-full text-left hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
                 >
                     <div className="relative">
                         <LazyRowImage
@@ -344,6 +407,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                                 {evt.title}
                             </h4>
+                            {dups && dups.length > 0 && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-[10px] font-black text-white tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                    ×{dups.length + 1}
+                                </span>
+                            )}
                             {isVadkulHostedEvent(evt) && (
                                 <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                     VADKUL
@@ -357,6 +425,9 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                         <ChevronRight size={16} className="text-slate-400 shrink-0" />
                     </div>
                 </button>
+                {dups && dups.length > 0 && (
+                    <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="px-4 md:px-6 pb-2.5 -mt-0.5" />
+                )}
             </li>
         );
     }
@@ -368,13 +439,13 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
             <button
                 type="button"
                 onClick={() => onSelect(evt)}
-                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
                         isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
-                            : 'bg-slate-100 dark:bg-slate-800'
+                            : 'bg-slate-100 dark:bg-zinc-800'
                     }`}
                     aria-hidden
                 >
@@ -385,6 +456,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
                             {evt.title}
                         </h4>
+                        {dups && dups.length > 0 && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-500 dark:text-zinc-400 tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                ×{dups.length + 1}
+                            </span>
+                        )}
                         {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL
@@ -396,11 +472,14 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                 </div>
                 <ChevronRight size={16} className="text-slate-400 shrink-0" />
             </button>
+            {dups && dups.length > 0 && (
+                <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="pl-16 pr-4 md:pl-[4.5rem] md:pr-6 pb-2.5 -mt-1" />
+            )}
         </li>
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -409,10 +488,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
     // scrollat ända ner hit.
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
-        <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
-            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
+        <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
+            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Fler event i närheten · {upcomingTotal}
+                    Fler event i närheten · {upcomingCount}
                 </span>
                 {!imagesOnly && (
                     <button
@@ -423,7 +502,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                         className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
                             showImages
                                 ? 'bg-[#006AA7] text-white'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                : 'bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
                         }`}
                     >
                         {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
@@ -433,9 +512,9 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
             </div>
 
             <ul className="divide-y divide-border">
-                {upcomingItems.map(({ evt, distanceKm }, i) => (
+                {upcomingItems.map(({ evt, distanceKm, dups }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -461,11 +540,11 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     <button
                         type="button"
                         onClick={() => setShowPast(s => !s)}
-                        className="w-full px-4 md:px-6 py-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                        className="w-full px-4 md:px-6 py-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
                         aria-expanded={showPast}
                     >
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            Har varit · {pastItems.length}
+                            Har varit · {pastItems.reduce((sum, it) => sum + 1 + (it.dups?.length ?? 0), 0)}
                         </span>
                         <ChevronDown
                             size={16}
@@ -474,8 +553,8 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     </button>
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
-                            {pastItems.map(({ evt, distanceKm }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
+                            {pastItems.map(({ evt, distanceKm, dups }) => (
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
                             ))}
                         </ul>
                     )}
@@ -614,6 +693,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
+    // Minsta nedåtdrag (i vh) för att ett släpp ska räknas som ett medvetet
+    // "scrolla ner"-snäpp (helskärm → default, default → stängt; se
+    // onPointerUp) — kortare ryck studsar tillbaka dit gesten började.
+    const SNAP_PULL_MIN_VH = 6;
     // Kortets TAK: hur högt det får växa. INTE hela vägen upp längre (Josef
     // 31/8, ersätter 26/8-beslutet "kortet ska kunna fylla skärmen"): NÄSTA-
     // knappen, som ligger på raden ovanför kortet, ska hamna i LINJE MED
@@ -847,6 +930,34 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
     useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }, []);
 
+    /** Stäng kortet helt: glid ner + avmarkera eventet. Delas av drag-ner-
+     *  släppet och hjul-snäppet — samma glid, samma 260 ms. */
+    const closeCard = () => {
+        updateHeightVh(2);
+        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+    };
+    // Hjul-lyssnaren registreras en gång per öppnat kort och skulle annars
+    // stänga mot den renderingens onSelectEvent — läs via ref.
+    const closeCardRef = useRef(closeCard);
+    closeCardRef.current = closeCard;
+
+    // ── Hjul-snäppets gest-grind (se onWheel) ───────────────────────────────
+    // Spänd = nästa nedåtsvep vid innehållstoppen får utföra ETT snäpp
+    // (helskärm → default-öppningshöjden, eller default → stängt kort).
+    // En styrplattas tröghetssvans sprutar wheel-händelser långt efter själva
+    // svepet — utan grinden faller ETT svep genom default och stänger kortet.
+    // Grinden återspänns när hjulet varit tyst WHEEL_SNAP_QUIET_MS, eller
+    // direkt av ett uppåtsvep (växa-grenen).
+    const wheelSnapArmedRef = useRef(true);
+    const wheelRearmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const WHEEL_SNAP_QUIET_MS = 350;
+    const scheduleWheelRearm = () => {
+        if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current);
+        wheelRearmTimerRef.current = setTimeout(() => { wheelSnapArmedRef.current = true; }, WHEEL_SNAP_QUIET_MS);
+    };
+    useEffect(() => () => { if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current); }, []);
+
     // ── Dra-ner-vid-scroll-toppen ────────────────────────────────────────────
     // Står den inre scrollen på toppen och man drar nedåt ska gesten INTE
     // rubber-banda scrollen (vitt glapp ovanför innehållet) — den ska tas över
@@ -915,20 +1026,30 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
             if (deltaVh > 0 && h < maxVhRef.current) {
                 e.preventDefault();
+                wheelSnapArmedRef.current = true; // uppåt → spänn snäpp-grinden igen
                 setIsAnimating(false);
                 updateHeightVh(Math.min(maxVhRef.current, h + deltaVh), true);
                 commitHeightSoon();
                 return;
             }
-            // Scrolla tillbaka vid innehållets topp → krymp kortet (ner mot peek).
+            // Scrolla tillbaka vid innehållets topp → SNÄPP i två steg i
+            // stället för att glida (Josef 1/9): står kortet över default-
+            // öppningshöjden landar det direkt PÅ den (samma läge som när ett
+            // event öppnas), och nästa svep därifrån stänger kortet helt.
+            // Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett enda
+            // svep aldrig kedjar genom båda stegen.
             // < 1 (inte <= 0): Firefox rapporterar BRÅKDELS-scrollTop (0.5 osv)
             // nära toppen — med <= 0 fastnade hjulet i en död zon där varken
             // innehållet eller kortet rörde sig.
-            if (deltaVh < 0 && sc.scrollTop < 1 && h > collapsedVhRef.current) {
+            if (deltaVh < 0 && sc.scrollTop < 1) {
                 e.preventDefault();
-                setIsAnimating(false);
-                updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh), true);
-                commitHeightSoon();
+                if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
+                wheelSnapArmedRef.current = false;
+                scheduleWheelRearm();
+                setIsAnimating(true);
+                const def = measureDefaultHeight();
+                if (h > def + 4) updateHeightVh(def);
+                else closeCardRef.current();
                 return;
             }
             // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
@@ -1169,8 +1290,30 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // med bild, bilderna tvingade på. Lista-toggeln i headern visar ALLA
     // event, med bildtoggeln (default av).
     const imagesOnlyList = cardView !== 'nearby';
-    const listedUpcoming = imagesOnlyList ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
-    const listedPast = imagesOnlyList ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
+    // Dubblettgruppering (Josef 1/9 — samma regel som stadssidornas daglista,
+    // utils/groupDups): samma titel ELLER omslagsbild under samma dag = EN rad,
+    // övriga tillfällen bakom radens utfällning. Grupperas EFTER bildfiltret så
+    // bildflödets grupper bara bär bildsatta event. rows = RADER (pagineringen),
+    // count = EVENT (rubrikens siffra).
+    const groupNearby = (items: { evt: LinkEvent; distanceKm: number | null }[]) => {
+        const wrapped = items.map(it => ({ title: it.evt.title, coverImage: it.evt.coverImage || undefined, time: it.evt.time, it }));
+        const rows: NearbyItem[] = groupListDuplicates(wrapped).map(g => ({
+            ...g.rep.it,
+            ...(g.dups.length > 0 ? { dups: g.dups.map(d => d.it) } : {}),
+        }));
+        return { rows, count: items.length };
+    };
+    const listedUpcoming = useMemo(
+        () => groupNearby(imagesOnlyList ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby),
+        // groupNearby är en ren lokal hjälpare — medvetet utanför deps.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [upcomingNearby, imagesOnlyList]
+    );
+    const listedPast = useMemo(
+        () => groupNearby(imagesOnlyList ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [pastNearby, imagesOnlyList]
+    );
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -1464,9 +1607,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (h < collapsed - DISMISS_BELOW_VH) {
                 // Släppt långt under peek-gränsen → kortet glider ner och
                 // stängs helt (avmarkerar eventet, precis som ett kartklick).
-                updateHeightVh(2);
-                if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-                dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+                closeCard();
             } else if (h < collapsed) {
                 // Strax under gränsen → snäpp tillbaka till peek-läget.
                 updateHeightVh(collapsed);
@@ -1479,8 +1620,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 // långa beskrivningar gick då inte att scrolla alls.
                 updateHeightVh(MAX_HEIGHT_VH);
             } else {
-                // Neddrag: stanna på exakt den höjd användaren dragit till.
-                updateHeightVh(h);
+                // Neddrag → samma tvåstegs-snäpp som hjulet (Josef 1/9): från
+                // helskärm landar kortet på default-öppningshöjden, från
+                // default (eller lägre) stängs det helt. Korta ryck studsar
+                // tillbaka dit gesten började — ett darr på fingret ska inte
+                // stänga kortet. (Ett släpp långt under peek har redan
+                // stängts av grenarna ovan.)
+                const def = measureDefaultHeight();
+                if (startHeightVh.current - h < SNAP_PULL_MIN_VH) updateHeightVh(startHeightVh.current);
+                else if (startHeightVh.current > def + 4) updateHeightVh(def);
+                else closeCard();
             }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
@@ -1933,8 +2082,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     inte adderar någon höjd/padding. pointer-events-none → drag går
                     rakt igenom till kortet. */}
                 <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
                 </div>
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
@@ -2048,11 +2197,28 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         event i närheten direkt när de scrollar). Döljs i
                         chatt-vyn (som visar bara header + chatt); i listvyn
                         hamnar den i stället direkt under headern. */}
+                    {/* Djuplänks-glappet (?event= från stadssidorna): kortet
+                        öppnar på sitt seed-data långt innan Sverige-lagren
+                        laddat, så närhetslistan är tom en stund. Visa sektionen
+                        som laddande i stället för att den poppar in ur
+                        ingenstans — försvinner när listan fyllts, eller tyst
+                        när det definitiva beskedet säger att inget finns nära. */}
+                    {cardView !== 'chat' && nearbyEvents.length === 0 && !eventsSettled && (
+                        <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
+                            <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
+                                <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                    Letar event i närheten…
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {cardView !== 'chat' && nearbyEvents.length > 0 && (
                         <NearbyEventsList
-                            upcomingItems={listedUpcoming.slice(0, nearbyVisibleCount)}
-                            upcomingTotal={listedUpcoming.length}
-                            pastItems={listedPast}
+                            upcomingItems={listedUpcoming.rows.slice(0, nearbyVisibleCount)}
+                            upcomingTotal={listedUpcoming.rows.length}
+                            upcomingCount={listedUpcoming.count}
+                            pastItems={listedPast.rows}
                             now={now}
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}

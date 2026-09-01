@@ -86,7 +86,7 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
             <button
                 type="button"
                 onClick={onRequireLogin}
-                className="flex items-center gap-2 rounded-xl border border-border bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5 text-left hover:border-[#006AA7]/40 transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-border bg-slate-50 dark:bg-zinc-900/40 px-3 py-2.5 text-left hover:border-[#006AA7]/40 transition-colors"
             >
                 <MessageCircle size={14} className="text-[#006AA7] shrink-0" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 shrink-0">Chatt</span>
@@ -106,7 +106,7 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
                 type="button"
                 onClick={() => setExpanded(true)}
                 aria-expanded={false}
-                className="flex items-center gap-2 rounded-xl border border-border bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5 text-left hover:border-[#006AA7]/40 transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-border bg-slate-50 dark:bg-zinc-900/40 px-3 py-2.5 text-left hover:border-[#006AA7]/40 transition-colors"
             >
                 <MessageCircle size={14} className="text-[#006AA7] shrink-0" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 shrink-0">Chatt</span>
@@ -119,8 +119,8 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
     }
 
     return (
-        <div className="flex flex-col rounded-xl border border-border bg-slate-50 dark:bg-slate-900/40 overflow-hidden">
-            <div className="px-3 py-2 flex items-center gap-2 border-b border-border bg-white/60 dark:bg-slate-900/60">
+        <div className="flex flex-col rounded-xl border border-border bg-slate-50 dark:bg-zinc-900/40 overflow-hidden">
+            <div className="px-3 py-2 flex items-center gap-2 border-b border-border bg-white/60 dark:bg-zinc-900/60">
                 <MessageCircle size={14} className="text-[#006AA7]" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Chatt {messages.length > 0 && `· ${messages.length}`}
@@ -143,7 +143,7 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
                             <div className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm shadow-sm ${
                                 isMe
                                     ? 'bg-[#006AA7] text-white rounded-br-sm'
-                                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-border rounded-bl-sm'
+                                    : 'bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 border border-border rounded-bl-sm'
                             }`}>
                                 {/* Användarnamnet syns på ALLA kommentarer — även ens egna,
                                     så man ser hur man framstår för andra. */}
@@ -162,7 +162,7 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
 
             {/* Inget "logga in för att chatta"-läge längre: hit kommer man
                 bara som inloggad (utloggade fastnar på den låsta raden ovan). */}
-            <form onSubmit={handleSend} className="p-2 border-t border-border flex gap-2 bg-white/60 dark:bg-slate-900/60">
+            <form onSubmit={handleSend} className="p-2 border-t border-border flex gap-2 bg-white/60 dark:bg-zinc-900/60">
                 <input
                     type="text"
                     value={newMessage}
@@ -170,7 +170,7 @@ export default function EventChatPanel({ eventId, eventTitle, onRequireLogin }: 
                     placeholder="Skriv något…"
                     aria-label="Skriv ett chattmeddelande"
                     maxLength={500}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-[#006AA7]/40 text-sm text-slate-800 dark:text-slate-100"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-[#006AA7]/40 text-sm text-slate-800 dark:text-zinc-100"
                 />
                 <button
                     type="submit"

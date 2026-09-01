@@ -115,12 +115,12 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
                     // shift) — samma "vald = vit-kantad" som markören på kartan,
                     // så man ser vilken frame brickan stod på. Passerad rad
                     // dämpas (samma 50 % som kartans nål-prickar).
-                    className={`relative w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
+                    className={`relative w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
                 >
-                    <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`} aria-hidden>{eventEmoji(ev)}</span>
+                    <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`} aria-hidden>{eventEmoji(ev)}</span>
                     <span className="flex-1 min-w-0">
-                        <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{ev.title}</span>
-                        <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                        <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-zinc-100'}`}>{ev.title}</span>
+                        <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
                             {tid && <Clock size={10} className="shrink-0" />}
                             {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
                             <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
@@ -138,9 +138,9 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
         // höjd/drag/scroll. pt-8 lyfter rubriken under drag-indikatorn som
         // ligger absolut överst i kortet.
         <div className="pt-8">
-            <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-slate-700/70">
+            <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
-                    <span className="block text-base font-black text-slate-800 dark:text-slate-100 truncate leading-tight">{placeName}</span>
+                    <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>
                     <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">
                         {events.length} event på samma plats
                         {showDays ? ` · ${dayBuckets.length} dagar` : ''}
@@ -154,7 +154,7 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
             {/* Klistrade dagrubriker klistrar mot kortets scrollcontainer
                 (närmsta scrollande förälder) — samma grepp som stadssidornas
                 daglista. */}
-            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            <ul className="divide-y divide-slate-100 dark:divide-zinc-800">
                 {dayBuckets.map(day => (
                     <Fragment key={day.key}>
                         {showDays && (

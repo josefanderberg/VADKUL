@@ -571,6 +571,14 @@ export default function HomePage() {
     groupChoiceRef.current = groupChoice;
     const groupReturnRef = useRef<LinkEvent[] | null>(null);
     groupReturnRef.current = groupReturn;
+    // Väljarlista man LÄMNADE UTAN VAL (Josef 1/9): trycker man Nästa medan
+    // listan visas (inget val gjort) och sedan backar till representanten ska
+    // LISTAN visas igen — inte representantens kort, som om valet redan vore
+    // gjort. Stashas i medlemskaps-effekten nedan när valet lämnar gruppen,
+    // återställs när valet landar på rep:en igen. Refs — ingen render behövs
+    // förrän själva återställningen.
+    const groupRepRef = useRef<string | null>(null);
+    const unpickedGroupRef = useRef<{ repId: string; group: LinkEvent[] } | null>(null);
     // Kartklick stänger kategorikolumnen (Josef 31/8): bumpas vid varje klick
     // på själva kartan (MapLibre fyrar ingen 'click' efter en dragning, så en
     // panorering lämnar kolumnen i fred) och CategoryFilter fäller ihop sig.
@@ -2121,10 +2129,31 @@ export default function HomePage() {
     // rep atomiskt i handleSelectGroup — rep är medlem, så det rensas inte.)
     useEffect(() => {
         if (!groupChoice) return;
-        if (!selectedEvent || !groupChoice.some(ev => ev.id === selectedEvent.id)) {
-            setGroupChoice(null);
+        if (selectedEvent && groupChoice.some(ev => ev.id === selectedEvent.id)) {
+            // Medlemmen som är vald MEDAN listan visas (= rep:en) — det är
+            // hit "visa listan igen"-återställningen nedan siktar.
+            groupRepRef.current = selectedEvent.id;
+            return;
         }
+        // Valet lämnade gruppen MEDAN listan fortfarande visades = man gick
+        // vidare (Nästa/svep/sök) utan att välja något ur den. Minns listan;
+        // backar man till rep:en ska den upp igen. Stängt kort (selectedEvent
+        // null) är slutet på resan — inget att komma tillbaka till.
+        if (selectedEvent && groupRepRef.current) {
+            unpickedGroupRef.current = { repId: groupRepRef.current, group: groupChoice };
+        }
+        setGroupChoice(null);
     }, [selectedEvent, groupChoice]);
+    // Återställningen: landar valet på rep:en igen (Bakåt-knappen, eller en
+    // Nästa-slinga som kommer runt) medan en o-vald lista ligger stashad →
+    // öppna väljarlistan i stället för representantens kort. Engångs — ett
+    // val ur den återöppnade listan går sedan den vanliga vägen (groupReturn).
+    useEffect(() => {
+        const un = unpickedGroupRef.current;
+        if (!un || !selectedEvent || selectedEvent.id !== un.repId) return;
+        unpickedGroupRef.current = null;
+        setGroupChoice(un.group);
+    }, [selectedEvent]);
     // Tillbaka-historiken lever LÄNGRE än väljarläget (Josef 1/9): bläddrar man
     // vidare med Nästa och sedan tillbaka ska pilen stå där igen, så vägen till
     // multievent-listan aldrig går förlorad mitt i en bläddring. Gruppen ligger
@@ -2132,7 +2161,10 @@ export default function HomePage() {
     // eventet är medlem (se onBackToGroup nedan). Rensas bara när kortet
     // faktiskt stängs — då är resan slut.
     useEffect(() => {
-        if (groupReturn && !selectedEvent) setGroupReturn(null);
+        if (selectedEvent) return;
+        if (groupReturn) setGroupReturn(null);
+        unpickedGroupRef.current = null; // stängt kort = resan slut
+        groupRepRef.current = null;
     }, [selectedEvent, groupReturn]);
 
     // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
@@ -3271,7 +3303,7 @@ export default function HomePage() {
                     // z-[1300] = modal-lagret (AuthModal) — måste ligga över
                     // eventkortet som numera är z-[1250]. (Grupplistan hör inte
                     // hit längre: den är en väljare på z-1149 sedan 31/8.)
-                    className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+                    className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overscroll-none"
                     // Klick på bakgrunden stänger modalen (samma städning som
                     // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —
                     // klick inuti dialogen bubblar hit men filtreras bort här.
@@ -3281,7 +3313,11 @@ export default function HomePage() {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="create-event-title"
-                        className="bg-card dark:border dark:border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+                        // Rullningen stannar I dialogen: overscroll-contain hindrar att
+                        // iOS gummibandar vidare på visuella viewporten när man nått
+                        // toppen/botten (det såg ut som att KARTAN scrollade bakom),
+                        // och touch-action:pan-y låser gesten till lodrätt.
+                        className="bg-card dark:border dark:border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain [touch-action:pan-y]"
                     >
                         <h2 id="create-event-title" className="text-xl font-bold text-slate-800 dark:text-white">
                             {fulfillingWish ? 'Skapa eventet av önskan' : createKind === 'wish' ? 'Önska event' : 'Skapa event'}
@@ -3419,11 +3455,16 @@ export default function HomePage() {
                         {createKind === 'event' && (
                             <label className="flex flex-col gap-1 text-xs font-bold text-slate-500 dark:text-slate-400">
                                 När?
+                                {/* iOS ger datetime-local en egen inbyggd bredd som
+                                    inte krymper med width:100% — den sköt ut ur
+                                    modalen och gjorde HELA formuläret sidledes
+                                    rullbart. appearance-none + min-w-0 gör fältet
+                                    till en vanlig ruta som lyder w-full. */}
                                 <input
                                     type="datetime-local"
                                     value={newEventTime}
                                     onChange={e => setNewEventTime(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white font-normal text-base focus:border-green-500 focus:outline-none"
+                                    className="block w-full min-w-0 max-w-full appearance-none px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white font-normal text-base focus:border-green-500 focus:outline-none"
                                 />
                             </label>
                         )}
