@@ -245,3 +245,35 @@ describe('titel-dubbletter över källgränser', () => {
         expect(rows.thisWeek).toHaveLength(2);
     });
 });
+
+describe('Ticketmaster-förturen', () => {
+    it('tar med TM-eventet även när kategoritaket redan är fyllt', () => {
+        // Sju högt rankade stage-event plus EN Ticketmaster-konsert sist i
+        // rankningen. Utan förtursrundan knuffar kategoritaket ut den.
+        const fyllnad = Array.from({ length: 7 }, (_, i) =>
+            ev({ title: `Teater ${i}`, category: 'stage', locationName: `Scen ${i}`,
+                 time: `2026-08-2${2 + (i % 2)}T1${8 + (i % 2)}:00:00+02:00`, url: `https://lokal.se/${i}` }));
+        const tm = ev({ title: 'Stor turné', category: 'music', locationName: 'Arenan',
+                        time: '2026-08-22T20:00:00+02:00', url: 'https://ticketmaster.evyy.net/c/9' });
+        const rows = pickCityRows([...fyllnad, tm], FRI);
+        expect(rows.thisWeek.map(e => e.title)).toContain('Stor turné');
+    });
+
+    it('tar ändå in bredden när det finns annat att välja på', () => {
+        // Förturen får inte göra inlägget till en ren biljettannons: så länge
+        // orten HAR annat material ska kategoritaket i runda 2 släppa in det.
+        const tm = Array.from({ length: 12 }, (_, i) =>
+            ev({ title: `TM-konsert ${i}`, category: 'music', locationName: `Arena ${i}`,
+                 time: `2026-08-2${2 + (i % 2)}T20:00:00+02:00`, url: `https://ticketmaster.evyy.net/c/${i}` }));
+        const ovrigt = [
+            ev({ title: 'Höstmarknad', category: 'market', locationName: 'Torget', time: '2026-08-23T11:00:00+02:00', url: 'https://k.se/1' }),
+            ev({ title: 'Vernissage', category: 'art', locationName: 'Galleriet', time: '2026-08-22T16:00:00+02:00', url: 'https://k.se/2' }),
+            ev({ title: 'Loppis', category: 'market', locationName: 'Skolan', time: '2026-08-23T10:00:00+02:00', url: 'https://k.se/3' }),
+            ev({ title: 'Ståuppkväll', category: 'stage', locationName: 'Puben', time: '2026-08-22T20:00:00+02:00', url: 'https://k.se/4' }),
+        ];
+        const rows = pickCityRows([...tm, ...ovrigt], FRI, { maxThisWeek: 6 });
+        const titlar = rows.thisWeek.map(e => e.title);
+        expect(titlar.some(t => t.startsWith('TM-konsert'))).toBe(true);
+        expect(new Set(rows.thisWeek.map(e => e.category)).size).toBeGreaterThanOrEqual(3);
+    });
+});

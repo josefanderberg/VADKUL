@@ -23,6 +23,7 @@
  *   --max=20         tak för antal inlägg i körningen
  *   --radie=25       km kring orten som eventen hämtas ur
  *   --golv=8         minsta antal eventrader för att orten ska postas (0 = av)
+ *   --kommunfilter=av  ta med grannkommunernas event (bara för regionposter)
  *   --commit         schemalägg (utan den: bara utskrift)
  *
  * ⚠️ FÄRSKVARUREGELN — läs innan du höjer --per-dag:
@@ -54,7 +55,8 @@ import { db } from '../config/firebase';
 import { postToFacebook, getFacebookPostPermalink, SCHEDULE_MAX_MS } from '../utils/socialPublish';
 import { buildCityPostText, buildIgCaption, pickCityRows, meetsQualityFloor, type PickedRows } from '../utils/cityPostText';
 import { matchOrt } from '../utils/ortMatch';
-import { lookupCityPoint, citySlugFor, cityAdImageUrl } from '../utils/cityLookup';
+import { lookupCityPoint, citySlugFor, cityAdImageUrl, cityPoints } from '../utils/cityLookup';
+import { belongsToTown } from '../utils/townBoundary';
 import { loadQueue, saveQueue, upsertQueueItem, queueId, QUEUE_PATH } from '../utils/igQueue';
 
 // Hemligheter (FB_PAGE_ID/FB_PAGE_TOKEN) — samma mönster som publish-fb.ts.
@@ -98,6 +100,9 @@ const radiusKm = Number(arg('radie')) || 25;
 /** Kvalitetsgolvet — minsta antal eventrader för att orten ska få ett inlägg.
  *  0 stänger av det (för orter man medvetet vill posta tunt om). */
 const minRows = arg('golv') !== undefined ? Number(arg('golv')) : 8;
+/** Kommunfiltret — utan det hamnar grannkommunens event i inlägget. Av bara
+ *  vid uttrycklig `--kommunfilter=av` (regionposter som "Värmland"). */
+const kommunfilter = arg('kommunfilter') !== 'av';
 const [startHour, startMin] = (arg('klockan') ?? '17:00').split(':').map(Number);
 
 function firstSlot(): Date {
@@ -240,7 +245,16 @@ function eventsForTown(sqlite: Database.Database, town: Town, from: Date, to: Da
         town.lng - lngSpan, town.lng + lngSpan,
     ) as EventRow[];
 
-    return rows.filter(r => distKm(town.lat, town.lng, r.lat, r.lng) <= radiusKm);
+    const withinRadius = rows.filter(r => distKm(town.lat, town.lng, r.lat, r.lng) <= radiusKm);
+    if (!kommunfilter) return withinRadius;
+
+    // KOMMUNFILTRET: radien känner inga kommungränser. Landskrona-gruppen
+    // avvisade oss 1/9 för ett inlägg fullt av Helsingborg, Kävlinge och
+    // Lomma — "Ta bort alla evenemang som ej finns i Landskrona kommun".
+    // Se utils/townBoundary.ts för hur tillhörigheten avgörs.
+    const towns = cityPoints();
+    const self = { name: town.name, lat: town.lat, lng: town.lng };
+    return withinRadius.filter(r => belongsToTown(r, self, towns));
 }
 
 /* ── 3. Texten — bygget bor i utils/cityPostText (ägarens täta tvåsektions-

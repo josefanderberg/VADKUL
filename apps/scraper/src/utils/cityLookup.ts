@@ -42,6 +42,14 @@ function allCitySlugs(): { name: string; slug: string }[] {
     return slugCache;
 }
 
+/**
+ * Hela ortlistan — kommunfiltret i townBoundary behöver den för att avgöra
+ * vilken ort ett event NATURLIGT hör till (närmaste ort vinner).
+ */
+export function cityPoints(): CityPoint[] {
+    return allCityPoints();
+}
+
 /** Ort → koordinat. Går via matchOrt så "Mora" inte fastnar på Hedemora. */
 export function lookupCityPoint(query: string): CityPoint | null {
     return matchOrt(allCityPoints(), query, p => [p.name])[0] ?? null;

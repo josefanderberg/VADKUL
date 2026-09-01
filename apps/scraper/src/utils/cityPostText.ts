@@ -171,9 +171,9 @@ function pickSection(events: CityEventRow[], max: number, seenTitles: string[]):
     const seenVenue = new Set<string>();
     const picked: CityEventRow[] = [];
 
-    const take = (categoryCap: number) => {
-        for (const e of ranked) {
-            if (picked.length >= max) return;
+    const take = (pool: CityEventRow[], limit: number, categoryCap: number) => {
+        for (const e of pool) {
+            if (picked.length >= limit) return;
             const tk = titleKey(e.title);
             if (isDupTitle(tk, seenTitles)) continue;
             const day = e.time.slice(0, 10);
@@ -189,16 +189,22 @@ function pickSection(events: CityEventRow[], max: number, seenTitles: string[]):
         }
     };
 
-    // TVÅ RUNDOR. Första med hårt kategoritak, så bredden får företräde framför
-    // rankningen: en ren topplista blir en genrelista — Stockholm 2/9 gav bara
-    // "music, stage" innan taket fanns, trots 3000 event att välja bland.
-    //
-    // Andra rundan lyfter taket och fyller resten. Den är till för de tunna
-    // orterna: har Åmål bara konserter ska inlägget få bestå av konserter,
-    // hellre än att kapas till två rader av ett tak som var tänkt för
-    // storstadens överflöd.
-    take(Math.max(1, Math.ceil(max / 4)));
-    if (picked.length < max) take(Infinity);
+    // RUNDA 1 — Ticketmaster får förtur (ägarens prioritet 1/9). En poängbonus
+    // räckte inte: kategoritaket kunde ändå knuffa ut dem. Halva sektionen är
+    // taket, annars blir inlägget en ren biljettannons i stället för ett
+    // tvärsnitt av vad orten erbjuder.
+    const ticketed = ranked.filter(e => ticketBoost(e.url) >= 6);
+    take(ticketed, Math.max(1, Math.floor(max / 2)), Math.max(2, Math.ceil(max / 3)));
+
+    // RUNDA 2 — hårt kategoritak, så bredden får företräde framför rankningen.
+    // En ren topplista blir en genrelista: Stockholm gav bara "music, stage"
+    // trots 3000 event att välja bland.
+    take(ranked, max, Math.max(1, Math.ceil(max / 4)));
+
+    // RUNDA 3 — taket lyft, fyller resten. För de tunna orterna: har Åmål bara
+    // konserter ska inlägget få bestå av konserter, hellre än att kapas av ett
+    // tak som var tänkt för storstadens överflöd.
+    if (picked.length < max) take(ranked, max, Infinity);
 
     // Läsordningen är kronologisk även om urvalet var ranking-styrt.
     return picked.sort((a, b) => a.time.localeCompare(b.time));
