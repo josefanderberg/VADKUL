@@ -117,36 +117,55 @@ async function main() {
         return;
     }
 
-    let sqliteOk = 0, firestoreOk = 0, fel = 0;
+    let sqliteOk = 0, firestoreOk = 0, fel = 0, saknas = 0;
     for (const r of kandidater) {
         try {
-            setHidden(r.url, false);
-            sqliteOk++;
-            // Firestore måste med — aggregatet byggs från spegeln, men kartan
-            // och stadssidorna läser Firestore. ALLA skrivningar via stamped().
+            // Firestore FÖRST. Ett dokument kan ha raderats sedan spegeln
+            // skrevs; tar vi fram raden i SQLite ändå hamnar den i aggregatet
+            // utan att finnas i Firestore, och kartan får ett event som
+            // stadssidorna inte känner till.
             if (db && r.firestoreId) {
                 await db.collection('linkEvents').doc(r.firestoreId).update(stamped({ hidden: 0 }));
                 firestoreOk++;
             }
+            setHidden(r.url, false);
+            sqliteOk++;
         } catch (e) {
+            const msg = (e as Error).message;
+            if (msg.includes('NOT_FOUND')) {
+                // Dokumentet är borta ur Firestore — raden hör inte hemma på
+                // kartan. Lämna den dold, det är inte ett fel.
+                saknas++;
+                continue;
+            }
             fel++;
-            console.error(`   ❌ ${r.title.slice(0, 40)}: ${(e as Error).message}`);
+            console.error(`   ❌ ${r.title.slice(0, 40)}: ${msg}`);
         }
+    }
+    if (saknas > 0) {
+        console.log(`\n   ${saknas} rader hoppades över — Firestore-dokumentet är raderat, spegeln släpar.`);
     }
     // Fas 2: fram med affiliaten FÖRST, sedan undan med de andra — ordningen
     // gör att gruppen aldrig står helt osynlig om körningen avbryts.
     let vaxlade = 0;
     for (const v of vaxlingar) {
         try {
-            setHidden(v.fram.url, false);
             if (db && v.fram.firestoreId) {
                 await db.collection('linkEvents').doc(v.fram.firestoreId).update(stamped({ hidden: 0 }));
             }
+            setHidden(v.fram.url, false);
             for (const u of v.undan) {
-                setHidden(u.url, true);
-                if (db && u.firestoreId) {
-                    await db.collection('linkEvents').doc(u.firestoreId).update(stamped({ hidden: 1 }));
+                // Ett redan raderat Firestore-dokument är redan osynligt —
+                // göm det i spegeln och gå vidare i stället för att fälla
+                // hela växlingen och lämna två synliga rader efter oss.
+                try {
+                    if (db && u.firestoreId) {
+                        await db.collection('linkEvents').doc(u.firestoreId).update(stamped({ hidden: 1 }));
+                    }
+                } catch (e) {
+                    if (!(e as Error).message.includes('NOT_FOUND')) throw e;
                 }
+                setHidden(u.url, true);
             }
             vaxlade++;
         } catch (e) {
