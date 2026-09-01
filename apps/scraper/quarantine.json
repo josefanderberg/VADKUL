@@ -101,9 +101,15 @@
       "lastRetry": "2026-08-29",
       "emptyRetries": 1
     },
+    "sdhl": {
+      "since": "2026-09-01",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "staffanstorp": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-01",
+      "emptyRetries": 1
     },
     "stockholm": {
       "since": "2026-08-19",
