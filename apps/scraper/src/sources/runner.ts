@@ -210,7 +210,17 @@ export async function runSource(
                     const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
                     const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
                     const cityLower = (e.city ?? '').trim().toLowerCase();
-                    if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
+                    // Källan levererar nu EGNA koordinater medan det sparade bara
+                    // var stadscentroid/ogeokodat → flytta eventet dit. Utan detta
+                    // fastnar event som sparades innan källans koordinat-join
+                    // började täcka dem på centroiden för alltid (oland.se 2026-08-31).
+                    if (e.coords && (storedUngeocoded || storedRow?.geoPrecision === 'stad-centroid')) {
+                        const loc = storedRow?.locationName || e.venueName || e.city || '';
+                        if (await refreshEventPlace(e.url, loc, e.coords[0], e.coords[1], 'källans egna koordinater', true, 'kallkoordinat')) {
+                            result.updated++;
+                            ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
+                        }
+                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
                         const q = `${e.venueName}, ${e.city}`;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
