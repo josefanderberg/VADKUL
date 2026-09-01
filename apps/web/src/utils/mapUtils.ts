@@ -22,6 +22,39 @@ import type { EventCategoryType } from './categories';
  */
 export const WEEK_VIEW_MIN_ZOOM = 9;
 
+/**
+ * Zoom-nivån som visar ungefär `spanMeters` tvärs en yta som är `widthPx` bred,
+ * vid en given latitud. MapLibre räknar zoom mot 512 px breda rutor, och en
+ * longitudgrad krymper med cos(lat) — båda ligger i formeln.
+ *
+ * Kamerans mått anges i METER, inte i zoom-nivåer: samma zoom täcker helt
+ * olika många km på mobil och desktop (zoom 11 ≈ 25 km på desktop men ≈ 8 km
+ * på mobil), så en hårdkodad nivå ger två helt olika vyer.
+ */
+export function zoomForSpan(widthPx: number, lat: number, spanMeters: number): number {
+    const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
+    const metersPerWorldPx = (EARTH_CIRCUMFERENCE_M * Math.cos((lat * Math.PI) / 180)) / 512;
+    return Math.log2((metersPerWorldPx * widthPx) / spanMeters);
+}
+
+/**
+ * Står kameran redan (i praktiken) i den vy ett stadshopp är på väg till?
+ *
+ * Sedan 31/8 öppnar kartan direkt i din sparade stad — och GPS-svaret strax
+ * efteråt landar oftast på exakt samma ort. Utan den här kollen fyras då
+ * stadshoppets frostade överlägg + stadsnamn för en förflyttning på noll meter,
+ * vilket bara läser som en blink. Tröskeln ~2 km täcker "samma ortspunkt", inte
+ * grannstaden.
+ */
+export function sameCityView(
+    current: { lat: number; lng: number; zoom: number },
+    target: { lat: number; lng: number; zoom: number },
+): boolean {
+    const dLat = Math.abs(current.lat - target.lat);
+    const dLng = Math.abs(current.lng - target.lng) * Math.cos((target.lat * Math.PI) / 180);
+    return dLat < 0.02 && dLng < 0.02 && Math.abs(current.zoom - target.zoom) < 0.3;
+}
+
 export function isValidLatLng(lat: unknown, lng: unknown): boolean {
     return (
         typeof lat === 'number' && typeof lng === 'number' &&
