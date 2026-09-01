@@ -79,6 +79,39 @@ async function main() {
         console.log(`   ${r.time.slice(0, 10)}  ${(r.aiVerdict ?? '-').padEnd(12)} ${r.title.slice(0, 46).padEnd(46)} ${(r.locationName ?? '').slice(0, 24)}`);
     }
 
+    /* ── FAS 2: växla tillbaka till affiliatelänken ─────────────────────────
+     *
+     * Dedupen valde fel kopia innan scoreOf fick +25 för affiliate (1/9), och
+     * fixen gäller bara framåt — de grupper som redan dedupats står kvar med
+     * fel vinnare. Mamma Mia 3/9: visitstockholm.com synlig, affiliate-URL:en
+     * dold, klicket gick dit och provisionen uteblev.
+     *
+     * För varje (titel, dag) där en affiliatelänk är dold men en tvilling utan
+     * provision är synlig: visa affiliaten och göm de andra. Antalet synliga
+     * rader är oförändrat — det är bara VILKEN länk som visas som byts, så
+     * ingen dubblett uppstår på kartan.
+     */
+    const nyckel = (r: Row) => `${normalizeTitle(r.title)}|${localDay(r.time)}`;
+    const doldAffiliate = new Map<string, Row>();
+    for (const r of alla) {
+        if (r.hidden === 1 && isAffiliateLink(r.url) && !doldAffiliate.has(nyckel(r))) {
+            doldAffiliate.set(nyckel(r), r);
+        }
+    }
+    const vaxlingar: { fram: Row; undan: Row[] }[] = [];
+    for (const [k, fram] of doldAffiliate) {
+        const synligaUtanProvision = alla.filter(r =>
+            r.hidden === 0 && nyckel(r) === k && !isAffiliateLink(r.url));
+        if (synligaUtanProvision.length > 0) vaxlingar.push({ fram, undan: synligaUtanProvision });
+    }
+
+    if (vaxlingar.length > 0) {
+        console.log(`\n${vaxlingar.length} grupper där affiliatelänken är dold men en tvillling utan provision syns:`);
+        for (const v of vaxlingar.slice(0, 10)) {
+            console.log(`   ${v.fram.time.slice(0, 10)}  ${v.fram.title.slice(0, 40).padEnd(40)} ← ersätter ${v.undan.map(u => u.hostName).join(', ').slice(0, 34)}`);
+        }
+    }
+
     if (!APPLY) {
         console.log('\nKör om med --apply för att ta fram dem.');
         return;
@@ -100,7 +133,31 @@ async function main() {
             console.error(`   ❌ ${r.title.slice(0, 40)}: ${(e as Error).message}`);
         }
     }
-    console.log(`\n✅ ${sqliteOk} framtagna i SQLite, ${firestoreOk} speglade till Firestore, ${fel} fel.`);
+    // Fas 2: fram med affiliaten FÖRST, sedan undan med de andra — ordningen
+    // gör att gruppen aldrig står helt osynlig om körningen avbryts.
+    let vaxlade = 0;
+    for (const v of vaxlingar) {
+        try {
+            setHidden(v.fram.url, false);
+            if (db && v.fram.firestoreId) {
+                await db.collection('linkEvents').doc(v.fram.firestoreId).update(stamped({ hidden: 0 }));
+            }
+            for (const u of v.undan) {
+                setHidden(u.url, true);
+                if (db && u.firestoreId) {
+                    await db.collection('linkEvents').doc(u.firestoreId).update(stamped({ hidden: 1 }));
+                }
+            }
+            vaxlade++;
+        } catch (e) {
+            fel++;
+            console.error(`   ❌ växling ${v.fram.title.slice(0, 36)}: ${(e as Error).message}`);
+        }
+    }
+
+    console.log(`\n✅ ${sqliteOk} framtagna i SQLite, ${firestoreOk} speglade till Firestore.`);
+    console.log(`✅ ${vaxlade} grupper växlade till affiliatelänken.`);
+    if (fel > 0) console.log(`⚠️  ${fel} fel.`);
     console.log('Kör aggregate för att få ut dem på kartan.');
 }
 
