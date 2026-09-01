@@ -146,9 +146,19 @@ export function endOfPublishWeek(publishAt: number): number {
 /** Titel-nyckel för dubblettrensning — samma event ligger ofta dubbelt i
  *  datat med små varianter ("Wilmer X" / "Wilmer X - Kackelstugan Ute").
  *  Dubblett = den ena nyckeln är prefix av den andra. */
-const titleKey = (t: string) => t.toLowerCase().replace(/[^a-zåäö0-9]/g, '').slice(0, 28);
+const titleKey = (t: string) => t.toLowerCase()
+    // Ledorden skiljer sig mellan källorna och lurade prefix-jämförelsen:
+    // Ticketmasters "Konsert: Jacob Karlzon Questar" och arrangörens "Jacob
+    // Karlzon QUESTAR" stod båda i Älmhult-inlägget 2/9.
+    //
+    // Separatorn och lookahead:en är inte pynt: utan dem åt regexen upp en
+    // titel som BARA är ledordet ("Konsert"), och en tom nyckel är prefix av
+    // allt — hela sektionen hade räknats som en enda dubblett.
+    .replace(/^(konsert|live|biljetter|föreställning|show)\s*[:–-]\s*(?=\S)/, '')
+    .replace(/[^a-zåäö0-9]/g, '').slice(0, 28);
 const isDupTitle = (key: string, seen: string[]) =>
-    seen.some(s => s.startsWith(key) || key.startsWith(s));
+    // Tom nyckel (titel utan bokstäver) jämförs aldrig — den är prefix av allt.
+    key !== '' && seen.some(s => s !== '' && (s.startsWith(key) || key.startsWith(s)));
 
 function pickSection(events: CityEventRow[], max: number, seenTitles: string[]): CityEventRow[] {
     // Bäst dragplåster först, sedan sprid över dagar/platser som förr.

@@ -227,3 +227,21 @@ describe('meetsQualityFloor', () => {
         expect(meetsQualityFloor(rader(10, ['music']))).toBe(false);
     });
 });
+
+describe('titel-dubbletter över källgränser', () => {
+    it('ser "Konsert: X" och "X" som samma event', () => {
+        const rows = pickCityRows([
+            ev({ url: 'https://ticketmaster.evyy.net/c/1', title: 'Konsert: Jacob Karlzon Questar', time: '2026-08-22T19:30:00+02:00' }),
+            ev({ url: 'https://folketshus.se/a', title: 'Jacob Karlzon QUESTAR', time: '2026-08-22T19:30:00+02:00' }),
+        ], FRI);
+        expect(rows.thisWeek).toHaveLength(1);
+    });
+
+    it('rör inte en titel som bara ÄR ledordet (tom nyckel matchar allt)', () => {
+        const rows = pickCityRows([
+            ev({ title: 'Konsert', locationName: 'Parken', time: '2026-08-22T19:00:00+02:00' }),
+            ev({ title: 'Loppis', locationName: 'Torget', category: 'market', time: '2026-08-22T11:00:00+02:00' }),
+        ], FRI);
+        expect(rows.thisWeek).toHaveLength(2);
+    });
+});
