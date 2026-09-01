@@ -78,6 +78,12 @@ describe('belongsToTown — fallen som fällde Landskrona-inlägget 1/9', () => 
         expect(belongsToTown(i('Torshälla kyrka', 59.42, 16.48), torshalla, TOWNS)).toBe(true);
     });
 
+    it('kastar gränsfallet där grannorten är nästan lika nära', () => {
+        // Rydebäck: 11,0 km till Landskrona, 11,3 km till Helsingborg —
+        // närmast Landskrona, men i Helsingborgs kommun. Marginalen fäller den.
+        expect(belongsToTown(i('Rydebäcksskolan', 55.9651, 12.782, 'Ängesögatan 15'), landskrona, TOWNS)).toBe(false);
+    });
+
     it('säkerhetsventilen räddar orter som saknas i listan', () => {
         // En ort utan egen cityPoint: allt inom närradien behålls även om en
         // grannort råkar vara marginellt närmare mittpunkten.

@@ -107,14 +107,25 @@ export function belongsToTown(
     event: PlacedEvent,
     town: TownPoint,
     towns: TownPoint[],
-    { nearbyRadiusKm = 4 }: { nearbyRadiusKm?: number } = {},
+    { nearbyRadiusKm = 4, marginRatio = 0.8 }: { nearbyRadiusKm?: number; marginRatio?: number } = {},
 ): boolean {
     const mentioned = townsMentioned(event, towns);
     if (mentioned.some(n => sameName(n, town.name))) return true;
     if (mentioned.length > 0) return false;
 
-    if (distanceKm(event.lat, event.lng, town.lat, town.lng) <= nearbyRadiusKm) return true;
+    const own = distanceKm(event.lat, event.lng, town.lat, town.lng);
+    if (own <= nearbyRadiusKm) return true;
 
-    const nearest = nearestTown(event, towns);
-    return nearest === null || sameName(nearest.name, town.name);
+    // MARGINALEN. "Närmast vinner" räcker inte vid kommungränsen: Rydebäck
+    // ligger 11,0 km från Landskrona och 11,3 km från Helsingborg — närmast
+    // Landskrona, men i Helsingborgs kommun. Vår ort måste därför vara
+    // TYDLIGT närmast, annars faller eventet bort.
+    //
+    // Avvägningen är medveten: gruppen avvisade oss för FEL event, inte för
+    // få. Ett gränsfall som utesluts kostar en rad, ett som släpps igenom
+    // kostar förtroendet.
+    const closestOther = towns
+        .filter(t => !sameName(t.name, town.name))
+        .reduce((min, t) => Math.min(min, distanceKm(event.lat, event.lng, t.lat, t.lng)), Infinity);
+    return own <= closestOther * marginRatio;
 }
