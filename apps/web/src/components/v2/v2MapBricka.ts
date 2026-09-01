@@ -18,7 +18,7 @@
 // dvs. i praktiken på koordinaten.
 
 import { isVadkulHostedEvent, LinkEvent } from '../../types';
-import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
+import { EVENT_CATEGORIES, EventCategoryType, emojiForCategory } from '../../utils/categories';
 
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -105,8 +105,7 @@ export function groupKeyOf(lat: number, lng: number): string {
 // Eventets visnings-emoji: egen vald emoji i första hand, annars kategorins
 // standard-emoji (okänd kategori → 'other'), sist generisk biljett.
 export function eventEmoji(ev: LinkEvent): string {
-    const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
-    return ev.emoji || (EVENT_CATEGORIES[catKey as EventCategoryType]?.emoji ?? '🎫');
+    return ev.emoji || emojiForCategory(ev.category);
 }
 
 // Hex → [r,g,b]. Stödjer både #rgb och #rrggbb.

@@ -224,3 +224,21 @@ export const AGE_CATEGORIES = [
 ];
 
 export const CATEGORY_LIST = Object.values(EVENT_CATEGORIES);
+
+/**
+ * Kategorins emoji — DEN DELADE sanningen för alla ytor som bara har en
+ * `category` att gå på (stadssidorna, kart-heron, listraderna).
+ *
+ * Bakgrund (Josef 1/9): stadssidorna visade 📍 på VARJE event. De läser
+ * `events-destinations.json`, som bär `category` men INGEN `emoji` — fältet
+ * finns bara i kartans min-lager, där en LLM valt en fri emoji per event.
+ * Typen RawDest påstod ändå `emoji: string`, så tsc såg inget fel och
+ * `e.emoji || '📍'` föll igenom för alla 42 548 raderna.
+ *
+ * Har man en event-specifik emoji ska den vinna — se eventEmoji i
+ * v2MapBricka.ts, som lägger den ovanpå den här.
+ */
+export function emojiForCategory(category?: string | null): string {
+    const key = category && category in EVENT_CATEGORIES ? category : 'other';
+    return EVENT_CATEGORIES[key as EventCategoryType]?.emoji ?? '🎫';
+}

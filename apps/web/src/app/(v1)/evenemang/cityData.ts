@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { emojiForCategory } from '@/utils/categories';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
@@ -76,7 +77,12 @@ export type CityEvent = {
 
 type RawDest = {
     id: string; title: string; time: string; hasSpecificTime: boolean;
-    lat: number; lng: number; locationName: string; category: string; emoji: string;
+    lat: number; lng: number; locationName: string; category: string;
+    /** FINNS INTE i events-destinations.json — bara i kartans min-lager, där en
+     *  LLM valt en fri emoji per event. Stod som `emoji: string` fram till 1/9,
+     *  vilket dolde att stadssidorna visade 📍 på varje rad. Optional nu, och
+     *  emojin härleds ur category vid mappningen nedan. */
+    emoji?: string;
 };
 type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number };
 
@@ -203,7 +209,9 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
                 lng: e.lng,
                 locationName: e.locationName,
                 category: e.category,
-                emoji: e.emoji,
+                // Kategorins emoji när eventet saknar egen (= alltid, i det
+                // här lagret). 📍-fallbacken nedströms blir därmed död kod.
+                emoji: e.emoji || emojiForCategory(e.category),
                 hostName: card?.hostName || undefined,
                 coverImage: usableImageUrl(card?.coverImage),
                 price: card?.price || undefined,
