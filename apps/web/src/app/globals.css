@@ -252,6 +252,41 @@
   animation: welcome-sun-pulse 4.5s ease-in-out infinite;
 }
 
+/* ── Välkomstrutans ambient-liv (1/9): rörelsen sitter i detaljerna, inte i
+   en hel miljö (kulle-/tåg-scenen är prövad och riven samma dag — "för lik
+   bakgrunden"). Tre små: himlen andas, solen driver med strålar, kontoknappens
+   ram glimmar till. Allt ambient — rullar även för återbesökare. ── */
+
+/* Himlen ANDAS: gradientlagret är högre än headern och glider sakta ner/upp,
+   så det blå ibland når längre ner innan det vänder. */
+@keyframes welcome-sky-breathe {
+  0%, 100% { transform: translateY(-16px); }
+  50%      { transform: translateY(0); }
+}
+.welcome-sky {
+  animation: welcome-sky-breathe 14s ease-in-out infinite;
+}
+
+/* Solstrålar — roterande ekrar (repeating-conic) bakom solen. */
+@keyframes welcome-rays-spin {
+  to { transform: rotate(360deg); }
+}
+.welcome-rays {
+  background: repeating-conic-gradient(rgba(254, 204, 2, 0.22) 0deg 9deg, transparent 9deg 30deg);
+  animation: welcome-rays-spin 70s linear infinite;
+}
+
+/* Solen driver några pixlar i en långsam åtta — strålarna följer med
+   (de bor i samma wrapper). */
+@keyframes welcome-sun-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-7px, 6px); }
+}
+.welcome-sun-drift {
+  animation: welcome-sun-drift 16s ease-in-out infinite;
+}
+
+
 /* Ljusstråk som sveper över primärknappen med jämna mellanrum */
 @keyframes welcome-cta-shimmer {
   0%       { transform: translateX(-160%) skewX(-18deg); }
@@ -382,7 +417,8 @@
     opacity: 1;
     transform: none;
   }
-  .welcome-sun, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float {
+  .welcome-sun, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float,
+  .welcome-sky, .welcome-rays, .welcome-sun-drift {
     animation: none;
   }
   /* Exit blir en ren uttoning — ingen zoom/blur. */

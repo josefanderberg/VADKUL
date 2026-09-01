@@ -96,6 +96,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     onCloseRef.current = onClose;
 
     const shownCount = useCountUp(weekEventCount ?? 0);
+    // Idag-siffran räknas upp precis som veckosiffran (Josef 1/9).
+    const shownToday = useCountUp(todayEventCount ?? 0);
 
     // Före första målningen så snabbspåret inte flimrar fram ur intro-animationen.
     useIsoLayoutEffect(() => {
@@ -198,9 +200,23 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                 } ${closing ? 'welcome-card-out' : 'animate-in fade-in zoom-in-95 duration-300'}`}
             >
                 {/* ── Himmel: sol + drivande moln + svävande maskot ── */}
-                <div className="relative h-[132px] bg-gradient-to-b from-[#b8e0ff] via-[#e3f3ff] to-white overflow-hidden" aria-hidden="true">
-                    {/* Sol i hörnet (svenskgul, klipps mjukt av kortets rundning) */}
-                    <div className="welcome-sun absolute -top-7 -right-7 w-24 h-24 rounded-full bg-[#FECC02]" />
+                <div className="relative h-[132px] overflow-hidden" aria-hidden="true">
+                    {/* Himlen ANDAS (1/9): gradientlagret är HÖGRE än headern
+                        (164px mot 132) och glider sakta ner/upp — det blå når
+                        ibland längre ner innan det vänder. */}
+                    {/* Stoppen är explicita (to-white vid 75 % = 132px av 176)
+                        så gradienten är HELT vit innan klippkanten i ALLA
+                        andningsfaser — annars mötte en blåtonad rest kortets
+                        vita kropp som en synlig kant (1/9). */}
+                    <div className="welcome-sky absolute inset-x-0 top-0 h-[176px] bg-gradient-to-b from-[#b8e0ff] via-[#e3f3ff] via-40% to-white to-[75%]" />
+                    {/* Solen driver sakta (wrappern) med roterande strålar
+                        bakom sig; pulsen ligger kvar på själva solen. */}
+                    <div className="welcome-sun-drift absolute -top-7 -right-7 w-24 h-24">
+                        {/* blur + radiell mask = mjuka strålar som tonar ut
+                            mot spetsarna (skarpa conic-kanter såg klippta ut). */}
+                        <div className="welcome-rays absolute -inset-16 rounded-full blur-[5px] [mask-image:radial-gradient(circle,black_30%,transparent_72%)]" />
+                        <div className="welcome-sun absolute inset-0 rounded-full bg-[#FECC02]" />
+                    </div>
 
                     {/* Småmoln som driver förbi i olika hastigheter */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -231,20 +247,24 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             ögat landar på efter loggan. VECKANS antal, inte
                             dagens (Josef 11/8) — veckovolymen är det som visar
                             hur stor databasen faktiskt är. */}
-                        {/* Siffran ENSAM på sin rad ("13 996event"-limningen,
-                            Josef 1/9) — underraden bär ordet event och resten. */}
-                        <p className="mt-1 text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
-                            {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
+                        {/* Tre rader (Josef 1/9 kväll, slutformen):
+                            "13 996 event" / "den närmaste veckan i hela
+                            Sverige" / "2 551 redan idag". Ordet event ligger
+                            med gemener och tydligt mellanrum bredvid siffran —
+                            versal-varianten med tracking läste som fastklistrad. */}
+                        <p className="mt-1 flex items-baseline justify-center gap-2">
+                            <span className="text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
+                                {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
+                            </span>
+                            <span className="text-[16px] font-black uppercase tracking-wide text-slate-500">event</span>
                         </p>
                         <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
-                            event i hela Sverige den närmaste veckan
+                            den närmaste veckan i hela Sverige
                         </p>
-                        {/* Idag-siffran på EGEN rad med luft och lite större
-                            (Josef 1/9: "så den syns lite mer") — grön i stället
-                            för avskiljartecken, samma gröna som egna event-raden. */}
                         {todayEventCount && todayEventCount > 0 ? (
-                            <p className="mt-1.5 text-[16px] font-black text-emerald-600 leading-none">
-                                {todayEventCount.toLocaleString('sv-SE')} idag
+                            <p className="mt-1.5 text-[16px] font-black text-slate-500 leading-none tabular-nums">
+                                <span className="text-[19px] text-emerald-600">{shownToday.toLocaleString('sv-SE')}</span>
+                                {' '}redan idag
                             </p>
                         ) : null}
                         {/* ("N börjar inom en timme"-badgen låg här — borttagen
