@@ -22,6 +22,7 @@ import {
     upsertEvent, countSqliteEvents, getSqlitePath, getSyncMeta, setSyncMeta,
 } from '../utils/sqliteHelper';
 import { planSync } from '../utils/syncPlan';
+import { normalizeCategory } from '../utils/categoryNormalize';
 
 const CURSOR_KEY      = 'linkEvents.lastSyncAt';
 const FULL_CURSOR_KEY = 'linkEvents.lastFullSyncAt';
@@ -75,7 +76,12 @@ async function main() {
                 lat:                data.lat,
                 lng:                data.lng,
                 hostName:           data.hostName,
-                category:           data.category,
+                // NORMALISERA på vägen in (Josef 1/9): LLM-auditen och äldre
+                // källor har lagt in icke-kanoniska värden — culture (378),
+                // outdoor (238), workshop (165), creative (110) — som webbens
+                // EVENT_CATEGORIES inte känner igen och därför visar som
+                // "Övrigt". categoryNormalize mappar dem (workshop → course).
+                category:           normalizeCategory(data.category),
                 coverImage:         data.coverImage,
                 description:        data.description,
                 attendees:          data.attendees,
@@ -89,6 +95,11 @@ async function main() {
                 // och status='published' (default) oavsett vad Firestore säger.
                 hasSpecificTime:    data.hasSpecificTime,
                 price:              data.price ?? undefined,
+                // LLM-auditens per-event-emoji. Utan den här raden tappades
+                // fältet vid varje sync och aggregaten publicerades utan emoji
+                // — kartan föll då tillbaka på kategorins default för ALLA
+                // event (därav ⚽ på barnverksamhet som klassats sport).
+                emoji:              data.emoji ?? null,
                 status:             data.status,
                 // null → COALESCE i upserten bevarar lokal märkning (backfillen
                 // 24/8 satte geoPrecision på rader vars Firestore-doc saknar fältet).

@@ -335,12 +335,12 @@ const upsertStmt = sqlite.prepare(`
         url, title, time, hasSpecificTime, locationName, extractedAddress, geocodedQuery,
         lat, lng, geoPrecision, hostName, category, coverImage, description,
         attendees, createdAt, isLocationVerified, isHostVerified, hidden,
-        firestoreId, updatedAt, status, price, endDate
+        firestoreId, updatedAt, status, price, endDate, emoji
     ) VALUES (
         @url, @title, @time, @hasSpecificTime, @locationName, @extractedAddress, @geocodedQuery,
         @lat, @lng, @geoPrecision, @hostName, @category, @coverImage, @description,
         @attendees, @createdAt, @isLocationVerified, @isHostVerified, @hidden,
-        @firestoreId, @updatedAt, @status, @price, @endDate
+        @firestoreId, @updatedAt, @status, @price, @endDate, @emoji
     )
     ON CONFLICT(url) DO UPDATE SET
         title              = excluded.title,
@@ -369,7 +369,15 @@ const upsertStmt = sqlite.prepare(`
         price              = COALESCE(NULLIF(excluded.price, ''), link_events.price),
         -- endDate: bevara känt slutdatum när en skrivning saknar det (t.ex.
         -- Firestore-sync av äldre dokument eller källa som slutat leverera).
-        endDate            = COALESCE(NULLIF(excluded.endDate, ''), link_events.endDate)
+        endDate            = COALESCE(NULLIF(excluded.endDate, ''), link_events.endDate),
+        -- emoji: LLM-auditens per-event-emoji. Samma COALESCE-skydd som price —
+        -- en scraper-upsert (som aldrig har en emoji) får inte nolla auditens
+        -- val. Fältet SAKNADES helt i upserten fram till 1/9, vilket gjorde att
+        -- Firestore→SQLite-syncen tappade emojin: 2 av 82 621 rader hade en i
+        -- MacBookens spegel medan minins egen db hade 88 321 av 90 494. Följden
+        -- var att aggregaten publicerades UTAN emoji och att varje event på
+        -- kartan visade kategorins default (⚽ för allt som klassats sport).
+        emoji              = COALESCE(NULLIF(excluded.emoji, ''), link_events.emoji)
         -- status bevaras avsiktligt vid re-scrape; ändras bara via setEventStatus()
 `);
 
@@ -417,6 +425,10 @@ export interface SqliteEvent {
     price?: string;
     /** Validerat slutdatum (utils/eventEnd) — null/utelämnad = okänd/en-dags. */
     endDate?: Date | string | null;
+    /** Per-event-emoji från LLM-auditen (🧘/🥾/🐴 …). Sätts normalt av
+     *  setEventAuditWithCategory, men MÅSTE finnas här också: annars tappar
+     *  Firestore→SQLite-syncen fältet vid varje upsert. */
+    emoji?: string | null;
     /**
      * Pipeline-status. Default 'published' för bakåtkompatibilitet —
      * alla gamla anropare som inte sätter status får published direkt.
@@ -452,6 +464,7 @@ export function upsertEvent(event: SqliteEvent): void {
         status:             event.status ?? 'published',
         price:              event.price ?? null,
         endDate:            toIso(event.endDate),
+        emoji:              event.emoji ?? null,
     });
 }
 
