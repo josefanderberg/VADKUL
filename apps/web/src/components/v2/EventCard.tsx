@@ -974,12 +974,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         let pulling = false;
         let touchStartY = 0;
         const onTouchStart = (e: TouchEvent) => {
-            // Gester som börjar på interaktiva element (chattens input,
-            // knappar, länkar) lämnas helt åt webbläsaren.
+            // BARA textfälten lämnas åt webbläsaren (markera text, flytta
+            // markören) — knappar/länkar är DRAGYTA, samma filosofi som
+            // onPointerDown (Josef 31/8). 'button' låg tidigare i exkluderingen
+            // och då fanns i väljarlistan (enbart knapprader) ingen yta alls
+            // att dra ner kortet från i helskärm på touch: pan-y åt gesten →
+            // pointercancel → kortet "fastnade" på 1–2 px (iPhone-rapport
+            // 1/9). Ett rent tapp gör ingen touchmove-preventDefault, så
+            // radklicken lever som vanligt; ett riktigt drag sväljs ändå av
+            // didDragRef i sheet-rotens onClickCapture.
             const target = e.target as HTMLElement;
             // < 1: scrollTop kan vara bråkdel nära toppen (Firefox/iOS).
             startedAtTop = sc.scrollTop < 1
-                && !target.closest('button, a, input, textarea, select');
+                && !target.closest('input, textarea, select');
             touchStartY = e.touches[0].clientY;
             pulling = false;
         };
