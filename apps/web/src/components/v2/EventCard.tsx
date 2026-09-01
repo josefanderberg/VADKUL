@@ -508,6 +508,13 @@ interface EventCardProps {
     /** Radklicket i väljarlistan — sidan väljer eventet OCH nollar groupChoice
      *  så kortet går över till vanligt innehåll. */
     onPickFromGroup?: (evt: LinkEvent) => void;
+    /** ETT STEG TILLBAKA till multievent-listan man valde ur (Josef 1/9).
+     *  Sätts av sidan bara när det FINNS en grupp att gå tillbaka till och
+     *  listan inte redan visas — undefined = ingen pil i kortets header. */
+    onBackToGroup?: () => void;
+    /** Antal event i den gruppen — bara för pilens title/aria ("tillbaka till
+     *  de 5 eventen här"), inte för någon logik. */
+    backToGroupCount?: number;
     /** Framåt-navigering (Nästa-knappen/svepet) som landar på en plats med
      *  FLERA event öppnar väljarlistan där också (Josef 31/8: "kommer man
      *  till ett multi-event ska listan dyka upp så man får välja") — samma
@@ -588,7 +595,7 @@ interface EventCardProps {
     fullOpenNonce?: number;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2011,6 +2018,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ligger direkt under eventinfon. Lista-toggeln bara
                         // när närhetslistan har innehåll.
                         activityView={false}
+                        // Tillbaka-pilen sitter FÖRE Lista-knappen i headern.
+                        // Bara i infovyn: står man i närhetslistan är "tillbaka"
+                        // tvetydigt (två listor), och där finns Lista-toggeln
+                        // som väg ut.
+                        onBackToGroup={cardView === 'info' ? onBackToGroup : undefined}
+                        backToGroupCount={backToGroupCount}
                         nearbyView={cardView === 'nearby'}
                         onToggleNearbyView={nearbyEvents.length > 0 ? () => handleToggleView('nearby') : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}

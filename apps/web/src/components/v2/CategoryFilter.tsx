@@ -6,6 +6,7 @@ import { LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_LIST, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { sourceGradientCss } from './v2MapBricka';
+import { categoryLabel } from './v2MapLabel';
 
 interface CategoryFilterProps {
     /** Eventen I KARTANS RUTA just nu (sidan filtrerar med inMapView före
@@ -157,7 +158,14 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                         shownOnMap ? '' : 'opacity-50'
                     }`}
                 >
-                    {cat.label}
+                    {/* KORTFORMEN — samma enda ord som står under
+                        eventmarkörerna på kartan (Josef 1/9), inte
+                        EVENT_CATEGORIES långa etiketter ("Sport & träning",
+                        "Mat & dryck"). Samma sak ska heta samma sak på båda
+                        ytorna. Opt-in-källorna har ingen kortform (de är inte
+                        LLM-kategorier — categoryLabel skulle ge "Övrigt") och
+                        behåller därför sina egna namn. */}
+                    {SPECIAL_CATEGORY_KEYS.has(cat.id) ? cat.label : categoryLabel(cat.id)}
                 </span>
             </div>
         );

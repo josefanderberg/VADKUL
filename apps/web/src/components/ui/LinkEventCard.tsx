@@ -1,4 +1,4 @@
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -87,6 +87,11 @@ interface LinkEventCardProps {
      *  direkt under. Egen pill bredvid Chatt på översta raden. */
     nearbyView?: boolean;
     onToggleNearbyView?: () => void;
+    /** ETT STEG TILLBAKA till multievent-listan eventet valdes ur (Josef 1/9).
+     *  Undefined = kortet nåddes inte via en grupplista → ingen pil. */
+    onBackToGroup?: () => void;
+    /** Antal i gruppen — bara för pilens title/aria. */
+    backToGroupCount?: number;
     /** Fler event på SAMMA plats (multi-event-hög): position + antal → pager på
      *  platsraden ("3/7"). onGroupNext stegar till nästa i högen. groupTotal ≤ 1
      *  döljer pagern. */
@@ -101,7 +106,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -389,8 +394,30 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         sektionen respektive närhetslistan (som annars ligger
                         långt ner och sällan nås via scroll). Tydligt på/av-läge:
                         fylld blå när vyn är aktiv. */}
-                    {(onToggleActivityView || onToggleNearbyView) ? (
+                    {(onBackToGroup || onToggleActivityView || onToggleNearbyView) ? (
                         <div className="shrink-0 flex items-center gap-1.5">
+                            {/* TILLBAKA TILL MULTIEVENT-LISTAN (Josef 1/9) —
+                                längst till vänster, före Lista-toggeln, så
+                                steget bakåt läses som ett steg bakåt. BARA
+                                pilen: texten "Tillbaka" krockade med
+                                Lista-toggeln bredvid (två listor, två ord).
+                                Neutral (aldrig blå/aktiv) — den är en väg,
+                                inte ett läge man kan stå i. Meningen ligger i
+                                title/aria ("Tillbaka till de N eventen"). */}
+                            {onBackToGroup && (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBackToGroup(); }}
+                                    aria-label={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    title={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-full border transition-all active:scale-[0.97] bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                                >
+                                    <ArrowLeft size={15} strokeWidth={2.5} />
+                                </button>
+                            )}
                             {onToggleActivityView && (
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleActivityView(); }}

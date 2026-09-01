@@ -155,9 +155,6 @@ const nearestTourCityIndex = (lat: number, lng: number) => {
 // Under den här zoomnivån är "en stad" fel abstraktion — vyn täcker halva
 // landskap och mer. Stadsrutan skriver då "Sverige" i stället för att låtsas
 // att man tittar på orten som råkar ligga närmast mitten.
-// Skylten "Tryck för att växla" över dagväljaren visas tills man rört
-// någon av väljarens knappar EN gång — sedan aldrig mer på den enheten.
-const TOGGLE_HINT_KEY = 'vadkul_vaxla_hint_klar';
 const CITY_NAME_MIN_ZOOM = 8;
 // ...och ligger närmsta ort längre bort än så här från kartmitten (inzoomad i
 // ödemark) är ortsnamnet också en lögn — "Sverige" där med.
@@ -388,11 +385,15 @@ export default function HomePage() {
     const [catPrefsUid, setCatPrefsUid] = useState<string | null>(null);
     const lastSavedCatsRef = useRef<string | null>(null);
     const urlHadCategoriesRef = useRef(false);
-    // Familj & barn som opt-in (profilregeln i utils/familyFilter): inloggad
-    // vuxen utan barn ⇒ 'family' göms tills 🧸-cirkeln kryssas i, och cirkeln
-    // ligger då bland opt-in-raderna (Svenska kyrkan/PRO). Sätts vid
-    // prefs-hydreringen nedan, nollas vid utloggning.
-    const [familyOptIn, setFamilyOptIn] = useState(false);
+    // Familj & barn ligger ALLTID bland opt-in-raderna (Josef 1/9) — inte bara
+    // för inloggade vuxna utan barn som t.o.m. 31/8. Konstant, inte state:
+    // profilen styr numera bara om cirkeln är FÖRVALD (utils/categoryDefaults),
+    // inte var den ligger. Namnet är kvar för att propen/filterlogiken läser
+    // det som "beter sig som en opt-in-källa", vilket den nu alltid gör.
+    const familyOptIn = true;
+    // Profilens hasChildren, sparad vid hydreringen — behövs (som age) för att
+    // räkna fram standardläget igen utan att läsa om user-dokumentet.
+    const profileHasChildrenRef = useRef<unknown>(undefined);
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -544,6 +545,18 @@ export default function HomePage() {
     // av effekten nedan så fort valet lämnar gruppen (kort stängt, Nästa,
     // svep, sökhopp …).
     const [groupChoice, setGroupChoice] = useState<LinkEvent[] | null>(null);
+    // GRUPPEN MAN KOM IFRÅN (Josef 1/9): efter ett val i väljarlistan minns vi
+    // gruppen så kortet kan erbjuda ETT STEG TILLBAKA till listan. Skiljd från
+    // groupChoice — det är väljarLÄGET (listan visas), det här är bara
+    // historiken bakom det öppna eventet. Nollas så fort man lämnar gruppen
+    // (Nästa/svep/sök/dagbyte/stängt kort), se effekten nedan.
+    const [groupReturn, setGroupReturn] = useState<LinkEvent[] | null>(null);
+    // Live-speglar så handlers med tomma deps läser FÄRSKA värden. (setState
+    // inuti en updater vore en sidoeffekt — StrictMode dubbelkör updaters.)
+    const groupChoiceRef = useRef<LinkEvent[] | null>(null);
+    groupChoiceRef.current = groupChoice;
+    const groupReturnRef = useRef<LinkEvent[] | null>(null);
+    groupReturnRef.current = groupReturn;
     // Kartklick stänger kategorikolumnen (Josef 31/8): bumpas vid varje klick
     // på själva kartan (MapLibre fyrar ingen 'click' efter en dragning, så en
     // panorering lämnar kolumnen i fred) och CategoryFilter fäller ihop sig.
@@ -551,24 +564,16 @@ export default function HomePage() {
     // (Emoji-raden under stadsrutan (CategoryMix) är BORTTAGEN 10/8 — dess jobb
     // görs nu av kategorikolumnen till höger, som står öppen och visar antal
     // per kategori i vyn. mixPick/highlightEmoji-kopplingen försvann med den.)
-    // "Tryck för att växla"-skylten över dagväljaren är ren ONBOARDING (Josef
-    // 1/9): första gången man rört någon av väljarens knappar har man förstått,
-    // och då ska den bort — för gott, inte bara för sessionen.
-    // null = vi vet inte än (localStorage inte läst). Skylten renderas bara på
-    // false, så varken servern eller första klient-passet hinner blinka fram
-    // den för någon som redan tryckt.
-    const [toggleHintDone, setToggleHintDone] = useState<boolean | null>(null);
-    useEffect(() => {
-        try { setToggleHintDone(localStorage.getItem(TOGGLE_HINT_KEY) === '1'); }
-        catch { setToggleHintDone(false); }   // privat läge: visa skylten hellre än att krascha
-    }, []);
-    const markToggleHintDone = useCallback(() => {
-        setToggleHintDone(prev => {
-            if (prev === true) return prev;
-            try { localStorage.setItem(TOGGLE_HINT_KEY, '1'); } catch { /* privat läge */ }
-            return true;
-        });
-    }, []);
+    // "Tryck för att växla"-skylten över dagväljaren: PER BESÖK, inte per enhet
+    // (Josef 1/9, ersätter localStorage-varianten från samma dag — "den ska ju
+    // ALLTID synas ovanför när man kommer till den kartan"). Varje sidladdning
+    // börjar alltså med skylten uppe; första klicket på någon av väljarens
+    // knappar släcker den för resten av besöket. Med localStorage försvann den
+    // för gott efter ett enda klick, vilket i praktiken gjorde att den aldrig
+    // syntes igen för någon som testat kartan en gång.
+    // Ingen localStorage → inget null-läge och ingen hydreringsblink.
+    const [toggleHintDone, setToggleHintDone] = useState(false);
+    const markToggleHintDone = useCallback(() => setToggleHintDone(true), []);
 
     // Onboarding-rutan. Startar STÄNGD i servern/HTML:n.
     const [welcomeOpen, setWelcomeOpen] = useState(false);    // Onboarding vid start IGEN (Josef 11/8, ersätter 9/8-beslutet): utloggade
@@ -598,6 +603,20 @@ export default function HomePage() {
         if (authLoading || welcomeAutoShownRef.current) return;
         welcomeAutoShownRef.current = true;
         if (user) { setWelcomeDone(true); return; }
+        // DJUPLÄNK (?event=) HOPPAR ÖVER RUTAN (Josef 1/9). River 29/8-beslutet
+        // att kortet skulle läggas i HELSKÄRM ÖVER välkomstrutan: klickar man
+        // ett event på en stadssida har man redan valt vad man vill se, och en
+        // presentation av sajten står bara i vägen.
+        // URL:en läses DIREKT här — deepLinkedRef sätts först när eventlistan
+        // laddats, alltså långt efter att det här beslutet måste fattas.
+        // welcomeDone (inte bara "visa inte") så landningspulsens grind öppnas;
+        // annars väntar dag/vecka-blinken för evigt på en ruta som aldrig kom.
+        try {
+            if (new URLSearchParams(window.location.search).has('event')) {
+                setWelcomeDone(true);
+                return;
+            }
+        } catch { /* ingen läsbar URL — visa rutan som vanligt */ }
         setWelcomeOpen(true);
     }, [authLoading, user]);
 
@@ -2009,7 +2028,9 @@ export default function HomePage() {
     // och ett tomt set hade tvärtom SLÄCKT dem. Under 65 ⇒ tomt som förut.
     const handleClearCategories = useCallback(
         () => startTransition(() => setSelectedCategories(
-            new Set(defaultSpecialCategories({ loggedIn: !!user, age: profileAgeRef.current })),
+            new Set(defaultSpecialCategories({
+                loggedIn: !!user, age: profileAgeRef.current, hasChildren: profileHasChildrenRef.current,
+            })),
         )),
         [user],
     );
@@ -2058,10 +2079,21 @@ export default function HomePage() {
     // Radklicket i kortets väljarlista: välj eventet OCH lämna väljarläget —
     // kortet visar därefter det valda eventet som vanligt.
     const handlePickFromGroup = useCallback((evt: LinkEvent) => {
+        // Läs gruppen INNAN väljarläget rivs — annars finns ingen väg tillbaka
+        // till listan man just stod i.
+        const cameFrom = groupChoiceRef.current;
         startTransition(() => {
+            setGroupReturn(cameFrom);
             setGroupChoice(null);
             setSelectedEvent(evt);
         });
+    }, []);
+    // Tillbaka-pilen i kortets header: sätt tillbaka väljarläget till den
+    // grupp man kom ifrån. Valet står kvar (det är medlem i gruppen), så
+    // medlemskaps-effekten nedan river inte listan direkt.
+    const handleBackToGroup = useCallback(() => {
+        const back = groupReturnRef.current;
+        if (back) startTransition(() => setGroupChoice(back));
     }, []);
     // Väljarläget överlever bara så länge valet står kvar i gruppen: stängs
     // kortet (kartklick), eller byter man event via Nästa/svep/sök/dagbyte,
@@ -2073,6 +2105,15 @@ export default function HomePage() {
             setGroupChoice(null);
         }
     }, [selectedEvent, groupChoice]);
+    // Tillbaka-historiken lever LÄNGRE än väljarläget (Josef 1/9): bläddrar man
+    // vidare med Nästa och sedan tillbaka ska pilen stå där igen, så vägen till
+    // multievent-listan aldrig går förlorad mitt i en bläddring. Gruppen ligger
+    // därför kvar; det är PILENS SYNLIGHET som villkoras på att det valda
+    // eventet är medlem (se onBackToGroup nedan). Rensas bara när kortet
+    // faktiskt stängs — då är resan slut.
+    useEffect(() => {
+        if (groupReturn && !selectedEvent) setGroupReturn(null);
+    }, [selectedEvent, groupReturn]);
 
     // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
     useEffect(() => {
@@ -2477,7 +2518,9 @@ export default function HomePage() {
         // ?kategori=pro,svenskakyrkan i adressen bara för att stå i det.
         const catsKey = [...selectedCategories].sort().join(',');
         if (selectedCategories.size > 0
-            && catsKey !== specialDefaultsKey({ loggedIn: !!user, age: profileAgeRef.current })) {
+            && catsKey !== specialDefaultsKey({
+                loggedIn: !!user, age: profileAgeRef.current, hasChildren: profileHasChildrenRef.current,
+            })) {
             params.set('kategori', [...selectedCategories].join(','));
         }
         const qs = params.toString();
@@ -2518,8 +2561,8 @@ export default function HomePage() {
                     : null;
                 // Opt-in-läget följer alltid profilen — även när en inkommande
                 // ?kategori=-länk vinner över det sparade kategorivalet.
-                if (!cancelled) setFamilyOptIn(familyIsOptIn(data));
                 profileAgeRef.current = data?.age;
+                profileHasChildrenRef.current = data?.hasChildren;
                 if (!urlHadCategoriesRef.current) {
                     if (Array.isArray(data?.mapCategories)) {
                         const valid = data.mapCategories.filter((k): k is string =>
@@ -2532,11 +2575,14 @@ export default function HomePage() {
                         if (!cancelled) setSelectedCategories(new Set(valid));
                     } else {
                         // Aldrig rört filtret → profilens standardläge:
-                        // 65+ ⇒ Svenska kyrkan + PRO på, annars opt-in
-                        // (utils/categoryDefaults). Sätts ovillkorligt av samma
+                        // 65+ ⇒ Svenska kyrkan + PRO på, annars opt-in; 🧸
+                        // förvald för alla utom vuxna utan barn (19/8-regeln,
+                        // utils/categoryDefaults). Sätts ovillkorligt av samma
                         // skäl som ovan — profilens läge ska aldrig ärva
                         // besökarläget av en slump.
-                        const defaults = defaultSpecialCategories({ loggedIn: true, age: data?.age });
+                        const defaults = defaultSpecialCategories({
+                            loggedIn: true, age: data?.age, hasChildren: data?.hasChildren,
+                        });
                         baseline = [...defaults].sort().join(',');
                         if (!cancelled) setSelectedCategories(new Set(defaults));
                     }
@@ -2558,11 +2604,11 @@ export default function HomePage() {
     // standardläge i stället för att ärva besökarens.
     useEffect(() => {
         if (user) return;
-        setFamilyOptIn(false);
         setSelectedCategories(new Set(defaultSpecialCategories({ loggedIn: false })));
         setCatPrefsUid(null);
         lastSavedCatsRef.current = null;
         profileAgeRef.current = undefined;
+        profileHasChildrenRef.current = undefined;
     }, [user]);
 
     // Spara (debounce): först efter hydrering, och bara när valet faktiskt
@@ -2776,7 +2822,7 @@ export default function HomePage() {
                 pointer-events-none: den är ren skylt, klick går till kartan
                 (yttre kolumnen är också none — knapparna nedanför bär sina
                 egna auto). */}
-            {toggleHintDone === false && (
+            {!toggleHintDone && (
                 <span
                     aria-hidden
                     className="pointer-events-none rounded-full border border-white/10 bg-slate-900/70 px-2.5 py-1 text-[9.5px] font-black uppercase leading-none tracking-[0.14em] text-white/70 shadow-lg backdrop-blur-md animate-in fade-in duration-300"
@@ -3691,6 +3737,14 @@ export default function HomePage() {
                 onSelectEvent={selectEventSmooth}
                 groupChoice={groupChoice}
                 onPickFromGroup={handlePickFromGroup}
+                // Pilen visas när det ÖPPNA eventet hör till gruppen man kom
+                // ifrån — inte när man bläddrat bort (då pekar den ingenstans),
+                // och inte medan listan redan visas.
+                onBackToGroup={!groupChoice && groupReturn && groupReturn.length > 1
+                    && !!selectedEvent && groupReturn.some(ev => ev.id === selectedEvent.id)
+                    ? handleBackToGroup
+                    : undefined}
+                backToGroupCount={groupReturn?.length ?? 0}
                 // Nästa/svepet som landar på en multiplats öppnar väljarlistan
                 // — samma atomiska grupp+rep-väg som kartans multibrick-klick.
                 onSelectGroup={handleSelectGroup}
