@@ -8,6 +8,7 @@ import { type BoostTier } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
+import EventCardGroupList from './EventCardGroupList';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -499,6 +500,21 @@ interface EventCardProps {
     eventsSettled?: boolean;
     selectedEvent: LinkEvent | null;
     onSelectEvent: (evt: LinkEvent | null) => void;
+    /** VÄLJARLÄGET (Josef 31/8 — ersätter multi-event-listan som svävade över
+     *  kartan): klickade man en bricka med FLERA event skickar kartan upp
+     *  gruppen hit, och kortets INNEHÅLL byts ut mot en väljarlista
+     *  (EventCardGroupList) tills man valt. null/tom = vanligt kortinnehåll. */
+    groupChoice?: LinkEvent[] | null;
+    /** Radklicket i väljarlistan — sidan väljer eventet OCH nollar groupChoice
+     *  så kortet går över till vanligt innehåll. */
+    onPickFromGroup?: (evt: LinkEvent) => void;
+    /** Framåt-navigering (Nästa-knappen/svepet) som landar på en plats med
+     *  FLERA event öppnar väljarlistan där också (Josef 31/8: "kommer man
+     *  till ett multi-event ska listan dyka upp så man får välja") — samma
+     *  handleSelectGroup som kartans multibrick-klick (grupp + rep sätts
+     *  atomiskt). Bakåt-knappen väljer direkt som förut — dit man backar har
+     *  man redan valt. */
+    onSelectGroup?: (group: LinkEvent[], rep: LinkEvent) => void;
     onSaveEvent: (eventId: string) => void;
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
@@ -572,11 +588,14 @@ interface EventCardProps {
     fullOpenNonce?: number;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
     const PEEK_HEIGHT_VH = 22;
+    // Hur snabbt HJULET ändrar kortets höjd (1 = rått 1:1 px→vh). Gäller bara
+    // hjul/styrplatta, aldrig fingerdrag — se onWheel.
+    const SHEET_WHEEL_GAIN = 1.8;
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
@@ -588,10 +607,34 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
-    // Kortets TAK: hur högt det får växa. Hela vägen upp (Josef 26/8 — förut
-    // stannade det på 83vh med en kartremsa ovanför, men kortet ska kunna
-    // fylla skärmen).
-    const MAX_HEIGHT_VH = 100;
+    // Kortets TAK: hur högt det får växa. INTE hela vägen upp längre (Josef
+    // 31/8, ersätter 26/8-beslutet "kortet ska kunna fylla skärmen"): NÄSTA-
+    // knappen, som ligger på raden ovanför kortet, ska hamna i LINJE MED
+    // SÖKKNAPPEN i navbaren.
+    //
+    // Räkningen: navbaren sitter på top-6 (24 px) och sökknappen är dess
+    // första element (h-10) → dess överkant ligger 24 px ner. Knappraden över
+    // kortet är 38 px hög (verktygspillen/Nästa är h-[38px]) och har mb-4
+    // (16 px) ner till kortet. Kortets överkant måste alltså stanna
+    // 24 + 38 + 16 = 78 px under skärmtoppen, så raden hamnar på 24 px.
+    const CARD_TOP_GAP_PX = 78;
+    // Taket måste räknas i px och översättas till vh — en fast vh-siffra
+    // träffar bara EN skärmhöjd (78 px är ~10 vh på mobil men ~7 vh på en hög
+    // desktopskärm). Samma px→vh-omräkning som mät-hjälparna nedan gör.
+    const [viewportH, setViewportH] = useState(0);
+    useEffect(() => {
+        const read = () => setViewportH(window.innerHeight);
+        read();
+        window.addEventListener('resize', read);
+        return () => window.removeEventListener('resize', read);
+    }, []);
+    // 90 tills vi mätt (SSR + första målningen) — nära nog på en vanlig telefon
+    // och rättas i samma andetag av effekten ovan.
+    const MAX_HEIGHT_VH = viewportH ? 100 - (CARD_TOP_GAP_PX / viewportH) * 100 : 90;
+    // Hjul-lyssnaren registreras en gång per öppnat kort ([hasSelectedEvent])
+    // och skulle annars frysa taket från den renderingen — läs det via ref.
+    const maxVhRef = useRef(MAX_HEIGHT_VH);
+    maxVhRef.current = MAX_HEIGHT_VH;
     // Djuplänksöppningen (?event= från stadssidorna): INTE hela skärmen —
     // en kartremsa ska synas ovanför så man ser att man landat på kartan
     // (Josef 30/8). Användaren kan själv dra upp till MAX_HEIGHT_VH.
@@ -623,13 +666,41 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             return next;
         });
     };
+    // heightVh (state) är bara RENDER-TRIGGER + tröskelvakt (cardExpanded).
+    // heightVhRef är SANNINGEN och läses direkt i style-objektet — så en render
+    // som råkar ske mitt i en gest aldrig skriver tillbaka ett gammalt värde.
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
-    const updateHeightVh = (vh: number) => {
+    const sheetRef = useRef<HTMLDivElement | null>(null);
+    /**
+     * live = mitt i en pågående gest (hjul/drag). Då skrivs höjden DIREKT till
+     * DOM via --sheet-h i stället för via setState (Josef 31/8: "det känns
+     * sticky"). En setState per wheel-tick renderade om HELA kortet —
+     * närhetslistan med bilder, chatten, allt — 60–120 gånger i sekunden, och
+     * det var motståndet man kände: innehållsscrollen går på kompositor-tråden
+     * medan kortets höjd fick betala en full React-render per pixel.
+     * Vid gestens slut committas värdet med setHeightVh (commitHeight) så
+     * cardExpanded-tröskeln och resten av React ser samma sanning.
+     */
+    const updateHeightVh = (vh: number, live = false) => {
         heightVhRef.current = vh;
+        if (live) {
+            sheetRef.current?.style.setProperty('--sheet-h', `${vh}vh`);
+            return;
+        }
         setHeightVh(vh);
     };
+    // Efterhandssynk när en live-gest tystnat (hjulet har ingen "slut"-händelse).
+    const heightCommitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const commitHeightSoon = () => {
+        if (heightCommitRef.current) clearTimeout(heightCommitRef.current);
+        heightCommitRef.current = setTimeout(() => {
+            heightCommitRef.current = null;
+            setHeightVh(heightVhRef.current);
+        }, 140);
+    };
+    useEffect(() => () => { if (heightCommitRef.current) clearTimeout(heightCommitRef.current); }, []);
 
 
     const [dragX, setDragX] = useState(0);
@@ -828,12 +899,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             const px = e.deltaMode === 1 ? e.deltaY * 16
                 : e.deltaMode === 2 ? e.deltaY * window.innerHeight
                 : e.deltaY;
-            const deltaVh = (px / window.innerHeight) * 100;
+            // GAIN (Josef 31/8): rått 1:1 px→vh kändes segt jämfört med
+            // innehållsscrollen bredvid — den flyttar text några rader, medan
+            // kortet ska resa 50+ vh på samma gest. Förstärkningen gäller BARA
+            // kortets storleksändring; innehållsscrollen rörs inte (vi
+            // preventDefault:ar bara i de två grenarna nedan).
+            const deltaVh = (px / window.innerHeight) * 100 * SHEET_WHEEL_GAIN;
             // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
-            if (deltaVh > 0 && h < MAX_HEIGHT_VH) {
+            if (deltaVh > 0 && h < maxVhRef.current) {
                 e.preventDefault();
                 setIsAnimating(false);
-                updateHeightVh(Math.min(MAX_HEIGHT_VH, h + deltaVh));
+                updateHeightVh(Math.min(maxVhRef.current, h + deltaVh), true);
+                commitHeightSoon();
                 return;
             }
             // Scrolla tillbaka vid innehållets topp → krymp kortet (ner mot peek).
@@ -843,7 +920,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (deltaVh < 0 && sc.scrollTop < 1 && h > collapsedVhRef.current) {
                 e.preventDefault();
                 setIsAnimating(false);
-                updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh));
+                updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh), true);
+                commitHeightSoon();
                 return;
             }
             // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
@@ -1235,6 +1313,28 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return next;
     };
 
+    /** Alla event på samma koordinat som evt (4 decimaler — samma hopning som
+     *  kartans multibrickor och räknarna nedan). */
+    const groupAt = (evt: LinkEvent): LinkEvent[] => {
+        if (!evt.lat || !evt.lng) return [evt];
+        const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+        return events.filter(e => e.lat && e.lng && `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === key);
+    };
+    /** Framåt-navigeringens val: landar man på en MULTIPLATS öppnas kortets
+     *  väljarlista (onSelectGroup — grupp + rep atomiskt via sidan), annars
+     *  väljs eventet direkt. (Josef 31/8 — samma beteende som multibrick-
+     *  klicket på kartan.) */
+    const selectNextTarget = (next: LinkEvent | null) => {
+        if (next && onSelectGroup) {
+            const group = groupAt(next);
+            if (group.length > 1) {
+                onSelectGroup(group, next);
+                return;
+            }
+        }
+        onSelectEvent(next);
+    };
+
     const THRESHOLD = 100; // Pixels to trigger a swipe action
 
     // Sätts när en press blir en riktig drag (>5px). Används för att INTE
@@ -1331,7 +1431,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // botten — släpper man tillräckligt långt ner stängs det (se
             // onPointerUp). Uppåt klampas vid MAX_HEIGHT_VH.
             const newHeight = Math.max(3, Math.min(MAX_HEIGHT_VH, startHeightVh.current + deltaVh));
-            updateHeightVh(newHeight);
+            // live: fingret äger höjden direkt, ingen React-render per pixel.
+            // Ingen gain här — vid drag SKA kortet följa fingret 1:1.
+            updateHeightVh(newHeight, true);
         } else if (dragDirection.current === 'horizontal') {
             updateDragX(startDragX.current + deltaX);
         }
@@ -1475,7 +1577,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             const next = pickNext(selectedEvent);
             if (next) pushHistory(previousId);
             onNavigate?.(); // kameran ska stå kvar — vi fokuserar inte det nya eventet
-            onSelectEvent(next);
+            selectNextTarget(next); // multiplats → kortets väljarlista
 
             // Reset position immediately for the new card (height bevaras —
             // det här är en Nästa-navigering, inte en ny ankare).
@@ -1520,7 +1622,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!next) next = pickNext(selectedEvent);
         if (next) pushHistory(selectedEvent.id);
         onNavigate?.(); // kameran står kvar — vi fokuserar inte det nya eventet
-        onSelectEvent(next);
+        selectNextTarget(next); // multiplats → kortets väljarlista
 
         setExitX(null);
         updateDragX(0);
@@ -1597,6 +1699,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }).length;
     }, [nextEvent, events]);
 
+    // VÄLJARLÄGET (Josef 31/8): en multi-brickas grupp har skickats upp och
+    // inget val är gjort än — kortets innehåll är väljarlistan i stället för
+    // eventet (sidan nollar groupChoice vid valet/när valet lämnar gruppen).
+    const chooserActive = !!(groupChoice && groupChoice.length > 1 && onPickFromGroup);
+
     return (
         <>
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
@@ -1670,13 +1777,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 </div>
 
                 {/* Höger: träff-räknare (flipper) + emoji + bakåt + Nästa. Emoji/bakåt
-                    sitter längst till vänster i gruppen och Nästa växer (flex-1) så den
-                    blir så bred som möjligt. Gruppen tar hela bredden (flex-1) bredvid
-                    verktygspillen. Bakåt/Nästa döljs i spelläget — då ska man inte kunna
-                    navigera bort målet. */}
-                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-auto">
+                    sitter längst till vänster i gruppen och Nästa skjuts ut i högerkanten
+                    (ml-auto). Gruppen tar hela bredden (flex-1) bredvid verktygspillen men
+                    är pointer-events-none — bara knapparna själva tar klick, tomrummet
+                    emellan går till kartan. Bakåt/Nästa döljs i spelläget — då ska man inte
+                    kunna navigera bort målet. */}
+                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-none">
                     {pinShotHits > 0 && (
-                        <div className="flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
+                        <div className="pointer-events-auto flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
                             🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
                         </div>
                     )}
@@ -1697,7 +1805,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 disabled={!backEvent}
                                 aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
                                 title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
-                                className={`relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
+                                className={`pointer-events-auto relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
                                     backEvent
                                         ? 'hover:bg-white/50 hover:scale-105 active:scale-95 cursor-pointer text-xl'
                                         : 'opacity-40 cursor-not-allowed'
@@ -1721,8 +1829,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
-                            {/* Nästa — hela flex-1-ytan är klickbar, men det SYNLIGA är
-                                en solid flaggblå kapsel i högerkanten (samma gradient +
+                            {/* Nästa — knappen ÄR kapseln: ytan till vänster om den
+                                var tidigare klickbar (flex-1) men revs 31/8 (Josef:
+                                "det ska bara vara på nästa-knappen"), så kartklick i
+                                tomrummet går fram. Kapseln är solid flaggblå i
+                                högerkanten (samma gradient +
                                 inre ljuskant som ANMÄL-knappen). Den genomskinliga
                                 urstansade SVG-varianten TOGS BORT (Josef 21/8: "den
                                 behöver synas lite mer" — kartan genom bokstäverna gjorde
@@ -1738,7 +1849,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerCancel={onButtonPointerUp}
                                 aria-label={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
                                 title={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
-                                className="group/nasta relative min-w-0 h-[38px] box-border flex items-center justify-end flex-1 bg-transparent"
+                                className="group/nasta pointer-events-auto relative shrink-0 ml-auto h-[38px] box-border flex items-center bg-transparent"
                             >
                                 <span className="flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97]">
                                     <span className="text-[12px] font-black uppercase tracking-widest leading-none">NÄSTA</span>
@@ -1773,6 +1884,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             {selectedEvent ? (
             <div className="w-full max-w-4xl">
             <div
+                ref={sheetRef}
                 className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -1793,7 +1905,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 style={{
                     // Höjden går via --sheet-h så scroll-nudge-animationen kan
                     // växa kortet från samma basvärde (botten förblir förankrad).
-                    ['--sheet-h' as string]: `${heightVh}vh`,
+                    ['--sheet-h' as string]: `${heightVhRef.current}vh`,
                     height: 'var(--sheet-h)',
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
                     opacity: exitX !== null ? 0 : opacity,
@@ -1841,9 +1953,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // scrolla innehållet. touch-action låses vid gest-start,
                         // så ETT svep växer kortet hela vägen upp och NÄSTA svep
                         // scrollar den nedre delen.
-                        touchAction: heightVh < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
+                        touchAction: heightVhRef.current < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
                     }}
                 >
+                    {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
+                        (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
+                    {chooserActive && groupChoice ? (
+                        <EventCardGroupList
+                            events={groupChoice}
+                            selectedEvent={selectedEvent}
+                            onSelect={onPickFromGroup!}
+                        />
+                    ) : (<>
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
@@ -1898,7 +2019,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
-                    {/* Chatt per event — alla kan läsa, skriva kräver konto.
+                    {/* Chatt per event — KRÄVER KONTO för att ens läsas
+                        (Josef 31/8): utloggade ser en låst rad "Logga in för
+                        att se chatten" som öppnar auth-modalen.
                         (Livebilder-panelen borttagen 5/8 på ägarens beslut.)
                         Döljs i listvyn så närhetslistan hamnar direkt under
                         headern. */}
@@ -1926,6 +2049,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onToggleImages={toggleImages}
                         />
                     )}
+                    </>)}
                 </div>
 
                 {/* Scroll-coach: "scrolla ner"-pilen visas DIREKT när ett kort är
@@ -1940,7 +2064,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     ytan runt pillen inte fångar scroll/tap.
                     Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
                     i chatt-vyn finns ingen lista att scrolla till. */}
-                {coachStage !== 'off' && cardView === 'info' && (
+                {coachStage !== 'off' && cardView === 'info' && !chooserActive && (
                     <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <button
                             type="button"
