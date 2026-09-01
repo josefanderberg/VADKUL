@@ -135,10 +135,18 @@ Bedöm:
    - course: workshop, kurs, seminarium, föredrag, föreläsning
    - family: barnteater, familjeevent, sagostund, barnaktivitet
    - other: passar inte i någon ovan
+   MÅLGRUPPEN SLÅR AKTIVITETSTYPEN: riktar sig eventet till BARN är det
+   family, även om aktiviteten i sig är sport/kurs/musik. Signaler att leta
+   efter: åldersspann eller födelseår i titeln ("2020-2018", "4-6 år",
+   "0-1 år"), samt Friluftsfrämjandets barnverksamhet — Skogsmulle, Knopp,
+   Knytte, Strövare, Frilufsare, Vildmarksäventyr, Skogens värld — som ALLA
+   är family, inte sport. Undantag: LEDARUTBILDNING och fortbildning för
+   vuxna ledare i samma verksamhet är course.
 6. categoryConfidence — "high" om kategorin är uppenbar, annars "medium"/"low".
 7. emoji — EN enda emoji som bäst representerar just detta SPECIFIKA event (fritt val, inte bunden till kategorin). Var PRECIS — använd INTE ⚽ för all sport. Matcha aktiviteten:
    SPORT/RÖRELSE: yoga/meditation/mindfulness → 🧘 · cykling/MTB/spinning → 🚴 · löpning/maraton/terränglopp → 🏃 · simning → 🏊 · vandring/friluftsliv → 🥾 · gym/styrketräning/crossfit → 🏋️ · fotboll → ⚽ · ishockey → 🏒 · tennis/padel → 🎾 · golf → ⛳ · ridning/häst → 🐴 · kampsport/boxning → 🥊 · dans/zumba → 💃 · klättring → 🧗 · skidor → ⛷️
-   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · barnteater → 🧸 · quiz → 🧠 · brädspel → 🎲 · föreläsning → 🎓
+   FAMILJ/BARN: använd INTE 🧸 för allt som rör barn — den är lika slapp som ⚽ för all sport. Matcha aktiviteten: sagostund/högläsning → 📖 · babysång/babyrytmik → 🍼 · pyssel/skapande → ✂️ · målning/rita → 🎨 · öppen förskola/lekstuga → 🧸 · utomhus/skogsmulle/strövare → 🌲 · djur/4H/bondgård → 🐄 · ridning/ponny → 🐴 · barnteater/dockteater → 🎭 · barnkör/musiklek → 🎵 · barndisco → 🪩 · simskola → 🏊 · skattjakt → 🗺️ · ansiktsmålning → 🎨 · barnbio → 🎬 · ungdomsgrupp/häng → 🫂
+   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · quiz → 🧠 · brädspel → 🎲 · föreläsning → 🎓
    Välj det mest träffsäkra för EXAKT denna aktivitet. Två events av samma typ (t.ex. två yogapass) ska få samma emoji.
 8. price — entré-/deltagarpris OM det tydligt nämns i texten, som sträng (t.ex. "150 kr", "Fri entré", "50-200 kr"). Annars null. VIKTIGT: bara faktiskt pris för att delta — INTE vinstpotter ("1:a pris 1000 kr"), bordsavgifter eller medlemsavgifter.
 
