@@ -21,7 +21,7 @@ import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
-import { isLikelyLogoOrPlaceholderImage } from '../utils/imageFilter';
+import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from '../utils/imageFilter';
 import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
@@ -306,6 +306,10 @@ export async function runSource(
                 }
             }
 
+            // Port-mismatch ("https://…:80/", Axiell-sajterna) lagas INNAN
+            // logo-filtret och Storage-uppladdningen — fetch mot :80 över TLS
+            // kan aldrig lyckas, så bilden blev annars kvar som död remote-URL.
+            if (e.imageUrl) e.imageUrl = normalizeImagePort(e.imageUrl);
             // Loggor/platshållare (kommunsajters generiska og:image) blir
             // hellre bildlöst kort än en stadssida full av samma logga.
             if (isLikelyLogoOrPlaceholderImage(e.imageUrl)) e.imageUrl = undefined;

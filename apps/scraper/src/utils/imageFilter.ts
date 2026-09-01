@@ -53,3 +53,25 @@ export function isLikelyLogoOrPlaceholderImage(url: string | undefined | null): 
     if (/\.svg$/i.test(pathname)) return true;
     return JUNK_TOKEN.test(pathname);
 }
+
+/**
+ * Reparerar PORT-MISMATCH från källsidor bakom proxy: "https://host:80/…"
+ * (och spegelfallet "http://host:443/…") kan aldrig laddas — schema och port
+ * pekar åt olika håll. Axiell-bibliotekens sajter (bibliotekuppsala.se m.fl.)
+ * serverar sådana bild-URL:er i sin markup: 4 100+ bilder låg så 1/9, och
+ * eftersom uploadEventImage:s fetch också fallerar på dem blev de kvar som
+ * döda remote-URL:er i stället för att hamna i vår Storage.
+ * Släpper bara den motsägelsefulla porten — allt annat lämnas orört.
+ * Webben bär samma vakt (lib/deepLinkEventIndex.usableImageUrl) för data som
+ * redan ligger i Firestore.
+ */
+export function normalizeImagePort(raw: string): string {
+    try {
+        const u = new URL(raw);
+        if ((u.protocol === 'https:' && u.port === '80') || (u.protocol === 'http:' && u.port === '443')) {
+            u.port = '';
+            return u.toString();
+        }
+    } catch { /* ogiltig URL — lämna orörd, junk-/validitetsfiltren tar den */ }
+    return raw;
+}

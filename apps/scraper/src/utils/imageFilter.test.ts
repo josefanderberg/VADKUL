@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLikelyLogoOrPlaceholderImage } from './imageFilter';
+import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from './imageFilter';
 
 describe('isLikelyLogoOrPlaceholderImage', () => {
     it('fäller kommunloggor och logotyper', () => {
@@ -57,5 +57,20 @@ describe('isLikelyLogoOrPlaceholderImage', () => {
         expect(isLikelyLogoOrPlaceholderImage(undefined)).toBe(false);
         expect(isLikelyLogoOrPlaceholderImage('')).toBe(false);
         expect(isLikelyLogoOrPlaceholderImage('inte-en-url-logo.png')).toBe(true);
+    });
+});
+
+describe('normalizeImagePort', () => {
+    it('släpper https://…:80 (Axiell-fallet) och http://…:443', () => {
+        expect(normalizeImagePort('https://bibliotekuppsala.se:80/documents/a%20b.jpg?t=1'))
+            .toBe('https://bibliotekuppsala.se/documents/a%20b.jpg?t=1');
+        expect(normalizeImagePort('http://a.se:443/b.jpg')).toBe('http://a.se/b.jpg');
+    });
+    it('rör inte avsiktliga portar eller vanliga URL:er', () => {
+        expect(normalizeImagePort('https://a.se:8443/b.jpg')).toBe('https://a.se:8443/b.jpg');
+        expect(normalizeImagePort('https://a.se/b.jpg')).toBe('https://a.se/b.jpg');
+    });
+    it('lämnar ogiltiga strängar orörda', () => {
+        expect(normalizeImagePort('/images/b.jpg')).toBe('/images/b.jpg');
     });
 });
