@@ -1,4 +1,4 @@
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -10,7 +10,7 @@ import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../serv
 import { type BoostTier } from '../../services/boostService';
 import EventReminderBell from './EventReminderBell';
 import BoostTierPicker from './BoostTierPicker';
-import { getEventViews, recordEventClick } from '../../services/eventStatsService';
+import { recordEventClick } from '../../services/eventStatsService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
@@ -170,19 +170,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
 
-    // 👁 Visningar — läses från eventStats (increment:et fyras när kortet öppnas,
-    // i (v2)/page.tsx). Kort fördröjning så vår egen visning hinner räknas med.
-    // null = okänt (offline/regler ej deployade) → badgen visas inte alls.
-    const [viewCount, setViewCount] = useState<number | null>(null);
-    useEffect(() => {
-        setViewCount(null);
-        let cancelled = false;
-        const t = setTimeout(async () => {
-            const n = await getEventViews(linkEvent.id);
-            if (!cancelled) setViewCount(n);
-        }, 600);
-        return () => { cancelled = true; clearTimeout(t); };
-    }, [linkEvent.id]);
+    // (👁-visningsbadgen är BORTTAGEN 31/8 på ägarbeslut — siffran ska inte
+    // VISAS längre. Insamlingen är kvar: increment:et fyras fortfarande när
+    // kortet öppnas (recordEventView i (v2)/page.tsx) så statistiken finns
+    // internt. Att läsningen (getEventViews per kortöppning) försvann sparar
+    // dessutom Firestore-reads.)
     // Byt event (Nästa/Bakåt): var kortet redan uppfällt ska det FÖRBLI uppfällt
     // så bilden fortsatt syns — men i topp-läget (steg 1). Var det hopfällt börjar
     // det hopfällt som vanligt. (Sheet-höjden bevaras separat i föräldern.)
@@ -545,17 +537,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             )}
                         </div>
                     )}
-                    {/* 👁 Antal visningar (eventStats). Visas först när siffran
-                        är hämtad och > 0 — aldrig en ljugande nolla. */}
-                    {viewCount !== null && viewCount > 0 && (
-                        <div
-                            className="flex items-center gap-1.5 shrink-0"
-                            title={`${viewCount.toLocaleString('sv-SE')} visningar`}
-                        >
-                            <Eye size={13} className="text-primary" />
-                            <span className="whitespace-nowrap tabular-nums">{viewCount.toLocaleString('sv-SE')}</span>
-                        </div>
-                    )}
+                    {/* (👁-visningsbadgen som stod här är borttagen 31/8 —
+                        se kommentaren vid recordEventView-inforutan ovan.) */}
                     {/* Fler event på samma plats → pager längst till höger på platsraden:
                         antal ("3/7") + pil som stegar till nästa event i högen. */}
                     {groupTotal > 1 && onGroupNext && (

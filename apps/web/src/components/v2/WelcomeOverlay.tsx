@@ -273,9 +273,6 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                         >
                             Skapa gratis konto
                         </button>
-                        <p className="text-center text-[11px] font-semibold text-slate-400 mt-0.5">
-                            Gratis att utforska — inget konto behövs.
-                        </p>
                     </div>
                 </div>
             </div>

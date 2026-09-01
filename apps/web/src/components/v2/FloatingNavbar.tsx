@@ -91,17 +91,25 @@ export default function FloatingNavbar({
     const [plusDropping, setPlusDropping] = useState(false);
 
 
-    // Fokusera sökfältet när det öppnas
+    // Fokusera sökfältet när det öppnas — numera bara en RESERV för öppningar
+    // som inte går via klicket (mobiltangentbordet kräver det synkrona fokuset
+    // i själva klick-handlern, se sök-containern nedan; det här deferred-fokuset
+    // öppnar ALDRIG tangentbordet på iOS).
     useEffect(() => {
         if (searchOpen) {
             setTimeout(() => searchInputRef.current?.focus(), 50);
         }
     }, [searchOpen]);
 
-    // Sidan bad oss stänga (man valde en stad ur träfflistan) — fäll ihop
-    // fältet så kartan syns när den landar. 0 = startvärdet, inget att göra.
+    // Sidan bad oss stänga (man valde en stad ur träfflistan, eller klickade
+    // på kartan) — fäll ihop fältet så kartan syns när den landar. BLUR är
+    // obligatorisk sedan fältet alltid är monterat (31/8): utan den står
+    // fokuset (och mobiltangentbordet) kvar i det hopfällda fältet.
+    // 0 = startvärdet, inget att göra.
     useEffect(() => {
-        if (closeSearchNonce) setSearchOpen(false);
+        if (!closeSearchNonce) return;
+        setSearchOpen(false);
+        searchInputRef.current?.blur();
     }, [closeSearchNonce]);
 
     // Avbryt plus-animation när creationMode återgår till idle
@@ -155,6 +163,9 @@ export default function FloatingNavbar({
     const handleCloseSearch = () => {
         setSearchOpen(false);
         setSearchQuery('');
+        // Fältet är alltid monterat (31/8) — utan blur står fokuset och
+        // mobiltangentbordet kvar fast fältet fällts ihop.
+        searchInputRef.current?.blur();
     };
 
     return (
@@ -245,46 +256,58 @@ export default function FloatingNavbar({
                     <div className="flex flex-col items-end gap-2 flex-1 min-w-0 pointer-events-none">
                         {/* Sök. Öppet läge expanderar från högerkanten som förut,
                             men ligger ÖVER allt annat i navbaren (z-[1200] >
-                            skapa-knappens 1100 > dagchipens 10) med SOLID vit
-                            bakgrund — förut hamnade fältet under dagväljaren så man
-                            inte såg det man skrev; nu täcker det chipen. */}
-                        {searchOpen ? (
-                            <div className="relative z-[1200] flex items-center w-full max-w-[520px] bg-white rounded-full shadow-xl border border-white/50 px-4 h-10 pointer-events-auto">
-                                <Search size={16} className="text-slate-400 shrink-0 mr-2" />
+                            skapa-knappens 1100) med SOLID vit bakgrund — förut
+                            hamnade fältet under dagväljaren så man inte såg det
+                            man skrev.
+                            EN OCH SAMMA CONTAINER i båda lägena (Josef 31/8:
+                            tangentbordet ska öppnas DIREKT på mobilen): fältet
+                            är alltid monterat (w-0/osynligt hopfällt) så
+                            klick-handlern kan fokusera det SYNKRONT i själva
+                            gesten — iOS öppnar bara tangentbordet för en fokus
+                            inne i användargestens callstack, aldrig för det
+                            gamla setTimeout-fokuset efter att fältet monterats.
+                            Tab-fokus på det hopfällda fältet expanderar också
+                            (onFocus) — tangentbordsvägen behöver ingen klick. */}
+                        <div className={`flex flex-row-reverse items-center gap-2 pointer-events-none ${searchOpen ? 'w-full justify-start' : ''}`}>
+                            <div
+                                role="search"
+                                onClick={() => {
+                                    if (searchOpen) return;
+                                    setSearchOpen(true);
+                                    searchInputRef.current?.focus(); // synkront i gesten → mobiltangentbord
+                                }}
+                                className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 transition-colors ${searchOpen
+                                    ? 'relative z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl'
+                                    : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white cursor-pointer'}`}
+                            >
+                                <Search size={searchOpen ? 16 : 20} aria-hidden className={searchOpen ? 'text-slate-400 shrink-0 mr-2' : 'text-slate-700 shrink-0'} />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
+                                    onFocus={() => setSearchOpen(true)}
                                     placeholder="Sök stad eller event…"
                                     aria-label="Sök stad eller event"
-                                    className="flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400 min-w-0"
+                                    className={searchOpen
+                                        ? 'flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400 min-w-0'
+                                        : 'w-0 min-w-0 p-0 bg-transparent outline-none opacity-0'}
                                 />
-                                <button
-                                    onClick={handleCloseSearch}
-                                    className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
-                                >
-                                    <X size={16} />
-                                </button>
+                                {searchOpen && (
+                                    <button
+                                        onClick={handleCloseSearch}
+                                        aria-label="Stäng sökningen"
+                                        className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
                             </div>
-                        ) : (
-                            // flex-row-reverse: etiketten ligger EFTER knappen i DOM
-                            // (peer-krav) men visas till vänster om den.
-                            <div className="flex flex-row-reverse items-center gap-2">
-                                <button
-                                    onClick={() => setSearchOpen(true)}
-                                    className="peer bg-white/90 backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors shrink-0 pointer-events-auto"
-                                    aria-label="Sök stad eller event"
-                                    title="Sök stad eller event"
-                                >
-                                    <Search size={20} className="text-slate-700" />
-                                </button>
-                                {/* "Stad" står först i etiketten med flit: knappen lästes
-                                    som ren eventsökning (användarkommentar 10/8) och man
-                                    letade efter en egen sökruta för orter. */}
-                                <HoverLabel>Sök stad eller event</HoverLabel>
-                            </div>
-                        )}
+                            {/* "Stad" står först i etiketten med flit: knappen lästes
+                                som ren eventsökning (användarkommentar 10/8) och man
+                                letade efter en egen sökruta för orter. */}
+                            {!searchOpen && <HoverLabel>Sök stad eller event</HoverLabel>}
+                        </div>
 
                         {/* (Skapa-knappen låg här i högerkolumnen fram till 14/8.
                             Den bor nu i VÄNSTERKOLUMNEN, på skylt-knappens gamla

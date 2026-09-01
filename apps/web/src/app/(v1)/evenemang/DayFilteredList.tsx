@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
-import { Heart, MapPin, Clock, Ticket, Users } from 'lucide-react';
+import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
@@ -403,6 +403,22 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Filterbyte → börja om från första dagen i det nya urvalet.
     useEffect(() => { setRevealed(1); }, [sel, hours]);
 
+    // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
+    // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
+    // ovan) — då höjs revealed först och scrollen körs i effekten nedan när
+    // sektionen faktiskt står i DOM (pendingScrollKey ligger kvar tills dess).
+    const dayRefs = useRef(new Map<string, HTMLElement>());
+    const [pendingScrollKey, setPendingScrollKey] = useState<string | null>(null);
+    useEffect(() => {
+        if (!pendingScrollKey) return;
+        const el = dayRefs.current.get(pendingScrollKey);
+        if (!el) return; // sektionen monteras av reveal-rendern — effekten körs om då
+        setPendingScrollKey(null);
+        // 57 px toppnav — nästa dags rubrik ska landa strax under naven,
+        // precis där den sedan klistrar sig.
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 56, behavior: 'smooth' });
+    }, [pendingScrollKey, revealed]);
+
     // Nästa dag monteras när sentineln ligger OVANFÖR laddlinjen (viewport-
     // botten + 700 px) — "ovanför" i stället för "inom" så att en snabb
     // scroll förbi (t.ex. rakt till sidfoten, ~1700 px under sentineln) inte
@@ -551,8 +567,13 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                     const imglessMore = imgless.length - IMGLESS_SHOWN;
                     // "Idag"/"Imorgon" är klockberoende → bara efter mount.
                     const rel = nowTs === 0 ? null : relativeDayLabel(day.key);
+                    const nextDay = shownDays[di + 1];
                     return (
-                        <section key={day.key}>
+                        <section
+                            key={day.key}
+                            // Rad i pil-hoppens register (nästa dag-pilen scrollar hit).
+                            ref={el => { if (el) dayRefs.current.set(day.key, el); else dayRefs.current.delete(day.key); }}
+                        >
                             {/* DAGRUBRIKEN: klistrad under toppnaven (57 px) så länge
                                 dagens egna rader rullar förbi, och knuffas sedan upp
                                 av nästa dags rubrik. Man ska aldrig kunna scrolla in
@@ -564,8 +585,8 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                 (annars hänger en lös linje kvar under naven).
                                 Första dagen har filterraden över sig i stället. */}
                             {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200" />}
-                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 backdrop-blur-sm">
-                                <h2 className="flex items-center gap-2">
+                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 backdrop-blur-sm flex items-center gap-2">
+                                <h2 className="flex items-center gap-2 min-w-0">
                                     <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#006AA7] text-white text-sm font-black shadow-sm">
                                         {rel && (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[#FECC02] text-[10px] font-black uppercase tracking-wider text-slate-900">
@@ -582,6 +603,30 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                                         </span>
                                     )}
                                 </h2>
+                                {/* NÄSTA DAG-PILEN (Josef 31/8): längst till höger i
+                                    rubrikraden — hoppar till nästa dags rubrik. Sitter
+                                    i den KLISTRADE rubriken, så den finns alltid till
+                                    hands medan dagens rader rullar förbi. Renderas
+                                    inte på sista dagen (finns inget att hoppa till).
+                                    Utanför h2:n — en knapp är inte en del av
+                                    rubrikens text. */}
+                                {nextDay && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            // Oavtäckt nästa dag? Montera den först —
+                                            // scrollen körs av pendingScrollKey-effekten
+                                            // när sektionen finns.
+                                            if (di + 1 >= renderDays.length) setRevealed(di + 2);
+                                            setPendingScrollKey(nextDay.key);
+                                        }}
+                                        aria-label={`Hoppa till nästa dag — ${nextDay.label}`}
+                                        title={`Nästa dag: ${nextDay.label}`}
+                                        className="ml-auto shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 shadow-sm hover:text-[#006AA7] hover:border-[#006AA7]/40 active:scale-95 transition-all"
+                                    >
+                                        <ChevronDown size={16} strokeWidth={2.5} />
+                                    </button>
+                                )}
                             </div>
                             {/* Historik: det som redan varit ligger hopfällt överst. */}
                             {day.past.length > 0 && (
