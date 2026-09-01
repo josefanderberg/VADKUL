@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-    buildCityPostText, buildIgCaption, endOfPublishWeek, formatCityRow, hashtagFor,
-    IG_CAPTION_MAX, isNoiseEvent, pickCityRows, shortVenue, type CityEventRow,
+    buildCityPostText, buildIgCaption, dragScore, endOfPublishWeek, formatCityRow, hashtagFor,
+    IG_CAPTION_MAX, isChoirRehearsal, isNoiseEvent, isOptInSource, meetsQualityFloor,
+    pickCityRows, shortVenue, ticketBoost, type CityEventRow,
 } from './cityPostText';
 
 const ev = (over: Partial<CityEventRow>): CityEventRow => ({
@@ -142,5 +143,87 @@ describe('buildIgCaption', () => {
         const caption = buildIgCaption('x'.repeat(IG_CAPTION_MAX + 500), 'Lund');
         expect(caption.length).toBeLessThanOrEqual(IG_CAPTION_MAX);
         expect(caption.endsWith('#vadkul #lund #evenemang #dethänder')).toBe(true);
+    });
+});
+
+/* ── Fixarna 1/9: Stockholm-inlägget var 11 av 12 rader kyrka/PRO ─────────── */
+
+describe('isOptInSource', () => {
+    it('känner igen kartans opt-in-källor på värdnamnet', () => {
+        expect(isOptInSource('https://www.svenskakyrkan.se/kalender?event=1')).toBe(true);
+        expect(isOptInSource('https://pro.se/nagot')).toBe(true);
+        expect(isOptInSource('https://vasteras.pro.se/traff')).toBe(true);
+        expect(isOptInSource('https://korpen.se/match')).toBe(true);
+    });
+    it('lämnar övriga källor i fred, och tål skräp-URL:er', () => {
+        expect(isOptInSource('https://www.tickster.com/se/sv/events/abc')).toBe(false);
+        expect(isOptInSource('https://hembygd.se/nagot')).toBe(false);   // 9/8: ska ingå
+        expect(isOptInSource('inte-en-url')).toBe(false);
+    });
+});
+
+describe('isChoirRehearsal', () => {
+    it('fångar körrepen som gamla "övar"-regeln missade', () => {
+        for (const t of ['Diskantkören', 'Körrep Kyrkokören', 'Västlands kyrkokör',
+            'Stalakören', 'Ungdomskören Young Voices', 'Projektkören, Nässjö',
+            'Jubilatekören övning i Församlingshemmet', 'Chorus pacis, ungdomskör']) {
+            expect(isChoirRehearsal(t), t).toBe(true);
+        }
+    });
+    it('släpper igenom körer som faktiskt uppträder', () => {
+        for (const t of ['Konsert med Kyrkokören', 'Körsångens dag i kvarteret Almen',
+            'Vokalfestivalen Vallåt Trallåt', 'Julkonsert med Diskantkören']) {
+            expect(isChoirRehearsal(t), t).toBe(false);
+        }
+    });
+});
+
+describe('ticketBoost + dragScore', () => {
+    it('ger Ticketmaster mest, andra biljettsajter mindre, resten noll', () => {
+        expect(ticketBoost('https://ticketmaster.evyy.net/c/1/2/3?u=x')).toBe(6);
+        expect(ticketBoost('https://www.tickster.com/se/sv/events/abc')).toBe(3);
+        expect(ticketBoost('https://kommunen.se/event')).toBe(0);
+    });
+    it('kvällskonsert med biljett slår förmiddagsrutin i samma kategori', () => {
+        const morgon = ev({ category: 'music', time: '2026-09-01T09:00:00+02:00', url: 'https://x.se/a' });
+        const kvall = ev({ category: 'music', time: '2026-09-05T19:00:00+02:00', url: 'https://ticketmaster.evyy.net/c/1' });
+        expect(dragScore(kvall)).toBeGreaterThan(dragScore(morgon));
+    });
+});
+
+describe('pickCityRows med opt-in-filtret', () => {
+    it('utesluter kyrkan/PRO helt och väljer dragplåstret i stället', () => {
+        const rows = pickCityRows([
+            ev({ url: 'https://www.svenskakyrkan.se/kalender?event=1', title: 'Lunchmusik', time: '2026-08-21T12:00:00+02:00' }),
+            ev({ url: 'https://vasteras.pro.se/x', title: 'Promenad', category: 'sport', time: '2026-08-21T10:00:00+02:00' }),
+            ev({ url: 'https://ticketmaster.evyy.net/c/1', title: 'Stor konsert', time: '2026-08-22T19:00:00+02:00' }),
+        ], FRI);
+        expect(rows.thisWeek.map(e => e.title)).toEqual(['Stor konsert']);
+    });
+
+    it('kastar körrep även när de kommer från en vanlig källa', () => {
+        const rows = pickCityRows([
+            ev({ url: 'https://kommunen.se/a', title: 'Barkeryd-Forserums kyrkokör', time: '2026-08-21T19:00:00+02:00' }),
+            ev({ url: 'https://kommunen.se/b', title: 'Höstmarknad', category: 'market', time: '2026-08-22T11:00:00+02:00' }),
+        ], FRI);
+        expect(rows.thisWeek.map(e => e.title)).toEqual(['Höstmarknad']);
+    });
+});
+
+describe('meetsQualityFloor', () => {
+    const rader = (n: number, cats: string[]) => ({
+        thisWeek: Array.from({ length: n }, (_, i) =>
+            ev({ title: `E${i}`, category: cats[i % cats.length] })),
+        nextWeek: [],
+    });
+
+    it('släpper igenom en ort med tillräckligt många rader och bredd', () => {
+        expect(meetsQualityFloor(rader(8, ['music', 'market', 'stage']))).toBe(true);
+    });
+    it('stoppar den tunna orten', () => {
+        expect(meetsQualityFloor(rader(4, ['music', 'market', 'stage']))).toBe(false);
+    });
+    it('stoppar orten som bara har en sorts event', () => {
+        expect(meetsQualityFloor(rader(10, ['music']))).toBe(false);
     });
 });

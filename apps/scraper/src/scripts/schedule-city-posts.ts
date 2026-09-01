@@ -22,6 +22,7 @@
  *   --per-dag=2      antal orter per dag (default 2)
  *   --max=20         tak för antal inlägg i körningen
  *   --radie=25       km kring orten som eventen hämtas ur
+ *   --golv=8         minsta antal eventrader för att orten ska postas (0 = av)
  *   --commit         schemalägg (utan den: bara utskrift)
  *
  * ⚠️ FÄRSKVARUREGELN — läs innan du höjer --per-dag:
@@ -51,7 +52,7 @@ import path from 'path';
 import fs from 'fs';
 import { db } from '../config/firebase';
 import { postToFacebook, getFacebookPostPermalink, SCHEDULE_MAX_MS } from '../utils/socialPublish';
-import { buildCityPostText, buildIgCaption, pickCityRows, type PickedRows } from '../utils/cityPostText';
+import { buildCityPostText, buildIgCaption, pickCityRows, meetsQualityFloor, type PickedRows } from '../utils/cityPostText';
 import { matchOrt } from '../utils/ortMatch';
 import { lookupCityPoint, citySlugFor, cityAdImageUrl } from '../utils/cityLookup';
 import { loadQueue, saveQueue, upsertQueueItem, queueId, QUEUE_PATH } from '../utils/igQueue';
@@ -94,6 +95,9 @@ const onlyCities = arg('orter')?.split(',').map(s => s.trim().toLowerCase()).fil
 const perDay = Math.max(1, Number(arg('per-dag')) || 2);
 const maxPosts = Number(arg('max')) || 40;
 const radiusKm = Number(arg('radie')) || 25;
+/** Kvalitetsgolvet — minsta antal eventrader för att orten ska få ett inlägg.
+ *  0 stänger av det (för orter man medvetet vill posta tunt om). */
+const minRows = arg('golv') !== undefined ? Number(arg('golv')) : 8;
 const [startHour, startMin] = (arg('klockan') ?? '17:00').split(':').map(Number);
 
 function firstSlot(): Date {
@@ -302,6 +306,26 @@ async function main() {
                 eventsForTown(sqlite, town, when, new Date(when.getTime() + 14 * DAY_MS)),
                 when.getTime());
         const rows = [...picked.thisWeek, ...picked.nextWeek];
+
+        // Kvalitetsgolvet: hellre inget inlägg än ett tunt. Gäller även de
+        // tidlösa — en ort utan utbud ska inte lockas till en tom karta.
+        if (minRows > 0) {
+            const probe = timeless
+                ? pickCityRows(
+                    eventsForTown(sqlite, town, when, new Date(when.getTime() + 14 * DAY_MS)),
+                    when.getTime())
+                : picked;
+            if (!meetsQualityFloor(probe, { minRows })) {
+                const all = [...probe.thisWeek, ...probe.nextWeek];
+                const kategorier = new Set(all.map(e => e.category)).size;
+                const brist = all.length < minRows
+                    ? `bara ${all.length} rader (golv ${minRows})`
+                    : `bara ${kategorier} kategorier — för ensidigt`;
+                console.warn(`⏭  ${town.name}: ${brist}, hoppas över.`);
+                return;
+            }
+        }
+
         const text = timeless || rows.length === 0
             ? timelessText(town)
             : buildCityPostText(town.name, linkFor(town), picked, when.getTime());
