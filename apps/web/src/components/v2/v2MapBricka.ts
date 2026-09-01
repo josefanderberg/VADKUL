@@ -52,17 +52,44 @@ export function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolea
 // sedan "har varit". Midnatt som gräns höll dem "levande" hela kvällen.
 export const NO_TIME_PAST_HOUR = 20;
 
-// Ett event "har varit": start + 1 h (standardlängden, samma som EventCard/
-// SavedPanel) har passerat. Event utan klockslag blir "varit" kl 20 sin dag
-// (NO_TIME_PAST_HOUR ovan).
-export function isEventPast(e: LinkEvent, nowMs: number): boolean {
-    if (!e.time) return false;
+// Tidpunkten då eventet SLUTAR räknas som aktuellt: start + 1 h
+// (standardlängden, samma som EventCard/SavedPanel), eller kl 20 sin dag för
+// event utan klockslag (NO_TIME_PAST_HOUR ovan). null = passerar aldrig (event
+// helt utan tid). Egen funktion för att gränsen ska gå att FÖRUTSE och inte
+// bara utvärderas mot ett "nu" — se latestPastAt nedan.
+export function eventPastAt(e: LinkEvent): number | null {
+    if (!e.time) return null;
     if (e.hasSpecificTime === false) {
         const cutoff = new Date(e.time);
         cutoff.setHours(NO_TIME_PAST_HOUR, 0, 0, 0);
-        return cutoff.getTime() <= nowMs;
+        return cutoff.getTime();
     }
-    return e.time.getTime() + ONE_HOUR_MS <= nowMs;
+    return e.time.getTime() + ONE_HOUR_MS;
+}
+
+// Ett event "har varit": dess gräns (eventPastAt) har passerat.
+export function isEventPast(e: LinkEvent, nowMs: number): boolean {
+    const at = eventPastAt(e);
+    return at !== null && at <= nowMs;
+}
+
+// Tidpunkten då HELA listan har varit — när det SISTA eventet slocknar.
+// Infinity för tom lista eller om något event aldrig passerar (utan tid), så
+// att `now >= latestPastAt(list)` aldrig blir sant av misstag (samma
+// length > 0-vakt som groupIsPast).
+//
+// Skalären gör "allt har redan varit" mätbart med en klocka i stället för en
+// omräkning av hela listan varje sekund: räkna om bara när LISTAN ändras,
+// jämför sedan nu mot talet.
+export function latestPastAt(events: LinkEvent[]): number {
+    if (events.length === 0) return Infinity;
+    let last = 0;
+    for (const e of events) {
+        const at = eventPastAt(e);
+        if (at === null) return Infinity;
+        if (at > last) last = at;
+    }
+    return last;
 }
 
 // Gruppens markör dämpas (50 % opacity) först när ALLA event i gruppen har varit.
@@ -88,43 +115,74 @@ function parseHex(h: string): [number, number, number] {
     const n = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
     return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
 }
-// Blanda två hex-färger (t = 0 → a, t = 1 → b) och returnera en rgb()-sträng.
-function mixHex(a: string, b: string, t: number): string {
+// Blanda två hex-färger (t = 0 → a, t = 1 → b) och returnera en rgb(a)-sträng.
+function mixHex(a: string, b: string, t: number, alpha = 1): string {
     const pa = parseHex(a), pb = parseHex(b);
     const ch = (i: number) => Math.round(pa[i] + (pb[i] - pa[i]) * t);
-    return `rgb(${ch(0)},${ch(1)},${ch(2)})`;
+    return alpha >= 1
+        ? `rgb(${ch(0)},${ch(1)},${ch(2)})`
+        : `rgba(${ch(0)},${ch(1)},${ch(2)},${alpha})`;
 }
-// En källfärgs brick-gradient (ljus → bas → mörk) som CSS-sträng för DOM-brickan.
-export function sourceGradientCss(color: string): string {
-    return `linear-gradient(145deg, ${mixHex(color, '#ffffff', 0.22)} 0%, ${color} 55%, ${mixHex(color, '#000000', 0.32)} 100%)`;
+// En hex-färg med alfa som rgba()-sträng.
+function withAlpha(hex: string, alpha: number): string {
+    const [r, g, b] = parseHex(hex);
+    return alpha >= 1 ? hex : `rgba(${r},${g},${b},${alpha})`;
 }
 
-// Standardbrickans mörka gradient (händelser utan kategorifärg / stora källor).
-export const BRICKA_DARK_BG = 'linear-gradient(145deg, #344256 0%, #1e293b 55%, #16202e 100%)';
+// BRICK-KROPPENS GENOMSKINLIGHET (ägarbeslut 31/8): brickorna ska ligga lite
+// "i" kartan i stället för att klistras ovanpå den.
+//
+// Gäller NORMALKROPPEN — kategorifärgad (sourceGradientCss) och mörk standard
+// (BRICKA_DARK_BG). EMFAS-LÄGENA står kvar solida med flit: guld (boost/TM),
+// sparat-vitt och valt ska INTE tunnas ut, de är brickor man ska lägga märke
+// till. Önskebrickorna har sin egen, kraftigare alfa sedan tidigare.
+// (DOM-brickans hårdkodade gröna gradient för VADKUL-värdade är också opak —
+// skillnaden mot GL-bildens 0.9 är osynlig, och GL-vägen används knappt för
+// dem: egna event är alltid DOM-brickor via isSpecialGroup.)
+//
+// Emojin ritas ALLTID opakt ovanpå: alfat sitter i plattans gradient, inte på
+// hela bilden. Skruva ALDRIG på icon-opacity i stället — då tonas emojin med.
+export const BRICKA_BODY_ALPHA = 0.9;
+
+// En källfärgs brick-gradient (ljus → bas → mörk) som CSS-sträng för DOM-brickan.
+// alpha lämnas 1 av ytor som INTE är brickor — filterkolumnens cirklar ska vara
+// solida.
+export function sourceGradientCss(color: string, alpha = 1): string {
+    return `linear-gradient(145deg, ${mixHex(color, '#ffffff', 0.22, alpha)} 0%, ${withAlpha(color, alpha)} 55%, ${mixHex(color, '#000000', 0.32, alpha)} 100%)`;
+}
+
+// Standardbrickans mörka gradient (event utan kategorifärg / stora källor).
+export const BRICKA_DARK_BG = `linear-gradient(145deg, ${withAlpha('#344256', BRICKA_BODY_ALPHA)} 0%, ${withAlpha('#1e293b', BRICKA_BODY_ALPHA)} 55%, ${withAlpha('#16202e', BRICKA_BODY_ALPHA)} 100%)`;
 
 // Brick-kroppens kategori-/källfärg för ETT event i normaltillstånd → sin
 // kategoris markerHex (okänd kategori → mörk standardbricka via null). Opt-in-
 // källorna (PRO/Svenska kyrkan) följer samma regel som allt annat: när
 // användaren aktiverat dem integreras de visuellt med sin vanliga kategorifärg
-// (ingen egen mörk källbricka längre). Delas av GL-lagret, DOM-synken, slideshow-
-// cyclern och vald-grupp-bläddringen så bakgrunden ALLTID matchar det event som
-// faktiskt visas i en multi-event-bricka (förr frös färgen på gruppens FÖRSTA
-// event). Smaragdgrön bas för användarskapade event (samma gröna som skapa-flödet
-// och DOM-markörens gradient). Delas av GL- och DOM-brickan så eget-eventfärgen
-// aldrig glider isär.
+// (ingen egen mörk källbricka längre).
+//
+// (En vända 31/8 stängde AV kategorifärgerna här — alla brickor mörka, för
+// läsbarhetens skull — men ägaren backade den samma kväll: "vi byter tillbaka
+// till färgerna som de var innan". Föreslå den inte igen utan att bli ombedd.)
+//
+// Delas av GL-lagret, DOM-synken, slideshow-cyclern och vald-grupp-bläddringen
+// så bakgrunden ALLTID matchar det event som faktiskt visas i en multi-event-
+// bricka (förr frös färgen på gruppens FÖRSTA event). Smaragdgrön bas för
+// användarskapade event (samma gröna som skapa-flödet och DOM-markörens
+// gradient) — delad av GL- och DOM-brickan så eget-eventfärgen aldrig glider
+// isär.
 export const USER_EVENT_HEX = '#059669';
 export function brickaBodyHex(ev: LinkEvent): string | null {
     // VADKUL-värdade event: alltid smaragdgröna, oavsett kategori — de lyfts
     // fram som sajtens kärna (samma emfas som deras alltid-synliga bricka).
-    // TIPS (användarskapade MED länk) får däremot sin vanliga kategorifärg —
-    // de ska smälta in bland länk-eventen, inte se ut som egna arrangemang.
+    // TIPS (användarskapade MED länk) räknas INTE som värdade — de ska smälta
+    // in bland länk-eventen, inte se ut som egna arrangemang.
     if (isVadkulHostedEvent(ev)) return USER_EVENT_HEX;
     const catKey = ev.category && EVENT_CATEGORIES[ev.category] ? ev.category : 'other';
     return (EVENT_CATEGORIES[catKey as EventCategoryType] as { markerHex?: string }).markerHex ?? null;
 }
 export function brickaBodyBg(ev: LinkEvent): string {
     const hex = brickaBodyHex(ev);
-    return hex ? sourceGradientCss(hex) : BRICKA_DARK_BG;
+    return hex ? sourceGradientCss(hex, BRICKA_BODY_ALPHA) : BRICKA_DARK_BG;
 }
 
 // Nål-prickens färg för ÖNSKE-brickor (samma lila familj som wish-gradienten).
@@ -256,8 +314,8 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
         : saved
         ? ['#ffffff', '#f3f6fa', '#e3e9f1']
         : bodyColor
-        ? [mixHex(bodyColor, '#ffffff', 0.22), bodyColor, mixHex(bodyColor, '#000000', 0.32)]
-        : ['#344256', '#1e293b', '#16202e'];
+        ? [mixHex(bodyColor, '#ffffff', 0.22, BRICKA_BODY_ALPHA), withAlpha(bodyColor, BRICKA_BODY_ALPHA), mixHex(bodyColor, '#000000', 0.32, BRICKA_BODY_ALPHA)]
+        : [withAlpha('#344256', BRICKA_BODY_ALPHA), withAlpha('#1e293b', BRICKA_BODY_ALPHA), withAlpha('#16202e', BRICKA_BODY_ALPHA)];
     grad.addColorStop(0, stops[0]);
     grad.addColorStop(0.55, stops[1]);
     grad.addColorStop(1, stops[2]);
