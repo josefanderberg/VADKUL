@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, Hand, Heart } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Hand } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 
@@ -158,6 +158,11 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     // ovanför bär "vad är det här", och de tre sakerna man själv kan göra
     // (tipsa/önska/skapa) har flyttat till ett EGET steg efter att rutan
     // stängts — de trängdes ihjäl här inne (Josef 14/8: "det blir för mycket").
+    // Rad 2 säljer KONTOT (Josef 1/9: "jag vill ju att folk ska registrera
+    // sig och skapa egna event — det hade varit ett mål"): sedan actionrutan
+    // (steg 2) revs 26/8 nämndes "lägg upp egna event" ingenstans i
+    // onboardingen. Grönt — egna/VADKUL-event är gröna i produkten.
+    // (Spara/dela-raden fick lämna plats; max TVÅ rader, Josef 14/8.)
     const rows = [
         {
             chip: 'bg-[#006AA7]/10',
@@ -165,9 +170,9 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
             text: <>Tryck <span className="font-bold text-slate-900">var som helst på kartan</span> för att se vad som händer just där.</>,
         },
         {
-            chip: 'bg-rose-100',
-            icon: <Heart size={19} className="text-rose-500" />,
-            text: <>Spara favoriter, dela med vänner &amp; håll koll på din stad.</>,
+            chip: 'bg-emerald-100',
+            icon: <CalendarPlus size={19} className="text-emerald-600" />,
+            text: <>Med ett gratis konto kan du <span className="font-bold text-slate-900">lägga upp egna event</span> och spara favoriter.</>,
         },
     ];
 
@@ -226,16 +231,17 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             ögat landar på efter loggan. VECKANS antal, inte
                             dagens (Josef 11/8) — veckovolymen är det som visar
                             hur stor databasen faktiskt är. */}
-                        <p className="mt-1 flex items-baseline justify-center gap-2">
-                            <span className="text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
-                                {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
-                            </span>
-                            <span className="text-[15px] font-black uppercase tracking-[0.1em] text-slate-500">event</span>
+                        {/* Siffran ENSAM på sin rad ("13 996event"-limningen,
+                            Josef 1/9) — underraden bär ordet event och resten. */}
+                        <p className="mt-1 text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
+                            {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
                         </p>
                         <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
-                            den närmaste veckan i hela Sverige
+                            event i hela Sverige den närmaste veckan
                             {todayEventCount && todayEventCount > 0
-                                ? <> — <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} redan idag</span></>
+                                // nowrap: bryter raden ska "· 2 551 idag" följas åt —
+                                // inte lämna punkten ensam kvar på raden ovanför.
+                                ? <>{' '}<span className="whitespace-nowrap">· <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} idag</span></span></>
                                 : null}
                         </p>
                         {/* ("N börjar inom en timme"-badgen låg här — borttagen
@@ -266,10 +272,13 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             Utforska kartan
                             <ArrowRight size={19} strokeWidth={2.5} className="transition-transform group-hover:translate-x-1" />
                         </button>
+                        {/* Riktig sekundärknapp, inte textlänk (Josef 1/9 —
+                            registreringar är målet): samma tyngd som primären
+                            minus fyllningen. */}
                         <button
                             type="button"
                             onClick={() => { track('welcome_create_account'); dismiss(true); }}
-                            className="w-full py-2.5 rounded-2xl text-[#006AA7] hover:bg-slate-50 font-bold text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
+                            className="w-full py-3 rounded-2xl border-2 border-[#006AA7]/25 text-[#006AA7] hover:bg-[#006AA7]/5 hover:border-[#006AA7]/40 font-black text-sm active:scale-[0.98] transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
                         >
                             Skapa gratis konto
                         </button>
