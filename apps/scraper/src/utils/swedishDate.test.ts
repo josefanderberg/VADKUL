@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeDateOnlyTime } from './swedishDate';
+import { findFirstDateInText, normalizeDateOnlyTime, parseSwedishDate } from './swedishDate';
 
 describe('normalizeDateOnlyTime', () => {
     it('sommar: lokal midnatt (22:00Z föreg. dag) → 12:00Z rätt kalenderdag', () => {
@@ -28,5 +28,41 @@ describe('normalizeDateOnlyTime', () => {
         const out = normalizeDateOnlyTime(new Date('2026-06-24T22:00:00.000Z'));
         const hhmm = out.toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' });
         expect(hhmm).toBe('14:00');
+    });
+});
+
+describe('findFirstDateInText — år med komma + spök-datum', () => {
+    const NOW = new Date('2026-08-31T12:00:00');
+
+    it('"8 juni, 2026" läses som 2026 (inte som årlöst datum)', () => {
+        const d = findFirstDateInText('calendar_today 8 juni, 2026 Slagthuset, Malmö', NOW)!;
+        expect(d.getFullYear()).toBe(2026);
+        expect(d.getMonth()).toBe(5);
+        expect(d.getDate()).toBe(8);
+    });
+
+    it('brödtext som upprepar ett passerat datum utan år ger inget spöke nästa år', () => {
+        // Kulturbolaget: faktarutan har "8 juni, 2026", ingressen "Den 8 juni".
+        // Utan dedupen vann 2027-06-08 som "första framtida datum" och eventet
+        // som redan spelats dök upp igen ett år fram.
+        const d = findFirstDateInText(
+            '8 juni, 2026 Slagthuset, Malmö Datum har passerat. Den 8 juni intar han scenen.',
+            NOW,
+        )!;
+        expect(d.getFullYear()).toBe(2026);
+    });
+
+    it('årlöst datum som saknar utskriven motsvarighet gissas fortfarande framåt', () => {
+        const d = findFirstDateInText('Publicerad 22 augusti 2025. Konsert 2 oktober kl 19:00', NOW)!;
+        expect(d.getFullYear()).toBe(2026);
+        expect(d.getMonth()).toBe(9);
+        expect(d.getDate()).toBe(2);
+        expect(d.getHours()).toBe(19);
+    });
+
+    it('parseSwedishDate klarar komma före året', () => {
+        const d = parseSwedishDate('8 juni, 2026', NOW)!;
+        expect(d.getFullYear()).toBe(2026);
+        expect(d.getMonth()).toBe(5);
     });
 });

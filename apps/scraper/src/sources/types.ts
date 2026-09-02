@@ -185,7 +185,7 @@ export type EngineName =
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
-    | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'fhp'
+    | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'skordefest' | 'fhp'
     | 'goteborgstad' | 'gotlandcom' | 'bergmancenter' | 'turid' | 'hbgevent' | 'bestevent' | 'accentfeed' | 'optimizely-events' | 'sportality' | 'sportomedia';
 
 /**

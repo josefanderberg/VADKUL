@@ -15,6 +15,7 @@
  *   urlPatterns:   RegExp[]           — minst en måste matcha
  *   urlBlacklist?: RegExp[]           — om någon matchar — skippa URL
  *   defaultCity?:  string             — fallback om JSON-LD saknar
+ *   defaultVenue?: string             — venue-fallback för EN-VENUE-sajter
  *   userAgent?:    string
  *   maxUrls?:      number             — cap per körning, default 500
  *   maxSubSitemaps?: number           — hur många sub-sitemaps att expandera, default 10
@@ -75,6 +76,18 @@ export interface SitemapConfig {
     /** Om true: behandla sitemapUrl som HTML-katalog, inte XML-sitemap. */
     isHtmlCatalog?: boolean;
     /**
+     * Katalogsidan bär eventets DATUM per kort medan detaljsidan saknar det
+     * (WP-arkiv med ACF-datumfält — Borgholms slott m.fl.). Kräver
+     * isHtmlCatalog. Datumet från katalogen VINNER över textextraktionen;
+     * klockslag som detaljsidan gav behålls. Kort utan datum i katalogen
+     * hoppas över — bättre än att ärva ett annat events datum ur "Fler tips".
+     *
+     *   itemSelector — kort-containern ('article')
+     *   linkSelector — <a href> till detaljsidan inuti kortet ('a.read-more')
+     *   dateSelector — elementet med datumtexten ('.dateoftheitem')
+     */
+    catalogDates?: { itemSelector: string; linkSelector: string; dateSelector: string };
+    /**
      * Om true: sitemapUrl är ett JSON-svar (sök-API) — alla citerade URL-
      * strängar i svaret blir kandidater (urlPatterns filtrerar). Katalog-
      * fetchen skickar X-Requested-With: XMLHttpRequest (content-negotiation).
@@ -83,6 +96,12 @@ export interface SitemapConfig {
     urlPatterns: RegExp[];
     urlBlacklist?: RegExp[];
     defaultCity?: string;
+    /**
+     * Venue-fallback för sajter som ÄR en enda spelplats (slott, resort,
+     * scen). Sätts bara när sidan inte själv anger plats. Ger geokodaren
+     * ett namn att slå upp i known_venues i stället för stadscentroiden.
+     */
+    defaultVenue?: string;
     userAgent?: string;
     maxUrls?: number;
     maxSubSitemaps?: number;
@@ -213,6 +232,9 @@ const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     /^trafikstart/i,
     /^\d+\s+(parkering|p-plats|p-rute)/i,
     /\bv[äa]g(en|s|arna)?\s+avst[äa]ngd/i,
+    // Inställda event ska inte på kartan — arrangörer skriver om titeln i
+    // stället för att ta bort sidan (Ekerum: "Drop in vigsel-INSTÄLLT!").
+    /inst[äa]llt/i,
 ];
 
 const DEFAULT_MAX_URLS = 300;
@@ -302,6 +324,31 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
 interface SitemapEntry {
     url: string;
     lastmod?: Date;
+    /** Datum som katalogsidan angav för just detta kort (se catalogDates). */
+    catalogDate?: Date;
+}
+
+/**
+ * Läs kort-datum ur en HTML-katalog: en Map från normaliserad detaljside-URL
+ * till datum. Se SitemapConfig.catalogDates. ISO ("2026-09-12") och svensk
+ * text ("12 september") hanteras båda.
+ */
+export function extractCatalogDates(
+    html: string,
+    baseUrl: string,
+    sel: { itemSelector: string; linkSelector: string; dateSelector: string },
+): Map<string, Date> {
+    const out = new Map<string, Date>();
+    const $ = cheerio.load(html);
+    $(sel.itemSelector).each((_i, el) => {
+        const href = $(el).find(sel.linkSelector).first().attr('href');
+        const text = $(el).find(sel.dateSelector).first().text().replace(/\s+/g, ' ').trim();
+        if (!href || !text) return;
+        const d = findFirstDateInText(text);
+        if (!d) return;
+        try { out.set(new URL(href, baseUrl).toString().replace(/\/+$/, ''), d); } catch { /* trasig href */ }
+    });
+    return out;
 }
 
 /**
@@ -399,6 +446,14 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
     } else if (cfg.isHtmlCatalog) {
         candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
         ctx.log(`html-katalog: ${candidates.length} länkar hittade`);
+        if (cfg.catalogDates) {
+            const dates = extractCatalogDates(root, cfg.sitemapUrl, cfg.catalogDates);
+            for (const c of candidates) {
+                const d = dates.get(c.url.replace(/\/+$/, ''));
+                if (d) c.catalogDate = d;
+            }
+            ctx.log(`html-katalog: ${dates.size} kortdatum lästa ur katalogen`);
+        }
     } else if (isSitemapIndex(root)) {
         const subs = extractEntries(root);
         // Prioritera sub-sitemaps som troligen innehåller events
@@ -493,11 +548,73 @@ function stripChrome(html: string): string {
     const $c = cheerio.load(html);
     $c('script, style, noscript, nav, [role="navigation"], footer, .site-footer, '
         + '.menu, .main-menu, .nav-menu, .navbar, .breadcrumb, .breadcrumbs, .cookie, .cookies').remove();
+    $c(ICON_GLYPH_SELECTOR).remove();
+    stripRelatedBlocks($c);
     return $c('body').text();
 }
 
-function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
+/**
+ * Ligatur-ikoner — `<i class="material-icons">location_on</i>` renderas som en
+ * ikon men bär texten "location_on", som följer med i .text() och förorenar
+ * plats- och datumsträngar ("location_on Slagthuset, Malmö").
+ */
+const ICON_GLYPH_SELECTOR = '.material-icons, [class*="material-icons"], [class*="material-symbols"]';
+
+/**
+ * Rubriker som inleder en lista med ANDRA events ("Rekommenderade evenemang",
+ * "Fler konserter", "Du kanske också gillar"). Blocken under dem är en
+ * främmande event-lista — inte sidans eget event.
+ */
+const RELATED_HEADING = new RegExp(
+    '^(?:rekommenderade|relaterade|liknande|fler|andra|övriga|populära|utvalda|kommande)\\s+'
+    + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips)'
+    + '|^(?:du kanske också|missa inte|se även|läs även|mer från|relaterat|rekommenderat|tips på)',
+    'i',
+);
+
+/**
+ * Ta bort "Rekommenderade evenemang"-karusellen ur dokumentet.
+ *
+ * Kulturbolaget (2026-08-31): varje detaljsida avslutas med
+ * `<section id="highlights">` där VARJE kort bär egen microdata —
+ * `<meta itemprop="startDate" content="2026-09-09T19:00">` + eget
+ * `[itemprop="location"]`. Sidans EGET event har ingen startDate-microdata
+ * alls (datumet står bara som text i faktarutan), så `.first()` plockade
+ * grannens datum och venue: 36 KB-event landade på 2026-09-09 och 26 på
+ * 2026-09-23, alla på fel spelplats. Samma mönster finns i de flesta
+ * WordPress-teman för scener, så strippen är generisk.
+ *
+ * Konservativ: en `<section>/<aside>` tas bort bara om den innehåller minst
+ * två länkar och INTE sidans egen rubrik (dokumentets första h1) — då är den
+ * huvudinnehållet. OBS: korten i karusellen har ofta EGNA h1 (KB gör det), så
+ * vakten måste jämföra mot just första h1:an, inte "innehåller någon h1".
+ * Saknas egen sektion tas rubriken + allt efter den på samma nivå bort — allt
+ * efter en "fler evenemang"-rubrik hör per definition till listan.
+ */
+function stripRelatedBlocks($: cheerio.CheerioAPI): void {
+    const mainH1 = $('h1').first()[0];
+    $('h2, h3, h4').each((_i, el) => {
+        const heading = $(el);
+        const text = heading.text().replace(/\s+/g, ' ').trim();
+        if (!text || text.length > 60 || !RELATED_HEADING.test(text)) return;
+        const box = heading.closest('section, aside');
+        const holdsMainH1 = !!mainH1 && box.find('h1').toArray().includes(mainH1);
+        if (box.length && !box.is('body, main, article')
+            && box.find('a').length >= 2 && !holdsMainH1) {
+            box.remove();
+            return;
+        }
+        heading.nextAll().remove();
+        heading.remove();
+    });
+}
+
+export function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
+    // FÖRE allt annat: bort med "Rekommenderade evenemang"-listan. Korten där
+    // bär egen microdata (startDate/location) och vinner annars varje .first().
+    stripRelatedBlocks($);
+    $(ICON_GLYPH_SELECTOR).remove();
     // Title-fallback: h1 → og:title → <title> → URL-slug (avlägsna sajtnamnet).
     // Multi-h1-sidor (Kalmar läns museum: h1#1 = sajtloggan, h1#2 = eventtiteln)
     // gjorde att .first() gav SAJTNAMNET på alla event — därför vinner den h1
@@ -655,10 +772,25 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
             }
         });
     }
+    // Etikett-i-fetstil: "<p><strong>Plats:</strong> Ladan, Näckrosgatan 9
+    // Färjestaden</p>" — vanligaste mönstret på kommunernas info-rutor
+    // (Mörbylånga m.fl.). Utan det fick alla deras event kommun-centroiden.
+    if (!kvPlats) {
+        $('strong, b, th').each((_i, el) => {
+            if (!/^plats:?$/i.test($(el).text().trim())) return;
+            const parent = $(el).parent();
+            const val = parent.text().replace($(el).text(), '').replace(/\s+/g, ' ').trim()
+                || $(el).next('td').first().text().replace(/\s+/g, ' ').trim();
+            // "Ladan , Näckrosgatan 9" → "Ladan, Näckrosgatan 9"
+            const cleaned = val.replace(/\s+,/g, ',').replace(/^[,\s]+|[,\s]+$/g, '');
+            if (cleaned.length >= 2 && cleaned.length <= 120) { kvPlats = cleaned; return false; }
+        });
+    }
     const venueName =
         $('[itemprop="location"] [itemprop="name"]').first().text().trim() ||
         (kvPlats && kvPlats.toLowerCase() !== 'sverige' ? kvPlats : '') ||
         $('.event-location, .plats, .location, .venue').first().text().trim() ||
+        locationScopeText($) ||
         undefined;
 
     // Gatuadress ur microdata/vanliga adress-element (regex-fallbacken för
@@ -678,6 +810,17 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         undefined;
     if (address && address.length > 120) address = undefined;  // skräp-skydd
 
+    // Ort ur eventets EGEN location-microdata slår defaultCity. Sajter som
+    // bokar i flera städer (Kulturbolaget: Malmö/Göteborg/Stockholm/Lund) fick
+    // annars hela katalogen i defaultCity — Proclaimers på Trädgår'n i
+    // Göteborg hamnade i Malmö. Scopad till [itemprop="location"] så att
+    // footer-microdata (kontorsorter) inte läcker in.
+    const microCity = $('[itemprop="location"] [itemprop="addressLocality"]').first()
+        .text().replace(/\s+/g, ' ').trim();
+    const city = microCity && microCity.length <= 40 && !/\d/.test(microCity)
+        ? microCity.charAt(0).toUpperCase() + microCity.slice(1)
+        : defaultCity;
+
     return {
         title,
         startDate,
@@ -686,8 +829,24 @@ function cheerioFallback(html: string, url: string, defaultCity?: string): RawEv
         imageUrl,
         venueName,
         address,
-        city: defaultCity,
+        city,
     };
+}
+
+/**
+ * Hela [itemprop="location"]-scopets text som platssträng — för sajter som
+ * märker upp scopet men saknar [itemprop="name"] i det. Kulturbolaget skriver
+ * "Slagthuset, Malmö" där bara orten har egen itemprop; utan detta blev
+ * venue tom och eventet landade på stadscentroiden. Bara korta strängar
+ * släpps igenom — ett location-scope som svept in halva sidan är skräp.
+ */
+function locationScopeText($: cheerio.CheerioAPI): string {
+    const raw = $('[itemprop="location"]').first().text()
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\s+,/g, ',')
+        .trim();
+    return raw.length >= 2 && raw.length <= 80 ? raw : '';
 }
 
 /**
@@ -1002,6 +1161,16 @@ export const sitemapEngine = async (
             if (!html) { failed++; events.push(null); continue; }
             const ev = extractFromHtml(html, entry.url, config.defaultCity);
             if (!ev) { noEvent++; events.push(null); continue; }
+            if (config.catalogDates) {
+                // Katalogen är sanningen om DAGEN; detaljsidans klockslag behålls.
+                if (!entry.catalogDate) { noEvent++; events.push(null); continue; }
+                const d = new Date(entry.catalogDate);
+                const hadClock = ev.hasSpecificTime === true
+                    || ev.startDate.getHours() !== 0 || ev.startDate.getMinutes() !== 0;
+                if (hadClock) d.setHours(ev.startDate.getHours(), ev.startDate.getMinutes(), 0, 0);
+                ev.startDate = d;
+            }
+            if (!ev.venueName && config.defaultVenue) ev.venueName = config.defaultVenue;
             // Plats-endpoint (Kulturbiljetter-mönstret): separat kart-sida bär
             // venue/adress/stad som detaljsidan saknar. Bara vid venue-miss.
             if (config.placeUrlReplace && !ev.venueName && !ev.coords) {
