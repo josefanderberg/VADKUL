@@ -129,6 +129,10 @@ export type ListedDay = {
     events: ListedEvent[];
     /** Antal event per starttimme 0–23 för dagen — histogrammets staplar. */
     hourCounts: number[];
+    /** Dag BORTOM listans 14-dagarsfönster med glesa kategoriers senare event
+     *  (utils/listHorizon) — visas bara när en kategori är vald, aldrig i
+     *  Alla-vyn och aldrig som dagchip. */
+    beyond?: boolean;
 };
 
 // Urvals-typen (dag/period/nästa timmen) bor numera i dayFilter.tsx (DaySel)
@@ -489,9 +493,12 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
     );
 }
 
-export default function DayFilteredList({ days: serverDays, restCount, cityName, children }: {
+export default function DayFilteredList({ days: serverDays, restCount, restByCategory, cityName, children }: {
     days: ListedDay[];
     restCount: number;
+    /** Event per kategori som varken fick plats i fönstret eller som extra-
+     *  rad (utils/listHorizon) — "…och N till längre fram" i kategoriläget. */
+    restByCategory?: Record<string, number>;
     cityName: string;
     /** Renderas mellan filterraden och daglistan (t.ex. kategorichips). */
     children?: ReactNode;
@@ -603,7 +610,11 @@ export default function DayFilteredList({ days: serverDays, restCount, cityName,
     const periodReady = nowTs !== 0;
     const dayKeys = sel.kind === 'period' ? (periodReady ? periodKeys(sel.period) : null)
         : [sel.key];
-    const visDays = dayKeys ? days.filter(d => dayKeys.includes(d.key)) : days;
+    // `beyond`-dagarna (glesa kategoriers senare event, utanför 14-dagars-
+    // fönstret) finns bara i kategoriläget — i Alla-vyn är listan fönstret
+    // + "…längre fram"-raden som förut (Josef 3/9: chippen sa 5, listan 1).
+    const horizonDays = category === null ? days.filter(d => !d.beyond) : days;
+    const visDays = dayKeys ? horizonDays.filter(d => dayKeys.includes(d.key)) : horizonDays;
 
     const hourMatch = (e: { hour: number | null }) =>
         hours.length ? e.hour !== null && hours.includes(e.hour) : true;
@@ -725,7 +736,7 @@ export default function DayFilteredList({ days: serverDays, restCount, cityName,
                     />
                 ))}
                 <span className="shrink-0 mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden />
-                {days.slice(2).map(d => (
+                {days.filter(d => !d.beyond).slice(2).map(d => (
                     <Chip
                         key={d.key}
                         label={d.short}
@@ -921,6 +932,15 @@ export default function DayFilteredList({ days: serverDays, restCount, cityName,
             {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category === null && !hasMoreDays && restCount > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restCount} evenemang längre fram.{' '}
+                    <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>
+                </p>
+            )}
+            {/* Kategoriläget: extra-raderna täcker det mesta (utils/listHorizon),
+                men slår taket till står resten här i stället för att tyst
+                saknas. */}
+            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category !== null && !hasMoreDays && (restByCategory?.[category] ?? 0) > 0 && (
+                <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
+                    …och {restByCategory![category]} till längre fram.{' '}
                     <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>
                 </p>
             )}

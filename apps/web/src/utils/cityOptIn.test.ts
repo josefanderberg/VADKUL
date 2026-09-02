@@ -102,6 +102,14 @@ describe('mergeListedDays', () => {
         expect(out[1].events.map(r => r.id)).toEqual(['z']);
     });
 
+    it('beyond bara när båda halvorna är utanför fönstret', () => {
+        const server: Day[] = [{ ...day('2026-10-01', [row('s', 1, 9)]), beyond: true }];
+        const optInBeyond: Day[] = [{ ...day('2026-10-01', [row('o', 2, 10)]), beyond: true }];
+        const optInWindow: Day[] = [day('2026-10-01', [row('o', 2, 10)])];
+        expect(mergeListedDays(server, optInBeyond)[0].beyond).toBe(true);
+        expect(mergeListedDays(server, optInWindow)[0].beyond).toBeUndefined();
+    });
+
     it('rör inte serverns dagobjekt', () => {
         const extra = [day('2026-09-05', [row('w', 600, 20)])];
         const out = mergeListedDays(base, extra);

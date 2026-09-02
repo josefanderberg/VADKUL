@@ -50,7 +50,7 @@ export function cityOptInDefault(stored: string | null | undefined, loggedIn: bo
 // sammanslagningen behöver — typerna importeras inte (klientmodul med
 // 'use client'), och funktionerna ska kunna testas utan React.
 export type MergeRow = { coverImage?: string; t: number; hour: number | null; source?: string; dups?: MergeRow[] };
-export type MergeDay<R extends MergeRow> = { key: string; label: string; short: string; hourCounts: number[]; events: R[] };
+export type MergeDay<R extends MergeRow> = { key: string; label: string; short: string; hourCounts: number[]; events: R[]; beyond?: boolean };
 
 /**
  * Behåll bara raderna från de VALDA källorna (rad-nivå: en grupprad följer
@@ -99,7 +99,11 @@ export function mergeListedDays<R extends MergeRow, D extends MergeDay<R>>(base:
             ...rows.filter(r => !r.coverImage).sort(byTime),
         ];
         const hourCounts = Array.from({ length: 24 }, (_, h) => (cur.hourCounts[h] ?? 0) + (x.hourCounts[h] ?? 0));
-        byKey.set(x.key, { ...cur, events: merged, hourCounts });
+        // En dag är `beyond` (utanför 14-dagarsfönstret, bara i kategori-
+        // läget) bara om BÅDA halvorna är det — listornas fönster kan sluta
+        // olika dagar, och en riktig fönsterdag ska synas i Alla-vyn.
+        const beyond = !!cur.beyond && !!x.beyond;
+        byKey.set(x.key, { ...cur, events: merged, hourCounts, ...(beyond ? { beyond: true } : { beyond: undefined }) });
     }
     return [...byKey.values()].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 }

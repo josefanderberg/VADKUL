@@ -4,6 +4,7 @@ import DayFilteredList, { type ListedDay, type ListedEvent } from './DayFiltered
 import { groupDayDuplicates } from '@/utils/groupDups';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { classifySource } from '@/utils/sources';
+import { planCategoryExtras } from '@/utils/listHorizon';
 
 const sourceField = (id: string): { source?: string } => {
     const s = classifySource(id);
@@ -164,9 +165,9 @@ export function EventDayList({ events, cityName, children }: {
     cityName: string;
     children?: ReactNode;
 }) {
-    const { days, restCount } = buildListedDays(events, cityName);
+    const { days, restCount, restByCategory } = buildListedDays(events, cityName);
     return (
-        <DayFilteredList days={days} restCount={restCount} cityName={cityName}>
+        <DayFilteredList days={days} restCount={restCount} restByCategory={restByCategory} cityName={cityName}>
             {children}
         </DayFilteredList>
     );
@@ -174,15 +175,30 @@ export function EventDayList({ events, cityName, children }: {
 
 /** Event → klientens färdiga dagar (rena strängar). Delas av sidornas
  *  EventDayList och stadens opt-in.json (route handler), så opt-in-raderna
- *  får EXAKT samma form som serverns och kan sys in i listan i klienten. */
-export function buildListedDays(events: CityEvent[], cityName: string): { days: ListedDay[]; restCount: number } {
+ *  får EXAKT samma form som serverns och kan sys in i listan i klienten.
+ *  De första DAYS_LISTED dagarna är listans fönster; därefter följer
+ *  `beyond`-dagar med glesa kategoriers senare event (utils/listHorizon),
+ *  som klienten visar bara när kategorin är vald. */
+export function buildListedDays(events: CityEvent[], cityName: string): { days: ListedDay[]; restCount: number; restByCategory: Record<string, number> } {
     const byDay = new Map<string, CityEvent[]>();
     for (const e of events) {
         const k = dayKey(e.time);
         const list = byDay.get(k);
         if (list) list.push(e); else byDay.set(k, [e]);
     }
-    const days = [...byDay.entries()].slice(0, DAYS_LISTED);
+    const allDays = [...byDay.entries()];
+    const days = allDays.slice(0, DAYS_LISTED);
+    // Glesa kategoriers senare event → extra `beyond`-dagar (se filhuvudet).
+    const { extras, restByCategory } = planCategoryExtras(
+        days.flatMap(([, l]) => l),
+        allDays.slice(DAYS_LISTED).flatMap(([, l]) => l),
+    );
+    const beyondByDay = new Map<string, CityEvent[]>();
+    for (const e of extras) {
+        const k = dayKey(e.time);
+        const list = beyondByDay.get(k);
+        if (list) list.push(e); else beyondByDay.set(k, [e]);
+    }
     let listed = 0;
     // En CityEvent → en färdig klientrad (rena strängar, se ovan).
     const toRow = (e: CityEvent, cityName: string): Omit<ListedEvent, 'dups'> => ({
@@ -215,33 +231,40 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         // aldrig från en opt-in-källa, så fältet uteblir där (mindre HTML).
         ...sourceField(e.id),
     });
+    const buildDay = (k: string, list: CityEvent[], beyond: boolean): ListedDay => {
+        // ALLA dagens event listas (ingen budget). Dagens dubbletter
+        // (samma titel — biblioteksfilialernas kopior) grupperas till EN
+        // rad var (groupDups); övriga tillfällen följer med raden som
+        // dups och radas upp bakom utfällningen i klienten. Bild först
+        // inom dagen: grupper vars representant har omslagsbild överst,
+        // bildlösa under; tidsordningen (listan kommer tidssorterad)
+        // bevaras inbördes.
+        const groups = groupDayDuplicates(list);
+        const shown = [...groups.filter(g => !!g.rep.coverImage), ...groups.filter(g => !g.rep.coverImage)];
+        // Timfördelning för dagen — klientens stapeldiagram.
+        const hourCounts = Array(24).fill(0) as number[];
+        for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
+        return {
+            key: k,
+            label: dayLabel(list[0].time),
+            short: shortDayLabel(list[0].time),
+            hourCounts,
+            ...(beyond ? { beyond: true } : {}),
+            events: shown.map(g => ({
+                ...toRow(g.rep, cityName),
+                ...(g.dups.length > 0 ? { dups: g.dups.map(d => toRow(d, cityName)) } : {}),
+            })),
+        };
+    };
     const shownDays: ListedDay[] = days
         .map(([k, list]) => {
-            // ALLA dagens event listas (ingen budget). Dagens dubbletter
-            // (samma titel — biblioteksfilialernas kopior) grupperas till EN
-            // rad var (groupDups); övriga tillfällen följer med raden som
-            // dups och radas upp bakom utfällningen i klienten. Bild först
-            // inom dagen: grupper vars representant har omslagsbild överst,
-            // bildlösa under; tidsordningen (listan kommer tidssorterad)
-            // bevaras inbördes.
-            const groups = groupDayDuplicates(list);
-            const shown = [...groups.filter(g => !!g.rep.coverImage), ...groups.filter(g => !g.rep.coverImage)];
             listed += list.length;
-            // Timfördelning för dagen — klientens stapeldiagram.
-            const hourCounts = Array(24).fill(0) as number[];
-            for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
-            return {
-                key: k,
-                label: dayLabel(list[0].time),
-                short: shortDayLabel(list[0].time),
-                hourCounts,
-                events: shown.map(g => ({
-                    ...toRow(g.rep, cityName),
-                    ...(g.dups.length > 0 ? { dups: g.dups.map(d => toRow(d, cityName)) } : {}),
-                })),
-            };
+            return buildDay(k, list, false);
         })
         .filter(d => d.events.length > 0);
+    const beyondDays = [...beyondByDay.entries()].map(([k, list]) => buildDay(k, list, true));
+    // "…längre fram" i Alla-vyn räknar allt utanför fönstret — även de
+    // extra-rader som bara syns under en vald kategori.
     const restCount = events.length - listed;
-    return { days: shownDays, restCount };
+    return { days: [...shownDays, ...beyondDays], restCount, restByCategory };
 }
