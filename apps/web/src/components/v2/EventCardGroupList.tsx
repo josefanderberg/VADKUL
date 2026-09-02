@@ -148,16 +148,22 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
             <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
                     <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">
-                        {events.length} event på samma plats
-                        {showDays ? ` · ${dayBuckets.length} dagar` : ''}
-                        {past.length > 0 && past.length < events.length ? ` · ${past.length} har varit` : ''}
+                    {/* Räknarraden + uppmaningen på SAMMA rad (Josef 2/9: "Välj
+                        vilket event…" hade en egen rad med för mycket luft) —
+                        uppmaningen ligger längst till höger och viker aldrig;
+                        räknaren trunkeras i stället om det blir trångt. */}
+                    <span className="flex items-baseline justify-between gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">
+                        <span className="min-w-0 truncate">
+                            {events.length} event på samma plats
+                            {showDays ? ` · ${dayBuckets.length} dagar` : ''}
+                            {past.length > 0 && past.length < events.length ? ` · ${past.length} har varit` : ''}
+                        </span>
+                        <span className="shrink-0 normal-case tracking-normal font-bold text-[11px]">
+                            Välj vilket event du vill öppna:
+                        </span>
                     </span>
                 </div>
             </div>
-            <p className="px-4 pt-2 pb-1 text-[11px] font-bold text-slate-400">
-                Välj vilket event du vill öppna:
-            </p>
             {/* EN <ul> PER DAG (Josef 2/9): dagrubriken är sticky mot kortets
                 scrollcontainer (närmsta scrollande förälder) och stannar
                 längst upp i kortet medan dagens rader rullar upp under över-
