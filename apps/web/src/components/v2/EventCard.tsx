@@ -11,6 +11,7 @@ import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { chooserDefaultTargetPx } from '@/utils/chooserSheetHeight';
+import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
@@ -824,16 +825,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
         setHeightVh(vh);
     };
-    // Efterhandssynk när en live-gest tystnat (hjulet har ingen "slut"-händelse).
-    const heightCommitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const commitHeightSoon = () => {
-        if (heightCommitRef.current) clearTimeout(heightCommitRef.current);
-        heightCommitRef.current = setTimeout(() => {
-            heightCommitRef.current = null;
-            setHeightVh(heightVhRef.current);
-        }, 140);
-    };
-    useEffect(() => () => { if (heightCommitRef.current) clearTimeout(heightCommitRef.current); }, []);
+    // (Efterhandssynken för hjulet — commitHeightSoon, 140 ms efter tystnad —
+    //  är borta sedan 2/9: hjulet snäpper stopp för stopp via setState och
+    //  har ingen live-fas längre. Bara fingerdraget skriver live, och det
+    //  committar i onPointerUp.)
 
 
     const [dragX, setDragX] = useState(0);
@@ -989,6 +984,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
     };
+    // ── Kortets STOPP (Josef 2/9: "två nya sticky-positioner") ─────────────
+    // Default-höjden (header + bildremsa), TAPP-HÖJDEN (bild + första
+    // beskrivningsraden — "täcker typ halva skärmen") och TAKET. Hjul och drag
+    // stannar på dem i tur och ordning, och först på taket scrollar innehållet
+    // (touch-action pan-y / hjulets fallthrough). Nedåt samma stopp baklänges,
+    // sist stängs kortet. Mäts färskt per gest — bild- och headerhöjd varierar.
+    // Väljarlistan har ingen tapp-höjd (ingen beskrivning att mäta mot).
+    // Toleransen: ett läge inom 4 vh från ett stopp räknas som "på" det.
+    const SNAP_TOLERANCE_VH = 4;
+    const sheetStopsNow = (): number[] => sheetStops([
+        measureDefaultHeight(),
+        ...(chooserActiveRef.current ? [] : [measureOpenHeight()]),
+        maxVhRef.current,
+    ], SNAP_TOLERANCE_VH);
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
     // botten-gränsen utan att bindas om. Default = konstanten tills vi mätt.
     const collapsedVhRef = useRef(COLLAPSED_HEIGHT_VH);
@@ -1009,18 +1018,24 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     closeCardRef.current = closeCard;
 
     // ── Hjul-snäppets gest-grind (se onWheel) ───────────────────────────────
-    // Spänd = nästa nedåtsvep vid innehållstoppen får utföra ETT snäpp
-    // (helskärm → default-öppningshöjden, eller default → stängt kort).
-    // En styrplattas tröghetssvans sprutar wheel-händelser långt efter själva
-    // svepet — utan grinden faller ETT svep genom default och stänger kortet.
-    // Grinden återspänns när hjulet varit tyst WHEEL_SNAP_QUIET_MS, eller
-    // direkt av ett uppåtsvep (växa-grenen).
+    // Spänd = nästa svep får utföra ETT snäpp: uppåt ett stopp upp (default →
+    // tapp-höjden → taket, Josef 2/9), nedåt vid innehållstoppen ett stopp ner
+    // (sist stängs kortet). En styrplattas tröghetssvans sprutar wheel-
+    // händelser långt efter själva svepet — utan grinden faller ETT svep
+    // genom alla stopp. Grinden återspänns när hjulet varit tyst
+    // WHEEL_SNAP_QUIET_MS. wheelHoldAtMaxRef: precis snäppt till TAKET — då
+    // sväljs resten av samma gest så innehållet inte börjar scrolla förrän
+    // nästa gest ("stanna innan vi börjar scrolla inom själva kortet").
     const wheelSnapArmedRef = useRef(true);
+    const wheelHoldAtMaxRef = useRef(false);
     const wheelRearmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const WHEEL_SNAP_QUIET_MS = 350;
     const scheduleWheelRearm = () => {
         if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current);
-        wheelRearmTimerRef.current = setTimeout(() => { wheelSnapArmedRef.current = true; }, WHEEL_SNAP_QUIET_MS);
+        wheelRearmTimerRef.current = setTimeout(() => {
+            wheelSnapArmedRef.current = true;
+            wheelHoldAtMaxRef.current = false;
+        }, WHEEL_SNAP_QUIET_MS);
     };
     useEffect(() => () => { if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current); }, []);
 
@@ -1080,9 +1095,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // ── Mus-/styrplatte-hjul: scrolla för att VÄXA hela behållaren ───────────
     // Förut kunde man bara DRA kortet med handtaget för att förstora det — ett
     // hjul-/tvåfingerscroll gjorde inget (touch-action gäller bara touch, inte
-    // hjul). Nu växer hjulet kortet mot helskärm FÖRST; när det fyllt skärmen
-    // scrollar den nedre delen av innehållet normalt. Scrollar man tillbaka vid
-    // innehållstoppen krymper hela kortet igen (ner mot peek, ej stäng).
+    // hjul). Hjulet tar kortet upp STOPP FÖR STOPP (Josef 2/9): default →
+    // tapp-höjden → taket, ett steg per gest; först på taket scrollar
+    // innehållet. Scrollar man tillbaka vid innehållstoppen går det samma
+    // stopp nedåt, och sist stängs kortet. (Den kontinuerliga växten mot
+    // helskärm, 31/8–2/9, är ersatt av stoppen.)
     // Native-lyssnare (passive:false) krävs för preventDefault.
     useEffect(() => {
         if (!hasSelectedEvent) return;
@@ -1104,21 +1121,27 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // upp under överkanten — hjulet växer inte kortet här. Vill man
             // ha det större drar man i handtaget.
             const chooser = chooserActiveRef.current;
-            // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
+            // Scrolla "in i" kortet (fingrar upp / hjul ner) under taket → ETT
+            // STOPP UPP (Josef 2/9): default → tapp-höjden → taket. Grinden
+            // slukar tröghetssvansen så ett svep aldrig kedjar genom flera
+            // stopp. Landar vi på taket hålls resten av gesten (hold nedan) så
+            // innehållet inte börjar scrolla förrän nästa gest.
             if (deltaVh > 0 && h < maxVhRef.current && !chooser) {
                 e.preventDefault();
-                wheelSnapArmedRef.current = true; // uppåt → spänn snäpp-grinden igen
-                setIsAnimating(false);
-                updateHeightVh(Math.min(maxVhRef.current, h + deltaVh), true);
-                commitHeightSoon();
+                if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
+                wheelSnapArmedRef.current = false;
+                scheduleWheelRearm();
+                setIsAnimating(true);
+                const target = nextStopAbove(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
+                updateHeightVh(target);
+                if (target >= maxVhRef.current - 0.5) wheelHoldAtMaxRef.current = true;
                 return;
             }
-            // Scrolla tillbaka vid innehållets topp → SNÄPP i två steg i
-            // stället för att glida (Josef 1/9): står kortet över default-
-            // öppningshöjden landar det direkt PÅ den (samma läge som när ett
-            // event öppnas), och nästa svep därifrån stänger kortet helt.
-            // Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett enda
-            // svep aldrig kedjar genom båda stegen.
+            // Scrolla tillbaka vid innehållets topp → ETT STOPP NER i stället
+            // för att glida (Josef 1/9, utökat 2/9 med tapp-höjden): taket →
+            // tapp-höjden → default, och nästa svep därifrån stänger kortet
+            // helt. Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett
+            // enda svep aldrig kedjar genom flera steg.
             // < 1 (inte <= 0): Firefox rapporterar BRÅKDELS-scrollTop (0.5 osv)
             // nära toppen — med <= 0 fastnade hjulet i en död zon där varken
             // innehållet eller kortet rörde sig.
@@ -1128,9 +1151,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 wheelSnapArmedRef.current = false;
                 scheduleWheelRearm();
                 setIsAnimating(true);
-                const def = measureDefaultHeight();
-                if (h > def + 4) updateHeightVh(def);
+                const target = nextStopBelow(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
+                if (target !== null) updateHeightVh(target);
                 else closeCardRef.current();
+                return;
+            }
+            // Precis snäppt till taket: svälj resten av samma gest (Josef 2/9:
+            // "stanna innan vi börjar scrolla inom själva eventkortet").
+            if (deltaVh > 0 && wheelHoldAtMaxRef.current) {
+                e.preventDefault();
+                scheduleWheelRearm();
                 return;
             }
             // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
@@ -1763,24 +1793,27 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 // Strax under gränsen → snäpp tillbaka till peek-läget.
                 updateHeightVh(collapsed);
             } else if (h > startHeightVh.current) {
-                // UPPÅT-drag → snäpp ända till MAX, oavsett hur kort svepet
-                // var. Det infriar löftet "ETT svep växer kortet hela vägen
-                // upp och NÄSTA svep scrollar": ett släpp på t.ex. 70vh
-                // lämnade annars kortet i touch-action:none-zonen (< MAX-5)
-                // där svep på innehållet bara fortsatte växa/stå still —
-                // långa beskrivningar gick då inte att scrolla alls.
-                updateHeightVh(MAX_HEIGHT_VH);
+                // UPPÅT-drag → snäpp till närmaste STOPP ovanför startläget
+                // (Josef 2/9: default → tapp-höjden → taket): ett kort ryck
+                // tar ett steg, ett långt drag landar där fingret släppte.
+                // Släppet hamnar alltid PÅ ett stopp, aldrig mitt emellan —
+                // så kortet inte blir kvar i touch-action:none-zonen (< MAX-5)
+                // där svep på innehållet varken scrollar eller växer. Först
+                // på taket scrollar innehållet (nästa svep).
+                updateHeightVh(snapUp(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH));
             } else {
-                // Neddrag → samma tvåstegs-snäpp som hjulet (Josef 1/9): från
-                // helskärm landar kortet på default-öppningshöjden, från
-                // default (eller lägre) stängs det helt. Korta ryck studsar
-                // tillbaka dit gesten började — ett darr på fingret ska inte
-                // stänga kortet. (Ett släpp långt under peek har redan
-                // stängts av grenarna ovan.)
-                const def = measureDefaultHeight();
-                if (startHeightVh.current - h < SNAP_PULL_MIN_VH) updateHeightVh(startHeightVh.current);
-                else if (startHeightVh.current > def + 4) updateHeightVh(def);
-                else closeCard();
+                // Neddrag → stoppen baklänges (Josef 1/9, utökat 2/9): taket →
+                // tapp-höjden → default, och från default (eller lägre) stängs
+                // kortet helt. Korta ryck studsar tillbaka dit gesten började
+                // — ett darr på fingret ska inte stänga kortet. (Ett släpp
+                // långt under peek har redan stängts av grenarna ovan.)
+                if (startHeightVh.current - h < SNAP_PULL_MIN_VH) {
+                    updateHeightVh(startHeightVh.current);
+                } else {
+                    const target = snapDown(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH);
+                    if (target !== null) updateHeightVh(target);
+                    else closeCard();
+                }
             }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
