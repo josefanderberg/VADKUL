@@ -291,7 +291,9 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
 
             {/* Dagchips — SAMMA filter som listan under (dayFilter). Ett
                 dagval i listans filterrad speglas alltså här och tvärtom. */}
-            <div className="absolute top-2 left-2 z-30 flex gap-1">
+            {/* z-20: under toppnaven (z-40) — chipsen får inte rita över den
+                när heron scrollas upp bakom naven. */}
+            <div className="absolute top-2 left-2 z-20 flex gap-1">
                 {PERIODS.map(p => {
                     const active = sel.kind === 'period' && sel.period === p.key;
                     return (

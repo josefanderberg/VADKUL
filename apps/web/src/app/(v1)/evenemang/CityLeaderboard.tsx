@@ -33,13 +33,18 @@ import { todayKey, weekKeys } from './periods';
 // sifferkolumn). Sorteringsnycklarna är samma som kolumnerna, så listan och
 // rubrikerna aldrig kan säga olika saker.
 
-type SortKey = 'today' | 'week' | 'total';
+// 'name' = A–Ö (Josef 2/9: "så blir det lättare att hitta sin stad") —
+// då byts platssiffran mot bokstavsavdelare och ingen sifferkolumn markeras.
+type SortKey = 'today' | 'week' | 'total' | 'name';
 
 const SORTS: { key: SortKey; label: string }[] = [
     { key: 'total', label: 'Flest totalt' },
     { key: 'week', label: 'Mest i veckan' },
     { key: 'today', label: 'Mest idag' },
+    { key: 'name', label: 'A–Ö' },
 ];
+
+const collator = new Intl.Collator('sv-SE');
 
 export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] }) {
     const [sort, setSort] = useState<SortKey>('total');
@@ -67,6 +72,7 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
             // Innan klockan lästs finns bara eventtotalen att sortera på — då
             // hoppar listan rätt när dagstalen landar (mounted-hoppet).
             .sort((a, b) => {
+                if (sort === 'name') return collator.compare(a.name, b.name);
                 const pick = (r: typeof a) =>
                     sort === 'total' ? r.total : ((sort === 'week' ? r.week : r.today) ?? r.total);
                 return pick(b) - pick(a) || b.total - a.total;
@@ -119,13 +125,19 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                         className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all"
                     >
                         <Link href={`/evenemang/${c.slug}`} className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4">
+                            {/* Platssiffra — eller, i A–Ö-läget, första bokstaven
+                                på första staden under den bokstaven (avdelare). */}
                             <span
                                 className={`w-6 shrink-0 text-right text-base font-black tabular-nums ${
-                                    i < 3 ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-300 dark:text-zinc-600'
+                                    sort === 'name'
+                                        ? 'text-[#006AA7] dark:text-sky-400'
+                                        : i < 3 ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-300 dark:text-zinc-600'
                                 }`}
                                 aria-hidden
                             >
-                                {i + 1}
+                                {sort === 'name'
+                                    ? (i === 0 || rows[i - 1].name[0].toUpperCase() !== c.name[0].toUpperCase() ? c.name[0].toUpperCase() : '')
+                                    : i + 1}
                             </span>
                             {/* Ankartexten: stadsnamnet bär raden, och på lite
                                 bredare skärmar följer hela frågan med (bättre

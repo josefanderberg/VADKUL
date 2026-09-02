@@ -12,8 +12,11 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
     /** Kart-länken — stadssidorna skickar ?plats=… så kartan öppnas inzoomad på staden. */
     ctaHref?: string;
 }) {
+    // z-40: ÖVER allt i sidflödet. Kart-herons dagchips/CTA (z-20) och listans
+    // klistrade dagrubriker (z-20) låg förr på samma z-30 som naven och ritades
+    // över den när man scrollat (Josef 2/9).
     return (
-        <nav className="sticky top-0 z-30 bg-slate-50/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/70 dark:border-zinc-800/70">
+        <nav className="sticky top-0 z-40 bg-slate-50/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/70 dark:border-zinc-800/70">
             <div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
                 <Link
                     href={backHref}

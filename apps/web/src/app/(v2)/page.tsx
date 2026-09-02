@@ -1272,6 +1272,18 @@ export default function HomePage() {
     //  stället för att resa dit bakom välkomstrutan. Kromet göms fortfarande
     //  medan rutan är uppe, men det är `chromeHidden` ovan som styr det.)
     const effectiveRangeDays = dayRangeDays >= WEEK_RANGE_MIN_DAYS && weekZoomLocked ? 1 : dayRangeDays;
+    // DAGBLINKEN (Josef 2/9): varje gång plattans dag/period byts efter mount
+    // — Nästa-knappens automatiska dagbyte, dagpilarna, ↺ — bumpas noncen;
+    // plattans text och ring får key={nonce} så engångsanimationen
+    // (globals.css day-flash-*) spelas om. Aldrig vid första renderingen.
+    const dayFlashKey = `${dayOffset}:${effectiveRangeDays}`;
+    const [dayFlashNonce, setDayFlashNonce] = useState(0);
+    const prevDayFlashKeyRef = useRef(dayFlashKey);
+    useEffect(() => {
+        if (prevDayFlashKeyRef.current === dayFlashKey) return;
+        prevDayFlashKeyRef.current = dayFlashKey;
+        setDayFlashNonce(n => n + 1);
+    }, [dayFlashKey]);
     const weekAreaKey = effectiveRangeDays >= WEEK_RANGE_MIN_DAYS && weekAreaCenter
         ? `${Math.round(weekAreaCenter.lat * 20) / 20}:${Math.round(weekAreaCenter.lng * 20) / 20}:${
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
@@ -2995,7 +3007,7 @@ export default function HomePage() {
             href={cityLink.href}
             title={cityLink.label}
             aria-label={cityLink.aria}
-            className="pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+            className="relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
         >
             {/* BARA stadsnamnet (Josef 31/8: "Evenemang stad för stad"-under-
                 raden revs samma kväll som den lades till — namnet ÄR länken,
@@ -3011,7 +3023,15 @@ export default function HomePage() {
                 etikett som väljaren (getDayLabel) så texterna aldrig går isär;
                 effectiveRangeDays = det kartan faktiskt visar (veckan faller
                 till en dag utzoomad). */}
-            <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none">
+            {/* Ringen + texten får key=dayFlashNonce → remount → engångs-
+                blinken spelas om vid varje dagbyte (se dayFlashNonce). */}
+            {dayFlashNonce > 0 && (
+                <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-full pointer-events-none" />
+            )}
+            <span
+                key={`day-${dayFlashNonce}`}
+                className={`block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
+            >
                 {getDayLabel(dayOffset, effectiveRangeDays)}
             </span>
             {/* Staden som liten underrad: plattan är länken till stadens

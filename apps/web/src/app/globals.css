@@ -48,6 +48,23 @@
 }
 .feature-blink-blue { animation: feature-blink-blue 1s ease-in-out infinite; }
 
+/* DAGBLINKEN på kartans toppplatta (Josef 2/9): när dagen byts — av Nästa-
+   knappens automatiska dagbyte eller ett dagsteg — ska dagens namn "blinka
+   till" så man uppfattar bytet. ENGÅNGS (ingen infinite): texten svälls upp
+   och glöder vitt, plattan får en vit ring som tonar bort. Spelas om via
+   key-byte på elementen (page.tsx dayFlashNonce). */
+@keyframes day-flash-text {
+  0%   { transform: scale(1);    text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  30%  { transform: scale(1.22); text-shadow: 0 0 16px rgba(255, 255, 255, 0.95); }
+  100% { transform: scale(1);    text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+}
+.day-flash-text { animation: day-flash-text 700ms cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center; }
+@keyframes day-flash-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.9); }
+  100% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+}
+.day-flash-ring { animation: day-flash-ring 700ms ease-out; }
+
 @layer base {
   :root {
     /* Base HSL values */

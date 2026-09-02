@@ -12,7 +12,7 @@ import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { chooserDefaultTargetPx } from '@/utils/chooserSheetHeight';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -2276,7 +2276,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 title={nextTitle}
                                 className={`group/nasta pointer-events-auto relative shrink-0 ml-auto h-[38px] box-border flex items-center bg-transparent${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
-                                <span className="flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97]">
+                                {/* DAGBYTES-LÄGET ser annorlunda ut (Josef 2/9: "byter färg
+                                    eller border så man ser visuellt att man byter dag"):
+                                    vit kapsel med blå text och blå kant + kalender-ikon i
+                                    stället för den blå gradienten och eventets emoji. Inte
+                                    guld — guld betyder boost på den här kartan. */}
+                                <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full transition-all group-active/nasta:scale-[0.97] ${
+                                    nextDayLabel
+                                        ? 'bg-white text-[#006AA7] ring-2 ring-inset ring-[#006AA7] shadow-md shadow-sky-900/20 group-hover/nasta:bg-sky-50 group-hover/nasta:shadow-lg'
+                                        : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg'
+                                }`}>
                                     {/* Eventen i bild slut → nästa dags namn i stället för NÄSTA,
                                         så man ser att trycket byter dag (se nextDayLabel). */}
                                     <span className="text-[12px] font-black uppercase tracking-widest leading-none">{nextDayLabel ?? 'NÄSTA'}</span>
@@ -2294,6 +2303,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                                     {nextEventGroupCount}
                                                 </span>
                                             )}
+                                        </span>
+                                    ) : nextDayLabel ? (
+                                        <span aria-hidden className="flex items-center justify-center w-7 h-7 rounded-full bg-[#006AA7] text-white">
+                                            <CalendarDays size={14} />
                                         </span>
                                     ) : (
                                         <span aria-hidden className="flex items-center justify-center w-7 h-7">

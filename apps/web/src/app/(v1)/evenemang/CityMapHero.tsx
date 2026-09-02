@@ -221,7 +221,7 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
             <Link
                 href={cityMapHref(city)}
                 aria-label={ctaLabel}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
             >
                 <span className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-lg hover:scale-105 transition-all">
                     {ctaLabel} →
@@ -229,7 +229,7 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
             </Link>
 
             {/* Carto/OSM-attribution — licenskravet gäller även rastertiles. */}
-            <span className="absolute bottom-0 right-0 z-30 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
+            <span className="absolute bottom-0 right-0 z-20 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
                 © OpenStreetMap © CARTO
             </span>
         </div>
