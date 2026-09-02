@@ -1038,6 +1038,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }, WHEEL_SNAP_QUIET_MS);
     };
     useEffect(() => () => { if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current); }, []);
+    // NY-GEST-DETEKTORN (Josef 2/9: "direkt efter ett stopp går det inte att
+    // scrolla — man måste flytta pekaren först"). Styrplattans tröghetssvans
+    // rullar i upp till ~1,5 s efter ett svep, och varje händelse sköt upp
+    // återspänningen — ett NYTT svep som började medan svansen ännu rullade
+    // smälte ihop med den och svaldes. (Att röra pekaren = röra plattan =
+    // svansen dör → 350 ms tystnad → grinden spänns; därav "flytta musen".)
+    // Svansen avtar monotont: ett nytt svep syns som ett HOPP i storlek
+    // (> WHEEL_NEW_GESTURE_GAIN × förra händelsen) eller ett riktningsbyte,
+    // och återspänner då grinden direkt. Hoppet räknas först efter
+    // WHEEL_SNAP_COOLDOWN_MS från senaste snäpp — fingerfasen av SAMMA svep
+    // växer också och ska inte kedja två stopp. Riktningsbyte gäller alltid.
+    const wheelTrackRef = useRef({ lastAbs: 0, lastSign: 0, snappedAt: 0 });
+    const WHEEL_SNAP_COOLDOWN_MS = 400;
+    const WHEEL_NEW_GESTURE_GAIN = 1.5;
+    /** Ett snäpp utfört: lås grinden, notera tidpunkten, boka återspänning. */
+    const consumeWheelGate = () => {
+        wheelSnapArmedRef.current = false;
+        wheelTrackRef.current.snappedAt = performance.now();
+        scheduleWheelRearm();
+    };
 
     // ── Dra-ner-vid-scroll-toppen ────────────────────────────────────────────
     // Står den inre scrollen på toppen och man drar nedåt ska gesten INTE
@@ -1117,6 +1137,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // kortets storleksändring; innehållsscrollen rörs inte (vi
             // preventDefault:ar bara i de två grenarna nedan).
             const deltaVh = (px / window.innerHeight) * 100 * SHEET_WHEEL_GAIN;
+            // Ny gest mitt i tröghetssvansen? (Se wheelTrackRef.) Då spänns
+            // grinden och taket-hållet släpps direkt — utan att vänta på
+            // tystnad som aldrig kommer medan svansen rullar.
+            const track = wheelTrackRef.current;
+            const absPx = Math.abs(px);
+            const sign = Math.sign(px);
+            const flipped = sign !== 0 && track.lastSign !== 0 && sign !== track.lastSign;
+            const jumped = absPx > track.lastAbs * WHEEL_NEW_GESTURE_GAIN + 2;
+            if (flipped || (jumped && performance.now() - track.snappedAt > WHEEL_SNAP_COOLDOWN_MS)) {
+                wheelSnapArmedRef.current = true;
+                wheelHoldAtMaxRef.current = false;
+            }
+            track.lastAbs = absPx;
+            if (sign !== 0) track.lastSign = sign;
             // VÄLJARLISTAN (Josef 2/9): kortet står STILL och listan scrollar
             // upp under överkanten — hjulet växer inte kortet här. Vill man
             // ha det större drar man i handtaget.
@@ -1129,8 +1163,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (deltaVh > 0 && h < maxVhRef.current && !chooser) {
                 e.preventDefault();
                 if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
-                wheelSnapArmedRef.current = false;
-                scheduleWheelRearm();
+                consumeWheelGate();
                 setIsAnimating(true);
                 const target = nextStopAbove(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
                 updateHeightVh(target);
@@ -1148,8 +1181,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (deltaVh < 0 && sc.scrollTop < 1) {
                 e.preventDefault();
                 if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
-                wheelSnapArmedRef.current = false;
-                scheduleWheelRearm();
+                consumeWheelGate();
                 setIsAnimating(true);
                 const target = nextStopBelow(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
                 if (target !== null) updateHeightVh(target);
