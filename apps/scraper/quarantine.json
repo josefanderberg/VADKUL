@@ -89,12 +89,6 @@
       "lastRetry": "2026-08-29",
       "emptyRetries": 1
     },
-    "rotary": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-26",
-      "emptyRetries": 1
-    },
     "sater": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
