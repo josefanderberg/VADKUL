@@ -2,8 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
-    CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, MIN_INDEXABLE_EVENTS, distKm,
-    getCityEvents, getCityOptInEvents, countBySource, pickRecommended, dayLabel, cityTitle, categoryTitle,
+    CITIES, MIN_INDEXABLE_EVENTS, distKm,
+    getCityEvents, getCityOptInEvents, getCityCategoryChips, countBySource, pickRecommended, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import CategoryChips from '../CategoryChips';
@@ -74,14 +74,10 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
     // eventen går ALDRIG in i sidan — de hämtas ur stadens opt-in.json.
     const sourceCounts = countBySource((await getCityOptInEvents(city)).events);
 
-    // Kategorichips: bara kategorier med nog många event för en egen sida.
-    // Småorter har inga kategorisidor alls (getCategoryCombos hoppar dem) —
-    // chipsen skulle länka till 404:or.
-    const perKey = new Map<string, number>();
-    for (const e of events) perKey.set(e.category, (perKey.get(e.category) ?? 0) + 1);
-    const cityCategories = city.small ? [] : CATEGORY_PAGES
-        .map(cat => ({ cat, count: perKey.get(cat.dataKey) ?? 0 }))
-        .filter(c => c.count >= MIN_CATEGORY_EVENTS);
+    // Kategorichips = FILTER (från 3 event, alla orter). hasPage säger om
+    // kategorin också har en egen undersida (5 i storstad / 10 i småort) —
+    // annars filtrerar chippen på plats under ?kategori= (Josef 3/9).
+    const cityCategories = getCityCategoryChips(city, events);
 
     // Unika/påkostade händelser (rankingen i cityData) — går numera BARA till
     // kart-heron, som väljer sina brickor ur dem. Den egna "Rekommenderat"-
@@ -198,12 +194,13 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         cityName={city.name}
                         cityTitle={cityTitle(city.name)}
                         allCount={events.length}
-                        categories={cityCategories.map(({ cat, count }) => ({
+                        categories={cityCategories.map(({ cat, count, hasPage }) => ({
                             slug: cat.slug,
                             dataKey: cat.dataKey,
                             emoji: cat.emoji,
                             label: categoryLabel(cat.dataKey),
                             count,
+                            hasPage,
                             title: categoryTitle(cat, city.name),
                         }))}
                         sourceCounts={sourceCounts}

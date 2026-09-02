@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { emojiForCategory } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
+import { planCategoryChips, CATEGORY_PAGE_MIN_BIG } from '@/utils/categoryChips';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
@@ -403,7 +404,9 @@ export async function getCityDayCounts(): Promise<CityDayCounts[]> {
 // `other` är för vaga för att fånga riktiga sökfraser. En sida genereras BARA
 // när staden har ≥ MIN_CATEGORY_EVENTS kommande event i kategorin, så vi aldrig
 // publicerar tunna/tomma sidor (Google straffar dem).
-export const MIN_CATEGORY_EVENTS = 5;
+// Trösklarna bor i utils/categoryChips sedan 3/9 (chip 3, undersida 5/10) —
+// den här konstanten är storstädernas undersidetröskel, kvar för importer.
+export const MIN_CATEGORY_EVENTS = CATEGORY_PAGE_MIN_BIG;
 
 export type CategoryPage = {
     slug: string;      // URL-segment: /evenemang/[stad]/[slug]
@@ -469,20 +472,28 @@ export async function getCityCategoryEvents(city: City, dataKey: string) {
     return { events: events.filter(e => e.category === dataKey), updatedAt };
 }
 
-/** Alla (stad, kategori)-kombinationer värda en egen sida (≥ MIN_CATEGORY_EVENTS). */
+/** Stadens kategorichips (filter) + vilka som har en egen undersida — EN
+ *  regel för stads- och kategorisidan (utils/categoryChips: chip från 3
+ *  event, undersida från 5 i storstad / 10 i småort). */
+export function getCityCategoryChips(city: City, events: CityEvent[]): { cat: CategoryPage; count: number; hasPage: boolean }[] {
+    const perKey = new Map<string, number>();
+    for (const e of events) perKey.set(e.category, (perKey.get(e.category) ?? 0) + 1);
+    const byKey = new Map(CATEGORY_PAGES.map(c => [c.dataKey, c]));
+    return planCategoryChips(CATEGORY_PAGES.map(c => c.dataKey), perKey, city.small)
+        .map(p => ({ cat: byKey.get(p.dataKey)!, count: p.count, hasPage: p.hasPage }));
+}
+
+/** Alla (stad, kategori)-kombinationer värda en egen sida. Småorterna är MED
+ *  sedan 3/9 (ägarbeslut, river 1/9-regeln "inga kategorisidor på småorter")
+ *  — men med den högre tröskeln (CATEGORY_PAGE_MIN_SMALL), så bara kategorier
+ *  med substans får en indexerbar sida; resten är chips som filtrerar på
+ *  plats (getCityCategoryChips). */
 export async function getCategoryCombos(): Promise<{ city: City; cat: CategoryPage; count: number }[]> {
     const combos: { city: City; cat: CategoryPage; count: number }[] = [];
     for (const city of CITIES) {
-        // Småorterna får INGA kategorisidor (ägarbeslut 1/9): kategorierna
-        // nämns i stället i stadssidans löptext, som ändå plockas upp av
-        // sökfraserna — egna sidor på det underlaget blir tunt innehåll.
-        if (city.small) continue;
         const { events } = await getCityEvents(city);
-        const perKey = new Map<string, number>();
-        for (const e of events) perKey.set(e.category, (perKey.get(e.category) ?? 0) + 1);
-        for (const cat of CATEGORY_PAGES) {
-            const count = perKey.get(cat.dataKey) ?? 0;
-            if (count >= MIN_CATEGORY_EVENTS) combos.push({ city, cat, count });
+        for (const { cat, count, hasPage } of getCityCategoryChips(city, events)) {
+            if (hasPage) combos.push({ city, cat, count });
         }
     }
     return combos;

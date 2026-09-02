@@ -2,8 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
-    CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
-    categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
+    CITIES,
+    categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, getCityCategoryChips, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import CategoryChips from '../../CategoryChips';
@@ -65,10 +65,12 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     const combos = await getCategoryCombos();
     const siblingCategories = combos
         .filter(c => c.city.slug === city.slug && c.cat.slug !== cat.slug);
-    // Chip-raden ovanför listan: ALLA stadens kategorier (den här markerad)
+    // Chip-raden ovanför listan: ALLA stadens kategorichips (den här markerad)
     // + "Alla" med stadens totala antal — vägen tillbaka till hela listan.
-    const cityCategoryChips = combos.filter(c => c.city.slug === city.slug);
+    // Samma regel som stadssidan: chips utan undersida länkar till stads-
+    // sidan med ?kategori= och filtrerar där.
     const { events: allCityEvents } = await getCityEvents(city);
+    const cityCategoryChips = getCityCategoryChips(city, allCityEvents);
     // Fler-radens siffror: opt-in-källornas event i JUST den här kategorin
     // (kategorifiltret gäller även de hämtade raderna).
     const sourceCounts = countBySource((await getCityOptInEvents(city)).events.filter(e => e.category === cat.dataKey));
@@ -175,12 +177,13 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                         cityName={city.name}
                         cityTitle={cityTitle(city.name)}
                         allCount={allCityEvents.length}
-                        categories={cityCategoryChips.map(({ cat: c, count }) => ({
+                        categories={cityCategoryChips.map(({ cat: c, count, hasPage }) => ({
                             slug: c.slug,
                             dataKey: c.dataKey,
                             emoji: c.emoji,
                             label: categoryLabel(c.dataKey),
                             count,
+                            hasPage,
                             title: categoryTitle(c, city.name),
                         }))}
                         sourceCounts={sourceCounts}

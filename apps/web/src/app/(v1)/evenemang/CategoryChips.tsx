@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { SOURCE_DEFS } from '@/utils/sources';
 import { CITY_OPT_IN_STORAGE_KEY, cityOptInDefault, cityOptInJsonHref } from '@/utils/cityOptIn';
+import { categoryChipHref, activeCategorySlug } from '@/utils/categoryChips';
 
 /**
  * Kategorichipsen på stads- och kategorisidorna ("Populärt i Stockholm") +
@@ -45,8 +46,15 @@ export type CategoryChip = {
     emoji: string;
     label: string;
     count: number;
+    /** Har kategorin en egen undersida (/evenemang/stad/kategori)? Annars är
+     *  chippen bara ett filter och bär stadssidans adress + ?kategori=
+     *  (utils/categoryChips — Josef 3/9: filter alltid, undersida bara med
+     *  substans). */
+    hasPage: boolean;
     /** Dokumenttiteln när kategorin är vald på plats (= kategorisidans
-     *  <title>), så fliken säger samma sak som efter en omladdning. */
+     *  <title>), så fliken säger samma sak som efter en omladdning. Används
+     *  bara för chips MED undersida — en omladdning av ?kategori= ger
+     *  stadssidans titel, så den behålls där. */
     title: string;
 };
 
@@ -69,9 +77,20 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
 }) {
     const pathname = usePathname();
     const { setCategory } = useDayFilter();
-    // /evenemang/<stad>/<kategori> → kategori-slug; stadssidan → null.
-    const seg = pathname.split('/').filter(Boolean);
-    const activeSlug = seg[0] === 'evenemang' && seg[1] === citySlug && seg[2] ? seg[2] : null;
+    // Frågedelen (?kategori=) läses EFTER mount och hålls i egen state — inte
+    // useSearchParams, som kräver en Suspense-gräns på statiska sidor. Vår
+    // egen pushState uppdaterar den direkt; bakåt/framåt via popstate.
+    // SSR: '' → ingen aktiv fråga, deterministisk hydrering.
+    const [search, setSearch] = useState('');
+    useEffect(() => {
+        const read = () => setSearch(window.location.search);
+        read();
+        window.addEventListener('popstate', read);
+        return () => window.removeEventListener('popstate', read);
+    }, []);
+    // /evenemang/<stad>/<kategori> eller /evenemang/<stad>?kategori=<slug>
+    // → slug; stadssidan utan fråga → null (utils/categoryChips).
+    const activeSlug = activeCategorySlug(pathname, search, citySlug);
     const active = activeSlug ? categories.find(c => c.slug === activeSlug) ?? null : null;
 
     // Kontexten (listan + heron) följer URL:en. Effekt, inte render: SSR:en
@@ -87,18 +106,23 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
     const titleTouchedRef = useRef(false);
     useEffect(() => {
         if (!inPlace) return;
-        if (active) {
+        if (active?.hasPage) {
             document.title = `${active.title} – VADKUL`;
             titleTouchedRef.current = true;
         } else if (titleTouchedRef.current) {
             document.title = `${cityTitle} – VADKUL`;
+            titleTouchedRef.current = false;
         }
     }, [inPlace, active, cityTitle]);
 
     const go = (href: string) => (ev: React.MouseEvent<HTMLAnchorElement>) => {
         if (!inPlace || !isPlainClick(ev)) return; // modifierat klick → ny flik som vanligt
         ev.preventDefault();
-        if (window.location.pathname !== href) window.history.pushState(null, '', href);
+        const cur = window.location.pathname + window.location.search;
+        if (cur !== href) window.history.pushState(null, '', href);
+        // Frågedelen är vår egen state (se ovan) — popstate fyrar inte för
+        // pushState, så spegla den direkt.
+        setSearch(window.location.search);
     };
 
     const hasCategories = categories.length > 0;
@@ -123,7 +147,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                     </Link>
                 )}
                 {categories.map(cat => {
-                    const href = `/evenemang/${citySlug}/${cat.slug}`;
+                    const href = categoryChipHref(citySlug, cat.slug, cat.hasPage);
                     const isOn = active?.slug === cat.slug;
                     return (
                         <Link
