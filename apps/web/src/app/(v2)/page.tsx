@@ -26,6 +26,7 @@ import { toggleCategory } from '@/utils/categoryToggle';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
+import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity } from '@/utils/startCity';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
@@ -1308,27 +1309,8 @@ export default function HomePage() {
         }
     }, [mapZoom, dayRangeDays]);
 
-    // När dagen/intervallet byts: välj eventet närmast KARTANS MITT (det man
-    // tittar på) och be V2Map att INTE flytta kameran — vi vill stanna kvar i
-    // vyn i stället för att flyga iväg till en annan stad. (Bara vid byte,
-    // inte vid varje Firestore-uppdatering.)
-    useEffect(() => {
-        const dayKey = `${dayOffset}:${dayRangeDays}`;
-        if (prevDayKey.current !== dayKey) {
-            prevDayKey.current = dayKey;
-            // Bildspelets blink växlar dag↔vecka en gång i halvsekunden. Det ska bara
-            // ändra vad kartan VISAR — inte öppna ett eventkort per blink.
-            if (tourPlayingRef.current) return;
-            // Har man INGET kort uppe ska ett dag/vecka-byte inte trolla fram
-            // ett (Josef 9/8) — kartan ska bara byta vad den visar. Kort öppnas
-            // när man själv klickar på en bricka. Har man däremot ett kort uppe
-            // följer det med till den nya dagen (närmast kartans mitt).
-            if (selectedEventRef.current) {
-                setSelectedEvent(pickNearestToPoint(mapCenterRef.current, filteredEvents));
-            }
-            setDaySwitchNonce(n => n + 1);
-        }
-    }, [filteredEvents, dayOffset, dayRangeDays]);
+    // (Dagbytets nyval-effekt bor längre ner, efter inTourView — den väljer
+    //  bland eventen I BILD sedan 2/9 och behöver kartrutan.)
 
     // Stäng av scroll på body så kartan tar över helt
     useEffect(() => {
@@ -1861,6 +1843,66 @@ export default function HomePage() {
         && evt.lat! >= mapBounds.south && evt.lat! <= mapBounds.north
         && evt.lng! >= mapBounds.west && evt.lng! <= mapBounds.east
     ), [mapBounds]);
+
+    // ── Nästa-bläddringen håller sig till det man SER ───────────────────────
+    /**
+     * Vad kortet ser (Josef 2/9: "bara gå till dem som visas i bild — kartan
+     * ska aldrig hoppa iväg"): inom kartrutan OCH ovanför kortets peek-höjd
+     * (utils/viewportTour — brickor bakom kortet syns inte). Strängare än
+     * inMapView ovan, som är stadsrutans/kategorikolumnens mått och räknar
+     * hela rutan.
+     */
+    const inTourView = useCallback((evt: LinkEvent) => (
+        hasValidCoords(evt) && isInVisibleMapArea(evt.lat, evt.lng, mapBounds, TOUR_CARD_COVER_FRACTION)
+    ), [mapBounds]);
+
+    // När dagen/intervallet byts: har man ett kort uppe följer det med till
+    // den nya dagen — närmast KARTANS MITT bland eventen I BILD (Josef 2/9;
+    // förut bland hela dagens event, vilket kunde landa på något utanför
+    // vyn). Finns inget i bild: hela dagens lista som förut. Kameran står
+    // still (daySwitchNonce → V2Maps "stå still"-fönster). Bara vid byte,
+    // inte vid varje Firestore-uppdatering. Det här är också landningen för
+    // Nästa-knappens automatiska dagbyte (EventCard advanceToNextDay).
+    useEffect(() => {
+        const dayKey = `${dayOffset}:${dayRangeDays}`;
+        if (prevDayKey.current !== dayKey) {
+            prevDayKey.current = dayKey;
+            // Bildspelets blink växlar dag↔vecka en gång i halvsekunden. Det ska bara
+            // ändra vad kartan VISAR — inte öppna ett eventkort per blink.
+            if (tourPlayingRef.current) return;
+            // Har man INGET kort uppe ska ett dag/vecka-byte inte trolla fram
+            // ett (Josef 9/8) — kartan ska bara byta vad den visar. Kort öppnas
+            // när man själv klickar på en bricka.
+            if (selectedEventRef.current) {
+                const nowMs = Date.now();
+                const inView = visibleEvents.filter(e =>
+                    inTourView(e) && !discardedEventIds.has(e.id) && !isEventPast(e, nowMs));
+                setSelectedEvent(pickNearestToPoint(mapCenterRef.current, inView.length > 0 ? inView : filteredEvents));
+            }
+            setDaySwitchNonce(n => n + 1);
+        }
+    }, [filteredEvents, visibleEvents, inTourView, discardedEventIds, dayOffset, dayRangeDays]);
+
+    /**
+     * NÄSTA DAG FÖR BLÄDDRINGEN (Josef 2/9): har man klickat sig igenom alla
+     * event i bild går Nästa vidare till nästa dag som HAR något i bild —
+     * tomma dagar hoppas över, i hela perioder (sju i veckovyn). null = inget
+     * mer inom datahorisonten → Nästa-knappen släcks. Samma villkor som
+     * kortets pool (i bild, kategorifiltret, inte bortsvept, inte passerat)
+     * så dagen vi landar på garanterat har något att välja. Under en sökning
+     * är dagbegreppet redan satt ur spel (träffar från alla dagar) → null.
+     */
+    const nextTourDayOffset = useMemo(() => {
+        if (!mapBounds || searchQuery.trim()) return null;
+        const nowMs = Date.now();
+        const nowDate = new Date(nowMs);
+        const offsets: number[] = [];
+        for (const evt of events) {
+            if (!inTourView(evt) || discardedEventIds.has(evt.id) || !matchesFilter(evt) || isEventPast(evt, nowMs)) continue;
+            offsets.push(dayOffsetOf(evt.time, nowDate));
+        }
+        return nextPeriodWithEvents(offsets, dayOffset, effectiveRangeDays);
+    }, [mapBounds, searchQuery, events, inTourView, discardedEventIds, matchesFilter, dayOffset, effectiveRangeDays]);
 
     // Vilken stad kartrutan senast MÄTTES under — stadsrutans vakt mot att visa
     // förra stadens siffror under den nya stadens namn (se areaCounts).
@@ -2890,8 +2932,9 @@ export default function HomePage() {
             />
             )}
 
-            {/* 1b1a. STADSNAMNET — kvar i mitten överst (Josef 31/8), men nu en
-                LÄNK till /evenemang (stad-för-stad-sidan) i stället för
+            {/* 1b1a. DAGEN ÖVERST, staden som liten rad under (Josef 2/9 — se
+                span-kommentarerna). Plattan är kvar i mitten överst (Josef 31/8)
+                och är en LÄNK till /evenemang (stad-för-stad-sidan) i stället för
                 dag/vecka-växeln, som flyttat ner till botten (1b1b). Hörn-
                 pillen som bar länken är borttagen — stadsnamnet ÄR länken, och
                 därmed också Googles crawlbara väg in i /evenemang-hierarkin
@@ -2921,7 +2964,20 @@ export default function HomePage() {
                 sm:leading-none MÅSTE upprepas: sm:text-2xl sätter om
                 line-height till 32px i breakpointen och vinner annars över
                 bara leading-none — då växer plattan i onödan på desktop. */}
+            {/* DAGEN står överst (Josef 2/9: "där det står staden längst upp —
+                där ska det stå vilken dag man är på, så man ser det"): Nästa-
+                bläddringen byter dag av sig själv när eventen i bild är slut,
+                och dagväljaren i botten ligger bakom kortet just då. Samma
+                etikett som väljaren (getDayLabel) så texterna aldrig går isär;
+                effectiveRangeDays = det kartan faktiskt visar (veckan faller
+                till en dag utzoomad). */}
             <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none">
+                {getDayLabel(dayOffset, effectiveRangeDays)}
+            </span>
+            {/* Staden som liten underrad: plattan är fortfarande /evenemang-
+                länken (Googles väg in i stadshierarkin), och namnet säger
+                vart den leder. */}
+            <span className="mt-1 block text-[11px] font-bold uppercase tracking-wider text-white/70 leading-none">
                 {liveCityName ?? 'Sverige'}
             </span>
             <span className="sr-only">Evenemang stad för stad</span>
@@ -3909,8 +3965,17 @@ export default function HomePage() {
                 onZoomToSelected={() => setZoomToEventTrigger(t => t + 1)}
                 onZoomOut={() => setZoomOutTrigger(t => t + 1)}
                 dayOffset={dayOffset}
-                dayRangeDays={dayRangeDays}
+                // Det kartan FAKTISKT visar (veckan faller till en dag utzoomad)
+                // — samma tal som toppplattans etikett och Nästa-knappens
+                // "nästa dag"-text, så de aldrig går isär.
+                dayRangeDays={effectiveRangeDays}
                 onDayRangeChange={handleDayRangeChange}
+                // Nästa-bläddringen håller sig till det man ser (Josef 2/9):
+                // i bild-vakten, nästa dag med event i bild, och dagsteget
+                // (dagväljarens pilhandler → landningspulsen tystas lika).
+                inView={inTourView}
+                nextDayOffset={nextTourDayOffset}
+                onDayStep={handleTourDayStep}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}

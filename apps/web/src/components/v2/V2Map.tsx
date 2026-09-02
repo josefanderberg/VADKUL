@@ -3122,16 +3122,19 @@ export default function V2Map({
         }
     }, [daySwitchNonce]);
 
-    // Intern kort-navigering (Nästa/Föregående/svep): VISA markören man bläddrar till.
-    // Vi undertrycker INTE recenter längre — val-effekten nedan kör recenterOnSelected
-    // som panorerar fram det valda eventets bricka SÅ man ser vilket event man är på
-    // (utan att zooma; står still om brickan redan syns ovanför kortet). Vi behåller
-    // bara ref-spårningen så effekten inte loopar. De avslöjade brickorna ligger KVAR
-    // där man klickade — navigering flyttar bara kameran, inte avslöjnings-urvalet.
+    // Intern kort-navigering (Nästa/Föregående/svep): KAMERAN STÅR STILL (Josef
+    // 2/9: "kartan ska aldrig hoppa iväg"). Nästa väljer numera bara bland
+    // brickor som redan syns i bild (EventCard:s inView-vakt), så recentern
+    // behövs inte för att visa vart man kom — och den fick inte flytta vyn.
+    // Samma "stå still"-fönster som dagbytet ovan; måste liksom det deklareras
+    // FÖRE val-effekten nedan. (5/8–1/9 kördes recenterOnSelected även här för
+    // att panorera fram brickan — det är rivet.) De avslöjade brickorna ligger
+    // KVAR där man klickade — navigering rör inte avslöjnings-urvalet.
     const prevNavSelectNonceRef = useRef(navSelectNonce);
     useEffect(() => {
         if (navSelectNonce !== prevNavSelectNonceRef.current) {
             prevNavSelectNonceRef.current = navSelectNonce;
+            suppressAutoRecenterUntilRef.current = performance.now() + 1500;
         }
     }, [navSelectNonce]);
 
