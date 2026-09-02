@@ -1723,7 +1723,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // klicket. Händelserna bubblar ändå hit upp, så drag-logiken nedan
         // är densamma; blir gesten ett drag sväljer onClickCapture på kortet
         // knappens efterföljande klick (didDragRef).
-        const interactive = target.closest('button, a') as HTMLElement | null;
+        // `summary` räknas också (Josef 2/9): närhetslistans grupprader
+        // ("+7 fler tider & platser") fälls ut med <details>/<summary>. Utan
+        // den här raden togs capturen på KORTET, klicket retargetades bort
+        // från summaryn (listan öppnades aldrig) och tappen togglade kortets
+        // höjd i stället — "kortet går ner men de 7 andra visas inte".
+        const interactive = target.closest('button, a, summary') as HTMLElement | null;
 
         // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
         // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens
