@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { ChevronRight, Clock } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { eventEmoji, isEventPast } from './v2MapBricka';
@@ -22,6 +22,10 @@ import { nearestCityPoint } from '@/utils/cityPoints';
 // stadssidorna (/evenemang/<stad>): blå pille med veckodag + datum, gul
 // "Idag"/"Imorgon"-badge, antal event i dagen. Är hela högen samma dag (vanligt
 // i dagsläget) ritas INGA rubriker.
+// SCROLLEN (Josef 2/9): kortet står still och listan rullar upp under kortets
+// överkant (EventCard låter innehållet scrolla i väljarläget i stället för att
+// växa kortet). Dagrubriken är sticky mot kortets scrollcontainer, så den dag
+// man är på stannar längst upp i kortet tills nästa dags rubrik knuffar ut den.
 // HAR VARIT: passerade event ligger hopfällda bakom en knapp längst ner (samma
 // grepp som stadssidan) i stället för att ta plats bland de kommande.
 
@@ -107,7 +111,9 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
         const catLabel = EVENT_CATEGORIES[catKey].label;
         const isSel = selectedEvent?.id === ev.id;
         return (
-            <li key={ev.id}>
+            // data-group-row: EventCard mäter radernas underkanter för att
+            // öppna kortet på hela rader (measureDefaultHeight).
+            <li key={ev.id} data-group-row>
                 <button
                     type="button"
                     onClick={() => onSelect(ev)}
@@ -136,8 +142,9 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
     return (
         // Vanligt blockinnehåll i kortets scrollcontainer — kortets sheet äger
         // höjd/drag/scroll. pt-8 lyfter rubriken under drag-indikatorn som
-        // ligger absolut överst i kortet.
-        <div className="pt-8">
+        // ligger absolut överst i kortet. data-group-list: EventCard känner
+        // igen väljarläget i DOM:en och mäter listans höjd (measureDefaultHeight).
+        <div className="pt-8" data-group-list>
             <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
                     <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>
@@ -151,32 +158,40 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
             <p className="px-4 pt-2 pb-1 text-[11px] font-bold text-slate-400">
                 Välj vilket event du vill öppna:
             </p>
-            {/* Klistrade dagrubriker klistrar mot kortets scrollcontainer
-                (närmsta scrollande förälder) — samma grepp som stadssidornas
-                daglista. */}
-            <ul className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {dayBuckets.map(day => (
-                    <Fragment key={day.key}>
-                        {showDays && (
-                            <li className="sticky top-0 z-20 px-3 py-1.5 bg-card">
-                                <span className="flex items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#006AA7] text-white text-[11px] font-black">
-                                        {day.rel && (
-                                            <span className="inline-flex items-center px-1.5 rounded-full bg-[#FECC02] text-[9px] font-black uppercase tracking-wider text-slate-900">
-                                                {day.rel}
-                                            </span>
-                                        )}
-                                        {day.label}
-                                    </span>
-                                    <span className="text-[10px] font-black text-slate-400 tabular-nums">{day.events.length}</span>
+            {/* EN <ul> PER DAG (Josef 2/9): dagrubriken är sticky mot kortets
+                scrollcontainer (närmsta scrollande förälder) och stannar
+                längst upp i kortet medan dagens rader rullar upp under över-
+                kanten — och knuffas sedan ut av nästa dags rubrik, eftersom
+                sticky-elementet hålls kvar av sin egen lista (samma grepp som
+                stadssidornas <section> per dag). Låg alla dagar i EN lista
+                lade rubrikerna sig ovanpå varandra i stället för att bytas.
+                pt-5 lyfter pillen under drag-strecken (absolut överst i
+                kortet, 8–20 px) när rubriken sitter fast; i flödet blir samma
+                luft avgränsaren mellan dagarna. */}
+            {dayBuckets.map(day => (
+                <ul key={day.key} className="divide-y divide-slate-100 dark:divide-zinc-800">
+                    {showDays && (
+                        <li className="sticky top-0 z-20 px-3 pt-5 pb-1.5 bg-card">
+                            <span className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#006AA7] text-white text-[11px] font-black">
+                                    {day.rel && (
+                                        <span className="inline-flex items-center px-1.5 rounded-full bg-[#FECC02] text-[9px] font-black uppercase tracking-wider text-slate-900">
+                                            {day.rel}
+                                        </span>
+                                    )}
+                                    {day.label}
                                 </span>
-                            </li>
-                        )}
-                        {day.events.map(ev => row(ev, false))}
-                    </Fragment>
-                ))}
-                {/* Historik: det som redan varit ligger hopfällt längst ner. */}
-                {past.length > 0 && (
+                                <span className="text-[10px] font-black text-slate-400 tabular-nums">{day.events.length}</span>
+                            </span>
+                        </li>
+                    )}
+                    {day.events.map(ev => row(ev, false))}
+                </ul>
+            ))}
+            {/* Historik: det som redan varit ligger hopfällt längst ner — egen
+                lista, så den inte hamnar under sista dagens klistrade rubrik. */}
+            {past.length > 0 && (
+                <ul className="border-t border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
                     <li>
                         <button
                             type="button"
@@ -188,9 +203,9 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
                             {past.length} har redan varit · {pastOpen ? 'Dölj' : 'Visa'}
                         </button>
                     </li>
-                )}
-                {pastOpen && pastOrdered.map(ev => row(ev, true))}
-            </ul>
+                    {pastOpen && pastOrdered.map(ev => row(ev, true))}
+                </ul>
+            )}
         </div>
     );
 }
