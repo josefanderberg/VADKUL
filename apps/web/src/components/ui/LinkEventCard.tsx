@@ -6,6 +6,8 @@ import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
+// Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
+import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
 import EventReminderBell from './EventReminderBell';
@@ -18,20 +20,6 @@ import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
 const ADDRESS_FALLBACKS = new Set(['växjö', 'vaxjo', 'stockholm', 'sverige', 'sweden', '']);
-
-/**
- * Äldre skrapade beskrivningar tappade radbrytningarna HELT — styckena sitter
- * ihop utan ens mellanslag ("…intresseklubb.Tävlingsområde…", "…11:30Klasserna…").
- * Saknar texten \n men har sådana skarvar (skiljetecken/siffra direkt följt av
- * versal) stoppar vi in radbrytningar där. Nyskrapat innehåll har riktiga \n
- * (skraperfix 2026-07-11) och lämnas orört.
- */
-function withRecoveredLineBreaks(text: string): string {
-    if (!text || text.includes('\n')) return text;
-    return text
-        .replace(/([.!?…)])(?=[A-ZÅÄÖ"“])/g, '$1\n')
-        .replace(/(\d)(?=[A-ZÅÄÖ])/g, '$1\n');
-}
 
 function isSpecificAddress(addr: string | undefined | null): boolean {
     if (!addr) return false;
@@ -330,13 +318,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // (ingen fallback-platshållare längre).
     const hasRealCover = !!linkEvent.coverImage;
 
-    const getFaviconUrl = (url: string) => {
-        try {
-            const domain = new URL(url).hostname;
-            return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-        } catch { return null; }
-    };
-    const faviconUrl = getFaviconUrl(linkEvent.url);
+    const faviconUrl = hostFaviconUrl(linkEvent.url);
 
     // Formatera pris för visning. Normaliserar de vanliga svenska varianter vi
     // ser i scraper-datan: "Fri entré"/"Avgiftsfritt"/"kostnadsfritt" → "Gratis";

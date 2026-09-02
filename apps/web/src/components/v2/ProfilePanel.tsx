@@ -29,24 +29,35 @@ interface MyBoost {
 interface ProfilePanelProps {
     open: boolean;
     onClose: () => void;
-    /** Användarens egna skapade event (filtrerade ur eventlistan i page). */
-    myEvents: LinkEvent[];
+    /** Användarens egna skapade event (filtrerade ur eventlistan i page).
+     *  UTELÄMNAD (stadssidornas toppnav, 2/9 — där finns ingen laddad
+     *  eventlista) → hela Mina event-sektionen döljs, hellre än att ljuga "0". */
+    myEvents?: LinkEvent[];
     /** HELA laddade eventlistan — boost-raderna slår upp titel + hoppmål här
-     *  (kvittona bär bara eventId; domännamn i stället för titel var obegripligt). */
-    allEvents: LinkEvent[];
-    onPickEvent: (evt: LinkEvent) => void;
-    onDeleteEvent: (id: string) => void;
-    savedCount: number;
-    /** Byt till sparat-panelen (stänger profilen). */
-    onOpenSaved: () => void;
+     *  (kvittona bär bara eventId; domännamn i stället för titel var obegripligt).
+     *  Utelämnad = tom lista (boost-raderna faller tillbaka på domännamnet). */
+    allEvents?: LinkEvent[];
+    onPickEvent?: (evt: LinkEvent) => void;
+    onDeleteEvent?: (id: string) => void;
+    savedCount?: number;
+    /** Byt till sparat-panelen (stänger profilen). Utelämnad → Sparade-raden
+     *  döljs (stadssidan har ingen sparat-panel att byta till). */
+    onOpenSaved?: () => void;
+    /** Var panelen hänger: under profilknappen i kartans VÄNSTRA hörn
+     *  (default) eller till höger (stadssidornas toppnav). */
+    anchor?: 'left' | 'right';
 }
+
+// Stabil tom lista när allEvents utelämnas — en ny [] per render hade varit
+// ofarlig (läses via ref) men är onödig.
+const NO_EVENTS: LinkEvent[] = [];
 
 /**
  * Hela kontot på ett ställe, utan att lämna kartan: namn (redigerbart),
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPickEvent, onDeleteEvent, savedCount, onOpenSaved }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left' }: ProfilePanelProps) {
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
@@ -423,7 +434,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                 krom men under eventkortet (1250)/modalerna (1300); utanför-
                 ytan fångar klick på kromet panelen täcker och stänger. */}
             <div className="fixed inset-0 z-[1164]" onClick={onClose} />
-            <div className="absolute top-[4.6rem] left-4 right-4 sm:right-auto sm:w-[420px] z-[1165] pointer-events-auto">
+            <div className={`absolute top-[4.6rem] left-4 right-4 ${anchor === 'right' ? 'sm:left-auto sm:right-4' : 'sm:right-auto'} sm:w-[420px] z-[1165] pointer-events-auto`}>
                 <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[min(70vh,34rem)] animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {/* Identitet */}
@@ -507,13 +518,16 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                     </div>
 
                     <div className="overflow-y-auto custom-scrollbar">
-                        {/* Sparade event — genväg till hjärt-panelen */}
-                        <button type="button" onClick={onOpenSaved} className={actionRow}>
-                            <Heart size={16} className="text-rose-500 shrink-0" fill={savedCount > 0 ? 'currentColor' : 'none'} />
-                            <span className="flex-1">Sparade event</span>
-                            <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
-                            <ChevronRight size={15} className="text-slate-400 shrink-0" />
-                        </button>
+                        {/* Sparade event — genväg till hjärt-panelen (bara där
+                            det finns en: kartan skickar onOpenSaved, stadssidan inte) */}
+                        {onOpenSaved && (
+                            <button type="button" onClick={onOpenSaved} className={actionRow}>
+                                <Heart size={16} className="text-rose-500 shrink-0" fill={savedCount > 0 ? 'currentColor' : 'none'} />
+                                <span className="flex-1">Sparade event</span>
+                                <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
+                                <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                            </button>
+                        )}
 
                         {/* Notiser — påminnelse 1 h innan gillade event börjar.
                             Permission-frågan får BARA ställas härifrån (riktig
@@ -560,7 +574,9 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                             </div>
                         )}
 
-                        {/* Mina event */}
+                        {/* Mina event — bara när sidan vet vilka de är (kartan);
+                            utelämnad lista = sektionen döljs. */}
+                        {myEvents && (
                         <div className="border-t border-slate-100 dark:border-slate-800">
                             <div className="px-4 pt-3 pb-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -577,11 +593,11 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                                         <EventListRow
                                             key={evt.id}
                                             evt={evt}
-                                            onPick={onPickEvent}
+                                            onPick={evt => onPickEvent?.(evt)}
                                             right={
                                                 <button
                                                     type="button"
-                                                    onClick={() => { if (confirm(`Ta bort "${evt.title}" permanent?`)) onDeleteEvent(evt.id); }}
+                                                    onClick={() => { if (confirm(`Ta bort "${evt.title}" permanent?`)) onDeleteEvent?.(evt.id); }}
                                                     title="Ta bort eventet"
                                                     aria-label="Ta bort eventet"
                                                     className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
@@ -594,6 +610,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                                 </ul>
                             )}
                         </div>
+                        )}
 
                         {/* Mina boostar — bara när det finns kvitton att visa: event
                             man boostat + hur länge guldstjärnan syns. Slutdatumet är
@@ -626,10 +643,10 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents, onPic
                                         const evt = b.evt;
                                         return (
                                             <li key={b.key}>
-                                                {evt ? (
+                                                {evt && onPickEvent ? (
                                                     <button
                                                         type="button"
-                                                        onClick={() => onPickEvent(evt)}
+                                                        onClick={() => onPickEvent?.(evt)}
                                                         className="w-full px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
                                                     >
                                                         {inner}

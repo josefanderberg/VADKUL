@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import TopNavProfile from './TopNavProfile';
 
 // Fast toppnav som delas av alla /evenemang-sidor (index, stad, kategori):
-// tillbaka-länken till vänster, kart-pillen till höger — ligger kvar i toppen
+// tillbaka-länken till vänster, kart-pillen + profilknappen till höger — ligger kvar i toppen
 // när listan scrollas. city-cta = samma glesa ljussvep som kartans hörn-pill
 // (globals.css; kräver position + overflow-hidden).
 export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan', ctaHref = '/' }: {
@@ -20,12 +21,17 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
                 >
                     ← {backLabel}
                 </Link>
-                <Link
-                    href={ctaHref}
-                    className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-md hover:scale-105 transition-all shrink-0"
-                >
-                    {ctaLabel}
-                </Link>
+                {/* Kart-pillen + profilknappen (Josef 2/9: logga in/skapa konto
+                    direkt på stadssidan) — ihop till höger. */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                        href={ctaHref}
+                        className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-md hover:scale-105 transition-all shrink-0"
+                    >
+                        {ctaLabel}
+                    </Link>
+                    <TopNavProfile />
+                </div>
             </div>
         </nav>
     );

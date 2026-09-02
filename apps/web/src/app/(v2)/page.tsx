@@ -28,6 +28,7 @@ import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoin
 import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity } from '@/utils/startCity';
+import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { useAuth } from '@/context/AuthContext';
@@ -2264,6 +2265,27 @@ export default function HomePage() {
     // stadssegmenterade medlemsutskick. Manuellt vald stad i profilen vinner.
     useSaveUserCity(userPos);
 
+    // STADSNAMNS-LÄNKENS MÅL (Josef 2/9): "hoppa över sidan där man ser alla
+    // städer och kom direkt till den där man befinner sig" — plattan länkar
+    // till STADSSIDAN för den stad man är i, inte till /evenemang-indexet.
+    // Punkten är kartmitten när plattan visar en stad (namnet och länken ska
+    // peka på SAMMA ort; mitt i ett stadshopp är MÅLET sanningen, som för
+    // liveCityName), annars — utzoomad "Sverige"-vy — GPS-positionen. Finns
+    // ingen stadssida inom CITY_PAGE_MAX_KM (Kiruna) blir det indexet som
+    // förut. Server-HTML:n bär alltid /evenemang: det är Googles crawlbara
+    // väg in i hierarkin, och hydreringen matchar eftersom mapCenter/userPos
+    // är null i första klientrendern också.
+    const cityLink = useMemo(() => {
+        const jumping = cityTourTarget && boundsCityKey !== cityTourTarget.key;
+        const pos = jumping ? cityTourTarget
+            : liveCityName && liveCityName !== 'Sverige' && mapCenter ? mapCenter
+            : userPos;
+        const city = pos ? nearestCityPage(pos.lat, pos.lng) : null;
+        return city
+            ? { href: cityPageHref(city), label: `Alla evenemang i ${city.name}`, aria: `Alla evenemang i ${city.name} — stadssidan med dag-för-dag-lista` }
+            : { href: '/evenemang', label: 'Evenemang stad för stad', aria: `Evenemang stad för stad — se allt i ${liveCityName ?? 'Sverige'} och andra städer` };
+    }, [cityTourTarget, boundsCityKey, liveCityName, mapCenter, userPos]);
+
     // ── Var kartan LANDAR ────────────────────────────────────────────────────
     // I staden du är i, inte Stockholm (Josef 9/8). Ligger här nere för att
     // effekten behöver userPos; själva bildspelet bor långt ovanför.
@@ -2951,7 +2973,8 @@ export default function HomePage() {
 
             {/* 1b1a. DAGEN ÖVERST, staden som liten rad under (Josef 2/9 — se
                 span-kommentarerna). Plattan är kvar i mitten överst (Josef 31/8)
-                och är en LÄNK till /evenemang (stad-för-stad-sidan) i stället för
+                och är en LÄNK till STADSSIDAN för staden man är i (Josef 2/9,
+                cityLink ovan; /evenemang-indexet bara som fallback) i stället för
                 dag/vecka-växeln, som flyttat ner till botten (1b1b). Hörn-
                 pillen som bar länken är borttagen — stadsnamnet ÄR länken, och
                 därmed också Googles crawlbara väg in i /evenemang-hierarkin
@@ -2969,9 +2992,9 @@ export default function HomePage() {
     <div className="fixed inset-x-0 top-6 z-[1090] flex justify-center px-16 pointer-events-none">
         <a
             key={cityTourTarget?.key ?? 0}
-            href="/evenemang"
-            title="Evenemang stad för stad"
-            aria-label={`Evenemang stad för stad — se allt i ${liveCityName ?? 'Sverige'} och andra städer`}
+            href={cityLink.href}
+            title={cityLink.label}
+            aria-label={cityLink.aria}
             className="pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
         >
             {/* BARA stadsnamnet (Josef 31/8: "Evenemang stad för stad"-under-
@@ -2991,13 +3014,13 @@ export default function HomePage() {
             <span className="block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none">
                 {getDayLabel(dayOffset, effectiveRangeDays)}
             </span>
-            {/* Staden som liten underrad: plattan är fortfarande /evenemang-
-                länken (Googles väg in i stadshierarkin), och namnet säger
-                vart den leder. */}
+            {/* Staden som liten underrad: plattan är länken till stadens
+                egen /evenemang-sida (cityLink; indexet som fallback — Googles
+                väg in i stadshierarkin), och namnet säger vart den leder. */}
             <span className="mt-1 block text-[11px] font-bold uppercase tracking-wider text-white/70 leading-none">
                 {liveCityName ?? 'Sverige'}
             </span>
-            <span className="sr-only">Evenemang stad för stad</span>
+            <span className="sr-only">{cityLink.label}</span>
         </a>
     </div>
 )}

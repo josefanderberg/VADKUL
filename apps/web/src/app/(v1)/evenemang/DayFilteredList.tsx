@@ -3,13 +3,18 @@
 import Link from 'next/link';
 import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
 import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
+import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
+// Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
+// chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
+import { categoryLabel } from '@/components/v2/v2MapLabel';
+import EventExpanded from './EventExpanded';
 
 // Inloggningsmodalen (samma som kartans) — laddas först när någon utloggad
 // trycker på ett hjärta. Stadssidorna är SEO-ytor och ska inte bära
@@ -45,6 +50,11 @@ const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: fals
 //    nollställer avtäckningen.
 //  - BILDLÖSA KAPAS: max IMGLESS_SHOWN rader utan omslagsbild per dag, resten
 //    bakom en "Visa fler"-rad (Josef 30/8) — bildkorten ska bära listan.
+//  - UTFÄLLNING PÅ PLATS (Josef 2/9): ett klick på en rad öppnar eventet HÄR
+//    (EventExpanded: beskrivning, Anmäl/Boka, Karta, Dela) i stället för att
+//    hoppa till kartan. Ett i taget, som ett kort. Radens <a href=/?event=>
+//    står kvar i HTML:n — crawlbar, och cmd/ctrl-klick öppnar kartan i ny
+//    flik som förut; bara det vanliga klicket fångas (isPlainClick).
 
 export type ListedEvent = {
     id: string;
@@ -241,8 +251,19 @@ function LazyRowImage({ src, className, onFailed }: {
 // (bildgrupperna — "Förtidsröstning Tenhult" under "Förtidsröstning i stan").
 // <details> i stället för state så SSR-HTML:en är komplett och länkarna
 // fungerar redan före hydreringen. Ligger UTANFÖR radens Link (klick ska
-// fälla ut, inte navigera).
-function DupList({ dups, repTitle }: { dups: NonNullable<ListedEvent['dups']>; repTitle: string }) {
+// fälla ut, inte navigera). Tillfällenas egna länkar fäller sedan 2/9 ut
+// tillfället i gruppradens panel (onPick), precis som radklicket.
+type RowPick = (ev: ReactMouseEvent<HTMLAnchorElement>, target: Omit<ListedEvent, 'dups'>) => void;
+
+function DupList({ dups, repTitle, onPick, activeId }: {
+    dups: NonNullable<ListedEvent['dups']>;
+    repTitle: string;
+    /** Radklicket (EventRow.pick): vanligt klick fäller ut tillfället under
+     *  gruppraden, modifierat klick går till kartan som förut. */
+    onPick: RowPick;
+    /** Det utfällda tillfällets id — raden markeras blå. */
+    activeId: string | null;
+}) {
     const repKey = dupKey(repTitle);
     return (
         <details className="group/dups">
@@ -255,8 +276,11 @@ function DupList({ dups, repTitle }: { dups: NonNullable<ListedEvent['dups']>; r
                     <li key={d.id}>
                         <Link
                             href={d.href}
-                            onClick={() => seedMapHandoff(d)}
-                            className="flex items-center gap-x-2 max-w-full text-[11px] font-bold text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                            onClick={ev => onPick(ev, d)}
+                            aria-expanded={activeId === d.id}
+                            className={`flex items-center gap-x-2 max-w-full text-[11px] font-bold transition-colors hover:text-[#006AA7] dark:hover:text-sky-400 ${
+                                activeId === d.id ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-500 dark:text-zinc-400'
+                            }`}
                         >
                             {dupKey(d.title) !== repKey && (
                                 <span className="min-w-0 shrink truncate font-black text-slate-700 dark:text-zinc-300">{d.title}</span>
@@ -272,18 +296,60 @@ function DupList({ dups, repTitle }: { dups: NonNullable<ListedEvent['dups']>; r
     );
 }
 
-function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
+function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggleExpand, dayLabel }: {
     e: ListedEvent;
     dimmed?: boolean;
     isSaved: boolean;
     onToggleSave: (id: string) => void;
     nowTs: number;
+    /** Id:t på det UTFÄLLDA eventet i listan (ett i taget) — radens eget
+     *  eller ett av dess dups → panelen renderas under den här raden. */
+    expandedId: string | null;
+    /** anchor = radens <li>: hålls kvar på samma plats på skärmen över
+     *  bytet (scrollkompensationen i DayFilteredList). */
+    onToggleExpand: (id: string, anchor?: HTMLElement | null) => void;
+    /** Dagrubriken ("torsdag 9 juli") — panelens datumrad. */
+    dayLabel: string;
 }) {
     const [imgFailed, setImgFailed] = useState(false);
+    const liRef = useRef<HTMLLIElement>(null);
     const hasImage = !!e.coverImage && !imgFailed;
     const dups = e.dups ?? [];
     // Statusbadgen är klockberoende → bara efter mount (deterministisk SSR).
     const status = nowTs === 0 ? null : statusOf(e, nowTs);
+
+    // UTFÄLLNINGEN (Josef 2/9): ett vanligt klick på raden öppnar eventet HÄR
+    // på stadssidan (EventExpanded) i stället för att hoppa till kartan.
+    // Länken är kvar i HTML:n — crawlbar, och cmd/ctrl-klick öppnar kartan i
+    // ny flik som förut (då skrivs seeden precis som innan). Ett av grupp-
+    // radens övriga tillfällen (dups) fälls ut under SAMMA rad.
+    const shown = expandedId === e.id ? e : (dups.find(d => d.id === expandedId) ?? null);
+    const expanded = shown !== null;
+    const pick: RowPick = (ev, target) => {
+        if (isPlainClick(ev)) {
+            ev.preventDefault();
+            // Ankaret är radens <li> (dup-länkarna ligger i gruppradens li).
+            onToggleExpand(target.id, ev.currentTarget.closest('li'));
+            return;
+        }
+        seedMapHandoff(target);
+    };
+    const panel = shown && (
+        <EventExpanded
+            key={shown.id}
+            e={shown}
+            isDup={shown.id !== e.id}
+            dayLabel={dayLabel}
+            onClose={() => onToggleExpand(shown.id, liRef.current)}
+            onMapClick={() => seedMapHandoff(shown)}
+        />
+    );
+    // Utfälld rad markeras med blå kant (samma blå som chipsen/dagpillen).
+    const liBase = `rounded-xl bg-white dark:bg-zinc-900 border transition-all [content-visibility:auto] ${
+        expanded
+            ? 'border-[#006AA7]/60 dark:border-sky-400/60 shadow-md'
+            : 'border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm'
+    } ${dimmed ? 'opacity-55' : ''}`;
 
     // Inforad (plats · tid · pris · antal) — samma stil/ikoner som eventkortets
     // närhetslista. Allt är server-strängar → deterministiskt vid SSR.
@@ -316,16 +382,24 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
 
     // MED bild: omslagsbild kant till kant, titel + emoji + statusbadge överlagd
     // på en mörk gradient, inforaden under — spara-hjärtat överlagrat uppe till
-    // höger (utanför Link:en så det inte navigerar).
+    // höger (utanför Link:en så det inte navigerar). Utfälld växer bilden
+    // (h-28 → h-52, utan animation) så man ser mer av den, och panelen ligger
+    // under inforaden.
     // content-visibility:auto på raderna: rader utanför viewporten kostar
     // ingen layout/paint (stora listor = stor INP/LCP-vinst på mobil);
     // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li className={`relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_10rem] ${dimmed ? 'opacity-55' : ''}`}>
-                <Link href={e.href} className="block" onClick={() => seedMapHandoff(e)}>
+            <li ref={liRef} className={`relative overflow-hidden [contain-intrinsic-size:auto_10rem] ${liBase}`}>
+                <Link href={e.href} className="block" onClick={ev => pick(ev, e)} aria-expanded={expanded}>
                     <div className="relative">
-                        <LazyRowImage src={e.coverImage!} className="h-28" onFailed={() => setImgFailed(true)} />
+                        {/* Ingen höjdanimation: EventExpanded mäter panelens läge
+                            synkront vid mount och behöver den slutliga höjden. */}
+                        <LazyRowImage
+                            src={e.coverImage!}
+                            className={expanded ? 'h-52' : 'h-28'}
+                            onFailed={() => setImgFailed(true)}
+                        />
                         <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
                             <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{e.emoji}</span>
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
@@ -334,12 +408,20 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
                                     ×{dups.length + 1}
                                 </span>
                             )}
+                            {/* Kategorin nere till höger på bilden, vänster om
+                                statusbadgen (Josef 2/9). */}
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-[10px] font-black text-white">
+                                {categoryLabel(e.category)}
+                            </span>
                             {status && <StatusBadge status={status} />}
                         </div>
                     </div>
-                    <div className="px-4 py-2">{infoRow}</div>
+                    {/* Inforaden under bilden döljs när eventet är öppet —
+                        panelen visar samma uppgifter (Josef 2/9: "står 2 gånger"). */}
+                    {!expanded && <div className="px-4 py-2">{infoRow}</div>}
                 </Link>
-                {dups.length > 0 && <div className="px-4 pb-2.5 -mt-0.5"><DupList dups={dups} repTitle={e.title} /></div>}
+                {dups.length > 0 && <div className="px-4 pb-2.5 -mt-0.5"><DupList dups={dups} repTitle={e.title} onPick={pick} activeId={expandedId} /></div>}
+                {panel}
                 <button
                     type="button"
                     onClick={() => onToggleSave(e.id)}
@@ -359,11 +441,12 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
     // UTAN bild: kompakt rad — emoji-bricka, titel + statusbadge, inforad under.
     // En grupprad får dessutom ×N-brickan vid titeln och utfällningen under —
     // utfällningen ligger utanför Link:en (klick ska fälla ut, inte navigera),
-    // så li:t är en kolumn med radinnehållet i en egen flex-div.
+    // så li:t är en kolumn med radinnehållet i en egen flex-div. Panelen
+    // (EventExpanded) ligger sist i kolumnen.
     return (
-        <li className={`rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm transition-all [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem] ${dimmed ? 'opacity-55' : ''}`}>
+        <li ref={liRef} className={`[contain-intrinsic-size:auto_4.5rem] ${liBase}`}>
             <div className="flex items-stretch">
-                <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={() => seedMapHandoff(e)}>
+                <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={ev => pick(ev, e)} aria-expanded={expanded}>
                     <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
                     <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
@@ -373,9 +456,14 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
                                     ×{dups.length + 1}
                                 </span>
                             )}
+                            {/* Kategorin — samma plats som på bildraderna (vänster
+                                om statusbadgen), i den kompakta radens färger. */}
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-500 dark:text-zinc-400">
+                                {categoryLabel(e.category)}
+                            </span>
                             {status && <StatusBadge status={status} />}
                         </span>
-                        <span className="block mt-1">{infoRow}</span>
+                        {!expanded && <span className="block mt-1">{infoRow}</span>}
                     </span>
                 </Link>
                 <button
@@ -391,7 +479,8 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs }: {
                     <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
                 </button>
             </div>
-            {dups.length > 0 && <div className="pl-16 pr-4 pb-3 -mt-1"><DupList dups={dups} repTitle={e.title} /></div>}
+            {dups.length > 0 && <div className="pl-16 pr-4 pb-3 -mt-1"><DupList dups={dups} repTitle={e.title} onPick={pick} activeId={expandedId} /></div>}
+            {panel}
         </li>
     );
 }
@@ -425,6 +514,31 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Dag-för-dag-avtäckning (se filhuvudet): antal dagar som renderats.
     // Gäller först efter mount (nowTs) — pre-mount renderas alla dagar.
     const [revealed, setRevealed] = useState(1);
+    // Det UTFÄLLDA eventet (Josef 2/9) — ett i taget, som ett kort. Id:t kan
+    // vara en rads eget eller ett av dess dups; raden hittar det själv.
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    // SCROLLKOMPENSATION (Josef 2/9: "scrollar man ner förbi en jättelång
+    // beskrivning och klickar på nästa hamnar man helt off"): när rad A:s
+    // panel fälls ihop ovanför den rad B man just klickade på rycker B upp
+    // lika många px som panelen var hög, och skärmen står kvar långt ner i
+    // listan utan att B syns. Raden man klickade på hålls därför på SAMMA
+    // plats på skärmen: toppen mäts i klicket, och skillnaden mot toppen
+    // efter DOM-uppdateringen scrollas bort FÖRE målningen (layout-effekt,
+    // instant) — sedan får panelens egen mjuka scroll visa resten. Att stänga
+    // en rad man scrollat djupt ner i lyfter i stället fram den under naven
+    // (anchorScrollDelta i utils/eventExpand).
+    const scrollAnchorRef = useRef<{ el: HTMLElement; top: number } | null>(null);
+    const toggleExpand = (id: string, anchor?: HTMLElement | null) => {
+        scrollAnchorRef.current = anchor ? { el: anchor, top: anchor.getBoundingClientRect().top } : null;
+        setExpandedId(prev => (prev === id ? null : id));
+    };
+    useLayoutEffect(() => {
+        const a = scrollAnchorRef.current;
+        if (!a) return;
+        scrollAnchorRef.current = null;
+        const delta = anchorScrollDelta(a.top, a.el.getBoundingClientRect().top, expandedId === null);
+        if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
+    }, [expandedId]);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -500,8 +614,9 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     const renderDays = shownDays.slice(0, dayLimit);
     const hasMoreDays = renderDays.length < shownDays.length;
 
-    // Filterbyte → börja om från första dagen i det nya urvalet.
-    useEffect(() => { setRevealed(1); }, [sel, hours]);
+    // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
+    // ihop det öppna eventet (raden kan ha filtrerats bort).
+    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours]);
 
     // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
     // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
@@ -742,13 +857,13 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
                             )}
                             <ul className="flex flex-col gap-2">
                                 {pastOpen && day.past.map(e => (
-                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
+                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {withImg.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {shownImgless.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {nowTs !== 0 && imglessMore > 0 && (
                                     <li>
