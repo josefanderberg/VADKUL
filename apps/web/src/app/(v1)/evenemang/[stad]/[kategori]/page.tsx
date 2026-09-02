@@ -7,6 +7,7 @@ import {
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import CategoryChips from '../../CategoryChips';
+import OptInToggle from '../../OptInToggle';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
@@ -181,6 +182,9 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                             title: categoryTitle(c, city.name),
                         }))}
                     />
+                    {/* Samma opt-in-växel som stadssidan; kategorifiltret
+                        (kontexten) gäller även de hämtade raderna. */}
+                    <OptInToggle citySlug={city.slug} />
                 </EventDayList>
                 </DayFilterProvider>
 

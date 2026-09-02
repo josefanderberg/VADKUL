@@ -138,27 +138,38 @@ export function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 // filtret var 39 % av eventen på sidorna sådant kartan döljer, och siffrorna
 // i metadata/FAQ ljög mot Google-besökaren. Klassningen går på event-URL:ens
 // värdnamn precis som kartans filter — destinationslagrets id ÄR url:en.
+// Tilldelningen körs i TVÅ hinkar med samma närmsta-stad-regel: SEO-ytornas
+// event (utan opt-in-källorna) och opt-in-eventen (Svenska kyrkan/PRO/Korpen),
+// som bara serveras som stadens opt-in.json när växeln på sidan slås på
+// (Josef 2/9) — de ska aldrig in i server-HTML, siffror eller metadata.
+function assignNearestCity(keep: (e: RawDest) => boolean): Promise<Map<string, RawDest[]>> {
+    return loadData().then(({ dests }) => {
+        const bySlug = new Map<string, RawDest[]>(CITIES.map(c => [c.slug, []]));
+        for (const e of dests) {
+            if (!e.lat || !e.lng) continue;
+            if (!keep(e)) continue;
+            let best: City | null = null;
+            let bestD = Infinity;
+            for (const c of CITIES) {
+                const d = distKm(c.lat, c.lng, e.lat, e.lng);
+                const limit = c.small ? SMALL_TOWN_RADIUS_KM : CITY_RADIUS_KM;
+                if (d <= limit && d < bestD) { best = c; bestD = d; }
+            }
+            if (best) bySlug.get(best.slug)!.push(e);
+        }
+        return bySlug;
+    });
+}
 let assignPromise: Promise<Map<string, RawDest[]>> | null = null;
 function assignEvents() {
-    if (!assignPromise) {
-        assignPromise = loadData().then(({ dests }) => {
-            const bySlug = new Map<string, RawDest[]>(CITIES.map(c => [c.slug, []]));
-            for (const e of dests) {
-                if (!e.lat || !e.lng) continue;
-                if (classifySource(e.id)) continue; // opt-in-källa → inte på SEO-ytorna
-                let best: City | null = null;
-                let bestD = Infinity;
-                for (const c of CITIES) {
-                    const d = distKm(c.lat, c.lng, e.lat, e.lng);
-                    const limit = c.small ? SMALL_TOWN_RADIUS_KM : CITY_RADIUS_KM;
-                    if (d <= limit && d < bestD) { best = c; bestD = d; }
-                }
-                if (best) bySlug.get(best.slug)!.push(e);
-            }
-            return bySlug;
-        });
-    }
+    // opt-in-källa → inte på SEO-ytorna
+    if (!assignPromise) assignPromise = assignNearestCity(e => !classifySource(e.id));
     return assignPromise;
+}
+let assignOptInPromise: Promise<Map<string, RawDest[]>> | null = null;
+function assignOptInEvents() {
+    if (!assignOptInPromise) assignOptInPromise = assignNearestCity(e => !!classifySource(e.id));
+    return assignOptInPromise;
 }
 
 /** Stadens kommande event (närmsta-stad-tilldelade, tidssorterade).
@@ -166,7 +177,17 @@ function assignEvents() {
  *  event har ofta midnatt som starttid, så en ren tidsjämförelse slänger hela
  *  dagens utbud så fort dagen börjat. */
 export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; updatedAt: string }> {
-    const [{ cards, descs, titleFreq, updatedAt }, assigned] = await Promise.all([loadData(), assignEvents()]);
+    return upcomingCityEvents(city, await assignEvents());
+}
+
+/** Stadens kommande OPT-IN-event (Svenska kyrkan/PRO/Korpen) — bara för
+ *  stadens opt-in.json (route handler), aldrig för sidornas HTML. */
+export async function getCityOptInEvents(city: City): Promise<{ events: CityEvent[]; updatedAt: string }> {
+    return upcomingCityEvents(city, await assignOptInEvents());
+}
+
+async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>): Promise<{ events: CityEvent[]; updatedAt: string }> {
+    const { cards, descs, titleFreq, updatedAt } = await loadData();
     const todayK = dayKey(new Date().toISOString());
     const events = (assigned.get(city.slug) ?? [])
         .filter(e => dayKey(e.time) >= todayK)

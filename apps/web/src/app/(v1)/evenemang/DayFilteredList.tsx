@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
-import { useEffect, useLayoutEffect, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { mergeListedDays } from '@/utils/cityOptIn';
 import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
@@ -485,7 +486,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
     );
 }
 
-export default function DayFilteredList({ days, restCount, cityName, children }: {
+export default function DayFilteredList({ days: serverDays, restCount, cityName, children }: {
     days: ListedDay[];
     restCount: number;
     cityName: string;
@@ -495,7 +496,14 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
     // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
     // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours, category } = useDayFilter();
+    const { sel, setSel, hours, setHours, category, optIn, optInDays } = useDayFilter();
+    // OPT-IN-KÄLLORNA (Josef 2/9): med växeln på sys stadens hämtade opt-in-
+    // dagar in i serverns lista (samma radform; utils/cityOptIn). Av/ej hämtat
+    // → serverns lista orörd, samma referens.
+    const days = useMemo(
+        () => (optIn && optInDays ? mergeListedDays(serverDays, optInDays as ListedDay[]) : serverDays),
+        [serverDays, optIn, optInDays],
+    );
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
     // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).

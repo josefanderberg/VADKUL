@@ -7,6 +7,7 @@ import {
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import CategoryChips from '../CategoryChips';
+import OptInToggle from '../OptInToggle';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
@@ -202,6 +203,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                             }))}
                         />
                     )}
+                    {/* Opt-in-källorna (kyrkan/PRO/Korpen) hämtas först när
+                        växeln slås på — utanför HTML:n och siffrorna. */}
+                    <OptInToggle citySlug={city.slug} />
                 </EventDayList>
                 </DayFilterProvider>
 

@@ -27,7 +27,18 @@ type DayFilterState = {
      *  raderna redan kategorifiltrerade av servern, så värdet är ofarligt. */
     category: string | null;
     setCategory: (c: string | null) => void;
+    /** OPT-IN-KÄLLORNA (Josef 2/9): växeln på (OptInToggle) och de hämtade
+     *  dagarna (stadens opt-in.json, serverns radform) som DayFilteredList
+     *  syr in i listan. null = inte hämtat än. Alltid av vid SSR. */
+    optIn: boolean;
+    setOptIn: (on: boolean) => void;
+    optInDays: OptInDay[] | null;
+    setOptInDays: (d: OptInDay[] | null) => void;
 };
+
+/** Samma form som DayFilteredList:s ListedDay — typad löst här för att
+ *  slippa en importcirkel (DayFilteredList importerar den här modulen). */
+export type OptInDay = { key: string; label: string; short: string; hourCounts: number[]; events: unknown[] };
 
 const DayFilterCtx = createContext<DayFilterState | null>(null);
 
@@ -35,9 +46,11 @@ export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [sel, setSel] = useState<DaySel>({ kind: 'period', period: 'all' });
     const [hours, setHours] = useState<number[]>([]);
     const [category, setCategory] = useState<string | null>(null);
+    const [optIn, setOptIn] = useState(false);
+    const [optInDays, setOptInDays] = useState<OptInDay[] | null>(null);
 
     return (
-        <DayFilterCtx.Provider value={{ sel, setSel, hours, setHours, category, setCategory }}>
+        <DayFilterCtx.Provider value={{ sel, setSel, hours, setHours, category, setCategory, optIn, setOptIn, optInDays, setOptInDays }}>
             {children}
         </DayFilterCtx.Provider>
     );

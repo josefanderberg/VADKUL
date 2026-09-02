@@ -158,6 +158,18 @@ export function EventDayList({ events, cityName, children }: {
     cityName: string;
     children?: ReactNode;
 }) {
+    const { days, restCount } = buildListedDays(events, cityName);
+    return (
+        <DayFilteredList days={days} restCount={restCount} cityName={cityName}>
+            {children}
+        </DayFilteredList>
+    );
+}
+
+/** Event → klientens färdiga dagar (rena strängar). Delas av sidornas
+ *  EventDayList och stadens opt-in.json (route handler), så opt-in-raderna
+ *  får EXAKT samma form som serverns och kan sys in i listan i klienten. */
+export function buildListedDays(events: CityEvent[], cityName: string): { days: ListedDay[]; restCount: number } {
     const byDay = new Map<string, CityEvent[]>();
     for (const e of events) {
         const k = dayKey(e.time);
@@ -221,10 +233,5 @@ export function EventDayList({ events, cityName, children }: {
         })
         .filter(d => d.events.length > 0);
     const restCount = events.length - listed;
-
-    return (
-        <DayFilteredList days={shownDays} restCount={restCount} cityName={cityName}>
-            {children}
-        </DayFilteredList>
-    );
+    return { days: shownDays, restCount };
 }
