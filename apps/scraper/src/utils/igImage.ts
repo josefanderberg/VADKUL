@@ -28,6 +28,24 @@ import { bucket, STORAGE_BUCKET } from '../config/firebase';
 const STORAGE_FOLDER = 'city-posts';
 const FETCH_TIMEOUT_MS = 30_000;
 
+/**
+ * Storage-nyckel utan icke-ASCII. Kö-id:n bär ortsnamnet ("nyköping-…"), och
+ * ett rått ö i objektnamnet ger en URL med rått ö — den hämtade Meta inte:
+ * Nyköping 2/9 avvisades med "Only photo or video can be accepted as media
+ * type" medan Landskrona och Sundsvall (ren ASCII) gick igenom. Translitterera
+ * å/ä/ö och släng resten som inte är [a-z0-9._-].
+ */
+export function safeStorageKey(key: string): string {
+    return key
+        .toLowerCase()
+        .replace(/å/g, 'a').replace(/ä/g, 'a').replace(/ö/g, 'o')
+        .replace(/é/g, 'e').replace(/ü/g, 'u')
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-|-$/g, '')
+        || 'bild';
+}
+
 function haveSips(): boolean {
     try {
         execFileSync('/usr/bin/sips', ['--version'], { stdio: 'ignore' });
@@ -99,7 +117,7 @@ export async function prepareInstagramImage(sourceUrl: string, key: string): Pro
     // Meta hämtar bilden serverside — den skulle få gammalt innehåll. En
     // färsk sökväg per uppladdning kan inte träffa en varm cache.
     const stamp = new Date().toISOString().slice(0, 16).replace(/[-T:]/g, '');
-    const filePath = `${STORAGE_FOLDER}/${key}-${stamp}.${ext}`;
+    const filePath = `${STORAGE_FOLDER}/${safeStorageKey(key)}-${stamp}.${ext}`;
 
     try {
         const file = bucket.file(filePath);
