@@ -180,10 +180,21 @@ export async function getCityEvents(city: City): Promise<{ events: CityEvent[]; 
     return upcomingCityEvents(city, await assignEvents());
 }
 
-/** Stadens kommande OPT-IN-event (Svenska kyrkan/PRO/Korpen) — bara för
- *  stadens opt-in.json (route handler), aldrig för sidornas HTML. */
+/** Stadens kommande OPT-IN-event (Svenska kyrkan/PRO/Korpen) — för stadens
+ *  opt-in.json (route handler) och Fler-radens siffror, aldrig för sidornas
+ *  HTML-lista, intro-siffror eller metadata. */
 export async function getCityOptInEvents(city: City): Promise<{ events: CityEvent[]; updatedAt: string }> {
     return upcomingCityEvents(city, await assignOptInEvents());
+}
+
+/** Antal event per opt-in-källa ('svenskakyrkan' | 'pro' | 'korpen'). */
+export function countBySource(events: CityEvent[]): Record<string, number> {
+    const totals: Record<string, number> = {};
+    for (const e of events) {
+        const k = classifySource(e.id);
+        if (k) totals[k] = (totals[k] ?? 0) + 1;
+    }
+    return totals;
 }
 
 async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>): Promise<{ events: CityEvent[]; updatedAt: string }> {

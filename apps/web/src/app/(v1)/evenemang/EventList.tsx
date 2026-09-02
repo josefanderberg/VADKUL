@@ -3,6 +3,12 @@ import { dayKey, dayLabel, shortDayLabel, clockLabel, hourOf, type CityEvent } f
 import DayFilteredList, { type ListedDay, type ListedEvent } from './DayFilteredList';
 import { groupDayDuplicates } from '@/utils/groupDups';
 import { normalizePriceLabel } from '@/utils/priceLabel';
+import { classifySource } from '@/utils/sources';
+
+const sourceField = (id: string): { source?: string } => {
+    const s = classifySource(id);
+    return s ? { source: s } : {};
+};
 
 // Delade byggstenar för stads- och kategorisidorna: dag-grupperad eventlista
 // + schema.org-markup. Sidorna ska se ut och bete sig identiskt — bara
@@ -204,6 +210,10 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         category: e.category,
         hostName: e.hostName ?? null,
         description: e.description ?? null,
+        // Källnyckeln finns bara på opt-in-raderna (stadens opt-in.json) —
+        // Fler-radens chips filtrerar per källa. Sidornas egna rader är
+        // aldrig från en opt-in-källa, så fältet uteblir där (mindre HTML).
+        ...sourceField(e.id),
     });
     const shownDays: ListedDay[] = days
         .map(([k, list]) => {

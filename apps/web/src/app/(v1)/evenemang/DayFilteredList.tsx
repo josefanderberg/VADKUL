@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
-import { mergeListedDays } from '@/utils/cityOptIn';
+import { mergeListedDays, filterDaysBySource } from '@/utils/cityOptIn';
 import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
@@ -88,6 +88,9 @@ export type ListedEvent = {
     category: string;
     hostName: string | null;
     description: string | null;
+    /** Opt-in-källans nyckel ('svenskakyrkan' | 'pro' | 'korpen') — bara på
+     *  raderna i stadens opt-in.json; sidornas egna rader saknar fältet. */
+    source?: string;
     /** Dagens dubbletter (samma titel eller omslagsbild — groupDups): ÖVRIGA tillfällen utöver
      *  radens representant. Det som skiljer (tid & plats) radas upp bakom
      *  radens utfällning; representanten bär bild, status och hjärta. */
@@ -496,13 +499,15 @@ export default function DayFilteredList({ days: serverDays, restCount, cityName,
     // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
     // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
     // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours, category, optIn, optInDays } = useDayFilter();
-    // OPT-IN-KÄLLORNA (Josef 2/9): med växeln på sys stadens hämtade opt-in-
-    // dagar in i serverns lista (samma radform; utils/cityOptIn). Av/ej hämtat
-    // → serverns lista orörd, samma referens.
+    const { sel, setSel, hours, setHours, category, optInSources, optInDays } = useDayFilter();
+    // OPT-IN-KÄLLORNA (Josef 2/9): de valda källornas rader ur stadens hämtade
+    // opt-in-dagar sys in i serverns lista (samma radform; utils/cityOptIn).
+    // Inget valt/ej hämtat → serverns lista orörd, samma referens.
     const days = useMemo(
-        () => (optIn && optInDays ? mergeListedDays(serverDays, optInDays as ListedDay[]) : serverDays),
-        [serverDays, optIn, optInDays],
+        () => (optInSources.length > 0 && optInDays
+            ? mergeListedDays(serverDays, filterDaysBySource(optInDays as ListedDay[], optInSources))
+            : serverDays),
+        [serverDays, optInSources, optInDays],
     );
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen

@@ -3,11 +3,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, MIN_INDEXABLE_EVENTS, distKm,
-    getCityEvents, pickRecommended, dayLabel, cityTitle, categoryTitle,
+    getCityEvents, getCityOptInEvents, countBySource, pickRecommended, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import CategoryChips from '../CategoryChips';
-import OptInToggle from '../OptInToggle';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
@@ -71,6 +70,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
     const city = CITIES.find(c => c.slug === stad);
     if (!city) notFound();
     const { events, updatedAt } = await getCityEvents(city);
+    // Fler-radens siffror per opt-in-källa (kyrkan/PRO/Korpen). Själva
+    // eventen går ALDRIG in i sidan — de hämtas ur stadens opt-in.json.
+    const sourceCounts = countBySource((await getCityOptInEvents(city)).events);
 
     // Kategorichips: bara kategorier med nog många event för en egen sida.
     // Småorter har inga kategorisidor alls (getCategoryCombos hoppar dem) —
@@ -186,26 +188,26 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     {/* Kategorichipsen: riktiga länkar till kategorisidorna
                         (Google), men ett vanligt klick filtrerar listan PÅ
                         PLATS och byter URL:en (Josef 2/9) — se CategoryChips. */}
-                    {cityCategories.length > 0 && (
-                        <CategoryChips
-                            inPlace
-                            citySlug={city.slug}
-                            cityName={city.name}
-                            cityTitle={cityTitle(city.name)}
-                            allCount={events.length}
-                            categories={cityCategories.map(({ cat, count }) => ({
-                                slug: cat.slug,
-                                dataKey: cat.dataKey,
-                                emoji: cat.emoji,
-                                label: categoryLabel(cat.dataKey),
-                                count,
-                                title: categoryTitle(cat, city.name),
-                            }))}
-                        />
-                    )}
-                    {/* Opt-in-källorna (kyrkan/PRO/Korpen) hämtas först när
-                        växeln slås på — utanför HTML:n och siffrorna. */}
-                    <OptInToggle citySlug={city.slug} />
+                    {/* Renderas även på småorterna (tom kategorilista): då
+                        blir raden bara Fler-chippen med opt-in-källorna
+                        (kyrkan/PRO/Korpen), som hämtas först när någon slås
+                        på — utanför HTML:n och siffrorna. */}
+                    <CategoryChips
+                        inPlace
+                        citySlug={city.slug}
+                        cityName={city.name}
+                        cityTitle={cityTitle(city.name)}
+                        allCount={events.length}
+                        categories={cityCategories.map(({ cat, count }) => ({
+                            slug: cat.slug,
+                            dataKey: cat.dataKey,
+                            emoji: cat.emoji,
+                            label: categoryLabel(cat.dataKey),
+                            count,
+                            title: categoryTitle(cat, city.name),
+                        }))}
+                        sourceCounts={sourceCounts}
+                    />
                 </EventDayList>
                 </DayFilterProvider>
 

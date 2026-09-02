@@ -3,11 +3,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
-    categoryBySlug, getCityCategoryEvents, getCityEvents, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
+    categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import CategoryChips from '../../CategoryChips';
-import OptInToggle from '../../OptInToggle';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
@@ -70,6 +69,9 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     // + "Alla" med stadens totala antal — vägen tillbaka till hela listan.
     const cityCategoryChips = combos.filter(c => c.city.slug === city.slug);
     const { events: allCityEvents } = await getCityEvents(city);
+    // Fler-radens siffror: opt-in-källornas event i JUST den här kategorin
+    // (kategorifiltret gäller även de hämtade raderna).
+    const sourceCounts = countBySource((await getCityOptInEvents(city)).events.filter(e => e.category === cat.dataKey));
     const sameCategoryElsewhere = combos
         .filter(c => c.cat.slug === cat.slug && c.city.slug !== city.slug)
         .sort((a, b) => b.count - a.count)
@@ -181,10 +183,8 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                             count,
                             title: categoryTitle(c, city.name),
                         }))}
+                        sourceCounts={sourceCounts}
                     />
-                    {/* Samma opt-in-växel som stadssidan; kategorifiltret
-                        (kontexten) gäller även de hämtade raderna. */}
-                    <OptInToggle citySlug={city.slug} />
                 </EventDayList>
                 </DayFilterProvider>
 

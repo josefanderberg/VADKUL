@@ -1,4 +1,4 @@
-import { CITIES, getCityOptInEvents } from '../../cityData';
+import { CITIES, getCityOptInEvents, countBySource } from '../../cityData';
 import { buildListedDays } from '../../EventList';
 
 // Stadens OPT-IN-EVENT (Svenska kyrkan, PRO, Korpen) som bakad JSON — hämtas
@@ -21,5 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stad: s
     if (!city) return new Response('Not found', { status: 404 });
     const { events, updatedAt } = await getCityOptInEvents(city);
     const { days } = buildListedDays(events, city.name);
-    return Response.json({ updatedAt, total: events.length, days });
+    // Raderna bär `source` (EventList.sourceField) — Fler-radens chips slår
+    // på/av per källa; totals = antal per källa för chipsens siffror.
+    return Response.json({ updatedAt, total: events.length, totals: countBySource(events), days });
 }
