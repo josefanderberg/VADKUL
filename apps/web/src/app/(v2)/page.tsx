@@ -888,7 +888,12 @@ export default function HomePage() {
     // (Vecko-hinten vid dagsteg — ⇄-snurr + halv guld på båda periodraderna —
     // byggdes och REVS SAMMA DAG 30/8, Josef: "såg bara skumt ut". Dagsteget
     // ska inte blinka något alls.)
-    const handleTourDayStep = useCallback((delta: number) => {
+    // Vilket event dagbytet ska landa PÅ: kortets Bakåt/Nästa över ett dagbyte
+    // (Josef 2/9) skickar med id:t; konsumeras av dagbytes-effekten (efter
+    // inTourView). null = närmast kartans mitt bland eventen i bild.
+    const daySwitchSelectIdRef = useRef<string | null>(null);
+    const handleTourDayStep = useCallback((delta: number, selectEventId?: string) => {
+        daySwitchSelectIdRef.current = selectEventId ?? null;
         setPulseSuppressed(true);
         startTransition(() => setDayOffset(o => Math.max(0, o + delta)));
     }, []);
@@ -1867,6 +1872,10 @@ export default function HomePage() {
         const dayKey = `${dayOffset}:${dayRangeDays}`;
         if (prevDayKey.current !== dayKey) {
             prevDayKey.current = dayKey;
+            // Ett begärt landningsevent (kortets Bakåt/Nästa över ett dagbyte)
+            // gäller bara DETTA byte — läs och nolla oavsett vad som händer nedan.
+            const wantedId = daySwitchSelectIdRef.current;
+            daySwitchSelectIdRef.current = null;
             // Bildspelets blink växlar dag↔vecka en gång i halvsekunden. Det ska bara
             // ändra vad kartan VISAR — inte öppna ett eventkort per blink.
             if (tourPlayingRef.current) return;
@@ -1874,10 +1883,18 @@ export default function HomePage() {
             // ett (Josef 9/8) — kartan ska bara byta vad den visar. Kort öppnas
             // när man själv klickar på en bricka.
             if (selectedEventRef.current) {
-                const nowMs = Date.now();
-                const inView = visibleEvents.filter(e =>
-                    inTourView(e) && !discardedEventIds.has(e.id) && !isEventPast(e, nowMs));
-                setSelectedEvent(pickNearestToPoint(mapCenterRef.current, inView.length > 0 ? inView : filteredEvents));
+                const wanted = wantedId ? filteredEvents.find(e => e.id === wantedId) ?? null : null;
+                if (wanted) {
+                    // Bakåt/Nästa över ett dagbyte: landa på just det event man
+                    // stod på där (Josef 2/9). Finns det inte längre i dagens
+                    // lista → närmast mitten i bild som vid ett vanligt byte.
+                    setSelectedEvent(wanted);
+                } else {
+                    const nowMs = Date.now();
+                    const inView = visibleEvents.filter(e =>
+                        inTourView(e) && !discardedEventIds.has(e.id) && !isEventPast(e, nowMs));
+                    setSelectedEvent(pickNearestToPoint(mapCenterRef.current, inView.length > 0 ? inView : filteredEvents));
+                }
             }
             setDaySwitchNonce(n => n + 1);
         }

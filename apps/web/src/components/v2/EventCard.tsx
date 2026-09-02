@@ -565,6 +565,13 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
     );
 }
 
+/** En post i kortets bakåt-/framåthistorik: eventet OCH dagen det låg på,
+ *  så Bakåt/Nästa kan ta en över ett dagbyte (Josef 2/9: "klickar man på
+ *  Nästa så man byter dag ska man kunna klicka på tillbaka-knappen igen").
+ *  Eventobjektet sparas hellre än bara id:t — en annan dags event finns
+ *  inte i `events` (dagens lista) och behövs ändå för emoji-förhandsvisningen. */
+type NavEntry = { evt: LinkEvent; dayOffset: number };
+
 interface EventCardProps {
     events: LinkEvent[];
     /** Antal event för dagen i dag-väljarens badge — räknas FÖRE källfiltret så
@@ -640,8 +647,10 @@ interface EventCardProps {
      *  förhandsvisning; null släcker knappen. */
     nextDayOffset?: number | null;
     /** Stega dagen (delta i dagar) — dagväljarens pilhandler, så landnings-
-     *  pulsen tystas på samma sätt som vid ett manuellt dagsteg. */
-    onDayStep?: (delta: number) => void;
+     *  pulsen tystas på samma sätt som vid ett manuellt dagsteg. Med
+     *  `selectEventId` ska sidan landa på JUST det eventet (Bakåt/Nästa över
+     *  ett dagbyte); utan väljer den närmast kartans mitt bland dem i bild. */
+    onDayStep?: (delta: number, selectEventId?: string) => void;
     onSunClick?: () => void;
     /** Sant när huvudmolnet/solmolnet ligger utanför skärmen — då visas en
      *  återkallnings-knapp jämte solknappen. */
@@ -876,10 +885,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         try { localStorage.setItem(COACH_KEY, '1'); } catch { /* privat läge */ }
     };
     // Browse-historik (bakåt-stack): event-id:n vi tittade på innan vi gick vidare.
-    const [historyStack, setHistoryStack] = useState<string[]>([]);
+    const [historyStack, setHistoryStack] = useState<NavEntry[]>([]);
     // Framåt-stack: event vi backat ur. Nästa spelar upp dem i samma ordning igen
     // (som webbläsarens framåt-knapp) i stället för att räkna fram ett nytt event.
-    const [forwardStack, setForwardStack] = useState<string[]>([]);
+    const [forwardStack, setForwardStack] = useState<NavEntry[]>([]);
 
     const [isAnimating, setIsAnimating] = useState(true);
     const isDragging = useRef(false);
@@ -892,6 +901,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
     // "användaren klickade på kartan" från "vi tryckte Nästa".
     const expectedNextIdRef = useRef<string | null>(null);
+    // ARMERAT DAGBYTE (Josef 2/9): Nästa/Bakåt har just bett sidan byta dag,
+    // och nästa "externa" val är LANDNINGEN på den dagen — inte ett kart-
+    // klick. Ankar-effekten ser då att dagen bytt sedan armeringen och låter
+    // bakåt-/framåtstackarna stå kvar (ny dag = ny runda: ankare + besökt
+    // nollas ändå). Tidsfönstret skyddar mot att en landning som aldrig kom
+    // (sidan valde samma event) armerar ett riktigt kartklick långt senare.
+    const dayStepRef = useRef<{ fromOffset: number; armedAt: number } | null>(null);
+    const DAY_STEP_LANDING_MS = 3000;
     const isFreshOpenRef = useRef(false);
     // Senast förbrukade helskärmsbegäran (fullOpenNonce) — se ankar-effekten.
     const consumedFullOpenNonceRef = useRef(0);
@@ -1156,13 +1173,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
 
         const isPickNext = expectedNextIdRef.current === selectedEvent.id;
+        const step = dayStepRef.current;
+        const isDayStepLanding = !!step && step.fromOffset !== dayOffset
+            && Date.now() - step.armedAt < DAY_STEP_LANDING_MS;
         if (isPickNext) {
             // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
+        } else if (isDayStepLanding) {
+            // LANDNINGEN efter ett dagbyte via Nästa/Bakåt (Josef 2/9): sidan
+            // valde eventet åt oss. Ny dag = ny runda — nytt ankare och tomt
+            // besökt-set — men bakåt-/framåtstackarna står KVAR så man kan gå
+            // tillbaka över dagbytet (och framåt igen).
+            dayStepRef.current = null;
+            setAnchorId(selectedEvent.id);
+            anchorSetAtRef.current = Date.now();
+            setVisitedEventIds(new Set());
         } else {
             // Användaren valde ett nytt event (kartkick / första valet) → ny
             // ankare och en helt ny browsing-gren: nollställ besökt + historik.
+            dayStepRef.current = null;
             setAnchorId(selectedEvent.id);
             anchorSetAtRef.current = Date.now();
             setVisitedEventIds(new Set());
@@ -1570,9 +1600,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
      *  kartans mitt bland dem i bild — kameran står still. Sant om ett
      *  dagbyte utlöstes; falskt när ingen dag finns kvar. */
     const advanceToNextDay = (): boolean => {
-        if (nextDayOffset == null || !onDayStep) return false;
-        onDayStep(nextDayOffset - dayOffset);
+        if (nextDayOffset == null || !onDayStep || !selectedEvent) return false;
+        // Dagbytet är ett steg i historiken: eventet man lämnar (och dess dag)
+        // läggs bakåt, så Bakåt tar en tillbaka över dagbytet (Josef 2/9).
+        pushHistory({ evt: selectedEvent, dayOffset });
+        setForwardStack([]);
+        stepToDay(nextDayOffset);
         return true;
+    };
+    /** Be sidan byta dag och armera landningen (se dayStepRef). Med
+     *  selectEventId landar dagbytet på just det eventet (Bakåt/Nästa över
+     *  ett dagbyte), annars på närmaste i bild. */
+    const stepToDay = (toOffset: number, selectEventId?: string) => {
+        dayStepRef.current = { fromOffset: dayOffset, armedAt: Date.now() };
+        onDayStep?.(toOffset - dayOffset, selectEventId);
     };
 
     const THRESHOLD = 100; // Pixels to trigger a swipe action
@@ -1805,8 +1846,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         onPointerUp(e as unknown as React.PointerEvent<HTMLDivElement>);
     };
 
-    const pushHistory = (id: string) => {
-        setHistoryStack(prev => [...prev, id]);
+    const pushHistory = (entry: NavEntry) => {
+        setHistoryStack(prev => [...prev, entry]);
     };
 
     const handleSwipeOut = (direction: 'left' | 'right') => {
@@ -1832,8 +1873,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             onDiscardEvent(selectedEvent.id);
         }
 
-        const previousId = selectedEvent.id;
-
         // Wait for animation, then change event
         setTimeout(() => {
             if (events.length === 0) return;
@@ -1852,7 +1891,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 if (!advanceToNextDay()) onSelectEvent(null);
                 return;
             }
-            pushHistory(previousId);
+            pushHistory({ evt: selectedEvent, dayOffset });
             onNavigate?.(); // kameran ska stå kvar — vi fokuserar inte det nya eventet
             selectNextTarget(next); // multiplats → kortets väljarlista
         }, 200); // 200ms matches the CSS transition
@@ -1863,10 +1902,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const handleHistoryBack = () => {
         if (didDragRef.current) { didDragRef.current = false; return; }
         if (historyStack.length === 0 || !selectedEvent) return;
-        const prevId = historyStack[historyStack.length - 1];
-        const prevEvent = events.find(e => e.id === prevId);
+        const entry = historyStack[historyStack.length - 1];
         setHistoryStack(prev => prev.slice(0, -1));
-        setForwardStack(prev => [...prev, selectedEvent.id]);
+        setForwardStack(prev => [...prev, { evt: selectedEvent, dayOffset }]);
+        if (entry.dayOffset !== dayOffset) {
+            // BAKÅT ÖVER ETT DAGBYTE (Josef 2/9): tillbaka till den dagen, och
+            // sidan landar på eventet man stod på där (finns det inte längre:
+            // närmast kartans mitt i bild). Landningen behåller stackarna, så
+            // Nästa tar en framåt över dagbytet igen.
+            if (onDayStep) stepToDay(entry.dayOffset, entry.evt.id);
+            setExitX(null);
+            updateDragX(0);
+            return;
+        }
+        const prevEvent = events.find(e => e.id === entry.evt.id);
         if (prevEvent) {
             // Intern navigering → behåll ankare/besökt (markeras som "väntat").
             expectedNextIdRef.current = prevEvent.id;
@@ -1887,8 +1936,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // backade); annars slängs stacken och Nästa räknar fram som vanligt.
         let next: LinkEvent | null = null;
         if (forwardStack.length > 0) {
-            const fwdId = forwardStack[forwardStack.length - 1];
-            const fwd = events.find(e => e.id === fwdId) ?? null;
+            const top = forwardStack[forwardStack.length - 1];
+            if (top.dayOffset !== dayOffset && onDayStep) {
+                // FRAMÅT ÖVER ETT DAGBYTE (man backade över det): eventet man
+                // står på läggs bakåt, dagen byts och sidan landar på just det
+                // event man var på där.
+                pushHistory({ evt: selectedEvent, dayOffset });
+                setForwardStack(prev => prev.slice(0, -1));
+                stepToDay(top.dayOffset, top.evt.id);
+                return;
+            }
+            const fwd = top.dayOffset === dayOffset ? events.find(e => e.id === top.evt.id) ?? null : null;
             if (fwd && (!inView || inView(fwd))) {
                 next = fwd;
                 setForwardStack(prev => prev.slice(0, -1));
@@ -1905,7 +1963,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             advanceToNextDay();
             return;
         }
-        pushHistory(selectedEvent.id);
+        pushHistory({ evt: selectedEvent, dayOffset });
         onNavigate?.(); // kameran står kvar — vi fokuserar inte det nya eventet
         selectNextTarget(next); // multiplats → kortets väljarlista
 
@@ -1926,19 +1984,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     // Föregående event i bakåt-stacken — visas som emoji-bricka (= bakåt-knapp)
     // till vänster om Nästa, så man ser vilket event man går TILLBAKA till.
-    const backEventId = historyStack[historyStack.length - 1];
-    const backEvent = backEventId ? events.find(e => e.id === backEventId) : undefined;
+    const backEntry: NavEntry | undefined = historyStack[historyStack.length - 1];
+    const backEvent = backEntry?.evt;
+    // Ligger föregående event på en ANNAN dag tar Bakåt en över dagbytet —
+    // titeln säger vilken dag, så det inte kommer som en överraskning.
+    const backCrossDay = !!backEntry && backEntry.dayOffset !== dayOffset;
+    const backTitle = backEvent
+        ? `Gå tillbaka till ${backEvent.title}${backCrossDay ? ` (${getDayLabel(backEntry!.dayOffset, dayRangeDays).toLowerCase()})` : ''}`
+        : null;
 
-    // Antal event i föregående events grupp (om det var en multibricka)
+    // Antal event i föregående events grupp (om det var en multibricka).
+    // Räknas bara på dagens lista — över ett dagbyte visas ingen siffra.
     const backEventGroupCount = useMemo(() => {
-        if (!backEvent || !backEvent.lat || !backEvent.lng) return 1;
+        if (!backEvent || backCrossDay || !backEvent.lat || !backEvent.lng) return 1;
         const key = `${backEvent.lat.toFixed(4)},${backEvent.lng.toFixed(4)}`;
         return events.filter(e => {
             if (!e.lat || !e.lng) return false;
             const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
             return k === key;
         }).length;
-    }, [backEvent, events]);
+    }, [backEvent, backCrossDay, events]);
 
     // Nästa event — SAMMA val som handleNextOnly gör (framåt-stacken först,
     // annars närmaste obesökta), men helt ren (inga setState/refs) så den kan
@@ -1948,7 +2013,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // Har vi backat? Nästa spelar upp framåt-stacken i samma ordning igen
         // — om eventet fortfarande är i bild (samma vakt som handleNextOnly).
         if (forwardStack.length > 0) {
-            const fwd = events.find(e => e.id === forwardStack[forwardStack.length - 1]);
+            const top = forwardStack[forwardStack.length - 1];
+            // Över ett dagbyte: ingen emoji — knappen visar dagens namn i
+            // stället (nextDayLabel), och trycket byter dag.
+            if (top.dayOffset !== dayOffset) return null;
+            const fwd = events.find(e => e.id === top.evt.id);
             if (fwd && (!inView || inView(fwd))) return fwd;
         }
         // Annars: samma logik som pickNext, utan sidoeffekter.
@@ -1966,7 +2035,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
         // null = alla i bild genomgångna → knappen visar nästa dag i stället.
         return findNearestEvent(anchor, pool, discardedEventIds, simVisited);
-    }, [selectedEvent, events, forwardStack, anchorId, visitedEventIds, discardedEventIds, now, inView]);
+    }, [selectedEvent, events, forwardStack, dayOffset, anchorId, visitedEventIds, discardedEventIds, now, inView]);
 
     // Antal event i nästa events grupp (om det är en multibricka)
     const nextEventGroupCount = useMemo(() => {
@@ -1982,8 +2051,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // förhandsvisning som förut; (2) eventen i bild slut men en dag med
     // event i bild finns → NÄSTA DAGS NAMN på knappen ("IMORGON", "TORSDAG"),
     // trycket byter dag; (3) ingen dag kvar → släckt knapp.
-    const nextDayLabel = !nextEvent && nextDayOffset != null ? getDayLabel(nextDayOffset, dayRangeDays) : null;
-    const nextDisabled = !nextEvent && nextDayOffset == null;
+    // Har man backat över ett dagbyte ligger DEN dagen överst i framåtstacken
+    // och vinner över den beräknade nästa dagen — Nästa spelar upp samma väg.
+    const forwardTop: NavEntry | undefined = forwardStack[forwardStack.length - 1];
+    const nextStepDayOffset = forwardTop && forwardTop.dayOffset !== dayOffset ? forwardTop.dayOffset : nextDayOffset;
+    const nextDayLabel = !nextEvent && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
+    const nextDisabled = !nextEvent && nextStepDayOffset == null;
     const nextTitle = nextEvent
         ? `Närmaste i bild: ${nextEvent.title}`
         : nextDayLabel
@@ -2089,8 +2162,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerUp={onButtonPointerUp}
                                 onPointerCancel={onButtonPointerUp}
                                 disabled={!backEvent}
-                                aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
-                                title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
+                                aria-label={backTitle ?? 'Inget föregående event'}
+                                title={backTitle ?? 'Inget föregående event än'}
                                 className={`pointer-events-auto relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
                                     backEvent
                                         ? 'hover:bg-white/50 hover:scale-105 active:scale-95 cursor-pointer text-xl'
