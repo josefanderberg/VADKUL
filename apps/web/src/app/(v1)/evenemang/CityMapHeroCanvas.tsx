@@ -59,6 +59,8 @@ export type HeroLiveEvent = {
     t: number;
     hour: number | null;
     day: string;
+    /** Kategorinyckeln — heron följer kategorichipsen precis som listan. */
+    category: string;
 };
 
 /** Samma "har varit"-trappa som daglistan och stora kartan: klockslag = 1 h
@@ -123,7 +125,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
     // Voyager-kaklen under. Tills dess täcker landfärgs-plattan dem, så heron
     // ser ut som kartan redan från server-HTML:en.
     const [failed, setFailed] = useState(false);
-    const { sel, setSel, hours } = useDayFilter();
+    const { sel, setSel, hours, category } = useDayFilter();
 
     const mapRef = useRef<MapLibreMap | null>(null);
     const markerCtorRef = useRef<(new (o: object) => MapLibreMarker) | null>(null);
@@ -143,6 +145,8 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
         const visible = markers.filter(e => {
             if (isPastEv(e, now)) return false;
             if (keys && !keys.includes(e.day)) return false;
+            // Kategorichipsen (Josef 2/9): heron och listan är ETT filter.
+            if (category !== null && e.category !== category) return false;
             if (hours.length && (e.hour === null || !hours.includes(e.hour))) return false;
             return true;
         });
@@ -250,7 +254,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
         if (!ready) return;
         rebuild();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ready, sel, hours, markers]);
+    }, [ready, sel, hours, category, markers]);
 
     return (
         <>

@@ -495,7 +495,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
     // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
     // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
     // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours } = useDayFilter();
+    const { sel, setSel, hours, setHours, category } = useDayFilter();
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
     // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).
@@ -594,10 +594,14 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
     const hourMatch = (e: { hour: number | null }) =>
         hours.length ? e.hour !== null && hours.includes(e.hour) : true;
+    // KATEGORIN (CategoryChips → kontexten, Josef 2/9): stadssidans rader
+    // bär alla kategorier och filtreras här på plats; på kategorisidan är
+    // raderna redan servern-filtrerade och matchar alla.
+    const catMatch = (e: { category?: string }) => category === null || e.category === category;
     // En grupprad (dups) matchar timfiltret om NÅGOT av tillfällena gör det,
     // och räknas som "har varit" först när ALLA tillfällen passerat — annars
     // försvinner kvällens sagostund för att morgonens redan varit.
-    const rowMatch = (e: ListedEvent) => hourMatch(e) || (e.dups ?? []).some(hourMatch);
+    const rowMatch = (e: ListedEvent) => catMatch(e) && (hourMatch(e) || (e.dups ?? []).some(hourMatch));
     const rowPast = (e: ListedEvent) => isPast(e) && (e.dups ?? []).every(isPast);
     // Från nu och framåt: passerade rader göms bakom "har redan varit".
     const shownDays = visDays
@@ -616,7 +620,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
     // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
     // ihop det öppna eventet (raden kan ha filtrerats bort).
-    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours]);
+    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours, category]);
 
     // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
     // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
@@ -660,10 +664,15 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
             window.removeEventListener('scroll', check);
             window.removeEventListener('resize', check);
         };
-    }, [revealed, hasMoreDays, sel, hours]);
+    }, [revealed, hasMoreDays, sel, hours, category]);
 
     // Histogram = summan av de visade dagarnas hourCounts (sanna totaler).
-    const hist = Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + (d.hourCounts[h] ?? 0), 0));
+    // Med en kategori vald räknas staplarna i stället ur radernas (och
+    // dupsens) timmar — hourCounts är förbyggda över ALLA kategorier.
+    const hist = category === null
+        ? Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + (d.hourCounts[h] ?? 0), 0))
+        : Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + d.events.reduce((t, e) =>
+            t + [e, ...(e.dups ?? [])].filter(x => x.category === category && x.hour === h).length, 0), 0));
     const histMax = Math.max(...hist, 1);
     let lo = 7, hi = 22;
     for (let h = 0; h < 7; h++) if (hist[h] > 0) { lo = h; break; }
@@ -896,7 +905,7 @@ export default function DayFilteredList({ days, restCount, cityName, children }:
 
             {/* Visas först när alla dagar är avtäckta — annars ser det ut som
                 att listan tar slut fast sentineln fyller på fler dagar. */}
-            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && !hasMoreDays && restCount > 0 && (
+            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category === null && !hasMoreDays && restCount > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restCount} evenemang längre fram.{' '}
                     <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>

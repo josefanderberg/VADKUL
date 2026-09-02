@@ -3,9 +3,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS,
-    categoryBySlug, getCityCategoryEvents, getCategoryCombos, dayLabel,
+    categoryBySlug, getCityCategoryEvents, getCityEvents, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
+import CategoryChips from '../../CategoryChips';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
 import CityMapHero, { cityMapHref } from '../../CityMapHero';
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     const counts = countsSentence(todayCount, weekendCountMeta, weekCount);
     const description = `${events.length} kommande evenemang: ${cat.intro(city.name)} i ${city.name} med omnejd.${counts} Se allt som händer på VADKUL-kartan, gratis.`;
     return {
-        title: `${cat.h1(city.name)} — idag & i helgen`,
+        title: categoryTitle(cat, city.name),
         description,
         alternates: { canonical: `/evenemang/${city.slug}/${cat.slug}` },
         openGraph: {
@@ -64,6 +65,10 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     const combos = await getCategoryCombos();
     const siblingCategories = combos
         .filter(c => c.city.slug === city.slug && c.cat.slug !== cat.slug);
+    // Chip-raden ovanför listan: ALLA stadens kategorier (den här markerad)
+    // + "Alla" med stadens totala antal — vägen tillbaka till hela listan.
+    const cityCategoryChips = combos.filter(c => c.city.slug === city.slug);
+    const { events: allCityEvents } = await getCityEvents(city);
     const sameCategoryElsewhere = combos
         .filter(c => c.cat.slug === cat.slug && c.city.slug !== city.slug)
         .sort((a, b) => b.count - a.count)
@@ -155,7 +160,28 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400 dark:text-zinc-500">Uppdaterad {dayLabel(updatedAt)}</p>
 
-                <EventDayList events={events} cityName={city.name} />
+                <EventDayList events={events} cityName={city.name}>
+                    {/* Samma chip-rad som stadssidan, men som vanliga länkar:
+                        listan här har bara kategorins rader, så ett byte
+                        måste hämta sidan. "Alla" → stadssidan (Josef 2/9:
+                        "man ska såklart kunna klicka för att komma tillbaka
+                        och se alla event"). */}
+                    <CategoryChips
+                        inPlace={false}
+                        citySlug={city.slug}
+                        cityName={city.name}
+                        cityTitle={cityTitle(city.name)}
+                        allCount={allCityEvents.length}
+                        categories={cityCategoryChips.map(({ cat: c, count }) => ({
+                            slug: c.slug,
+                            dataKey: c.dataKey,
+                            emoji: c.emoji,
+                            label: categoryLabel(c.dataKey),
+                            count,
+                            title: categoryTitle(c, city.name),
+                        }))}
+                    />
+                </EventDayList>
                 </DayFilterProvider>
 
                 <FaqSection faqs={faqs} />

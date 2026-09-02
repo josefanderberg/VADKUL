@@ -3,9 +3,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, CATEGORY_PAGES, MIN_CATEGORY_EVENTS, MIN_INDEXABLE_EVENTS, distKm,
-    getCityEvents, pickRecommended, dayLabel,
+    getCityEvents, pickRecommended, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
+import CategoryChips from '../CategoryChips';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
     // för att helgtalet skulle rymmas utan att svansen kapas.
     const description = `${events.length} evenemang i ${city.name} med omnejd.${counts} Konserter, marknader, sport och saker att göra med barn — gratis på VADKUL.`;
     return {
-        title: `Vad händer i ${city.name}? Evenemang & saker att göra idag`,
+        title: cityTitle(city.name),
         description,
         // Säsongsvakt för småorterna: tunn sida → noindex (och ur sitemapen),
         // tills utbudet kommer tillbaka. Sidan finns kvar så länkar inte 404:ar.
@@ -181,23 +182,25 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     i sektionen och styr allt under: kategorichipsen (children)
                     och dag-för-dag-listan. */}
                 <EventDayList events={events} cityName={city.name}>
+                    {/* Kategorichipsen: riktiga länkar till kategorisidorna
+                        (Google), men ett vanligt klick filtrerar listan PÅ
+                        PLATS och byter URL:en (Josef 2/9) — se CategoryChips. */}
                     {cityCategories.length > 0 && (
-                        <div className="mt-8">
-                            <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Populärt i {city.name}</h2>
-                            <div className="flex flex-wrap gap-2">
-                                {cityCategories.map(({ cat, count }) => (
-                                    <Link
-                                        key={cat.slug}
-                                        href={`/evenemang/${city.slug}/${cat.slug}`}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
-                                    >
-                                        <span aria-hidden>{cat.emoji}</span>
-                                        {categoryLabel(cat.dataKey)}
-                                        <span className="text-slate-400 dark:text-zinc-500 font-black">{count}</span>
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
+                        <CategoryChips
+                            inPlace
+                            citySlug={city.slug}
+                            cityName={city.name}
+                            cityTitle={cityTitle(city.name)}
+                            allCount={events.length}
+                            categories={cityCategories.map(({ cat, count }) => ({
+                                slug: cat.slug,
+                                dataKey: cat.dataKey,
+                                emoji: cat.emoji,
+                                label: categoryLabel(cat.dataKey),
+                                count,
+                                title: categoryTitle(cat, city.name),
+                            }))}
+                        />
                     )}
                 </EventDayList>
                 </DayFilterProvider>

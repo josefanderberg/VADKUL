@@ -98,6 +98,7 @@ function buildLiveEvents(events: CityEvent[]): HeroLiveEvent[] {
                 t: Date.parse(e.time),
                 hour: e.hasSpecificTime ? hourOf(e.time) : null,
                 day: dayKey(e.time),
+                category: e.category,
             };
         });
 }

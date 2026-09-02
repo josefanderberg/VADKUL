@@ -426,6 +426,11 @@ export const CATEGORY_PAGES: CategoryPage[] = [
 
 export const categoryBySlug = (slug: string) => CATEGORY_PAGES.find(c => c.slug === slug);
 
+/** Stads- och kategorisidornas <title> — EN källa, för både metadata och
+ *  dokumenttiteln vid kategoribytet på plats (CategoryChips). */
+export const cityTitle = (cityName: string) => `Vad händer i ${cityName}? Evenemang & saker att göra idag`;
+export const categoryTitle = (cat: CategoryPage, cityName: string) => `${cat.h1(cityName)} — idag & i helgen`;
+
 /** Stadens kommande event i en kategori (tidssorterade). */
 export async function getCityCategoryEvents(city: City, dataKey: string) {
     const { events, updatedAt } = await getCityEvents(city);

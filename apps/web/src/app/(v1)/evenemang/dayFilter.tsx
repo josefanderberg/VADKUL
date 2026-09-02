@@ -21,6 +21,12 @@ type DayFilterState = {
     setSel: (s: DaySel) => void;
     hours: number[];
     setHours: (h: number[] | ((prev: number[]) => number[])) => void;
+    /** KATEGORIN (Josef 2/9: "byte utan sidladdning") — datanyckeln
+     *  ('family', 'music' …) eller null = alla. Sätts av CategoryChips ur
+     *  URL:en; listan (och heron) filtrerar på den. På kategorisidan är
+     *  raderna redan kategorifiltrerade av servern, så värdet är ofarligt. */
+    category: string | null;
+    setCategory: (c: string | null) => void;
 };
 
 const DayFilterCtx = createContext<DayFilterState | null>(null);
@@ -28,9 +34,10 @@ const DayFilterCtx = createContext<DayFilterState | null>(null);
 export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [sel, setSel] = useState<DaySel>({ kind: 'period', period: 'all' });
     const [hours, setHours] = useState<number[]>([]);
+    const [category, setCategory] = useState<string | null>(null);
 
     return (
-        <DayFilterCtx.Provider value={{ sel, setSel, hours, setHours }}>
+        <DayFilterCtx.Provider value={{ sel, setSel, hours, setHours, category, setCategory }}>
             {children}
         </DayFilterCtx.Provider>
     );
