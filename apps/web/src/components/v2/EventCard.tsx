@@ -2281,15 +2281,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 title={nextTitle}
                                 className={`group/nasta pointer-events-auto relative shrink-0 ml-auto h-[38px] box-border flex items-center bg-transparent${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
-                                {/* DAGBYTES-LÄGET ser annorlunda ut (Josef 2/9: "byter färg
-                                    eller border så man ser visuellt att man byter dag"):
-                                    vit kapsel med blå text och blå kant + kalender-ikon i
-                                    stället för den blå gradienten och eventets emoji. Inte
-                                    guld — guld betyder boost på den här kartan. */}
-                                <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full transition-all group-active/nasta:scale-[0.97] ${
-                                    nextDayLabel
-                                        ? 'bg-white text-[#006AA7] ring-2 ring-inset ring-[#006AA7] shadow-md shadow-sky-900/20 group-hover/nasta:bg-sky-50 group-hover/nasta:shadow-lg'
-                                        : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg'
+                                {/* DAGBYTES-LÄGET: samma blå kapsel men med GUL RAM (Josef
+                                    2/9: "skit i det att den byter färg, lägg en gul ram i
+                                    stället") + kalender-ikon i stället för eventets emoji.
+                                    Ägarbeslut — den vita omfärgningen byggdes och revs
+                                    samma kväll. */}
+                                <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-inset transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97] ${
+                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : 'ring-1 ring-white/25'
                                 }`}>
                                     {/* Eventen i bild slut → nästa dags namn i stället för NÄSTA,
                                         så man ser att trycket byter dag (se nextDayLabel). */}
@@ -2310,8 +2308,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                             )}
                                         </span>
                                     ) : nextDayLabel ? (
-                                        <span aria-hidden className="flex items-center justify-center w-7 h-7 rounded-full bg-[#006AA7] text-white">
-                                            <CalendarDays size={14} />
+                                        <span aria-hidden className="flex items-center justify-center w-7 h-7">
+                                            <CalendarDays size={16} />
                                         </span>
                                     ) : (
                                         <span aria-hidden className="flex items-center justify-center w-7 h-7">
