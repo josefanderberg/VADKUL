@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    dueItems, queueId, replaceItem, staleItems, upsertQueueItem, STALE_MS,
+    dueItems, forcedItems, queueId, replaceItem, staleItems, upsertQueueItem, STALE_MS,
     type IgQueueItem,
 } from './igQueue';
 
@@ -71,6 +71,40 @@ describe('dueItems', () => {
     it('publicerar i tidsordning', () => {
         const q = [item({ id: 'sen', publishAt: at(6) }), item({ id: 'tidig', publishAt: at(5) })];
         expect(dueItems(q, now).map(x => x.id)).toEqual(['tidig', 'sen']);
+    });
+});
+
+describe('forcedItems', () => {
+    // September — dagens tre inlägg 2/9 hann bli förfallna medan token var trasig.
+    const sep = (d: number, h: number) => new Date(2026, 8, d, h, 0, 0).getTime();
+    const q = [
+        item({ id: 'sundsvall-2026-09-02-08', publishAt: sep(2, 8), status: 'förfallen' }),
+        item({ id: 'landskrona-2026-09-02-06', publishAt: sep(2, 6), status: 'förfallen' }),
+        item({ id: 'nyköping-2026-09-02-07', publishAt: sep(2, 7), status: 'förfallen' }),
+        item({ id: 'luleå-2026-09-03-06', publishAt: sep(3, 6) }),
+    ];
+
+    it('ett datum tar hela dagen, förfallna inräknade, i tidsordning', () => {
+        expect(forcedItems(q, ['2026-09-02']).map(x => x.id))
+            .toEqual(['landskrona-2026-09-02-06', 'nyköping-2026-09-02-07', 'sundsvall-2026-09-02-08']);
+    });
+
+    it('ett exakt id tar bara den posten — och färskvaran spelar ingen roll', () => {
+        expect(forcedItems(q, ['luleå-2026-09-03-06']).map(x => x.id)).toEqual(['luleå-2026-09-03-06']);
+        expect(forcedItems(q, ['Sundsvall-2026-09-02-08 ']).map(x => x.id)).toEqual(['sundsvall-2026-09-02-08']);
+    });
+
+    it('tomt eller okänt urval ger inget', () => {
+        expect(forcedItems(q, [])).toEqual([]);
+        expect(forcedItems(q, ['', ' '])).toEqual([]);
+        expect(forcedItems(q, ['2026-09-04'])).toEqual([]);
+        expect(forcedItems(q, ['2026-09'])).toEqual([]);
+    });
+
+    it('rör ALDRIG en redan publicerad post — inte ens tvingat', () => {
+        const done = [item({ id: 'malmo-2026-09-02-06', publishAt: sep(2, 6), status: 'publicerad', igMediaId: '1' })];
+        expect(forcedItems(done, ['2026-09-02'])).toEqual([]);
+        expect(forcedItems(done, ['malmo-2026-09-02-06'])).toEqual([]);
     });
 });
 

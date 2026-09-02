@@ -94,6 +94,23 @@ export function staleItems(items: IgQueueItem[], now: number, staleMs = STALE_MS
     return items.filter(x => x.status === 'väntar' && now - x.publishAt > staleMs);
 }
 
+/**
+ * Poster som ska TVINGAS ut oavsett klockslag och färskvara — läget när
+ * token/behörigheten varit trasig och dagens inlägg redan hunnit markeras
+ * `förfallen`. Selektorn är antingen ett exakt id (`landskrona-2026-09-02-06`)
+ * eller ett datum (`2026-09-02`) som tar alla poster den dagen. En redan
+ * publicerad post rörs aldrig — det får inte gå att dubbelposta den här vägen.
+ */
+export function forcedItems(items: IgQueueItem[], selectors: string[]): IgQueueItem[] {
+    const wanted = selectors.map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (wanted.length === 0) return [];
+    const matches = (x: IgQueueItem) => wanted.some(s =>
+        (/^\d{4}-\d{2}-\d{2}$/.test(s) ? x.id.includes(`-${s}-`) : x.id === s));
+    return items
+        .filter(x => x.status !== 'publicerad' && matches(x))
+        .sort((a, b) => a.publishAt - b.publishAt);
+}
+
 /** Ersätt en post (matchat på id) med en uppdaterad kopia. */
 export function replaceItem(items: IgQueueItem[], id: string, patch: Partial<IgQueueItem>): IgQueueItem[] {
     return items.map(x => (x.id === id ? { ...x, ...patch } : x));

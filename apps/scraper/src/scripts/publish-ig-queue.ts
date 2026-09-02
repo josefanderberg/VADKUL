@@ -15,6 +15,8 @@
  *   npx ts-node src/scripts/publish-ig-queue.ts --provkör          # bild + IG-container, publicerar INTE
  *   npx ts-node src/scripts/publish-ig-queue.ts --kolla            # behörigheter + IG-koppling
  *   npx ts-node src/scripts/publish-ig-queue.ts --publicera        # skarpt (launchd-jobbets läge)
+ *   npx ts-node src/scripts/publish-ig-queue.ts --publicera --tvinga=2026-09-02
+ *                                                # skjut ut en dags poster NU, även `förfallna`
  *
  * `--importera-fb-schema` läser Sidans schemakö hos Meta och skapar en
  * IG-post per stadsinlägg som saknar en. Orten läses ur stadssidelänken i
@@ -25,10 +27,15 @@
  * `--provkör` bygger bilden och skapar en IG-container utan att publicera
  * (containern förfaller av sig själv). Det är vägen att verifiera att
  * behörigheter och bildformat sitter, utan att något hamnar i flödet.
+ *
+ * `--tvinga=<datum|id>[,…]` åsidosätter färskvaruregeln (6 h) för just de
+ * posterna: läget när token varit trasig hela förmiddagen och dagens inlägg
+ * redan markerats `förfallen`. Publicerade poster rörs aldrig, så det går
+ * inte att dubbelposta den här vägen.
  */
 
 import {
-    loadQueue, saveQueue, upsertQueueItem, dueItems, staleItems, replaceItem,
+    loadQueue, saveQueue, upsertQueueItem, dueItems, staleItems, forcedItems, replaceItem,
     queueId, QUEUE_PATH, type IgQueueItem,
 } from '../utils/igQueue';
 import { prepareInstagramImage } from '../utils/igImage';
@@ -43,6 +50,9 @@ const doImport = process.argv.includes('--importera-fb-schema');
 const doPublish = process.argv.includes('--publicera');
 const doProbe = process.argv.includes('--provkör') || process.argv.includes('--provkor');
 const doCheck = process.argv.includes('--kolla');
+/** `--tvinga=2026-09-02` eller `--tvinga=landskrona-2026-09-02-06,nyköping-…` */
+const forced = (process.argv.find(a => a.startsWith('--tvinga='))?.slice('--tvinga='.length) ?? '')
+    .split(',').map(s => s.trim()).filter(Boolean);
 
 const sv = (ms: number) => new Date(ms).toLocaleString('sv-SE');
 
@@ -152,16 +162,26 @@ async function runPublish(): Promise<void> {
     let queue = loadQueue();
     const now = Date.now();
 
-    for (const old of staleItems(queue, now)) {
-        console.warn(`⏭  ${old.town} (${sv(old.publishAt)}) är för gammal — markeras förfallen i stället för att postas.`);
-        queue = replaceItem(queue, old.id, { status: 'förfallen' });
-    }
-
-    const due = dueItems(queue, now);
-    if (due.length === 0) {
-        saveQueue(queue);
-        console.log('Inget att publicera just nu.');
-        return;
+    let due: IgQueueItem[];
+    if (forced.length > 0) {
+        // Tvingat: färskvaruregeln åsidosatt med flit — se filhuvudet.
+        due = forcedItems(queue, forced);
+        if (due.length === 0) {
+            console.log(`Inget i kön matchar --tvinga=${forced.join(',')} (publicerade rörs aldrig).`);
+            return;
+        }
+        console.log(`Tvingar ut ${due.length} post(er) för ${forced.join(', ')} — oavsett klockslag och färskvara.`);
+    } else {
+        for (const old of staleItems(queue, now)) {
+            console.warn(`⏭  ${old.town} (${sv(old.publishAt)}) är för gammal — markeras förfallen i stället för att postas.`);
+            queue = replaceItem(queue, old.id, { status: 'förfallen' });
+        }
+        due = dueItems(queue, now);
+        if (due.length === 0) {
+            saveQueue(queue);
+            console.log('Inget att publicera just nu.');
+            return;
+        }
     }
     if (!isInstagramConfigured()) {
         console.error('❌ IG_USER_ID / FB_PAGE_TOKEN saknas — kan inte publicera. Kön rörs inte.');
