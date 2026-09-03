@@ -169,6 +169,27 @@ export function collectEvents(node: any, accepted: Set<string>, out: any[]): voi
     }
 }
 
+/**
+ * Språktaggade JSON-LD-värden → ren sträng. schema.org tillåter
+ * `{"@value": "Titeln", "@language": "sv"}` i stället för en naken sträng
+ * (EPiServer-sajter som vastsverige.com gör så), och en array av sådana när
+ * fältet finns på flera språk. `String(...)` på ett sådant objekt gav
+ * "[object Object]" rakt in i title/description.
+ *
+ * Flerspråkig array: svenska först, annars första posten.
+ */
+function plainText(v: any): string | undefined {
+    if (v === undefined || v === null) return undefined;
+    if (typeof v === 'string') return v.trim() || undefined;
+    if (typeof v === 'number') return String(v);
+    if (Array.isArray(v)) {
+        const sv = v.find((x) => x && typeof x === 'object' && /^sv/i.test(String(x['@language'] ?? '')));
+        return plainText(sv ?? v[0]);
+    }
+    if (typeof v === 'object') return plainText(v['@value'] ?? v.name);
+    return undefined;
+}
+
 function pickImage(img: any): string | undefined {
     if (!img) return undefined;
     if (typeof img === 'string') return img;
@@ -264,7 +285,8 @@ function resolveSchedule(node: any): { start?: string; end?: string } {
 
 export function jsonLdToRawEvent(node: any, baseUrl: string): RawEvent | null {
     const sched = resolveSchedule(node);
-    if (!node.name || !sched.start) return null;
+    const title = plainText(node.name);
+    if (!title || !sched.start) return null;
 
     let url = pickUrl(node);
     if (url && url.startsWith('/')) {
@@ -281,17 +303,17 @@ export function jsonLdToRawEvent(node: any, baseUrl: string): RawEvent | null {
 
     return {
         externalId: node['@id'] || node.identifier,
-        title: String(node.name).trim(),
+        title,
         startDate,
         endDate: endDate && !isNaN(endDate.getTime()) ? endDate : undefined,
         url,
-        venueName: loc?.name,
-        city: address?.addressLocality,
-        address: address?.streetAddress,
+        venueName: plainText(loc?.name),
+        city: plainText(address?.addressLocality),
+        address: plainText(address?.streetAddress),
         coords: pickGeo(loc),
-        description: node.description ? String(node.description).trim() : undefined,
+        description: plainText(node.description),
         imageUrl: pickImage(node.image),
-        organizer: node.organizer?.name,
+        organizer: plainText(node.organizer?.name),
         price: pickPrice(node.offers),
     };
 }

@@ -1042,17 +1042,68 @@ function makeAbsoluteUrl(url: string | undefined, base: string): string | undefi
     try { return new URL(url, base).toString(); } catch { return url; }
 }
 
+/**
+ * Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
+ * (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
+ * detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
+ * event som SAKNAR desc hämtas → självbegränsande när korten räcker.
+ *
+ * Gäller sedan 3/9 2026 även API-vägarna. Anropet satt tidigare EFTER
+ * dispatchens `return scrapeXApi(...)` och nåddes därför aldrig av en
+ * API-källa — `fetchDetailDesc: true` var tyst verkningslös på alla 13.
+ *
+ * VARNING innan du slår på den för en restApi-källa: RESTApp-API:t saknar
+ * description-fält helt (bara image/id/title/uri/url/info), men de fyra
+ * restApi-källorna testades 3/9 och detaljsidans meta-tagg duger INTE:
+ * visitarboga/visitvastramalardalen har `content=""`, medan surahammar.se
+ * ger arrangörsnamnet ("Surahammars Hembygdsförening") och
+ * visithallstahammar eventtiteln ("IT-hjälp på biblioteket"). Båda passerar
+ * 20-teckensgränsen och hade lagt sig som falsk beskrivning — sämre än tom.
+ * Flaggan är därför medvetet AV på alla fyra. Deras text finns bara i
+ * brödtexten, bakom cookie-/translate-boilerplate.
+ */
+async function backfillDescriptions(
+    events: RawEvent[],
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<void> {
+    if (!config.fetchDetailDesc) return;
+    let filled = 0;
+    for (const ev of events) {
+        if (ev.description || !ev.url) continue;
+        const html = await fetchHtml(ev.url, config);
+        if (!html) continue;
+        const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
+            || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
+        const desc = m?.[1]
+            ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+            : undefined;
+        if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
+    }
+    if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
+}
+
 export const sitevisionEngine = async (
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
-    if (config.restApi) return scrapeRestAppApi(config, ctx);
-    if (config.itemsApi) return scrapeSoleilItemsApi(config, ctx);
-    if (config.eventSearchApi) return scrapeEventSearchApi(config, ctx);
-    if (config.guideApi) return scrapeGuideApi(config, ctx);
-    if (config.searchAppApi) return scrapeSearchAppApi(config, ctx);
-    if (config.pageApi) return scrapePageApi(config, ctx);
-    if (config.eventServiceApi) return scrapeEventServiceApi(config, ctx);
+    // API-vägarna kortsluter HTML-extraktionen. De går via samma
+    // backfillDescriptions() som list-vägen — utan den kunde en API-källa
+    // aldrig få fetchDetailDesc att göra något (se helpern ovan).
+    const apiScraper =
+        config.restApi ? scrapeRestAppApi
+            : config.itemsApi ? scrapeSoleilItemsApi
+                : config.eventSearchApi ? scrapeEventSearchApi
+                    : config.guideApi ? scrapeGuideApi
+                        : config.searchAppApi ? scrapeSearchAppApi
+                            : config.pageApi ? scrapePageApi
+                                : config.eventServiceApi ? scrapeEventServiceApi
+                                    : null;
+    if (apiScraper) {
+        const apiEvents = await apiScraper(config, ctx);
+        await backfillDescriptions(apiEvents, config, ctx);
+        return apiEvents;
+    }
 
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();
@@ -1231,25 +1282,7 @@ export const sitevisionEngine = async (
         }
     }
 
-    // Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
-    // (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
-    // detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
-    // event som SAKNAR desc hämtas → självbegränsande när korten räcker.
-    if (config.fetchDetailDesc) {
-        let filled = 0;
-        for (const ev of events) {
-            if (ev.description || !ev.url) continue;
-            const html = await fetchHtml(ev.url, config);
-            if (!html) continue;
-            const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
-                || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
-            const desc = m?.[1]
-                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
-                : undefined;
-            if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
-        }
-        if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
-    }
+    await backfillDescriptions(events, config, ctx);
 
     return events;
 };

@@ -194,6 +194,9 @@ export const SOURCES: Source[] = [
             defaultCity: 'Öland',
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +15 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'active',
         discovery: { method: 'probe-xhr', probeUrl: 'https://www.oland.se/sv/api/cbis-product-list?nodeId=1510&page=0', date: '2026-08-31', rawEventCount: 46, notes: 'nodeId låg i drupal-settings-json (productList-nyckeln) på /kalender.' },
         notes: 'Probe 2026-08-31: samma CBIS-plattform, tredje temat (.body-title/.body-desc-text) och datum med MÅNADEN FÖRE dagen ("sep 02 - dec 16 16:00") → flipMonthFirst i motorn. /map-endpointen ger exakta koordinater för nästan alla → spridda över hela ön i stället för kommun-centroider. Subnoder 2355/2356/2359 (guidningar/mat/kultur) är delmängder av 1510 — kör inte separat.',
@@ -1196,6 +1199,10 @@ export const SOURCES: Source[] = [
             defaultCity: 'Tranås',
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +14 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe 2026-06: 53 events.',
     },
     {
@@ -1222,6 +1229,9 @@ export const SOURCES: Source[] = [
             fetchDetailPage: true,
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +6 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         notes: 'Probe 2026-06: 23 events. fetchDetailPage.',
     },
     {
@@ -1429,6 +1439,31 @@ export const SOURCES: Source[] = [
         engine: 'sitevision',
         config: { urls: ['https://www.ljungby.se/uppleva-och-gora/evenemangskalender'], defaultCity: 'Ljungby' },
         updateFrequency: 'every-3d',
+    },
+    {
+        id: 'sagobygden',
+        hostName: 'Sagomuseet',
+        region: 'ljungby',
+        engine: 'sitemap',
+        config: {
+            // KATALOG, inte wp-json: /wp-json/wp/v2/event svarar med 20 poster
+            // varav merparten är AVPUBLICERADE arkivsidor (t.ex. "Kulturarvsdag
+            // 2024") som kalendern själv inte längre listar. Datumen står bara
+            // som "7 september" i brödtexten utan årtal → textparsern skjuter
+            // dem till nästa förekomst och gamla event återuppstår varje år.
+            // Listsidan bär exakt de 6 aktuella — den är sanningen här.
+            sitemapUrl: 'https://sagobygden.se/sv/evenemang/',
+            isHtmlCatalog: true,
+            urlPatterns: [/sagobygden\.se\/sv\/evenemang\/[a-z0-9-]{3,}\/?$/i],
+            defaultCity: 'Ljungby',
+            maxUrls: 40,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Dry-run 2026-09-03: 6 event (= listsidans alla), 3 i 30d-fönstret, 100 % bild/beskrivning/venue/ort. Datum ur brödtext utan klockslag → heldag. Ljungby var tunnast av de 40 nya småortssidorna (4 lokala event) och detta är stadens enda egna kulturarrangör i pipelinen vid sidan av kommunkalendern.',
+        lastVerified: '2026-09-03',
+        discovery: { method: 'probe-wp', probeUrl: 'https://www.sagomuseet.se', date: '2026-09-03', rawEventCount: 6, notes: 'bulk-probe träffade wp-v2 på sagomuseet.se → sagobygden.se; wp-v2-vägen förkastad (spökevent), katalogsidan vald.' },
     },
     {
         id: 'uppvidinge',
@@ -1943,6 +1978,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Säffle',
                 },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +35 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 554 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -2083,6 +2122,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Sölvesborg',
                 },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +4 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 212 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -2195,6 +2238,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Ystad',
                 },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +37 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 107 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -2344,6 +2391,9 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Mullsjö',
                 },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +13 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 53 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -2702,6 +2752,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Enköping',
                 },
         updateFrequency: 'weekly',
+        // Fönstret vidgat 3/9 2026: dry-run visade +4 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 12 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -2730,6 +2784,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Älmhult',
                 },
         updateFrequency: 'weekly',
+        // Fönstret vidgat 3/9 2026: dry-run visade +3 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 12 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -3183,6 +3241,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Karlshamn',
                 },
         updateFrequency: 'weekly',
+        // Fönstret vidgat 3/9 2026: dry-run visade +9 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 2 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
     },
@@ -4771,6 +4833,9 @@ export const SOURCES: Source[] = [
             maxPages: 4,
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +98 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'experimental',
         discovery: { method: 'probe-wp', probeUrl: 'https://www.trosa.com', date: '2026-06-11' },
         notes: 'Bulk-probe 2026-06-11: tribe, ~445 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov.',
@@ -4823,6 +4888,9 @@ export const SOURCES: Source[] = [
             maxPages: 4,
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +82 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'experimental',
         discovery: { method: 'probe-wp', probeUrl: 'https://www.vimmerby.com', date: '2026-06-11' },
         notes: 'Bulk-probe 2026-06-11: tribe, ~725 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov.',
@@ -4840,6 +4908,9 @@ export const SOURCES: Source[] = [
             maxUrls: 200,
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +36 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.vastervik.com/vvikcom_event-sitemap.xml', date: '2026-06-11' },
         notes: 'Bulk-probe 2026-06-11: sitemap-text, ~185 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov.',
@@ -6176,6 +6247,9 @@ export const SOURCES: Source[] = [
             defaultCity: 'Värnamo',
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +77 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 108 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
@@ -6208,6 +6282,9 @@ export const SOURCES: Source[] = [
             defaultCity: 'Strängnäs',
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +40 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180,
         status: 'experimental',
         notes: 'Hostad Cruncho-widget inbäddad i kommunsajten. 45 poster vid upptäckt. Hittad genom att testa varje kommunslug mot /categories/with-events/ — ett billigt GET som avslöjar om destinationen finns.',
         lastVerified: '2026-08-26',
@@ -6328,10 +6405,76 @@ export const SOURCES: Source[] = [
             maxItems: 200,
         },
         updateFrequency: 'every-3d',
+        // Fönstret vidgat 3/9 2026: dry-run visade +7 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
+        // småortssidorna och tål inte att tappa dem.
+        windowDays: 180,
         status: 'experimental',
         notes: 'JS-renderad kommunkalender — hämtas via Puppeteer (delad browser med sitemap-motorn) och extraheras sedan som vanligt. 10 event i fönstret vid upptäckt. Kalendern blandar in nämndsammanträden, därav dropMunicipalMeetings.',
         lastVerified: '2026-08-26',
         discovery: { method: 'probe-sitevision', probeUrl: 'https://www.mark.se/kommunkalender', date: '2026-08-26', rawEventCount: 10, notes: 'Ingen XHR att fånga (apps/scraper/scout/deep-scout.cjs hittade inget API) — men sidan renderar datumen i DOM:en, så browser-läget räcker.' },
+    },
+
+    // ─── VASTSVERIGE.COM — Turistrådets destinationssajt ─────────────────────
+    // Flera Bohuslän-/Sjuhärads-kommuner har LAGT NER sin egen kalender och
+    // länkar i stället hit: stenungsund.se/uppleva-och-gora/evenemang är en
+    // ren landningssida vars enda kalenderlänk går till vastsverige.com. Utan
+    // de här källorna finns ingen väg till kommunernas eventutbud alls.
+    //
+    // Discovery går via LISTSIDAN, inte sitemapen: vastsverige.com/sitemap.xml
+    // innehåller 24 535 URL:er som ALLA pekar på demo.vgregion.se (fel-
+    // konfigurerad staging-host) — noll produktions-URL:er. Befintliga
+    // sb-vastsverige-com i registry-snowball.ts jagar `/events/`-mönstret i
+    // just den sitemapen och ger därför ~0 event; den lämnas orörd (annan
+    // domänroll) men är i praktiken död.
+    //
+    // Listsidan bygger korten i JS → isHtmlCatalog + useBrowser. Detaljsidorna
+    // bär komplett JSON-LD Event (startDate med tid, endDate, image, location
+    // med gatuadress och ort). OBS: script-taggen skrivs som
+    // `application/ld&#x2B;json` och name/description är SPRÅKTAGGADE objekt
+    // ({'@value','@language'}) — se plainText() i engines/json-ld.ts, utan den
+    // fick varje event titeln "[object Object]".
+    {
+        id: 'vastsverige-stenungsund',
+        hostName: 'Vastsverige Stenungsund',
+        region: 'stenungsund',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.vastsverige.com/stenungsund/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,   // korten injiceras sent
+            urlPatterns: [/\/stenungsund\/evenemang\/[a-z0-9-]{3,}/i],
+            defaultCity: 'Stenungsund',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Dry-run 2026-09-03: 12 event ur listsidan, 6 i 30d-fönstret. 100 % datum/tid/bild/beskrivning/venue/ort. Pris saknas i källan (JSON-LD har ingen offers-nod). Listsidan lazy-laddar — settle-tiden styr hur många kort som hinner renderas.',
+        lastVerified: '2026-09-03',
+        discovery: { method: 'hint', probeUrl: 'https://www.stenungsund.se/uppleva-och-gora/evenemang', date: '2026-09-03', rawEventCount: 12, notes: 'Hittad genom att följa kommunsajtens enda kalenderlänk.' },
+    },
+    {
+        id: 'vastsverige-mark',
+        hostName: 'Vastsverige Mark',
+        region: 'mark',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.vastsverige.com/mark/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,
+            urlPatterns: [/\/mark\/evenemang\/[a-z0-9-]{3,}/i],
+            defaultCity: 'Kinna',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Dry-run 2026-09-03: 12 event, 5 i 30d-fönstret, 100 % datum/bild/beskrivning/ort. Komplement till mark-kommun (kommunkalendern) — egen domän och andra arrangörer (Rydals museum, hembygdsföreningar, Hyssnamakarna), så dedupen krockar inte.',
+        lastVerified: '2026-09-03',
+        discovery: { method: 'hint', probeUrl: 'https://www.rydalsmuseum.se', date: '2026-09-03', rawEventCount: 12, notes: 'Rydals museum länkar sin kalender hit.' },
     },
     {
         id: 'visittorsas',

@@ -540,6 +540,9 @@ export const SNOWBALL_SOURCES: Source[] = [
         engine: 'sitevision' as const,
         config: { urls: ["https://visitarboga.se/download/18.e8970c418b6ab9102db98b"], defaultCity: 'Arboga', restApi: {"url":"https://visitarboga.se/rest-api/Evenemang"} },
         updateFrequency: 'every-3d' as const,
+        // Fönstret vidgat 3/9 2026: dry-run visade +157 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180 as const,
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,
