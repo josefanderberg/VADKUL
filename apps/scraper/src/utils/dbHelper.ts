@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, setEventContent, getSyncMeta } from './sqliteHelper';
+import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, setEventContent, setEventHost, getSyncMeta } from './sqliteHelper';
 import { sanitizeEndDate } from './eventEnd';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
@@ -228,6 +228,33 @@ export async function refreshEventContent(
             await db.collection('linkEvents').doc(row.firestoreId).update(stamped(changes));
         } catch (err: any) {
             if (err?.code !== 5) console.error('refreshEventContent: Firestore-uppdatering misslyckades:', err?.message);
+        }
+    }
+    return true;
+}
+
+/**
+ * Känt event fick en RIKTIG värd (FB-omskrapning: hostFallback hittade namnet
+ * som DOM-instrumentet missade). Skriver SQLite + Firestore via stamped() —
+ * addEventToDb rör inte redan kända Firestore-dokument. Returnerar true om
+ * något ändrades.
+ */
+export async function refreshEventHost(url: string, hostName: string): Promise<boolean> {
+    const row = getSqliteEvent(url);
+    if (!row) return false;
+    const h = hostName.trim();
+    if (!h || h === (row.hostName ?? '')) return false;
+    try {
+        setEventHost(url, h);
+    } catch (err) {
+        console.error('refreshEventHost: SQLite-uppdatering misslyckades:', err);
+        return false;
+    }
+    if (db && row.firestoreId) {
+        try {
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ hostName: h }));
+        } catch (err: any) {
+            if (err?.code !== 5) console.error('refreshEventHost: Firestore-uppdatering misslyckades:', err?.message);
         }
     }
     return true;

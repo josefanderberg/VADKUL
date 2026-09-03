@@ -627,6 +627,12 @@ export function setEventLocationName(url: string, locationName: string): void {
     setLocStmt.run(locationName, new Date().toISOString(), url);
 }
 
+const setHostStmt = sqlite.prepare('UPDATE link_events SET hostName = ?, updatedAt = ? WHERE url = ?');
+/** Värdnamn för ett känt event (FB-omskrapning som hittade en riktig värd). */
+export function setEventHost(url: string, hostName: string): void {
+    setHostStmt.run(hostName, new Date().toISOString(), url);
+}
+
 const setDescriptionStmt = sqlite.prepare('UPDATE link_events SET description = ?, updatedAt = ? WHERE url = ?');
 const setPriceStmt = sqlite.prepare('UPDATE link_events SET price = ?, updatedAt = ? WHERE url = ?');
 
