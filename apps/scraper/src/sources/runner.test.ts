@@ -33,17 +33,24 @@ vi.mock('../utils/sqliteHelper', () => ({
     recordScrapeRun: vi.fn(),
     setEventAudit: vi.fn(),
     getSqliteEvent: vi.fn(() => undefined),
+    getSyncMeta: vi.fn(() => null),
+    setSyncMeta: vi.fn(),
+}));
+// Var 4:e-körning-logiken är datum/hash-styrd — pinna av så testerna inte
+// blir beroende av vilken dag de körs.
+vi.mock('./schedule', () => ({
+    isRefreshRun: vi.fn(() => false),
 }));
 vi.mock('../utils/llmAudit', () => ({
     auditEvent: vi.fn(),
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, CONTENT_SWEEP_VERSION } from './runner';
 import { Source, RawEvent, Engine } from './types';
 import { addEventsBatch, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
-import { recordScrapeRun } from '../utils/sqliteHelper';
+import { recordScrapeRun, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
 
 const batchMock = vi.mocked(addEventsBatch);
 // Runnern batchar skrivningar: alla event från en körning kommer i ETT
@@ -53,6 +60,8 @@ const writtenEvents = (): any[] => batchMock.mock.calls.flatMap((c) => c[0]);
 const existsMock = vi.mocked(eventExistsInDb);
 const geocodeMock = vi.mocked(geocodeVenueSweden);
 const recordRunMock = vi.mocked(recordScrapeRun);
+const syncMetaGetMock = vi.mocked(getSyncMeta);
+const syncMetaSetMock = vi.mocked(setSyncMeta);
 
 /** Imorgon kl 19:00 lokal tid — alltid inne i 30-dagarsfönstret. */
 function tomorrow19(): Date {
@@ -95,6 +104,54 @@ beforeEach(() => {
     vi.clearAllMocks();
     existsMock.mockResolvedValue(false);
     geocodeMock.mockResolvedValue(null);
+    // Default: svepet är redan gjort — övriga tester ska inte köra i refresh-läge.
+    syncMetaGetMock.mockReturnValue(CONTENT_SWEEP_VERSION);
+});
+
+describe('runSource — innehålls-svep (engångs full-refresh per källa)', () => {
+    const capture = () => {
+        let seen: boolean | undefined;
+        const engine: Engine = async (_cfg, ctx) => { seen = ctx.refreshKnown; return []; };
+        return { engine, refreshKnown: () => seen };
+    };
+
+    it('ostämplad källa → full-refresh, stämplas efter genomförd körning', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(true);
+        expect(syncMetaSetMock).toHaveBeenCalledWith('contentSweep.test-source', CONTENT_SWEEP_VERSION);
+    });
+
+    it('gammal stämpel räknas som ostämplad', async () => {
+        syncMetaGetMock.mockReturnValue('2026-01-01');
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(true);
+        expect(syncMetaSetMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('redan svept → ingen tvingad refresh, ingen ny stämpel', async () => {
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(false);
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+
+    it('dry-run varken refreshar eller stämplar', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const c = capture();
+        await run(c.engine, { dryRun: true });
+        expect(c.refreshKnown()).toBe(false);
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+
+    it('motorkrasch stämplar inte — svepet försöks igen nästa körning', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const result = await run(async () => { throw new Error('boom'); });
+        expect(result.errors[0]).toContain('boom');
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
 });
 
 describe('runSource — grundpipeline', () => {
