@@ -28,14 +28,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
-    },
-    "huddinge-hembygdsforening": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
     "louisdegeer": {
       "since": "2026-08-30",
@@ -50,8 +44,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
     "nykoping": {
       "since": "2026-08-19",
@@ -120,8 +114,8 @@
     "tjorn": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
     "tjorns-hembygdsforening": {
       "since": "2026-08-19",
