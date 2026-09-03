@@ -24,7 +24,7 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
-import { decodeHtmlEntities } from '../../utils/text';
+import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { findFirstDateInText } from '../../utils/swedishDate';
 import { getSharedBrowser } from './sitemap';
 
@@ -1078,7 +1078,7 @@ async function backfillDescriptions(
         const desc = m?.[1]
             ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
             : undefined;
-        if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
+        if (desc && desc.length >= 20) { ev.description = truncateAtBoundary(desc, DEFAULT_DESCRIPTION_MAX); filled++; }
     }
     if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
 }
@@ -1204,7 +1204,7 @@ export const sitevisionEngine = async (
 
             // Description: sök första <p> eller text-element i kortet
             const descCandidate = container.find('p, .description, [class*="excerpt"], [class*="summary"]').first().text().trim();
-            const description = descCandidate.length > 30 ? descCandidate.slice(0, 600) : undefined;
+            const description = descCandidate.length > 30 ? truncateAtBoundary(descCandidate, DEFAULT_DESCRIPTION_MAX) : undefined;
 
             // Venue: ofta i en .venue, [class*="location"] eller liknande
             const venueEl = container.find('[class*="location"], [class*="venue"], [class*="place"]').first();

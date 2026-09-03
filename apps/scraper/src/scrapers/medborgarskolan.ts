@@ -16,6 +16,7 @@
 
 import { RawEvent, Engine } from '../sources/types';
 
+import { truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 const API = 'https://www.medborgarskolan.se/wt/api/v2/eventsearch/';
 const SITE = 'https://www.medborgarskolan.se';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -66,7 +67,7 @@ export function mapMbskItem(item: any): RawEvent | null {
         city: city || undefined,
         venueName: city || undefined,
         imageUrl: item?.ld_entity?.image?.url || undefined,
-        description: (item?.ld_entity?.description || '').trim().slice(0, 600)
+        description: truncateAtBoundary((item?.ld_entity?.description || '').trim(), DEFAULT_DESCRIPTION_MAX)
             || `${item?.type ? item.type + ' med ' : ''}Medborgarskolan${city ? ` i ${city}` : ''}.`,
         price: price || null as any,
         hostName: 'Medborgarskolan',

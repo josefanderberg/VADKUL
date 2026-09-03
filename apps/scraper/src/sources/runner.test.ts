@@ -12,6 +12,8 @@ vi.mock('../utils/dbHelper', () => ({
     eventExistsInDb: vi.fn(async () => false),
     refreshEventTime: vi.fn(async () => false),
     refreshEventPlace: vi.fn(async () => false),
+    refreshEventEndDate: vi.fn(async () => false),
+    refreshEventContent: vi.fn(async () => false),
 }));
 vi.mock('../utils/venueCoordinates', () => ({
     geocodeVenueSweden: vi.fn(async () => null),

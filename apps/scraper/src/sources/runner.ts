@@ -11,7 +11,8 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
+import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
@@ -250,6 +251,23 @@ export async function runSource(
                     if (validEnd && await refreshEventEndDate(e.url, validEnd.toISOString())) {
                         result.updated++;
                         ctx.log(`  📅 slutdatum satt: ${e.title.slice(0, 50)} → ${validEnd.toISOString().slice(0, 10)}`);
+                    }
+                    // Innehåll: byt beskrivning BARA när källan nu bevisligen ger
+                    // bättre (hel text där den sparade kapades vid gammalt tak,
+                    // återfunna å/ä/ö, borttaget �, platshållare → riktig text —
+                    // se utils/contentRefresh). Pris fylls bara på där det saknas;
+                    // normalizeRawEvent har redan plockat pris ur texten om källan
+                    // inte gav något. Utan detta låg 1 509 kapade och 159 å/ä/ö-
+                    // lösa beskrivningar kvar för alltid (kända URL:er hoppas över).
+                    const betterDesc = pickBetterDescription(storedRow?.description, e.description);
+                    const betterPrice = pickBetterPrice(storedRow?.price, e.price);
+                    if ((betterDesc || betterPrice) && await refreshEventContent(e.url, {
+                        ...(betterDesc ? { description: betterDesc } : {}),
+                        ...(betterPrice ? { price: betterPrice } : {}),
+                    })) {
+                        result.updated++;
+                        const what = [betterDesc ? 'beskrivning' : '', betterPrice ? `pris ${betterPrice}` : ''].filter(Boolean).join(' + ');
+                        ctx.log(`  📝 ${what} uppdaterad: ${e.title.slice(0, 50)}`);
                     }
                 }
                 result.skipped.duplicate++;

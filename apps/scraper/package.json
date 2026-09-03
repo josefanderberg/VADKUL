@@ -71,6 +71,8 @@
     "daily-report": "ts-node src/scripts/teams-daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "backfill-categories": "ts-node src/scripts/backfill-categories.ts",
+    "backfill-content": "ts-node src/scripts/backfill-content-quality.ts",
+    "repair-stripped": "ts-node src/scripts/repair-stripped-descriptions.ts",
     "sync-to-sqlite": "ts-node src/scripts/sync-firestore-to-sqlite.ts",
     "llm-enrich": "ts-node src/scripts/llm-enrich-missing.ts",
     "venues": "ts-node src/scripts/manage-venues.ts",

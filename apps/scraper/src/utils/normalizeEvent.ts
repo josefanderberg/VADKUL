@@ -14,6 +14,7 @@
 
 import { RawEvent } from '../sources/types';
 import { decodeHtmlEntities, cleanDescription } from './text';
+import { extractPriceFromText } from './priceFromText';
 
 /** Beskrivningar som egentligen är sajt-chrome (FB-sidfot m.fl.) → töm. */
 const JUNK_DESCRIPTION = [
@@ -92,5 +93,12 @@ export function normalizeRawEvent(e: RawEvent, hostName?: string): RawEvent {
     if (e.city) e.city = collapse(decodeHtmlEntities(e.city));
     e.title = normalizeTitle(e.title, { venueName: e.venueName, city: e.city, hostName: e.hostName ?? hostName });
     e.description = normalizeDescription(e.description) || undefined;
+    // Pris: källans strukturerade pris vinner; saknas det plockas ett SÄKERT
+    // pris ur beskrivningstexten (etiketterat belopp / entré-fras — se
+    // priceFromText). 81 % av eventen saknade pris fast det ofta stod i texten.
+    if (!e.price) {
+        const fromText = extractPriceFromText(e.description);
+        if (fromText) e.price = fromText;
+    }
     return e;
 }
