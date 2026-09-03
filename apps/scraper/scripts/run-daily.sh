@@ -306,6 +306,19 @@ else
     echo "⚠️ Image migration misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── K9: Innehållskvalitet — pris ur beskrivningstext, trasiga tecken ──────
+# Deterministiskt (regex, utils/priceFromText) och idempotent. Körs FÖRE K4
+# så Ollama bara får de event som texten inte kunde prissätta. Rapporterar
+# också kapade/å-ä-ö-lösa beskrivningar per domän (lagas av refresh-körningar).
+# Ett fel här får aldrig stoppa kedjan.
+echo "" >> "$LOG_FILE"
+echo "── K9: CONTENT-QUALITY (pris ur text, �-rensning) ──" >> "$LOG_FILE"
+if npm run backfill-content -- --apply >> "$LOG_FILE" 2>&1; then
+    echo "Content-quality OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Content-quality misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── K4: LLM-enrichment (Ollama) ────────────────────────────────────────────
 echo "" >> "$LOG_FILE"
 echo "── K4: LLM-ENRICHMENT ──" >> "$LOG_FILE"

@@ -627,6 +627,20 @@ export function setEventLocationName(url: string, locationName: string): void {
     setLocStmt.run(locationName, new Date().toISOString(), url);
 }
 
+const setDescriptionStmt = sqlite.prepare('UPDATE link_events SET description = ?, updatedAt = ? WHERE url = ?');
+const setPriceStmt = sqlite.prepare('UPDATE link_events SET price = ?, updatedAt = ? WHERE url = ?');
+
+/**
+ * Innehålls-refresh (runnerns refresh-körningar, backfill-content-quality):
+ * ny beskrivning och/eller nytt pris för ett KÄNT event. Anroparen avgör
+ * om texten är bättre (utils/contentRefresh) — här skrivs bara.
+ */
+export function setEventContent(url: string, patch: { description?: string; price?: string }): void {
+    const now = new Date().toISOString();
+    if (patch.description !== undefined) setDescriptionStmt.run(patch.description, now, url);
+    if (patch.price !== undefined) setPriceStmt.run(patch.price, now, url);
+}
+
 const bumpGeoRefineStmt = sqlite.prepare(
     'UPDATE link_events SET geoRefineAttempts = COALESCE(geoRefineAttempts, 0) + 1 WHERE url = ?',
 );

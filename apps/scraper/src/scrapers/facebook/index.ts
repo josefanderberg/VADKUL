@@ -5,6 +5,9 @@ import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHel
 import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { classifyEvent } from '../../utils/classify';
+import { normalizeDescription } from '../../utils/normalizeEvent';
+import { extractPriceFromText } from '../../utils/priceFromText';
+import { isResellerJunk, cleanFacebookTitle } from './junk';
 import { searchGoogleImage } from '../../utils/imageSearch';
 import { applyDateFilters, discoverEventUrls } from './discovery';
 import { extractEventDetails } from './extractor';
@@ -512,6 +515,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         // Extraction-fas räknare för slutstatistik
         let extractAlreadyInDb = 0;
         let extractSkippedForeign = 0;
+        let extractSkippedJunk = 0;
         let extractSkippedDate = 0;
         let extractLoginWall = 0;
         let extractFailed = 0;
@@ -608,6 +612,13 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
                 const details = await extractEventDetails(page);
                 if (details.title === 'Facebook Event' || details.title.includes('Logga in')) { extractLoginWall++; continue; }
+                // Samma städning som runnern ger engine-event: FB-sidfoten
+                // ("Integritet · Användarvillkor …") som beskrivning → tom,
+                // ersättningstecken (�) bort. FB-skrapan skriver direkt via
+                // addEventToDb och gick förbi normalizeEvent (revisionen 2026-09-03).
+                details.description = normalizeDescription(details.description);
+                // "Sailing Day Tour (Stockholm) Tickets" → "Sailing Day Tour".
+                details.title = cleanFacebookTitle(details.title);
 
                 // --- INSTRUMENT: VÄRD (HOST) ---
                 const hostInfo = await HostInstrument.extractInfo(page);
@@ -633,7 +644,16 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
                 // --- INSTRUMENT: PLATS (LOCATION) ---
                 const locInfo = await LocationInstrument.extractInfo(page, details.title);
-                
+
+                // Biljett-återförsäljare ("Ken Carson Tickets" från Ticket Deals/
+                // Laugh Seats med amerikansk arena) — annonser, inte event. De
+                // slank förbi utlandsfiltret när adressen inte gick att läsa.
+                if (isResellerJunk(details.title, finalHostName, details.description, locInfo.fullAddress || locInfo.name)) {
+                    console.log(`    ⏩ Skippar biljettannons (återförsäljare): "${details.title}" (värd: ${finalHostName})`);
+                    extractSkippedJunk++;
+                    continue;
+                }
+
                 const extractedAddress = locInfo.fullAddress;
                 const geocodedQuery = cleanVenueName(extractedAddress);
                 
@@ -813,6 +833,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     }
                 }
 
+                // FB har inget prisfält — priset står i texten om alls
+                // ("Pris: 50 kr per person", "Fri entré"). 222 FB-event hade
+                // pris i beskrivningen men tomt prisfält (2026-09-03).
+                const fbPrice = extractPriceFromText(details.description) ?? extractPriceFromText(details.ogDescription);
+                if (fbPrice) console.log(`    💰 Pris ur texten: ${fbPrice}`);
+
                 const eventObj = {
                     title: details.title,
                     url: url,
@@ -827,6 +853,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
+                    price: fbPrice ?? null,
                     attendees: details.going,
                     createdAt: new Date().toISOString(),
                     isLocationVerified,
@@ -848,6 +875,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
+                    price: fbPrice ?? null,
                     attendees: details.going,
                     createdAt: new Date(),
                     isLocationVerified,
@@ -913,6 +941,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 alreadyInDb:   extractAlreadyInDb,
                 newlySaved:    extractNewlySaved,
                 skippedForeign: extractSkippedForeign,
+                skippedJunk:   extractSkippedJunk,
                 skippedDate:   extractSkippedDate,
                 loginWall:     extractLoginWall,
                 failed:        extractFailed,
@@ -952,6 +981,7 @@ export function writeFinalScraperStats(opts: {
         alreadyInDb: number;
         newlySaved: number;
         skippedForeign: number;
+        skippedJunk: number;
         skippedDate: number;
         loginWall: number;
         failed: number;

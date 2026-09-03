@@ -34,6 +34,7 @@
 import { RawEvent, Engine } from '../sources/types';
 import { decodeHtmlEntities } from '../utils/categoryNormalize';
 
+import { truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 const DEFAULT_API = 'https://microservices.goteborg.se/ua/kalendariet/public/activities/';
@@ -102,7 +103,7 @@ export function mapKalendarietActivity(
     const end = parseKalendarietTime(a.endTime);
     const loc = a.location;
     const description = a.description
-        ? decodeHtmlEntities(a.description.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim().slice(0, 800) || undefined
+        ? truncateAtBoundary(decodeHtmlEntities(a.description.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim(), DEFAULT_DESCRIPTION_MAX) || undefined
         : undefined;
     const imageUrl = a.image?.host && a.image?.path
         ? `${a.image.host.replace(/\/$/, '')}/${a.image.path.replace(/^\//, '')}`

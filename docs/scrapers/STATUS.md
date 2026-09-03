@@ -41,6 +41,7 @@ varianter. Detaljer: [runs/2026-07-27.md](runs/2026-07-27.md).
 | [K5](kampanjer/k5-lank-enrichment.md) | Länk-enrichment | PLAN |
 | [K6](kampanjer/k6-teams-rapport.md) | Teams-rapport som visar tratten ärligt | PLAN |
 | K7 | Eventbrite + Eventim scrapers (Puppeteer) | KLAR 2026-05-29c |
+| [K9](kampanjer/k9-datakvalitet.md) | Datakvalitet: kapade beskrivningar, å/ä/ö, pris ur text | KOD KLAR 2026-09-03 — data läks av nattkedjan |
 
 ## Topp-3 öppna problem (per 2026-05-29b)
 

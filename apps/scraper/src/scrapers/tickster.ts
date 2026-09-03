@@ -178,13 +178,40 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                             jsonLng = d.location.geo.longitude ?? null;
                         }
                     }
-                    if (d.offers?.price !== undefined) {
-                        const p = d.offers.price;
-                        jsonPrice = (p === 0 || p === '0') ? 'Gratis' : parseInt(p, 10);
+                    // Pris ENBART ur JSON-LD offers — aldrig ur sidtexten: enda
+                    // "800 kr" i Ticksters HTML är deras egen serviceavgifts-text
+                    // (verifierat 2026-09-03). offers kan vara objekt eller lista,
+                    // med price eller lowPrice/highPrice (även i priceSpecification).
+                    const offers = Array.isArray(d.offers) ? d.offers : (d.offers ? [d.offers] : []);
+                    const nums: number[] = [];
+                    for (const o of offers) {
+                        for (const k of ['lowPrice', 'highPrice', 'price']) {
+                            const v = o?.[k] ?? o?.priceSpecification?.[k];
+                            if (v === undefined || v === null || v === '') continue;
+                            const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+                            if (Number.isFinite(n) && n >= 0) nums.push(n);
+                        }
+                    }
+                    if (nums.length) {
+                        const min = Math.min(...nums);
+                        const max = Math.max(...nums);
+                        jsonPrice = max === 0 ? 'Gratis'
+                            : (min === max || min === 0) ? `${Math.round(max)} kr`
+                            : `${Math.round(min)}–${Math.round(max)} kr`;
                     }
                 }
             } catch (_) {}
         }
+
+        // Ticksters JSON-LD-description är oftast bara sidans meta-text
+        // ("Titel på Venue i Stad 3 september - Tickster.com") — 2 049 av
+        // 2 082 Tickster-event hade den som "beskrivning" (revisionen
+        // 2026-09-03). Räkna den som saknad så stycke-fallbacken nedan får
+        // plocka den riktiga texten ur sidan.
+        const genericJsonDesc = /\s[-–]\s*Tickster\.com\s*$/i.test(jsonDescription)
+            || (jsonDescription.length < 160 && title.length >= 8
+                && jsonDescription.toLowerCase().includes(title.toLowerCase().slice(0, 25)));
+        if (genericJsonDesc) jsonDescription = '';
 
         // Description från sidans body — om JSON-LD saknar den.
         // Tickster renderar beskrivningen som vanliga <p> utan klass vars parent också saknar klass.
@@ -198,8 +225,9 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                     if (txt.length < 30) return false;
                     // Skip date lines ("Måndag den 1 juni …")
                     if (/^(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)\s+den\s+\d/i.test(txt)) return false;
-                    // Skip ticket/door info lines
-                    if (/Entrén öppnar|Biljett|köpa biljett|Startar:|Dörröppning|Insläpp:/i.test(txt)) return false;
+                    // Skip ticket/door info lines — och Ticksters egen text om
+                    // serviceavgift/köpvillkor (får aldrig bli "beskrivning").
+                    if (/Entrén öppnar|Biljett|köpa biljett|Startar:|Dörröppning|Insläpp:|serviceavgift|Tickster|köpvillkor/i.test(txt)) return false;
                     return true;
                 })
                 .map(p => p.textContent?.trim() || '');
@@ -410,6 +438,13 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                 // Hoppa bort generiska placeholder-titlar
                 if (details.title === 'Tickster Event' || details.title.toLowerCase() === 'event') {
                     console.log(`     🗑️  Placeholder-titel "${details.title}", hoppar.`);
+                    continue;
+                }
+                // Rena biljettslag sålda som "event" (Armémuseums dagliga
+                // "Entrébiljetter/Tickets", 29 st 2026-09-03) — museientré,
+                // inte ett evenemang.
+                if (/^(?:entr[ée]biljetter?|entr[ée]|intr[äa]de|tickets?|biljetter?)(?:\s*\/\s*(?:tickets?|biljetter?|entr[ée]))?$/i.test(details.title)) {
+                    console.log(`     🗑️  Biljettslag som titel "${details.title}", hoppar.`);
                     continue;
                 }
 

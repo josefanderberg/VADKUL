@@ -25,7 +25,7 @@
 
 import { RawEvent, Engine } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
-import { decodeHtmlEntities } from '../utils/text';
+import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 
 const API_BASE = 'https://api.axiell.com/event/api';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -185,7 +185,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         venueName: branch || undefined,
         city: tenant.cityHint ?? branchCity(branch, tenant.cities),
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
-        description: [stripHtml(e.description).slice(0, 600), audiences ? `Målgrupp: ${audiences}.` : '']
+        description: [truncateAtBoundary(stripHtml(e.description), DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
         hostName: branch || tenant.name,
         hasSpecificTime: true,   // API:t levererar riktiga klockslag (UTC)

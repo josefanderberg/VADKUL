@@ -35,7 +35,7 @@ import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText } from '../../utils/swedishDate';
-import { decodeHtmlEntities } from '../../utils/text';
+import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { extractStreetAddress } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
 
@@ -928,7 +928,7 @@ function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
                 if (t.length >= 40) { d = t; return false; }
             });
         }
-        if (d.length >= 20) ev.description = d.slice(0, 600);
+        if (d.length >= 20) ev.description = truncateAtBoundary(d, DEFAULT_DESCRIPTION_MAX);
     }
 
     if (needsImg) {

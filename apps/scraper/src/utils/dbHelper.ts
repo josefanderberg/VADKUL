@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, getSyncMeta } from './sqliteHelper';
+import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, setEventContent, getSyncMeta } from './sqliteHelper';
 import { sanitizeEndDate } from './eventEnd';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
@@ -195,6 +195,39 @@ export async function refreshEventPlace(
             }));
         } catch (err: any) {
             if (err?.code !== 5) console.error('refreshEventPlace: Firestore-uppdatering misslyckades:', err?.message);
+        }
+    }
+    return true;
+}
+
+/**
+ * Refresh-körning: källan levererar nu en BÄTTRE beskrivning (hel i stället
+ * för kapad vid gammalt tak, med å/ä/ö, utan �) och/eller ett pris där det
+ * saknades. Vad som räknas som bättre avgörs av utils/contentRefresh — här
+ * skrivs bara det som faktiskt skiljer sig (SQLite + Firestore via stamped()).
+ * Returnerar true om något ändrades.
+ */
+export async function refreshEventContent(
+    url: string,
+    patch: { description?: string; price?: string },
+): Promise<boolean> {
+    const row = getSqliteEvent(url);
+    if (!row) return false;
+    const changes: { description?: string; price?: string } = {};
+    if (patch.description !== undefined && patch.description !== (row.description ?? '')) changes.description = patch.description;
+    if (patch.price !== undefined && patch.price !== (row.price ?? '')) changes.price = patch.price;
+    if (Object.keys(changes).length === 0) return false;
+    try {
+        setEventContent(url, changes);
+    } catch (err) {
+        console.error('refreshEventContent: SQLite-uppdatering misslyckades:', err);
+        return false;
+    }
+    if (db && row.firestoreId) {
+        try {
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped(changes));
+        } catch (err: any) {
+            if (err?.code !== 5) console.error('refreshEventContent: Firestore-uppdatering misslyckades:', err?.message);
         }
     }
     return true;
