@@ -148,7 +148,7 @@ function unconditionalFree(sentence: string, re: RegExp): boolean {
  */
 export function extractPriceFromText(text: string | null | undefined): string | null {
     if (!text) return null;
-    const t = String(text).replace(/ /g, ' ');
+    const t = String(text).replace(/\u00a0/g, ' ');   // NBSP → vanligt mellanslag (annars missar \s)
     if (t.trim().length < 4) return null;
     const sentences = splitSentences(t);
 
