@@ -36,7 +36,8 @@ Gjort:
 - `utils/priceFromText.ts`: konservativ prisextraktor (etikett/entré-fras/per person; spärrord för vinst, lott, medlems-/serviceavgift). Kopplad i `normalizeRawEvent` (alla engines) + FB-skrapan.
 - `utils/contentRefresh.ts` + runnerns refresh-gren: kända event får ny beskrivning BARA när den bevisligen är bättre (längre fortsättning, återfunna å/ä/ö, utan �, platshållare → text); pris fylls bara på där det saknas.
 - wp-rest: hela `content` när `excerpt` är WP:s auto-utdrag ("[…]"). Tickster: meta-text räknas som saknad → stycke-fallback; offers-array/lowPrice; "Entrébiljetter/Tickets"-titlar hoppas. FB: återförsäljar-junk (`facebook/junk.ts`), titelstäd, `normalizeDescription`. ABF: og:description för nya event (max 80/natt). Ticketmaster: `info/pleaseNote/description`.
-- `scripts/backfill-content-quality.ts` (`npm run backfill-content -- --apply`) i nattkedjan som steg K9 före K4: pris ur text + �-städning på befintliga rader, rapport över kapade/strippade per domän.
+- `scripts/backfill-content-quality.ts` (`npm run backfill-content -- --apply`) i nattkedjan som steg K9 före K4: pris ur text + �-städning + prisfält-sanering ("P", "ordi" → tomt; långtext → intervall) på befintliga rader, rapport över kapade/strippade per domän.
+- Runda 2 (samma dag): `sanitizePriceField` i normalizeRawEvent; platshållar-medvetet `pickBetterDescription` (1 360 PRO-platshållare byts mot detaljtext i svepet); PRO-kommun med åäö ur webbens ortlista ("Eksjo" → "Eksjö"); Tickster tar bara `/se/`-event (108 Oslo-event slutar komma); "Läs mer"-svansar strippas.
 
 Rörs inte:
 - Firestore/SQLite på minin — datan läks av nattkedjan. Kapade/strippade texter kräver källan: `SCRAPE_FORCE_REFRESH=1 npm run sources -- --engine=svenskakyrkan` (och nortic, pro, hembygd, rotary, bibliotek) på minin.

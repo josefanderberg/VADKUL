@@ -117,6 +117,8 @@ export function cleanDescription(raw: unknown, maxLen = DEFAULT_DESCRIPTION_MAX)
             .replace(/<[^>]+>/g, ' '),
     )
         .replace(/\[…\]|\[\.\.\.\]/g, '')
+        // Länktext som följt med ur listkort/utdrag: "… Läs mer »", "Read more".
+        .replace(/\s*(?:läs mer|read more|visa mer|see more)(?:\s+här)?\s*[»›→…]*\s*$/i, '')
         .replace(/�/g, '')
         .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
         .replace(/[^\S\n]+/g, ' ')   // kollapsa whitespace, men inte \n

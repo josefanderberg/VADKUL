@@ -14,9 +14,15 @@ describe('cleanDescription', () => {
         expect(cleanDescription('a<br/>b<br />c')).toBe('a\nb\nc');
     });
 
+    it('tar bort "Läs mer"-svansar ur utdrag', () => {
+        expect(cleanDescription('Bra konsert i kyrkan. Läs mer »')).toBe('Bra konsert i kyrkan.');
+        expect(cleanDescription('Great show.\nRead more')).toBe('Great show.');
+        expect(cleanDescription('Läs mer om oss på hemsidan.')).toBe('Läs mer om oss på hemsidan.');
+    });
+
     it('tar bort WP-excerpt-rester', () => {
-        expect(cleanDescription('Läs mer […]')).toBe('Läs mer');
-        expect(cleanDescription('Läs mer [...]')).toBe('Läs mer');
+        expect(cleanDescription('Mer info […]')).toBe('Mer info');
+        expect(cleanDescription('Mer info [...]')).toBe('Mer info');
     });
 
     it('klipper vid ordgräns med ellips — aldrig mitt i ett ord (default 1500)', () => {

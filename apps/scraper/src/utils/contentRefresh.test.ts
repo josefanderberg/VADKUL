@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickBetterDescription, pickBetterPrice, looksStripped } from './contentRefresh';
+import { pickBetterDescription, pickBetterPrice, looksStripped, isPlaceholderDescription } from './contentRefresh';
 
 describe('pickBetterDescription', () => {
     const full = 'Vi firar en enkel mässa tillsammans. Efteråt serveras frukost i församlingshemmet, och alla är välkomna att stanna kvar en stund.';
@@ -33,9 +33,17 @@ describe('pickBetterDescription', () => {
             .toBe('VI ÄR TILLBAKA! Efter sommaruppehållet är det dags igen.');
     });
 
-    it('byter kort platshållare mot riktig text', () => {
+    it('byter platshållare mot riktig text — även långa PRO-platshållare', () => {
         expect(pickBetterDescription('PRO Eksjö-aktivitet, Eksjo.', full)).toBe(full);
+        expect(pickBetterDescription('PRO Falköping-aktivitet på Folkets hus Falköping, Falköping.', full)).toBe(full);
         expect(pickBetterDescription('ABF-evenemang i Kalmar.', 'ABF-evenemang i Växjö.')).toBeNull();
+        expect(pickBetterDescription('ABF-evenemang i Kalmar.', full)).toBe(full);
+    });
+
+    it('isPlaceholderDescription känner igen motorernas mallar men inte riktig text', () => {
+        expect(isPlaceholderDescription('PRO-aktivitet, Sverige.')).toBe(true);
+        expect(isPlaceholderDescription('Kurs med Medborgarskolan i Lund.')).toBe(true);
+        expect(isPlaceholderDescription('Vi spelar boule varje tisdag. Alla är välkomna, PRO bjuder på fika.')).toBe(false);
     });
 
     it('rör inte omformuleringar, kortare texter eller identisk text', () => {
