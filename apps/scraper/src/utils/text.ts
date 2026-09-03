@@ -50,15 +50,66 @@ export function decodeHtmlEntities(s: string): string {
 }
 
 /**
+ * Standardtak för beskrivningar ur engines. Höjt 500 → 1500 (2026-09-03):
+ * kvalitetsrevisionen visade 1 509 beskrivningar kapade EXAKT vid 500 tecken
+ * (Svenska kyrkan 315, Nortic 441, PRO 184, Hembygd 102, Rotary 98) — mitt i
+ * ett ord, utan markering. Webben visar hela texten i kortet, och FB-
+ * beskrivningar har hela tiden fått vara upp till ~6 000 tecken utan problem.
+ * Descriptions-lagret växer med uppskattningsvis 0,5–1 MB rått (gzip: en
+ * bråkdel) — godtagbart mot att var 25:e beskrivning slutade mitt i ett ord.
+ */
+export const DEFAULT_DESCRIPTION_MAX = 1500;
+
+/**
+ * Klipp `s` till högst `max` tecken vid en NATURLIG gräns — i första hand
+ * sista meningsslutet (. ! ?) i den bakre halvan, annars sista ordgränsen —
+ * och markera klippet med "…". Aldrig mitt i ett ord, och aldrig mellan
+ * halvorna i ett surrogatpar (emoji) — det var så "🎉" blev "�" i JSON:en.
+ * Text som redan ryms returneras orörd.
+ */
+export function truncateAtBoundary(s: string, max: number): string {
+    if (max <= 0) return '';
+    if (s.length <= max) return s;
+    const room = max - 1;                        // plats för "…"
+    let head = s.slice(0, room);
+    if (/[\uD800-\uDBFF]$/.test(head)) head = head.slice(0, -1);   // halvt emoji
+    const minKeep = Math.floor(room * 0.5);
+
+    // 1) Sista meningsslutet följt av whitespace i den bakre halvan → hel mening.
+    //    Söks i hela strängen (lookahead behöver tecknet EFTER klippet) men
+    //    bara träffar som ryms i head räknas.
+    let cut = -1;
+    const sentenceEnd = /[.!?](?=\s)/g;
+    let m: RegExpExecArray | null;
+    while ((m = sentenceEnd.exec(s)) !== null && m.index < head.length) {
+        if (m.index >= minKeep) cut = m.index + 1;
+    }
+    if (cut > 0) return head.slice(0, cut).trimEnd();
+
+    // 2) Annars sista ordgränsen: klippet landar exakt på en (nästa tecken är
+    //    whitespace) eller så backar vi till sista mellanslaget/radbrytet.
+    let base: string;
+    if (/\s/.test(s.charAt(head.length))) {
+        base = head;
+    } else {
+        const ws = Math.max(head.lastIndexOf(' '), head.lastIndexOf('\n'));
+        base = ws >= minKeep ? head.slice(0, ws) : head;
+    }
+    return base.replace(/[\s,;:–\-(]+$/, '') + '…';
+}
+
+/**
  * Normalisera beskrivnings-HTML från en källa: gör blockslut/<br> till
  * radbrytningar, strippa övriga taggar, AVKODA entities (förr: ersattes med
  * mellanslag → å/ä/ö försvann), ta bort WP-excerpt-rester ("[…]"), kollapsa
  * whitespace — men BEHÅLL radbrytningarna (förr: allt blev ETT stycke,
  * rapporterat 2026-07-11; webben visar beskrivningar med whitespace-pre-wrap
- * så \n renderas). Klipp längden sist.
+ * så \n renderas). Ersättningstecken (U+FFFD) och ensamma surrogathalvor —
+ * spår av trasig kodning, aldrig läsbar text — plockas bort. Klipp längden
+ * sist, vid ordgräns (truncateAtBoundary), aldrig mitt i ett ord.
  */
-export function cleanDescription(raw: unknown, maxLen = 500): string {
-    return decodeHtmlEntities(
+export function cleanDescription(raw: unknown, maxLen = DEFAULT_DESCRIPTION_MAX): string {
+    const text = decodeHtmlEntities(
         (raw ?? '')
             .toString()
             // Radbrytande taggar → \n så styckena överlever tag-strippen.
@@ -66,11 +117,13 @@ export function cleanDescription(raw: unknown, maxLen = 500): string {
             .replace(/<[^>]+>/g, ' '),
     )
         .replace(/\[…\]|\[\.\.\.\]/g, '')
+        .replace(/�/g, '')
+        .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
         .replace(/[^\S\n]+/g, ' ')   // kollapsa whitespace, men inte \n
         .replace(/ ?\n ?/g, '\n')    // inga hängande mellanslag runt radbryt
         .replace(/\n{3,}/g, '\n\n')  // max en tomrad i följd
-        .trim()
-        .slice(0, maxLen);
+        .trim();
+    return truncateAtBoundary(text, maxLen);
 }
 
 /**

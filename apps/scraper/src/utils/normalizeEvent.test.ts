@@ -52,6 +52,17 @@ describe('normalizeLocation', () => {
 });
 
 describe('normalizeRawEvent', () => {
+    it('plockar pris ur beskrivningen när källan inte gav något — men skriver aldrig över källans', () => {
+        const a: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Kom och dansa. Pris: 80 kr per person.' };
+        normalizeRawEvent(a);
+        expect(a.price).toBe('80 kr');
+        const b: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Pris: 80 kr', price: '100 kr' };
+        normalizeRawEvent(b);
+        expect(b.price).toBe('100 kr');
+        const c: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Vi samlade in 500 kr.' };
+        normalizeRawEvent(c);
+        expect(c.price).toBeUndefined();
+    });
     it('kör allt och behåller övriga fält', () => {
         const e: any = { title: 'A &amp; B | Lund', startDate: new Date(), url: 'u', city: 'Lund', description: '<b>x</b>', venueName: 'V\nadr 1' };
         normalizeRawEvent(e, 'Host');

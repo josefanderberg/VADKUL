@@ -24,6 +24,7 @@ import { Engine, RawEvent } from '../sources/types';
 import { parseSwedishDate } from '../utils/swedishDate';
 import { domainLimiter } from '../sources/rateLimiter';
 
+import { cleanDescription, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 export interface CbisConfig {
@@ -117,7 +118,7 @@ export function parseCbisCard(cardHtml: string, cfg: CbisConfig, now: Date): Raw
         venueName: venue,
         city: cfg.defaultCity,
         imageUrl,
-        description: cardDesc.length >= 20 ? cardDesc.slice(0, 600) : undefined,
+        description: cardDesc.length >= 20 ? truncateAtBoundary(cardDesc, DEFAULT_DESCRIPTION_MAX) : undefined,
         // Kortdatumet saknar oftast klockslag → låt runnerns midnatts-heuristik
         // gälla tills detaljsidan ev. ger tid. Kinda-varianten bär det på kortet.
         hasSpecificTime: hasClock ? true : undefined,
@@ -129,7 +130,9 @@ export function applyCbisDetail(html: string, ev: RawEvent): void {
     const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
         || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
     if (m && m[1].trim().length >= 20 && !ev.description) {
-        ev.description = m[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim().slice(0, 600);
+        // cleanDescription: entitetsavkodning (alla, i rätt ordning — inte
+        // &amp;-först som dubbelavkodar), whitespace, ordgräns-trunkering.
+        ev.description = cleanDescription(m[1]);
     }
     // Första rimliga klockslag i brödtexten ("12:00 - 13:00" → 12:00)
     if (ev.startDate.getHours() === 0 && ev.startDate.getMinutes() === 0) {

@@ -327,13 +327,19 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
 
     if (!start || isNaN(start.getTime())) return null;
 
-    // Description: föredra excerpt, annars första 600 tecken av content.
-    // cleanDescription avkodar entities — WP:s rendered-HTML är alltid kodad.
-    let description = e.excerpt?.rendered
-        ? cleanDescription(e.excerpt.rendered, 600)
-        : (e.content?.rendered
-            ? cleanDescription(e.content.rendered, 600)
-            : '');
+    // Description: excerpt om det är ett RIKTIGT (handskrivet) utdrag, annars
+    // hela content. WP:s AUTO-excerpt är bara de första ~55 orden + "[…]"/"…"
+    // — det gav 300+ beskrivningar som slutade i "…" (Visit Norrköping/
+    // Eskilstuna, Norrköpings konstmuseum, revisionen 2026-09-03).
+    // cleanDescription avkodar entities (WP:s rendered-HTML är alltid kodad)
+    // och klipper vid ordgräns (DEFAULT_DESCRIPTION_MAX).
+    const excerptRaw = String(e.excerpt?.rendered || '');
+    const excerptIsAuto = /\[(?:…|\.\.\.|&hellip;)\]|(?:…|\.\.\.|&hellip;)\s*(?:<\/p>\s*)*$/i.test(excerptRaw);
+    const excerpt = excerptRaw ? cleanDescription(excerptRaw) : '';
+    const content = e.content?.rendered ? cleanDescription(e.content.rendered) : '';
+    let description = excerpt && !(excerptIsAuto && content.length > excerpt.length)
+        ? excerpt
+        : (content || excerpt);
 
     // Image: prefer _embed featuredmedia (full quality), annars fall tillbaka
     let imageUrl: string | undefined = e._embedded?.['wp:featuredmedia']?.[0]?.source_url

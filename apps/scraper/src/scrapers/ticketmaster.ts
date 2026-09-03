@@ -17,6 +17,7 @@ dotenv.config();
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { classifyEvent } from '../utils/classify';
 
+import { cleanDescription } from '../utils/text';
 const API_KEY  = process.env.TICKETMASTER_API_KEY || '';
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
 
@@ -128,6 +129,10 @@ interface TmEvent {
     dates:  { start: { localDate: string; localTime?: string } };
     images?:       TmImage[];
     priceRanges?:  TmPriceRange[];
+    /** Fritext från arrangören (Discovery API: info/pleaseNote/description). */
+    info?:         string;
+    pleaseNote?:   string;
+    description?:  string;
     classifications?: { segment?: { name: string }; genre?: { name: string } }[];
     _embedded?: { venues?: TmVenue[] };
 }
@@ -246,6 +251,14 @@ export async function scrapeTicketmaster(): Promise<number> {
             const locationName = [venueName, cityName].filter(Boolean).join(', ');
             const coverImage   = getBestImage(event.images ?? []);
             const price        = formatPrice(event.priceRanges ?? []);
+            // Riktig text när API:t har den (info/description/pleaseNote) —
+            // förr sparades bara genre-hinten ("Music Rock") som beskrivning
+            // på alla 795 TM-event (revisionen 2026-09-03). Hinten hängs på
+            // sist så classifyEvent-signalen inte går förlorad.
+            const tmText = cleanDescription(
+                [event.info, event.description, event.pleaseNote].filter(Boolean).join('\n\n'),
+            );
+            const description = tmText ? `${tmText}\n\n${categoryHint}`.trim() : categoryHint;
 
             await addEventToDb({
                 title:             event.name,
@@ -262,7 +275,7 @@ export async function scrapeTicketmaster(): Promise<number> {
                 createdAt:         new Date(),
                 coverImage,
                 price,
-                description:       categoryHint,
+                description,
                 isLocationVerified: !!(lat && lng && lat !== 0 && lng !== 0),
             });
 
