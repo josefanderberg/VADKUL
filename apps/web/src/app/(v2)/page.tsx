@@ -1272,18 +1272,32 @@ export default function HomePage() {
     //  stället för att resa dit bakom välkomstrutan. Kromet göms fortfarande
     //  medan rutan är uppe, men det är `chromeHidden` ovan som styr det.)
     const effectiveRangeDays = dayRangeDays >= WEEK_RANGE_MIN_DAYS && weekZoomLocked ? 1 : dayRangeDays;
-    // DAGBLINKEN (Josef 2/9): varje gång plattans dag/period byts efter mount
-    // — Nästa-knappens automatiska dagbyte, dagpilarna, ↺ — bumpas noncen;
-    // plattans text och ring får key={nonce} så engångsanimationen
+    // DAGBLINKEN (Josef 2/9, avgränsad 4/9): plattans dag blinkar BARA när
+    // eventkortet självt byter dag — Nästa när eventen i bild är genomgångna,
+    // och Bakåt/Nästa över ett sådant byte. INTE vid dagväljarens pilar,
+    // vecko-växeln eller ↺ (Josef 4/9: "det blinkar hela tiden då om man
+    // byter många dagar fort"). Kortets steg armar flaggan; effekten på
+    // plattans nyckel bumpar noncen bara om den är armad och nollar den
+    // alltid, så ett manuellt byte aldrig ärver en gammal armering.
+    // Plattans text och ring får key={nonce} så engångsanimationen
     // (globals.css day-flash-*) spelas om. Aldrig vid första renderingen.
     const dayFlashKey = `${dayOffset}:${effectiveRangeDays}`;
     const [dayFlashNonce, setDayFlashNonce] = useState(0);
     const prevDayFlashKeyRef = useRef(dayFlashKey);
+    const dayFlashArmedRef = useRef(false);
     useEffect(() => {
         if (prevDayFlashKeyRef.current === dayFlashKey) return;
         prevDayFlashKeyRef.current = dayFlashKey;
-        setDayFlashNonce(n => n + 1);
+        const armed = dayFlashArmedRef.current;
+        dayFlashArmedRef.current = false;
+        if (armed) setDayFlashNonce(n => n + 1);
     }, [dayFlashKey]);
+    // Eventkortets dagsteg (onDayStep): samma steg som dagväljarens pilar,
+    // men det enda som får plattan att blinka.
+    const handleCardDayStep = useCallback((delta: number, selectEventId?: string) => {
+        if (delta !== 0) dayFlashArmedRef.current = true;
+        handleTourDayStep(delta, selectEventId);
+    }, [handleTourDayStep]);
     const weekAreaKey = effectiveRangeDays >= WEEK_RANGE_MIN_DAYS && weekAreaCenter
         ? `${Math.round(weekAreaCenter.lat * 20) / 20}:${Math.round(weekAreaCenter.lng * 20) / 20}:${
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
@@ -4035,7 +4049,7 @@ export default function HomePage() {
                 // (dagväljarens pilhandler → landningspulsen tystas lika).
                 inView={inTourView}
                 nextDayOffset={nextTourDayOffset}
-                onDayStep={handleTourDayStep}
+                onDayStep={handleCardDayStep}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}
