@@ -161,6 +161,11 @@ export function collectEvents(node: any, accepted: Set<string>, out: any[]): voi
         }
     }
 
+    // EventSeries.subEvent: kalendersidor som bär hela månaden som EN
+    // serie-nod med tillfällena under sig (Berwaldhallen 2026-09-04).
+    // Serie-noden själv saknar startDate och faller bort i mappningen.
+    if (Array.isArray(node.subEvent)) collectEvents(node.subEvent, accepted, out);
+
     // Är detta själv ett event?
     const t = node['@type'];
     const types = Array.isArray(t) ? t : [t];
@@ -235,7 +240,9 @@ function pickPrice(offers: any): string | undefined {
 }
 
 function pickGeo(loc: any): [number, number] | undefined {
-    const geo = loc?.geo;
+    // schema.org Place bär koordinater antingen som geo{GeoCoordinates} eller
+    // direkt som latitude/longitude på platsen (Berwaldhallen 2026-09-04).
+    const geo = loc?.geo ?? (loc?.latitude != null && loc?.longitude != null ? loc : undefined);
     if (!geo) return undefined;
     const lat = parseFloat(geo.latitude);
     const lng = parseFloat(geo.longitude);

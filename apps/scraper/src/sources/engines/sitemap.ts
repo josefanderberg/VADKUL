@@ -235,6 +235,9 @@ const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     // Inställda event ska inte på kartan — arrangörer skriver om titeln i
     // stället för att ta bort sidan (Ekerum: "Drop in vigsel-INSTÄLLT!").
     /inst[äa]llt/i,
+    // Stockholm Lives arenasajter (eventadmin.stockholmlive.com) lägger
+    // insläppet som en egen SportsEvent/MusicEvent-nod före själva eventet.
+    /^entr[ée]er? [öo]ppnar/i,
 ];
 
 const DEFAULT_MAX_URLS = 300;
@@ -1058,23 +1061,30 @@ export function applyPlacePage(html: string, ev: RawEvent): void {
     }
 }
 
-function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
     const nodes: any[] = [];
     for (const b of blocks) collectEvents(b, DEFAULT_EVENT_TYPES, nodes);
     let ev: RawEvent | null = null;
+    let sawBlacklisted = false;
     for (const node of nodes) {
         const candidate = jsonLdToRawEvent(node, url);
-        if (candidate) {
-            // Title-blacklist gäller oavsett källa — JSON-LD-events kan också
-            // ha junk-titlar ("Startsida", "Nyköpings kommuns webbplats" m.fl.)
-            if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(candidate.title))) return null;
-            if (!candidate.city && defaultCity) candidate.city = defaultCity;
-            ev = candidate;
-            break;
-        }
+        if (!candidate) continue;
+        // Title-blacklist gäller oavsett källa — JSON-LD-events kan också
+        // ha junk-titlar ("Startsida", "Nyköpings kommuns webbplats" m.fl.).
+        // En blacklistad nod diskvalificerar BARA sig själv: Stockholm Lives
+        // arenor (Hovet, Avicii Arena …) lägger "Entréer öppnar" som första
+        // Event-nod och själva matchen/konserten som andra — sidan ska då ge
+        // det riktiga eventet, inte tomt.
+        if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(candidate.title))) { sawBlacklisted = true; continue; }
+        if (!candidate.city && defaultCity) candidate.city = defaultCity;
+        ev = candidate;
+        break;
     }
+    // Bara junk-noder på sidan → samma verdict som förr: inget event alls
+    // (cheerio-fallbacken skulle annars återuppliva "Startsida"-sidorna).
+    if (!ev && sawBlacklisted) return null;
     // 2) Cheerio-fallback
     if (!ev) ev = cheerioFallback(html, url, defaultCity);
     // 2b) Backfilla TOMMA desc/bild ur HTML — gäller BÅDA vägarna (JSON-LD med

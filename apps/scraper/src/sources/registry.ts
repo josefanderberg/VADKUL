@@ -113,6 +113,196 @@ export const SOURCES: Source[] = [
         notes: 'Probe 2026-06-10: 31 repertoar-URLs. JSON-LD utan startDate → datum+tid ur text-fallback ("13 juni 11:00").',
         lastVerified: '2026-06-10',
     },
+
+    // ─── STOCKHOLM LIVE-ARENORNA (källsvep 2026-09-04) ──────────────────────
+    // Stockholms största scener saknades helt: Ticketmasters Discovery-API
+    // exponerar bara ~200 SE-event/90 dagar (verifierat med egen nyckel), så
+    // arenaeventen kom aldrig in den vägen. Stockholm Live driver en WP-sajt
+    // per arena (samma plattform, eventadmin.stockholmlive.com). Sitemap →
+    // detaljsida med JSON-LD Event (startDate m. tid, location.name, bild).
+    // Fälla: sportsidor har "Entréer öppnar" som första Event-nod — hanteras
+    // av titel-blacklisten i sitemap-motorn (noden hoppas över, inte sidan).
+    // stockholmlive.com/evenemang bär bara namn+datum+länk — skippad.
+    {
+        id: 'avicii-arena',
+        hostName: 'Avicii Arena',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://aviciiarena.se/sitemap.xml',
+            urlPatterns: [/^https:\/\/aviciiarena\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+            defaultVenue: 'Avicii Arena',
+            maxUrls: 300,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://aviciiarena.se/sitemap.xml', date: '2026-09-04', rawEventCount: 219 },
+        notes: 'Källsvep 2026-09-04: 219 /evenemang/<kategori>/<slug>/-URLs. JSON-LD MusicEvent/Event med startDate+tid, location "Avicii Arena", bild från eventadmin.stockholmlive.com. Flerdagarsshower ger bara första datumet i JSON-LD (Killinggänget 3–17 juli).',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: '3arena',
+        hostName: '3Arena',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://3arena.se/sitemap.xml',
+            urlPatterns: [/^https:\/\/3arena\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+            defaultVenue: '3Arena',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://3arena.se/sitemap.xml', date: '2026-09-04', rawEventCount: 8 },
+        notes: 'Källsvep 2026-09-04: f.d. Tele2 Arena (tele2arena.se 301:ar hit). Samma plattform som Avicii Arena. Hammarby/Djurgården-matcherna ligger här utöver konserterna.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'hovet',
+        hostName: 'Hovet',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://hovetarena.se/sitemap.xml',
+            urlPatterns: [/^https:\/\/hovetarena\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+            defaultVenue: 'Hovet',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://hovetarena.se/sitemap.xml', date: '2026-09-04', rawEventCount: 6 },
+        notes: 'Källsvep 2026-09-04: AIK Hockeys hemmasidor + konserter. Sportsidorna har "Entréer öppnar"-nod före matchen i JSON-LD.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'annexet',
+        hostName: 'Annexet',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://annexet.se/sitemap.xml',
+            urlPatterns: [/^https:\/\/annexet\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+            defaultVenue: 'Annexet',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://annexet.se/sitemap.xml', date: '2026-09-04', rawEventCount: 21 },
+        notes: 'Källsvep 2026-09-04: 21 konserter (klubbstorlek, Globenområdet). Samma plattform som Avicii Arena.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'strawberry-arena',
+        hostName: 'Strawberry Arena',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://strawberryarena.se/sitemap.xml',
+            // Sitemapen har undersidor per event (/premiumexperience/, /infor-ditt-besok/)
+            // — exakt två segment efter /evenemang/ är själva eventsidan.
+            urlPatterns: [/^https:\/\/strawberryarena\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Solna',
+            defaultVenue: 'Strawberry Arena',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://strawberryarena.se/sitemap.xml', date: '2026-09-04', rawEventCount: 7 },
+        notes: 'Källsvep 2026-09-04: f.d. Friends Arena (landskamper, stadionkonserter). Samma plattform som Avicii Arena.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'berwaldhallen',
+        hostName: 'Berwaldhallen',
+        region: 'stockholm',
+        engine: 'json-ld',
+        config: {
+            // Kalendariet är en SPA utan sitemap/detaljsidor, men sidan bär ett
+            // EventSeries-block med subEvent[] för innevarande månad: startDate
+            // +tid, koordinater, bild, pris och offers.url (bokningssidan) som
+            // blir eventets URL. Ingen månadsparameter — bara ~9 event i taget.
+            urls: ['https://www.berwaldhallen.se/kalendarium'],
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-jsonld', probeUrl: 'https://www.berwaldhallen.se/kalendarium', date: '2026-09-04', rawEventCount: 9 },
+        notes: 'Källsvep 2026-09-04: Sveriges Radios Symfoniorkester/Radiokören. subEvent.@id (berwaldhallen.se/event/<id>) 404:ar — offers.url (boka.berwaldhallen.se) är den länk som fungerar.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'debaser',
+        hostName: 'Debaser',
+        region: 'stockholm',
+        engine: 'sitemap',
+        config: {
+            // Webflow-sajt: sitemap.xml saknar eventsidorna, men /kalender/
+            // listar ~100 /events/<slug>-länkar server-renderat. Detaljsidan
+            // har ingen JSON-LD — cheerio-fallbacken läser "Lör 19 Sep 2026"
+            // + "Scen Debaser Nova" ur texten (verifierat mot swedishDate).
+            sitemapUrl: 'https://debaser.se/kalender/',
+            isHtmlCatalog: true,
+            urlPatterns: [/^https:\/\/debaser\.se\/events\/[a-z0-9-]+\/?$/i],
+            defaultCity: 'Stockholm',
+            defaultVenue: 'Debaser',
+            maxUrls: 150,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'manual', probeUrl: 'https://debaser.se/kalender/', date: '2026-09-04', rawEventCount: 100, notes: 'Hittad i källsvepet 2026-09-04 — Stockholms mest bokade klubbscen saknades (bara 32 träffar via Tickster/TM).' },
+        notes: 'Källsvep 2026-09-04: Debaser Strand/Nova/Pontonen (Hornstull). Tider ligger som "Dörrar 18.00" utan kl-prefix → date-only tills text-tidsparsern lär sig "Dörrar".',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'gotevent',
+        hostName: 'Got Event',
+        region: 'goteborg',
+        engine: 'gotevent',
+        config: {
+            baseUrl: 'https://gotevent.se',
+            defaultCity: 'Göteborg',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://gotevent.se/api/v2/event/GetEventsTeasers', date: '2026-09-04', rawEventCount: 28, notes: 'network-scout på /evenemang fångade bara GetUniqueEventDates; POST-routen + bodyn grävdes ur dist/gotevent.js.' },
+        notes: 'Källsvep 2026-09-04: Scandinavium/Ullevi/Gamla Ullevi/Valhalla/Frölundaborg — Göteborgs stora arenor saknades (3 träffar via kommunen). Lagsidorna (dateSpan "Fotbollssäsongen 2026") filtreras bort i motorn; matcherna tas av sport-motorerna.',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'visitlulea',
+        hostName: 'Visit Luleå',
+        region: 'lulea',
+        engine: 'visitlulea',
+        config: {
+            baseUrl: 'https://visitlulea.se',
+            pageId: 3925,
+            defaultCity: 'Luleå',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://visitlulea.se/umbraco/api/eventsapi/filter', date: '2026-09-04', rawEventCount: 53, notes: 'network-scout på /evenemang. GET 405:ar; POST utan HitsPerPage ger tomma Hits trots TotalHits 53.' },
+        notes: 'Källsvep 2026-09-04: Luleå låg på 9 lokala event (city-gaps). 53 event/30 dagar, venue-namn på alla, inga klockslag i API:t (date-only).',
+        lastVerified: '2026-09-04',
+    },
+    {
+        id: 'visit-roslagen',
+        hostName: 'Visit Roslagen',
+        region: 'norrtalje',
+        engine: 'wp-rest',
+        config: {
+            baseUrl: 'https://roslagen.se',
+            variant: 'tribe',
+            defaultCity: 'Norrtälje',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'probe-wp', probeUrl: 'https://roslagen.se/wp-json/tribe/events/v1/events', date: '2026-09-04', rawEventCount: 288 },
+        notes: 'Källsvep 2026-09-04: Norrtälje låg på 20 lokala event (city-gaps) — destinationsbolagets kalender (The Events Calendar) har 288 framtida. Venue.city saknas på många → defaultCity Norrtälje; geokodaren får jobba på venue-namnet.',
+        lastVerified: '2026-09-04',
+    },
     {
         id: 'malmo-pride',
         hostName: 'Malmö Pride',
@@ -3805,12 +3995,19 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
             sitemapUrl: 'https://www.konserthuset.se/sv/sitemap.xml',
-            urlPatterns: [/\/(?:sv\/)?konsert(?:er)?\/[^/]+\/?$/i],
+            // Sajten byggdes om: 9 133 kalender-URLs med datum+tid sist i
+            // sökvägen (/kalender/<serie>/<år>/<slug>/20260906-1900/). Det
+            // gamla /konsert/-mönstret matchade inget → 0 hittade i månader.
+            urlPatterns: [/\/program-och-biljetter\/kalender\/.+\/\d{8}-\d{4}\/?$/i],
+            // Förfiltrera på datumet i URL:en — annars hämtas 9 000 sidor.
+            urlDateRegex: /\/(?<year>\d{4})(?<month>\d{2})(?<day>\d{2})-\d{4}\/?$/,
             defaultCity: 'Stockholm',
+            defaultVenue: 'Konserthuset Stockholm',
+            maxUrls: 300,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 12 event-URLs (konsert-mönster) — konserthus.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 12 event-URLs (konsert-mönster). OMPROBAD 2026-09-04 efter 0 hittade: ny URL-struktur, ingen JSON-LD → cheerio-fallback läser "Söndag 6 september 2026 kl 19.00" ur sidtexten.',
+        lastVerified: '2026-09-04',
     },
     {
         id: 'helsingborgs-konserthus',
@@ -4171,17 +4368,19 @@ export const SOURCES: Source[] = [
         region: 'goteborg',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.pustervik.se/event-sitemap.xml',
-            urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
+            // Ny sajt 2026 (pustervik.nu, DatoCMS): 91 /evenemang/<slug>-URLs med
+            // JSON-LD Event (startDate+tid, location "Matsalen Göteborg", bild).
+            // Gamla pustervik.se/event-sitemap.xml gav 0 hittade sedan juli.
+            sitemapUrl: 'https://www.pustervik.nu/sitemap.xml',
+            urlPatterns: [/^https:\/\/www\.pustervik\.nu\/evenemang\/[a-z0-9-]+\/?$/i],
             defaultCity: 'Göteborg',
+            defaultVenue: 'Pustervik',
             maxUrls: 300,
-            // Showtiden renderas av JS → krävs för text-tidsparsning (annars 00:00).
-            useBrowser: true,
         },
         updateFrequency: 'every-3d',
         status: 'active',
-        lastVerified: '2026-06-09',
-        notes: 'Probe-venues 2026-06-09: 1000 event-URLs (event-mönster) — livemusik (Göteborg). Verifierad: 31 sparade, 23 distinkta datum (rena).',
+        lastVerified: '2026-09-04',
+        notes: 'Probe-venues 2026-06-09: 1000 event-URLs (event-mönster) — livemusik (Göteborg). Verifierad: 31 sparade, 23 distinkta datum (rena). OMPROBAD 2026-09-04: domänbyte till pustervik.nu, JSON-LD i stället för browser-rendering (useBrowser borttagen).',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.pustervik.se/event-sitemap.xml', date: '2026-06-09' },
     },
     {

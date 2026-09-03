@@ -4,6 +4,14 @@ Entry-point. Läs först. Hålls under 60 rader.
 
 ## Senaste riktade insats
 
+2026-09-04: **Källsvep storstadsscener + svagaste städerna** — Stockholm Lives
+fem arenor, Berwaldhallen, Debaser, Got Event (Scandinavium/Ullevi), Visit
+Luleå, Visit Roslagen in; Pustervik + Konserthuset lagade. Två nya motorer
+(`gotevent`, `visitlulea`), tre motorfixar. Ticketmasters API har bara ~200
+SE-event — arenorna måste tas från egna sajter. Recept för det som inte
+byggdes (Ystad-Österlen, Svensk Jazz, Malmö Arena) i
+[runs/2026-09-04.md](runs/2026-09-04.md).
+
 2026-07-27: **Dammsugning Borås/Kalmar/Östersund/Eskilstuna** (GSC-topstäderna) —
 9 nya/väckta källor, ~560 nya event. Ny `wp-graphql`-engine + 2 sitevision-API-
 varianter. Detaljer: [runs/2026-07-27.md](runs/2026-07-27.md).

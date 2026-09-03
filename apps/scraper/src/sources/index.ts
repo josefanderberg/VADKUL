@@ -51,6 +51,8 @@ import { accentFeedEngine } from '../scrapers/accentfeed';
 import { optimizelyEventsEngine } from '../scrapers/optimizely-events';
 import { sportalityEngine } from '../scrapers/sportality';
 import { sportomediaEngine } from '../scrapers/sportomedia';
+import { gotEventEngine } from '../scrapers/gotevent';
+import { visitLuleaEngine } from '../scrapers/visitlulea';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -124,4 +126,6 @@ export const ENGINES: Record<string, Engine> = {
     'optimizely-events': optimizelyEventsEngine,
     'sportality': sportalityEngine,
     'sportomedia': sportomediaEngine,
+    'gotevent': gotEventEngine,
+    'visitlulea': visitLuleaEngine,
 };

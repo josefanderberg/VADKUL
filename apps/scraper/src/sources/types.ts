@@ -186,7 +186,8 @@ export type EngineName =
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
     | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'skordefest' | 'fhp'
-    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter' | 'turid' | 'hbgevent' | 'bestevent' | 'accentfeed' | 'optimizely-events' | 'sportality' | 'sportomedia';
+    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter' | 'turid' | 'hbgevent' | 'bestevent' | 'accentfeed' | 'optimizely-events' | 'sportality' | 'sportomedia'
+    | 'gotevent' | 'visitlulea';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

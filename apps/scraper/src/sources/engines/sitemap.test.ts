@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -253,5 +253,32 @@ describe('cheerioFallback — "Rekommenderade evenemang" förgiftar inte sidan',
         const html = KB_PAGE.replace('Rekommenderade evenemang', 'Om artisten');
         const ev = cheerioFallback(html, URL, 'Malmö')!;
         expect(ev.title).toBe('The Proclaimers');
+    });
+});
+
+// Stockholm Lives arenasajter (hovetarena.se, aviciiarena.se …) lägger
+// insläppet "Entréer öppnar" som FÖRSTA Event-nod i JSON-LD:n och själva
+// matchen som andra. Före 2026-09-04 dödade blacklistträffen hela sidan.
+const HOVET_PAGE = `<html><head><title>AIK Hockey - Hovet</title>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+ {"@type":"SportsEvent","name":"Entréer öppnar","url":"https://hovetarena.se/evenemang/sport/aik-hockey/","startDate":"2026-09-04T18:00:00+02:00","location":{"@type":"Place","name":"Hovet"}},
+ {"@type":"SportsEvent","name":"AIK - Sparta Sarpsborg (Försäsongsmatch)","url":"https://hovetarena.se/evenemang/sport/aik-hockey/","startDate":"2026-09-04T19:00:00+02:00","location":{"@type":"Place","name":"Hovet"},"image":["https://eventadmin.stockholmlive.com/uploads/img/x.jpg"]}
+]}</script></head><body><main><h1>AIK Hockey</h1></main></body></html>`;
+
+describe('extractFromHtml — blacklistad JSON-LD-nod diskvalificerar bara sig själv', () => {
+    it('hoppar över "Entréer öppnar" och tar matchen som följer', () => {
+        const ev = extractFromHtml(HOVET_PAGE, 'https://hovetarena.se/evenemang/sport/aik-hockey/', 'Stockholm')!;
+        expect(ev).not.toBeNull();
+        expect(ev.title).toBe('AIK - Sparta Sarpsborg (Försäsongsmatch)');
+        expect(ev.startDate.toISOString()).toBe('2026-09-04T17:00:00.000Z');
+        expect(ev.venueName).toBe('Hovet');
+        expect(ev.city).toBe('Stockholm');
+    });
+
+    it('sida med ENBART junk-noder ger fortfarande inget event (ingen cheerio-återuppståndelse)', () => {
+        const html = `<html><head><title>Kommunen</title>
+<script type="application/ld+json">{"@type":"Event","name":"Startsida","url":"https://example.se/","startDate":"2026-09-10"}</script>
+</head><body><main><h1>Startsida</h1><p>10 september 2026</p></main></body></html>`;
+        expect(extractFromHtml(html, 'https://example.se/', 'Kalmar')).toBeNull();
     });
 });
