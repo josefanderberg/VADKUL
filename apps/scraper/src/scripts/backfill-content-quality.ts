@@ -33,7 +33,7 @@ import { db } from '../config/firebase';
 import { sqlite, setEventContent } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import { extractPriceFromText } from '../utils/priceFromText';
-import { normalizeDescription } from '../utils/normalizeEvent';
+import { normalizeDescription, sanitizePriceField } from '../utils/normalizeEvent';
 import { looksStripped } from '../utils/contentRefresh';
 
 const APPLY = process.argv.includes('--apply');
@@ -48,6 +48,7 @@ interface Row {
 
 const BROKEN_CHARS_RE = /�|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 const FB_FOOTER_RE = /^\s*Integritet\s*[·•]?\s*(?:\n\s*)?·?\s*Användarvillkor/i;
+const READ_MORE_TAIL_RE = /\s*(?:läs mer|read more|visa mer|see more)(?:\s+här)?\s*[»›→…]*\s*$/i;
 /** Gamla hårda tak: cleanDescription 500, engines 600/800. Avslut saknas → kapad. */
 const OLD_CAPS = new Set([500, 600, 800]);
 
@@ -76,7 +77,7 @@ async function main() {
     `).all() as Row[];
     console.log(`${rows.length} framtida synliga event`);
 
-    const stats = { price: 0, cleaned: 0, emptied: 0 };
+    const stats = { price: 0, priceCleaned: 0, cleaned: 0, emptied: 0 };
     const priceSamples: string[] = [];
     const priceByHost: Record<string, number> = {};
     const capped: Record<string, number> = {};
@@ -86,8 +87,8 @@ async function main() {
         const desc = r.description ?? '';
         const patch: { description?: string; price?: string } = {};
 
-        // 1) Trasiga tecken / FB-sidfot → städa (bara rader som bär skadan).
-        if (desc && (BROKEN_CHARS_RE.test(desc) || FB_FOOTER_RE.test(desc))) {
+        // 1) Trasiga tecken / FB-sidfot / "Läs mer"-svans → städa (bara rader som bär skadan).
+        if (desc && (BROKEN_CHARS_RE.test(desc) || FB_FOOTER_RE.test(desc) || READ_MORE_TAIL_RE.test(desc))) {
             const fixed = normalizeDescription(desc);
             if (fixed !== desc) {
                 patch.description = fixed;
@@ -95,10 +96,17 @@ async function main() {
             }
         }
 
-        // 2) Pris ur texten där prisfältet är tomt. Tickster undantas: deras
-        //    sidtext bär Ticksters egen serviceavgift ("800 kr"), inte biljettpriset.
+        // 2a) Skräp/långtext i prisfältet ("P", "ordi", "Pris: 100 kr, Ungdom …
+        //     Biljetter via …") → tomt resp. intervall.
+        const storedPrice = (r.price ?? '').trim();
+        const sanitized = storedPrice ? (sanitizePriceField(storedPrice) ?? '') : '';
+        if (storedPrice && sanitized !== storedPrice) { patch.price = sanitized; stats.priceCleaned++; }
+        const effectivePrice = storedPrice ? sanitized : '';
+
+        // 2b) Pris ur texten där prisfältet är (eller just blev) tomt. Tickster
+        //     undantas: deras sidtext bär Ticksters egen serviceavgift ("800 kr").
         const text = patch.description ?? desc;
-        if (!(r.price ?? '').trim() && text && !/tickster\.com/i.test(r.url)) {
+        if (!effectivePrice && text && !/tickster\.com/i.test(r.url)) {
             const p = extractPriceFromText(text);
             if (p) {
                 patch.price = p;
@@ -126,7 +134,8 @@ async function main() {
     console.log(Object.entries(priceByHost).sort((a, b) => b[1] - a[1]).slice(0, 12)
         .map(([h, n]) => `  ${String(n).padStart(5)}  ${h}`).join('\n'));
     if (priceSamples.length) console.log('  exempel:\n' + priceSamples.join('\n'));
-    console.log(`\n🧹 Beskrivningar städade från �/sidfot: ${stats.cleaned} (${stats.emptied} tömda)`);
+    console.log(`\n🧹 Beskrivningar städade från �/sidfot/"Läs mer": ${stats.cleaned} (${stats.emptied} tömda)`);
+    console.log(`🏷️  Prisfält sanerade (skräp tömt / långtext → intervall): ${stats.priceCleaned}`);
 
     const top = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12)
         .map(([h, n]) => `  ${String(n).padStart(5)}  ${h}`).join('\n') || '  (inga)';

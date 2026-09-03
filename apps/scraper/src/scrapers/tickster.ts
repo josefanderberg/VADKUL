@@ -98,7 +98,9 @@ async function discoverEventLinks(page: Page, url: string): Promise<{ href: stri
             const anchors = Array.from(document.querySelectorAll('a[href*="/events/"]'));
             return anchors
                 .map(a => (a as HTMLAnchorElement).href)
-                .filter(href => /\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}\//.test(href));
+                // Bara /se/-event: sökningen är svensk men listar även norska
+                // (/no/nb/) — 108 Oslo-event låg på kartan 2026-09-03.
+                .filter(href => /tickster\.com\/se\//i.test(href) && /\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}\//.test(href));
         });
 
         const result: { href: string; dateFromUrl: string }[] = [];

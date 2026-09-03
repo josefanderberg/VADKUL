@@ -33,6 +33,7 @@ import { Engine, RawEvent } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
 import { cleanDescription } from '../utils/text';
 import { extractVenueFromText, ortFromForeningsnamn } from '../utils/venueFromText';
+import { cityPoints } from '../utils/cityLookup';
 
 const SITE = 'https://pro.se';
 const PORTLET_ID = '12.4d4eef20190100e8b7a784c7';
@@ -125,7 +126,7 @@ export function mapProActivity(a: any, foreningUrl: string, foreningNamn: string
     if (!startDate) return null;
 
     const kommun = kommunFromUrl(foreningUrl);
-    const kommunCap = kommun ? kommun[0].toUpperCase() + kommun.slice(1) : '';
+    const kommunCap = kommunNameFromSlug(kommun);
     const locationName = (a.location?.name || a.location || '').toString().trim();
     const host = foreningNamn || 'PRO';
     // Orten ur föreningsnamnet ("PRO Vislanda" → Vislanda) slår kommun-
@@ -175,6 +176,21 @@ export function parseActivityDescription(html: string): string | null {
 export async function fetchProActivityDescription(url: string): Promise<string | null> {
     const html = await fetchText(url);
     return html ? parseActivityDescription(html) : null;
+}
+
+/** ASCII-vikning för slug-jämförelse ("Eksjö" → "eksjo"). */
+const foldSlug = (v: string) => v.toLowerCase().replace(/[åä]/g, 'a').replace(/ö/g, 'o').replace(/é/g, 'e').replace(/[\s-]+/g, ' ');
+
+/**
+ * Kommunens ascii-slug ur URL:en ("eksjo", "ostra goinge") → riktigt namn
+ * med åäö ("Eksjö", "Östra Göinge") via webbens ortlista. 1 360 PRO-
+ * platshållare stod med "Eksjo"/"Falkoping" (revisionen 2026-09-03).
+ * Okänd ort → slug med stor bokstav, som förut. Exporterad för test.
+ */
+export function kommunNameFromSlug(slug: string): string {
+    if (!slug) return '';
+    const hit = cityPoints().find((p) => foldSlug(p.name) === foldSlug(slug));
+    return hit?.name ?? slug.split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
 /**

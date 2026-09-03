@@ -32,6 +32,19 @@ export function looksStripped(text: string): boolean {
     return SPACE_HOLE_RE.test(text);
 }
 
+/**
+ * Motorernas egna platshållartexter när källan inte gav någon beskrivning:
+ * PRO ("PRO Eksjö-aktivitet på Folkets hus, Eksjö."), ABF ("ABF-evenemang i
+ * Kalmar."), Medborgarskolan ("Kurs med Medborgarskolan i Lund."). 1 360
+ * PRO-rader låg kvar så (2026-09-03) fast detaljsidan har riktig text.
+ */
+const PLACEHOLDER_RE = /^(?:PRO(?: [^\n]{0,60})?-aktivitet(?: på [^,\n]{1,80})?, [^.\n]{1,40}\.|ABF-evenemang(?: i [^.\n]{1,40})?\.|(?:[^\n]{1,40} med )?Medborgarskolan(?: i [^.\n]{1,40})?\.)$/;
+
+/** Är texten en motor-platshållare (ingen riktig beskrivning)? */
+export function isPlaceholderDescription(text: string): boolean {
+    return PLACEHOLDER_RE.test(text.trim());
+}
+
 /** Ersättningstecken/ensamma surrogathalvor — spår av trasig kodning. */
 const BROKEN_CHARS_RE = /�|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -52,6 +65,7 @@ function core(s: string): string {
  *  - sparad saknar å/ä/ö (mellanslagshål), färsk har → färsk
  *  - sparad har �/trasiga surrogat, färsk inte        → färsk
  *  - färsk är en LÄNGRE FORTSÄTTNING av sparad (kapad vid tak) → färsk
+ *  - sparad är en motor-platshållare (PRO/ABF/Medborgarskolan) och färsk är riktig text ≥ 60 → färsk
  *  - sparad är kort platshållare (< 40 tecken) och färsk är ≥ 60 och minst dubbelt → färsk
  *  - annars null — omformuleringar i källan rör vi inte
  */
@@ -67,6 +81,7 @@ export function pickBetterDescription(
     const sn = norm(s);
     if (fn === sn) return null;
 
+    if (isPlaceholderDescription(sn) && !isPlaceholderDescription(fn) && fn.length >= 60) return f;
     if (!HAS_SWEDISH.test(s) && looksStripped(s) && HAS_SWEDISH.test(f)) return f;
     if (BROKEN_CHARS_RE.test(s) && !BROKEN_CHARS_RE.test(f)) return f;
 
