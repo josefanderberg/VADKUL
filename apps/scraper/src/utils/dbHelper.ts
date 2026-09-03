@@ -202,19 +202,22 @@ export async function refreshEventPlace(
 
 /**
  * Refresh-körning: källan levererar nu en BÄTTRE beskrivning (hel i stället
- * för kapad vid gammalt tak, med å/ä/ö, utan �) och/eller ett pris där det
- * saknades. Vad som räknas som bättre avgörs av utils/contentRefresh — här
- * skrivs bara det som faktiskt skiljer sig (SQLite + Firestore via stamped()).
- * Returnerar true om något ändrades.
+ * för kapad vid gammalt tak, med å/ä/ö, utan �), en riktig värd och/eller ett
+ * pris där det saknades. Vad som räknas som bättre avgörs av anroparen
+ * (utils/contentRefresh; ticketmaster.enrichmentPatch — 2026-09-04: ~860
+ * TM-event låg med "Music Pop"/"TicketMaster") — här skrivs bara det som
+ * faktiskt skiljer sig (SQLite + Firestore via stamped()). Returnerar true
+ * om något ändrades.
  */
 export async function refreshEventContent(
     url: string,
-    patch: { description?: string; price?: string },
+    patch: { description?: string; hostName?: string; price?: string },
 ): Promise<boolean> {
     const row = getSqliteEvent(url);
     if (!row) return false;
-    const changes: { description?: string; price?: string } = {};
+    const changes: { description?: string; hostName?: string; price?: string } = {};
     if (patch.description !== undefined && patch.description !== (row.description ?? '')) changes.description = patch.description;
+    if (patch.hostName !== undefined && patch.hostName !== (row.hostName ?? '')) changes.hostName = patch.hostName;
     if (patch.price !== undefined && patch.price !== (row.price ?? '')) changes.price = patch.price;
     if (Object.keys(changes).length === 0) return false;
     try {

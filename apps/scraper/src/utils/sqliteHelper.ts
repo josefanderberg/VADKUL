@@ -637,13 +637,15 @@ const setDescriptionStmt = sqlite.prepare('UPDATE link_events SET description = 
 const setPriceStmt = sqlite.prepare('UPDATE link_events SET price = ?, updatedAt = ? WHERE url = ?');
 
 /**
- * Innehålls-refresh (runnerns refresh-körningar, backfill-content-quality):
- * ny beskrivning och/eller nytt pris för ett KÄNT event. Anroparen avgör
- * om texten är bättre (utils/contentRefresh) — här skrivs bara.
+ * Innehålls-refresh (runnerns refresh-körningar, backfill-content-quality,
+ * Ticketmaster-berikningen): ny beskrivning, värd och/eller pris för ett
+ * KÄNT event. Anroparen avgör om texten är bättre (utils/contentRefresh,
+ * ticketmaster.enrichmentPatch) — här skrivs bara. Utelämnade fält rörs inte.
  */
-export function setEventContent(url: string, patch: { description?: string; price?: string }): void {
+export function setEventContent(url: string, patch: { description?: string; hostName?: string; price?: string }): void {
     const now = new Date().toISOString();
     if (patch.description !== undefined) setDescriptionStmt.run(patch.description, now, url);
+    if (patch.hostName !== undefined) setHostStmt.run(patch.hostName, now, url);
     if (patch.price !== undefined) setPriceStmt.run(patch.price, now, url);
 }
 

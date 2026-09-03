@@ -7,6 +7,7 @@
     "start": "ts-node src/index.ts",
     "runs": "ts-node src/scripts/show-runs.ts",
     "sources": "ts-node src/scripts/run-sources.ts",
+    "scrape-ticketmaster": "ts-node src/scripts/run-ticketmaster.ts",
     "probe-wp": "ts-node src/scripts/probe-wordpress.ts",
     "probe-ical": "ts-node src/scripts/probe-ical.ts",
     "probe-sitevision": "ts-node src/scripts/probe-sitevision.ts",
