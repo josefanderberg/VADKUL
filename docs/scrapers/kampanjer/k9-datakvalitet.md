@@ -46,7 +46,8 @@ Rörs inte:
 ## Fortsättning
 
 - [ ] Efter första nattkörningen: läs K9-blocket i `nightly.log` — hur många priser ur text, hur ser exemplen ut? Falska positiva ⇒ skärp `GUARD_RE`.
-- [ ] Kör `SCRAPE_FORCE_REFRESH=1 npm run sources -- --engine=svenskakyrkan` (dagtid, minin) och räkna om 500-kapade: ska gå från 315 mot 0.
+- [x] 2026-09-03: engångs innehålls-svep i runnern (`CONTENT_SWEEP_VERSION`, stämpel per källa i `sync_meta`) — varje källa gör full-refresh vid sin nästa körning, så de kapade/å-ä-ö-lösa texterna läks i natt (dagliga) resp. inom en vecka (veckokällor) utan manuell `SCRAPE_FORCE_REFRESH`. Vill man ha det NU: `SCRAPE_FORCE_REFRESH=1 npm run sources -- --engine=svenskakyrkan` på minin.
+- [ ] Räkna om 500-kapade efter första natten: ska gå från 315 (SvK) / 441 (Nortic) mot 0.
 - [ ] Tickster: verifiera stycke-fallbacken headless på 3 event (dokumentera i tickster.md) — ändringen är skriven blind (ingen nätåtkomst i molnsessionen).
 - [ ] Hitta roten till �-emojin i FB-skrapan (jämför 25 drabbade mot 8 intakta: skrapdatum, Chrome-version, seed-fil vs sök).
 - [ ] Pris-täckning efter K9: mät `price=''` per källa igen; överväg Ollama-prompt för FB-event utan textpris.

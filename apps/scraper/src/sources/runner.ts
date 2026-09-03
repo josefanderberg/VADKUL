@@ -23,10 +23,22 @@ import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from '../utils/imageFilter';
-import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
+import { recordScrapeRun, setEventAudit, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
 const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
+
+/**
+ * Innehålls-svep (2026-09-03): när tolkningen av beskrivning/pris ändras
+ * (1500-tak i stället för 500, pris ur texten, contentRefresh) ska VARJE
+ * källa göra EN full-refresh vid sin nästa körning så kända event läks
+ * direkt — inte först vid var 4:e körning (upp till fyra veckor för
+ * veckokällor). Stämplas per källa i sync_meta när motorn gått igenom;
+ * dry-run och motorkrasch stämplar inte. Bumpa datumet när nästa sådan
+ * ändring landar, så går svepet igen.
+ */
+export const CONTENT_SWEEP_VERSION = '2026-09-03';
+const sweepKey = (sourceId: string): string => `contentSweep.${sourceId}`;
 
 // 30 dagar. Håller databasen lean — events längre fram fångas ändå senare när
 // de glider in i fönstret (och med färskare info då). Detalj-sidorna hämtas
@@ -132,7 +144,8 @@ export async function runSource(
     // Var 4:e körning per källa är en full-refresh: skip-känt-optimeringen
     // stängs av så ändrade/flyttade event på kända URL:er fångas upp.
     // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
-    const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1');
+    const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== CONTENT_SWEEP_VERSION;
+    const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1' || sweepDue);
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
@@ -142,7 +155,7 @@ export async function runSource(
         isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
         refreshKnown,
     };
-    if (refreshKnown) ctx.log('full-refresh-körning: kända URL:er re-fetchas');
+    if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${CONTENT_SWEEP_VERSION}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
 
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
@@ -435,6 +448,9 @@ export async function runSource(
     // Dry-run lämnar inga spår: en "would save 19686"-rad i scrape_runs skulle
     // förgifta daily-report och expectedMinEvents-regressionen.
     if (!opts.dryRun) persistRun(source, startedAt, result);
+    // Motorn gick igenom → svepet är gjort för den här källan (per-event-fel
+    // hindrar inte; en motorkrasch returnerar tidigare och stämplar inte).
+    if (sweepDue) setSyncMeta(sweepKey(source.id), CONTENT_SWEEP_VERSION);
     return result;
 }
 
