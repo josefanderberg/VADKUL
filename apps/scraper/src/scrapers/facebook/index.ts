@@ -1,13 +1,21 @@
 import puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHelper';
+import { addEventToDb, eventExistsInDb, getEventFromDb, refreshEventHost } from '../../utils/dbHelper';
 import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
 import { isResellerJunk, cleanFacebookTitle } from './junk';
+import { isGenericHost, hostFromOgDescription, hostFromPageJson } from './hostFallback';
+
+/**
+ * Kända event med generisk värd ("Facebook") skrapas om — högst så här många
+ * per natt, så FB inte rate-limitar oss för värdnamnens skull. 679/1 685 FB-
+ * event stod utan riktig värd 2026-09-03; hostFallback ger dem en ny chans.
+ */
+const MAX_HOST_RETRY = 120;
 import { searchGoogleImage } from '../../utils/imageSearch';
 import { applyDateFilters, discoverEventUrls } from './discovery';
 import { extractEventDetails } from './extractor';
@@ -516,6 +524,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         let extractAlreadyInDb = 0;
         let extractSkippedForeign = 0;
         let extractSkippedJunk = 0;
+        let extractHostRetried = 0;
         let extractSkippedDate = 0;
         let extractLoginWall = 0;
         let extractFailed = 0;
@@ -539,7 +548,11 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     return exp - Date.now() < 24 * 60 * 60 * 1000; // expirar inom 24h
                 };
 
-                if (existingEvent && !isFbImageExpired(existingEvent.coverImage)) {
+                // Generisk värd = DOM-instrumentet hittade inget. Skrapa om ett
+                // begränsat antal per natt så hostFallback (og:description, sid-JSON)
+                // får en chans att hitta namnet.
+                const hostRetry = !!existingEvent && isGenericHost(existingEvent.hostName) && extractHostRetried < MAX_HOST_RETRY;
+                if (existingEvent && !isFbImageExpired(existingEvent.coverImage) && !hostRetry) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     console.log(`    👉 Redan sparad i databasen: "${existingEvent.title}"`);
                     
@@ -594,7 +607,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 // Antingen ny URL eller existerande med expired FB-bild → scrape detalsidan
                 if (existingEvent) {
                     console.log(`  📄 Detaljer för: ${url}`);
-                    console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
+                    if (hostRetry) {
+                        extractHostRetried++;
+                        console.log(`    🔄 Generisk värd → omskrapning för värdnamn: "${existingEvent.title}"`);
+                    } else {
+                        console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
+                    }
                 }
                 await page.goto(url, { waitUntil: 'networkidle2' });
                 await handleBannersAndModals(page);
@@ -623,6 +641,26 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 // --- INSTRUMENT: VÄRD (HOST) ---
                 const hostInfo = await HostInstrument.extractInfo(page);
                 let finalHostName = hostInfo.name;
+                // Fallback-källor när DOM-instrumentet inte hittade värden: FB visar
+                // den på olika ställen beroende på sidformat — og:description
+                // ("Evenemang av X · …") och sidans inbäddade Relay-JSON.
+                if (isGenericHost(finalHostName)) {
+                    const fromOg = hostFromOgDescription(details.ogDescription);
+                    let fromJson: string | null = null;
+                    if (!fromOg) {
+                        try { fromJson = hostFromPageJson(await page.content()); } catch { /* sidan kan ha stängts */ }
+                    }
+                    const found = fromOg ?? fromJson;
+                    if (found) {
+                        finalHostName = found;
+                        console.log(`    👤 Värd via ${fromOg ? 'og:description' : 'sid-JSON'}: ${found}`);
+                    }
+                }
+                // Omskrapat för värdens skull och namnet hittades: skriv direkt till
+                // SQLite + Firestore (addEventToDb rör inte kända Firestore-dokument).
+                if (hostRetry && !isGenericHost(finalHostName)) {
+                    await refreshEventHost(url, finalHostName);
+                }
                 let finalImage = details.image;
                 let isHostVerified = false;
 
@@ -942,6 +980,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 newlySaved:    extractNewlySaved,
                 skippedForeign: extractSkippedForeign,
                 skippedJunk:   extractSkippedJunk,
+                hostRetried:   extractHostRetried,
                 skippedDate:   extractSkippedDate,
                 loginWall:     extractLoginWall,
                 failed:        extractFailed,
@@ -982,6 +1021,7 @@ export function writeFinalScraperStats(opts: {
         newlySaved: number;
         skippedForeign: number;
         skippedJunk: number;
+        hostRetried: number;
         skippedDate: number;
         loginWall: number;
         failed: number;

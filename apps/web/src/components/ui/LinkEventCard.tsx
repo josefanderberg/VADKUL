@@ -2,6 +2,7 @@ import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Use
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { hostLabelFor } from '../../utils/hostLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
@@ -324,6 +325,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // ser i scraper-datan: "Fri entré"/"Avgiftsfritt"/"kostnadsfritt" → "Gratis";
     // "30kr"/"160:-"/"40 SEK" → "X kr"; rena siffror/intervall får "kr" påsatt.
     const priceLabel = normalizePriceLabel(linkEvent.price);
+    // Källans domän tills cards-lagret mergat in värden (aldrig "Okänd" med länk).
+    const hostLabel = hostLabelFor(linkEvent.hostName, linkEvent.url);
 
     // Eventets emoji (samma logik som kartnålen/EventCard): per-event-emoji, annars
     // kategori-fallback. Visas i början av titeln.
@@ -594,10 +597,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 {!vadkulHosted && faviconUrl ? (
                                     <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
                                 ) : (
-                                    <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
+                                    <span className="font-bold text-[8px]">{hostLabel.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
-                            <span className="text-xs font-black text-black dark:text-white truncate">{linkEvent.hostName || 'Okänd'}</span>
+                            <span className="text-xs font-black text-black dark:text-white truncate">{hostLabel}</span>
                         </div>
                     </div>
 
