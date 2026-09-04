@@ -176,6 +176,9 @@ describe('runSource — grundpipeline', () => {
         expect(writtenEvents()[0].category).toBe('stage');
         await run([makeEvent({ title: 'Konsert', venueName: 'Konserthuset' })]);
         expect(writtenEvents()[1].emoji).toBeUndefined();
+        // Entydig aktivitet får sin regel-emoji redan vid spar (utils/activityEmoji).
+        await run([makeEvent({ title: 'KM Piteå discgolf', venueName: 'Norrfjärdens discgolfbana', city: 'Piteå' })]);
+        expect(writtenEvents()[2].emoji).toBe('🥏');
     });
 
     it('per-event hostName (paraply-källor) vinner över source.hostName', async () => {
