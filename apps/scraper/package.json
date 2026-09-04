@@ -37,6 +37,7 @@
     "fix-times": "ts-node src/scripts/fix-event-times.ts",
     "geo-refine": "ts-node src/scripts/geo-refine.ts",
     "repair-geo": "ts-node src/scripts/repair-misplaced-geo.ts",
+    "venue-fixes": "ts-node src/scripts/apply-venue-fixes.ts",
     "refetch-tickster": "ts-node src/scripts/refetch-tickster-geo.ts",
     "backfill-geocode": "ts-node src/scripts/backfill-geocode.ts",
     "backfill-date-only-times": "ts-node src/scripts/backfill-date-only-times.ts",
