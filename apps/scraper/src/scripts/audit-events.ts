@@ -20,7 +20,7 @@ import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
 import { setHidden, setEventAuditWithCategory } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
-import { withCinemaEmoji } from '../utils/cinema';
+import { withCinemaEmoji, looksLikeCinema } from '../utils/cinema';
 import { OLLAMA_CONCURRENCY, chunk } from '../utils/ollamaPool';
 
 const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
@@ -113,6 +113,9 @@ async function main() {
         const r = batch[b];
         const result = results[b];
         i++;
+        // Biovisning: kategori scen med hög konfidens oavsett LLM:ens gissning
+        // (taxonomin film → stage; utils/cinema). Emojin sätts vid skrivningen.
+        if (looksLikeCinema(r.title, r.locationName)) { result.category = 'stage'; result.categoryConfidence = 'high'; }
 
         stats[result.verdict]++;
         if (result.price) stats.priced++;

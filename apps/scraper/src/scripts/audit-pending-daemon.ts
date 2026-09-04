@@ -26,6 +26,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { isTrustedTicketSource } from '../utils/ticketSources';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 import { db as firestoreDb } from '../config/firebase';
@@ -116,6 +117,11 @@ async function processBatch(rows: Row[]): Promise<number> {
             if (TRANSIENT_REASONS.has(result.reason)) {
                 log(`  [${i + 1}/${total}] ⏳ skippar (LLM-fel) | ${(r.title || '').slice(0, 45)}`);
                 continue;
+            }
+
+            // Biovisning → scen + 🎬 oavsett LLM:ens val (utils/cinema, samma regel som audit-events).
+            if (looksLikeCinema(r.title, r.locationName)) {
+                result.category = 'stage'; result.categoryConfidence = 'high'; result.emoji = CINEMA_EMOJI;
             }
 
             const swFlag = result.inSweden ? '' : ' [EJ-SE]';

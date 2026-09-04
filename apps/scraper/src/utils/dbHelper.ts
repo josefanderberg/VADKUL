@@ -211,15 +211,16 @@ export async function refreshEventPlace(
  */
 export async function refreshEventContent(
     url: string,
-    patch: { description?: string; hostName?: string; price?: string; emoji?: string },
+    patch: { description?: string; hostName?: string; price?: string; emoji?: string; category?: string },
 ): Promise<boolean> {
     const row = getSqliteEvent(url);
     if (!row) return false;
-    const changes: { description?: string; hostName?: string; price?: string; emoji?: string } = {};
+    const changes: { description?: string; hostName?: string; price?: string; emoji?: string; category?: string } = {};
     if (patch.description !== undefined && patch.description !== (row.description ?? '')) changes.description = patch.description;
     if (patch.hostName !== undefined && patch.hostName !== (row.hostName ?? '')) changes.hostName = patch.hostName;
     if (patch.price !== undefined && patch.price !== (row.price ?? '')) changes.price = patch.price;
     if (patch.emoji !== undefined && patch.emoji !== (row.emoji ?? '')) changes.emoji = patch.emoji;
+    if (patch.category !== undefined && patch.category !== (row.category ?? '')) changes.category = patch.category;
     if (Object.keys(changes).length === 0) return false;
     try {
         setEventContent(url, changes);

@@ -408,7 +408,9 @@ export async function runSource(
                 geoPrecision,
                 // Paraply-källor (församling/klubb/krets) sätter värd per event.
                 hostName: e.hostName || source.hostName,
-                category,
+                // Biovisningar är alltid scen (taxonomin: film → stage) — klassificeraren
+                // gissade musik/familj/kurs på filmtitlar (158 av 619 låg fel 2026-09-04).
+                category: looksLikeCinema(e.title, e.venueName) ? 'stage' : category,
                 description: e.description || '',
                 coverImage: finalImageUrl,
                 // null (ej undefined) när pris saknas: Firestore vägrar undefined,
