@@ -1,31 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import {
     composeSpotlightRows, spotDistKm, spotWhen, type SpotEvent, type SpotRow,
 } from '@/utils/citySpotlight';
+import { writeEventSeed } from '@/utils/eventSeed';
+import { isPlainClick } from '@/utils/eventExpand';
+import { categoryLabel } from '@/components/v2/v2MapLabel';
+import EventExpanded from './EventExpanded';
 
 // Exponeringstrappans nivå 2–3 överst på stadssidan: boostade event (guld,
 // syns mest) och VADKUL-skapade event (syns mer), ovanför den externa
 // dag-för-dag-listan (syns bra). Sidan är statisk, men de här eventen bor i
 // Firestore (linkEvents userCreated / eventBoosts) — därför en klient-
 // komponent med två små filtrerade frågor, samma som kartan redan gör.
+// Raderna beter sig som LISTANS rader (Josef 4/9: "vi ska kunna öppna upp de
+// som de andra, samma info"): ett vanligt klick fäller ut eventet PÅ PLATS
+// (EventExpanded — beskrivning, Anmäl/Boka, Karta, Dela; /api/event fyller
+// luckorna, userCreated-fallbacken sedan 4/9), cmd/ctrl-klick öppnar kartan.
 // Finns inget att visa blir sektionen en SMAL inbjudan (aldrig en stor tom
-// hylla) — budskapet "ditt event överst här" ska kännas som en möjlighet,
-// inte som tomhet. Ägarbeslut 4/9: ingen Patreon/donationsrad här.
+// hylla). Ägarbeslut 4/9: ingen Patreon/donationsrad här.
 
 interface Props {
     cityName: string;
     cityLat: number;
     cityLng: number;
     radiusKm: number;
-    /** Sidans externa event, trimmade (id/titel/tid/emoji/plats) — bara för
-     *  boost-matchning; renderas aldrig i sin helhet här. */
+    /** Sidans externa event, trimmade — för boost-matchning och radvisning;
+     *  description m.m. fylls av /api/event vid utfällning. */
     staticEvents: SpotEvent[];
-    /** Kartlänk med &skapa=1 — öppnar skapa-flödet direkt över staden. */
+    /** Kartlänk med &skapa=1 — öppnar platsval-först-flödet över staden. */
     createHref: string;
 }
 
@@ -54,6 +61,14 @@ async function fetchCityRows(p: Props): Promise<{ boosted: SpotRow[]; vadkul: Sp
             time: time.toISOString(),
             emoji: typeof v.emoji === 'string' ? v.emoji : undefined,
             locationName: typeof v.locationName === 'string' ? v.locationName : undefined,
+            lat, lng,
+            category: typeof v.category === 'string' ? v.category : 'other',
+            hostName: typeof v.hostName === 'string' ? v.hostName : undefined,
+            coverImage: typeof v.coverImage === 'string' && v.coverImage ? v.coverImage : undefined,
+            price: typeof v.price === 'string' ? v.price : undefined,
+            description: typeof v.description === 'string' ? v.description : undefined,
+            attendees: typeof v.attendees === 'number' ? v.attendees : 0,
+            isTip: v.isTip === true,
         });
         // Ett boostat VADKUL-event kan vara boostat på doc-id:t.
         const fu = v.featuredUntil instanceof Timestamp ? v.featuredUntil.toDate() : null;
@@ -62,33 +77,114 @@ async function fetchCityRows(p: Props): Promise<{ boosted: SpotRow[]; vadkul: Sp
     return composeSpotlightRows(userCreated, p.staticEvents, boostedIds);
 }
 
-function Row({ e, gold }: { e: SpotRow; gold: boolean }) {
+const DAY_LABEL_FMT = new Intl.DateTimeFormat('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
+const CLOCK_FMT = new Intl.DateTimeFormat('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
+const HOUR_FMT = new Intl.DateTimeFormat('sv-SE', { hour: 'numeric', hour12: false, timeZone: 'Europe/Stockholm' });
+
+/** Radens data i EventExpandeds format (ListedEvent utan dups) — luckor
+ *  (beskrivning, utlänk) fylls av /api/event inne i utfällningen. */
+function toExpanded(e: SpotRow) {
+    const t = new Date(e.time);
+    const clock = CLOCK_FMT.format(t) === '00:00' ? null : CLOCK_FMT.format(t);
+    const place = e.locationName ?? '';
+    return {
+        id: e.id,
+        href: `/?event=${encodeURIComponent(e.id)}`,
+        emoji: e.emoji || '🎉',
+        title: e.title,
+        meta: [clock ? `kl ${clock}` : null, place || null, e.hostName ?? null].filter(Boolean).join(' · '),
+        coverImage: e.coverImage,
+        place,
+        clock,
+        price: e.price ?? null,
+        attendees: e.attendees ?? 0,
+        hour: clock ? parseInt(HOUR_FMT.format(t), 10) : null,
+        t: t.getTime(),
+        lat: e.lat ?? 0,
+        lng: e.lng ?? 0,
+        category: e.category ?? 'other',
+        hostName: e.hostName ?? null,
+        description: e.description ?? null,
+    };
+}
+
+/** Kart-överlämningen (samma som listradernas seedMapHandoff). */
+function seedMap(e: SpotRow): void {
+    writeEventSeed({
+        id: e.id,
+        title: e.title,
+        t: new Date(e.time).getTime(),
+        hasSpecificTime: CLOCK_FMT.format(new Date(e.time)) !== '00:00',
+        lat: e.lat ?? 0,
+        lng: e.lng ?? 0,
+        locationName: e.locationName ?? '',
+        category: e.category ?? 'other',
+        emoji: e.emoji || '🎉',
+        hostName: e.hostName,
+        coverImage: e.coverImage,
+        price: e.price,
+        attendees: e.attendees ?? 0,
+        description: e.description,
+    });
+}
+
+function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expanded: boolean; onToggle: () => void }) {
     return (
-        <Link
-            href={`/?event=${encodeURIComponent(e.id)}`}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 border transition-colors ${
-                gold
-                    ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300/70 dark:border-amber-500/40 hover:border-amber-400'
-                    : 'bg-white dark:bg-zinc-900 border-sky-200 dark:border-sky-500/30 hover:border-[#006AA7]/50'
-            }`}
-        >
-            <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
-                {e.emoji || '🎉'}
-            </span>
-            <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
-                    {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
+        <div className={`rounded-2xl border overflow-hidden transition-colors ${
+            gold
+                ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300/70 dark:border-amber-500/40'
+                : 'bg-white dark:bg-zinc-900 border-sky-200 dark:border-sky-500/30'
+        }`}>
+            {/* <a href=/?event=> står kvar för crawl + cmd/ctrl-klick (kartan i
+                ny flik) — vanligt klick fäller ut på plats, som listraderna. */}
+            <a
+                href={`/?event=${encodeURIComponent(e.id)}`}
+                onClick={(ev) => {
+                    if (!isPlainClick(ev)) { seedMap(e); return; }
+                    ev.preventDefault();
+                    onToggle();
+                }}
+                className="flex items-center gap-3 px-3 py-2.5"
+            >
+                <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
+                    {e.emoji || '🎉'}
                 </span>
-                <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
-                    {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
+                        {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
+                    </span>
+                    <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
+                        {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                    </span>
                 </span>
-            </span>
-        </Link>
+                <span className="shrink-0 flex flex-col items-end gap-1">
+                    {e.vadkul && (
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${gold ? 'bg-amber-200/70 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300'}`}>
+                            {e.isTip ? 'Tipsat' : 'Skapat'}
+                        </span>
+                    )}
+                    {e.category && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400">
+                            {categoryLabel(e.category)}
+                        </span>
+                    )}
+                </span>
+            </a>
+            {expanded && (
+                <EventExpanded
+                    e={toExpanded(e)}
+                    dayLabel={DAY_LABEL_FMT.format(new Date(e.time))}
+                    onClose={onToggle}
+                    onMapClick={() => seedMap(e)}
+                />
+            )}
+        </div>
     );
 }
 
 export default function CityVadkulSpotlight(props: Props) {
     const [rows, setRows] = useState<{ boosted: SpotRow[]; vadkul: SpotRow[] } | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     useEffect(() => {
         let active = true;
         fetchCityRows(props)
@@ -120,6 +216,7 @@ export default function CityVadkulSpotlight(props: Props) {
         );
     }
 
+    const toggle = (id: string) => setExpandedId(prev => (prev === id ? null : id));
     return (
         <section className="mt-4">
             <div className="flex items-baseline justify-between gap-3">
@@ -131,8 +228,8 @@ export default function CityVadkulSpotlight(props: Props) {
                 </Link>
             </div>
             <div className="mt-2 flex flex-col gap-2">
-                {boosted.map(e => <Row key={e.id} e={e} gold />)}
-                {vadkul.map(e => <Row key={e.id} e={e} gold={false} />)}
+                {boosted.map(e => <Row key={e.id} e={e} gold expanded={expandedId === e.id} onToggle={() => toggle(e.id)} />)}
+                {vadkul.map(e => <Row key={e.id} e={e} gold={false} expanded={expandedId === e.id} onToggle={() => toggle(e.id)} />)}
             </div>
             <p className="mt-1.5 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
                 Event skapade på VADKUL visas överst här — ⭐ boostade syns allra mest, även på kartan.

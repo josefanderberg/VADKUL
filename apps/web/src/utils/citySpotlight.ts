@@ -12,6 +12,17 @@ export interface SpotEvent {
     locationName?: string;
     lat?: number;
     lng?: number;
+    /** Fält för utfällningen på plats (EventExpanded) — följer med genom
+     *  composeSpotlightRows via spread. Saknade fält fylls av /api/event. */
+    category?: string;
+    hostName?: string;
+    coverImage?: string;
+    price?: string;
+    description?: string;
+    attendees?: number;
+    /** Tips (isTip på userCreated-dokumentet) — "Tipsat" i stället för
+     *  "Skapat på VADKUL". */
+    isTip?: boolean;
 }
 
 export interface SpotRow extends SpotEvent {
