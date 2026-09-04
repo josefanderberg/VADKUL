@@ -1,5 +1,5 @@
 /**
- * LLM-baserad audit av events: använder Ollama (gemma4:latest) för att bedöma
+ * LLM-baserad audit av events: använder Ollama (qwen3:8b) för att bedöma
  * om eventet ser legitimt ut, klassificera kategori, välja en passande emoji
  * och plocka ut entrépris.
  *
@@ -11,7 +11,10 @@
  *   - Vilken enskild emoji representerar just detta event bäst (för kartpinnen)?
  *   - Nämns ett entré-/deltagarpris i texten?
  *
- * Modell: gemma4:latest (text-only). För bildgranskning behövs llama3.2-vision.
+ * Modell: qwen3:8b (text-only, samma som K4 — EN modell laddad på minin).
+ * Standard var gemma4:latest t.o.m. 2026-09-04: llama-server tog 18 GB på en
+ * 16 GB-maskin och svepte ut allt annat. Bilder granskas inte — texten
+ * (titel/plats/beskrivning/värd) räcker för junk/kategori/emoji/pris.
  */
 
 import { normalizeCategory } from './categoryNormalize';
@@ -19,7 +22,7 @@ import { normalizeCategory } from './categoryNormalize';
 import { OLLAMA_TIMEOUT_MS } from './ollamaPool';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
+const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'qwen3:8b';
 // Skalar med OLLAMA_CONCURRENCY (utils/ollamaPool) — köade anrop får inte avbrytas.
 const TIMEOUT_MS = OLLAMA_TIMEOUT_MS;
 
