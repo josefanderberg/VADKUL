@@ -11,6 +11,7 @@ import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd,
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
 import CityVadkulSpotlight from '../CityVadkulSpotlight';
+import CityCreatePitch from '../CityCreatePitch';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
@@ -204,6 +205,11 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     })()}
                 />
 
+                {/* Samma pitch som i botten men HOPFÄLLD (Josef 4/9: "i
+                    Stockholm tar det aslång tid att scrolla ner") — nyttan av
+                    att skapa/boosta ska synas även i storstäder. */}
+                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} collapsible />
+
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
                     i sektionen och styr allt under: kategorichipsen (children)
                     och dag-för-dag-listan. */}
@@ -237,49 +243,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
 
                 {/* Slutet av listan är en INBJUDAN, inte en återvändsgränd
                     (Josef 4/9): den som scrollat hit ska mötas av "du är
-                    nästa", plus varför horisonten är kort (nu-fokus är
-                    positionering, inte en brist). Trappan säljer boosten. */}
-                <section className="mt-10 rounded-3xl bg-gradient-to-br from-[#006AA7] to-[#004B78] px-5 py-6 text-white">
-                    <h2 className="text-xl font-black tracking-tight">Slut på listan? Skapa det som saknas.</h2>
-                    <p className="mt-2 text-sm leading-relaxed text-sky-100 font-medium">
-                        Ett event på VADKUL behöver inte vara en konsert — bjud hem folk på sällskapsspel,
-                        laga mat ihop, ordna vinprovning, plugga eller gå en runda. Det du skapar visas
-                        överst på den här sidan och lyfts på kartan.
-                    </p>
-                    {/* Trappan: nivåerna ska SE ut som en stegring (Josef 4/9:
-                        "ser knappt skillnad på vänster och höger") — dämpad →
-                        blå med bricka → guld med glow, stigande höjd på
-                        desktop. Argumenten är kartans riktiga beteenden:
-                        VADKUL-event ligger alltid uppe som bricka, boost ger
-                        guldbricka med ⭐ som syns hela veckan före eventet. */}
-                    <div className="mt-4 grid gap-2 sm:grid-cols-3 sm:items-end">
-                        <div className="rounded-2xl bg-white/5 border border-white/10 px-3.5 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/80">Nivå 1</p>
-                            <p className="mt-0.5 text-sm font-black text-sky-100/90">Syns bra</p>
-                            <p className="mt-1 text-xs font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig, varje natt, och visar dem som prickar på kartan.</p>
-                        </div>
-                        <div className="rounded-2xl bg-white/15 border border-sky-300/40 px-3.5 py-4 shadow-lg">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-sky-200">Nivå 2 · Skapa gratis</p>
-                            <p className="mt-0.5 text-sm font-black text-white">📌 Syns mer</p>
-                            <p className="mt-1 text-xs font-medium leading-snug text-sky-100">Skapat på VADKUL — egen eventbricka som ligger UPPE på kartan hela tiden, och överst på den här sidan.</p>
-                        </div>
-                        <div className="rounded-2xl bg-gradient-to-br from-[#FECC02]/25 to-[#FECC02]/10 border-2 border-[#FECC02] px-3.5 py-5 shadow-xl shadow-[#FECC02]/20">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost</p>
-                            <p className="mt-0.5 text-sm font-black text-[#FECC02]">⭐ Syns mest</p>
-                            <p className="mt-1 text-xs font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här.</p>
-                        </div>
-                    </div>
-                    <Link
-                        href={`${cityMapHref(city)}&skapa=1`}
-                        className="mt-4 inline-block rounded-full bg-[#FECC02] px-5 py-2.5 text-sm font-black text-[#052846] hover:brightness-105 transition"
-                    >
-                        Skapa ett event i {city.name}
-                    </Link>
-                    <p className="mt-3 text-[11px] font-medium text-sky-200/90">
-                        VADKUL fokuserar på det som händer nu — idag först, sedan veckan. Event längre
-                        fram fylls på när de närmar sig.
-                    </p>
-                </section>
+                    nästa". Samma block ligger HOPFÄLLT under spotlighten
+                    överst — i Stockholm scrollar ingen hit. */}
+                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} />
 
                 <FaqSection faqs={faqs} />
 
