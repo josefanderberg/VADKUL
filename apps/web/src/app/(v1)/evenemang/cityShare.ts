@@ -24,7 +24,7 @@ export function truncateTitle(title: string, max = 48): string {
 /** Rader till bilden: veckans bästa (pickRecommended — spridning över
  *  kategori/värd/plats), bara inom `horizonDays` framåt, kapade titlar,
  *  "Lör 6/9 · 19:00" (klockslag när eventet har ett). Delas länken varje dag
- *  (ägarens plan 4/9) ska bilden vara den dagens veckolista. */
+ *  (ägarens plan 4/9) ska bilden vara den dagens veckolista, i datumordning. */
 export function pickShareLines(events: CityEvent[], n = 5, now = Date.now(), horizonDays = 7): ShareLine[] {
     const from = now - 60 * 60 * 1000;
     const to = now + horizonDays * 24 * 60 * 60 * 1000;
@@ -32,7 +32,10 @@ export function pickShareLines(events: CityEvent[], n = 5, now = Date.now(), hor
         const t = new Date(e.time).getTime();
         return t >= from && t < to;
     });
-    return pickRecommended(upcoming, n).map(e => ({
+    // Urvalet är kvalitetsrankat; raderna visas i datumordning (ägaren 4/9).
+    return pickRecommended(upcoming, n)
+        .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+        .map(e => ({
         emoji: e.emoji || '🎉',
         title: truncateTitle(e.title, 44),
         when: e.hasSpecificTime ? `${shortDayLabel(e.time)} · ${clockLabel(e.time)}` : shortDayLabel(e.time),

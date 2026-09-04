@@ -56,6 +56,19 @@ describe('pickShareLines', () => {
         const loppis = lines.find(l => l.title === 'Loppis på torget');
         if (loppis) expect(loppis.when).not.toContain('·');   // utan klockslag → bara dagen
     });
+    it('raderna ligger i datumordning oavsett rankning/inmatningsordning', () => {
+        // Olika ord i titlarna: dedupKey ser "Dag 1"–"Dag 5" som samma titel.
+        const now = Date.now();
+        const at = (d: number) => new Date(now + d * 864e5 + 3600e3).toISOString();
+        const lines = pickShareLines([
+            ev({ id: 'd4', title: 'Match', time: at(4), category: 'sport', emoji: '⚽', locationName: 'Arenan' }),
+            ev({ id: 'd1', title: 'Konsert', time: at(1), category: 'music', emoji: '🎵', locationName: 'Scenen' }),
+            ev({ id: 'd5', title: 'Vernissage', time: at(5), category: 'art', emoji: '🎨', locationName: 'Galleriet' }),
+            ev({ id: 'd2', title: 'Familjedag', time: at(2), category: 'family', emoji: '🧸', locationName: 'Parken' }),
+            ev({ id: 'd3', title: 'Loppis', time: at(3), category: 'market', emoji: '🛍️', locationName: 'Torget' }),
+        ], 5, now);
+        expect(lines.map(l => l.title)).toEqual(['Konsert', 'Familjedag', 'Loppis', 'Match', 'Vernissage']);
+    });
     it('tom lista → tom lista', () => {
         expect(pickShareLines([], 5)).toEqual([]);
     });
