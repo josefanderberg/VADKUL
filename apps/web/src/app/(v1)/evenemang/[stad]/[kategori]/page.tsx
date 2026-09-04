@@ -50,6 +50,11 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
             title: `${cat.h1(city.name)} — ${events.length} evenemang på kartan`,
             description,
             url: `/evenemang/${city.slug}/${cat.slug}`,
+            // Sidans openGraph ERSÄTTER rotens (Next slår inte ihop nästlade fält) —
+            // utan de här saknade Facebook og:type/siteName (Sharing Debugger 4/9).
+            type: 'website',
+            siteName: 'VADKUL',
+            locale: 'sv_SE',
         },
     };
 }

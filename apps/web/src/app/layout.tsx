@@ -52,6 +52,9 @@ export async function generateMetadata(): Promise<Metadata> {
             description:
                 `${claim}. Se vad som händer nära dig idag – gratis.`,
         },
+        // fb:app_id är frivilligt (Sharing Debugger varnar ändå) — ger Facebook-
+        // appen Insights för delningar. Sätts via NEXT_PUBLIC_FB_APP_ID i .env/WEB_ENV.
+        ...(process.env.NEXT_PUBLIC_FB_APP_ID ? { other: { 'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID } } : {}),
         manifest: '/manifest.json',
         appleWebApp: {
             capable: true,
