@@ -187,7 +187,7 @@ export interface Source {
 
 export type EngineName =
     | 'json-ld' | 'wp-rest' | 'ical' | 'api' | 'sitevision' | 'xhr-discovery'
-    | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap' | 'cruncho' | 'wp-graphql' | 'gotohub' | 'everysport'
+    | 'nextjs-data' | 'nuxt-data' | 'drupal' | 'sitemap' | 'cruncho' | 'wp-graphql' | 'shader-graphql' | 'gotohub' | 'everysport'
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'

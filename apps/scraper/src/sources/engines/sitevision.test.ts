@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
-    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
+    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail, mapEventListingResult,
 } from './sitevision';
 
 describe('parseSoleilDate', () => {
@@ -516,5 +516,88 @@ describe('isMunicipalMeeting', () => {
     it('klarar både a och ä i stavningarna', () => {
         expect(isMunicipalMeeting('Barn- och utbildningsnamnden')).toBe(true);
         expect(isMunicipalMeeting('Barn- och utbildningsnämnden')).toBe(true);
+    });
+});
+
+describe('mapEventListingResult', () => {
+    const BASE = 'https://www.linkoping.se/uppleva-och-gora/evenemang-i-linkoping/evenemangskalender';
+    const WINDOW_START = new Date('2026-09-04T00:00:00+02:00');
+    // Riktigt result från linkoping.se 2026-09-04 (nedkortat)
+    const result = {
+        id: '5.203b50119ed4297ae8b5484',
+        displayName: 'Visning av Slottsträdgården',
+        description: 'Visning av Slottsträdgården vid Linköpings slott',
+        uri: '/upplevaochgora/evenemangilinkoping/evenemangskalender/evenemangskalender/visningavslottstradgarden.5.203b50119ed4297ae8b5484.html',
+        organizer: 'Linköpings slotts- och domkyrkomuseum',
+        location: 'Linköpings slotts- och domkyrkomuseum',
+        admissionFee: 'Gratis',
+        ticketLink: 'https://lsdm.se/event/visning-av-slottstradgarden/',
+        image: { uri: '/images/200.203b50119ed4297ae8cb74b/1785752374696/Tradgardsvisning.jpg' },
+        type: [
+            { name: 'guidning/visning', title: 'Guidning och visning' },
+            { name: 'kulturarv', title: 'Kulturarv' },
+        ],
+        date: {
+            start: { fullDate: '2026-09-05T13:00:00+02:00' },
+            end: { fullDate: '2026-09-05T14:00:00+02:00' },
+            showTime: true,
+        },
+    };
+
+    it('mappar ett komplett result med exakt tid', () => {
+        const ev = mapEventListingResult(result, BASE, 'Linköping', WINDOW_START);
+        expect(ev).not.toBeNull();
+        expect(ev!.title).toBe('Visning av Slottsträdgården');
+        expect(ev!.startDate.toISOString()).toBe('2026-09-05T11:00:00.000Z');
+        expect(ev!.endDate?.toISOString()).toBe('2026-09-05T12:00:00.000Z');
+        expect(ev!.url).toBe('https://www.linkoping.se/upplevaochgora/evenemangilinkoping/evenemangskalender/evenemangskalender/visningavslottstradgarden.5.203b50119ed4297ae8b5484.html');
+        expect(ev!.venueName).toBe('Linköpings slotts- och domkyrkomuseum');
+        expect(ev!.city).toBe('Linköping');
+        expect(ev!.organizer).toBe('Linköpings slotts- och domkyrkomuseum');
+        expect(ev!.price).toBe('Gratis');
+        expect(ev!.classifyHints).toBe('Guidning och visning, Kulturarv');
+        expect(ev!.imageUrl).toBe('https://www.linkoping.se/images/200.203b50119ed4297ae8cb74b/1785752374696/Tradgardsvisning.jpg');
+        expect(ev!.hasSpecificTime).toBe(true);
+    });
+
+    it('showTime=false → hasSpecificTime=false (heldagsmarkering)', () => {
+        const ev = mapEventListingResult(
+            { ...result, date: { ...result.date, showTime: false } },
+            BASE, 'Linköping', WINDOW_START,
+        );
+        expect(ev!.hasSpecificTime).toBe(false);
+    });
+
+    it('pågående fleradagars-event ankras på windowStart', () => {
+        const ev = mapEventListingResult(
+            {
+                ...result,
+                date: {
+                    start: { fullDate: '2026-08-01T10:00:00+02:00' },
+                    end: { fullDate: '2026-10-01T18:00:00+02:00' },
+                    showTime: false,
+                },
+            },
+            BASE, 'Linköping', WINDOW_START,
+        );
+        expect(ev!.startDate.getTime()).toBe(WINDOW_START.getTime());
+        expect(ev!.endDate?.toISOString()).toBe('2026-10-01T16:00:00.000Z');
+    });
+
+    it('saknad titel/uri/datum → null', () => {
+        expect(mapEventListingResult({ ...result, displayName: ' ' }, BASE, undefined, WINDOW_START)).toBeNull();
+        expect(mapEventListingResult({ ...result, uri: undefined }, BASE, undefined, WINDOW_START)).toBeNull();
+        expect(mapEventListingResult({ ...result, date: {} }, BASE, undefined, WINDOW_START)).toBeNull();
+    });
+
+    it('tomma strängfält blir undefined, inte ""', () => {
+        const ev = mapEventListingResult(
+            { ...result, description: '', organizer: '  ', location: '', admissionFee: '' },
+            BASE, 'Linköping', WINDOW_START,
+        );
+        expect(ev!.description).toBeUndefined();
+        expect(ev!.organizer).toBeUndefined();
+        expect(ev!.venueName).toBeUndefined();
+        expect(ev!.price).toBeUndefined();
     });
 });

@@ -167,6 +167,27 @@ export interface SiteVisionConfig {
      * Vansbro"), `startDate` är ISO med offset.
      */
     eventServiceApi?: { paths: string };
+    /**
+     * SiteVision-webappen "event-listing" (upptäckt på linkoping.se 2026-09-04):
+     *   POST <listUrl>?sv.target=<portletId>&sv.<portletId>.route=%2Fsearch&sv.standalone=true
+     *   Headers: Content-Type: application/json + X-Requested-With: XMLHttpRequest
+     *     (utan XHR-headern svarar servern med hela HTML-sidan, precis som searchAppApi)
+     *   Body: { query:"", dateRange:{ startDate:<epoch-ms>, endDate:<epoch-ms> },
+     *           facetA:[], facetB:[], page:<n>, size:<n> }
+     *   → { results: [{ displayName, description, uri, id, organizer, location,
+     *        admissionFee, ticketLink, image:{uri}, type:[{name,title}],
+     *        date:{ start:{fullDate:"2026-09-05T13:00:00+02:00"}, end:{fullDate},
+     *               showTime } }],
+     *       pagination: { total, page, size } }
+     *
+     * dateRange är EPOCH-MILLISEKUNDER (webappens useStartAndEndTimeOfDay kör
+     * Date.getTime()) — ISO-strängar ger 0 träffar utan fel. Servern klampar
+     * size till 50; page är 0-indexerad och inte kumulativ. Till skillnad från
+     * searchAppApi bär list-svaret ALLT: exakt starttid med offset, plats,
+     * arrangör, pris och beskrivning — ingen detaljhämtning behövs.
+     * En återkommande serie ger en träff per tillfälle med EGEN uri/id.
+     */
+    eventListingApi?: { portletId: string };
 }
 
 /** Rått item ur soleil items-API:t (bara fälten vi läser). */
@@ -987,6 +1008,150 @@ async function scrapeSearchAppApi(
     return events;
 }
 
+/** Rått result ur event-listing-webappen (bara fälten vi läser). */
+export interface EventListingResult {
+    id?: string;
+    displayName?: string;
+    description?: string;
+    uri?: string;
+    organizer?: string;
+    location?: string;
+    admissionFee?: string;
+    ticketLink?: string;
+    image?: { uri?: string };
+    type?: Array<{ name?: string; title?: string }>;
+    date?: {
+        start?: { fullDate?: string };
+        end?: { fullDate?: string };
+        showTime?: boolean;
+    };
+}
+
+/** Mappa ett event-listing-result → RawEvent. Exporterad för test. */
+export function mapEventListingResult(
+    result: EventListingResult,
+    baseUrl: string,
+    defaultCity: string | undefined,
+    windowStart: Date,
+): RawEvent | null {
+    const title = decodeHtmlEntities(result.displayName || '').trim();
+    const eventUrl = makeAbsoluteUrl(result.uri, baseUrl);
+    const startRaw = result.date?.start?.fullDate;
+    if (!title || !eventUrl || !startRaw) return null;
+
+    let start = new Date(startRaw);
+    if (isNaN(start.getTime())) return null;
+    const endRaw = result.date?.end?.fullDate;
+    let end = endRaw ? new Date(endRaw) : undefined;
+    if (end && isNaN(end.getTime())) end = undefined;
+
+    // Pågående fleradagars-event ankras på windowStart (samma som searchApp).
+    if (start < windowStart && end && end >= windowStart) start = new Date(windowStart);
+
+    const description = decodeHtmlEntities(result.description || '')
+        .replace(/\s+/g, ' ').trim() || undefined;
+    const categoryTitles = (result.type ?? [])
+        .map((t) => t?.title?.trim()).filter(Boolean).join(', ');
+
+    return {
+        externalId: result.id,
+        title,
+        startDate: start,
+        endDate: end && end > start ? end : undefined,
+        url: eventUrl,
+        venueName: decodeHtmlEntities(result.location || '').trim() || undefined,
+        city: defaultCity,
+        description: description
+            ? truncateAtBoundary(description, DEFAULT_DESCRIPTION_MAX)
+            : undefined,
+        imageUrl: makeAbsoluteUrl(result.image?.uri, baseUrl),
+        organizer: decodeHtmlEntities(result.organizer || '').trim() || undefined,
+        price: result.admissionFee?.trim() || undefined,
+        classifyHints: categoryTitles || undefined,
+        // showTime=false är webappens heldagsmarkering; annars är fullDate exakt.
+        hasSpecificTime: result.date?.showTime === false ? false : true,
+    };
+}
+
+/** Event-listing-webappens /search-route: POST med JSON-body, epoch-ms-fönster. */
+async function scrapeEventListingApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const { portletId } = config.eventListingApi!;
+    const cap = config.maxItems ?? 1000;
+    const pageSize = 50; // servern klampar hårt till 50
+    const url = `${base}?sv.target=${portletId}`
+        + `&sv.${portletId}.route=%2Fsearch&sv.standalone=true`;
+
+    const events: RawEvent[] = [];
+    let total = Infinity;
+
+    for (let page = 0; events.length < cap && page * pageSize < total; page++) {
+        const payload = {
+            query: '',
+            dateRange: {
+                startDate: ctx.windowStart.getTime(),
+                endDate: ctx.windowEnd.getTime(),
+            },
+            facetA: [],
+            facetB: [],
+            page,
+            size: pageSize,
+        };
+        const body = await postJson(url, payload, config);
+        if (!body) { ctx.log(`  event-listing-API svarade inte (page=${page})`); break; }
+
+        let data: { results?: EventListingResult[]; pagination?: { total?: number } };
+        try { data = JSON.parse(body); } catch {
+            ctx.log('  event-listing-API gav icke-JSON (saknas X-Requested-With?)');
+            break;
+        }
+        if (page === 0) total = data.pagination?.total ?? 0;
+
+        const results = data.results ?? [];
+        if (results.length === 0) break;
+        for (const r of results) {
+            const ev = mapEventListingResult(r, base, config.defaultCity, ctx.windowStart);
+            if (ev) events.push(ev);
+        }
+    }
+    ctx.log(`event-listing-API: ${events.length} tillfällen (total=${isFinite(total) ? total : '?'})`);
+    return events;
+}
+
+/** POST JSON (event-listing-API:t). Throttlad som övriga anrop. */
+async function postJson(
+    url: string,
+    payload: unknown,
+    cfg: SiteVisionConfig,
+): Promise<string | null> {
+    await domainLimiter.wait(url);
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'User-Agent': cfg.userAgent ?? DEFAULT_UA,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+            },
+            body: JSON.stringify(payload),
+            redirect: 'follow',
+            signal: ac.signal,
+        });
+        if (!res.ok) return null;
+        return await res.text();
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(t);
+    }
+}
+
 async function fetchHtml(
     url: string,
     cfg: SiteVisionConfig,
@@ -1098,7 +1263,8 @@ export const sitevisionEngine = async (
                         : config.searchAppApi ? scrapeSearchAppApi
                             : config.pageApi ? scrapePageApi
                                 : config.eventServiceApi ? scrapeEventServiceApi
-                                    : null;
+                                    : config.eventListingApi ? scrapeEventListingApi
+                                        : null;
     if (apiScraper) {
         const apiEvents = await apiScraper(config, ctx);
         await backfillDescriptions(apiEvents, config, ctx);

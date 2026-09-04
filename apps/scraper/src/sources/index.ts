@@ -19,6 +19,7 @@ import { crunchoEngine } from './engines/cruncho';
 import { gotohubEngine } from './engines/gotohub';
 import { everysportEngine } from './engines/everysport';
 import { wpGraphqlEngine } from './engines/wp-graphql';
+import { shaderGraphqlEngine } from './engines/shader-graphql';
 // Nätverks-engines — paraply-API:er där EN engine täcker hela nätverket.
 // Bor i src/scrapers/ (källspecifik kod) men kör genom samma runner-pipeline.
 import { hembygdEngine } from '../scrapers/hembygd';
@@ -95,6 +96,7 @@ export const ENGINES: Record<string, Engine> = {
     'gotohub': gotohubEngine,
     'everysport': everysportEngine,
     'wp-graphql': wpGraphqlEngine,
+    'shader-graphql': shaderGraphqlEngine,
     // Nätverks-engines (en källa = hela nätverket)
     'hembygd': hembygdEngine,
     'svenskakyrkan': svenskaKyrkanEngine,

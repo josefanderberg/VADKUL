@@ -1921,6 +1921,146 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-04',
     },
     {
+        id: 'linkoping-kommun',
+        hostName: 'Linköpings kommun',
+        region: 'linkoping',
+        engine: 'sitevision',
+        config: {
+            urls: ['https://www.linkoping.se/uppleva-och-gora/evenemang-i-linkoping/evenemangskalender'],
+            defaultCity: 'Linköping',
+            // Webappen "event-listing" 1.0.6 (se eventListingApi i sitevision.ts).
+            // Portlet-id ur AppRegistry.registerApp-blobben på kalendersidan.
+            eventListingApi: { portletId: '12.54277fb919936ff84a71b6db' },
+            maxItems: 800,
+        },
+        // Kalendern sträcker sig ~1 år framåt; 30d-fönstret hade kastat det
+        // mesta (samma lärdom som visit-norrkoping).
+        windowDays: 180,
+        updateFrequency: 'daily',
+        notes: 'Linköpings officiella evenemangskalender. 245 tillfällen vid upptäckt '
+            + '2026-09-04, stor arrangörsbredd (slottsmuseet, guideklubben, ABF, '
+            + 'hemslöjden, Agora …) och bara ~8 % biblioteksöverlapp. List-API:t bär '
+            + 'ALLT: exakt starttid med offset, plats, arrangör, pris, beskrivning, '
+            + 'bild, biljettlänk och kategori — inga detaljhämtningar behövs.',
+        lastVerified: '2026-09-04',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://www.linkoping.se/uppleva-och-gora/evenemang-i-linkoping/evenemangskalender',
+            date: '2026-09-04',
+            rawEventCount: 245,
+        },
+    },
+    {
+        id: 'skylten-linkoping',
+        hostName: 'Skylten',
+        region: 'linkoping',
+        engine: 'sitevision',
+        config: {
+            urls: ['https://www.linkoping.se/skylten/evenemang-pa-skylten'],
+            defaultCity: 'Linköping',
+            // Samma event-listing-webapp som kommunkalendern, egen portlet.
+            eventListingApi: { portletId: '12.54277fb919936ff84a71b6d1' },
+            maxItems: 200,
+        },
+        windowDays: 180,
+        updateFrequency: 'every-3d',
+        notes: 'Kulturscenen Skylten (Södra Oskarsgatan 3, vid resecentrum) har en egen '
+            + 'event-listing-kalender på linkoping.se. 13 event vid upptäckt 2026-09-04 '
+            + '(konserter, klubbkvällar, ungdomskultur) — fanns inte alls i pipelinen.',
+        lastVerified: '2026-09-04',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://www.linkoping.se/skylten/evenemang-pa-skylten',
+            date: '2026-09-04',
+            rawEventCount: 13,
+        },
+    },
+    {
+        id: 'ostgotateatern',
+        hostName: 'Östgötateatern',
+        region: 'ostergotland',
+        engine: 'shader-graphql',
+        config: {
+            endpoint: 'https://cms.shader.build/ostgotateatern/graphql',
+            eventBaseUrl: 'https://www.ostgotateatern.se',
+            // Teatern spelar i BÅDA städerna — locationStage avgör per tillfälle,
+            // och tillfällen utan stad ("Annan spelplats", "På turné") slopas
+            // hellre än gissas (ingen defaultCity).
+            cities: ['Linköping', 'Norrköping'],
+        },
+        // Säsongen publiceras terminsvis — tillfällen ligger månader fram.
+        windowDays: 180,
+        updateFrequency: 'every-3d',
+        notes: 'Sveriges största länsteater. 174 tillfällen vid upptäckt 2026-09-04: '
+            + '85 Linköping (Stora Teatern m.fl.) + 81 Norrköping + 8 utan stad (slopas). '
+            + 'Exakta klockslag ur Tix, beskrivning ur performance.about. Fanns i princip '
+            + 'inte i pipelinen (1 event via Riksteatern).',
+        lastVerified: '2026-09-04',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://cms.shader.build/ostgotateatern/graphql',
+            date: '2026-09-04',
+            rawEventCount: 174,
+        },
+    },
+    {
+        id: 'ostgotamusiken',
+        hostName: 'Östgötamusiken',
+        region: 'ostergotland',
+        engine: 'shader-graphql',
+        config: {
+            endpoint: 'https://cms.shader.build/ostgotamusiken/graphql',
+            eventBaseUrl: 'https://www.ostgotamusiken.se',
+            cities: ['Linköping', 'Norrköping'],
+            // Husets egna scener ("Winden", "Wallenbergsalen") bär ingen stad
+            // i locationStage — de ligger i Linköping.
+            defaultCity: 'Linköping',
+        },
+        windowDays: 180,
+        updateFrequency: 'weekly',
+        notes: 'Länsmusiken i Östergötland — samma shader-CMS som Östgötateatern. '
+            + '24 tillfällen vid upptäckt 2026-09-04, bl.a. Crusellhallen i Konsert & '
+            + 'Kongress (som annars saknas: K&K:s program ligger på visitlinkoping-'
+            + 'sitemapen bara delvis).',
+        lastVerified: '2026-09-04',
+        discovery: {
+            method: 'probe-xhr',
+            probeUrl: 'https://cms.shader.build/ostgotamusiken/graphql',
+            date: '2026-09-04',
+            rawEventCount: 24,
+        },
+    },
+    {
+        id: 'gamla-linkoping',
+        hostName: 'Gamla Linköping',
+        region: 'linkoping',
+        engine: 'wp-rest',
+        config: {
+            // API:t bor på gamla domänen; publika länkarna pekar på
+            // gamlalinkoping.se (SPA-skal utan datum — fetchDetailPage är
+            // meningslös). Datumen står i content ("Datum: 10 oktober,
+            // Tid: kl 13.00-15.00") → wp-v2:s text-skanning hittar dem, och
+            // "Plats: Djurhuset, Valla Gård" fångas av venue-extraktionen.
+            baseUrl: 'https://www.gamlalinkoping.info',
+            variant: 'wp-v2',
+            endpoint: '/wp-json/wp/v2/event',
+            defaultCity: 'Linköping',
+            maxPages: 2,
+        },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        notes: 'Friluftsmuseet Gamla Linköping — stort besöksmål som mest synts via '
+            + 'enstaka FB/Ticketmaster-träffar. 12 event i wp/v2 vid upptäckt 2026-09-04. '
+            + 'Experimental tills text-datumskanningen verifierats i skarp körning.',
+        lastVerified: '2026-09-04',
+        discovery: {
+            method: 'probe-wp',
+            probeUrl: 'https://www.gamlalinkoping.info/wp-json/wp/v2/event',
+            date: '2026-09-04',
+            rawEventCount: 12,
+        },
+    },
+    {
         id: 'morbylanga',
         hostName: 'Mörbylånga Kommun',
         region: 'morbylanga',
