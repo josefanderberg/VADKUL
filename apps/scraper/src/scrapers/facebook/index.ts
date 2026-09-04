@@ -24,6 +24,7 @@ import { LocationInstrument } from './location';
 import { FacebookSource } from './types';
 import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
 import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
+import { matchesCityScope } from './scope';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -94,6 +95,10 @@ export interface FacebookScraperOptions {
      *  vecko-svepet (halverar antalet queries och ger event till audit långt
      *  innan det stora full-jobbet är klart). */
     filters?: string[];
+    /** Kör bara EN stad: stadssöken för den + sidbevakningar med samma city.
+     *  Breda sökord hoppas. Riktad körning på minuter i stället för timmar —
+     *  `npm run scrape-fb -- --city=Piteå` efter community-kritik. */
+    onlyCity?: string;
 }
 
 export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
@@ -101,7 +106,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
     const DATE_FILTERS_INPUT = opts.filters && opts.filters.length > 0
         ? opts.filters
         : ['idag', 'den här veckan'];
-    console.log(`🚀 Startar Facebook-skrapan (Refactored) — filter: [${DATE_FILTERS_INPUT.join(', ')}]`);
+    const onlyCity = opts.onlyCity?.trim() || undefined;
+    console.log(`🚀 Startar Facebook-skrapan (Refactored) — filter: [${DATE_FILTERS_INPUT.join(', ')}]${onlyCity ? ` — bara ${onlyCity}` : ''}`);
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
     const keywordStatsPath = path.resolve(__dirname, '../../../keyword_stats.json');
@@ -307,10 +313,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         // today-scrapern skickar ['idag'] för att halvera query-volymen.
         const DATE_FILTERS = DATE_FILTERS_INPUT;
 
+        // --city=X: bara den stadens sök + sidor, inga breda sökord.
+        const cities = SWEDISH_CITIES.filter((c) => matchesCityScope(c, onlyCity));
+        const keywords = onlyCity ? [] : BROAD_KEYWORDS;
+
         const SOURCES: FacebookSource[] = [];
 
         // 1. Städer × datumfilter
-        for (const city of SWEDISH_CITIES) {
+        for (const city of cities) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
                     url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}`,
@@ -321,7 +331,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         }
 
         // 2. Breda sökord × datumfilter
-        for (const keyword of BROAD_KEYWORDS) {
+        for (const keyword of keywords) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
                     url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(keyword)}`,
@@ -336,6 +346,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         //    sitt datum från detaljsidan (trusted → 30d-horisont nedan).
         const seenPageSlugs = new Set<string>();
         const allPageWatches = [...FACEBOOK_PAGE_WATCHLIST, ...FACEBOOK_PAGE_WATCHLIST_NATIONAL]
+            .filter((w) => matchesCityScope(w.city, onlyCity))
             .filter((w) => {
                 const key = w.slug.toLowerCase();
                 if (seenPageSlugs.has(key)) return false;
@@ -351,7 +362,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
             });
         }
 
-        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
+        console.log(`🔧 Konfiguration: ${cities.length} städer + ${keywords.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
 
         // requiresParsedDate: sid-/seed-event saknar sökets datumfilter — utan
         // ett datum parsat från själva eventsidan vore fallbacken "idag" ren
