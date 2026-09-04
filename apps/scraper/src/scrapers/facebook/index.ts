@@ -551,7 +551,11 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 // Generisk värd = DOM-instrumentet hittade inget. Skrapa om ett
                 // begränsat antal per natt så hostFallback (og:description, sid-JSON)
                 // får en chans att hitta namnet.
-                const hostRetry = !!existingEvent && isGenericHost(existingEvent.hostName) && extractHostRetried < MAX_HOST_RETRY;
+                // … eller tom/sidfots-beskrivning (nya layouten "Vad du kan förvänta dig"
+                // + "Läs mer" missades) — samma tak per natt.
+                const storedDesc = String(existingEvent?.description ?? '').trim();
+                const descRetry = !!existingEvent && (storedDesc.length < 40 || /^Integritet/i.test(storedDesc)) && extractHostRetried < MAX_HOST_RETRY;
+                const hostRetry = (!!existingEvent && isGenericHost(existingEvent.hostName) && extractHostRetried < MAX_HOST_RETRY) || descRetry;
                 if (existingEvent && !isFbImageExpired(existingEvent.coverImage) && !hostRetry) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     console.log(`    👉 Redan sparad i databasen: "${existingEvent.title}"`);
@@ -609,7 +613,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     if (hostRetry) {
                         extractHostRetried++;
-                        console.log(`    🔄 Generisk värd → omskrapning för värdnamn: "${existingEvent.title}"`);
+                        console.log(`    🔄 ${descRetry ? 'Tom/sidfots-beskrivning' : 'Generisk värd'} → omskrapning: "${existingEvent.title}"`);
                     } else {
                         console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
                     }
@@ -623,7 +627,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
                     for (const btn of buttons) {
                         const txt = btn.textContent?.trim().toLowerCase() || '';
-                        if (txt === 'visa mer' || txt === 'see more') (btn as HTMLElement).click();
+                        // Nya layouten säger "Läs mer" (2026-09-04) — 30 beskrivningar slutade i "… Läs mer".
+                        if (/^(?:visa mer|see more|läs mer|read more|mer)$/.test(txt)) (btn as HTMLElement).click();
                     }
                 });
                 await new Promise(r => setTimeout(r, 1000));
@@ -635,6 +640,11 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 // ersättningstecken (�) bort. FB-skrapan skriver direkt via
                 // addEventToDb och gick förbi normalizeEvent (revisionen 2026-09-03).
                 details.description = normalizeDescription(details.description);
+                // Ingen beskrivning i DOM:en (layoutvariant) → og:description om den
+                // bär mer än rubrik/plats. Hellre kort text än tom.
+                if (details.description.length < 20 && details.ogDescription && details.ogDescription.length >= 40 && !/facebook/i.test(details.ogDescription)) {
+                    details.description = normalizeDescription(details.ogDescription);
+                }
                 // "Sailing Day Tour (Stockholm) Tickets" → "Sailing Day Tour".
                 details.title = cleanFacebookTitle(details.title);
 

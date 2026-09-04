@@ -14,6 +14,7 @@ import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './type
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
 import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
 import { venueBuildingOf } from '../utils/venueFromText';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
@@ -413,6 +414,9 @@ export async function runSource(
                 // null (ej undefined) när pris saknas: Firestore vägrar undefined,
                 // och SQLite-upsert COALESCE:ar null → bevarar LLM-extraherat pris.
                 price: e.price || null,
+                // Biovisningar får 🎬 direkt (LLM-auditen/backfill-emoji håller
+                // regeln); övriga event lämnar emoji åt auditen/kategoridefaulten.
+                ...(looksLikeCinema(e.title, e.venueName) ? { emoji: CINEMA_EMOJI } : {}),
                 createdAt: new Date(),
                 // OBS: betyder "har koordinater" (även stad-centroid) — kvalitets-
                 // sanningen bor i geoPrecision. Semantiken låst av konsumenterna

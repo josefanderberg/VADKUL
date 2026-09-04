@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden, type GeoHit } from '../utils/venueCoordinates';
 import { venueBuildingOf } from '../utils/venueFromText';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE FILTER: Kommande 7 dagar ---
@@ -546,7 +547,9 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     lng,
                     geoPrecision,
                     hostName: 'Tickster',
-                    category: guessCategoryFromTitle(details.title),
+                    category: looksLikeCinema(details.title, details.venue) ? 'stage' : guessCategoryFromTitle(details.title),
+                    // Biovisning → 🎬 (annars 🎭/🎉 från auditen — community-kritik 2026-09-04)
+                    ...(looksLikeCinema(details.title, details.venue) ? { emoji: CINEMA_EMOJI } : {}),
                     createdAt: new Date(),
                     coverImage: details.coverImage || await searchGoogleImage(page, details.title) || '',
                     description: details.jsonDescription || '',

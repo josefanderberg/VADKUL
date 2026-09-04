@@ -170,6 +170,13 @@ describe('runSource — grundpipeline', () => {
         expect(written.hasSpecificTime).toBe(true);     // 19:00 ≠ midnatt
     });
 
+    it('biovisning får 🎬 redan vid spar', async () => {
+        await run([makeEvent({ title: 'The Invite', venueName: 'Metropol - Bio 3:an', city: 'Piteå' })]);
+        expect(writtenEvents()[0].emoji).toBe('🎬');
+        await run([makeEvent({ title: 'Konsert', venueName: 'Konserthuset' })]);
+        expect(writtenEvents()[1].emoji).toBeUndefined();
+    });
+
     it('per-event hostName (paraply-källor) vinner över source.hostName', async () => {
         await run([makeEvent({ hostName: 'Sundbybergs församling' })]);
         expect(writtenEvents()[0].hostName).toBe('Sundbybergs församling');
