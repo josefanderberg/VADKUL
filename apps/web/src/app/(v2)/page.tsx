@@ -2506,13 +2506,16 @@ export default function HomePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ?skapa=1 — stadssidornas "arrangera själv"-CTA. Öppnar skapa-FORMULÄRET
-    // direkt med kartans mitt (= staden via ?plats=) som plats; "📍 Ändra
-    // plats" i formuläret täcker justering. Inte 'placing': det läget har
-    // ingen egen synlig UI (pinnen ÄR plusknappens animation i normalflödet),
-    // så en djuplänk rakt in i det ser ut som att ingenting hände (4/9).
-    // Väntar in stängd welcome-ruta + att kartan fått ett center.
+    // ?skapa=1 — stadssidornas "arrangera själv"-CTA. Platsen VÄLJS FÖRST
+    // (Josef 4/9: "man måste ju välja var eventet ska vara"): kartan står
+    // redan över staden (?plats=), och när welcome-rutan stängts går vi in i
+    // placing-läget MED egen synlig UI — center-pin, bannern "Var vill du att
+    // din aktivitet ska äga rum?" och en pulserande Välj här-knapp (samma
+    // recall-pulse som dagbytes-blinken). Normalflödets placing (plusknappen)
+    // har sin egen pinne (den animerade plusknappen) och berörs inte —
+    // deepPlacing gäller bara djuplänken.
     const pendingDeepCreateRef = useRef(false);
+    const [deepPlacing, setDeepPlacing] = useState(false);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (!params.has('skapa')) return;
@@ -2524,18 +2527,15 @@ export default function HomePage() {
     }, []);
     useEffect(() => {
         if (!pendingDeepCreateRef.current || welcomeOpen) return;
-        // mapCenterRef är en ref (ingen re-render när kartan monterat) —
-        // kort poll tills centret finns, sen öppnas formuläret.
-        const t = window.setInterval(() => {
-            if (!pendingDeepCreateRef.current) { window.clearInterval(t); return; }
-            if (!mapCenterRef.current) return;
-            pendingDeepCreateRef.current = false;
-            window.clearInterval(t);
-            openCreateFormHere();
-        }, 200);
-        const stop = window.setTimeout(() => { window.clearInterval(t); pendingDeepCreateRef.current = false; }, 15_000);
-        return () => { window.clearInterval(t); window.clearTimeout(stop); };
-    }, [welcomeOpen, openCreateFormHere]);
+        pendingDeepCreateRef.current = false;
+        setCreationMode('placing');
+        setDeepPlacing(true);
+    }, [welcomeOpen]);
+    // Lämnas placing-läget någon annan väg (navbarens bock, Avbryt, skapat
+    // klart) ska djuplänks-UI:t inte ligga kvar och spöka.
+    useEffect(() => {
+        if (creationMode !== 'placing' && deepPlacing) setDeepPlacing(false);
+    }, [creationMode, deepPlacing]);
     useEffect(() => {
         if (!pendingStarCodeRef.current) return;
         // Vänta tills Firebase återställt sessionen — annars öppnas login-
@@ -3916,6 +3916,41 @@ export default function HomePage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Djuplänks-placeringen (?skapa=1 från stadssidorna): platsen
+                väljs FÖRST. Center-pin + banner + pulserande Välj här —
+                utan pulsen och bannern såg flödet ut som att inget hände
+                (4/9). Kartan är fri att panorera under tiden. */}
+            {creationMode === 'placing' && deepPlacing && (
+                <>
+                    <div aria-hidden className="pointer-events-none fixed left-1/2 top-1/2 z-[1190] -translate-x-1/2 -translate-y-[85%] text-4xl drop-shadow-lg">📍</div>
+                    <div className="fixed inset-x-0 bottom-24 z-[1190] flex justify-center px-4 pointer-events-none">
+                        <div className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-3xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-5 py-3.5 max-w-sm">
+                            <div className="text-center">
+                                <p className="text-sm font-black text-slate-800">Var vill du att din aktivitet ska äga rum?</p>
+                                <p className="mt-0.5 text-xs font-medium text-slate-500">Panorera kartan tills pinnen står rätt.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setDeepPlacing(false); openCreateFormHere(); }}
+                                    className="relative px-5 py-2 rounded-full bg-green-600 text-white text-sm font-black hover:bg-green-500 transition-colors"
+                                >
+                                    <span className="absolute inset-0 rounded-full animate-recall-pulse pointer-events-none" />
+                                    Välj här
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setDeepPlacing(false); resetCreateFlow(); }}
+                                    className="px-3 py-2 rounded-full text-slate-500 text-sm font-semibold hover:bg-slate-100 transition-colors"
+                                >
+                                    Avbryt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* "Ändra plats"-varvet: modalen gömd, kartan fri att panorera.
