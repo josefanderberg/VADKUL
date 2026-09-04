@@ -21,6 +21,7 @@ import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
 import { setHidden, setEventAuditWithCategory } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import { withCinemaEmoji } from '../utils/cinema';
+import { OLLAMA_CONCURRENCY, chunk } from '../utils/ollamaPool';
 
 const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
 
@@ -93,18 +94,25 @@ async function main() {
     const gpsStats = { ok: 0, suspect: 0, wrong: 0, 'no-coords': 0, unknown: 0, hidden: 0, llmCalls: 0 };
     const startedAt = Date.now();
 
-    for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        if (ONLY_NEW && alreadyAudited.has(r.firestoreId)) continue;
+    const todo = rows.filter(r => !(ONLY_NEW && alreadyAudited.has(r.firestoreId)));
+    console.log(`Att auditera: ${todo.length} (${OLLAMA_CONCURRENCY} parallella Ollama-anrop)\n`);
 
-        const result = await auditEvent({
+    // LLM-audit i batchar om OLLAMA_CONCURRENCY; GPS-check (Nominatim 1 req/s)
+    // och Firestore-skrivning förblir sekventiella per batch.
+    let i = -1;
+    for (const batch of chunk(todo, OLLAMA_CONCURRENCY)) {
+      const results = await Promise.all(batch.map(r => auditEvent({
             title: r.title,
             locationName: r.locationName || undefined,
             extractedAddress: r.extractedAddress || undefined,
             description: r.description || undefined,
             hostName: r.hostName || undefined,
             url: r.url,
-        });
+      })));
+      for (let b = 0; b < batch.length; b++) {
+        const r = batch[b];
+        const result = results[b];
+        i++;
 
         stats[result.verdict]++;
         if (result.price) stats.priced++;
@@ -113,7 +121,7 @@ async function main() {
             : result.verdict === 'suspect' ? '❓'
             : '✅';
         const swMark = result.inSweden ? '' : ' [🌍 EJ SVERIGE]';
-        const progress = `[${i + 1}/${rows.length}]`;
+        const progress = `[${i + 1}/${todo.length}]`;
         const catTag = `${result.category}/${result.categoryConfidence}`;
         console.log(`  ${progress} ${prefix} ${result.verdict}/${result.confidence} 🏷️ ${catTag}${swMark} | ${(r.title || '').slice(0, 50)} → ${result.reason}`);
 
@@ -209,6 +217,7 @@ async function main() {
                 console.error(`     ❌ DB write fail: ${err.message}`);
             }
         }
+      }
     }
 
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);

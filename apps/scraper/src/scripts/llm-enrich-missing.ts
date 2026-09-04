@@ -10,6 +10,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { llmEnrichEvent, ollamaIsAvailable } from '../utils/llmEnrich';
+import { OLLAMA_CONCURRENCY, chunk } from '../utils/ollamaPool';
 import { geocodeVenueSweden, isForeignAddress, SWEDISH_GEO_CITIES } from '../utils/venueCoordinates';
 
 const dbPath = process.env.SCRAPER_SQLITE_PATH
@@ -58,17 +59,21 @@ async function main() {
         LIMIT 500
     `).all() as { url: string; title: string; description: string; extractedAddress: string }[];
 
-    console.log(`📊 ${missing.length} FB-events med lat=0 och beskrivning — skickar till Ollama...`);
+    console.log(`📊 ${missing.length} FB-events med lat=0 och beskrivning — skickar till Ollama (${OLLAMA_CONCURRENCY} parallella anrop)...`);
 
     let enriched = 0;
     let geocoded = 0;
     let categoryFixed = 0;
     let junk = 0;
 
-    for (const event of missing) {
+    // LLM-anropen går parallellt i batchar om OLLAMA_CONCURRENCY; efterarbetet
+    // (Nominatim 1 req/s, SQLite) förblir sekventiellt per batch.
+    for (const batch of chunk(missing, OLLAMA_CONCURRENCY)) {
+      const results = await Promise.all(batch.map(ev => llmEnrichEvent(ev.title, ev.description, ev.extractedAddress)));
+      for (let b = 0; b < batch.length; b++) {
+        const event = batch[b];
+        const result = results[b];
         process.stdout.write(`  [${enriched + 1}/${missing.length}] "${event.title.slice(0, 60)}" `);
-
-        const result = await llmEnrichEvent(event.title, event.description, event.extractedAddress);
 
         if (result.isJunk) {
             process.stdout.write('→ JUNK\n');
@@ -137,6 +142,7 @@ async function main() {
         }
 
         enriched++;
+      }
     }
 
     console.log(`\n🎉 K4 klar:`);

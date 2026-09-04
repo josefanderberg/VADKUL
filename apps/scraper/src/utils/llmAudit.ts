@@ -16,9 +16,12 @@
 
 import { normalizeCategory } from './categoryNormalize';
 
+import { OLLAMA_TIMEOUT_MS } from './ollamaPool';
+
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
-const TIMEOUT_MS = 30_000;
+// Skalar med OLLAMA_CONCURRENCY (utils/ollamaPool) — köade anrop får inte avbrytas.
+const TIMEOUT_MS = OLLAMA_TIMEOUT_MS;
 
 export type AuditVerdict = 'ok' | 'suspect' | 'junk';
 
