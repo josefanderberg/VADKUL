@@ -14,8 +14,9 @@ import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 // Messenger/FB plockade i stället första <img> på sidan: en kartkakel med
 // "kräver API-nyckel"-text. Nu samma look som sajtens bild (og-karta.jpg +
 // scrim + ordmärke + guldpills) men med stadens namn, stadens siffror och tre
-// kommande event. Renderas på begäran som /e/<slug>-bilden (låg volym: en
-// hämtning per delning) och läser samma publika JSON:er som sidorna.
+// kommande event. FÖRRENDERAS VID BUILD för varje stads-/kategorisida
+// (force-static i [stad]/opengraph-image — on-demand gav FB ingen bild 4/9),
+// därav kakelcache/semafor/retries nedan: bygget gör hundratals bilder.
 
 export const SHARE_IMAGE_SIZE = { width: 1200, height: 630 };
 
@@ -46,14 +47,58 @@ function worldPx(lat: number, lng: number, zoom: number) {
 
 export type TileFetcher = (url: string) => Promise<Buffer | null>;
 
-const defaultTileFetcher: TileFetcher = async (url) => {
-    try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-        if (!res.ok) return null;
-        return Buffer.from(await res.arrayBuffer());
-    } catch {
-        return null;
+// ── Byggtålig kakelhämtning ────────────────────────────────────────────────
+// Bilderna FÖRRENDERAS VID BUILD för varje stads- och kategorisida (~hundratals
+// rutter × ~20 kakel). Utan hänsyn blir det tusentals samtidiga anrop mot EN
+// Esri-host — 4/9 ströps de (60 s-timeouts per rutt, till slut en död
+// anslutning som fällde hela bygget). Tre skydd:
+//   1. Cache per URL: kategorisidorna använder exakt samma kakel som sin
+//      stadssida — hämta en gång per byggprocess. (Rensas grovt vid tak så
+//      SSR-funktionen inte samlar buffertar för evigt.)
+//   2. Semafor: max 8 kakel i luften samtidigt.
+//   3. Omförsök med backoff innan ett kakel ger upp (null → og-karta.jpg).
+const TILE_MAX_CONCURRENT = 8;
+const TILE_ATTEMPTS = 3;
+const TILE_CACHE_MAX = 3000;
+const tileCache = new Map<string, Promise<Buffer | null>>();
+let tilesInFlight = 0;
+const tileQueue: (() => void)[] = [];
+
+async function withTileSlot<T>(fn: () => Promise<T>): Promise<T> {
+    if (tilesInFlight >= TILE_MAX_CONCURRENT) {
+        await new Promise<void>(r => tileQueue.push(r));
     }
+    tilesInFlight++;
+    try {
+        return await fn();
+    } finally {
+        tilesInFlight--;
+        tileQueue.shift()?.();
+    }
+}
+
+async function fetchTileWithRetry(url: string): Promise<Buffer | null> {
+    for (let attempt = 0; attempt < TILE_ATTEMPTS; attempt++) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+            if (res.ok) return Buffer.from(await res.arrayBuffer());
+        } catch { /* nytt försök nedan */ }
+        if (attempt < TILE_ATTEMPTS - 1) {
+            await new Promise(r => setTimeout(r, 400 * 2 ** attempt));
+        }
+    }
+    return null;
+}
+
+const defaultTileFetcher: TileFetcher = (url) => {
+    const cached = tileCache.get(url);
+    if (cached) return cached;
+    if (tileCache.size >= TILE_CACHE_MAX) tileCache.clear();
+    const p = withTileSlot(() => fetchTileWithRetry(url))
+        // En miss ska inte fastna i cachen — nästa rutt får försöka själv.
+        .then(buf => { if (!buf) tileCache.delete(url); return buf; });
+    tileCache.set(url, p);
+    return p;
 };
 
 type Tile = { src: string; left: number; top: number };
@@ -170,8 +215,7 @@ export async function renderCityShareImage(opts: {
     const lines = pickShareLines(opts.events, 5);
     const headlineSize = opts.headline.length > 30 ? 44 : 54;
 
-    return new ImageResponse(
-        (
+    const jsx = () => (
             <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative', fontFamily: 'Fredoka, sans-serif', background: '#052846' }}>
                 {tiles ? tiles.map((t, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -248,16 +292,33 @@ export async function renderCityShareImage(opts: {
                     )}
                 </div>
             </div>
-        ),
-        {
-            ...SHARE_IMAGE_SIZE,
-            emoji: 'twemoji',
-            fonts: fredoka || interBlackItalic
-                ? [
-                      ...(fredoka ? [{ name: 'Fredoka', data: fredoka, weight: 600 as const, style: 'normal' as const }] : []),
-                      ...(interBlackItalic ? [{ name: 'Inter', data: interBlackItalic, weight: 900 as const, style: 'italic' as const }] : []),
-                  ]
-                : undefined,
-        },
     );
+    const build = (withTwemoji: boolean) => new ImageResponse(jsx(), {
+        ...SHARE_IMAGE_SIZE,
+        ...(withTwemoji ? { emoji: 'twemoji' as const } : {}),
+        fonts: fredoka || interBlackItalic
+            ? [
+                  ...(fredoka ? [{ name: 'Fredoka', data: fredoka, weight: 600 as const, style: 'normal' as const }] : []),
+                  ...(interBlackItalic ? [{ name: 'Inter', data: interBlackItalic, weight: 900 as const, style: 'italic' as const }] : []),
+              ]
+            : undefined,
+    });
+
+    // Materialisera renderingen HÄR (i stället för att lämna ut en lat
+    // ImageResponse): satoris twemoji-hämtningar sker under renderingen, och
+    // vid build fäller ett enda tappat CDN-anrop annars HELA deployen (hände
+    // 4/9: "other side closed" på en av ~600 rutter). Två försök med twemoji,
+    // sista utan (inga nätverksanrop kvar i satori → kan inte nät-faila);
+    // emojin blir då tomma rutor i just den bilden, men bygget överlever.
+    for (let attempt = 0; ; attempt++) {
+        const withTwemoji = attempt < 2;
+        try {
+            const res = build(withTwemoji);
+            const buf = await res.arrayBuffer();
+            return new Response(buf, { headers: res.headers });
+        } catch (e) {
+            if (attempt >= 2) throw e;
+            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+    }
 }
