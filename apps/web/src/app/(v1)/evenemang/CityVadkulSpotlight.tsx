@@ -129,6 +129,34 @@ function seedMap(e: SpotRow): void {
 }
 
 function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expanded: boolean; onToggle: () => void }) {
+    // Bildvakt som listradernas: trasig bild → kompakta emoji-raden.
+    const [imgFailed, setImgFailed] = useState(false);
+    const hasImage = !!e.coverImage && !imgFailed;
+
+    const badge = e.vadkul && (
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+            hasImage
+                ? 'bg-white/25 backdrop-blur-sm text-white'
+                : gold
+                    ? 'bg-amber-200/70 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300'
+                    : 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300'
+        }`}>
+            {e.isTip ? 'Tipsat' : 'Skapat'}
+        </span>
+    );
+    const catChip = e.category && (
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+            hasImage ? 'bg-white/25 backdrop-blur-sm text-white' : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+        }`}>
+            {categoryLabel(e.category)}
+        </span>
+    );
+    const onClick = (ev: React.MouseEvent) => {
+        if (!isPlainClick(ev)) { seedMap(e); return; }
+        ev.preventDefault();
+        onToggle();
+    };
+
     return (
         <div className={`rounded-2xl border overflow-hidden transition-colors ${
             gold
@@ -137,39 +165,53 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
         }`}>
             {/* <a href=/?event=> står kvar för crawl + cmd/ctrl-klick (kartan i
                 ny flik) — vanligt klick fäller ut på plats, som listraderna. */}
-            <a
-                href={`/?event=${encodeURIComponent(e.id)}`}
-                onClick={(ev) => {
-                    if (!isPlainClick(ev)) { seedMap(e); return; }
-                    ev.preventDefault();
-                    onToggle();
-                }}
-                className="flex items-center gap-3 px-3 py-2.5"
-            >
-                <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
-                    {e.emoji || '🎉'}
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
-                        {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
-                    </span>
-                    <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
-                        {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
-                    </span>
-                </span>
-                <span className="shrink-0 flex flex-col items-end gap-1">
-                    {e.vadkul && (
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${gold ? 'bg-amber-200/70 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300'}`}>
-                            {e.isTip ? 'Tipsat' : 'Skapat'}
-                        </span>
+            {hasImage ? (
+                // Bildkort som listans rader (Josef 4/9: "bilden kommer ju inte
+                // med"): omslagsbild kant till kant, titel + märken på mörk
+                // gradient, när & var-raden under. Bilden växer utfälld —
+                // UTAN animation, EventExpanded mäter sin höjd synkront.
+                <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="block">
+                    <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={e.coverImage}
+                            alt=""
+                            loading="lazy"
+                            onError={() => setImgFailed(true)}
+                            className={`w-full object-cover ${expanded ? 'h-52' : 'h-28'}`}
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+                            <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : e.emoji || '🎉'}</span>
+                            <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
+                            {badge}
+                            {catChip}
+                        </div>
+                    </div>
+                    {!expanded && (
+                        <div className="px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate">
+                            {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                        </div>
                     )}
-                    {e.category && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400">
-                            {categoryLabel(e.category)}
+                </a>
+            ) : (
+                <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="flex items-center gap-3 px-3 py-2.5">
+                    <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
+                        {e.emoji || '🎉'}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
+                            {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
                         </span>
-                    )}
-                </span>
-            </a>
+                        <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
+                            {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                        </span>
+                    </span>
+                    <span className="shrink-0 flex flex-col items-end gap-1">
+                        {badge}
+                        {catChip}
+                    </span>
+                </a>
+            )}
             {expanded && (
                 <EventExpanded
                     e={toExpanded(e)}

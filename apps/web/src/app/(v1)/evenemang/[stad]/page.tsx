@@ -206,6 +206,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                                 // För boostade externa rader: kart-seed + utfällning
                                 // (beskrivning m.m. fylls av /api/event vid klick).
                                 lat: e.lat, lng: e.lng, category: e.category, hostName: e.hostName,
+                                coverImage: e.coverImage,
                             }));
                     })()}
                 />
