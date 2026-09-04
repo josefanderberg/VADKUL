@@ -66,6 +66,7 @@ function core(s: string): string {
  *  - sparad har �/trasiga surrogat, färsk inte        → färsk
  *  - färsk är en LÄNGRE FORTSÄTTNING av sparad (kapad vid tak) → färsk
  *  - sparad är en motor-platshållare (PRO/ABF/Medborgarskolan) och färsk är riktig text ≥ 60 → färsk
+ *  - sparad = färsk + kort påhängd svans (WP-taggsoppa) → färsk
  *  - sparad är kort platshållare (< 40 tecken) och färsk är ≥ 60 och minst dubbelt → färsk
  *  - annars null — omformuleringar i källan rör vi inte
  */
@@ -84,6 +85,15 @@ export function pickBetterDescription(
     if (isPlaceholderDescription(sn) && !isPlaceholderDescription(fn) && fn.length >= 60) return f;
     if (!HAS_SWEDISH.test(s) && looksStripped(s) && HAS_SWEDISH.test(f)) return f;
     if (BROKEN_CHARS_RE.test(s) && !BROKEN_CHARS_RE.test(f)) return f;
+
+    // Sparad = färsk + påhängd TAGGSOPPA (WP-termer som förr klistrades på:
+    // "… en liten,… aktiviteter & upplevelser kultur & nöje") → färsk. Svansen
+    // måste se ut som termer (gemener, &, inga meningar) — en riktig
+    // fortsättning av texten räknas inte.
+    if (fn.length >= 40 && sn.length > fn.length && sn.startsWith(fn)) {
+        const tail = sn.slice(fn.length).trim();
+        if (tail.length <= 160 && /^[a-zåäö&\s-]+$/.test(tail)) return f;
+    }
 
     const sc = core(s);
     if (sc && fn.length > sc.length + 20 && fn.startsWith(sc)) return f;

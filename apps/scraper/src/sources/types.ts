@@ -39,6 +39,12 @@ export interface RawEvent {
     organizer?: string;
     /** Kategori om källan vet (annars klassificerar runnern via title+desc) */
     category?: string;
+    /**
+     * Extra ord till klassificeraren (WP-termer, genre-hintar) som INTE ska
+     * sparas i beskrivningen. Förr klistrades de på description och läckte
+     * ut på korten som taggsoppa.
+     */
+    classifyHints?: string;
     price?: string;
     /**
      * Per-event-värd för paraply-källor (församling, klubb, lokalkrets).

@@ -170,6 +170,13 @@ describe('runSource — grundpipeline', () => {
         expect(written.hasSpecificTime).toBe(true);     // 19:00 ≠ midnatt
     });
 
+    it('biovisning får 🎬 redan vid spar', async () => {
+        await run([makeEvent({ title: 'The Invite', venueName: 'Metropol - Bio 3:an', city: 'Piteå' })]);
+        expect(writtenEvents()[0].emoji).toBe('🎬');
+        await run([makeEvent({ title: 'Konsert', venueName: 'Konserthuset' })]);
+        expect(writtenEvents()[1].emoji).toBeUndefined();
+    });
+
     it('per-event hostName (paraply-källor) vinner över source.hostName', async () => {
         await run([makeEvent({ hostName: 'Sundbybergs församling' })]);
         expect(writtenEvents()[0].hostName).toBe('Sundbybergs församling');
@@ -354,6 +361,11 @@ describe('deriveHasSpecificTime', () => {
 });
 
 describe('geocodeQueriesFor', () => {
+    it('salong-venue ("Saga - Bio 3:an") får byggnaden som kandidat före hela strängen', () => {
+        const queries = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Saga - Bio 3:an', city: 'Piteå' });
+        expect(queries.indexOf('Bio 3:an, Piteå')).toBeLessThan(queries.indexOf('Saga - Bio 3:an, Piteå'));
+    });
+
     it('källans kandidater används när de finns, tomma/korta filtreras', () => {
         const queries = geocodeQueriesFor({
             title: 't', url: 'u', startDate: new Date(),

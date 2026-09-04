@@ -35,6 +35,7 @@ import { stamped } from '../utils/firestoreStamp';
 import { extractPriceFromText } from '../utils/priceFromText';
 import { normalizeDescription, sanitizePriceField } from '../utils/normalizeEvent';
 import { looksStripped } from '../utils/contentRefresh';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -44,6 +45,8 @@ interface Row {
     title: string;
     description: string | null;
     price: string | null;
+    locationName: string | null;
+    emoji: string | null;
 }
 
 const BROKEN_CHARS_RE = /�|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
@@ -56,7 +59,7 @@ function host(url: string): string {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return '?'; }
 }
 
-async function writePatch(r: Row, patch: { description?: string; price?: string }): Promise<void> {
+async function writePatch(r: Row, patch: { description?: string; price?: string; emoji?: string }): Promise<void> {
     setEventContent(r.url, patch);
     if (db && r.firestoreId) {
         try {
@@ -71,13 +74,13 @@ async function writePatch(r: Row, patch: { description?: string; price?: string 
 async function main() {
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN (kör med --apply för att skriva)');
     const rows = sqlite.prepare(`
-        SELECT url, firestoreId, title, description, price
+        SELECT url, firestoreId, title, description, price, locationName, emoji
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
     `).all() as Row[];
     console.log(`${rows.length} framtida synliga event`);
 
-    const stats = { price: 0, priceCleaned: 0, cleaned: 0, emptied: 0 };
+    const stats = { price: 0, priceCleaned: 0, cleaned: 0, emptied: 0, cinema: 0 };
     const priceSamples: string[] = [];
     const priceByHost: Record<string, number> = {};
     const capped: Record<string, number> = {};
@@ -85,7 +88,10 @@ async function main() {
 
     for (const r of rows) {
         const desc = r.description ?? '';
-        const patch: { description?: string; price?: string } = {};
+        const patch: { description?: string; price?: string; emoji?: string } = {};
+
+        // 0) Biovisning utan filmsymbol → 🎬 (473 hade 🎭/🎉/🧸, 2026-09-04).
+        if (looksLikeCinema(r.title, r.locationName) && (r.emoji ?? '') !== CINEMA_EMOJI) { patch.emoji = CINEMA_EMOJI; stats.cinema++; }
 
         // 1) Trasiga tecken / FB-sidfot / "Läs mer"-svans → städa (bara rader som bär skadan).
         if (desc && (BROKEN_CHARS_RE.test(desc) || FB_FOOTER_RE.test(desc) || READ_MORE_TAIL_RE.test(desc))) {
@@ -136,6 +142,7 @@ async function main() {
     if (priceSamples.length) console.log('  exempel:\n' + priceSamples.join('\n'));
     console.log(`\n🧹 Beskrivningar städade från �/sidfot/"Läs mer": ${stats.cleaned} (${stats.emptied} tömda)`);
     console.log(`🏷️  Prisfält sanerade (skräp tömt / långtext → intervall): ${stats.priceCleaned}`);
+    console.log(`🎬 Biovisningar som fick filmsymbol: ${stats.cinema}`);
 
     const top = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12)
         .map(([h, n]) => `  ${String(n).padStart(5)}  ${h}`).join('\n') || '  (inga)';

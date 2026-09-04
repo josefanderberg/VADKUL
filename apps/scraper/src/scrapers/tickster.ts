@@ -1,6 +1,8 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { geocodeVenueSweden, type GeoHit } from '../utils/venueCoordinates';
+import { venueBuildingOf } from '../utils/venueFromText';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE FILTER: Kommande 7 dagar ---
@@ -475,12 +477,33 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     details.jsonLng = null;
                 }
 
+                // Biografsalonger: "Saga - Bio 3:an". Ticksters koordinater per
+                // salong spretar (Piteå 2026-09-04: tre salonger, tre platser, en
+                // 14 km bort mellan Svensbyn och Hemmingsmark). Geokoda BYGGNADEN
+                // först — en riktig träff (known_venues/poi/gata) vinner över
+                // salongens koordinat; stadscentroid räknas inte som träff.
+                let buildingHit: GeoHit | null = null;
+                const building = venueBuildingOf(details.venue);
+                if (building) {
+                    const bq = [building, details.city].filter(Boolean).join(', ');
+                    const hit = await geocodeVenueSweden(bq, details.city ? { nearCity: details.city } : undefined);
+                    if (hit && hit[2] && hit[2] !== 'stad-centroid' && hit[2] !== 'ort-centroid') {
+                        buildingHit = hit;
+                        details.geocodeQuery = bq;
+                        console.log(`     🏛️  Byggnad "${bq}" → [${hit[0].toFixed(4)}, ${hit[1].toFixed(4)}] (${hit[2]}) i stället för salongskoordinaten`);
+                    }
+                }
+
                 // Koordinater
                 let lat: number;
                 let lng: number;
 
                 let geoPrecision: string | null = null;
-                if (details.jsonLat && details.jsonLng) {
+                if (buildingHit) {
+                    lat = buildingHit[0];
+                    lng = buildingHit[1];
+                    geoPrecision = buildingHit[2];
+                } else if (details.jsonLat && details.jsonLng) {
                     lat = details.jsonLat;
                     lng = details.jsonLng;
                     geoPrecision = 'kallkoordinat';
@@ -524,7 +547,9 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     lng,
                     geoPrecision,
                     hostName: 'Tickster',
-                    category: guessCategoryFromTitle(details.title),
+                    category: looksLikeCinema(details.title, details.venue) ? 'stage' : guessCategoryFromTitle(details.title),
+                    // Biovisning → 🎬 (annars 🎭/🎉 från auditen — community-kritik 2026-09-04)
+                    ...(looksLikeCinema(details.title, details.venue) ? { emoji: CINEMA_EMOJI } : {}),
                     createdAt: new Date(),
                     coverImage: details.coverImage || await searchGoogleImage(page, details.title) || '',
                     description: details.jsonDescription || '',

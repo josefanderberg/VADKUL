@@ -1,6 +1,7 @@
 /** Extraktorerna för PRO/SPF-fallet (Canasta i Vislanda, 24/8). */
 import { describe, it, expect } from 'vitest';
 import { extractVenueFromText, ortFromForeningsnamn } from './venueFromText';
+import { venueBuildingOf } from './venueFromText';
 
 describe('extractVenueFromText', () => {
     it('ägarens exempel: Canasta-beskrivningen ger Folkets Hus', () => {
@@ -40,5 +41,25 @@ describe('ortFromForeningsnamn', () => {
         expect(ortFromForeningsnamn('PRO Samorganisation Växjö')).toBeNull();
         expect(ortFromForeningsnamn('Hembygdsföreningen')).toBeNull();
         expect(ortFromForeningsnamn(null)).toBeNull();
+    });
+});
+
+describe('venueBuildingOf', () => {
+    it('plockar byggnaden ur "SALONG - BYGGNAD"', () => {
+        expect(venueBuildingOf('Saga - Bio 3:an')).toBe('Bio 3:an');
+        expect(venueBuildingOf('Röda Kvarn - Bio 3:an')).toBe('Bio 3:an');
+        expect(venueBuildingOf('Metropol - Bio 3:an')).toBe('Bio 3:an');
+        expect(venueBuildingOf('Salong Lillan - Garvaren Bio')).toBe('Garvaren Bio');
+        expect(venueBuildingOf('Terassen - Vimmerby Bio')).toBe('Vimmerby Bio');
+        expect(venueBuildingOf('Grand – Vimmerby Bio')).toBe('Vimmerby Bio');
+    });
+    it('lämnar byggnad-först, bindestreck i namn och salongslösa platser', () => {
+        expect(venueBuildingOf('Kulturhuset - Stora scenen')).toBeNull();
+        expect(venueBuildingOf('Bio 3:an - Saga')).toBeNull();
+        expect(venueBuildingOf('Studio Acusticum, Black Box')).toBeNull();
+        expect(venueBuildingOf('Storm Salong 1')).toBeNull();
+        expect(venueBuildingOf('Musik i ruinen - S:t Nicolai')).toBeNull();
+        expect(venueBuildingOf('')).toBeNull();
+        expect(venueBuildingOf(undefined)).toBeNull();
     });
 });

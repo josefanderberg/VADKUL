@@ -86,4 +86,16 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     // Great Lake Run-tipset: SHRA:s cruisingar syns bara på deras FB-sida.
     // Verifierad headless 2026-08-28: /upcoming_hosted_events renderar utloggat.
     { slug: 'shraostersund', name: 'SHRA Östersund', city: 'Östersund' },
+
+    // ── Piteå (community-kritik 2026-09-04: "hittar inte en bråkdel") ───
+    // Bara 8 av 307 Piteå-event kom från FB; inga Piteå-sidor bevakades.
+    // Kandidater tillagda UTAN headless-verifiering (molnsession utan nät):
+    // fel slug ⇒ "innehållet är inte tillgängligt" ⇒ 0 eventlänkar i natt-
+    // loggen — ta då bort raden. Verifiera: facebook.com/<slug>/events
+    { slug: 'piteakommun', name: 'Piteå kommun', city: 'Piteå' },
+    { slug: 'visitpitea', name: 'Visit Piteå', city: 'Piteå' },
+    { slug: 'studioacusticum', name: 'Studio Acusticum', city: 'Piteå' },
+    { slug: 'piteamuseum', name: 'Piteå museum', city: 'Piteå' },
+    { slug: 'framnasfolkhogskola', name: 'Framnäs folkhögskola', city: 'Öjebyn' },
+    { slug: 'piteaif', name: 'Piteå IF', city: 'Piteå' },
 ];
