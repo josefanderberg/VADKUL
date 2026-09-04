@@ -18,5 +18,6 @@ export default async function CategoryShareImage({ params }: { params: Promise<{
         headline: cat.h1(city.name),
         kicker: `JUST NU I ${city.name.toUpperCase()}`,
         events,
+        city: { lat: city.lat, lng: city.lng },
     });
 }
