@@ -13,6 +13,7 @@
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
 import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
+import { venueBuildingOf } from '../utils/venueFromText';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
@@ -90,6 +91,8 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
         ? e.geocodeCandidates
         : [
             e.address ? [e.address, e.city].filter(Boolean).join(', ') : '',
+            // "Saga - Bio 3:an" → byggnaden först; salongsnamnet träffar annars fel ort.
+            (() => { const b = venueBuildingOf(e.venueName); return b ? [b, e.city].filter(Boolean).join(', ') : ''; })(),
             e.venueName ? [e.venueName, e.city].filter(Boolean).join(', ') : '',
             e.city ?? '',
         ];
@@ -317,7 +320,10 @@ export async function runSource(
                 }
             }
 
-            const category = normalizeCategory(e.category || classifyEvent(e.title, e.description || ''));
+            // classifyHints (t.ex. WP-termer) går till klassificeraren men sparas
+            // aldrig i beskrivningen — förr hamnade "aktiviteter & upplevelser
+            // kultur & nöje …" sist i 30 Visit Piteå-texter (2026-09-04).
+            const category = normalizeCategory(e.category || classifyEvent(e.title, [e.description, e.classifyHints].filter(Boolean).join(' ')));
 
             // ── LLM-audit (opt-in, kräver AUDIT_ENABLED=true + Ollama uppe) ──
             let auditVerdict: string | undefined;

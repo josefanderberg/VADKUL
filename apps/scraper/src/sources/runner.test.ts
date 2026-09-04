@@ -354,6 +354,11 @@ describe('deriveHasSpecificTime', () => {
 });
 
 describe('geocodeQueriesFor', () => {
+    it('salong-venue ("Saga - Bio 3:an") får byggnaden som kandidat före hela strängen', () => {
+        const queries = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Saga - Bio 3:an', city: 'Piteå' });
+        expect(queries.indexOf('Bio 3:an, Piteå')).toBeLessThan(queries.indexOf('Saga - Bio 3:an, Piteå'));
+    });
+
     it('källans kandidater används när de finns, tomma/korta filtreras', () => {
         const queries = geocodeQueriesFor({
             title: 't', url: 'u', startDate: new Date(),

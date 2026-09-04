@@ -46,6 +46,11 @@ describe('pickBetterDescription', () => {
         expect(isPlaceholderDescription('Vi spelar boule varje tisdag. Alla är välkomna, PRO bjuder på fika.')).toBe(false);
     });
 
+    it('byter när sparad bara är färsk + påhängd taggsoppa', () => {
+        const fresh = 'Upptäck en värld av magi! Bludderblad är en föreställning för de yngre barnen som genom dans och musik funderar.';
+        expect(pickBetterDescription(fresh + ' aktiviteter & upplevelser kultur & nöje musik & underhållning teater & scenkonst', fresh)).toBe(fresh);
+    });
+
     it('rör inte omformuleringar, kortare texter eller identisk text', () => {
         expect(pickBetterDescription(full, full)).toBeNull();
         expect(pickBetterDescription(full, full.slice(0, 80))).toBeNull();

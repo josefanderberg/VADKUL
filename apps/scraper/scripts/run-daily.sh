@@ -208,6 +208,17 @@ else
     echo "⚠️ Hide-junk misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Dölj slutna sällskap: Rotary (clubrunner.ca) — ägarbeslut 2026-09-04 ────
+# Klubbmöten för medlemmar, inte publika event. Källan är 'dead' i registret;
+# det här gömmer det som redan ligger i DB:n. Idempotent.
+echo "" >> "$LOG_FILE"
+echo "── HIDE ROTARY (clubrunner.ca, slutna klubbmöten) ──" >> "$LOG_FILE"
+if npm run hide-source -- --url-like=clubrunner.ca --apply >> "$LOG_FILE" 2>&1; then
+    echo "Hide Rotary OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Hide Rotary misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Fixa platshållar-midnatt: re-fetcha detail-sidor efter klockslag ────────
 # Kandidater väljs på hasSpecificTime=0 (runnerns flagga) med max 3 försök per
 # event — sedan ger vi upp (sidan saknar klockslag) och eventet ligger kvar på

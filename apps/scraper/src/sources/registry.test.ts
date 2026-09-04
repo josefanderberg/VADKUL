@@ -43,11 +43,18 @@ describe('source-registryt', () => {
     });
 
     it('nätverkskällorna (paraply-API:erna) finns och är aktiva', () => {
-        const networks = ['hembygd', 'svenska-kyrkan', 'naturskyddsforeningen', 'rotary', 'roda-korset'];
+        const networks = ['hembygd', 'svenska-kyrkan', 'naturskyddsforeningen', 'roda-korset'];
         for (const id of networks) {
             const s = SOURCES.find((x) => x.id === id);
             expect(s, `${id} saknas i registryt`).toBeDefined();
             expect(s!.status).toBe('active');
         }
+    });
+
+    it('Rotary är medvetet dold (ägarbeslut 2026-09-04: slutna klubbmöten)', () => {
+        const s = SOURCES.find((x) => x.id === 'rotary');
+        expect(s).toBeDefined();
+        expect(s!.status).toBe('dead');
+        expect(s!.notes).toMatch(/2026-09-04/);
     });
 });

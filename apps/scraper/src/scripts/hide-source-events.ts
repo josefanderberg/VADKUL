@@ -4,6 +4,9 @@
  *
  *   npx ts-node src/scripts/hide-source-events.ts --host='Oceanen'           # dry-run
  *   npx ts-node src/scripts/hide-source-events.ts --host='Oceanen' --apply
+ *   npm run hide-source -- --url-like=clubrunner.ca --apply   # per URL-domän (Rotary: 110 klubb-värdar)
+ *
+ * Idempotent (hidden=0-filter) — körs nattligt för clubrunner.ca (ägarbeslut 2026-09-04).
  */
 import path from 'path';
 import Database from 'better-sqlite3';
@@ -13,16 +16,19 @@ import { stamped } from '../utils/firestoreStamp';
 const apply = process.argv.includes('--apply');
 const hostArg = process.argv.find((a) => a.startsWith('--host='));
 const host = hostArg ? hostArg.split('=').slice(1).join('=') : '';
+const urlArg = process.argv.find((a) => a.startsWith('--url-like='));
+const urlLike = urlArg ? urlArg.split('=').slice(1).join('=') : '';
 
 async function main() {
-    if (!host) { console.error("Ange --host='Källans hostName'"); process.exit(1); }
+    if (!host && !urlLike) { console.error("Ange --host='Källans hostName' eller --url-like=<domän>"); process.exit(1); }
+    const label = host || `url~${urlLike}`;
     const sqlite = new Database(path.resolve(__dirname, '../../events.db'));
     const rows = sqlite.prepare(`
         SELECT firestoreId, substr(time,1,10) AS day, title FROM link_events
-        WHERE hostName = ? AND hidden = 0 AND firestoreId IS NOT NULL
-    `).all(host) as { firestoreId: string; day: string; title: string }[];
+        WHERE ((? != '' AND hostName = ?) OR (? != '' AND url LIKE ?)) AND hidden = 0 AND firestoreId IS NOT NULL
+    `).all(host, host, urlLike, `%${urlLike}%`) as { firestoreId: string; day: string; title: string }[];
 
-    console.log(`${apply ? '🔧 APPLY' : '🔍 DRY-RUN'} — ${host}: ${rows.length} synliga events att gömma`);
+    console.log(`${apply ? '🔧 APPLY' : '🔍 DRY-RUN'} — ${label}: ${rows.length} synliga events att gömma`);
     const days = new Set(rows.map((r) => r.day));
     console.log(`   distinkta datum: ${days.size}${days.size === 1 ? ' (⚠️ default-datum-kluster)' : ''}`);
     for (const r of rows.slice(0, 4)) console.log(`   ex: ${r.day} ${r.title.slice(0, 45)}`);

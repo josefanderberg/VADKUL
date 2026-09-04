@@ -225,7 +225,9 @@ function looksLikePublishDate(dateRaw: string | undefined, now: Date): boolean {
  */
 // Vanliga falska positiva: nyckelord/sociala medier/all-caps-rubriker som
 // vår venue-regex annars plockar upp.
-const VENUE_FALSE_POSITIVES = /^(facebook|instagram|tiktok|youtube|spotify|datum|tid|plats|när|var|info|sveriges|svenska|alla|nya|en|ett)$/i;
+const VENUE_FALSE_POSITIVES = /^(facebook|instagram|tiktok|youtube|spotify|datum|dat|tid|tider|plats|när|var|info|information|anmälan|pris|kostnad|avgift|ålder|sveriges|svenska|alla|nya|en|ett)$/i;
+// Etikettord i början av kandidaten ("Dat" ur "Datum:", "Pris 160 kr") — ingen plats.
+const VENUE_LABEL_START = /^(?:dat(?:um)?|tid(?:er)?|när|var|plats|info(?:rmation)?|anmälan|pris|kostnad|avgift|ålder|kl)(?!\p{L})/iu;
 
 function findVenueInText(text: string): string | undefined {
     if (!text) return undefined;
@@ -244,6 +246,7 @@ function findVenueInText(text: string): string | undefined {
         if (candidate.length < 3 || candidate.length > 60) continue;
         if (/^[A-ZÅÄÖ]{2,}$/.test(candidate)) continue;
         if (VENUE_FALSE_POSITIVES.test(candidate)) continue;
+        if (VENUE_LABEL_START.test(candidate)) continue;   // "Dat" (Visit Piteå 2026-09-04)
         return candidate;
     }
     return undefined;
@@ -266,7 +269,13 @@ function categoryFromTerms(e: any): string | undefined {
     return names.length > 0 ? names.join(' ') : undefined;
 }
 
-async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: AbortSignal): Promise<RawEvent | null> {
+async function wpV2ToRawEvent(
+    e: any,
+    cfg: WpRestConfig,
+    now: Date,
+    signal?: AbortSignal,
+    opts: { allowDetailFetch?: boolean } = {},
+): Promise<RawEvent | null> {
     // WP REST HTML-enkodar titlar (&#038; &amp; &#8211;) — avkoda enligt encoding-guarden
     const title = e?.title?.rendered ? decodeEntities(String(e.title.rendered)).trim() : null;
     if (!title) return null;
@@ -361,14 +370,21 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
     }
 
     // Venue: leta i content → excerpt → HTML detalsida om vi redan hämtat den
-    const venueName = detailVenue
+    let venueName = detailVenue
         || findVenueInText(String(e.content?.rendered || ''))
         || findVenueInText(String(e.excerpt?.rendered || ''))
         || (detailHtml ? findVenueInHtml(detailHtml) : undefined);
+    // Ingen plats i API-texten → hämta detaljsidan (bara nya URL:er) och läs
+    // "Plats:"/<dt>Plats</dt>. Visit Piteå: 59 av 114 event låg på stadens
+    // mittpunkt fast sidan anger t.ex. Framnäs folkhögskola i Öjebyn (2026-09-04).
+    if (!venueName && cfg.fetchDetailPage && e.link && opts.allowDetailFetch !== false) {
+        if (!detailHtml) detailHtml = await fetchDetailHtml(e.link, cfg, signal);
+        if (detailHtml) venueName = findVenueInHtml(detailHtml);
+    }
 
-    // Lägg in terms i description så classifyEvent i runnern fångar dem ("konsert", "musik" etc)
+    // WP-termer ("konsert", "musik & underhållning") går till klassificeraren
+    // via classifyHints — INTE in i beskrivningen (läckte som taggsoppa på korten).
     const termsHint = categoryFromTerms(e);
-    if (termsHint) description = `${description} ${termsHint}`.trim();
 
     return {
         externalId: e.id ? String(e.id) : undefined,
@@ -379,6 +395,7 @@ async function wpV2ToRawEvent(e: any, cfg: WpRestConfig, now: Date, signal?: Abo
         city: cfg.defaultCity,
         description,
         imageUrl,
+        classifyHints: termsHint,
     };
 }
 
@@ -431,7 +448,12 @@ export const wpRestEngine = async (
         // (domainLimiter throttles inom samma domän så detta är säkert)
         const evs = variant === 'tribe'
             ? items.map((it) => tribeToRawEvent(it)).filter((x): x is RawEvent => !!x)
-            : (await Promise.all(items.map((it) => wpV2ToRawEvent(it, config, ctx.windowStart, ctx.signal))))
+            : (await Promise.all(items.map(async (it) => {
+                // Detaljsida för plats bara för NYA URL:er (kända refreshas var 4:e körning).
+                const link = it?.link ? String(it.link) : '';
+                const known = !!link && !ctx.refreshKnown && !!ctx.isKnownUrl && await ctx.isKnownUrl(link);
+                return wpV2ToRawEvent(it, config, ctx.windowStart, ctx.signal, { allowDetailFetch: !known });
+            })))
                 .filter((x): x is RawEvent => !!x);
         results.push(...evs);
 

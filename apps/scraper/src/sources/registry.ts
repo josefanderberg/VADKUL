@@ -5543,7 +5543,11 @@ export const SOURCES: Source[] = [
         config: { districts: ['2325', '2335', '2355', '2365', '2395', '2405'] },
         windowDays: 180,   // klubb-event är glesa; distrikten publicerar långt fram
         updateFrequency: 'daily',
-        status: 'active',
+        // Ägarbeslut 2026-09-04 (community-kritik: "blandar evenemang för
+        // allmänheten med slutna sällskap"): Rotarys klubbmöten är lunchmöten
+        // för medlemmar, inte publika event. Dold; run-daily gömmer befintliga
+        // clubrunner-rader nattligt (hide-source --url-like=clubrunner.ca).
+        status: 'dead',
         expectedMinEvents: 50,
         discovery: {
             method: 'manual',
@@ -5551,8 +5555,8 @@ export const SOURCES: Source[] = [
             date: '2026-06-11',
             notes: 'ClubRunner per distrikt; siteId runtime-upptäcks från /events. US-datumformat "MMM d, yyyy" KRÄVS (ISO ger 0).',
         },
-        notes: '6 distrikt, bara 3 exponerar endpointen (övriga widget-iframes). ~370 event/180d.',
-        lastVerified: '2026-06-11',
+        notes: '6 distrikt, bara 3 exponerar endpointen (övriga widget-iframes). ~370 event/180d. Dold 2026-09-04 (ägarbeslut): slutna klubbmöten, inte publika event.',
+        lastVerified: '2026-09-04',
     },
     {
         id: 'pro',

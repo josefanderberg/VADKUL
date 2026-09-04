@@ -57,3 +57,26 @@ export function ortFromForeningsnamn(name: string | null | undefined): string | 
     const ort = words.join(' ');
     return /^[A-ZÅÄÖ]/.test(ort) ? ort : null;
 }
+
+/** Ord som gör en text till en BYGGNAD/plats (inte bara ett salongsnamn). */
+const BUILDING_RE = /(?<!\p{L})(?:bio(?:graf(?:en)?)?|teater(?:n)?|kulturhus(?:et)?|arena(?:n)?|hus(?:et)?|scen(?:en)?|hall(?:en)?|center|centrum|centret|gård(?:en)?|kyrka(?:n)?|museum|museet|park(?:en)?|skola(?:n)?|folkets|konserthus(?:et)?|filmhus(?:et)?|kursgård(?:en)?|folkhögskola(?:n)?|bibliotek(?:et)?)(?!\p{L})/iu;
+/** Salongs-/rumsord: "Salong Lillan", "Sal 2", "Stora scenen" är rum, inte byggnader. */
+const ROOM_RE = /^(?:salong|sal|scen|studio|rum|lokal|stora|lilla|black box|kino|terass(?:en)?|foaj[ée]n?)(?!\p{L})/iu;
+
+/**
+ * "Saga - Bio 3:an" → "Bio 3:an", "Salong Lillan - Garvaren Bio" → "Garvaren Bio".
+ * Biografer/scener på Tickster m.fl. namnger platsen som "SALONG - BYGGNAD".
+ * Geokodas hela strängen träffar salongsnamnet fel ort: Piteås Bio 3:an låg
+ * 14 km bort mellan Svensbyn och Hemmingsmark (community-kritik 2026-09-04),
+ * och de tre salongerna fick tre olika platser. Returnerar byggnaden när
+ * högerdelen ser ut som en byggnad och vänsterdelen inte gör det (eller är
+ * ett rumsord); annars null — "Kulturhuset - Stora scenen" lämnas orörd.
+ */
+export function venueBuildingOf(venueName: string | null | undefined): string | null {
+    const m = (venueName ?? '').trim().match(/^(.{2,40}?)\s+[-–—]\s+(.{3,80})$/);
+    if (!m) return null;
+    const [, left, right] = m;
+    if (!BUILDING_RE.test(right)) return null;
+    if (BUILDING_RE.test(left) && !ROOM_RE.test(left)) return null;
+    return right.trim();
+}
