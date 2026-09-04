@@ -27,5 +27,6 @@ export default async function CityShareImage({ params }: { params: Promise<{ sta
         headline: `Vad händer i ${city.name}?`,
         kicker: `JUST NU I ${city.name.toUpperCase()}`,
         events,
+        city: { lat: city.lat, lng: city.lng },
     });
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatCount, truncateTitle, pickShareLines } from './cityShare';
+import { cityBricks } from './cityShareImage';
 import type { CityEvent } from './cityData';
 
 const ev = (over: Partial<CityEvent>): CityEvent => ({
@@ -71,5 +72,31 @@ describe('pickShareLines', () => {
     });
     it('tom lista → tom lista', () => {
         expect(pickShareLines([], 5)).toEqual([]);
+    });
+});
+
+describe('cityBricks', () => {
+    const pitea = { lat: 65.3170, lng: 21.4795 };
+    it('event nära staden hamnar i kartans högerdel, glest och max 12', () => {
+        const now = Date.now();
+        const events: CityEvent[] = Array.from({ length: 30 }, (_, i) => ev({
+            id: `e${i}`, title: `Event ${i}`, category: ['music', 'sport', 'family', 'art', 'market'][i % 5],
+            lat: 65.3170 + (i % 6) * 0.004, lng: 21.4795 + Math.floor(i / 6) * 0.01,
+            locationName: `Plats ${i}`, time: new Date(now + 864e5 + i * 36e5).toISOString(),
+        }));
+        const bricks = cityBricks(pitea, events, now);
+        expect(bricks.length).toBeGreaterThan(0);
+        expect(bricks.length).toBeLessThanOrEqual(12);
+        for (const b of bricks) { expect(b.left).toBeGreaterThanOrEqual(640); expect(b.left).toBeLessThanOrEqual(1170); }
+        for (let i = 0; i < bricks.length; i++) for (let j = i + 1; j < bricks.length; j++)
+            expect(Math.hypot(bricks[i].left - bricks[j].left, bricks[i].top - bricks[j].top)).toBeGreaterThanOrEqual(48);
+    });
+    it('event utan koordinater, förbi eller >7 dagar bort ger inga brickor', () => {
+        const now = Date.now();
+        expect(cityBricks(pitea, [
+            ev({ id: 'a', lat: 0, lng: 0 }),
+            ev({ id: 'b', time: new Date(now - 2 * 864e5).toISOString() }),
+            ev({ id: 'c', time: new Date(now + 20 * 864e5).toISOString() }),
+        ], now)).toEqual([]);
     });
 });
