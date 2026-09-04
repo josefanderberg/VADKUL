@@ -9,11 +9,12 @@
 #   run-daily.sh facebook scrape-fb             # Bara FB (cleanup redan kört)
 #
 # Förväntar sig:
-#   TEAMS_WEBHOOK_URL   — sätts i ~/.vadkul-secrets/env eller via launchd plist
+#   TG_BOT_TOKEN + TG_CHAT_ID — sätts i ~/.vadkul-secrets/env (Telegram-boten;
+#   samma som bot-daemon/digest). Teams togs bort 2026-09-04 (kontot borta).
 #
 # Skriver:
 #   ~/Library/Logs/vadkul-scraper/<jobname>.log   (stdout/stderr från jobbet)
-#   En POST till Teams med ✅/❌ + duration + extraherade siffror
+#   Ett Telegram-meddelande med ✅/❌ + duration + extraherade siffror
 
 set -u  # Bråka om odefinierade variabler. Ingen -e — vi vill alltid kunna posta.
 
@@ -29,7 +30,7 @@ SECRET_FILE="$HOME/.vadkul-secrets/env"
 
 mkdir -p "$LOG_DIR"
 
-# Ladda hemligheter (TEAMS_WEBHOOK_URL m.m.) om filen finns
+# Ladda hemligheter (TG_BOT_TOKEN, TG_CHAT_ID m.m.) om filen finns
 if [ -f "$SECRET_FILE" ]; then
     # shellcheck disable=SC1090
     set -a; . "$SECRET_FILE"; set +a
@@ -153,7 +154,7 @@ DURATION=$(( END_TS - START_TS ))
 # ─── Auto-karantän: pausa källor utan livstecken ────────────────────────────
 # N raka körningar med found=0 och inga skips ⇒ quarantine.json (läses av
 # schedule.scheduledForToday). Vecko-retry ger självläkning. ⏸️/▶️-raderna
-# plockas upp i Teams-kortet nedan. Friska-men-tysta källor (found>0) rörs ej.
+# plockas upp i Telegram-rapporten nedan. Friska-men-tysta källor (found>0) rörs ej.
 echo "" >> "$LOG_FILE"
 echo "── AUTO-KARANTÄN (källor utan livstecken) ──" >> "$LOG_FILE"
 if npm run quarantine >> "$LOG_FILE" 2>&1; then
@@ -166,7 +167,7 @@ fi
 # Janitorn raderar bevisat döda markörer (eventReminders m.m. — incidenten
 # 2026-08-19: 46 920 docs varav 2 med mottagare). Kostnadsvakten snapshotar
 # alla kollektioners docantal i SQLite och ⚠️-varnar vid tillväxt/tak —
-# raderna landar i Teams-kortet nedan. Läsningarna är count-aggregat (~gratis).
+# raderna landar i Telegram-rapporten nedan. Läsningarna är count-aggregat (~gratis).
 if [ "$JOB_NAME" = "nightly" ]; then
     echo "" >> "$LOG_FILE"
     echo "── DB-JANITOR (döda reminder-markörer) ──" >> "$LOG_FILE"
@@ -461,8 +462,10 @@ else
     STATUS_COLOR="attention"
 fi
 
-# ─── Bygg Adaptive Card-payload via python3 (säker JSON-serialisering) ──────
-PAYLOAD_FILE="$(mktemp -t vadkul-teams).json"
+# ─── Bygg Telegram-rapporten (HTML) via python3 — säker escaping ────────────
+# Ersatte Teams Adaptive Card 2026-09-04 (ägaren har inte kvar Teams-kontot).
+# Telegram: parse_mode=HTML, max 4096 tecken — loggsvansen kapas om det behövs.
+PAYLOAD_FILE="$(mktemp -t vadkul-tg).txt"
 JOB_NAME="$JOB_NAME" \
 STATUS_EMOJI="$STATUS_EMOJI" \
 STATUS_TEXT="$STATUS_TEXT" \
@@ -488,7 +491,8 @@ COST_SUMMARY="$COST_SUMMARY" \
 COST_WARNINGS="$COST_WARNINGS" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
-import os, json
+import os, html
+esc = html.escape
 
 job        = os.environ["JOB_NAME"]
 emoji      = os.environ["STATUS_EMOJI"]
@@ -583,118 +587,87 @@ if cost_summary:
 if cost_warnings:
     db_facts.append({"title": "🚨 VARNINGAR",     "value": cost_warnings})
 
-body = [
-    {
-        "type": "TextBlock",
-        "text": f"{emoji} VADKUL daily — {job}",
-        "weight": "Bolder",
-        "size": "Large",
-        "color": color,
-    },
-    # Scraper-resultat
-    {"type": "TextBlock", "text": "🚀 Scraper-resultat", "weight": "Bolder", "spacing": "Medium"},
-    {"type": "FactSet", "facts": run_facts},
+def facts(rows):
+    return "\n".join(f"• <b>{esc(r['title'])}:</b> {esc(r['value'])}" for r in rows)
+
+def section(title, rows):
+    return f"\n<b>{esc(title)}</b>\n{facts(rows)}" if rows else ""
+
+parts = [
+    f"{emoji} <b>VADKUL daily — {esc(job)}</b>",
+    section("🚀 Scraper-resultat", run_facts),
+    section("🗺️ Kartstatistik", map_facts),
+    section("👤 Facebook Events", fb_facts),
+    section("⏸️ Källkarantän", quar_facts),
+    section("🚨 Databas & kostnadsvakt" if cost_warnings else "🧹 Databas & kostnadsvakt", db_facts),
 ]
+text = "\n".join(p for p in parts if p)
 
-if map_facts:
-    body.append({"type": "TextBlock", "text": "🗺️ Kartstatistik", "weight": "Bolder", "spacing": "Medium"})
-    body.append({"type": "FactSet", "facts": map_facts})
-
-if fb_facts:
-    body.append({"type": "TextBlock", "text": "👤 Facebook Events", "weight": "Bolder", "spacing": "Medium"})
-    body.append({"type": "FactSet", "facts": fb_facts})
-
-if quar_facts:
-    body.append({"type": "TextBlock", "text": "⏸️ Källkarantän", "weight": "Bolder", "spacing": "Medium"})
-    body.append({"type": "FactSet", "facts": quar_facts})
-
-if db_facts:
-    header_color = "attention" if cost_warnings else "default"
-    body.append({"type": "TextBlock", "text": "🧹 Databas & kostnadsvakt", "weight": "Bolder", "spacing": "Medium", "color": header_color})
-    body.append({"type": "FactSet", "facts": db_facts})
-
-body += [
-    {"type": "TextBlock", "text": "📝 Logg (tail)", "weight": "Bolder", "spacing": "Medium"},
-    {
-        "type": "TextBlock",
-        "text": tail,
-        "wrap": True,
-        "fontType": "Monospace",
-        "size": "Small",
-        "isSubtle": True,
-    },
-]
-
-card = {
-    "type": "message",
-    "attachments": [{
-        "contentType": "application/vnd.microsoft.card.adaptive",
-        "content": {
-            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-            "type": "AdaptiveCard",
-            "version": "1.4",
-            "msteams": {"width": "Full"},
-            "body": body,
-        },
-    }],
-}
-print(json.dumps(card))
+# Loggsvansen sist, inom Telegrams gräns (4096; marginal till 4000).
+budget = 4000 - len(text) - 40
+if budget > 80:
+    t = esc(tail)
+    if len(t) > budget:
+        t = "…" + t[-(budget - 1):]
+    text += f"\n\n<b>📝 Logg (tail)</b>\n<pre>{t}</pre>"
+print(text)
 PYEOF
 
-# ─── Posta till Teams ───────────────────────────────────────────────────────
-if [ -z "${TEAMS_WEBHOOK_URL:-}" ]; then
+# ─── Posta till Telegram ────────────────────────────────────────────────────
+if [ -z "${TG_BOT_TOKEN:-}" ] || [ -z "${TG_CHAT_ID:-}" ]; then
     echo "" >> "$LOG_FILE"
-    echo "⚠️ TEAMS_WEBHOOK_URL inte satt — hoppar över Teams-notis." >> "$LOG_FILE"
+    echo "⚠️ TG_BOT_TOKEN/TG_CHAT_ID inte satta — hoppar över Telegram-notis." >> "$LOG_FILE"
 else
-    HTTP_CODE="$(curl -s -o /tmp/vadkul-teams-resp -w '%{http_code}' \
-        -H 'Content-Type: application/json' \
-        --data-binary "@$PAYLOAD_FILE" \
-        "$TEAMS_WEBHOOK_URL")"
+    HTTP_CODE="$(curl -s -o /tmp/vadkul-tg-resp -w '%{http_code}' \
+        --data-urlencode "chat_id=${TG_CHAT_ID}" \
+        --data-urlencode "text@${PAYLOAD_FILE}" \
+        --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "disable_web_page_preview=true" \
+        "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage")"
     echo "" >> "$LOG_FILE"
-    echo "Teams POST → HTTP $HTTP_CODE" >> "$LOG_FILE"
-    if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "202" ]; then
-        echo "Teams svar:" >> "$LOG_FILE"
-        cat /tmp/vadkul-teams-resp >> "$LOG_FILE" 2>/dev/null || true
+    echo "Telegram POST → HTTP $HTTP_CODE" >> "$LOG_FILE"
+    if [ "$HTTP_CODE" != "200" ]; then
+        echo "Telegram svar:" >> "$LOG_FILE"
+        cat /tmp/vadkul-tg-resp >> "$LOG_FILE" 2>/dev/null || true
     fi
 fi
 
-rm -f "$PAYLOAD_FILE" /tmp/vadkul-teams-resp
+rm -f "$PAYLOAD_FILE" /tmp/vadkul-tg-resp
 
-# ─── Per-scraper-kort: byggt på scrape_runs (30s efter huvudkortet) ─────────
-# Egen Adaptive Card direkt från scrape_runs-tabellen (ej logg-grep): aktiva/
-# inaktiva scrapers, top-producenter, källor som behöver ses över. Detacheras
-# och staggras så den inte krockar visuellt med huvudkortet.
+# ─── Per-scraper-rapport: byggd på scrape_runs (10s efter huvudrapporten) ───
+# Eget Telegram-meddelande direkt från scrape_runs-tabellen (ej logg-grep):
+# aktiva/inaktiva scrapers, top-producenter, källor som behöver ses över.
+# Detacheras och staggras så meddelandena kommer i ordning.
 echo "" >> "$LOG_FILE"
-echo "── PER-SCRAPER RAPPORT (postas om 30s) ──" >> "$LOG_FILE"
+echo "── PER-SCRAPER RAPPORT (postas om 10s) ──" >> "$LOG_FILE"
 (
-    sleep 30
+    sleep 10
     cd "$SCRAPER_DIR" && npm run daily-report >> "$LOG_FILE" 2>&1
 ) &
 REPORT_PID=$!
 echo "Per-scraper-rapport schemalagd (PID $REPORT_PID)" >> "$LOG_FILE"
 
-# ─── Andra Teams-kort: kvalitet + 7-dagars trend (60s efter huvudkortet) ────
-# Detacheras så vi inte blockerar exit. Sover en minut för att inte krocka
-# visuellt med huvudkortet i samma Teams-tråd.
+# ─── Andra rapporten: kvalitet + 7-dagars trend (20s efter huvudrapporten) ──
+# Detacheras så vi inte blockerar exit; staggras så ordningen i Telegram håller.
 echo "" >> "$LOG_FILE"
-echo "── QUALITY-STATS (postas om 60s) ──" >> "$LOG_FILE"
+echo "── QUALITY-STATS (postas om 20s) ──" >> "$LOG_FILE"
 (
-    sleep 60
+    sleep 20
     cd "$SCRAPER_DIR" && npm run quality-stats >> "$LOG_FILE" 2>&1
 ) &
 QUALITY_PID=$!
-echo "Quality-stats schemalagd (PID $QUALITY_PID, postas ~$(date -v+1M '+%H:%M' 2>/dev/null || date -d '+1 minute' '+%H:%M'))" >> "$LOG_FILE"
+echo "Quality-stats schemalagd (PID $QUALITY_PID)" >> "$LOG_FILE"
 
-# ─── Tredje Teams-kort: fält-täckning PER scraper + trend (90s efter huvudkortet) ──
+# ─── Tredje rapporten: fält-täckning PER scraper + trend (30s efter huvudrapporten) ──
 # quality-coverage --md skriver docs/scrapers/coverage/ÅÅÅÅ-MM-DD.md (full per-scraper-
 # tabell) + lägger en rad i TREND.md (TOTAL-procenten, en rad/natt) → "koll på
-# strukturen" över tid. --teams postar ett kort med TOTAL + källor under kvalitets-
-# baren. Detacheras + staggras 90s så den inte krockar med de två tidigare korten.
+# strukturen" över tid. --telegram postar TOTAL + källor under kvalitets-baren.
+# Detacheras + staggras 30s så den kommer efter de två tidigare meddelandena.
 echo "" >> "$LOG_FILE"
-echo "── FÄLT-TÄCKNING PER SCRAPER (postas om 90s) ──" >> "$LOG_FILE"
+echo "── FÄLT-TÄCKNING PER SCRAPER (postas om 30s) ──" >> "$LOG_FILE"
 (
-    sleep 90
-    cd "$SCRAPER_DIR" && npm run quality-coverage -- --md --teams >> "$LOG_FILE" 2>&1
+    sleep 30
+    cd "$SCRAPER_DIR" && npm run quality-coverage -- --md --telegram >> "$LOG_FILE" 2>&1
 ) &
 COVERAGE_PID=$!
 echo "Fält-täckning schemalagd (PID $COVERAGE_PID)" >> "$LOG_FILE"

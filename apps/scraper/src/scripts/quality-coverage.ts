@@ -5,7 +5,7 @@
  * hur stor andel av dess events har bild, beskrivning, pris, kategori, geo?".
  *
  * Till skillnad från:
- *   - teams-daily-report.ts → volym per scraper (found→saved), ingen fält-kvalitet
+ *   - daily-report.ts       → volym per scraper (found→saved), ingen fält-kvalitet
  *   - post-quality-stats.ts → fält-kvalitet men GLOBALT (inte per scraper)
  *   - coverage.ts           → geografisk kommun-täckning
  * ...visar det här verktyget kvalitets-PROCENT per källa, så man ser exakt
@@ -22,12 +22,12 @@
  *   npm run quality-coverage -- --since=1d   # bara events skapade senaste dygnet (per-körning-vy)
  *   npm run quality-coverage -- --json       # JSON för dashboards
  *   npm run quality-coverage -- --md         # skriv dated snapshot + uppdatera trend i docs/scrapers/coverage/
- *   npm run quality-coverage -- --teams      # posta Adaptive Card till TEAMS_WEBHOOK_URL
+ *   npm run quality-coverage -- --telegram   # posta sammanfattning till Telegram (TG_BOT_TOKEN + TG_CHAT_ID)
  *
  * Beroenden:
  *   - events.db i scraper-roten (SCRAPER_SQLITE_PATH override stöds)
  *   - SOURCES-registry (för engine-mappning per källa)
- *   - TEAMS_WEBHOOK_URL (bara för --teams)
+ *   - TG_BOT_TOKEN + TG_CHAT_ID (bara för --telegram)
  */
 
 import Database from 'better-sqlite3';
@@ -35,6 +35,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import 'dotenv/config';
 import { SOURCES } from '../sources/registry';
+import { sendMessage, isTelegramConfigured } from '../utils/telegram';
+import { factLines, section, clampTelegram, escapeHtml } from '../utils/telegramReport';
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
@@ -51,7 +53,7 @@ const args = {
     worst: argv.includes('--worst'),
     json: argv.includes('--json'),
     md: argv.includes('--md'),
-    teams: argv.includes('--teams'),
+    telegram: argv.includes('--telegram'),
     sinceDays: 0,
 };
 for (const a of argv) {
@@ -68,7 +70,7 @@ if (args.all) args.min = 0;
 
 export interface FieldDef {
     key: string;          // kolumn-nyckel i resultatet
-    label: string;        // rubrik i text/teams
+    label: string;        // rubrik i text/telegram
     /** SQL-uttryck som ger 1 när fältet räknas som "ifyllt", annars 0. */
     sql: string;
     /** Kvalitets-bar: källor under detta (%) flaggas av --worst. null = mäts ej för worst. */
@@ -289,62 +291,32 @@ function writeMarkdown(rep: Report): { snapshot: string; trend: string } {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Teams Adaptive Card (TOTAL + topp-svaga källor)
+//  Telegram-sammanfattning (TOTAL + topp-svaga källor)
 // ───────────────────────────────────────────────────────────────────────────
 
-function buildCard(rep: Report) {
-    const totalFacts = FIELDS.map(f => ({
-        title: f.label,
-        value: `${rep.total.pct[f.key]}%`,
-    }));
-
+export function buildTelegramText(rep: Report): string {
     const worst = rep.sources.filter(isWorst).slice(0, 8);
-    const worstFacts = worst.length
-        ? worst.map(r => ({ title: r.host.slice(0, 24), value: `${r.n}st · saknar: ${flagsFor(r)}` }))
-        : [{ title: '—', value: 'Inga källor under baren 🎉' }];
-
-    return {
-        type: 'message',
-        attachments: [{
-            contentType: 'application/vnd.microsoft.card.adaptive',
-            content: {
-                $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-                type: 'AdaptiveCard',
-                version: '1.4',
-                msteams: { width: 'Full' },
-                body: [
-                    { type: 'TextBlock', text: '📊 Fält-täckning per scraper',
-                      weight: 'Bolder', size: 'Large', color: 'accent' },
-                    { type: 'TextBlock', isSubtle: true, spacing: 'None', wrap: true,
-                      text: `${rep.universe} · ${rep.total.n} events` },
-                    { type: 'TextBlock', text: 'TOTAL', weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'FactSet', facts: totalFacts },
-                    { type: 'TextBlock', text: '⚠️ Under kvalitets-baren', weight: 'Bolder',
-                      spacing: 'Medium', color: 'warning' },
-                    { type: 'FactSet', facts: worstFacts },
-                ],
-            },
-        }],
-    };
+    return [
+        '📊 <b>Fält-täckning per scraper</b>',
+        `<i>${escapeHtml(`${rep.universe} · ${rep.total.n} events`)}</i>`,
+        section('TOTAL', factLines(FIELDS.map(f => ({ title: f.label, value: `${rep.total.pct[f.key]}%` })))),
+        section('⚠️ Under kvalitets-baren', worst.length
+            ? factLines(worst.map(r => ({ title: r.host.slice(0, 24), value: `${r.n}st · saknar: ${flagsFor(r)}` })))
+            : 'Inga källor under baren 🎉'),
+    ].join('\n');
 }
 
-async function postTeams(rep: Report): Promise<void> {
-    const webhook = process.env.TEAMS_WEBHOOK_URL;
-    if (!webhook) {
-        console.error('⚠️ TEAMS_WEBHOOK_URL inte satt — skippar Teams-postningen.');
+async function postTelegram(rep: Report): Promise<void> {
+    if (!isTelegramConfigured()) {
+        console.error('⚠️ TG_BOT_TOKEN/TG_CHAT_ID inte satta — skippar Telegram-postningen.');
         return;
     }
-    const res = await fetch(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildCard(rep)),
-    });
-    if (res.status !== 200 && res.status !== 202) {
-        const txt = await res.text().catch(() => '');
-        console.error(`❌ Teams POST → HTTP ${res.status}: ${txt.slice(0, 300)}`);
+    const id = await sendMessage(clampTelegram(buildTelegramText(rep)));
+    if (!id) {
+        console.error('❌ Telegram: sendMessage misslyckades.');
         process.exit(1);
     }
-    console.log(`✅ Fält-täckning postad till Teams (HTTP ${res.status})`);
+    console.log(`✅ Fält-täckning postad till Telegram (msg ${id})`);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -373,7 +345,7 @@ async function main() {
         console.log(`📈 Uppdaterade ${path.relative(process.cwd(), trend)}`);
     }
 
-    if (args.teams) await postTeams(rep);
+    if (args.telegram) await postTelegram(rep);
 }
 
 if (require.main === module) {

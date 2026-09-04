@@ -71,7 +71,7 @@
     "db-janitor": "ts-node src/scripts/db-janitor.ts",
     "cost-guard": "ts-node src/scripts/cost-guard.ts",
     "backfill-run": "ts-node src/scripts/backfill-run.ts",
-    "daily-report": "ts-node src/scripts/teams-daily-report.ts",
+    "daily-report": "ts-node src/scripts/daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "backfill-categories": "ts-node src/scripts/backfill-categories.ts",
     "backfill-content": "ts-node src/scripts/backfill-content-quality.ts",
