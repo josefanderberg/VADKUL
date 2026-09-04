@@ -2506,18 +2506,36 @@ export default function HomePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ?skapa=1 — stadssidornas "arrangera själv"-CTA: starta placeringsvarvet
-    // direkt, samma väg som +-knappen (kartan står redan över staden via
-    // ?plats=). Läses en gång vid mount och städas ur URL:en som ?stjarna=.
+    // ?skapa=1 — stadssidornas "arrangera själv"-CTA. Öppnar skapa-FORMULÄRET
+    // direkt med kartans mitt (= staden via ?plats=) som plats; "📍 Ändra
+    // plats" i formuläret täcker justering. Inte 'placing': det läget har
+    // ingen egen synlig UI (pinnen ÄR plusknappens animation i normalflödet),
+    // så en djuplänk rakt in i det ser ut som att ingenting hände (4/9).
+    // Väntar in stängd welcome-ruta + att kartan fått ett center.
+    const pendingDeepCreateRef = useRef(false);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (!params.has('skapa')) return;
         params.delete('skapa');
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-        setCreationMode('placing');
+        pendingDeepCreateRef.current = true;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+    useEffect(() => {
+        if (!pendingDeepCreateRef.current || welcomeOpen) return;
+        // mapCenterRef är en ref (ingen re-render när kartan monterat) —
+        // kort poll tills centret finns, sen öppnas formuläret.
+        const t = window.setInterval(() => {
+            if (!pendingDeepCreateRef.current) { window.clearInterval(t); return; }
+            if (!mapCenterRef.current) return;
+            pendingDeepCreateRef.current = false;
+            window.clearInterval(t);
+            openCreateFormHere();
+        }, 200);
+        const stop = window.setTimeout(() => { window.clearInterval(t); pendingDeepCreateRef.current = false; }, 15_000);
+        return () => { window.clearInterval(t); window.clearTimeout(stop); };
+    }, [welcomeOpen, openCreateFormHere]);
     useEffect(() => {
         if (!pendingStarCodeRef.current) return;
         // Vänta tills Firebase återställt sessionen — annars öppnas login-
