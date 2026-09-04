@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { Heart } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import {
@@ -12,6 +15,11 @@ import { isPlainClick } from '@/utils/eventExpand';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import { emojiForCategory } from '@/utils/categories';
 import EventExpanded from './EventExpanded';
+
+// Lazy som i listan: inloggningsmodalen laddas först när ett hjärta trycks.
+const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: false });
+// Samma nyckel som kartan/listan — hjärtan här hamnar i kartans Sparat-panel.
+const SAVED_KEY = 'vadkul_saved_events';
 
 // Exponeringstrappans nivå 2–3 överst på stadssidan: boostade event (guld,
 // syns mest) och VADKUL-skapade event (syns mer), ovanför den externa
@@ -135,21 +143,41 @@ function seedMap(e: SpotRow): void {
     });
 }
 
-function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expanded: boolean; onToggle: () => void }) {
+function Row({ e, gold, expanded, onToggle, isSaved, onToggleSave }: {
+    e: SpotRow; gold: boolean; expanded: boolean; onToggle: () => void;
+    isSaved: boolean; onToggleSave: (id: string) => void;
+}) {
     // Bildvakt som listradernas: trasig bild → kompakta emoji-raden.
     const [imgFailed, setImgFailed] = useState(false);
     const hasImage = !!e.coverImage && !imgFailed;
 
+    // Skapat/Tipsat: uppe till VÄNSTER på bildkortet (Josef 4/9), i höger-
+    // kolumnen på den kompakta raden.
     const badge = e.vadkul && (
         <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
             hasImage
-                ? 'bg-white/25 backdrop-blur-sm text-white'
+                ? `bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow ${gold ? 'text-amber-600 dark:text-amber-400' : 'text-sky-700 dark:text-sky-300'}`
                 : gold
                     ? 'bg-amber-200/70 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300'
                     : 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300'
         }`}>
             {e.isTip ? 'Tipsat' : 'Skapat'}
         </span>
+    );
+    // Spara-hjärtat: samma knapp och regler som listans rader.
+    const heartOverlay = (
+        <button
+            type="button"
+            onClick={() => onToggleSave(e.id)}
+            aria-pressed={isSaved}
+            aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
+            title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
+            className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+                isSaved ? 'text-rose-500' : 'text-slate-400 dark:text-zinc-500 hover:text-rose-400'
+            }`}
+        >
+            <Heart size={16} fill={isSaved ? 'currentColor' : 'none'} />
+        </button>
     );
     const catChip = e.category && (
         <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
@@ -165,7 +193,7 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
     };
 
     return (
-        <div className={`rounded-2xl border overflow-hidden transition-colors ${
+        <div className={`relative rounded-2xl border overflow-hidden transition-colors ${
             gold
                 ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300/70 dark:border-amber-500/40'
                 : 'bg-white dark:bg-zinc-900 border-sky-200 dark:border-sky-500/30'
@@ -174,50 +202,69 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
                 ny flik) — vanligt klick fäller ut på plats, som listraderna. */}
             {hasImage ? (
                 // Bildkort som listans rader (Josef 4/9: "bilden kommer ju inte
-                // med"): omslagsbild kant till kant, titel + märken på mörk
-                // gradient, när & var-raden under. Bilden växer utfälld —
-                // UTAN animation, EventExpanded mäter sin höjd synkront.
-                <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="block">
-                    <div className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={e.coverImage}
-                            alt=""
-                            loading="lazy"
-                            onError={() => setImgFailed(true)}
-                            className={`w-full object-cover ${expanded ? 'h-52' : 'h-28'}`}
-                        />
-                        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
-                            <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : spotEmoji(e)}</span>
-                            <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
+                // med"): omslagsbild kant till kant, titel + kategori på mörk
+                // gradient, Skapat/Tipsat uppe till vänster, hjärtat uppe till
+                // höger (utanför länken). Bilden växer utfälld — UTAN
+                // animation, EventExpanded mäter sin höjd synkront.
+                <>
+                    <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="block">
+                        <div className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={e.coverImage}
+                                alt=""
+                                loading="lazy"
+                                onError={() => setImgFailed(true)}
+                                className={`w-full object-cover ${expanded ? 'h-52' : 'h-28'}`}
+                            />
+                            {badge && <span className="absolute top-2 left-2 z-10 flex">{badge}</span>}
+                            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+                                <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : spotEmoji(e)}</span>
+                                <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
+                                {catChip}
+                            </div>
+                        </div>
+                        {!expanded && (
+                            <div className="px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate">
+                                {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                            </div>
+                        )}
+                    </a>
+                    {heartOverlay}
+                </>
+            ) : (
+                <div className="flex items-stretch">
+                    <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5">
+                        <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
+                            {spotEmoji(e)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
+                                {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
+                            </span>
+                            <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
+                                {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
+                            </span>
+                        </span>
+                        <span className="shrink-0 flex flex-col items-end gap-1">
                             {badge}
                             {catChip}
-                        </div>
-                    </div>
-                    {!expanded && (
-                        <div className="px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate">
-                            {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
-                        </div>
-                    )}
-                </a>
-            ) : (
-                <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="flex items-center gap-3 px-3 py-2.5">
-                    <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
-                        {spotEmoji(e)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
-                            {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
                         </span>
-                        <span className="block truncate text-xs font-medium text-slate-500 dark:text-zinc-400">
-                            {spotWhen(e.time)}{e.locationName ? ` · ${e.locationName}` : ''}
-                        </span>
-                    </span>
-                    <span className="shrink-0 flex flex-col items-end gap-1">
-                        {badge}
-                        {catChip}
-                    </span>
-                </a>
+                    </a>
+                    {/* Hjärtat i radens högerkant — samma som listans bildlösa rader. */}
+                    <button
+                        type="button"
+                        onClick={() => onToggleSave(e.id)}
+                        aria-pressed={isSaved}
+                        aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
+                        title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
+                        className={`shrink-0 flex items-center px-3 rounded-r-2xl transition-colors ${
+                            isSaved ? 'text-rose-500' : 'text-slate-300 dark:text-zinc-600 hover:text-rose-400'
+                        }`}
+                    >
+                        <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
+                    </button>
+                </div>
             )}
             {expanded && (
                 <EventExpanded
@@ -234,6 +281,25 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
 export default function CityVadkulSpotlight(props: Props) {
     const [rows, setRows] = useState<{ boosted: SpotRow[]; vadkul: SpotRow[] } | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    // Spara-hjärtan: samma nyckel och regler som listan (gilla kräver konto,
+    // redan sparade får plockas bort utan).
+    const { user } = useAuth();
+    const [saved, setSaved] = useState<Set<string>>(new Set());
+    const [authOpen, setAuthOpen] = useState(false);
+    useEffect(() => {
+        try {
+            setSaved(new Set(JSON.parse(localStorage.getItem(SAVED_KEY) ?? '[]') as string[]));
+        } catch { /* trasig post — börja med tom lista */ }
+    }, []);
+    const toggleSave = (id: string) => {
+        if (!user && !saved.has(id)) { setAuthOpen(true); return; }
+        setSaved(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            try { localStorage.setItem(SAVED_KEY, JSON.stringify([...next])); } catch { /* privat läge */ }
+            return next;
+        });
+    };
     useEffect(() => {
         let active = true;
         fetchCityRows(props)
@@ -277,12 +343,19 @@ export default function CityVadkulSpotlight(props: Props) {
                 </Link>
             </div>
             <div className="mt-2 flex flex-col gap-2">
-                {boosted.map(e => <Row key={e.id} e={e} gold expanded={expandedId === e.id} onToggle={() => toggle(e.id)} />)}
-                {vadkul.map(e => <Row key={e.id} e={e} gold={false} expanded={expandedId === e.id} onToggle={() => toggle(e.id)} />)}
+                {boosted.map(e => <Row key={e.id} e={e} gold expanded={expandedId === e.id} onToggle={() => toggle(e.id)} isSaved={saved.has(e.id)} onToggleSave={toggleSave} />)}
+                {vadkul.map(e => <Row key={e.id} e={e} gold={false} expanded={expandedId === e.id} onToggle={() => toggle(e.id)} isSaved={saved.has(e.id)} onToggleSave={toggleSave} />)}
             </div>
             <p className="mt-1.5 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
                 Event skapade på VADKUL visas överst här — ⭐ boostade syns allra mest, även på kartan.
             </p>
+            {authOpen && (
+                <AuthModal
+                    open
+                    reason="Logga in för att gilla event"
+                    onClose={() => setAuthOpen(false)}
+                />
+            )}
         </section>
     );
 }
