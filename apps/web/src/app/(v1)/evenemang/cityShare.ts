@@ -23,7 +23,7 @@ export function truncateTitle(title: string, max = 48): string {
 
 /** Rader till bilden: veckans bästa (pickRecommended — spridning över
  *  kategori/värd/plats), bara inom `horizonDays` framåt, kapade titlar,
- *  "Lör 6/9" + klockslag när eventet har ett. Delas länken varje dag
+ *  "Lör 6/9 · 19:00" (klockslag när eventet har ett). Delas länken varje dag
  *  (ägarens plan 4/9) ska bilden vara den dagens veckolista. */
 export function pickShareLines(events: CityEvent[], n = 5, now = Date.now(), horizonDays = 7): ShareLine[] {
     const from = now - 60 * 60 * 1000;

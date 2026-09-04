@@ -34,8 +34,11 @@ async function main() {
         console.log('FB_SCRAPE_TOKEN saknas — hoppar över omhämtningen hos Facebook.');
         return;
     }
-    const xml = await fetch(`${SITE}/sitemap.xml`, { signal: AbortSignal.timeout(30_000) }).then(r => r.text());
+    const res = await fetch(`${SITE}/sitemap.xml`, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) throw new Error(`sitemap.xml svarade ${res.status}`);
+    const xml = await res.text();
     const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(wanted);
+    if (urls.length === 0) throw new Error('sitemap.xml gav inga stadslänkar');
     console.log(`${urls.length} länkar att hämta om${ALL ? ' (inkl. kategorisidor)' : ''}`);
     if (DRY) { for (const u of urls) console.log('  ' + u); return; }
 
