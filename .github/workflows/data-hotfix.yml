@@ -1,0 +1,42 @@
+# Manuell Firestore-patch av det publicerade aggregatet — kör
+# hotfix-aggregate-venue.ts (flyttar event enligt data/venueFixes.ts i
+# aggregatedEvents-sharderna) utan att vänta på minins nattkedja.
+#
+# Startas för hand (workflow_dispatch) när en venue-fix behöver synas på
+# kartan DIREKT. Nattkedjan skriver ändå om aggregatet med samma koordinater.
+# Obs: /api/events CDN-cachas ≤1 h — trigga en deploy efteråt för omedelbar
+# effekt (deployen tömmer Hosting-CDN:en).
+name: Data-hotfix (aggregat)
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Kör skarpt (avbockad = dry-run)"
+        type: boolean
+        default: true
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/scraper/package-lock.json
+
+      - run: npm ci
+
+      - name: Skriv service-account.json
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Patcha aggregatet
+        run: npm run hotfix-aggregate -- ${{ inputs.apply == true && '--apply' || '' }}
