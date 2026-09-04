@@ -153,12 +153,12 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
             const ty = cty + dy;
             tiles.push({
                 key: `${tx}/${ty}`,
-                // Esris gatukarta (samma keyless leverantör som satellitläget).
-                // Var Cartos raster-Voyager, men Carto vattenstämplar sedan
-                // slutet av aug -26 nyckellösa rasterkakel med "API KEY
-                // REQUIRED" — vektorstilen ovanpå är fortsatt fri. Kaklen är
-                // ändå bara reservväg under/utan GL.
-                src: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${HERO_ZOOM}/${ty}/${tx}`,
+                // OpenStreetMaps standardkakel — keyless med full Sverige-
+                // täckning. Kaklen är bara reservväg under/utan GL. Byt inte
+                // tillbaka: Carto vattenstämplar keyless raster sedan aug -26,
+                // och Esris gatukarta saknar z12-täckning i norra Sverige
+                // (helblå kakel — Piteå 4/9).
+                src: `https://tile.openstreetmap.org/${HERO_ZOOM}/${tx}/${ty}.png`,
                 left: tx * TILE - center.x,
                 top: ty * TILE - center.y,
             });
@@ -230,9 +230,9 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 </span>
             </Link>
 
-            {/* Attribution — Carto/OSM för vektorkartan, Esri för reservkaklen. */}
+            {/* Attribution — OSM täcker både vektorkartan (Carto) och reservkaklen. */}
             <span className="absolute bottom-0 right-0 z-20 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
-                © OpenStreetMap © CARTO © Esri
+                © OpenStreetMap © CARTO
             </span>
         </div>
     );
